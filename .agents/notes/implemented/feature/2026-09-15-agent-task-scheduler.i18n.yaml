@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-15-agent-task-scheduler.md
-2026-09-15-agent-task-scheduler.md: 6b31572647abdf76a076f0443c15fade1f286b24
-2026-09-15-agent-task-scheduler.zh.md: 6d11390f76b813336cd8ac86d67d6dceaac1af4e
+2026-09-15-agent-task-scheduler.md: 757eb5e9b555a44b2df8bd5b4a247446599998b9
+2026-09-15-agent-task-scheduler.zh.md: 8a4b0fb4476fc8c1b558026626cdb356042a169f

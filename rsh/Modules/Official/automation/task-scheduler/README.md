@@ -28,7 +28,7 @@ Create one-shot reminders, recurring tasks, or goal tasks with completion criter
 
 Install the plugin into a profile and add [cordis.patch.yml](cordis.patch.yml) to its patches. The Host requires the normal Agent, preset, permission, workspace, and session-persistence services. The database path must be absolute and must identify a dedicated local SQLite file. Do not share it over a network filesystem. Merely importing the package does not enable scheduling; the exported Cordis `apply` mounts it.
 
-From a built source checkout, use `pnpm dsh web --patch rsh/Programs/CLI/config/examples/task-scheduler/cordis.yml`. A Desktop profile can install the built local package through its plugin manager and mount the packaged patch with its own database path; it is not enabled by default.
+Web and Desktop enable this plugin by default through the Web bundle, using `task-scheduler.sqlite` in the Harness home. From a built source checkout, use `pnpm dsh web`. The sidebar exposes task creation and Settings exposes the task center. A profile patch can override the `task-scheduler` row or disable it explicitly.
 
 In a normal conversation, ask the Agent to use `task_schedule` to create a task with a title, prompt, future RFC 3339 `at` timestamp including its UTC offset, and optional `every_seconds`. A recurring schedule uses a fixed elapsed-time interval, not a calendar rule. The workspace, model, Agent preset, and permission preset are captured from the creating session. No API key or access token is copied to the task database. Existing permission and approval checks remain in force for every execution.
 

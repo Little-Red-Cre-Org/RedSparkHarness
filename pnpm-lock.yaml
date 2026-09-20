@@ -891,6 +891,9 @@ importers:
       '@deepseek-ai/dsh-subprocess':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess
+      '@deepseek-ai/dsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/automation/task-scheduler
       '@deepseek-ai/dsh-tool-subagent':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/tool-subagent

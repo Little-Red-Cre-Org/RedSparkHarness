@@ -42,6 +42,16 @@
 # `dsh.client` rows are the browser roster the modules node half scans into
 # window.__DSH_BOOT__; the modules row is simultaneously a host row.
 - insert:
+    - id: task-scheduler
+      name: '@deepseek-ai/dsh-task-scheduler'
+      config:
+        path: !!js dshHomePath('task-scheduler.sqlite')
+        pollMs: 1000
+        runTimeoutMs: 600000
+        maxConcurrent: 1
+        historyLimit: 50
+        minEverySeconds: 300
+
     # Host-owned opt-in sampled when a new Web session receives its preset
     # delegation tools. The Plugins page edits this settings namespace.
     - id: subagent-model-selection-settings

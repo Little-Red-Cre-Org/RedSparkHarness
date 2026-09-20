@@ -28,7 +28,7 @@ kind: "package-bundle"
 
 将插件安装到配置中，并添加 [cordis.patch.yml](cordis.patch.yml)。宿主需要正常的 Agent、预设、权限、工作区和会话持久化服务。数据库必须使用绝对路径和独立的本地 SQLite 文件，不要放在网络文件系统。仅导入包不会启用调度，Cordis 的 `apply` 负责加载。
 
-源码完成构建后，可运行 `pnpm dsh web --patch rsh/Programs/CLI/config/examples/task-scheduler/cordis.yml`。桌面配置可通过插件管理器安装构建后的本地包，再加载包内补丁并指定自己的数据库路径；默认不启用。
+Web 和桌面端通过 Web bundle 默认启用本插件，使用 Harness 主目录中的 `task-scheduler.sqlite`。源码完成构建后，可运行 `pnpm dsh web`。侧边栏提供任务创建入口，设置提供任务中心。Profile 补丁可以覆盖 `task-scheduler` 行或显式禁用它。
 
 在普通对话中让 Agent 使用 `task_schedule` 创建任务，提供标题、任务内容、带 UTC 偏移量的未来 RFC 3339 时间 `at`，以及可选的周期秒数 `every_seconds`。周期按照固定经过时间计算，不是日历规则。创建时保存当前工作区、模型、Agent 预设和权限预设，不复制 API 密钥或访问令牌。每次执行仍遵守原有权限及审批机制。
 
