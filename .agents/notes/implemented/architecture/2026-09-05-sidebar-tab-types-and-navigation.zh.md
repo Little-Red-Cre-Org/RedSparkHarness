@@ -46,7 +46,7 @@ interface SidebarRightTabDefinition {
 
 ### 标签实例信息
 
-[响应式 Sidebar 与标签信息](2026-09-07-sidebar-responsive-tab-info.zh.md)取代本记录中以平铺 owner props 传递实例信息的选择。正文、标题与引导页替换项接收框架注入的 `useTabInfo()`，以 `{ sidebar, panel, tab }` 读取所属 Sidebar、窗格与标签。实例的记录、导航、可见性、signal 与绑定动作均在 `tab` 内；精确字段见 [Sidebar 参考](../../../../docs/subsystems/sidebar-right.zh.md)。
+[响应式 Sidebar 与标签信息](2026-09-07-sidebar-responsive-tab-info.zh.md)取代本记录中以平铺 owner props 传递实例信息的选择。正文、标题与引导页替换项接收框架注入的 `useTabInfo()`，以 `{ sidebar, panel, tab }` 读取所属 Sidebar、窗格与标签。实例的记录、导航、可见性、signal 与绑定动作均在 `tab` 内；精确字段见 [Sidebar 参考](../../../../rsh/Docs/subsystems/sidebar-right.zh.md)。
 
 标签域仍为每个已提交记录拥有一个实例，包括 `AbortController`、导航快照和绑定到所属 Session 的动作。记录存活期间，其地址被钉在[资源模型](2026-09-05-client-resource-model.zh.md)中；隐藏与切换 Session 不结束实例，关闭记录则中止并释放它。框架已有的存储与导航钩子提供实时读取，类型不自行订阅。
 

@@ -12,9 +12,9 @@ Status: implemented
 
 第一方功能命名为 `open-in-app`：它选择在 Harness 主机上打开 workspace 目录的应用，不表示另一台机器或目的位置。
 
-[launch-environment](../../../../packages/util/launch-environment/README.zh.md) 中共用的 `launchedThroughSsh()` 只从继承的进程层读取非空 `SSH_CONNECTION` 或 `SSH_TTY`。SSH 启动时会在任何探测开始前返回空应用目录。项目与用户 `.env` 中的值不能作为 SSH 启动的依据；Web 浏览器唤起和自适应目录选择器共用此判断。即使客户端记住了应用选择，也会隐藏操作入口；已有的可用性检查会拒绝图标和启动请求。SSH 端口转发只改变 HTTP 可达性，不改变工作区或应用所属的机器。
+[launch-environment](../../../../rsh/Core/util/launch-environment/README.zh.md) 中共用的 `launchedThroughSsh()` 只从继承的进程层读取非空 `SSH_CONNECTION` 或 `SSH_TTY`。SSH 启动时会在任何探测开始前返回空应用目录。项目与用户 `.env` 中的值不能作为 SSH 启动的依据；Web 浏览器唤起和自适应目录选择器共用此判断。即使客户端记住了应用选择，也会隐藏操作入口；已有的可用性检查会拒绝图标和启动请求。SSH 端口转发只改变 HTTP 可达性，不改变工作区或应用所属的机器。
 
-该功能的第一方归属是一对包：`@deepseek-ai/dsh-host-open-in-app` 位于 `packages/host/open-in-app/`（探测、目录与启动路由），`@deepseek-ai/dsh-client-ui-open-in-app` 位于 `packages/client/ui-open-in-app/`（分体按钮），由 `dsh-web-app` bundle 的 `open-in-app` 与 `ui-open-in-app` 两行挂载进 Web profile。转正是重写，不是 vendoring：
+该功能的第一方归属是一对包：`@deepseek-ai/dsh-host-open-in-app` 位于 `rsh/Programs/Web/host/open-in-app/`（探测、目录与启动路由），`@deepseek-ai/dsh-client-ui-open-in-app` 位于 `rsh/Programs/Web/client/ui-open-in-app/`（分体按钮），由 `dsh-web-app` bundle 的 `open-in-app` 与 `ui-open-in-app` 两行挂载进 Web profile。转正是重写，不是 vendoring：
 
 - **一对 host/client 包，沿用 `directory-picker-browse`/`ui-directory-picker-browse` 的配对结构**：host 包的 `src/index.ts` 在 `ctx.webServer` 上注册三条 HTTP 路由（`GET /open-in-app/apps`、`GET /open-in-app/icon/<id>`、`POST /open-in-app/open`）；ui 包的 `src/client/index.ts` 经标准 slot/inject 通货把分体按钮注册进 `conversation.session.header.utilities`，文案在类型化的 `open-in-app` locale 命名空间中，样式为 `--dsw-*` token 上的 CSS Modules（原插件手工注入的 style 标签与内联下拉被 `Menu` 原语替代），节点半边是让插件出现在主机名册上的空 apply。路由路径与 wire 载荷类型只有一个家：host 包浏览器安全的 `./shared` 子路径（只有常量与类型）；client bundle 经 client tsdown preset 的 `INLINE_SAFE` 条目将其内联，与 `dsh-session` 各 wire 切片同一通道。host 根入口只导出 Loader 所需的插件实体与类型；目录、resolver、launcher 与图标 helper 保持源码内部可见。
 - **一趟解析产出已验证的启动器；点击绝不重新检测。** 主机把整个目录每进程惰性解析一次，产出目录 id 到 `OpenInAppResolvedLaunch` 的映射——本机实际持有的启动器，绝不是裸的安装记录。`GET /apps` 提供映射的 keys，`POST /open` 直接启动其值；启动时发现可执行文件已消失（spawn `ENOENT`）会只作废该条目、重解析一次，无法再证明时把它从列表移除（卸载自愈，新安装等重启）。
@@ -26,7 +26,7 @@ Status: implemented
 - **删除了 DSH 版本门禁。** 它存在是因为插件逐版本骑乘一个它不拥有的接口；第一方包与仓库同版本发布，门禁、它的 `sessionStorage`/`localStorage` 信任台账和 argv 遍历版本探测都失去了所指。
 - **上次选择经 `createSnapshotStore(..., { persist })` 持久化**（`dsh.open-in-app.choice`），替代手写 `localStorage` 访问。新存储没有平台特定的初始选择；用户首次选择前，组件使用主机提供的第一个可用条目。
 
-这对包放在 `packages/host/` 与 `packages/client/`，因为两个半边本来就是这两种东西：探测/启动侧是主机基础设施，与它消费的 webserver 同组；按钮是客户端表面，与其他 `ui-*` 包同组。评审把它从 `packages/workspace/` 的单个双半边包迁到这里（见替代方案）。
+这对包放在 `rsh/Programs/Web/host/` 与 `rsh/Programs/Web/client/`，因为两个半边本来就是这两种东西：探测/启动侧是主机基础设施，与它消费的 webserver 同组；按钮是客户端表面，与其他 `ui-*` 包同组。评审把它从 `rsh/Modules/Official/workspace/` 的单个双半边包迁到这里（见替代方案）。
 
 ## 考虑过的替代方案
 
@@ -34,11 +34,11 @@ Status: implemented
 
 **将插件的 `lib/` 原样 vendor 进 `packages/`。** 最快，但手写 JavaScript 会整体不过 typecheck、覆盖率、i18n、JSDoc 和 invariant 门禁；为其保留豁免会造出仓库刻意不设的包类别。
 
-**用 Typert Remote 而非裸 webServer 路由。** apps/open 调用符合 Remote RPC 形态，但 icon 路由提供二进制 PNG，JSON RPC 词汇承载不了；把 icon 拆去裸路由而 apps/open 走 Remote 会让一个功能有两种传输。裸路由也匹配原插件的客户端，且 `webhook-github` 已确立带校验裸路由的先例。
+**用 Typert Remote 而非裸 webServer 路由。** rsh/Programs/open 调用符合 Remote RPC 形态，但 icon 路由提供二进制 PNG，JSON RPC 词汇承载不了；把 icon 拆去裸路由而 rsh/Programs/open 走 Remote 会让一个功能有两种传输。裸路由也匹配原插件的客户端，且 `webhook-github` 已确立带校验裸路由的先例。
 
 **扩展 `host/apiproxy` 的 `openPath` 而非新 open 端点。** `openPath` 用系统默认应用打开一个路径；本功能的主体是*用哪个*应用，带可用性探测和逐应用启动器——是不同的契约。两者共享 `dsh-native-command`。
 
-**放在 `packages/workspace/` 的单个双半边包（最初交付的形态，沿用 `dsh-session-log-export`）。** 评审期拆成 host/client 对：workspace 组的契约是 host-side only，该功能消费的是 `webServer` 而非 `workspaceRegistry`，且单包整体注册在 Client 编译聚合面迫使主机路由与目录测试伪装成 `.client.spec.ts`。拆分让每个半边的测试落在自己的编译面、依赖落在正确的区段；wire 契约经 host 包的 `./shared` 子路径保持唯一出处。
+**放在 `rsh/Modules/Official/workspace/` 的单个双半边包（最初交付的形态，沿用 `dsh-session-log-export`）。** 评审期拆成 host/client 对：workspace 组的契约是 host-side only，该功能消费的是 `webServer` 而非 `workspaceRegistry`，且单包整体注册在 Client 编译聚合面迫使主机路由与目录测试伪装成 `.client.spec.ts`。拆分让每个半边的测试落在自己的编译面、依赖落在正确的区段；wire 契约经 host 包的 `./shared` 子路径保持唯一出处。
 
 **可配置目录（cordis.yml 定义应用）。** 延后：每个条目耦合发现、启动参数、进程策略与图标行为，因此接受任意命令前需要明确的用户设置归属与校验规则。用户提供的 label 属于用户数据，不与 locale 拥有的产品文案冲突。Codex 与 Orca 展示了可能的扩展形态：维护过的内置 preset 加可配置 custom handler。
 

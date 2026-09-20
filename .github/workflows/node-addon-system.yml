@@ -1,4 +1,4 @@
-# CI for the node-addon-system packages under native/system. A separate
+# CI for the node-addon-system packages under rsh/Core/native/system. A separate
 # workflow from ci.yml keeps the native OS/architecture matrix independent of
 # the harness Node matrix. Each platform job builds once and tests those bytes
 # under every supported Node release. Release assembly and publication use the
@@ -10,7 +10,7 @@ on:
     paths:
       - '.github/workflows/node-addon-system.yml'
       - '.github/workflows/node-addon-system-release.yml'
-      - 'native/system/**'
+      - 'rsh/Core/native/system/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -19,7 +19,7 @@ on:
     paths:
       - '.github/workflows/node-addon-system.yml'
       - '.github/workflows/node-addon-system-release.yml'
-      - 'native/system/**'
+      - 'rsh/Core/native/system/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -34,12 +34,12 @@ permissions:
 
 env:
   # CI runs must never report to the production telemetry endpoint baked
-  # into apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 defaults:
   run:
-    working-directory: native/system
+    working-directory: rsh/Core/native/system
 
 jobs:
   matrix:

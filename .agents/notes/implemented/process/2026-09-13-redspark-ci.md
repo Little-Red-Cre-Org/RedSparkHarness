@@ -16,7 +16,7 @@ Ordinary Dependabot version-update PRs have a zero open limit. Security alerts a
 
 ## Alternatives considered
 
-**Disable all checks:** this hides code failures along with missing integrations. RedSpark retains an executable client baseline and independent native/sandbox checks.
+**Disable all checks:** this hides code failures along with missing integrations. RedSpark retains an executable client baseline and independent rsh/Core/native/sandbox checks.
 
 **Rename upstream accounts and keep every job active:** branding cannot supply credentials or private runners. The upstream definitions remain references, including their failover and untrusted-PR protections.
 

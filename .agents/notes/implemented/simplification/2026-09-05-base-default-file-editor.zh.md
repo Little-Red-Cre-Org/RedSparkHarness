@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-[base patch](../../../../packages/bundle/base/cordis.patch.yml) 选择 `read`、`write` 和 `edit` 负责文件编辑。它不插入 `tool-str-replace-editor`；因此 SDK 与 Web 应用 patch 无需禁用覆盖。编辑器包仍可供显式插入它的组合使用。
+[base patch](../../../../rsh/Compatibility/DSH/bundle/base/cordis.patch.yml) 选择 `read`、`write` 和 `edit` 负责文件编辑。它不插入 `tool-str-replace-editor`；因此 SDK 与 Web 应用 patch 无需禁用覆盖。编辑器包仍可供显式插入它的组合使用。
 
 Web minimal 与独立 `sdk-minimal` bundle 各自负责工具选择，不依赖 base。[仅持久 shell 决策](2026-09-03-minimal-profiles-persistent-shell-only.zh.md)负责它们的单工具默认值。
 
@@ -28,4 +28,4 @@ Web minimal 与独立 `sdk-minimal` bundle 各自负责工具选择，不依赖 
 
 ## Verification
 
-[SDK 进程测试](../../../../apps/cli/tests/profiles/sdk/keyless-smoke.e2e.ts) 捕获默认文件工具、显式插入编辑器与独立极简工具清单的实际模型请求。[headless 进程测试](../../../../apps/cli/tests/profiles/headless/tests/keyless-smoke.e2e.ts) 通过所属应用检查共享默认值。[headless](../../../../snapshots/session/headless.snapshot.ts)、[SDK](../../../../snapshots/sdk/sdk.snapshot.ts) 与 [ACP](../../../../snapshots/acp/acp.snapshot.ts) 录制会话固定组装后模型可见的输出，包括显式插入编辑器的 SDK fixture。
+[SDK 进程测试](../../../../rsh/Programs/CLI/tests/profiles/sdk/keyless-smoke.e2e.ts) 捕获默认文件工具、显式插入编辑器与独立极简工具清单的实际模型请求。[headless 进程测试](../../../../rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts) 通过所属应用检查共享默认值。[headless](../../../../snapshots/session/headless.snapshot.ts)、[SDK](../../../../snapshots/sdk/sdk.snapshot.ts) 与 [ACP](../../../../snapshots/acp/acp.snapshot.ts) 录制会话固定组装后模型可见的输出，包括显式插入编辑器的 SDK fixture。

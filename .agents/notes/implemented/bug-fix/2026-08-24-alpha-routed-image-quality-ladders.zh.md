@@ -30,4 +30,4 @@ Status: implemented
 - GIF 源图经 gifload 解码后带 alpha 平面，因此静帧 GIF 规范化走 WebP 阶梯。
 - `IMAGE_TOO_LARGE` 不再产生于编码环节；它仍是超大源图的准入错误。
 - 阶梯耗尽的附件可能以超过字节目标的大小落盘和上行，直到提供方上限拒绝；实测只有对抗性随机 alpha 输入可达。把这样的超目标 master 再次作为新上传提交时，直通的字节检查不通过，会再走一遍有损阶梯，因此规范化对这一仅对抗性可达的类别不幂等，每轮都会累积代际损失。
-- 测试证据：`packages/attachment/attachment-local/tests` 用真实编码器钉住路由、阶梯耗尽和文字可读性行为，包括 issue #2885 误判特征（高频摄影内容离开慢路径）。
+- 测试证据：`rsh/Modules/Official/attachment/attachment-local/tests` 用真实编码器钉住路由、阶梯耗尽和文字可读性行为，包括 issue #2885 误判特征（高频摄影内容离开慢路径）。

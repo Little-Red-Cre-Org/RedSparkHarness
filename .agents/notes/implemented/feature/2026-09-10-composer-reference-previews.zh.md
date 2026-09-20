@@ -10,11 +10,11 @@ Status: implemented
 
 ## Decision
 
-[输入触发来源](../../../../packages/client/ui-input-trigger/README.zh.md)负责可选的引用激活。编辑器按来源身份路由原子引用，按来源当前词表路由可编辑文本。文件和 skill 来源在编写消息的 Session 中打开现有右侧栏文件资源。Skill 发现保留胜出提供方可选的指令文件路径，避免加载正文或根据 skill 名称、目录惯例猜测路径。
+[输入触发来源](../../../../rsh/Programs/Web/client/ui-input-trigger/README.zh.md)负责可选的引用激活。编辑器按来源身份路由原子引用，按来源当前词表路由可编辑文本。文件和 skill 来源在编写消息的 Session 中打开现有右侧栏文件资源。Skill 发现保留胜出提供方可选的指令文件路径，避免加载正文或根据 skill 名称、目录惯例猜测路径。
 
-[输入框](../../../../packages/client/ui-conversation/README.zh.md)共用引用悬停样式，同时保留原子文件标签和可编辑的 `/name` 文本。点击不序列化或提交草稿。无效标签、选择手势及不可用的来源目标仍由编辑器处理；虚拟 skill 仍可调用，但没有文件预览。
+[输入框](../../../../rsh/Programs/Web/client/ui-conversation/README.zh.md)共用引用悬停样式，同时保留原子文件标签和可编辑的 `/name` 文本。点击不序列化或提交草稿。无效标签、选择手势及不可用的来源目标仍由编辑器处理；虚拟 skill 仍可调用，但没有文件预览。
 
-已发送消息的气泡保留日志中的 skill 调用证据作为装饰依据。[Chat 目标](../../../../packages/client/ui-chat/README.zh.md)在当前查看的 Session 中打开文件路径，并通过该 Session 的来源路由已加载的 skill 名称。共享用户文本组件将这些引用渲染为按钮，复用现有正文文件链接的悬停和聚焦样式；会话、目录和命令引用不提供导航。
+已发送消息的气泡保留日志中的 skill 调用证据作为装饰依据。[Chat 目标](../../../../rsh/Programs/Web/client/ui-chat/README.zh.md)在当前查看的 Session 中打开文件路径，并通过该 Session 的来源路由已加载的 skill 名称。共享用户文本组件将这些引用渲染为按钮，复用现有正文文件链接的悬停和聚焦样式；会话、目录和命令引用不提供导航。
 
 ## Alternatives considered
 

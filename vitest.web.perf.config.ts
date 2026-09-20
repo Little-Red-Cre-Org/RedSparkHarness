@@ -11,8 +11,8 @@ export default defineConfig({
     // Memory diagnostics use forced-GC baselines only in this manual inventory.
     execArgv: [...vitestExecArgv, '--expose-gc'],
     include: [
-      'apps/web/tests/**/*.perf.ts',
-      'packages/client/ui-conversation/tests/**/*.perf.client.ts',
+      'rsh/Programs/Web/application/tests/**/*.perf.ts',
+      'rsh/Programs/Web/client/ui-conversation/tests/**/*.perf.client.ts',
     ],
     disableConsoleIntercept: true,
     hookTimeout: 180_000,

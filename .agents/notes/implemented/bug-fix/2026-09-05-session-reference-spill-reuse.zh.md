@@ -10,9 +10,9 @@ Status: implemented
 
 ## 决策
 
-[会话引用准备](../../../../packages/context/session-reference/README.zh.md)保留既有预览策略和逐引用 JSON 字节预算。每个被截断的引用通过可选的 `ctx.get("spillStore")` 尝试 `saveText`；未截断的引用不写入产物。完整转录与有界预览来自同一份已捕获的 user／assistant 文本投影，包含压缩检查点，但排除工具、推理与其他注入上下文。不发生第二次源读取。
+[会话引用准备](../../../../rsh/Engine/context/session-reference/README.zh.md)保留既有预览策略和逐引用 JSON 字节预算。每个被截断的引用通过可选的 `ctx.get("spillStore")` 尝试 `saveText`；未截断的引用不写入产物。完整转录与有界预览来自同一份已捕获的 user／assistant 文本投影，包含压缩检查点，但排除工具、推理与其他注入上下文。不发生第二次源读取。
 
-产物归接收上下文的目标会话所有。其描述性来源是 `{ kind: "session-reference", sessionId, label }`，其中 `sessionId` 标识被引用的会话。[spill 存储](../../../../packages/spill/spill/README.zh.md)在工具来源之外接受这一最小分支；不需要伪造工具名称或调用 id。存储归属不授权取回。
+产物归接收上下文的目标会话所有。其描述性来源是 `{ kind: "session-reference", sessionId, label }`，其中 `sessionId` 标识被引用的会话。[spill 存储](../../../../rsh/Modules/Official/spill/spill/README.zh.md)在工具来源之外接受这一最小分支；不需要伪造工具名称或调用 id。存储归属不授权取回。
 
 有界预览 JSON 之外的独立省略通知记录精确的 `omittedMessages` 与 `omittedBytes`。通知携带保存后的定位信息和后端 `retrievalHint`，或区分未配置存储与保存失败的不可用结果。该通知是同一条持久引用消息中的模型可见内容，而不是只供 UI 使用的元数据装饰。极小的预览预算无法移除它。保存的转录携带包括 `capturedFormatVersion` 在内的捕获元数据，以及与预览相同的不受信任背景警告。每条消息的 JSON 字符串片段每行至多包含 64 个 Unicode 码点；解码并拼接后可恢复精确文本，包括原始换行。这种固定产物格式让普通分页文件读取可以取回很长的单行文本中部，而不改变预览保留策略。
 
@@ -34,7 +34,7 @@ Status: implemented
 
 ## 验证
 
-[单元测试](../../../../packages/context/session-reference/tests/session-reference.spec.ts)锁定省略计数、完整 Unicode 与控制字符恢复、整条消息丢弃、三个引用的隔离、无存储与保存失败、来源排除与变更隔离，以及发布前取消。[Loader 组合测试](../../../../packages/context/session-reference/tests/loader-composition.spec.ts)使用真实本地存储和分页 `read` 工具，读取巨型单行消息的中部，并检查存储归目标会话所有。[无密钥录制会话场景](../../../../snapshots/session/session-reference-spill/snapshot.yml)锁定持久的模型可见引用上下文。嵌套 Windows 定位信息回归覆盖序列化提取与规范化，且不改写无关反斜杠。回放会[规范化已知的带引号 spill 定位信息](../../../../packages/test-support/session-snapshot/README.zh.md)，同时保留保存字节数与省略计数。
+[单元测试](../../../../rsh/Engine/context/session-reference/tests/session-reference.spec.ts)锁定省略计数、完整 Unicode 与控制字符恢复、整条消息丢弃、三个引用的隔离、无存储与保存失败、来源排除与变更隔离，以及发布前取消。[Loader 组合测试](../../../../rsh/Engine/context/session-reference/tests/loader-composition.spec.ts)使用真实本地存储和分页 `read` 工具，读取巨型单行消息的中部，并检查存储归目标会话所有。[无密钥录制会话场景](../../../../snapshots/session/session-reference-spill/snapshot.yml)锁定持久的模型可见引用上下文。嵌套 Windows 定位信息回归覆盖序列化提取与规范化，且不改写无关反斜杠。回放会[规范化已知的带引号 spill 定位信息](../../../../rsh/Tests/test-support/session-snapshot/README.zh.md)，同时保留保存字节数与省略计数。
 
 ## 相关决策
 

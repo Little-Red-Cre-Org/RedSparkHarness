@@ -29,6 +29,6 @@ Status: implemented
 
 ## 后果
 
-- 新的可点击产物表面应消费 `--dsw-alias-link` 和 LinkIcon 词汇，而不是引入另一种颜色或下划线形态；规则记录在 [docs/web-styling.md](../../../../docs/web-styling.zh.md)。
+- 新的可点击产物表面应消费 `--dsw-alias-link` 和 LinkIcon 词汇，而不是引入另一种颜色或下划线形态；规则记录在 [rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.zh.md)。
 - 长产物文件名按自然宽度展示；整行溢出时 flex 按比例收缩所有 chip，几个长名字一起收缩，而不是最后一个先让位。
 - mailto 链接目前共用 `url` 地球图形；若将来需要独立的邮件类别，一行即可加上。

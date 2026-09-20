@@ -18,7 +18,7 @@ Status: implemented
 
 - VM 探针：`NODE_COMPILE_CACHE=/data_local/ci/compile-cache-probe node -e 'require("node:fs")'` 在数据盘写出了 `v22.23.2-x64-*` 缓存子目录（位置切换生效）。
 - VM 探针（bwrap）：`NODE_COMPILE_CACHE` 指向 bwrap profile 未授权的路径时，`node` 正常运行（exit 0）——缓存写失败被容忍。
-- `scripts/ci-workflow.spec.ts` 断言每个 Linux lane 都在 `pnpm/action-setup` 之前把 `NODE_COMPILE_CACHE=${{ runner.temp }}/node-compile-cache`（`$GITHUB_ENV` 的 `KEY=VALUE` 行）注入 `$GITHUB_ENV`；位置断言在注入移出首次 pnpm 调用之后时会失败。
+- `rsh/Scripts/ci-workflow.spec.ts` 断言每个 Linux lane 都在 `pnpm/action-setup` 之前把 `NODE_COMPILE_CACHE=${{ runner.temp }}/node-compile-cache`（`$GITHUB_ENV` 的 `KEY=VALUE` 行）注入 `$GITHUB_ENV`；位置断言在注入移出首次 pnpm 调用之后时会失败。
 - CI lane：三个必需的 Linux job（默认 hosted，`DSH_CI_FAILOVER_LINUX` 时自托管 `vm-backup`）会在新 env 下跑完整套件；缓存处理回归会表现为 lane 失败。
 
 ## 备选方案

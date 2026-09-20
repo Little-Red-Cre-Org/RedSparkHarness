@@ -10,19 +10,19 @@ Status: implemented
 
 ## 决策
 
-每个 `docs/subsystems/` 页面锚定到声明其词汇的包或包分组，页面归属跟随仓库布局：[core.md](../../../../docs/subsystems/core.zh.md) 是 `packages/core` 的页面（创建与所有权、`Agent` 句柄及其投递/取消/拦截约定、指向该组专属页面的链接），[llm-streaming.md](../../../../docs/subsystems/llm-streaming.zh.md) 完整涵盖 `packages/llm`，依此类推。全仓通用类型模式（`…Map → 派生联合`、品牌化 id）保留在 core.md 一个明确标注的收尾小节中，而不是与包内容交错。这在*页面范围界定规则*的意义上取代了主干-vs-seam 规则；存活下来的放置启发式更简单：类型记录在其声明包对应的页面，相关实现机制仍集中记录在其所属页面。
+每个 `rsh/Docs/subsystems/` 页面锚定到声明其词汇的包或包分组，页面归属跟随仓库布局：[core.md](../../../../rsh/Docs/subsystems/core.zh.md) 是 `rsh/Engine/core` 的页面（创建与所有权、`Agent` 句柄及其投递/取消/拦截约定、指向该组专属页面的链接），[llm-streaming.md](../../../../rsh/Docs/subsystems/llm-streaming.zh.md) 完整涵盖 `rsh/Engine/llm`，依此类推。全仓通用类型模式（`…Map → 派生联合`、品牌化 id）保留在 core.md 一个明确标注的收尾小节中，而不是与包内容交错。这在*页面范围界定规则*的意义上取代了主干-vs-seam 规则；存活下来的放置启发式更简单：类型记录在其声明包对应的页面，相关实现机制仍集中记录在其所属页面。
 
-生成签名引用的每个类型都必须能在目录中某处解析：agent 所有权词汇从生成器的 `TYPE_LINK_EXEMPTIONS` 移入 `LINK_MAP → core.md`，因此豁免只留给确实仅用于服务内部或来自 vendored 代码的类型结构。每个粘贴的声明只有一个家（`SessionEvent` 位于 [session.md](../../../../docs/subsystems/session.zh.md)；core.md 概括并链接）。
+生成签名引用的每个类型都必须能在目录中某处解析：agent 所有权词汇从生成器的 `TYPE_LINK_EXEMPTIONS` 移入 `LINK_MAP → core.md`，因此豁免只留给确实仅用于服务内部或来自 vendored 代码的类型结构。每个粘贴的声明只有一个家（`SessionEvent` 位于 [session.md](../../../../rsh/Docs/subsystems/session.zh.md)；core.md 概括并链接）。
 
 每个 `packages/<group>/README.md` 配对都是统一形状的精简入口：一段先说明「为什么」的介绍、一张包表格（包 / 角色 / ctx 键）、一个指向对应子系统页面的收尾链接。未声明独立子系统参考资料的分组会在 `GROUPS_WITHOUT_SUBSYSTEM_PAGE` 中附上非空理由。如果承载关键信息的正文超出这一结构所能容纳的范围，就将其迁移到对应的子系统页面，而非删除。
 
-`verify-subsystem-pages` 同时从分组 README 和子包 manifest（元数据清单）发现分组。它会拒绝缺少分组 README、分组既没有面向读者且直接指向 `docs/subsystems/` 下某一个英文文件的链接也没有显式豁免、豁免为空或成为孤立项、已豁免分组新增链接，以及链接指向的页面不存在；代码、注释、图片、嵌套路径和路径穿越都不能满足所有权声明。该检查作为独立的 `doc-sync`（文档同步）叶节点运行，因此新增包分组时不能悄悄遗漏其文档拥有方。
+`verify-subsystem-pages` 同时从分组 README 和子包 manifest（元数据清单）发现分组。它会拒绝缺少分组 README、分组既没有面向读者且直接指向 `rsh/Docs/subsystems/` 下某一个英文文件的链接也没有显式豁免、豁免为空或成为孤立项、已豁免分组新增链接，以及链接指向的页面不存在；代码、注释、图片、嵌套路径和路径穿越都不能满足所有权声明。该检查作为独立的 `doc-sync`（文档同步）叶节点运行，因此新增包分组时不能悄悄遗漏其文档拥有方。
 
-[子系统 README](../../../../docs/subsystems/README.zh.md) 在中英文两侧索引目录中的每一页；`scripts/project-doc-site.spec.ts` 强制每个页面对应一个表格行，因此新增或合并吸收的页面无法悄悄缺席索引。
+[子系统 README](../../../../rsh/Docs/subsystems/README.zh.md) 在中英文两侧索引目录中的每一页；`rsh/Scripts/project-doc-site.spec.ts` 强制每个页面对应一个表格行，因此新增或合并吸收的页面无法悄悄缺席索引。
 
 ## 考虑过的替代方案
 
-**保留主干-vs-子系统界定规则。**它逐类型回答「这个类型是核心吗？」，这正是首页积累了四个包的类型、却缺失 `packages/core/agent` 一半公开接口的原因。按仓库布局进行预测的方案胜出。
+**保留主干-vs-子系统界定规则。**它逐类型回答「这个类型是核心吗？」，这正是首页积累了四个包的类型、却缺失 `rsh/Engine/core/agent` 一半公开接口的原因。按仓库布局进行预测的方案胜出。
 
 **扁平的单文档目录。**在[原目录 Agent Note](../../archived/process/2026-06-20-core-data-structures-catalog.md) 中已被否决；增长到四十一页证实了该结论。
 

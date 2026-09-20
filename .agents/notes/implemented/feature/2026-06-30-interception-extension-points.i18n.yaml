@@ -1,6 +1,6 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-06-30-interception-extension-points.md
-2026-06-30-interception-extension-points.md: d628cdce0bc6c13a90a25eeebcfd977602dd76e3
-2026-06-30-interception-extension-points.zh.md: 689d7f6ee6d5a552c2eaf950ce5930be559eb5bb
+2026-06-30-interception-extension-points.md: f87ce0bdcef7e9418a6184d73699026055172134
+2026-06-30-interception-extension-points.zh.md: 970b625862ffc8b08cfcaa0f1d676f758e041843

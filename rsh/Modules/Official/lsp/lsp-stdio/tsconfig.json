@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../fs/fs"
+    },
+    {
+      "path": "../lsp"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    }
+  ]
+}

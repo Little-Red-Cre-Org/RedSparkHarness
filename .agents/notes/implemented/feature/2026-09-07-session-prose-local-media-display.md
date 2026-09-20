@@ -40,4 +40,4 @@ The archived [model-readable image paths](../../archived/feature/2026-08-21-mode
 
 ## Testing
 
-Renderer tests cover settled and streaming gates, reference-style images, protocol rechecks, failed-load fallback, and replacement sources. Chat tests cover the vocabulary and component wiring. The browser scenario in `apps/web/tests/markdown-images.e2e.ts` boots the shipped Web composition with a seeded Session and checks actual loading and fallback text. A model-driven recorded Session round trip remains separate from this UI expectation; the successor note names current route coverage.
+Renderer tests cover settled and streaming gates, reference-style images, protocol rechecks, failed-load fallback, and replacement sources. Chat tests cover the vocabulary and component wiring. The browser scenario in `rsh/Programs/Web/application/tests/markdown-images.e2e.ts` boots the shipped Web composition with a seeded Session and checks actual loading and fallback text. A model-driven recorded Session round trip remains separate from this UI expectation; the successor note names current route coverage.

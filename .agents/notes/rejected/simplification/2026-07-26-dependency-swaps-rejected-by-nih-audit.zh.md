@@ -52,7 +52,7 @@ Status: rejected — 下列每一项替换在证据上都未达到净简化门�
 
 **服务器与 HTTP：**
 
-- **以 `msw` 替换 llm-mock-server**：这个服务器的存在意义就是在线路上制造故障——socket 销毁、SSE（Server-Sent Events）中途断连、停滞、监听前拒绝——服务对象是真实的 HTTP 适配器和子进程；进程内拦截一样都表达不了。设计归 [llm-mock-server README](../../../../packages/test-support/llm-mock-server/README.zh.md) 所有。
+- **以 `msw` 替换 llm-mock-server**：这个服务器的存在意义就是在线路上制造故障——socket 销毁、SSE（Server-Sent Events）中途断连、停滞、监听前拒绝——服务对象是真实的 HTTP 适配器和子进程；进程内拦截一样都表达不了。设计归 [llm-mock-server README](../../../../rsh/Tests/test-support/llm-mock-server/README.zh.md) 所有。
 - **以 `hono`/`sirv` 承担 host/webserver**：核心是基于 disposer 的动态路由注册表（「注册即效果」约定、HMR 反注册）加 index HTML 变换挂点；hono 的路由器只增不减，静态中间件也无法伺服变换后的 index。总共约 244 行，确实很小。
 - **以 `@mozilla/readability`/`iconv-lite` 承担 web-fetch-http**：该提供方返回原始 HTML；字符集处理已经是内置的 `TextDecoder`；MIME 解析约 11 行；重定向跟随是同源安全策略。
 
@@ -69,7 +69,7 @@ Status: rejected — 下列每一项替换在证据上都未达到净简化门�
 - **以 `prebuildify`/`node-gyp-build` 承担 landlock 启动器打包**：不适用——那些工具通过 dlopen 加载 `.node` addon；这个启动器交付的是独立 exec 的静态二进制，而按平台划分的 `optionalDependencies` 恰恰*就是*二进制分发的生态惯例。
 - **以 `@landstrip/landstrip` 替换 Landlock 启动器本身**：未通过安全不变式检验——启动器是一个约 300 行、可完整评审的 C 文件，其二进制逐字节锁定到原生 CI 构建，且早已从一个 Rust 依赖迁移出来；单一维护者的 LGPL Rust 二进制集合有更大的审计面，其发布更难与已审阅源码对应。[Windows ACL 决策](../../implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md)为已交付的 Windows 层级记录了同一否决。
 - **以 `hatch-nodejs-version` 承担 Python 发布版本号**：代码行数大致持平（一个自定义 metadata 钩子换掉那个正则），却反转了「dev 哨兵值绝不决定发布版本」这条记录在案的决策，还把一个单一维护者的构建插件放进发布供应链。
-- **YAML 归一（`js-yaml` 与 `yaml`）**：仓库同时携带两个解析器，`!!js` 标签在 js-yaml 上定义了四次（vendor 收录的 include、app-boot、apps/cli、`scripts/verify-cordis-config.ts`），在 `yaml` 上定义了两次（sdk-telemetry 的 `ScalarTag`、sdk-helper 的可保留注释的 Document 编辑）。方向是被迫的——js-yaml 无法取代 `yaml`（sdk-helper 需要 Document API）——但迁移 js-yaml 各调用点也退休不了这个库（vendor 收录的 include 锁定了它），还会让两个解析器共管一种必须完全一致的方言，违背[个人配置决策](../../archived/feature/2026-07-20-dsh-cli-personal-config.md)刻意的「仅加载副本」对等性。可删除的：约 20–25 行重复标签定义和两条 `@types/js-yaml` 条目。归一的时机是未来某次 include 同步，不是现在。
+- **YAML 归一（`js-yaml` 与 `yaml`）**：仓库同时携带两个解析器，`!!js` 标签在 js-yaml 上定义了四次（vendor 收录的 include、app-boot、rsh/Programs/CLI、`rsh/Scripts/verify-cordis-config.ts`），在 `yaml` 上定义了两次（sdk-telemetry 的 `ScalarTag`、sdk-helper 的可保留注释的 Document 编辑）。方向是被迫的——js-yaml 无法取代 `yaml`（sdk-helper 需要 Document API）——但迁移 js-yaml 各调用点也退休不了这个库（vendor 收录的 include 锁定了它），还会让两个解析器共管一种必须完全一致的方言，违背[个人配置决策](../../archived/feature/2026-07-20-dsh-cli-personal-config.md)刻意的「仅加载副本」对等性。可删除的：约 20–25 行重复标签定义和两条 `@types/js-yaml` 条目。归一的时机是未来某次 include 同步，不是现在。
 
 ## 曾考虑的替代方案
 

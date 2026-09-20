@@ -10,7 +10,7 @@ A delayed scroll sample compares positions from different layouts. While Chat is
 
 ## Decision
 
-[ChatView](../../../../packages/client/ui-chat/src/client/chat/ChatView.tsx) uses the existing observed-top comparison to sample non-reader pinned scroll deliveries synchronously through the same sample operation that clears pending work. This releases layout follow before further growth. Genuine reader movement remains pending until the existing interval or `scrollend`, even within the follow threshold: growth must not erase small gestures before they accumulate into a scroll-away. Immediate pinned samples use scroll metrics, not semantic-row geometry.
+[ChatView](../../../../rsh/Programs/Web/client/ui-chat/src/client/chat/ChatView.tsx) uses the existing observed-top comparison to sample non-reader pinned scroll deliveries synchronously through the same sample operation that clears pending work. This releases layout follow before further growth. Genuine reader movement remains pending until the existing interval or `scrollend`, even within the follow threshold: growth must not erase small gestures before they accumulate into a scroll-away. Immediate pinned samples use scroll metrics, not semantic-row geometry.
 
 ## Alternatives considered
 
@@ -20,4 +20,4 @@ A delayed scroll sample compares positions from different layouts. While Chat is
 
 ## Consequences
 
-Pinned deliveries incur immediate scroll-metric reads. History reading retains its bounded sampling cadence, and explicit return-to-bottom deliveries clear any pending away sample. [Focused tests](../../../../packages/client/ui-chat/tests/chat-view.client.spec.tsx) cover shrink/regrowth before scrollend, observer growth without row measurements, repinning with a pending sample, timer and scrollend sampling, and unmount cancellation. The [keyless browser scenario](../../../../apps/web/tests/chat-scroll-contract.e2e.ts) covers pinned Send, real scroll-away input, streaming, and tool disclosure across the long transcript.
+Pinned deliveries incur immediate scroll-metric reads. History reading retains its bounded sampling cadence, and explicit return-to-bottom deliveries clear any pending away sample. [Focused tests](../../../../rsh/Programs/Web/client/ui-chat/tests/chat-view.client.spec.tsx) cover shrink/regrowth before scrollend, observer growth without row measurements, repinning with a pending sample, timer and scrollend sampling, and unmount cancellation. The [keyless browser scenario](../../../../rsh/Programs/Web/application/tests/chat-scroll-contract.e2e.ts) covers pinned Send, real scroll-away input, streaming, and tool disclosure across the long transcript.

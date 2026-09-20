@@ -30,7 +30,7 @@ Status: implemented
 
 ## client cordis 树与装载链
 
-装载链——两类包（普通包 vs dsh.client 插件）、模块系统/插件治理器之分、host 独家撰写的带修订号 entry 图之上的双阶段 boot、热重载——归 [client 插件装载笔记](2026-07-23-client-plugin-loading-model.zh.md) 所有。本篇赖以立足的事实：浏览器启动与 host 相同的 vendored `@cordisjs/plugin-loader`，由 client 模块系统（`ctx.modules`，`packages/client/modules`）填上其 `internal` 约定；凡带产品行为的单元都是 host 独家撰写的 `__DSH_BOOT__` 图里的 entry——每个生产插件包（含基础设施）都携带 `dsh.client` 声明、以 fetch 到达的 `./client` tsdown 闭包 bundle 供给，`immediately` 行的差别仅在 boot 第一阶段预取，而普通包（react 家族、cordis、尚未升格的库）保持打进壳、已播种、对图不可见；bundle 执行 `window.__ModuleLoader__.load({ id, factory })`，其 `require` 由 lazy CJS 模块表应答（种子词条 + 已登记工厂，首次 require 时物化并记忆化——跨插件值 import 是构建错误，协作走 cordis 服务）；全局样式与 CSS Modules 都内联在其持有插件的 bundle 中，物化时注入为 `<style data-plugin="<id>">`（CSS Modules 还会取得哈希类名；归属标签使重载时移除成为可能）；热重载已在 dev 图落地——webserver 对自己供给的 bundle 做 stat 轮询并广播 `rebuilt` SSE 帧，`client-hmr` 插件每帧换掉一个 fiber。`loader.await()` 与全 ACTIVE 扫描完成后，不依赖框架的内核会调用动态 UI 渲染器的 `ctx.uiRenderer.mount(container)` 一次——此时每个 entry 已创建、每个 fiber 都到达 ACTIVE，FAILED/PENDING 的 fiber 被大声列出；不存在部分可用模式（渐进渲染为后置工作）。
+装载链——两类包（普通包 vs dsh.client 插件）、模块系统/插件治理器之分、host 独家撰写的带修订号 entry 图之上的双阶段 boot、热重载——归 [client 插件装载笔记](2026-07-23-client-plugin-loading-model.zh.md) 所有。本篇赖以立足的事实：浏览器启动与 host 相同的 vendored `@cordisjs/plugin-loader`，由 client 模块系统（`ctx.modules`，`rsh/Programs/Web/client/modules`）填上其 `internal` 约定；凡带产品行为的单元都是 host 独家撰写的 `__DSH_BOOT__` 图里的 entry——每个生产插件包（含基础设施）都携带 `dsh.client` 声明、以 fetch 到达的 `./client` tsdown 闭包 bundle 供给，`immediately` 行的差别仅在 boot 第一阶段预取，而普通包（react 家族、cordis、尚未升格的库）保持打进壳、已播种、对图不可见；bundle 执行 `window.__ModuleLoader__.load({ id, factory })`，其 `require` 由 lazy CJS 模块表应答（种子词条 + 已登记工厂，首次 require 时物化并记忆化——跨插件值 import 是构建错误，协作走 cordis 服务）；全局样式与 CSS Modules 都内联在其持有插件的 bundle 中，物化时注入为 `<style data-plugin="<id>">`（CSS Modules 还会取得哈希类名；归属标签使重载时移除成为可能）；热重载已在 dev 图落地——webserver 对自己供给的 bundle 做 stat 轮询并广播 `rebuilt` SSE 帧，`client-hmr` 插件每帧换掉一个 fiber。`loader.await()` 与全 ACTIVE 扫描完成后，不依赖框架的内核会调用动态 UI 渲染器的 `ctx.uiRenderer.mount(container)` 一次——此时每个 entry 已创建、每个 fiber 都到达 ACTIVE，FAILED/PENDING 的 fiber 被大声列出；不存在部分可用模式（渐进渲染为后置工作）。
 
 类型宇宙在聚合层拆分——`tsconfig.host.json` 是 host program、`tsconfig.client.json` 是 client program，二者由 solution 根 `tsconfig.json` 引用，因为两侧都在相同键（`sessions`、`loader`）上对 cordis `Context` 做声明合并且服务不同；client 包经纯类型子路径（`@deepseek-ai/dsh-session/types` 等）消费协议词汇，host 侧的声明合并不会搭车进入 client program。
 
@@ -38,7 +38,7 @@ Status: implemented
 
 slot 体系有自己的笔记——[slot 体系标准](2026-07-22-slot-type-chain-implementation.zh.md)——本文整体移交给它。此处只留一段定位摘要：ui-renderer 只渲染 `'root'`；插件用单独一次 `register` 调用组合 UI——占用 slot、声明并授权子 slot（`children` spec 对象）、声明 store、注入业务面；组件 props 分四份额自动推导到达（`PropsRuntime<K>` / `PropsRenderSlots<S>` / `PropsStore<H>` / inject），各有唯一真源。`SlotMap` 声明合并仍是类型权威，entry 只携带 owner 份额（「谁注入的，类型归谁」）；每个被渲染的注册项都在 per-entry 错误边界之内。
 
-实现的家：注册表核心与 props 份额类型在 `packages/client/ui-slots`；outlet 渲染器、uSES 桥、应用级安装与根挂载在 `packages/client/ui-renderer`。
+实现的家：注册表核心与 props 份额类型在 `rsh/Programs/Web/client/ui-slots`；outlet 渲染器、uSES 桥、应用级安装与根挂载在 `rsh/Programs/Web/client/ui-renderer`。
 
 ## 服务与 scope 寻址
 
@@ -48,7 +48,7 @@ slot 之外不存在第二种组件注册模型——原视图环与工具环都
 
 **scope 寻址**与 host 侧 agent（智能体）scope 惯例同构：服务是 root 单例，方法不收 sessionId——它们读调用方 ctx 上的 scope 标（`scopeOf(ctx)`）。在会话 scope 内，`ctx.conversation.send('hi', 'queue')` 自动打到该会话；跨会话调用换 ctx 定向（`ctx.sessions.scope(id)!.conversation.send(...)`）；从 root ctx 直接调 scoped 方法即 throw。client 会话 scope 的铸造方式与 host agent scope 相同（no-op 插件 fiber + scope 键 extend），首次观看时惰性建，只有会话被移除且无人观看才拆——仅 host 会话死亡不拆 scope（冻结为只读视窗）。
 
-## 数据对象层（`packages/api/session-controller/src/client/`）
+## 数据对象层（`rsh/Programs/Web/api/session-controller/src/client/`）
 
 帧从这里进、快照从这里出、Conversation assembler 坐在中间——React-free（零 React import，grep 可断言）：
 
@@ -73,9 +73,9 @@ Notifier 微任务合批 ──► ConversationSnapshot 缓存 ──uSES──�
 - **SessionManager**（manager.ts）：实例簇 + 帧总入口 + 会话列表。带 sessionId 的帧只投已存在实例（mux 广播不得把每个会话都实例化）；例外是审批/问答 `requested` 帧——它们不落 history、open 无法回补，故缓冲进 `pendingBuffers`，实例化时回放。
 - **Notifier**（notifier.ts）：两条通知通道，按变更来源取用。`markDirty()`（默认；帧驱动一律用它）按微任务合批——N 次变更、一次通知、一次重渲染；flush 先重建快照缓存再通知。`notifyNow()`（仅用户手势的直接回响）同 tick 重建并通知——受控输入的回响若延到微任务，DOM 会回滚、光标跳尾。帧驱动代码用 notifyNow 会让合批塌回逐帧渲染；禁。
 - **ConversationNodeAssembler**（`runtime/src/client/conversation/`）：Session 拥有的增量引擎在原始事件上运行各自独立注册的 Definition。`match(event)` 无须扫描 Context 即可选出 `(kind, id)`；start/update 构造 Definition state；引擎计算的 Location 携带 Turn/Step 关闭信息；向前查询 Context 时记录依赖，并由后续 prepend 修复；`buildViewNode(target)` 只物化 dirty Context。Chat builder 保留结构顺序和 per-key value identity，`useSession` selector 负责消费隔离，Assistant token 发布则合并到每个 animation frame 一次。[Conversation Node 决策](2026-08-09-client-conversation-node-assembly.zh.md)拥有组装边界，[Tool 展示所有权](../../archived/architecture/2026-08-08-client-tool-presentation-ownership.md)拥有 Tool 递归渲染。
-- **ConnectionController**（位于 `packages/client/connection`）：打开 `$events` Remote 流、通过 for-await 泵入，并在 generation 围栏内指数退避重连（500ms 翻倍至 10s 封顶、抖动、无限重试）；sink 单向注入，Controller 不认识 Session。重连即重建：`onConnected` → 列表刷新 + 各已打开会话 resync。对象层通过 `ctx.remote` 调用生成的命名空间；Web 载体以 HTTP POST 承载 Remote 一元调用，以 API Gateway 的 WebSocket mux 承载逻辑流，Connection 则拥有请求传输与 generation。
+- **ConnectionController**（位于 `rsh/Programs/Web/client/connection`）：打开 `$events` Remote 流、通过 for-await 泵入，并在 generation 围栏内指数退避重连（500ms 翻倍至 10s 封顶、抖动、无限重试）；sink 单向注入，Controller 不认识 Session。重连即重建：`onConnected` → 列表刷新 + 各已打开会话 resync。对象层通过 `ctx.remote` 调用生成的命名空间；Web 载体以 HTTP POST 承载 Remote 一元调用，以 API Gateway 的 WebSocket mux 承载逻辑流，Connection 则拥有请求传输与 generation。
 
-## React 面（`packages/client/ui-renderer`）
+## React 面（`rsh/Programs/Web/client/ui-renderer`）
 
 动态 ui-renderer 插件持有 ctx↔React 适配器、应用级安装、根挂载与标题投影。业务组件通过 slot props 接收绑定后的钩子，不对渲染器做值 import。
 
@@ -85,7 +85,7 @@ Notifier 微任务合批 ──► ConversationSnapshot 缓存 ──uSES──�
 
 ## 目录形态
 
-Client 包位于 `packages/client/*`，`apps/web` 是壳 boot 导出之上的薄 Vite 应用。插件包的浏览器半边在 `src/client/` 下；**一切构建产物落 `lib/`**——node 半边为 `lib/index.js`/`lib/invariant.js`，浏览器 bundle 为 `lib/client.js`（共享 tsdown client 预设两者皆出；无 `dist/` 目录，`exports["./client"]` 指向 `./lib/client.js`）。`ui-slots`、runtime 与 ui-renderer 构成基础设施方向；功能插件通过服务与 slot 协作，不导入展示实现。
+Client 包位于 `rsh/Programs/Web/client/*`，`rsh/Programs/Web/application` 是壳 boot 导出之上的薄 Vite 应用。插件包的浏览器半边在 `src/client/` 下；**一切构建产物落 `lib/`**——node 半边为 `lib/index.js`/`lib/invariant.js`，浏览器 bundle 为 `lib/client.js`（共享 tsdown client 预设两者皆出；无 `dist/` 目录，`exports["./client"]` 指向 `./lib/client.js`）。`ui-slots`、runtime 与 ui-renderer 构成基础设施方向；功能插件通过服务与 slot 协作，不导入展示实现。
 
 多域插件包的 client 半边还按未来包边界再拆——ui-conversation 即样板：
 
@@ -103,7 +103,7 @@ src/client/
   index.ts     public contract surface
 ```
 
-各领域实现文件不 import 兄弟领域；共享面统一经过 `contract/`。`scripts/verify-client-domain-graph.ts` 把守分层（contract=0、domain=1、apply/index=2；import 只准指向不高于自身的层级；兄弟领域依赖会失败）。Tool 展示已经拆为独立 `ui-tool` 包，只通过 ui-conversation 声明的 slot 到达 chat 与 details。
+各领域实现文件不 import 兄弟领域；共享面统一经过 `contract/`。`rsh/Scripts/verify-client-domain-graph.ts` 把守分层（contract=0、domain=1、apply/index=2；import 只准指向不高于自身的层级；兄弟领域依赖会失败）。Tool 展示已经拆为独立 `ui-tool` 包，只通过 ui-conversation 声明的 slot 到达 chat 与 details。
 
 ## 怎么开发
 

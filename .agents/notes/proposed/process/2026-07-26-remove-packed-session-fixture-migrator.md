@@ -12,9 +12,9 @@ Once every such branch is merged, closed, or already canonical, the write comman
 
 ## Proposal
 
-Remove the temporary `scripts/migrate-packed-session-fixtures.ts` CLI and the root `migrate:packed-session-fixtures` package command after a live inventory confirms that no open pull request still needs to convert session-format JSONL. Remove the transitional command links from the testing policy, the ACP snapshot README, and the implemented packed-row Agent Note in the same change; replace the command-specific remediation text in `scripts/session-fixture-layout.snapshot.ts` with command-independent canonical-layout guidance.
+Remove the temporary `rsh/Scripts/migrate-packed-session-fixtures.ts` CLI and the root `migrate:packed-session-fixtures` package command after a live inventory confirms that no open pull request still needs to convert session-format JSONL. Remove the transitional command links from the testing policy, the ACP snapshot README, and the implemented packed-row Agent Note in the same change; replace the command-specific remediation text in `rsh/Scripts/session-fixture-layout.snapshot.ts` with command-independent canonical-layout guidance.
 
-Retain `scripts/session-fixture-layout.ts`, its unit tests, and `scripts/session-fixture-layout.snapshot.ts`. They define and enforce the permanent canonical layout; only the branch-facing writer is temporary.
+Retain `rsh/Scripts/session-fixture-layout.ts`, its unit tests, and `rsh/Scripts/session-fixture-layout.snapshot.ts`. They define and enforce the permanent canonical layout; only the branch-facing writer is temporary.
 
 Before removing the command, each affected branch merges the current `master`, runs the migrator once, commits the resulting fixture-only rewrite separately, and verifies that the repository-wide snapshot layout check passes. Closed or superseded branches require no migration.
 

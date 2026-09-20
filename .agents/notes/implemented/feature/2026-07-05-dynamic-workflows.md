@@ -10,7 +10,7 @@ The harness can delegate ONE task to ONE child (`dsh-tool-subagent`), but work t
 
 ## Decision
 
-A workflow capability family at `packages/workflow/` in the bash seam shape (Service Definition / Service Provider / Consumer), plus the structured-output foundation it needs on the subagent seam.
+A workflow capability family at `rsh/Engine/workflow/` in the bash seam shape (Service Definition / Service Provider / Consumer), plus the structured-output foundation it needs on the subagent seam.
 
 ### The script contract (Claude Code-compatible)
 
@@ -20,7 +20,7 @@ One deliberate strictness DIVERGENCE from CC: hook misuse — unknown or deferre
 
 ### The seam (dsh-workflow)
 
-`ctx.workflowEngine` is an abstract `WorkflowEngine` in the bash shape — one engine per context, no named-provider registry (engines are deployment swaps, not co-residents). `start(request)` throws synchronously for a script that cannot begin; a returned `WorkflowRun`'s `result` NEVER rejects (failures resolve as `stopReason: 'error' | 'cancelled'`). The `workflow/*` events are observe-only emits carrying DATA SNAPSHOTS (id + meta; `workflow/end` omits the result value), per-listener contained, mirroring `subagent/start`/`subagent/end` — control stays with the run's holder. Vocabulary details: [subsystems/workflow.md](../../../../docs/subsystems/workflow.md).
+`ctx.workflowEngine` is an abstract `WorkflowEngine` in the bash shape — one engine per context, no named-provider registry (engines are deployment swaps, not co-residents). `start(request)` throws synchronously for a script that cannot begin; a returned `WorkflowRun`'s `result` NEVER rejects (failures resolve as `stopReason: 'error' | 'cancelled'`). The `workflow/*` events are observe-only emits carrying DATA SNAPSHOTS (id + meta; `workflow/end` omits the result value), per-listener contained, mirroring `subagent/start`/`subagent/end` — control stays with the run's holder. Vocabulary details: [subsystems/workflow.md](../../../../rsh/Docs/subsystems/workflow.md).
 
 ### The engine (dsh-workflow-worker-thread): one worker thread per run
 
@@ -40,7 +40,7 @@ The engine exposes an in-process `MessageChannel` test path because main-process
 
 A `workflow` tool mirroring `dsh-tool-subagent`'s synchronous shape: start, await, `try/finally` dispose, abort-bridge `exec.signal`, non-`completed` → `isError`. Render intent: a `generic` card titled by the call's `meta.name` parameter (presentation is a pure function of args). The tool description IS the model-facing authoring spec. The usage policy ships with the tool as its own `tool:<toolName>` prompt section (explicit-ask-only guidance — tool guidance lives in tool plugins, never in the deployment persona); the harness has no ultracode-style effort gate.
 
-For a top-level tool execution, the same consumer also writes the run and actual member lifecycle into the calling parent Session as four log-only `tool-workflow/*` events. The recording path observes rather than controls execution: its first append failure disables later writes for that run and leaves a legal prefix without changing the tool result. [`ui-workflow-run`](../../../../packages/client/ui-workflow-run/README.md) rebuilds those facts through the Conversation Node engine as a separate keyed Chat row; the existing generic tool row remains its own presentation owner. The detailed persistence, replay, disclosure, and live-navigation decision lives in [durable workflow runs in Chat](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md).
+For a top-level tool execution, the same consumer also writes the run and actual member lifecycle into the calling parent Session as four log-only `tool-workflow/*` events. The recording path observes rather than controls execution: its first append failure disables later writes for that run and leaves a legal prefix without changing the tool result. [`ui-workflow-run`](../../../../rsh/Programs/Web/client/ui-workflow-run/README.md) rebuilds those facts through the Conversation Node engine as a separate keyed Chat row; the existing generic tool row remains its own presentation owner. The detailed persistence, replay, disclosure, and live-navigation decision lives in [durable workflow runs in Chat](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md).
 
 ### The foundation: structured output on the subagent seam
 

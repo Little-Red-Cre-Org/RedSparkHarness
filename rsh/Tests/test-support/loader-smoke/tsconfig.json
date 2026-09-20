@@ -1,0 +1,27 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../Engine/core/session"
+    },
+    {
+      "path": "../../../Core/util/http-proxy"
+    }
+  ]
+}

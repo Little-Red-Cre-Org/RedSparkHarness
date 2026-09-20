@@ -28,7 +28,7 @@ Status: implemented
 
 | 普通 `git merge` 期间的失败 | 可观察状态 | 恢复 |
 |---|---|---|
-| 全新安装无法探测驱动或安装 Lefthook | 不会发布新的驱动或钩子路径配置；任何新增集成都会回滚到原有的钩子查找方式。 | 恢复依赖并重新运行 `node scripts/install-lefthook.mjs`。 |
+| 全新安装无法探测驱动或安装 Lefthook | 不会发布新的驱动或钩子路径配置；任何新增集成都会回滚到原有的钩子查找方式。 | 恢复依赖并重新运行 `node rsh/Scripts/install-lefthook.mjs`。 |
 | 安装后 Node、tsx 或驱动入口点变得不可用 | 合并停止，伴随文件状态为 `UU`；索引阶段 1/2/3 保留，worktree 中的伴随文件包含 Git 的文本结果，`MERGE_HEAD` 存在，且不创建提交。 | 恢复依赖并运行 `pnpm run resolve-translation-pairing-conflicts`，或运行 `git merge --abort`。 |
 | 了解仓库状态的驱动拒绝记录 | 合并停止，伴随文件保持未解决状态且不创建提交；驱动会打印修复配对文档和运行显式冲突解决命令的路径。 | 修复配对文档冲突或记录，然后运行打印出的冲突解决工作流，或中止合并。 |
 | 驱动进程以大于 128 的状态码崩溃 | Git 中止合并策略，既不写入 `MERGE_HEAD`，也不产生未合并的索引阶段。 | 修复运行时并重新执行合并。 |

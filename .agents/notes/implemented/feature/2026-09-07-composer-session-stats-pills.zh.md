@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决定
 
-`StatsPills`（packages/client/ui-chat/src/client/chat/StatsPills.tsx）在同一 `conversation.composer.dock` 插槽上取代 `StatsLine`；落选变体已删除，其共享工具函数（`deriveStats`、`formatDuration`、`cacheHitPercent`、`billedInputTokens`）并入新模块，废弃的 `stats.llm`、`stats.toolCall`、`stats.ttftAverage`、`stats.tokensPerSecond`、`stats.tokens` 文案键一并移除。
+`StatsPills`（rsh/Programs/Web/client/ui-chat/src/client/chat/StatsPills.tsx）在同一 `conversation.composer.dock` 插槽上取代 `StatsLine`；落选变体已删除，其共享工具函数（`deriveStats`、`formatDuration`、`cacheHitPercent`、`billedInputTokens`）并入新模块，废弃的 `stats.llm`、`stats.toolCall`、`stats.ttftAverage`、`stats.tokensPerSecond`、`stats.tokens` 文案键一并移除。
 
 - **两个图标 pill、两个弹层。** 仪表盘 pill（新增 `IconGaugeOutline16`，因下开口圆弧视觉偏高而把表盘中心光学下移到 y=8.75）展示 `{turns} 轮 {steps} 步` 加输出 TPS，点击打开「会话统计」弹层（模型用时、工具调用用时、首 token 平均、输出速度）；日志里没有任何计时数字时弹层会是空的，此时该 pill 渲染为静态读数而非按钮。数据库 pill（`IconDatabaseOutline16`）展示紧凑计费总量加缓存命中率，点击打开「Token 用量」弹层（缓存命中、未缓存输入、缓存读取、输出，以及非零时的缓存写入——精确计数）。两个弹层共用为这两处消费者抽出的 `stat-dialog` 模块（portal 面板、锚定定位、点击外部关闭、可选的外部持有开合状态）；pill 行持有唯一的互斥开合槽位，打开任一弹层即关闭另一个，且每个按钮携带显式 `aria-label`，用 ` · ` 分隔 aria-hidden 分隔符在视觉上连接的两段文本。[引导起始页与统计 pill 的细化](2026-09-10-guide-start-page-and-stat-pill-refinements.zh.md)负责缓存写入为零时省略该行的规则。
 - **数据来源架构不变。** 计数与用时优先读取持久的 `sessionStats` 投影，窗口折叠仅作无该单元装配时的回退（[全会话计数](../../archived/bug-fix/2026-08-12-full-session-turn-step-counts.md)）；token 数字只走 `tokenUsage`，投影缺席时直接不渲染用量 pill，而非展示窗口推算的计费。缓存写入仍计入计费总量与缓存命中分母（[投影决定](../architecture/2026-07-29-projected-token-usage-and-request-context.zh.md)）。上下文占用仍在输入框旁的 ContextMeter 圆环上，`StatsLine` 时代它就在那里——统计条从未承载过它。

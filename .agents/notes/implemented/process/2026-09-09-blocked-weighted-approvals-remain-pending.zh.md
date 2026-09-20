@@ -18,7 +18,7 @@ Status: implemented
 
 ## 验证
 
-[批准策略测试](../../../../.github/review-ownership/check-approval.test.mjs)锁定已达到阈值但仍有 blocker 的场景，以及准确发布的 `pending` payload。[工作流测试](../../../../scripts/ci-workflow.spec.ts)锁定独立的 publisher job 名称。
+[批准策略测试](../../../../.github/review-ownership/check-approval.test.mjs)锁定已达到阈值但仍有 blocker 的场景，以及准确发布的 `pending` payload。[工作流测试](../../../../rsh/Scripts/ci-workflow.spec.ts)锁定独立的 publisher job 名称。
 
 ## 考虑过的替代方案
 

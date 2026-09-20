@@ -30,11 +30,11 @@ Fork 与 Dependabot 拉取请求永远不会获得仓库密钥。它们的原生
 
 ### 必需目标
 
-拉取请求的 `python-runtime` job 针对 Linux x64 与 Windows x64 调用可复用构建器；master 推送根据[仅 master 平台策略](../process/2026-09-06-master-only-platform-ci.zh.md)选择 Linux arm64 与两种 macOS 架构。其聚合结果仍是 `all checks passed` 的依赖项，因此任一原生载体失败、取消或缺失都会阻止必需判定通过。[sdk-runtime README](../../../../python/sdk-runtime/README.zh.md) 负责 Windows 目标及其 PowerShell 专属极简快照。
+拉取请求的 `python-runtime` job 针对 Linux x64 与 Windows x64 调用可复用构建器；master 推送根据[仅 master 平台策略](../process/2026-09-06-master-only-platform-ci.zh.md)选择 Linux arm64 与两种 macOS 架构。其聚合结果仍是 `all checks passed` 的依赖项，因此任一原生载体失败、取消或缺失都会阻止必需判定通过。[sdk-runtime README](../../../../rsh/Programs/SDK/python/sdk-runtime/README.zh.md) 负责 Windows 目标及其 PowerShell 专属极简快照。
 
 ## Existing decisions and supersession
 
-本决策取代已归档的[必需 Python 运行时拉取请求验证](../../archived/testing/2026-08-12-required-python-runtime-pull-request-ci.md)中的单目标拓扑，同时保留真实可执行文件、快照、wheel 包与干净安装必须在各选定目标的检查中相遇的要求。[docs/architecture.md](../../../../docs/architecture.zh.md) 负责启动应用与自定义接口；[单文件 Python SDK 运行时 distribution](../architecture/2026-07-10-single-file-executable-sdk-runtime-distribution.zh.md)继续负责 SEA 打包、原生 sidecar、wheel 包标签与发布产物。
+本决策取代已归档的[必需 Python 运行时拉取请求验证](../../archived/testing/2026-08-12-required-python-runtime-pull-request-ci.md)中的单目标拓扑，同时保留真实可执行文件、快照、wheel 包与干净安装必须在各选定目标的检查中相遇的要求。[rsh/Docs/architecture.md](../../../../rsh/Docs/architecture.zh.md) 负责启动应用与自定义接口；[单文件 Python SDK 运行时 distribution](../architecture/2026-07-10-single-file-executable-sdk-runtime-distribution.zh.md)继续负责 SEA 打包、原生 sidecar、wheel 包标签与发布产物。
 
 ## Alternatives considered
 

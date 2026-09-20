@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "experimental-unshipped",
+  "repository": "https://github.com/git-for-windows/msys2-runtime",
+  "revision": "fb42d71358dd896ab324c52970f7d03f9ab0dfe5",
+  "archive": "https://codeload.github.com/git-for-windows/msys2-runtime/tar.gz/fb42d71358dd896ab324c52970f7d03f9ab0dfe5",
+  "archiveSha256": "d57999b4ab20f4cde5a42d64d82324ecd4c9498f9cb672d1b0a5f5bec194d6c6",
+  "patch": "patches/restricted-ipc.patch",
+  "patchSha256": "6021c0c5b6f9bf072d869456eae2cfb4875e2a19d898e4f8f701ab9620825799",
+  "distribution": {
+    "version": "2.54.0.windows.1",
+    "archive": "https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/PortableGit-2.54.0-64-bit.7z.exe",
+    "archiveSha256": "bea006a6cc69673f27b1647e84ab3a68e912fbc175ab6320c5987e012897f311",
+    "originalRuntimeSha256": "13f0b0dc94588766ecfa1867f1a00061508ba1dc62f5b8e858ac59f01e358aa0"
+  }
+}

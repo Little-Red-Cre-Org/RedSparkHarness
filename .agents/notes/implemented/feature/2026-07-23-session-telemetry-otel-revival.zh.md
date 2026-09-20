@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-`packages/session/`（原 `telemetry/`）以 SDK 立场复活这两个经过评审的包——harness 提供能力，部署方配置上报去向并对导出内容负责：
+`rsh/Engine/session/`（原 `telemetry/`）以 SDK 立场复活这两个经过评审的包——harness 提供能力，部署方配置上报去向并对导出内容负责：
 
 - **`@deepseek-ai/dsh-session-telemetry`** —— seam 本体。`SessionTelemetrySink`（`emit`/`flush?`/`shutdown`）、服务注册形态的 `SessionTelemetryBackend` 与 `SessionTelemetryCoordinator` 共同拥有生命周期本地捕获：每个新的 Session 对象从 `firstLiveSeq` 之前开始，随后逐 append firehose 以零 I/O 深拷贝、脱敏并交接每个事件；重新收养同一对象时从模块作用域游标之后继续。无缓冲按需捕获使用同样的一事件一记录映射，直到可选的包含式边界。Ledger 身份包含 `session.id`、`session.format_version` 与 `event.seq`；实时捕获还会转发 `agent/error`，并创建 dispose（资源释放）时的 `shutdown` 记录。
 - **`session-telemetry/record` waterfall（瀑布式事件）** —— 相对分支版本的增量，也是该 seam 的脱敏扩展点。每条记录抵达任何后端前必经此处；seam 自身不带任何规则——最内层 `next()` 原样透传，部署方以监听器挂载自己的规则（通过变换 `next()` 的返回值堆叠），抛异常的规则将该记录 fail-closed 扣下。脱敏只作用于导出副本；canonical log 永不改写。
@@ -34,4 +34,4 @@ Status: implemented
 
 ## 后果
 
-部署方配置 OTLP endpoint 并选择 `FEEDBACK_ONLY`，即可在新的显式反馈时释放完整权威日志前缀。`DISABLED` 是插件默认值（[`dsh-session-telemetry-otel` README](../../../../packages/session/session-telemetry-otel/README.zh.md)），且不构造上报流水线；删除配置项是静默退出方式，而禁用模式保留本地反馈警告。SDK 定时刷新和关闭只排空已授权批次，不捕获后续记录。未挂载规则的部署会导出每条已捕获事件的正文，包括紧凑 assistant stream 以及文件内容或命令输出中内嵌的凭据，因此跨信任边界的部署必须挂载 `session-telemetry/record` 监听器。脱敏后的正文可能与权威日志字节不同；日志仍是真源。丢失交接游标可能使后续已授权捕获产生重复，崩溃持久性则在上述 outbox 决定重新审议前继续不在范围内。
+部署方配置 OTLP endpoint 并选择 `FEEDBACK_ONLY`，即可在新的显式反馈时释放完整权威日志前缀。`DISABLED` 是插件默认值（[`dsh-session-telemetry-otel` README](../../../../rsh/Engine/session/session-telemetry-otel/README.zh.md)），且不构造上报流水线；删除配置项是静默退出方式，而禁用模式保留本地反馈警告。SDK 定时刷新和关闭只排空已授权批次，不捕获后续记录。未挂载规则的部署会导出每条已捕获事件的正文，包括紧凑 assistant stream 以及文件内容或命令输出中内嵌的凭据，因此跨信任边界的部署必须挂载 `session-telemetry/record` 监听器。脱敏后的正文可能与权威日志字节不同；日志仍是真源。丢失交接游标可能使后续已授权捕获产生重复，崩溃持久性则在上述 outbox 决定重新审议前继续不在范围内。

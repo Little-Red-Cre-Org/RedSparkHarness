@@ -6,7 +6,7 @@ Status: proposed
 
 ## 问题
 
-host 侧唯一的持久化面是 session 事件日志（`packages/session/session-persistence`：仅追加、一 session 一文件）。凡是"不属于某个 session"的信息就没有落盘处，存在两个已交付需求：
+host 侧唯一的持久化面是 session 事件日志（`rsh/Engine/session/session-persistence`：仅追加、一 session 一文件）。凡是"不属于某个 session"的信息就没有落盘处，存在两个已交付需求：
 
 - **workspace 实体**。GUI 要把 workspace 做成真实对象：路径、标题、关联 session 清单。归属关系由 workspace 持有——"哪些 session 属于这个 workspace"不是任何单个 session 自己的事实，塞进 session log 语义不成立。在本设计之前，workspace 只是 sidebar 上按 cwd 分组的视觉概念，没有实体。
 - **session 动态元信息**（可预见的第二个消费方）。冷会话列表只读日志首行 header（创建时的不可变快照），title、结束状态这类随会话推进变化的信息拿不到；补齐方向是 sidecar 元数据表——正是一张按 key 高频点更新的 KV 表。
@@ -17,29 +17,29 @@ host 侧唯一的持久化面是 session 事件日志（`packages/session/sessio
 
 ## 方案
 
-新建 `packages/storage/` 组——`ctx.storage` 存储枢纽（后端注册面 + 数据形式挂载面）、两个后端、domain 领域数据形式——及 workspace 消费方包；给 `SessionPersistence` 扩删除原语。
+新建 `rsh/Core/storage/` 组——`ctx.storage` 存储枢纽（后端注册面 + 数据形式挂载面）、两个后端、domain 领域数据形式——及 workspace 消费方包；给 `SessionPersistence` 扩删除原语。
 
 | 包 | 路径 | ctx 面 | 本期 |
 | --- | --- | --- | --- |
-| `@deepseek-ai/dsh-storage` | `packages/storage/storage/` | `ctx.storage`（枢纽） | ✓ |
-| `@deepseek-ai/dsh-storage-json` | `packages/storage/storage-json/` | 注册后端 `json` | ✓ |
-| `@deepseek-ai/dsh-storage-sqlite` | `packages/storage/storage-sqlite/` | 注册后端 `sqlite` | ✓ |
-| `@deepseek-ai/dsh-storage-domain` | `packages/storage/storage-domain/` | 挂载 `ctx.storage.domain` | ✓ |
-| `@deepseek-ai/dsh-workspace` | `packages/workspace/workspace/` | `ctx.workspaceRegistry` | ✓ |
-| `SessionPersistence.delete` 扩面 + 级联删编排 | `packages/session/*` | 既有 seam 新方法 | ✗ future work（本期不动 session 侧） |
+| `@deepseek-ai/dsh-storage` | `rsh/Core/storage/storage/` | `ctx.storage`（枢纽） | ✓ |
+| `@deepseek-ai/dsh-storage-json` | `rsh/Core/storage/storage-json/` | 注册后端 `json` | ✓ |
+| `@deepseek-ai/dsh-storage-sqlite` | `rsh/Core/storage/storage-sqlite/` | 注册后端 `sqlite` | ✓ |
+| `@deepseek-ai/dsh-storage-domain` | `rsh/Core/storage/storage-domain/` | 挂载 `ctx.storage.domain` | ✓ |
+| `@deepseek-ai/dsh-workspace` | `rsh/Modules/Official/workspace/workspace/` | `ctx.workspaceRegistry` | ✓ |
+| `SessionPersistence.delete` 扩面 + 级联删编排 | `rsh/Engine/session/*` | 既有 seam 新方法 | ✗ future work（本期不动 session 侧） |
 | `workspace.*` / `session.delete` RPC、GUI 接线、boot 组装 | — | — | ✗ 下期 |
 
-（workspace 放独立组不放 `packages/host/`：host 组命名规则要求 `dsh-host-*` 前缀，而包名定为 `dsh-workspace`；且 workspace 实体是领域概念，不绑定 host 装配层。与既有 `agent-instructions` 包无关——那是 AGENTS.md 指令加载器。）
+（workspace 放独立组不放 `rsh/Programs/Web/host/`：host 组命名规则要求 `dsh-host-*` 前缀，而包名定为 `dsh-workspace`；且 workspace 实体是领域概念，不绑定 host 装配层。与既有 `agent-instructions` 包无关——那是 AGENTS.md 指令加载器。）
 
 依赖方向：`dsh-workspace` → `dsh-domain` → `dsh-storage` ← 两后端。`dsh-workspace` 另依赖 `ctx.sessionPersistence` 的只读面（attach 的 cwd 校验读 session header；服务缺席时 attach 直接拒绝——无法校验即不写账）。session 删除相关的 `ctx.sessions` 运行中检查随级联删一并归入 future work。
 
 ### `dsh-storage`：存储枢纽
 
-纯注册枢纽，自身不做 IO，无 Config。`Storage` 服务挂 `ctx.storage`，两个面：`backend`（`BackendRegistry`：`register(name, backend)` 返回 disposer、重名 throw；`get(name)` 未知名 throw `backend-not-found`）与数据形式挂载（`mount(form, facility)` 配 merge-extensible 的 `StorageForms` map，`dsh-domain` merge 进 `domain` 键；未挂载访问 throw `form-not-mounted`）。签名正文见 `packages/storage/storage/src/index.ts` 与 `src/registry.ts`。
+纯注册枢纽，自身不做 IO，无 Config。`Storage` 服务挂 `ctx.storage`，两个面：`backend`（`BackendRegistry`：`register(name, backend)` 返回 disposer、重名 throw；`get(name)` 未知名 throw `backend-not-found`）与数据形式挂载（`mount(form, facility)` 配 merge-extensible 的 `StorageForms` map，`dsh-domain` merge 进 `domain` 键；未挂载访问 throw `form-not-mounted`）。签名正文见 `rsh/Core/storage/storage/src/index.ts` 与 `src/registry.ts`。
 
 **多后端同时挂载**；域→后端的选择是 `dsh-domain` 的配置（见下），不是全局二选一。disposer 语义 = 从表中摘名；后端自身的 close 由后端包的 effect 闭包负责，顺序先摘名后 close。
 
-一个后端是一个**介质 owner**（一棵文件树 root / 一个 db 文件），通过**数据形状 facet** 暴露原语——本期只有 `kv`；session 迁移期加 `log`（见迁移节）。facet 是可选成员，缺席即该后端不支持该形状，解析时 fail loud。`kv` facet 的原语面：`open(descriptor)`（descriptor = 名字/版本/表名清单/有无 global，名字与表名限 `^[a-z][a-z0-9_]*$` 兼作文件名与 SQL 表名段）返回 unit，unit 提供 `loadAll` / `putRecord` / `deleteRecord`（缺 key 为 no-op）/ `setGlobal` / `close`（幂等）；值对后端是不透明 JSON。规范正文（含逐方法 JSDoc）在 `packages/storage/storage/src/backend.ts`。
+一个后端是一个**介质 owner**（一棵文件树 root / 一个 db 文件），通过**数据形状 facet** 暴露原语——本期只有 `kv`；session 迁移期加 `log`（见迁移节）。facet 是可选成员，缺席即该后端不支持该形状，解析时 fail loud。`kv` facet 的原语面：`open(descriptor)`（descriptor = 名字/版本/表名清单/有无 global，名字与表名限 `^[a-z][a-z0-9_]*$` 兼作文件名与 SQL 表名段）返回 unit，unit 提供 `loadAll` / `putRecord` / `deleteRecord`（缺 key 为 no-op）/ `setGlobal` / `close`（幂等）；值对后端是不透明 JSON。规范正文（含逐方法 JSDoc）在 `rsh/Core/storage/storage/src/backend.ts`。
 
 后端约定（共享约定测试逐条断言，两后端同套件）：
 
@@ -51,7 +51,7 @@ host 侧唯一的持久化面是 session 事件日志（`packages/session/sessio
 6. 任意字符串 key / 任意 JSON 值安全（key 不进文件路径，结构性质）。
 7. `close` 幂等；close 后任何操作 → `StorageError('closed')`。
 
-错误词汇是带 code 判别的 `StorageError`，码表：`backend-not-found` / `form-not-mounted` / `duplicate-backend` / `duplicate-mount` / `version-mismatch` / `malformed-medium` / `closed`（`packages/storage/storage/src/error.ts`）。
+错误词汇是带 code 判别的 `StorageError`，码表：`backend-not-found` / `form-not-mounted` / `duplicate-backend` / `duplicate-mount` / `version-mismatch` / `malformed-medium` / `closed`（`rsh/Core/storage/storage/src/error.ts`）。
 
 ### `dsh-storage-json`
 
@@ -159,7 +159,7 @@ export interface KvTable<K extends string, V> {
 - **记录是纯数据**：可直接 JSON 序列化的不可变 POJO；`get`/`entries` 返回值不得原地改（TypeScript readonly 投影，不做运行时冻结）。带行为的领域对象属于消费方包。
 - **写串行**：域内一条 promise 链，`put`/`delete`/`update`/`global.set` 全排队；`update` 的 fn 在链上执行，并发不交错。不做 active-record（取出可变对象自动落盘——落盘时机不可控，与整域原子覆写冲突）。
 - **版本 fail loud**：盘上版本与 spec 不符直接报错，不迁移不重建（数据不可再生，pre-release 拒绝旧格式）。
-- **变更事件**：每次写落盘 resolve 后 emit `domain/changed`（`@mode emit`），逐条发、不带旧值（对齐仓库"新快照 + 操作判别"惯例，范本 `goal/changed`）；payload `DomainChanged` 是 put/deleted 判别联合——域名 + 表名 + key（global 变更两者为 `''`）+ operation，put 支带新快照 value、deleted 支无 value（`packages/storage/storage-domain/src/events.ts`）。此为下期 RPC 推帧的事件源。错误词汇 `DomainError`，码表：`already-open` / `facet-unsupported` / `invalid-record`（带 `{ table, key }`）/ `missing-key` / `closed`。
+- **变更事件**：每次写落盘 resolve 后 emit `domain/changed`（`@mode emit`），逐条发、不带旧值（对齐仓库"新快照 + 操作判别"惯例，范本 `goal/changed`）；payload `DomainChanged` 是 put/deleted 判别联合——域名 + 表名 + key（global 变更两者为 `''`）+ operation，put 支带新快照 value、deleted 支无 value（`rsh/Core/storage/storage-domain/src/events.ts`）。此为下期 RPC 推帧的事件源。错误词汇 `DomainError`，码表：`already-open` / `facet-unsupported` / `invalid-record`（带 `{ table, key }`）/ `missing-key` / `closed`。
 
 ### Future work：session 侧删除（设计定案，本期不实施）
 

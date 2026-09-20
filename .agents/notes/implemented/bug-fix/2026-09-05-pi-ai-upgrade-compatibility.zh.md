@@ -22,4 +22,4 @@ pi-ai 适配器显式分类上游兼容字段，并且只持久化后续请求�
 
 ## Consequences
 
-编译期覆盖保留显式字段分类。[兼容性测试](../../../../packages/llm/llm-pi-ai/tests/compat-upgrade.spec.ts) 覆盖 schema 接受、无效值、协议适用范围及物化，且不改变默认值。[回放转换测试](../../../../packages/llm/llm-pi-ai/tests/convert.spec.ts) 覆盖可选 effort 的保留。混合协议目录测试使用已安装的 OpenCode 目录。提供方行为仍由上游拥有；真实提供方验证与无需密钥的适配器测试分开。
+编译期覆盖保留显式字段分类。[兼容性测试](../../../../rsh/Engine/llm/llm-pi-ai/tests/compat-upgrade.spec.ts) 覆盖 schema 接受、无效值、协议适用范围及物化，且不改变默认值。[回放转换测试](../../../../rsh/Engine/llm/llm-pi-ai/tests/convert.spec.ts) 覆盖可选 effort 的保留。混合协议目录测试使用已安装的 OpenCode 目录。提供方行为仍由上游拥有；真实提供方验证与无需密钥的适配器测试分开。

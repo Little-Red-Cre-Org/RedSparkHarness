@@ -18,7 +18,7 @@ The redirect is a step right after `actions/checkout` that writes `NODE_COMPILE_
 
 - VM probe: `NODE_COMPILE_CACHE=/data_local/ci/compile-cache-probe node -e 'require("node:fs")'` wrote a `v22.23.2-x64-*` cache subdirectory on the data disk (location switch effective).
 - VM probe (bwrap): with `NODE_COMPILE_CACHE` set to a path the bwrap profile does not grant, `node` ran normally (exit 0) — cache write failure is tolerated.
-- `scripts/ci-workflow.spec.ts` asserts every Linux lane injects `NODE_COMPILE_CACHE=${{ runner.temp }}/node-compile-cache` (a `$GITHUB_ENV` `KEY=VALUE` line) into `$GITHUB_ENV` before `pnpm/action-setup`; the position assertion fails if the injection moves after the first pnpm call.
+- `rsh/Scripts/ci-workflow.spec.ts` asserts every Linux lane injects `NODE_COMPILE_CACHE=${{ runner.temp }}/node-compile-cache` (a `$GITHUB_ENV` `KEY=VALUE` line) into `$GITHUB_ENV` before `pnpm/action-setup`; the position assertion fails if the injection moves after the first pnpm call.
 - CI lanes: the three required Linux jobs (hosted by default, self-hosted `vm-backup` under `DSH_CI_FAILOVER_LINUX`) run the full suite under the new env; a regression in cache handling would surface as lane failure.
 
 ## Alternatives considered

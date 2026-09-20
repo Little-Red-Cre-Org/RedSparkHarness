@@ -10,11 +10,11 @@ Users need to inspect referenced files and skill instructions while composing a 
 
 ## Decision
 
-The [input-trigger source](../../../../packages/client/ui-input-trigger/README.md) owns optional reference activation. The editor routes atomic references by their source identity and editable tokens through the current source lexicon. File and skill sources open the existing right Sidebar file resource in the composing Session. Skill discovery retains the winning provider's optional instruction-file path, avoiding body loads and guesses based on skill names or directory conventions.
+The [input-trigger source](../../../../rsh/Programs/Web/client/ui-input-trigger/README.md) owns optional reference activation. The editor routes atomic references by their source identity and editable tokens through the current source lexicon. File and skill sources open the existing right Sidebar file resource in the composing Session. Skill discovery retains the winning provider's optional instruction-file path, avoiding body loads and guesses based on skill names or directory conventions.
 
-The [composer](../../../../packages/client/ui-conversation/README.md) shares reference hover styles while preserving atomic file chips and editable `/name` text. Clicking does not serialize or submit the draft. Invalid chips, selection gestures, and unavailable source targets retain editor handling; virtual skills remain invocable without a file preview.
+The [composer](../../../../rsh/Programs/Web/client/ui-conversation/README.md) shares reference hover styles while preserving atomic file chips and editable `/name` text. Clicking does not serialize or submit the draft. Invalid chips, selection gestures, and unavailable source targets retain editor handling; virtual skills remain invocable without a file preview.
 
-Sent message bubbles retain their logged skill-invocation evidence for decoration. The [Chat target](../../../../packages/client/ui-chat/README.md) opens file paths in the viewed Session and routes loaded skill names through that Session's source. The shared user-text primitive renders these references as buttons with the existing prose file-link hover and focus style; it leaves session, directory, and command references inert.
+Sent message bubbles retain their logged skill-invocation evidence for decoration. The [Chat target](../../../../rsh/Programs/Web/client/ui-chat/README.md) opens file paths in the viewed Session and routes loaded skill names through that Session's source. The shared user-text primitive renders these references as buttons with the existing prose file-link hover and focus style; it leaves session, directory, and command references inert.
 
 ## Alternatives considered
 

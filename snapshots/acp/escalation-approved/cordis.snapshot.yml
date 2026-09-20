@@ -45,7 +45,7 @@
 
 - insert:
     - id: snapshot-shell-path
-      name: ../../../scripts/snapshot-shell-path.ts
+      name: ../../../rsh/Scripts/snapshot-shell-path.ts
       config:
         command: "printf 'escalated\\n' > /tmp/dsh-escalated.txt && cat /tmp/dsh-escalated.txt && rm /tmp/dsh-escalated.txt"
         recordedPath: /tmp/dsh-escalated.txt

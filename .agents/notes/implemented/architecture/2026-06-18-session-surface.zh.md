@@ -21,7 +21,7 @@ surface 元数据仅属于四种 surface 事件类型（`system/message`、`user
 
 ### SurfaceOp：两种操作
 
-[与源码同步的 `SurfaceOp` 参考](../../../../docs/subsystems/session.zh.md#surface-types)定义了精确联合类型。替换对象仅包含 `op`、`startSeq` 和 `endSeq`；端点使用 `SessionSeq` 品牌。
+[与源码同步的 `SurfaceOp` 参考](../../../../rsh/Docs/subsystems/session.zh.md#surface-types)定义了精确联合类型。替换对象仅包含 `op`、`startSeq` 和 `endSeq`；端点使用 `SessionSeq` 品牌。
 
 1. **Append**：在尾部追加新事件的 seq。`system/message`、`user/message`、`assistant/message`、`tool/result` 使用此操作。agent loop（智能体循环）在所有此类追加上传入 `surfaceOp: 'append'`，并在适用时记录 `sourceEventSeqs`：`tool/result` 记录其 `tool/call` 来源，`assistant/message` 则直接拥有其嵌入式 stream。
 
@@ -37,7 +37,7 @@ surface 元数据仅属于四种 surface 事件类型（`system/message`、`user
 
 ### 持久化
 
-这些字段作为顶层 JSON 属性序列化。JSONL 无需单独列映射即可保留位置与来源。[V3 规范信封决策](2026-09-06-v3-canonical-session-envelopes.zh.md)负责精确替换键与严格准入依据；[V2 到 V3 规范](../../../../packages/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)负责历史转换。本文继续负责有序投影的所有权与替换依据。
+这些字段作为顶层 JSON 属性序列化。JSONL 无需单独列映射即可保留位置与来源。[V3 规范信封决策](2026-09-06-v3-canonical-session-envelopes.zh.md)负责精确替换键与严格准入依据；[V2 到 V3 规范](../../../../rsh/Engine/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)负责历史转换。本文继续负责有序投影的所有权与替换依据。
 
 ### 崩溃恢复
 
@@ -47,7 +47,7 @@ surface 元数据仅属于四种 surface 事件类型（`system/message`、`user
 
 `Session` 在始终启用的 seed/append 边界校验 `sourceEventSeqs` 与 `surfaceOp`：source list 必须非空、唯一、更早且已知；`assistant/message` 不携带 source list；replacement endpoint 必须存在于 surface 顺序中；`sourceEventSeqs` 必须覆盖每个被遮蔽的节点。这些是单记录接纳与存储投影规则，不是由可选 invariant service 提供的规则。
 
-每个可进入 surface 的事件都必须携带 `surfaceOp`，否则它将从派生历史中消失。类型化的 `append` 重载对字面事件类型强制执行此规则；`append` 和种子构造函数中的运行时检查覆盖宽化联合类型和当前已加载日志。已发布格式的校验与转换属于各自版本化迁移边，而不属于通用 Session 代码；参见 [V2 到 V3 位置规则](../../../../packages/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)。
+每个可进入 surface 的事件都必须携带 `surfaceOp`，否则它将从派生历史中消失。类型化的 `append` 重载对字面事件类型强制执行此规则；`append` 和种子构造函数中的运行时检查覆盖宽化联合类型和当前已加载日志。已发布格式的校验与转换属于各自版本化迁移边，而不属于通用 Session 代码；参见 [V2 到 V3 位置规则](../../../../rsh/Engine/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)。
 
 ## 曾考虑的替代方案
 
@@ -58,10 +58,10 @@ surface 元数据仅属于四种 surface 事件类型（`system/message`、`user
 
 ## 后果
 
-- **`packages/core/session`**：`surface.ts`（`SurfaceManager`）维护一个用于候选接纳和实时投影的有序 seq 数组；`SessionSurface` 是其只读公共视图。`SurfaceOp`/`SurfaceIntent` 与顶层会话事件字段记录条目如何加入它。`append()` 要求 surface 事件携带 `SurfaceIntent`，`deriveMessages()` 以遍历 surface 作为唯一派生路径，`repair.ts` 则发出 surface 感知的闭合事件。种子构造函数拒绝缺少 `surfaceOp` 标记的可进入 surface 的种子事件（见「不变式」一节）。
-- **`packages/core/agent-loop`**：所有涉及 surface 事件的追加操作都传入 surface 选项。每个 `assistant/message` 都嵌入精确提供方 stream，并禁止 `sourceEventSeqs`；每个 `tool/result` 都引用其 `tool/call` seq。
-- **`packages/session/session-persistence-jsonl`**：持久化规范 surface 元数据，并通过经过校验的格式准备恢复当前事件。
-- **`packages/session/session-persistence`**：存储所有权与内存 surface 投影保持分离。
+- **`rsh/Engine/core/session`**：`surface.ts`（`SurfaceManager`）维护一个用于候选接纳和实时投影的有序 seq 数组；`SessionSurface` 是其只读公共视图。`SurfaceOp`/`SurfaceIntent` 与顶层会话事件字段记录条目如何加入它。`append()` 要求 surface 事件携带 `SurfaceIntent`，`deriveMessages()` 以遍历 surface 作为唯一派生路径，`repair.ts` 则发出 surface 感知的闭合事件。种子构造函数拒绝缺少 `surfaceOp` 标记的可进入 surface 的种子事件（见「不变式」一节）。
+- **`rsh/Engine/core/agent-loop`**：所有涉及 surface 事件的追加操作都传入 surface 选项。每个 `assistant/message` 都嵌入精确提供方 stream，并禁止 `sourceEventSeqs`；每个 `tool/result` 都引用其 `tool/call` seq。
+- **`rsh/Engine/session/session-persistence-jsonl`**：持久化规范 surface 元数据，并通过经过校验的格式准备恢复当前事件。
+- **`rsh/Engine/session/session-persistence`**：存储所有权与内存 surface 投影保持分离。
 
 surface 是历史操纵赖以落地的基础——dsh-compaction 的压缩就搭载于其上。压缩或 tool-result-pruner 插件追加一个既有的消息产出事件类型（例如一条携带摘要的 `user/message`），附带 `surfaceOp: { op: 'replace', startSeq, endSeq }` 和覆盖被遮蔽条目的 `sourceEventSeqs`——新事件在 surface 上取代该范围的位置，而插件自身的 trace 事件（如 `compaction/start`、`compaction/end`）不进入 surface。回放以确定性方式保留该决策。
 

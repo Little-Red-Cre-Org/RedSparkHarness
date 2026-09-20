@@ -10,7 +10,7 @@ The publint script tests have a five-second synchronous subprocess deadline belo
 
 ## Decision
 
-The [publint spec](../../../../scripts/publint-all.spec.ts) uses the existing Execa dependency with Vitest's test-context signal. There is no independent subprocess timeout. The [workflow](../../../../.github/workflows/ci.yml) and [coverage argument owner](../../../../scripts/coverage-partitions.ts) remain responsible for budgets. This applies the same lane-ownership rule as the [subagent teardown tests](2026-09-07-subagent-teardown-test-budgets.md) without changing their cleanup.
+The [publint spec](../../../../rsh/Scripts/publint-all.spec.ts) uses the existing Execa dependency with Vitest's test-context signal. There is no independent subprocess timeout. The [workflow](../../../../.github/workflows/ci.yml) and [coverage argument owner](../../../../rsh/Scripts/coverage-partitions.ts) remain responsible for budgets. This applies the same lane-ownership rule as the [subagent teardown tests](2026-09-07-subagent-teardown-test-budgets.md) without changing their cleanup.
 
 Each direct Node child is registered immediately, cancellation requests SIGKILL, and teardown awaits every owned child's result and close event before removing private package roots. Process errors, cancellation, timeout flags, signals, and captured streams are diagnosed before expected exit codes. An ordinary exit code of one remains valid for negative publint cases. All five cases invoke the real script with isolated publication fixtures.
 

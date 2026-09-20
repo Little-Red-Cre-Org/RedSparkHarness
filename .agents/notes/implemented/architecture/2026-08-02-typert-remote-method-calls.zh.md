@@ -20,9 +20,9 @@ Host 与 Browser Client 使用独立的 TypeScript Program，因为两边会以�
 
 Remote 消费端投影同时包含 `.d.ts`、`.d.ts.map` 和 `.js`。`.d.ts` 只暴露被 Remote decorator 标记的方法，并引用业务包唯一的公共类型符号；`.d.ts.map` 把消费端 API 方法导航回 Host 业务方法实现；`.js` 携带同一约定的 endpoint、参数、Context 和 Zod 信息。Browser Client 在 assembly 层把需要的 Remote JS 贡献集中挂到 Client Remote Service；该投影和 Remote 抽象保持平台无关，以便未来 TUI 复用。
 
-`@deepseek-ai/dsh-api-gateway` 位于 `packages/api/gateway`，提供对称的两个 face：默认入口提供 Host `ctx.typertGateway`，`/client` 入口提供消费端 `ctx.remote`。两边各自在本地消费由同一模型生成的 `InvocationDescriptor`，descriptor 不通过 wire 发送。Remote 数据协议运行在 Connection 共享的 `/api` RPC channel 上；业务调用界面不随 Connection 从 HTTP 迁移到 WebSocket 而改变。
+`@deepseek-ai/dsh-api-gateway` 位于 `rsh/Programs/Web/api/gateway`，提供对称的两个 face：默认入口提供 Host `ctx.typertGateway`，`/client` 入口提供消费端 `ctx.remote`。两边各自在本地消费由同一模型生成的 `InvocationDescriptor`，descriptor 不通过 wire 发送。Remote 数据协议运行在 Connection 共享的 `/api` RPC channel 上；业务调用界面不随 Connection 从 HTTP 迁移到 WebSocket 而改变。
 
-`@deepseek-ai/dsh-api-remotes` 位于 `packages/api/remotes`，是 Gateway 上层的 BFF 层。其 Host 入口注册本应用转发的 Cordis 事件源与随 generation readiness 携带的 Host 事实；`/client` 入口选择应用对外暴露的生成 Remote contribution。Client 入口通过 Cordis 消费共享的 `TypertClientRemote` 约定，而不导入具体 Gateway 实现。
+`@deepseek-ai/dsh-api-remotes` 位于 `rsh/Programs/Web/api/remotes`，是 Gateway 上层的 BFF 层。其 Host 入口注册本应用转发的 Cordis 事件源与随 generation readiness 携带的 Host 事实；`/client` 入口选择应用对外暴露的生成 Remote contribution。Client 入口通过 Cordis 消费共享的 `TypertClientRemote` 约定，而不导入具体 Gateway 实现。
 
 ## 组件和 Cordis 服务
 

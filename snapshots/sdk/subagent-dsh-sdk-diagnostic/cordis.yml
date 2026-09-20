@@ -1,5 +1,18 @@
 # TypeScript SDK snapshot patch for foreground and background DSH SDK failures.
 
+# This recorded composition owns Bash schemas on every replay host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   config:
@@ -65,4 +78,4 @@
         backgroundMode: one-shot
         maxDepth: provider-managed
     - id: release-dsh-sdk-background-on-job-output
-      name: '../../../apps/cli/tests/profiles/sdk/fixtures/subagent-dsh-sdk-release-on-job-output.ts'
+      name: '../../../rsh/Programs/CLI/tests/profiles/sdk/fixtures/subagent-dsh-sdk-release-on-job-output.ts'

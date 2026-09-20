@@ -24,7 +24,7 @@ Status: implemented
 
 ### 决策规则
 
-`packages/core/agent-loop/src/runtime-context.ts` 中的 `SystemPromptProjection.project(rendered, { inHistory, startsSeries })` 每次调用都扫描当前 surface 上存活的 `system/message` 节点。它返回有序的逐节点提交。没有存活的系统节点时，即使渲染文本为空也预留头节点。有效文本取自最新的非空系统节点，没有时回退到头节点；未生效的空尾节点既不提供有效文本，也无需再次以空内容替换。无论路由或序列状态如何，空渲染文本都会清除每个生效的系统节点。不具备能力的路由或新请求序列面对非空渲染文本时，即使有效文本未变也执行归并。除此之外，有效文本相同时不产生事件。具体操作如下：
+`rsh/Engine/core/agent-loop/src/runtime-context.ts` 中的 `SystemPromptProjection.project(rendered, { inHistory, startsSeries })` 每次调用都扫描当前 surface 上存活的 `system/message` 节点。它返回有序的逐节点提交。没有存活的系统节点时，即使渲染文本为空也预留头节点。有效文本取自最新的非空系统节点，没有时回退到头节点；未生效的空尾节点既不提供有效文本，也无需再次以空内容替换。无论路由或序列状态如何，空渲染文本都会清除每个生效的系统节点。不具备能力的路由或新请求序列面对非空渲染文本时，即使有效文本未变也执行归并。除此之外，有效文本相同时不产生事件。具体操作如下：
 
 | 路由能力 | 前缀状态 | 操作 |
 |---|---|---|
@@ -85,13 +85,13 @@ Chat 与 Trajectory 通过纯操作 `uiConversation.inspectSystemPrompt` 解释�
 
 ## Testing
 
-生命周期验证要求：提示词未变更时不产生事件，具备能力的路由在恢复后追加变更后的提示词。TypeScript 与 Python SDK 的期望输出都必须包含带类型的追加 `system/message` 事件，遵循 [SDK 快照策略](../../../../docs/testing.zh.md)。[TypeScript SDK 通知](../../../../snapshots/sdk/system-prompt-in-history/notifications.expected.jsonl)与 [Python SDK 提示词历史](../../../../scripts/snapshots/python-sdk-single-exe/minimal-in-history/prompt-history.json)记录了追加的提示词事件与保留的提示词版本。
+生命周期验证要求：提示词未变更时不产生事件，具备能力的路由在恢复后追加变更后的提示词。TypeScript 与 Python SDK 的期望输出都必须包含带类型的追加 `system/message` 事件，遵循 [SDK 快照策略](../../../../rsh/Docs/testing.zh.md)。[TypeScript SDK 通知](../../../../snapshots/sdk/system-prompt-in-history/notifications.expected.jsonl)与 [Python SDK 提示词历史](../../../../rsh/Scripts/snapshots/python-sdk-single-exe/minimal-in-history/prompt-history.json)记录了追加的提示词事件与保留的提示词版本。
 
-- `packages/core/agent-loop/tests/system-prompt-admission.spec.ts` 覆盖文本变化或未变时从具备能力切换到不具备能力的路由、反向路由切换、恢复时的路由准入、请求中间件或准备阶段取消，以及已准备路由保持绑定时并发选择发生变化。重试压缩用例覆盖遮蔽最新提示词后有或没有更早更新存活的情况，并验证复用已接纳的组装结果、用户消息仅接纳一次，以及未变的后续重试不会多记序列 header。具备和不具备能力路由的清除用例会移除三个生效提示词版本，验证重复请求与带 seed 的恢复保持为空且不多记提示词事件，并仅恢复新文本；日志重建与 pi 转换器都不保留旧指令。`src/agent.ts` 与 `src/runtime-context.ts` 的聚焦覆盖率在语句、分支、函数和行四项均达到 100%。
-- `packages/core/agent-loop/tests/system-prompt-projection.spec.ts` 钉住序列延续时的追加、序列开始时无论是否存在后续存活节点、有效文本是否变化都执行的重新基线化、空提示词对所有生效版本的清除，以及不具备能力时只做替换的行为。
-- `packages/core/agent-loop/tests/request-reconstruction.spec.ts` 钉住继承 header 下追加的节点及携带 `systemPromptUpdate` 的 `request/context`、序列开始时折回第 0 号节点、由压缩驱动的重新基线化，以及在开启序列的 `change` header 下由工具 schema 变更驱动的重新基线化。
-- `packages/llm/llm/tests/service.spec.ts`、`packages/llm/llm-deepseek/tests/adapter.spec.ts` 与 `packages/test-support/llm-replay/tests/llm-replay.spec.ts` 钉住已解析模型信息上声明的模式，以及加载时对任何其他值的拒绝。
-- `packages/llm/token-meter/tests/context-breakdown-projection.spec.ts` 钉住最新与中间提示词移除、精确启发式总量、头部改写后的 surface 顺序、额外来源引用、休眠空节点与回退清空、不可变转换、紧凑保留检查点、延迟注册、重放和版本失效。
-- `packages/client/ui-conversation`、`ui-chat` 与 `ui-trajectory` 的客户端测试钉住更新卡片、同一步骤 header 的去重、更新之后不存在系统变更，以及合成的轨迹 header。
+- `rsh/Engine/core/agent-loop/tests/system-prompt-admission.spec.ts` 覆盖文本变化或未变时从具备能力切换到不具备能力的路由、反向路由切换、恢复时的路由准入、请求中间件或准备阶段取消，以及已准备路由保持绑定时并发选择发生变化。重试压缩用例覆盖遮蔽最新提示词后有或没有更早更新存活的情况，并验证复用已接纳的组装结果、用户消息仅接纳一次，以及未变的后续重试不会多记序列 header。具备和不具备能力路由的清除用例会移除三个生效提示词版本，验证重复请求与带 seed 的恢复保持为空且不多记提示词事件，并仅恢复新文本；日志重建与 pi 转换器都不保留旧指令。`src/agent.ts` 与 `src/runtime-context.ts` 的聚焦覆盖率在语句、分支、函数和行四项均达到 100%。
+- `rsh/Engine/core/agent-loop/tests/system-prompt-projection.spec.ts` 钉住序列延续时的追加、序列开始时无论是否存在后续存活节点、有效文本是否变化都执行的重新基线化、空提示词对所有生效版本的清除，以及不具备能力时只做替换的行为。
+- `rsh/Engine/core/agent-loop/tests/request-reconstruction.spec.ts` 钉住继承 header 下追加的节点及携带 `systemPromptUpdate` 的 `request/context`、序列开始时折回第 0 号节点、由压缩驱动的重新基线化，以及在开启序列的 `change` header 下由工具 schema 变更驱动的重新基线化。
+- `rsh/Engine/llm/llm/tests/service.spec.ts`、`rsh/Engine/llm/llm-deepseek/tests/adapter.spec.ts` 与 `rsh/Tests/test-support/llm-replay/tests/llm-replay.spec.ts` 钉住已解析模型信息上声明的模式，以及加载时对任何其他值的拒绝。
+- `rsh/Engine/llm/token-meter/tests/context-breakdown-projection.spec.ts` 钉住最新与中间提示词移除、精确启发式总量、头部改写后的 surface 顺序、额外来源引用、休眠空节点与回退清空、不可变转换、紧凑保留检查点、延迟注册、重放和版本失效。
+- `rsh/Programs/Web/client/ui-conversation`、`ui-chat` 与 `ui-trajectory` 的客户端测试钉住更新卡片、同一步骤 header 的去重、更新之后不存在系统变更，以及合成的轨迹 header。
 - 无密钥的手写快照 `snapshots/session/system-prompt-in-history/` 在回放路由上声明该能力，通过 fixture 片段在第一次工具调用之后改变提示词，钉住追加的 `system/message`、未被触及的第 0 号节点、唯一一条 `request/header` 以及 `request/context` 中的模式。
-- `packages/llm/llm-deepseek/tests/adapter.e2e.ts` 针对 `DEEPSEEK_IN_HISTORY_MODEL` 指定的模型运行两个步骤并夹带一次提示词变更，断言回复遵循追加的提示词，并断言追加后的请求比同一对话在重写最前提示词时读取更多的缓存 token；该变量未设置时跳过。
+- `rsh/Engine/llm/llm-deepseek/tests/adapter.e2e.ts` 针对 `DEEPSEEK_IN_HISTORY_MODEL` 指定的模型运行两个步骤并夹带一次提示词变更，断言回复遵循追加的提示词，并断言追加后的请求比同一对话在重写最前提示词时读取更多的缓存 token；该变量未设置时跳过。

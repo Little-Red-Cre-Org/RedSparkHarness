@@ -12,11 +12,11 @@ Status: implemented
 
 ## Decision
 
-[`packages/client/resources`](../../../../packages/client/resources/README.zh.md)（`@deepseek-ai/dsh-client-resources`）提供 `ctx.resources` 与 `useResource` 全局标准 hook。消费方活读的任何东西都是**资源**，资源只由其**地址**标识，地址的协议命名唯一一个把它变成帧流的**提供方**。
+[`rsh/Programs/Web/client/resources`](../../../../rsh/Programs/Web/client/resources/README.zh.md)（`@deepseek-ai/dsh-client-resources`）提供 `ctx.resources` 与 `useResource` 全局标准 hook。消费方活读的任何东西都是**资源**，资源只由其**地址**标识，地址的协议命名唯一一个把它变成帧流的**提供方**。
 
 ### 地址
 
-资源地址是 `dsh-resource://<type>/…` 形式的 URL。host 是协议键——`ResourceProtocolMap` 的键——路径归协议拥有者。`RESOURCE_SCHEME = 'dsh-resource'` 是唯一的 scheme 常量；`protocolOf(address)` 用 `new URL` 解析字串，要求 `protocol === 'dsh-resource:'`，返回小写 host；解析器拒绝的字串、其它 scheme 或空 host 返回 `undefined`。`dsh-resource` 不是 URL 规范里的特殊 scheme，解析器会保留 host 的大小写并把路径当作不透明串，所以小写化是显式做的，每段路径由定义它的协议做百分号编码。需要作用域的协议把作用域编进路径：`dsh-resource://file/session/<sessionId>/<path>`，`session/<sessionId>` 命名由其 Host 工作区解析相对或绝对路径的 Session（[语法](../../../../packages/util/workspace-path/README.zh.md)）。其它任何 scheme——`sidebar://guide`——是导航地址：它命名一个 tab 而非数据，模型对它回答 `none`（[tab 类型与导航](2026-09-05-sidebar-tab-types-and-navigation.zh.md)）。
+资源地址是 `dsh-resource://<type>/…` 形式的 URL。host 是协议键——`ResourceProtocolMap` 的键——路径归协议拥有者。`RESOURCE_SCHEME = 'dsh-resource'` 是唯一的 scheme 常量；`protocolOf(address)` 用 `new URL` 解析字串，要求 `protocol === 'dsh-resource:'`，返回小写 host；解析器拒绝的字串、其它 scheme 或空 host 返回 `undefined`。`dsh-resource` 不是 URL 规范里的特殊 scheme，解析器会保留 host 的大小写并把路径当作不透明串，所以小写化是显式做的，每段路径由定义它的协议做百分号编码。需要作用域的协议把作用域编进路径：`dsh-resource://file/session/<sessionId>/<path>`，`session/<sessionId>` 命名由其 Host 工作区解析相对或绝对路径的 Session（[语法](../../../../rsh/Core/util/workspace-path/README.zh.md)）。其它任何 scheme——`sidebar://guide`——是导航地址：它命名一个 tab 而非数据，模型对它回答 `none`（[tab 类型与导航](2026-09-05-sidebar-tab-types-and-navigation.zh.md)）。
 
 ### 服务
 
@@ -79,8 +79,8 @@ type UseResource = <P extends ResourceProtocol>(address: string) => ResourceSnap
 
 ## Testing
 
-`packages/client/resources/tests/resources.client.spec.ts` 用脚本化的 feed 驱动注册表：协议归属与注销、无提供方的协议与导航地址都为 `none`、提供方在地址已被持有后到达与在持有中离开、注册随 fiber 消失、首个持有者开流末个关流、一址一源、包括已中止信号在内的 pin、重挂读到最新值且不重开、重开为新流、中止后帧丢弃且迭代器归还、流自行结束、失败帧与最后值并存。`tests/apply.client.spec.ts` 在 `SlotTestRuntime` 里挂载插件，经一个根作用域探针组件验证 `useResource` 到达 props、渲染它即打开提供方的流、dispose 插件同时撤走服务与 hook。
+`rsh/Programs/Web/client/resources/tests/resources.client.spec.ts` 用脚本化的 feed 驱动注册表：协议归属与注销、无提供方的协议与导航地址都为 `none`、提供方在地址已被持有后到达与在持有中离开、注册随 fiber 消失、首个持有者开流末个关流、一址一源、包括已中止信号在内的 pin、重挂读到最新值且不重开、重开为新流、中止后帧丢弃且迭代器归还、流自行结束、失败帧与最后值并存。`tests/apply.client.spec.ts` 在 `SlotTestRuntime` 里挂载插件，经一个根作用域探针组件验证 `useResource` 到达 props、渲染它即打开提供方的流、dispose 插件同时撤走服务与 hook。
 
 ## Deferred
 
-回收空闲记录、与 Remote 面解耦的资源自有失败类型、`chat` 与 `terminal` 协议都还开放；各自等待一个消费方。面向开发者的参考是 [docs/subsystems/client-resources.md](../../../../docs/subsystems/client-resources.zh.md)；消费这个模型的 Sidebar 见 [docs/subsystems/sidebar-right.md](../../../../docs/subsystems/sidebar-right.zh.md)。
+回收空闲记录、与 Remote 面解耦的资源自有失败类型、`chat` 与 `terminal` 协议都还开放；各自等待一个消费方。面向开发者的参考是 [rsh/Docs/subsystems/client-resources.md](../../../../rsh/Docs/subsystems/client-resources.zh.md)；消费这个模型的 Sidebar 见 [rsh/Docs/subsystems/sidebar-right.md](../../../../rsh/Docs/subsystems/sidebar-right.zh.md)。

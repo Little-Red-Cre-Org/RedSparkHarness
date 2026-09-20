@@ -10,7 +10,7 @@ Status: proposed
 
 ## 提案
 
-- 新增 `packages/client/tool-owned-render` workspace 包。
+- 新增 `rsh/Programs/Web/client/tool-owned-render` workspace 包。
 - 把 `read`、`bash`、`write`/`edit`、`grep`/`glob`、`web_search`/`web_fetch` 注册项移植到从当前 `ToolCallBlock` 字段推导。
 - 增加 `read_image` 注册项，使用同一套 ToolCard/Segment 原语。
 - 通过 `dsh-client-ui-renderer` 接通 `ctx.slots` 类型增强。
@@ -23,7 +23,7 @@ Status: proposed
 
 ## 验收标准
 
-- `packages/client/tool-owned-render` 作为 workspace 包存在。
+- `rsh/Programs/Web/client/tool-owned-render` 作为 workspace 包存在。
 - 移植后的注册项从当前 `ToolCallBlock` 字段推导卡片状态，并在 master 上通过类型检查。
 - `read_image` 注册项与 `read` 使用同一套原语渲染。
 - `ctx.slots` 类型增强通过 `dsh-client-ui-renderer` 解析。

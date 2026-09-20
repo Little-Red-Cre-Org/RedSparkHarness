@@ -6,9 +6,9 @@ English | [中文](2026-08-03-per-session-agent-presets.zh.md)
 
 ## Problem
 
-One `dsh` process serves many sessions, but the composition that decides what an agent *is* — its tools, persona, prompt sections, delegation backends — is fixed for the whole process by the `cordis.yml` the launcher booted. A deployment that wants a benchmark-minimal agent beside a full coding agent has to run two processes, and the shipped workaround (`apps/cli/config/minimal.cordis.yml`, a `--config` overlay that disables tool rows) changes every session at once.
+One `dsh` process serves many sessions, but the composition that decides what an agent *is* — its tools, persona, prompt sections, delegation backends — is fixed for the whole process by the `cordis.yml` the launcher booted. A deployment that wants a benchmark-minimal agent beside a full coding agent has to run two processes, and the shipped workaround (`rsh/Programs/CLI/config/minimal.cordis.yml`, a `--config` overlay that disables tool rows) changes every session at once.
 
-The obvious reading of "let a session pick its composition" is that the loader needs a new tier. It does not. [`dsh-tools`](../../../../packages/core/tools/README.md) and [`dsh-system-prompt`](../../../../packages/core/system-prompt/README.md) already file registrations into the calling context's scope layer, and [the agent is a registration scope](2026-07-08-agent-scope-contexts.md). What was missing is a way to point a whole `cordis.yml` at one agent's scope.
+The obvious reading of "let a session pick its composition" is that the loader needs a new tier. It does not. [`dsh-tools`](../../../../rsh/Engine/core/tools/README.md) and [`dsh-system-prompt`](../../../../rsh/Engine/core/system-prompt/README.md) already file registrations into the calling context's scope layer, and [the agent is a registration scope](2026-07-08-agent-scope-contexts.md). What was missing is a way to point a whole `cordis.yml` at one agent's scope.
 
 ## Decision
 
@@ -23,7 +23,7 @@ Composition splits into two planes, decided by what must be shared rather than b
 
 Model routing stays out of presets. `installAgentLlmTarget` is already the per-agent seam for provider, model, and reasoning effort, and an LLM adapter mounted inside a preset would never be resolved by `agent-loop`, which lives in the host plane.
 
-The presets the deployment ships are the directories under `packages/preset/agent-presets/presets/`; the roster is that listing, not a list restated here.
+The presets the deployment ships are the directories under `rsh/Engine/preset/agent-presets/presets/`; the roster is that listing, not a list restated here.
 
 Mounting is per-session by default. Measured cost for a twelve-row composition is ~3ms and ~600KB per session, so isolation is the cheaper default than any sharing scheme, and a preset authored by a user or by an agent then has the smallest possible blast radius. A preset that genuinely owns an expensive singleton opts into sharing with Cordis's own `isolate` vocabulary: a named realm label is process-global, so two subtrees naming the same label resolve one instance.
 
@@ -77,7 +77,7 @@ The `agent-presets` user-settings namespace carries `modeSelectionEnabled` and `
 
 **Make the agent's scope key the preset.** Sessions on one preset would share a layer for free, but per-agent registrations — `installAgentLlmTarget`, per-agent tool restrictions — would then collide across sessions.
 
-**Run each preset as a child process.** [`subagent-dsh-sdk`](../../../../packages/subagent/subagent-dsh-sdk/README.md) already proves a full child harness works, and isolation would be absolute. It also means proxying streaming, approvals, and projections per session, which is a transport project rather than a composition one.
+**Run each preset as a child process.** [`subagent-dsh-sdk`](../../../../rsh/Engine/subagent/subagent-dsh-sdk/README.md) already proves a full child harness works, and isolation would be absolute. It also means proxying streaming, approvals, and projections per session, which is a transport project rather than a composition one.
 
 **Give product subagents global enable settings and a separate settings page.** The process-wide value would compete with the preset as owner of model-visible tools and could not express two sessions using different compositions. Product providers stay host-side, while ordinary preset rows independently expose Codex and Claude Code tools.
 

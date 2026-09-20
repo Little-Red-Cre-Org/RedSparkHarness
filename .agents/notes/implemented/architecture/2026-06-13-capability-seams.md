@@ -26,7 +26,7 @@ Roles normally use separate packages when they evolve independently, but the spl
 
 ## Terminology: "seam" names the trio, not the interface
 
-A **seam** is the whole capability — the three roles together: a **Service Definition** (the Cordis `Service` that owns `ctx.<key>` and the vocabulary), one or more **Service Providers**, and one or more **Consumers**. `packages/shell` is the canonical example — `dsh-shell` / `dsh-bash-local`+`dsh-bash-sandbox` / `dsh-tool-bash`. A package may own multiple roles, but one role alone is not the seam. The term "seam" is reserved for this complete capability; name a constituent by its role, class, service, contract, or extension point. The [glossary](../../../../docs/glossary.md#capability-seam) is the canonical entry.
+A **seam** is the whole capability — the three roles together: a **Service Definition** (the Cordis `Service` that owns `ctx.<key>` and the vocabulary), one or more **Service Providers**, and one or more **Consumers**. `rsh/Modules/Official/shell` is the canonical example — `dsh-shell` / `dsh-bash-local`+`dsh-bash-sandbox` / `dsh-tool-bash`. A package may own multiple roles, but one role alone is not the seam. The term "seam" is reserved for this complete capability; name a constituent by its role, class, service, contract, or extension point. The [glossary](../../../../rsh/Docs/glossary.md#capability-seam) is the canonical entry.
 
 ## Alternatives considered
 
@@ -35,4 +35,4 @@ A **seam** is the whole capability — the three roles together: a **Service Def
 
 ## Consequences
 
-Separating roles adds packages and boilerplate (`package.json`, `tsconfig`, README, and injection wiring). In return, Service Providers and Consumers ship and version independently, and a new backend never risks the model-facing contract. [AGENTS.md](../../../../AGENTS.md) and [architecture.md](../../../../docs/architecture.md) carry the rule; the bash trio is the reference template. This Agent Note records why independently changing roles normally split while genuinely shared concerns may remain folded.
+Separating roles adds packages and boilerplate (`package.json`, `tsconfig`, README, and injection wiring). In return, Service Providers and Consumers ship and version independently, and a new backend never risks the model-facing contract. [AGENTS.md](../../../../AGENTS.md) and [architecture.md](../../../../rsh/Docs/architecture.md) carry the rule; the bash trio is the reference template. This Agent Note records why independently changing roles normally split while genuinely shared concerns may remain folded.

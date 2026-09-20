@@ -8,13 +8,13 @@ Status: implemented
 
 Node 内置的 `fetch` 会忽略 `HTTP_PROXY` 与 `HTTPS_PROXY`。开发者运行的其他工具——curl、git、npm、pip——都遵循它们，所以代理后面的用户导出一次变量就期待一切随之生效。Harness 并没有：`setGlobalDispatcher`、`ProxyAgent` 与 `EnvHttpProxyAgent` 在 `packages/` 与 `apps/` 中出现次数为零，因此模型请求、每次 web 搜索、`web_fetch`、走 HTTP 的 MCP、OTLP 导出器与 E2B SDK 全部直连，且是静默的，任何地方都没有诊断。
 
-仓库曾短暂拥有过答案，又在无人察觉时弄丢了。PR #971 在 `bin/dsh` 里设置了 `NODE_USE_ENV_PROXY=1`；十一天后 `bbb1b1cc38 cleanup: remove managed source installer` 整体删除了那个启动器，把该标志一并带走。留下的只有 `apps/cli/reference/README.md` 里的一句话，让读者去设置一个已经无人消费的变量。
+仓库曾短暂拥有过答案，又在无人察觉时弄丢了。PR #971 在 `bin/dsh` 里设置了 `NODE_USE_ENV_PROXY=1`；十一天后 `bbb1b1cc38 cleanup: remove managed source installer` 整体删除了那个启动器，把该标志一并带走。留下的只有 `rsh/Programs/CLI/reference/README.md` 里的一句话，让读者去设置一个已经无人消费的变量。
 
 即便照做，那句话也不可能生效，原因有三条且都经过实测。`NODE_USE_ENV_PROXY` 在进程启动时对环境取快照，而 `loadLayeredEnv()` 是在之后才合并 `.env` 层，因此写在 `$DSH_HOME/.env` 中的代理对它不可见。它只覆盖 Node 24.0+，在 22 线上只覆盖 22.21+——而 `engines` 允许 `^22.19.0`，那里根本没有这个变量，设置了也不会有任何警告。它也完全触及不到 `web-fetch-http`：该提供方向 `fetch` 传入自己的 `dispatcher`，而显式 dispatcher 无论标志如何都会覆盖全局的那个。
 
 ## Decision
 
-**一份策略，从启动环境解析一次，装为全局 dispatcher。** `packages/util/http-proxy` 解析出 `ProxyPolicy`，并在 `runProfile` 中于环境快照提供之后、任何 entry 挂载之前完成安装。Node 的 `fetch` 解析的正是 undici 的全局 dispatcher，因此每一处普通 `fetch()` 以及每一个最终落到 `globalThis.fetch` 的 SDK 都无需改动即被覆盖——撰写时是九个调用点，未来新增的也自动覆盖。`loadLayeredEnv` 只有一个调用方，且 `apps/web` 不提供 bin，因此这一处即覆盖全部 profile，包括不叠加 `base` 的 `sdk-minimal`。
+**一份策略，从启动环境解析一次，装为全局 dispatcher。** `rsh/Core/util/http-proxy` 解析出 `ProxyPolicy`，并在 `runProfile` 中于环境快照提供之后、任何 entry 挂载之前完成安装。Node 的 `fetch` 解析的正是 undici 的全局 dispatcher，因此每一处普通 `fetch()` 以及每一个最终落到 `globalThis.fetch` 的 SDK 都无需改动即被覆盖——撰写时是九个调用点，未来新增的也自动覆盖。`loadLayeredEnv` 只有一个调用方，且 `rsh/Programs/Web/application` 不提供 bin，因此这一处即覆盖全部 profile，包括不叠加 `base` 的 `sdk-minimal`。
 
 解析读取的是启动器的快照而非 `process.env`，这正是让 `$DSH_HOME/.env` 中的代理生效的原因——也是环境变量方案不可能具备的能力。仅限该文件：`loadLayeredEnv` 拒绝项目 `.env` 里的代理名，正如它在那里拒绝 `PATH` 或 `NODE_OPTIONS`，因为那个文件随 clone 一起到来，不得替 Harness 选择路由。home 文件仅对这四个代理名豁免，而 `DSH_HOME` 本身是 bootstrap-only，因此没有任何 `.env` 能把这份豁免指向仓库控制的目录。
 
@@ -42,7 +42,7 @@ Node 内置的 `fetch` 会忽略 `HTTP_PROXY` 与 `HTTPS_PROXY`。开发者运�
 
 URL 层策略未受影响：仅 `http(s)`、禁止内嵌凭据、长度上限与跨域重定向拒绝在每一跳上依然生效。
 
-**派生的子进程通过环境获得策略；执行模型代码的 worker 什么也不获得。** `proxyEnvironmentForChild()` 并入 `scrubbedParentEnv()`——每个 spawner 本就共享的那一个函数。workflow worker **不**接收它：它执行的是模型编写的脚本体，而代理 URL 可能携带 `user:password`。这与 code runtime 保持的隔离相同，也是 `docs/defensive-patterns.md` 的要求，因此 workflow 自身的请求直连。
+**派生的子进程通过环境获得策略；执行模型代码的 worker 什么也不获得。** `proxyEnvironmentForChild()` 并入 `scrubbedParentEnv()`——每个 spawner 本就共享的那一个函数。workflow worker **不**接收它：它执行的是模型编写的脚本体，而代理 URL 可能携带 `user:password`。这与 code runtime 保持的隔离相同，也是 `rsh/Docs/defensive-patterns.md` 的要求，因此 workflow 自身的请求直连。
 
 子进程拿到的是用户自己的值，而这恰恰曾把它弄坏。Node 在 `NODE_USE_ENV_PROXY` 下会在运行程序之前先解析 `HTTP_PROXY` 与 `HTTPS_PROXY`，遇到 `http:`/`https:` 之外的协议直接退出；于是一个为 `curl` 保留的 `socks4://` 会让每个 Node 子进程——MCP server、subagent CLI、`npm`——在第一行之前就终结，而本进程此前只报告过该协议保持直连。在 Node 24.17 上实测：`socks4://`、`ftp://` 与畸形值均以 1 退出；`socks5://` 恰好在该版本被接受。现在只要子进程收到的某个值是本包拒绝过的，就扣下该标志，这样的子进程直连，`curl` 仍读到为它保留的值。若改为把解析后的值交给子进程，Node 固然能继续走代理，代价却是悄悄改写用户为另一工具设置的值。
 
@@ -56,7 +56,7 @@ URL 层策略未受影响：仅 `http(s)`、禁止内嵌凭据、长度上限与
 
 **每个出网点都配一份出网测试，因为读代码不够。** 各所属包中的 `egress.spec.ts` 驱动该点的真实代码路径，目标是无法解析的 `.invalid` 主机，穿过一个假代理，并断言代理确实收到了请求。九份测试覆盖搜索后端、pi-ai 发现、走 HTTP 的 MCP、E2B、派生的子 Node、worker 线程，以及遥测的排除。下面那条门禁看不进依赖内部；这些能，它们把「某个 SDK 换了传输」从静默回归变成失败的测试。
 
-**用门禁防止该缺陷复现。** `verify-no-bare-dispatcher` 解析 TypeScript AST——`scripts/AGENTS.md` 要求 source-ownership 门禁使用语法感知发现，而逐行正则漏掉了本仓库已在使用的 `{ dispatcher }` 简写，以及重命名导入后的 `new Alias(...)`。它在所属包之外拒绝 undici agent 构造与显式 `dispatcher` 选项。`proxyRouteFor(url)` 是受支持的替代；唯一一处确实自有传输的调用点——`web-fetch-http`，它把请求钉在已校验的地址上——用 `proxy-exempt:` 注释说明。这条规则之所以存在，是因为 `web-fetch-http` 里原本那行 `new Agent` 在写下时完全合理——那时根本还没有代理这回事，也没有任何机制会拦下它。
+**用门禁防止该缺陷复现。** `verify-no-bare-dispatcher` 解析 TypeScript AST——`rsh/Scripts/AGENTS.md` 要求 source-ownership 门禁使用语法感知发现，而逐行正则漏掉了本仓库已在使用的 `{ dispatcher }` 简写，以及重命名导入后的 `new Alias(...)`。它在所属包之外拒绝 undici agent 构造与显式 `dispatcher` 选项。`proxyRouteFor(url)` 是受支持的替代；唯一一处确实自有传输的调用点——`web-fetch-http`，它把请求钉在已校验的地址上——用 `proxy-exempt:` 注释说明。这条规则之所以存在，是因为 `web-fetch-http` 里原本那行 `new Agent` 在写下时完全合理——那时根本还没有代理这回事，也没有任何机制会拦下它。
 
 ## Alternatives considered
 
@@ -78,19 +78,19 @@ URL 层策略未受影响：仅 `http(s)`、禁止内嵌凭据、长度上限与
 
 导出了 `HTTPS_PROXY`、或把它写进 `$DSH_HOME/.env` 的用户，在 Harness 发起请求的每一处都会走代理，无需任何标志与配置。启动器在第一个插件挂载之前恰好安装一次。
 
-由于不读取操作系统设置，面向用户的文档从补充材料变成了承重件：仅在代理软件里拨了「系统代理」开关的用户什么也得不到，且没有诊断。因此 `docs/user/guide/network-proxy.md` 说明了要导出哪些变量，以及为什么浏览器走代理而终端不走——这个「三套机制」的困惑是最常见的报障，且并非本 Harness 特有。
+由于不读取操作系统设置，面向用户的文档从补充材料变成了承重件：仅在代理软件里拨了「系统代理」开关的用户什么也得不到，且没有诊断。因此 `rsh/Docs/user/guide/network-proxy.md` 说明了要导出哪些变量，以及为什么浏览器走代理而终端不走——这个「三套机制」的困惑是最常见的报障，且并非本 Harness 特有。
 
 `web_fetch` 的安全叙述现在有两种形态，其 README 已如实说明：直连的一跳保留地址校验与固定，代理转发的一跳把目的地选择交给运维方配置的代理。这是本次变更唯一改动的对外安全承诺。
 
 userland undici 能触及 Node 内置的 `fetch`，依赖于两者都会写入 legacy 的 `Symbol.for('undici.globalDispatcher.1')` 槽位。那是跨版本的隐式耦合而非约定——corepack#834 记录了它失效的实例——因此 `tests/install.spec.ts` 会驱动一次真实请求穿过 loopback 代理。破坏该耦合的版本升级会在那里失败，而不是流到线上。
 
-测试套件对开发者自身的环境免疫：每份 Vitest 配置都会先运行 `scripts/test-proxy-environment.ts`，在任何测试之前清除全部八个代理变量名的两种大小写形式；`install.spec.ts` 则在每个自行设值的用例前后还原本机的值。这是必需的。开发过程中，一个已导出的小写 `all_proxy` 曾决定了某个测试的结果，因为解析优先读取小写。
+测试套件对开发者自身的环境免疫：每份 Vitest 配置都会先运行 `rsh/Scripts/test-proxy-environment.ts`，在任何测试之前清除全部八个代理变量名的两种大小写形式；`install.spec.ts` 则在每个自行设值的用例前后还原本机的值。这是必需的。开发过程中，一个已导出的小写 `all_proxy` 曾决定了某个测试的结果，因为解析优先读取小写。
 
 ## Testing
 
-`packages/util/http-proxy` 有 84 个测试，per-file 覆盖率 100%。解析覆盖优先级、`ALL_PROXY` 兜底、空值遮蔽、SOCKS 与畸形值诊断，以及只设 https 变量时 `http:` 保持直连；路由以结构化方式覆盖整个 loopback 网段，绕过匹配覆盖后缀、端口、两种 IPv6 写法，以及刻意不匹配的 CIDR 条目。安装驱动一个真实的 loopback 代理，断言绝对形式的请求确实抵达、被绕过的目标不抵达，且 dispose 会还原 dispatcher、策略与环境。所有用例一律经 `installProxyFromEnvironment` 安装，因此没有测试能断言一次真实启动无法产生的策略对象。
+`rsh/Core/util/http-proxy` 有 84 个测试，per-file 覆盖率 100%。解析覆盖优先级、`ALL_PROXY` 兜底、空值遮蔽、SOCKS 与畸形值诊断，以及只设 https 变量时 `http:` 保持直连；路由以结构化方式覆盖整个 loopback 网段，绕过匹配覆盖后缀、端口、两种 IPv6 写法，以及刻意不匹配的 CIDR 条目。安装驱动一个真实的 loopback 代理，断言绝对形式的请求确实抵达、被绕过的目标不抵达，且 dispose 会还原 dispatcher、策略与环境。所有用例一律经 `installProxyFromEnvironment` 安装，因此没有测试能断言一次真实启动无法产生的策略对象。
 
-`packages/web/web-fetch-http/tests/proxy.spec.ts` 断言了最关键的那个决定：经由代理时公网地址解析器完全不被调用，而被绕过的一跳仍恰好调用一次，且跨域重定向拒绝在代理路径上依然成立。
+`rsh/Modules/Official/web/web-fetch-http/tests/proxy.spec.ts` 断言了最关键的那个决定：经由代理时公网地址解析器完全不被调用，而被绕过的一跳仍恰好调用一次，且跨域重定向拒绝在代理路径上依然成立。
 
 `verify-no-bare-dispatcher.spec.ts` 证明该门禁能拒掉本包所要修复的那种写法、接受 `proxyRouteFor`、接受带注释的豁免，并在当前代码树上通过。
 

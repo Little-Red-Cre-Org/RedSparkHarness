@@ -26,7 +26,7 @@ The driver fails with an ordinary unresolved sidecar when a record is malformed,
 
 | Failure during a normal `git merge` | Observable state | Recovery |
 |---|---|---|
-| A fresh install cannot probe the driver or install Lefthook | No new driver or hook-path configuration is published; any newly added integration is rolled back to the previous hook lookup. | Restore the dependencies and rerun `node scripts/install-lefthook.mjs`. |
+| A fresh install cannot probe the driver or install Lefthook | No new driver or hook-path configuration is published; any newly added integration is rolled back to the previous hook lookup. | Restore the dependencies and rerun `node rsh/Scripts/install-lefthook.mjs`. |
 | Node, tsx, or the driver entrypoint becomes unavailable after installation | The merge stops with the sidecar at `UU`, index stages 1/2/3 remain, the worktree sidecar contains Git's text result, `MERGE_HEAD` exists, and no commit is created. | Restore the dependencies and run `pnpm run resolve-translation-pairing-conflicts`, or run `git merge --abort`. |
 | The repository-aware driver rejects the records | The merge stops with the sidecar unresolved and no commit; the driver prints the owner-repair and explicit-resolver path. | Repair the owner conflict or record, then run the printed resolver workflow or abort. |
 | The driver process crashes with a status above 128 | Git aborts the merge strategy without publishing `MERGE_HEAD` or unmerged index stages. | Repair the runtime and rerun the merge. |

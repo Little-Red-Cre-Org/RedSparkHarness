@@ -28,13 +28,12 @@ tmp/
 mise.toml
 dist-exe/
 /dist/
-apps/desktop/.desktop-build/
-python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-*
-python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/
-python/**/__pycache__/
-python/**/.pytest_cache/
-packages/**/__pycache__/
-apps/web/dist/
+rsh/Programs/Desktop/.desktop-build/
+rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-*
+rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/
+rsh/**/__pycache__/
+rsh/**/.pytest_cache/
+rsh/Programs/Web/application/dist/
 .artifacts/
 .dsh-build/
 .playwright-mcp/
@@ -47,4 +46,4 @@ apps/web/dist/
 worktrees/
 .agents/worktrees/
 .typert-*/
-native/system/test/bin/
+rsh/Core/native/system/test/bin/

@@ -16,7 +16,7 @@ The current baseline also requires a person to derive versions, authenticate, pa
 
 The publication flow uses an immutable release bundle as its boundary. The pack phase builds every target package from one fixed Git commit, creates every tarball, validates tarball contents, and passes an installed-artifact integration test. The publish phase reads only those tarballs and their manifest and is forbidden from rebuilding or repacking.
 
-The target set contains only `@deepseek-ai/*` workspace packages discovered from `packages/*/*/package.json` and `apps/*/package.json`. The root project, `website/`, vendor, Python, and native workspaces are outside this NPM baseline. Discovery must reject duplicate names, mixed base versions, an unexpected publication privacy state, and unknown packages in the bundle instead of relying on another hand-maintained package-name list.
+The target set contains only `@deepseek-ai/*` workspace packages discovered from `rsh/*/*/package.json` and `rsh/Programs/*/package.json`. The root project, `website/`, vendor, Python, and native workspaces are outside this NPM baseline. Discovery must reject duplicate names, mixed base versions, an unexpected publication privacy state, and unknown packages in the bundle instead of relying on another hand-maintained package-name list.
 
 The prerelease version consists of the package stable base version, a second-precision UTC timestamp captured when the command starts, and the target commit's 10-character short SHA: `<base>-<YYYYMMDDHHmmss>-<short-commit>`. The dist-tag is derived as `dev-<base>`. For example, base `0.0.1`, time `2026-08-04T00:32:00Z`, and commit `909292dd7b` produce version `0.0.1-20260804003200-909292dd7b` and tag `dev-0.0.1`. Retrying one release bundle must retain its version and manifest; repacking creates a version from the new command start time.
 
@@ -95,7 +95,7 @@ The registry token is injected only into the publish job, which uses a protected
 
 ## Acceptance criteria
 
-- One pack entry discovers every target under `packages/*/*` and `apps/*` from a fixed commit, derives and displays a version from the UTC second and short commit before waiting for Enter, generates the complete release bundle before any registry write, and prints one copyable publish command; `release` waits again after packing, while `--yes` skips both confirmations.
+- One pack entry discovers every target under `rsh/*/*` and `rsh/Programs/*` from a fixed commit, derives and displays a version from the UTC second and short commit before waiting for Enter, generates the complete release bundle before any registry write, and prints one copyable publish command; `release` waits again after packing, while `--yes` skips both confirmations.
 - Static manifest and tarball-content gates both reject published `src` and `.d.ts.map` while source manifests retain `exports["./src/*"]`.
 - The release bundle records the complete package set, commit, derived version, tag, registry, and per-tarball integrity; every internal dependency is pinned exactly to that version, and publish consumes only that bundle without rebuilding.
 - An isolated integration test installs from local tarballs and starts the installed default `dsh` TUI under plain Node; deleting any required dynamic chunk makes the test fail deterministically.

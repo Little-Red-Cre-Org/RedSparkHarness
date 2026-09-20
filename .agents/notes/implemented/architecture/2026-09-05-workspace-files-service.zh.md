@@ -12,7 +12,7 @@ Web 客户端需要从一个未必在 Host 机器上的浏览器查看会话工�
 
 ## Decision
 
-`packages/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。Session Controller 不再携带任何工作区文件代码。
+`rsh/Programs/Web/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。Session Controller 不再携带任何工作区文件代码。
 
 ### 包拓扑
 
@@ -142,7 +142,7 @@ Client 导出向 `ctx.resources` 注册一个 `ResourceProvider<'file'>`，存�
 
 ## Testing
 
-`packages/api/workspace-files/tests` 中的 Host spec 覆盖 live 与 cold subagent Session 的 header-only scope 解析、部署 fallback、缺失身份与 lookup 释放；分页读取（整文件、嵌套路径、空文件、多字节 UTF-8、行窗口边界、缺省与拒绝的 limit、保留回车）；字节窗口（缺省、中段与尾窗、越界与空文件、base64 往返、版本、上限、坏范围以及无大小时的 `eof`）；`stat`；工作区外读取及后端拒绝；`list` 的包含、截断、符号链接与 `not-directory`；以及由 `fs/observed` 驱动并按根过滤的 `changes`。Client spec 覆盖提供者帧、变更流、不支持地址及注册与释放。`fs/fs`、`fs-local` 与 `fs-e2b` spec 钉住 `readByteRange`；`dsh-util-workspace-path` spec 钉住文件地址语法。connection fixture 为 web e2e 套件提供 `stat`、分页 `read`、`list` 与一帧可选启用的 `changes`。
+`rsh/Programs/Web/api/workspace-files/tests` 中的 Host spec 覆盖 live 与 cold subagent Session 的 header-only scope 解析、部署 fallback、缺失身份与 lookup 释放；分页读取（整文件、嵌套路径、空文件、多字节 UTF-8、行窗口边界、缺省与拒绝的 limit、保留回车）；字节窗口（缺省、中段与尾窗、越界与空文件、base64 往返、版本、上限、坏范围以及无大小时的 `eof`）；`stat`；工作区外读取及后端拒绝；`list` 的包含、截断、符号链接与 `not-directory`；以及由 `fs/observed` 驱动并按根过滤的 `changes`。Client spec 覆盖提供者帧、变更流、不支持地址及注册与释放。`fs/fs`、`fs-local` 与 `fs-e2b` spec 钉住 `readByteRange`；`dsh-util-workspace-path` spec 钉住文件地址语法。connection fixture 为 web e2e 套件提供 `stat`、分页 `read`、`list` 与一帧可选启用的 `changes`。
 
 ## Deferred
 

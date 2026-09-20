@@ -1,0 +1,23 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "files": [
+    "src/archive.ts",
+    "src/index.ts"
+  ],
+  "references": [
+    { "path": "../../../Core/vendor/cordis" },
+    { "path": "../../../Core/vendor/schemastery" },
+    { "path": "../../../Modules/Official/attachment/attachment" },
+    { "path": "../../../Core/util/brand" },
+    { "path": "../../core/session" },
+    { "path": "../../../Modules/Official/interaction/commands" },
+    { "path": "../../session/session-format" },
+    { "path": "../../session/session-persistence" },
+    { "path": "../session-query" }
+  ]
+}

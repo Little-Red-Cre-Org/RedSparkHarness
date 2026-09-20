@@ -8,11 +8,11 @@ Status: implemented
 
 Agent Teams 的服务与工具约定仍在变化，但它需要使用真实 Session 日志、subagent 生命周期、工具、示例、快照和仓库检查。用户还需要直接从 npm 安装完整 Team 组合，而无需构建源码 checkout。
 
-把这些包移入产品职责组会移除实验性名称，并暗示稳定包 owner 已经就位。发布 `packages/experimental/` 下的所有包又会暴露无关的内部原型。发布策略需要为 Agent Teams 设置显式例外，同时保留默认私有原则。
+把这些包移入产品职责组会移除实验性名称，并暗示稳定包 owner 已经就位。发布 `rsh/Modules/Community/experimental/` 下的所有包又会暴露无关的内部原型。发布策略需要为 Agent Teams 设置显式例外，同时保留默认私有原则。
 
 ## 决策
 
-`packages/experimental/agent-team`、`packages/experimental/tool-agent-team`、`packages/experimental/agent-team-profile`、`packages/experimental/client-ui-agent-team` 与 `packages/experimental/agent-team-web-profile` 是公开 workspace 包。它们保留现有 `@deepseek-ai/dsh-experimental-*` 名称并加入 dsh 发布系列。[实验性包规则](../../../../packages/experimental/AGENTS.md)负责默认私有原则、本例外与后续 promotion。
+`rsh/Modules/Community/experimental/agent-team`、`rsh/Modules/Community/experimental/tool-agent-team`、`rsh/Modules/Community/experimental/agent-team-profile`、`rsh/Modules/Community/experimental/client-ui-agent-team` 与 `rsh/Modules/Community/experimental/agent-team-web-profile` 是公开 workspace 包。它们保留现有 `@deepseek-ai/dsh-experimental-*` 名称并加入 dsh 发布系列。[实验性包规则](../../../../rsh/Modules/Community/experimental/AGENTS.md)负责默认私有原则、本例外与后续 promotion。
 
 dsh pack 与 publish 集合以及本地 baseline 发布器只会纳入这五个实验性包目录。workspace 约束要求它们省略 `private`、设置 `publishConfig.access` 为 `public`，并保留实验性 npm 前缀。其他实验性包默认仍为私有且不发布。实验组外的发布包与 app 以及 Python runtime 不得通过 `dependencies`、`optionalDependencies` 或 `peerDependencies` 引用实验性包；实验性包可以依赖发布包和其他实验性包。
 

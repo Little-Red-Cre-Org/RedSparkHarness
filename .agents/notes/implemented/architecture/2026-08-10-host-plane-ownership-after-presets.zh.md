@@ -20,13 +20,13 @@ Status: implemented
 
 **未加入的 agent 在两个不同的点上被指出两次。** 在配置了名单的前提下，`AgentPresets` 对每个作用域链长度为一就发布的 agent 记录一条警告。invariant 配套则直接失败——并且发生在 `system-prompt/assemble` 而非发布时，因为一个未加入的 agent 在它对模型说话之前都是合法的：`recompose` 绑定的正是这样一个 agent 作为它的首次链接；而提示词组装是唯一会提供 agent 作用域的调用方，因此宿主组装与常驻挂载都正确地落在检查范围之外。
 
-有三处限制不在此处修复，而是记录在会咬到它们的地方：投影 key 是否存在不能当作逐会话的能力信号（[`dsh-session-projection`](../../../../packages/session/session-projection/README.zh.md)）；被替代的常驻代际永不回收，而设置页的编写流程把它变成每次保存的代价（[`dsh-agent-presets`](../../../../packages/preset/agent-presets/README.zh.md)）；通过 `cordis_mount` 挂上的临时插件属于组装而非挂载它的会话（[`dsh-tool-cordis`](../../../../packages/extensions/tool-cordis/README.zh.md)）。
+有三处限制不在此处修复，而是记录在会咬到它们的地方：投影 key 是否存在不能当作逐会话的能力信号（[`dsh-session-projection`](../../../../rsh/Engine/session/session-projection/README.zh.md)）；被替代的常驻代际永不回收，而设置页的编写流程把它变成每次保存的代价（[`dsh-agent-presets`](../../../../rsh/Engine/preset/agent-presets/README.zh.md)）；通过 `cordis_mount` 挂上的临时插件属于组装而非挂载它的会话（[`dsh-tool-cordis`](../../../../rsh/Modules/Official/extensions/tool-cordis/README.zh.md)）。
 
 ## 测试
 
-`apps/cli/tests/web-agent-presets.e2e.ts` 在本文件中任何 preset 挂载**之前**，于已启动的 Web 组装上读取 `ctx.get('tokenMeter')`——preset 侧的 meter 会待在 `isolate` realm 里，对 `ctx.get` 不可见，因此这次读取是一次所有权断言而不是挂载顺序的巧合——随后断言一个 `minimal` 会话的快照带齐三个单元。
+`rsh/Programs/CLI/tests/web-agent-presets.e2e.ts` 在本文件中任何 preset 挂载**之前**，于已启动的 Web 组装上读取 `ctx.get('tokenMeter')`——preset 侧的 meter 会待在 `isolate` realm 里，对 `ctx.get` 不可见，因此这次读取是一次所有权断言而不是挂载顺序的巧合——随后断言一个 `minimal` 会话的快照带齐三个单元。
 
-`packages/preset/agent-presets/tests/mount.spec.ts` 断言警告对裸 agent 恰好触发一次、对已加入的 agent 完全不触发。`tests/invariant.spec.ts` 承担负控：未加入 agent 的组装被拒绝，而已加入 agent 的组装与不带作用域的宿主组装都通过。
+`rsh/Engine/preset/agent-presets/tests/mount.spec.ts` 断言警告对裸 agent 恰好触发一次、对已加入的 agent 完全不触发。`tests/invariant.spec.ts` 承担负控：未加入 agent 的组装被拒绝，而已加入 agent 的组装与不带作用域的宿主组装都通过。
 
 ## 考虑过的替代方案
 

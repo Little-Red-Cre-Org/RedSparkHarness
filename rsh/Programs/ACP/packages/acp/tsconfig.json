@@ -1,0 +1,45 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/llm/token-meter"
+    },
+    {
+      "path": "../../../../Modules/Official/mcp/mcp-client"
+    },
+    {
+      "path": "../../../../Engine/session/session-persistence"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/user-approval"
+    }
+  ]
+}

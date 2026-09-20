@@ -18,7 +18,7 @@ typed locale namespace 与双语字典对等性可以证明已注册字典完整
 
 **本地化展示文本绝不承担身份。** 模型与存储保留判别字段、稳定 id 和非展示 marker。渲染器先匹配再翻译，请求映射通过稳定的组成员关系进入 trajectory ledger。必须保存在视图模型中的 client 合成错误使用稳定 marker，只在展示时翻译。因此语言切换只改变措辞，不改变选择、分组、搜索身份或生命周期状态。
 
-**`verify-client-ui-i18n` 强制源码归属。** 基于 TypeScript AST 的检查会发现每个包含 TSX 的 package `src/client` 目录树、`packages/client/ui-*` 下的所有辅助 TS 文件和 web 应用源码；它拒绝自然语言 JSX 文本、承载文案的属性与组件 prop、JSX 字面量分支、label/copy 数据、具名文案辅助函数、返回字符串的展示格式化函数和解构默认值。locale 字典 owner 与不可变语言 token 是严格的语法级排除项。发现范围缩窄会直接失败，单元 fixture 固定纳入与排除形态，检查加入静态 CI 与 `hygiene` 图。字典 key 对等性仍由独立检查负责：一道门禁证明文案进入 locale 路径，另一道门禁证明两种发布语言都实现该路径。
+**`verify-client-ui-i18n` 强制源码归属。** 基于 TypeScript AST 的检查会发现每个包含 TSX 的 package `src/client` 目录树、`rsh/Programs/Web/client/ui-*` 下的所有辅助 TS 文件和 web 应用源码；它拒绝自然语言 JSX 文本、承载文案的属性与组件 prop、JSX 字面量分支、label/copy 数据、具名文案辅助函数、返回字符串的展示格式化函数和解构默认值。locale 字典 owner 与不可变语言 token 是严格的语法级排除项。发现范围缩窄会直接失败，单元 fixture 固定纳入与排除形态，检查加入静态 CI 与 `hygiene` 图。字典 key 对等性仍由独立检查负责：一道门禁证明文案进入 locale 路径，另一道门禁证明两种发布语言都实现该路径。
 
 [最初接入决策](../../archived/architecture/2026-07-30-client-locale-full-rollout.md)中的产品自产错误与设计字面量例外、原子组件默认文案和 trajectory 缓做均由本决定取代；其 label thunk、typed 席位、浏览器 locale、日期格式化和搜索占位行决定仍有效。
 

@@ -1,0 +1,33 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
+  },
+  "include": [
+    "src/client/**/*.ts",
+    "src/types.ts",
+    "src/remote-events.ts"
+  ],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../gateway/tsconfig.client.json" },
+    { "path": "../../../../Modules/Official/attachment/attachment" },
+    { "path": "../../client/connection/tsconfig.client.json" },
+    { "path": "../../client/file-upload/tsconfig.client.json" },
+    { "path": "../../client/store" },
+    { "path": "../../../../Engine/context/file-reference" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Engine/jobs/jobs" },
+    { "path": "../../../../Engine/llm/llm" },
+    { "path": "../../../../Engine/session/session-projection" },
+    { "path": "../../../../Engine/session/session-title" },
+    { "path": "../../../../Engine/subagent/subagent" },
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Core/util/crypto" },
+    { "path": "../../../../Core/util/workspace-path" },
+    { "path": "../../../../Modules/Official/workspace/workspace" },
+    { "path": "../../../../Core/typert/protocol" }
+  ]
+}

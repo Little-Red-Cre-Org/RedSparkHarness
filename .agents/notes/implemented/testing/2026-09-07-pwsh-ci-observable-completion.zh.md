@@ -12,7 +12,7 @@ Status: implemented
 
 ## Decision
 
-[真实 shell 测试](../../../../packages/terminal/terminal-bash/tests/local.spec.ts) 接受两种受支持的就绪层级，拒绝超时和退出结算，并在 scrollback 中观察格式化的子进程输出，证明环境持久化、当前目录与凭据清理。预期文本不出现在提交的命令中。私有文件屏障将执行阻塞到静默结算之后，只有下一次 send 结算后才释放，证明后续输出仍可被观察，而不延长生产时序。会话释放先于私有测试目录删除。
+[真实 shell 测试](../../../../rsh/Modules/Official/terminal/terminal-bash/tests/local.spec.ts) 接受两种受支持的就绪层级，拒绝超时和退出结算，并在 scrollback 中观察格式化的子进程输出，证明环境持久化、当前目录与凭据清理。预期文本不出现在提交的命令中。私有文件屏障将执行阻塞到静默结算之后，只有下一次 send 结算后才释放，证明后续输出仍可被观察，而不延长生产时序。会话释放先于私有测试目录删除。
 
 [单次](../../../../snapshots/session/pwsh-tool-turn/snapshot.yml)与[持久](../../../../snapshots/session/persistent-pwsh-tool-turn/snapshot.yml) fixture 及其拥有的 header pin 使用真实 PowerShell 可执行文件和已录制模型回复，经构建后的 headless profile 刷新。策略事件和可用工具保留在预期中；工具结果与最终回复仍为 `PWSH_OK` 和 `DONE`。
 

@@ -18,13 +18,13 @@ Session 格式 V3 使用一种规范事件信封。每个 `system/message`、`us
 
 ### 校验所有权
 
-[核心 Session](../../../../packages/core/session/src/surface.ts)负责事件本地的位置、请求头空字段与工具错误规则，其 surface 管理器负责需要事件日志的关系。seed、append 与恢复会在接纳事件前应用这些规则。它们不会为插件自有载荷创建通用 schema，也不会提前展开嵌入式提供方 stream。
+[核心 Session](../../../../rsh/Engine/core/session/src/surface.ts)负责事件本地的位置、请求头空字段与工具错误规则，其 surface 管理器负责需要事件日志的关系。seed、append 与恢复会在接纳事件前应用这些规则。它们不会为插件自有载荷创建通用 schema，也不会提前展开嵌入式提供方 stream。
 
-通用 Gateway 客户端返回未经校验的原始输出。因此，现有 [SessionEventStream](../../../../packages/api/session-controller/src/client/transport.ts) 会在发布前检查 follow 快照、实时持久条目与历史页。其私有[协议事件检查器](../../../../packages/api/session-controller/src/client/session-wire-event.ts)验证精确信封，并将事件本地规则委托给可在浏览器中使用的核心校验器。它不添加通用 Gateway schema，也不校验无关插件载荷。surface 成员关系与来源是否存在仍由 Host 负责，因为浏览器窗口可能未包含较早事件。
+通用 Gateway 客户端返回未经校验的原始输出。因此，现有 [SessionEventStream](../../../../rsh/Programs/Web/api/session-controller/src/client/transport.ts) 会在发布前检查 follow 快照、实时持久条目与历史页。其私有[协议事件检查器](../../../../rsh/Programs/Web/api/session-controller/src/client/session-wire-event.ts)验证精确信封，并将事件本地规则委托给可在浏览器中使用的核心校验器。它不添加通用 Gateway schema，也不校验无关插件载荷。surface 成员关系与来源是否存在仍由 Host 负责，因为浏览器窗口可能未包含较早事件。
 
 ### 已发布 V2 到 V3 的转换
 
-[V2 到 V3 规范](../../../../packages/session/session-format-v2-to-v3/README.zh.md#v2-to-v3-specification)负责完整历史转换、[规范化规则](../../../../packages/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)及[原生准入与恢复](../../../../packages/session/session-format-v2-to-v3/README.zh.md#native-v3-admission)。将这些规则集中在一起，可以避免把保持事件数量的规范化步骤误认为恒等迁移。冻结的关系校验使用私有视图而非运行时别名；原始 V3 产物仍具权威性。
+[V2 到 V3 规范](../../../../rsh/Engine/session/session-format-v2-to-v3/README.zh.md#v2-to-v3-specification)负责完整历史转换、[规范化规则](../../../../rsh/Engine/session/session-format-v2-to-v3/README.zh.md#canonical-envelopes)及[原生准入与恢复](../../../../rsh/Engine/session/session-format-v2-to-v3/README.zh.md#native-v3-admission)。将这些规则集中在一起，可以避免把保持事件数量的规范化步骤误认为恒等迁移。冻结的关系校验使用私有视图而非运行时别名；原始 V3 产物仍具权威性。
 
 ## 曾考虑的替代方案
 
@@ -44,4 +44,4 @@ Session 格式 V3 使用一种规范事件信封。每个 `system/message`、`us
 
 ## 验证
 
-[核心接纳测试](../../../../packages/core/session/tests/canonical-envelopes.spec.ts)固定无效 seed/append/restore 记录、类型化 surface 变体、可选失败身份与拒绝后派生状态不变。[浏览器传输测试](../../../../packages/api/session-controller/tests/transport.client.spec.ts)检验发布前的严格 follow/page 接纳。[迁移测试](../../../../packages/session/session-format-v2-to-v3/tests/canonical-envelopes.spec.ts)覆盖转换与恢复；冻结的相邻迁移边测试保留历史语义。必需覆盖还包括编解码器接纳、空白与空 stop 列表保留、不透明载荷保留，以及按合法 surface 顺序排列但数值递减的替换端点。
+[核心接纳测试](../../../../rsh/Engine/core/session/tests/canonical-envelopes.spec.ts)固定无效 seed/append/restore 记录、类型化 surface 变体、可选失败身份与拒绝后派生状态不变。[浏览器传输测试](../../../../rsh/Programs/Web/api/session-controller/tests/transport.client.spec.ts)检验发布前的严格 follow/page 接纳。[迁移测试](../../../../rsh/Engine/session/session-format-v2-to-v3/tests/canonical-envelopes.spec.ts)覆盖转换与恢复；冻结的相邻迁移边测试保留历史语义。必需覆盖还包括编解码器接纳、空白与空 stop 列表保留、不透明载荷保留，以及按合法 surface 顺序排列但数值递减的替换端点。

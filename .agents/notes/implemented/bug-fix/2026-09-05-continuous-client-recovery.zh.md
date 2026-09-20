@@ -10,7 +10,7 @@ generation source 可能一直挂起，既不报告就绪，也不报告载体�
 
 ## 决策
 
-[`ConnectionController`](../../../../packages/client/connection/src/client/connection.ts) 同时拥有握手就绪期限和持续重试调度。默认情况下，握手在三秒后报告 Host 响应缓慢，在十五秒后中止。告警提供早期反馈，同时保留需要数秒才能就绪的 Host；硬期限限制每次尝试的时长，并在取消 generation 时记录超时。告警与取消时间相互独立，因此缩短硬期限不需要同时修改两个字段；排定在握手结束之后的告警会被取消。取消会传到 generation source，后者必须释放资源并结束，下一 source 才能启动。已取消 source 迟到的 ready 回调不能建立 generation。
+[`ConnectionController`](../../../../rsh/Programs/Web/client/connection/src/client/connection.ts) 同时拥有握手就绪期限和持续重试调度。默认情况下，握手在三秒后报告 Host 响应缓慢，在十五秒后中止。告警提供早期反馈，同时保留需要数秒才能就绪的 Host；硬期限限制每次尝试的时长，并在取消 generation 时记录超时。告警与取消时间相互独立，因此缩短硬期限不需要同时修改两个字段；排定在握手结束之后的告警会被取消。取消会传到 generation source，后者必须释放资源并结束，下一 source 才能启动。已取消 source 迟到的 ready 回调不能建立 generation。
 
 重试上限从 500ms 开始，经过 1s、2s、4s、8s 增长到 10s，保留现有 50–100% 抖动。达到最大上限后失败仍继续重试。把最大延迟与重试次数上限分开，与 [Socket.IO Client 选项](https://socket.io/docs/v4/client-options/#reconnectionattempts)的区分一致；DSH 保留自身的 Remote stream 协议和唯一调度器。Controller 每要求一次尝试，Gateway 就替换一次物理 socket。仍在等待打开的 WebSocket 候选，以及已打开但未收到首个 ready 帧的 socket，都能通过此路径恢复。
 

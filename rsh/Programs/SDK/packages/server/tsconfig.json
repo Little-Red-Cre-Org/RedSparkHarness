@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/llm/llm-deepseek"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../../../../Engine/subagent/subagent"
+    }
+  ]
+}

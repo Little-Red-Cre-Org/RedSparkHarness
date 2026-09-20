@@ -2,7 +2,7 @@
 
 Status: implemented
 
-CPython 代码运行时现在位于 `packages/experimental/code-runtime-python`（私有，npm 名 `@deepseek-ai/dsh-experimental-code-runtime-python`）；提升为发布包遵循 experimental-packages 决策。
+CPython 代码运行时现在位于 `rsh/Modules/Community/experimental/code-runtime-python`（私有，npm 名 `@deepseek-ai/dsh-experimental-code-runtime-python`）；提升为发布包遵循 experimental-packages 决策。
 
 [English](2026-07-31-code-runtime-python-fd3-protocol.md) | 中文
 

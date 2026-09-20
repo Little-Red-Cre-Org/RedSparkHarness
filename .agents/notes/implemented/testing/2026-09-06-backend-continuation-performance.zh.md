@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决定
 
-[agent-continuation 基准](../../../../benchmarks/agent-continuation/agent-continuation.bench.ts)增加三个场景组，包含一个已发布 profile 变体，不修改产品实现。它们通过生产追加、流累积和持久化 API 构造当前代际的 Zstandard Session。独立播种进程在测量前生成确定性源数据；每个样本将其复制到私有根目录，并启动新的已编译纯 Node worker。输入不来自录制 Session、环境仓库、网络、私有 Harness 主目录或已部署 GUI。
+[agent-continuation 基准](../../../../rsh/Tests/benchmarks/agent-continuation/agent-continuation.bench.ts)增加三个场景组，包含一个已发布 profile 变体，不修改产品实现。它们通过生产追加、流累积和持久化 API 构造当前代际的 Zstandard Session。独立播种进程在测量前生成确定性源数据；每个样本将其复制到私有根目录，并启动新的已编译纯 Node worker。输入不来自录制 Session、环境仓库、网络、私有 Harness 主目录或已部署 GUI。
 
 共享历史包含 800 个已完成的双步骤轮次，每轮四次工具调用，工具结果为 2,048 字符：共 13,600 个事件和 5,600 条对话消息。每条助手回复携带推理、文本和紧凑流记录；请求工具的回复还携带分片参数。播种数据使用固定时间戳和 id。实时合成回复使用真实循环的时钟和 id，不覆盖进程全局状态。
 
@@ -39,7 +39,7 @@ SDK fixture 通过 profile patch 显式插入 `fs-local` 和 `str_replace_editor
 | 工具续聊 | 358.953, 324.790, 318.861, 320.119, 322.896 | 324.280, 321.952, 340.409, 325.470, 324.312 | 322.896 / 324.312 | 340 | 850 |
 | 子会话目录 | 318.730, 309.006, 311.404, 308.565, 310.105 | 308.670, 310.030, 280.086, 303.084, 284.829 | 310.105 / 303.084 | 320 | 800 |
 
-续聊保留约 22.295 MiB；源码期望值为 23 MiB，预算为 28.75 MiB。SDK 时间期望值使用现有[校准辅助函数](../../../../benchmarks/support/calibration.ts)：2× 共享 CI 时间比例和 1.25× 波动余量。请求历史使用[请求冻结校准](../simplification/2026-09-06-agent-request-freeze-provenance.zh.md)中的直接托管期望值，不乘以 2× 比例。内存只使用 1.25× 余量。比例继承现有通道的校准，并非这些用例的新 Linux 实测值；runner 特征变化时仍需 CI 证据。基线预算保护实测实现；更紧预算属于有测量依据且保持行为的修复。
+续聊保留约 22.295 MiB；源码期望值为 23 MiB，预算为 28.75 MiB。SDK 时间期望值使用现有[校准辅助函数](../../../../rsh/Tests/benchmarks/support/calibration.ts)：2× 共享 CI 时间比例和 1.25× 波动余量。请求历史使用[请求冻结校准](../simplification/2026-09-06-agent-request-freeze-provenance.zh.md)中的直接托管期望值，不乘以 2× 比例。内存只使用 1.25× 余量。比例继承现有通道的校准，并非这些用例的新 Linux 实测值；runner 特征变化时仍需 CI 证据。基线预算保护实测实现；更紧预算属于有测量依据且保持行为的修复。
 
 独立的纯 Node 请求历史 CPU profile 在一次 211.300 ms 操作中，将 132.876 ms 采样自身时间归因于 buildRequest 调用的 deepFreeze。这把重复遍历已冻结历史定位为聚焦调查目标，不是已证实的优化结果。目录首次／重复时间分别保留，因为观察释放后第二次列举仍读取带种子子会话的正文。
 

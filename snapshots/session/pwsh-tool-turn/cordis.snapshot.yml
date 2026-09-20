@@ -68,6 +68,10 @@
   name: '@deepseek-ai/dsh-skill'
   disabled: true
 
+- id: archify
+  name: '@deepseek-ai/dsh-archify'
+  disabled: true
+
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: true

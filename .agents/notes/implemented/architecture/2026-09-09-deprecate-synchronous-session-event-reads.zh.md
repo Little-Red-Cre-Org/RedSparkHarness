@@ -16,7 +16,7 @@ Status: implemented
 
 这三个方法通过 `@deprecated` JSDoc 声明该规则。这是 API 使用决策；当前 Session 实现仍在内存中保留完整事件序列。
 
-仓库测试文件（包括 `scripts/**/*.spec.{ts,tsx}`）可以调用这三个读取方法，以检查已发出的事件并验证 Session 历史行为。测试文件 lint override 允许 `snapshotEvents`、`eventAt` 和 `ownEvents`，其他弃用名称仍报错。在当前 linter 下，此豁免也覆盖使用这三个名称的其他声明。它不适用于生产源码或非测试仓库脚本。
+仓库测试文件（包括 `rsh/Scripts/**/*.spec.{ts,tsx}`）可以调用这三个读取方法，以检查已发出的事件并验证 Session 历史行为。测试文件 lint override 允许 `snapshotEvents`、`eventAt` 和 `ownEvents`，其他弃用名称仍报错。在当前 linter 下，此豁免也覆盖使用这三个名称的其他声明。它不适用于生产源码或非测试仓库脚本。
 
 ### 恢复后需要的状态
 

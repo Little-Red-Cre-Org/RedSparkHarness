@@ -19,7 +19,7 @@ Two explicit plugin policies over existing seams:
 1. **Same-session goals** retain one durable objective in the current session and admit goal-attributed continuation turns only while live activation is armed.
 2. **Fresh-agent Ralph runs** execute a fixed foreground workflow whose rounds each spawn a new structured child with no conversation seed.
 
-There is no `packages/loop/` family, `LoopDriver`, `LoopId`, universal `StopCondition`, or model-facing generic `loop` tool. The two policies share the repository's ordinary agent, session, tools, workflow, subagent, and UI extension points, but they do not pretend that one lifecycle fits both.
+There is no `rsh/loop/` family, `LoopDriver`, `LoopId`, universal `StopCondition`, or model-facing generic `loop` tool. The two policies share the repository's ordinary agent, session, tools, workflow, subagent, and UI extension points, but they do not pretend that one lifecycle fits both.
 
 ### Vocabulary and policy boundary
 
@@ -35,12 +35,12 @@ Time-based `/loop` or scheduled execution is a third policy and is not implement
 
 | Package | Repository category | Owned structures and verbs |
 |---|---|---|
-| `@deepseek-ai/dsh-goal` | `packages/goal/goal/`, domain service | Owns `GoalId`, compare-and-set `GoalRef`, `GoalSnapshot`, four-state `GoalPhase`, structured `GoalBlockReason`, process-local `GoalActivation`, replay folding, and `get`, `create`, `edit`, `pause`, `resume`, `complete`, `block`, `clear`, and `disarm` verbs. |
-| `@deepseek-ai/dsh-tool-goal` | `packages/goal/tool-goal/`, model-facing consumer | Registers exclusive `get_goal`, `create_goal`, and `update_goal`; requires a direct human message in a live root-agent turn and narrows autonomous-round authority to completion or blocking reports with machine-routable reason codes. |
-| `@deepseek-ai/dsh-goal-round-driver` | `packages/goal/goal-round-driver/`, continuation policy | Reserves, fences, admits, attributes, settles, cancels, and quiescently drains same-session goal rounds without importing the concrete loop. |
-| `@deepseek-ai/dsh-commands` | `packages/interaction/commands/`, UI registry | Owns `CommandDefinition`, discovery, scoped registration, direct dispatch, `CommandResult`, and request cancellation for human-only commands. |
-| `@deepseek-ai/dsh-command-goal` | `packages/goal/command-goal/`, human-command producer | Registers `/goal` status, creation, edit, pause, resume, and clear over the goal domain for TUI. |
-| `@deepseek-ai/dsh-tool-ralph` | `packages/workflow/tool-ralph/`, fixed workflow consumer | Registers `ralph({ objective, maxRounds? })`, validates the fresh structured provider and bounded `RalphRoundReport`, and returns `complete`, `blocked`, or `budget-limited`. |
+| `@deepseek-ai/dsh-goal` | `rsh/Engine/goal/goal/`, domain service | Owns `GoalId`, compare-and-set `GoalRef`, `GoalSnapshot`, four-state `GoalPhase`, structured `GoalBlockReason`, process-local `GoalActivation`, replay folding, and `get`, `create`, `edit`, `pause`, `resume`, `complete`, `block`, `clear`, and `disarm` verbs. |
+| `@deepseek-ai/dsh-tool-goal` | `rsh/Engine/goal/tool-goal/`, model-facing consumer | Registers exclusive `get_goal`, `create_goal`, and `update_goal`; requires a direct human message in a live root-agent turn and narrows autonomous-round authority to completion or blocking reports with machine-routable reason codes. |
+| `@deepseek-ai/dsh-goal-round-driver` | `rsh/Engine/goal/goal-round-driver/`, continuation policy | Reserves, fences, admits, attributes, settles, cancels, and quiescently drains same-session goal rounds without importing the concrete loop. |
+| `@deepseek-ai/dsh-commands` | `rsh/Modules/Official/interaction/commands/`, UI registry | Owns `CommandDefinition`, discovery, scoped registration, direct dispatch, `CommandResult`, and request cancellation for human-only commands. |
+| `@deepseek-ai/dsh-command-goal` | `rsh/Engine/goal/command-goal/`, human-command producer | Registers `/goal` status, creation, edit, pause, resume, and clear over the goal domain for TUI. |
+| `@deepseek-ai/dsh-tool-ralph` | `rsh/Engine/workflow/tool-ralph/`, fixed workflow consumer | Registers `ralph({ objective, maxRounds? })`, validates the fresh structured provider and bounded `RalphRoundReport`, and returns `complete`, `blocked`, or `budget-limited`. |
 
 The detailed contracts live in the [goal-domain](2026-07-19-persisted-same-session-goal-domain.md), [goal-owned event](../architecture/2026-07-31-goal-owned-durable-events.md), [model goal-tools](2026-07-19-model-facing-goal-tools.md), [goal-round driver](../../archived/feature/2026-07-19-same-session-goal-round-driver.md), [command registry](2026-07-19-plugin-command-registration.md), [human goal-command](../../archived/feature/2026-07-19-human-goal-command.md), and [Ralph workflow-tool](../../archived/feature/2026-07-19-fresh-agent-ralph-workflow-tool.md) Agent Notes.
 

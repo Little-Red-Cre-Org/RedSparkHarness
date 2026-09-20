@@ -18,7 +18,7 @@ Status: implemented
 
 `agent.ctx` 携带注册所有权和作用域键，不暴露反向的 `agent` 属性。需要领域主体的代码会显式接收它：`AgentSetup` 接收 `(agentCtx, agent)`，作用域事件则在 payload 中携带主体。
 
-Cordis 是 SDK 底层的插件框架。Cordis **上下文**是插件用来访问服务和注册效果的对象，效果的清理跟随该上下文。[Cordis 入门](../../../../docs/cordis-primer.zh.md)对该框架有更详细的说明。
+Cordis 是 SDK 底层的插件框架。Cordis **上下文**是插件用来访问服务和注册效果的对象，效果的清理跟随该上下文。[Cordis 入门](../../../../rsh/Docs/cordis-primer.zh.md)对该框架有更详细的说明。
 
 对大多数贡献者而言，完整约定是四条规则：
 
@@ -106,7 +106,7 @@ setup 接收完整的受信 Cordis 上下文和未发布的 Agent，因此既可
 
 在 Cordis 层面，`Scoped<T>` 是一个不透明的路由接收器。它携带用于选择监听器的过滤器，但本身不是领域对象。因此事件签名将真实的 `Agent`、工具执行、审批请求或其他主体作为显式参数保留，供监听器检查。
 
-以 `{ global: true }` 注册的监听器有意绕过上下文受众过滤，但其清理仍跟随注册上下文。注册表成员变更通知保持不过滤，因为它们描述的是共享注册表状态而非某个 agent 的操作。详尽的事件参考是各[子系统页面](../../../../docs/subsystems/core.zh.md)上生成的 `cordis-surface` 区块的集合——每个事件作用域在其所属页面上（`agent/*` 与 `agent-loop/*` 在 core.md 本页）。
+以 `{ global: true }` 注册的监听器有意绕过上下文受众过滤，但其清理仍跟随注册上下文。注册表成员变更通知保持不过滤，因为它们描述的是共享注册表状态而非某个 agent 的操作。详尽的事件参考是各[子系统页面](../../../../rsh/Docs/subsystems/core.zh.md)上生成的 `cordis-surface` 区块的集合——每个事件作用域在其所属页面上（`agent/*` 与 `agent-loop/*` 在 core.md 本页）。
 
 ### 创建最后发布，dispose 最后撤销
 

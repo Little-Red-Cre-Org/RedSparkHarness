@@ -6,11 +6,11 @@ Status: implemented
 
 ## 问题
 
-`ctx.jobs` 已经承载了 harness 在后台启动的全部长时工作——`bash`、`pwsh`、`pty-send`，以及一次性后台 subagent——但它唯一的读者是模型。[`dsh-tool-jobs`](../../../../packages/jobs/tool-jobs/README.zh.md) 暴露了 `job_list`、`job_output` 和 `job_kill`，除此之外没有任何东西观察这个注册表。
+`ctx.jobs` 已经承载了 harness 在后台启动的全部长时工作——`bash`、`pwsh`、`pty-send`，以及一次性后台 subagent——但它唯一的读者是模型。[`dsh-tool-jobs`](../../../../rsh/Engine/jobs/tool-jobs/README.zh.md) 暴露了 `job_list`、`job_output` 和 `job_kill`，除此之外没有任何东西观察这个注册表。
 
 于是 Web 端的人类看不到构建正在跑，分不清一个任务是已经完成还是卡死，也无法把它停掉。唯一的痕迹是 transcript 里更早某处那张打印了 job id 的 `run_in_background` 工具卡片，而那张卡片此后再也不会更新。
 
-会话 header 本来就是每会话后台活动的落点：[`dsh-client-ui-subagent`](../../../../packages/client/ui-subagent/README.zh.md) 把 subagent 目录贡献到 `conversation.session.header.actions`。位置没有争议。缺的是任何一条把任务状态送到浏览器的通道。
+会话 header 本来就是每会话后台活动的落点：[`dsh-client-ui-subagent`](../../../../rsh/Programs/Web/client/ui-subagent/README.zh.md) 把 subagent 目录贡献到 `conversation.session.header.actions`。位置没有争议。缺的是任何一条把任务状态送到浏览器的通道。
 
 ## 决策
 
@@ -26,7 +26,7 @@ Session Controller control 流中的一帧：
 | { type: 'jobs'; sessionId: SessionId; jobs: SessionJob[] }
 ```
 
-`SessionJob` 是浏览器安全类型，与其他 Session Remote 约定一起由 [`packages/api/session-controller/src/types.ts`](../../../../packages/api/session-controller/src/types.ts) 拥有：
+`SessionJob` 是浏览器安全类型，与其他 Session Remote 约定一起由 [`rsh/Programs/Web/api/session-controller/src/types.ts`](../../../../rsh/Programs/Web/api/session-controller/src/types.ts) 拥有：
 
 ```ts
 import type { JobId } from '@deepseek-ai/dsh-jobs/brand'
@@ -42,7 +42,7 @@ export interface SessionJob {
 }
 ```
 
-`JobId` 取自不依赖 cordis 的 [`@deepseek-ai/dsh-jobs/brand`](../../../../packages/jobs/jobs/src/brand.ts) 叶子——与 `api/subagents.ts` 已经在用的 `@deepseek-ai/dsh-llm/brand` 导入是同一种安排，因为 `dsh-jobs` 根出口会牵到 `dsh-agent`，即便只作类型也无法被客户端程序触及。和本仓库其他每一个非根子路径一样，它带有显式的 `tsconfig.base.json` `paths` 条目；没有这一条，Typert 分析器会把该 specifier 解析到 `lib/types/` 并判定该引用未被导出。
+`JobId` 取自不依赖 cordis 的 [`@deepseek-ai/dsh-jobs/brand`](../../../../rsh/Engine/jobs/jobs/src/brand.ts) 叶子——与 `api/subagents.ts` 已经在用的 `@deepseek-ai/dsh-llm/brand` 导入是同一种安排，因为 `dsh-jobs` 根出口会牵到 `dsh-agent`，即便只作类型也无法被客户端程序触及。和本仓库其他每一个非根子路径一样，它带有显式的 `tsconfig.base.json` `paths` 条目；没有这一条，Typert 分析器会把该 specifier 解析到 `lib/types/` 并判定该引用未被导出。
 
 线路上的 `kind` 是 `string` 而非 `JobKind`。kind 映射由生产者插件按声明合并扩展，客户端构建无法枚举这个闭集；遇到无法识别的 kind，呈现层走一条有文档的默认分支。
 
@@ -68,11 +68,11 @@ abstract onJobsChanged(listener: JobsChangedListener): () => void
 
 ### Session Controller 载体
 
-[`SessionControlController.control()`](../../../../packages/api/session-controller/src/control.ts) 先发出一份完整的 Host 范围 baseline，再发送后续 `jobs` 替换帧。每次物理重连都会打开新一代流，因此客户端会先替换进程本地镜像，再应用后续变更。
+[`SessionControlController.control()`](../../../../rsh/Programs/Web/api/session-controller/src/control.ts) 先发出一份完整的 Host 范围 baseline，再发送后续 `jobs` 替换帧。每次物理重连都会打开新一代流，因此客户端会先替换进程本地镜像，再应用后续变更。
 
 载体守着四条规则：
 
-- **绝不 resume。** 变更推送用监听器给出的确切 `Agent` 调 `jobs.list(owner)`，即使该 owner 的 scope 正在拆除、按 id 查找已经查不到，它依然正确。baseline 则读 `ctx.jobs.list(ctx.agents.get(session.id))`，没有 live Agent 的 Session 正确地只得到无主任务。两条路径都不调用 [Session Controller Agent 解析器](../../../../packages/api/session-controller/src/agent.ts)，因为列出任务绝不能复活用户随手划过的 Session。
+- **绝不 resume。** 变更推送用监听器给出的确切 `Agent` 调 `jobs.list(owner)`，即使该 owner 的 scope 正在拆除、按 id 查找已经查不到，它依然正确。baseline 则读 `ctx.jobs.list(ctx.agents.get(session.id))`，没有 live Agent 的 Session 正确地只得到无主任务。两条路径都不调用 [Session Controller Agent 解析器](../../../../rsh/Programs/Web/api/session-controller/src/agent.ts)，因为列出任务绝不能复活用户随手划过的 Session。
 - **无主变更要扇出。** `owner` 为 `undefined` 时向每一个已挂接 Session 推一份新快照，因为无主任务对所有调用方可见。
 - **保持可选。** 载体读 `ctx.get('jobs')`。没有挂注册表的组合报告空任务集，客户端也就不渲染入口。
 - **显式表示空集。** opening baseline 为每个已挂接 Session 提供一项，包括 `[]`；后续变更清空一个列表时也会推送 `[]`。客户端因此可以把空集归一化为缺失键，而不会保留陈旧行。
@@ -87,7 +87,7 @@ abstract onJobsChanged(listener: JobsChangedListener): () => void
 
 ### header 入口
 
-[`@deepseek-ai/dsh-client-ui-jobs`](../../../../packages/client/ui-jobs/README.zh.md) 在 `conversation.session.header.actions` 注册一个条目，排在 subagent 目录之后。呈现契约归它自己的 README；值得记在这里的决策是：会话没有任务时控件根本不渲染；活跃角标为零时省略，让只剩历史的会话保留一个安静的入口；终态行保持可见，因为失败任务的 `detail` 是其失败唯一可读之处。
+[`@deepseek-ai/dsh-client-ui-jobs`](../../../../rsh/Programs/Web/client/ui-jobs/README.zh.md) 在 `conversation.session.header.actions` 注册一个条目，排在 subagent 目录之后。呈现契约归它自己的 README；值得记在这里的决策是：会话没有任务时控件根本不渲染；活跃角标为零时省略，让只剩历史的会话保留一个安静的入口；终态行保持可见，因为失败任务的 `detail` 是其失败唯一可读之处。
 
 因此一个运行中的一次性后台 subagent 会同时出现在那里和 subagent 目录里。两者回答不同的问题——目录负责进入子会话的 transcript，而这个列表是中断能力唯一可能附着的句柄——在这里屏蔽 `kind: 'subagent'` 会让中断那一期恰好对这批任务没有入口。
 
@@ -101,11 +101,11 @@ abstract onJobsChanged(listener: JobsChangedListener): () => void
 
 ## 备选方案
 
-**信号帧加 RPC 拉取，即 subagent 目录的形状。** 推一个无 payload 的 `jobs-changed` 信号，防抖后用一元 RPC 重读权威状态。subagent 目录就是这么做的，代价在 [`SessionManager`](../../../../packages/api/session-controller/src/client/sessions/manager.ts) 里一览无余：`catalogInflight` 做单飞行、`catalogStale` 在成员帧落于请求中途时补一次尾拉、`updateCatalogActivity` 既就地打补丁又往在途请求里写一份好让比帧更旧的响应被覆盖、`parentAvailableOverride` 重放一个过期的 `false`，还有重连时逐一重拉每个打开的目录。这套装置之所以存在，是因为目录的权威被劈成两半——持久血缘来自投影，活跃度是响应时刻的采样——而任务没有持久的那一半，不该继承这份复杂度。它还恰好在输出那一期最在意的时刻失效：任务结算，输出流立即关闭，状态却要等防抖加一次往返才到，那段窗口里 UI 显示一个流已死的运行中任务。
+**信号帧加 RPC 拉取，即 subagent 目录的形状。** 推一个无 payload 的 `jobs-changed` 信号，防抖后用一元 RPC 重读权威状态。subagent 目录就是这么做的，代价在 [`SessionManager`](../../../../rsh/Programs/Web/api/session-controller/src/client/sessions/manager.ts) 里一览无余：`catalogInflight` 做单飞行、`catalogStale` 在成员帧落于请求中途时补一次尾拉、`updateCatalogActivity` 既就地打补丁又往在途请求里写一份好让比帧更旧的响应被覆盖、`parentAvailableOverride` 重放一个过期的 `false`，还有重连时逐一重拉每个打开的目录。这套装置之所以存在，是因为目录的权威被劈成两半——持久血缘来自投影，活跃度是响应时刻的采样——而任务没有持久的那一半，不该继承这份复杂度。它还恰好在输出那一期最在意的时刻失效：任务结算，输出流立即关闭，状态却要等防抖加一次往返才到，那段窗口里 UI 显示一个流已死的运行中任务。
 
 **只在弹层打开时轮询，不改 seam。** 最省事，也是唯一不碰 `JobRegistry` 的选项。它无法在不常驻轮询的前提下支持触发器上的常驻计数，而后面两期反正都需要一条真正的变更订阅，所以它省下一周又还回去。
 
-**基于持久任务事件的 session-projection 单元。** 投影单元在已提交的会话事件上折叠，所以这条路要先让任务生命周期变持久——`job/started` … `job/settled` 作为一对独立的开合括号，由最后一个 [`session/end-seed`](../../../../packages/core/session/src/types.ts) 把未配对的开括号标为死历史，与 compaction 括号已有的做法完全一致。它在客户端确实更省：`dsh-tool-todo` 用十五行的单元展示了整套模式，而现成的 `session/projection` 帧、history-tail 块和持久化 checkpoint 缓存本可以承载这批数据，无需新线路面、无需载体订阅、无需 manager 状态。否决它，是因为这要拿一次持久格式变更去换一个浏览器列表，而且它并不能延伸到最需要它的那一期：[`spill/`](../../../../packages/spill/README.zh.md) 的存在正是为了让超大工具输出留在日志之外，所以流式任务输出无论如何都不能骑在持久事件上。如果持久任务历史将来凭自身价值站得住，本设计不阻挡重新考虑它。
+**基于持久任务事件的 session-projection 单元。** 投影单元在已提交的会话事件上折叠，所以这条路要先让任务生命周期变持久——`job/started` … `job/settled` 作为一对独立的开合括号，由最后一个 [`session/end-seed`](../../../../rsh/Engine/core/session/src/types.ts) 把未配对的开括号标为死历史，与 compaction 括号已有的做法完全一致。它在客户端确实更省：`dsh-tool-todo` 用十五行的单元展示了整套模式，而现成的 `session/projection` 帧、history-tail 块和持久化 checkpoint 缓存本可以承载这批数据，无需新线路面、无需载体订阅、无需 manager 状态。否决它，是因为这要拿一次持久格式变更去换一个浏览器列表，而且它并不能延伸到最需要它的那一期：[`spill/`](../../../../rsh/Modules/Official/spill/README.zh.md) 的存在正是为了让超大工具输出留在日志之外，所以流式任务输出无论如何都不能骑在持久事件上。如果持久任务历史将来凭自身价值站得住，本设计不阻挡重新考虑它。
 
 **复用 `dsh-tool-jobs` 的 `PublicJobSnapshot`。** 字段几乎就是对的，但它属于面向模型的控制面。浏览器程序从一个 tool 包导入线路类型，会把客户端呈现耦合到面向 prompt 的决策上，并把一个 host-only 包拖进客户端构建。
 
@@ -115,9 +115,9 @@ abstract onJobsChanged(listener: JobsChangedListener): () => void
 
 ## 测试
 
-[web e2e 场景](../../../../apps/web/tests/background-job-list.e2e.ts)是端到端的证据，且无需密钥：一次真实的 `run_in_background` bash 调用注册进 `ctx.jobs`，header 的计数与行在没有任何用户操作的情况下出现，通过注册表杀掉该任务后打开着的列表翻到生产者给出的 detail。它断言的是整条投递链路，而不是其中某一层。
+[web e2e 场景](../../../../rsh/Programs/Web/application/tests/background-job-list.e2e.ts)是端到端的证据，且无需密钥：一次真实的 `run_in_background` bash 调用注册进 `ctx.jobs`，header 的计数与行在没有任何用户操作的情况下出现，通过注册表杀掉该任务后打开着的列表翻到生产者给出的 detail。它断言的是整条投递链路，而不是其中某一层。
 
-在它之下，[`jobs-local`](../../../../packages/jobs/jobs-local/tests/jobs.spec.ts) 钉住变更订阅的全部四个提交点、对抛错观察者的包容，以及显式销毁与 fiber 拆除两条路径上的注销；[`control-jobs`](../../../../packages/api/session-controller/tests/control-jobs.host.spec.ts) 钉住完整 baseline、三次变更推送、被丢弃的内部字段、无主扇出、不 resume 的保证、没有注册表的组合，以及不得消费模型输出；客户端各套件钉住 baseline 替换、last-wins 折叠、缺失键表示、移除清理，以及组件的排序、时长与关闭行为。
+在它之下，[`jobs-local`](../../../../rsh/Engine/jobs/jobs-local/tests/jobs.spec.ts) 钉住变更订阅的全部四个提交点、对抛错观察者的包容，以及显式销毁与 fiber 拆除两条路径上的注销；[`control-jobs`](../../../../rsh/Programs/Web/api/session-controller/tests/control-jobs.host.spec.ts) 钉住完整 baseline、三次变更推送、被丢弃的内部字段、无主扇出、不 resume 的保证、没有注册表的组合，以及不得消费模型输出；客户端各套件钉住 baseline 替换、last-wins 折叠、缺失键表示、移除清理，以及组件的排序、时长与关闭行为。
 
 ## 影响
 

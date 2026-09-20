@@ -10,15 +10,15 @@ The documentation system has strong placement, freshness, linking, bilingual, an
 
 ### Semantic correctness can pass without a current owner
 
-The gates prove structure and generated freshness, not that maintained prose still names the live mechanism. The former `dsh-doc-site-sync` skill told authors to reuse a nonexistent `en-docs` sidebar and to add sections to a removed `sectionOrder`; [website/docs.ts](../../../../website/docs.ts) owns `en-guide`, `en-develop`, `en-reference`, and `sections`. The implemented [product-first README decision](../../archived/process/2026-07-22-product-first-root-readme.md) describes an internal-testing notice and ACP, Python, and JSON-RPC surface sections absent from the [root README](../../../../README.md), although implemented Agent Notes must track shipped facts.
+The gates prove structure and generated freshness, not that maintained prose still names the live mechanism. The former `dsh-doc-site-sync` skill told authors to reuse a nonexistent `en-docs` sidebar and to add sections to a removed `sectionOrder`; [rsh/Docs/website/docs.ts](../../../../rsh/Docs/website/docs.ts) owns `en-guide`, `en-develop`, `en-reference`, and `sections`. The implemented [product-first README decision](../../archived/process/2026-07-22-product-first-root-readme.md) describes an internal-testing notice and ACP, Python, and JSON-RPC surface sections absent from the [root README](../../../../README.md), although implemented Agent Notes must track shipped facts.
 
-The budget policy has the same split. [docs/AGENTS.md](../../../../docs/AGENTS.md#wordcount-budgets) states a 1,800-word target and 5% headroom for `architecture.md`, but the [budget manifest](../../../../scripts/doc-budgets.manifest.json) allows 2,400 words while the file contains 1,313. The budget gate passes because it checks the manifest ceiling, not the target or ratchet rule. High-impact prose therefore needs a named source or a focused check that consumes the source; a second hand-written copy is not a freshness mechanism.
+The budget policy has the same split. [rsh/Docs/AGENTS.md](../../../../rsh/Docs/AGENTS.md#wordcount-budgets) states a 1,800-word target and 5% headroom for `architecture.md`, but the [budget manifest](../../../../rsh/Scripts/doc-budgets.manifest.json) allows 2,400 words while the file contains 1,313. The budget gate passes because it checks the manifest ceiling, not the target or ratchet rule. High-impact prose therefore needs a named source or a focused check that consumes the source; a second hand-written copy is not a freshness mechanism.
 
 ### Reader success is implicit rather than testable
 
 The standard classifies pages as tutorials or references and asks authors to classify a tutorial reader privately. It does not require a reviewable statement of the reader’s starting state, desired outcome, shortest successful path, likely failure, or next useful page. A document can therefore satisfy tier placement, links, word limits, and Markdown structure without proving that its intended reader can complete the task.
 
-The public site makes the pressure visible. Each locale publishes 84 pages: 3 guide pages, 17 developer pages, and 63 reference pages. The 13 English files under `docs/user/` contain 7,540 words, while 47 subsystem pages contain 100,759 words. The short Web quick start is a good product entry, but no corpus-level criterion verifies that a first-time user, a plugin newcomer, and a maintainer each has one obvious path from entry to outcome and recovery.
+The public site makes the pressure visible. Each locale publishes 84 pages: 3 guide pages, 17 developer pages, and 63 reference pages. The 13 English files under `rsh/Docs/user/` contain 7,540 words, while 47 subsystem pages contain 100,759 words. The short Web quick start is a good product entry, but no corpus-level criterion verifies that a first-time user, a plugin newcomer, and a maintainer each has one obvious path from entry to outcome and recovery.
 
 ### Generated accuracy and retrieval quality are conflated
 
@@ -28,7 +28,7 @@ These are legitimate exhaustive references, so a blanket word limit would delete
 
 ### The standard has no room for its next rule
 
-The standing documentation file is 1,320 words against a 1,320-word ceiling and a stated 1,250-word target. Root `AGENTS.md` is 1,936 words against a 1,600-word target, `packages/AGENTS.md` is 672 against 650, and `packages/README.md` is 969 against 600. The frozen ceilings prevent further growth but do not create a place for audience and outcome criteria. Adding more standing prose would deepen the problem the standard is meant to prevent.
+The standing documentation file is 1,320 words against a 1,320-word ceiling and a stated 1,250-word target. Root `AGENTS.md` is 1,936 words against a 1,600-word target, `rsh/AGENTS.md` is 672 against 650, and `rsh/README.md` is 969 against 600. The frozen ceilings prevent further growth but do not create a place for audience and outcome criteria. Adding more standing prose would deepen the problem the standard is meant to prevent.
 
 ### Baseline
 
@@ -54,7 +54,7 @@ The [dsh-doc skill](../../../skills/dsh-doc/SKILL.md) owns the first executable 
 - Authored pages start with a three-to-five-sentence `Summary`, then a linked `Table of Contents`. An English package README Summary stays within 100 `wc -w`-style words. It describes reader-visible capability instead of Cordis roles, registrations, or internal components, and omits source identifiers unless readers use them directly in configuration, commands, or a public API. Format-owned Agent Notes, postmortems, generated fragments, and machine files keep their required skeletons.
 - Each substantive section starts with a short orientation before subsections, tables, or code, and the page progresses from basic user use to advanced developer and maintainer detail.
 - English technical prose uses an ASD-STE100-inspired, non-certified clarity review: explicit actors and actions, stable terms, direct verbs, separated instructions and conditions, and preserved modality, exceptions, timing, and numbers. The 20-word instruction and 25-word description limits are review prompts. Precision overrides them.
-- Package contracts remain beside code. Cross-package material moves deliberately toward `docs/learn/overview/`, `docs/learn/cordis/`, `docs/learn/practices/`, `docs/user/`, `docs/developer/`, `docs/developer/discussion/`, `docs/scratch/`, and the parallel `docs/subsystems/` tier.
+- Package contracts remain beside code. Cross-package material moves deliberately toward `rsh/Docs/learn/overview/`, `rsh/Docs/learn/cordis/`, `rsh/Docs/learn/practices/`, `rsh/Docs/user/`, `rsh/Docs/developer/`, `rsh/Docs/developer/discussion/`, `rsh/Docs/scratch/`, and the parallel `rsh/Docs/subsystems/` tier.
 - English and Chinese pages keep equal authority, matching structure, links, code, frontmatter layout, and exact physical line count.
 - Inline pair metadata is the target replacement for sidecars. The prototype may carry both until the verifier, merge driver, recovery flow, generated-region recorder, and archive checks consume a non-self-referential pair digest.
 - Repository-root internal links are the target authoring model. The prototype keeps renderer-valid relative links because leading `/` currently leaves the repository on GitHub, bypasses `verify-md-links`, and remains unprojected by the website.
@@ -75,7 +75,7 @@ The [dsh-doc skill](../../../skills/dsh-doc/SKILL.md) owns the first executable 
 | Agent instruction or skill | Apply one workflow without stale copied values | Scope, authority links, required decisions, exact commands only when owned here | Metadata/link checks and focused tests for copied machine values |
 | Proposed or implemented Agent Note | Understand a decision, trade-off, and state | Problem, proposal or decision, alternatives, acceptance or consequences | Existing lifecycle, format, pairing, and supersession checks; review owns semantic currency |
 
-The table belongs in one canonical quality reference. `docs/AGENTS.md` should retain only the short standing orders needed whenever documentation is edited and link to that reference. This creates budget headroom instead of placing another complete standard inside agent context.
+The table belongs in one canonical quality reference. `rsh/Docs/AGENTS.md` should retain only the short standing orders needed whenever documentation is edited and link to that reference. This creates budget headroom instead of placing another complete standard inside agent context.
 
 ### Generated-reference entry and detail layers
 
@@ -88,8 +88,8 @@ The first prototype should use one large catalog and one mixed subsystem page. I
 1. Create and validate `dsh-doc`, then rewrite one package README pair as a line-aligned, metadata-bearing prototype without changing runtime claims.
 2. Review the rendered prototype with newcomer, user, developer, and agent tasks; revise the skill before enforcing the format elsewhere.
 3. Add narrow metadata, Summary-length, section-order, line-alignment, link-resolution, and pairing fixtures. Migrate every existing package Summary that violates the accepted entry limit, and keep sidecars until every merge and recovery consumer has replacement support.
-4. Extract accepted standing rules into one canonical quality reference, condense `docs/AGENTS.md` below its target, and organize one coherent `docs/` topic at a time with atomic link/navigation repair.
-5. Prototype generated-reference entry/detail separation on `config-catalog.md` and `docs/subsystems/core.md`; apply confirmed patterns elsewhere only after measured lookup cost falls without lost facts or route churn.
+4. Extract accepted standing rules into one canonical quality reference, condense `rsh/Docs/AGENTS.md` below its target, and organize one coherent `docs/` topic at a time with atomic link/navigation repair.
+5. Prototype generated-reference entry/detail separation on `config-catalog.md` and `rsh/Docs/subsystems/core.md`; apply confirmed patterns elsewhere only after measured lookup cost falls without lost facts or route churn.
 
 This sequence keeps each change independently reviewable. The first three slices improve criteria and package entry points without changing the broader information architecture; the generated-doc prototype supplies evidence before a broader structural change.
 
@@ -117,7 +117,7 @@ This proposal does not shorten exhaustive facts, merge audience tiers, publish i
 - `.agents/skills/dsh-doc` validates and directly links its metadata, structure/hierarchy, and review/prototype references without duplicating their detailed rules in `SKILL.md`.
 - The `session-persistence-jsonl` README pair demonstrates searchable YAML, Summary, Table of Contents, user-to-developer progression, Further Exploration, final Dev Note, structural parity, and exact line-count equality while preserving verified package contracts.
 - Every English package README Summary stays within 100 `wc -w`-style words; the focused gate reports the measured count and directs failures to `dsh-doc` and the selected kind template.
-- `docs/AGENTS.md` links that reference, remains sufficient as standing instruction, and is below its target with at least 5% headroom.
+- `rsh/Docs/AGENTS.md` links that reference, remains sufficient as standing instruction, and is below its target with at least 5% headroom.
 - The root user path, Web quick start, first-plugin tutorial, contributor setup, and architecture overview each name an observable outcome and a verification owner without duplicating implementation detail.
 - The budget manifest records both target and temporary ceiling, and its check reports or rejects a violated headroom/ratchet state.
 - The docs-site workflow contains no copied invalid sidebar name or section-owner claim, and a focused test prevents recurrence.

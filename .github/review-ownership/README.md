@@ -35,7 +35,7 @@ Approval policy changes take effect only after they merge into the default branc
 
 ## Verification
 
-Run `pnpm run test:approval-policy` for policy parsing, effective review decisions, review-event validation, pagination, permission filtering, weighted scoring, blockers, drafts, status publication, and API failures. [Workflow tests](../../scripts/ci-workflow.spec.ts) pin the trusted checkout, no-permission review handoff, permissions, events, and commands. The repository gate graph runs the approval policy and workflow tests in CI.
+Run `pnpm run test:approval-policy` for policy parsing, effective review decisions, review-event validation, pagination, permission filtering, weighted scoring, blockers, drafts, status publication, and API failures. [Workflow tests](../../rsh/Scripts/ci-workflow.spec.ts) pin the trusted checkout, no-permission review handoff, permissions, events, and commands. The repository gate graph runs the approval policy and workflow tests in CI.
 
 <a id="dev-note"></a>
 

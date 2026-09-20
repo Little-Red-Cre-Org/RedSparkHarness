@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-[present 工具](../../../../packages/fs/tool-present/README.zh.md)声明交付[Session 文件系统访问策略](2026-09-09-present-filesystem-access.zh.md)允许的已有普通源文件。它记录路径和可选说明，不读取或复制内容。[交付插件](../../../../packages/client/ui-deliverables/README.zh.md)使用 Host 默认应用打开当前工作区源文件。下次打开会看到编辑后的内容；删除或移动文件会使声明不可用。文件内容保留与写时复制存储延期到有持久化设计负责时实现。
+[present 工具](../../../../rsh/Modules/Official/fs/tool-present/README.zh.md)声明交付[Session 文件系统访问策略](2026-09-09-present-filesystem-access.zh.md)允许的已有普通源文件。它记录路径和可选说明，不读取或复制内容。[交付插件](../../../../rsh/Programs/Web/client/ui-deliverables/README.zh.md)使用 Host 默认应用打开当前工作区源文件。下次打开会看到编辑后的内容；删除或移动文件会使声明不可用。文件内容保留与写时复制存储延期到有持久化设计负责时实现。
 
 工具说明要求在写好用户要求接收的文件后、最终回复前调用 `present`，包括通过 Bash 或代码执行创建的文件。正文中的路径引用不能替代调用。录制的 [SVG 交付场景](../../../../snapshots/web/present-svg/snapshot.yml)使用未提及 `present` 的用户请求，检查生成文件、交付事件和卡片。其 UI 快照覆盖展开后的 Chat 对话内容；导航和输入框控件由各自场景负责，避免无关界面改动使文件交付预期失效。
 

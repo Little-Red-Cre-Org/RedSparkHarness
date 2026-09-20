@@ -1,0 +1,2110 @@
+{
+  "comment": "Maps each primary ` ```ts type-equiv ` or ` ```ts public-api ` block (by doc + declared symbol + projection) to the source declaration and original JSDoc it must match. Paired `.zh.md` blocks are byte-identical derivatives checked through their unsuffixed sibling and have no duplicate entry. Omit projection for the complete declaration; use public-api with a ` ```ts public-api ` block for a body-stripped public class declaration. verify-type-equiv.ts enforces a 1:1 correspondence between primary blocks and entries. Add an entry when you add a primary source-equivalence block; remove it when you remove the block.",
+  "entries": [
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "Branded",
+      "source": "rsh/Core/util/brand/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "AssistantProvenance",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "Message",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "MessageSourceMap",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ContextForm",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ContextSnapshotSection",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ContextFormed",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ImageAttachmentAccess",
+      "source": "rsh/Engine/llm/llm/src/content.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "FinishReasonMap",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "AdapterRegistrationHandle",
+      "source": "rsh/Engine/llm/llm/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmProviderInfo",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmModelInfo",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmModelDiscoveryRequest",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmDiscoveredModel",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmModelContext",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ReasoningEffortId",
+      "source": "rsh/Engine/llm/llm/src/brand.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmReasoningEffortInfo",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmModelReasoningInfo",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmResolvedModelInfo",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "GenerateOptions",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ToolSchema",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmCallConfig",
+      "source": "rsh/Engine/llm/llm/src/call-config.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmCallConfigAdapterDefaults",
+      "source": "rsh/Engine/llm/llm/src/call-config.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "Inbox",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "InboxTarget",
+      "source": "rsh/Engine/core/agent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "CancelOptions",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "AgentCancelCause",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "Agent",
+      "source": "rsh/Engine/core/agent/src/types.ts",
+      "augmentations": [
+        {
+          "source": "rsh/Engine/core/agent/src/runtime-types.ts",
+          "module": "./types.ts"
+        }
+      ]
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "PreStepDecision",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "RequestErrorAction",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "SessionStartSource",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/scope.md",
+      "symbol": "ScopeKey",
+      "source": "rsh/Engine/core/scope/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/scope.md",
+      "symbol": "Scoped",
+      "source": "rsh/Engine/core/scope/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/scope.md",
+      "symbol": "Scope",
+      "source": "rsh/Engine/core/scope/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/scope.md",
+      "symbol": "ScopeLayer",
+      "source": "rsh/Engine/core/scope/src/store.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalRef",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalPhase",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalBlockReason",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalSnapshot",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalView",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalActivationChanged",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalSnapshotChangeMeta",
+      "source": "rsh/Engine/goal/goal/src/domain.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalClearChangeMeta",
+      "source": "rsh/Engine/goal/goal/src/domain.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalMessageSource",
+      "source": "rsh/Engine/goal/goal/src/domain.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "CreateGoalRequest",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "EditGoalRequest",
+      "source": "rsh/Engine/goal/goal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/goal.md",
+      "symbol": "GoalChanged",
+      "source": "rsh/Engine/goal/goal/src/domain.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "AfterScheduleRecord",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "AtScheduleRecord",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "EveryScheduleRecord",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "LocalAtInput",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "AtInput",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "OneShotScheduleRecord",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleRecord",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleCreateChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleDeleteChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "OneShotScheduleDispatchChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "EveryScheduleDispatchChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleDispatchChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleChange",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleState",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleDeliveryMode",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/schedule.md",
+      "symbol": "ScheduleView",
+      "source": "rsh/Engine/schedule/schedule/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/agent-team.md",
+      "symbol": "TeamMemberSnapshot",
+      "source": "rsh/Modules/Community/experimental/agent-team/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/agent-team.md",
+      "symbol": "TeamMessageSnapshot",
+      "source": "rsh/Modules/Community/experimental/agent-team/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/agent-team.md",
+      "symbol": "TeamMessageSource",
+      "source": "rsh/Modules/Community/experimental/agent-team/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/agent-team.md",
+      "symbol": "TeamTaskSnapshot",
+      "source": "rsh/Modules/Community/experimental/agent-team/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "CommandInputDescriptor",
+      "source": "rsh/Modules/Official/interaction/commands/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "CommandDefinition",
+      "source": "rsh/Modules/Official/interaction/commands/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "CommandInvocation",
+      "source": "rsh/Modules/Official/interaction/commands/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "CommandResult",
+      "source": "rsh/Modules/Official/interaction/commands/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "CommandDescriptor",
+      "source": "rsh/Modules/Official/interaction/commands/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/commands.md",
+      "symbol": "ParsedCommand",
+      "source": "rsh/Modules/Official/interaction/commands/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/system-prompt.md",
+      "symbol": "AssembleContext",
+      "source": "rsh/Engine/core/system-prompt/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/system-prompt.md",
+      "symbol": "PromptContext",
+      "source": "rsh/Engine/core/system-prompt/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/system-prompt.md",
+      "symbol": "PromptSection",
+      "source": "rsh/Engine/core/system-prompt/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/system-prompt.md",
+      "symbol": "ToolProviderResult",
+      "source": "rsh/Engine/core/system-prompt/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ReplayEnvelope",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "StreamChunk",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmFailure",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "TokenUsage",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmImageRequestPrice",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmImageRequestPricing",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "ContentBlockMap",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "AppIdentity",
+      "source": "rsh/Engine/llm/llm/src/attribution.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "BlockAssembler",
+      "source": "rsh/Engine/llm/llm/src/assembler.ts",
+      "projection": "public-api"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "PreparedLlmCall",
+      "source": "rsh/Engine/llm/llm/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmAdapter",
+      "source": "rsh/Engine/llm/llm/src/index.ts",
+      "projection": "public-api"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/token-meter.md",
+      "symbol": "TokenMeasurement",
+      "source": "rsh/Engine/llm/token-meter/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/token-meter.md",
+      "symbol": "TokenSurfaceNode",
+      "source": "rsh/Engine/llm/token-meter/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "UserMessage",
+      "source": "rsh/Engine/llm/llm/src/message.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionEventMap",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "EpochHeader",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "RequestContext",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionSeq",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionLogOffset",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionSeqCursor",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "OptionalSessionSeq",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/todo.md",
+      "symbol": "TodoItem",
+      "source": "rsh/Modules/Official/todo/tool-todo/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionEvent",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "TurnEndCancelCause",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "TurnEndReasonMap",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SurfaceEventType",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SurfaceOp",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SurfaceIntent",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SessionSurface",
+      "source": "rsh/Engine/core/session/src/surface.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SurfaceFoldReplacement",
+      "source": "rsh/Engine/core/session/src/surface.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "SurfaceFoldResult",
+      "source": "rsh/Engine/core/session/src/surface.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session.md",
+      "symbol": "Session",
+      "source": "rsh/Engine/core/session/src/index.ts",
+      "projection": "public-api"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionHandleReadResult",
+      "source": "rsh/Engine/session/session-persistence/src/handle.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionHandle",
+      "source": "rsh/Engine/session/session-persistence/src/handle.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionHeader",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "CreateSessionOptions",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionSeedEventState",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "RestoredSessionOptions",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "PrepareSessionOptions",
+      "source": "rsh/Engine/core/session/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionPreparationOptions",
+      "source": "rsh/Engine/core/session/src/preparation.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionPreparation",
+      "source": "rsh/Engine/core/session/src/preparation.ts",
+      "projection": "public-api"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionLocation",
+      "source": "rsh/Engine/session/session-persistence/src/errors.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventSurface",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionRecord",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionLogSnapshot",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionSurfaceSnapshot",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionTitleObservation",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionTitleObservationResult",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventRecord",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionLineageNode",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionLineageTrace",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionQueryErrorCode",
+      "source": "rsh/Engine/session-query/session-query/src/config.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventReadRequest",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventWindow",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventTraceRequest",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventTrace",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventTraceObservation",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleProviderId",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleModelProvenance",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleSource",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleEventData",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleSnapshot",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleLlmRequestEventData",
+      "source": "rsh/Engine/session/session-title-llm/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleUserMessage",
+      "source": "rsh/Engine/session/session-title/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleAutomaticMode",
+      "source": "rsh/Engine/session/session-title/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleProviderRequest",
+      "source": "rsh/Engine/session/session-title/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleProviderResult",
+      "source": "rsh/Engine/session/session-title/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleProvider",
+      "source": "rsh/Engine/session/session-title/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "SessionReferenceInput",
+      "source": "rsh/Engine/context/session-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "FileReferenceCandidate",
+      "source": "rsh/Engine/context/file-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "SessionReferenceCandidate",
+      "source": "rsh/Engine/context/session-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "SessionReferenceMentionCandidate",
+      "source": "rsh/Engine/context/session-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "SessionReferenceSource",
+      "source": "rsh/Engine/context/session-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "PreparedReferencedMessage",
+      "source": "rsh/Engine/context/session-reference/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "SessionReferenceErrorCode",
+      "source": "rsh/Engine/context/session-reference/src/config.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolOutputDefinition",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolDefinition",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ValueSchemaSpec",
+      "source": "rsh/Engine/core/tools/src/schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ParameterPropertySpec",
+      "source": "rsh/Engine/core/tools/src/schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ParameterSchemaSpec",
+      "source": "rsh/Engine/core/tools/src/schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "InferValue",
+      "source": "rsh/Engine/core/tools/src/schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "InferArgs",
+      "source": "rsh/Engine/core/tools/src/schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionToken",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionInput",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecution",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolDispatchExecution",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionMode",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "PtcDispatchLog",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolRunContext",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolGuard",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolRestriction",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolFailure",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionSuccess",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionFailure",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ToolExecutionResult",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "PreToolDecision",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "PostToolDecision",
+      "source": "rsh/Engine/core/tools/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "JsonSchemaScalar",
+      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "JsonSchemaType",
+      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "JsonSchemaNode",
+      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "ObjectJsonSchema",
+      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionOption",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionIntent",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionItem",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionRequest",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionAnswerItem",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "AskUserQuestionAnswer",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/user-questions.md",
+      "symbol": "UserQuestionError",
+      "source": "rsh/Modules/Official/interaction/user-questions/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/approval.md",
+      "symbol": "ApprovalRequestId",
+      "source": "rsh/Modules/Official/interaction/user-approval/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/approval.md",
+      "symbol": "ApprovalOutcome",
+      "source": "rsh/Modules/Official/interaction/user-approval/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/approval.md",
+      "symbol": "ApprovalPolicy",
+      "source": "rsh/Modules/Official/interaction/user-approval/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/approval.md",
+      "symbol": "ApprovalRequest",
+      "source": "rsh/Modules/Official/interaction/user-approval/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "ImageMediaType",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "ImageAttachmentRef",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "ImageAttachmentLimits",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "PromptContentPart",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "AttachmentAdmissionPart",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "AdmittedPromptContentPart",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "EncodedImageAttachment",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "SaveImageAttachment",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "StoredImageAttachment",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "ImageRequestPolicy",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "RequestImageAttachment",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellExecRequest",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellExecSpec",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellRunResult",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellSandboxInfo",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellProcess",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/shell.md",
+      "symbol": "ShellProcessRead",
+      "source": "rsh/Modules/Official/shell/shell/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobKindMap",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobStart",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobHooks",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobOutcome",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobSnapshot",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/jobs.md",
+      "symbol": "JobRead",
+      "source": "rsh/Engine/jobs/jobs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalWaitReason",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalSessionStatus",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalBackend",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalBackendSession",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalSendOperation",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/terminal.md",
+      "symbol": "TerminalSendResult",
+      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "SandboxMode",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "ConfinedSandboxMode",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "SandboxExecutionPolicy",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "SandboxEnforcement",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "SandboxPolicy",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "SandboxPolicyRequest",
+      "source": "rsh/Modules/Official/sandbox/sandbox-policy/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "RunnerFailureRule",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "ConfinedArgv",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeJsonValue",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeRunRequest",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeRunResult",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeBindingNamespace",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeBindingErrorClass",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeBindingFunction",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "CodeRunFailure",
+      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsTarget",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsTargetKey",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsVersion",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsObservation",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsInfo",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsPathInfo",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsDirEntry",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsWriteIntent",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsWriteOutcome",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsEditRequest",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsEditOutcome",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsErrorCode",
+      "source": "rsh/Modules/Official/fs/fs/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FsObservationActor",
+      "source": "rsh/Modules/Official/fs/fs-observation-policy/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/filesystem.md",
+      "symbol": "FileReadOutcome",
+      "source": "rsh/Modules/Official/fs/tool-fs/src/read-render.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillSource",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillResourceBase",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillInvocationPolicy",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillSummary",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillCatalogSnapshot",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillCandidate",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillDefinition",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillRegistration",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillLookupOptions",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillViewOptions",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillProviderObservation",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillProvider",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "SkillProviderControl",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "Config",
+      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "CompactionResult",
+      "source": "rsh/Engine/compaction/compaction/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "CompactionTrigger",
+      "source": "rsh/Engine/compaction/compaction/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "ManualCompactionErrorCode",
+      "source": "rsh/Engine/compaction/compaction/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "PrunedEntry",
+      "source": "rsh/Engine/compaction/compaction-tool-result-pruner/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "PruneResult",
+      "source": "rsh/Engine/compaction/compaction-tool-result-pruner/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentCapabilities",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentStartRequest",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "ResolvedSubagentStartRequest",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "AgentMessageSource",
+      "source": "rsh/Engine/subagent/subagent/src/continuation-messages.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentSettledMessageSource",
+      "source": "rsh/Engine/subagent/subagent/src/continuation-messages.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentSendMessageOptions",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentInterruptAuthority",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentDescendantListEntry",
+      "source": "rsh/Engine/subagent/subagent/src/list-children.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "ContinuableStart",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "ContinuableCreateRequest",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "ContinuableCreateSpec",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentResult",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentStopReasonMap",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentRun",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "SubagentProvider",
+      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebSearchRequest",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebSearchResult",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebSearchSource",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebFetchRequest",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebFetchResult",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web.md",
+      "symbol": "WebFetchBody",
+      "source": "rsh/Modules/Official/web/web/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/spill.md",
+      "symbol": "SaveTextSpill",
+      "source": "rsh/Modules/Official/spill/spill/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/spill.md",
+      "symbol": "SpillOwner",
+      "source": "rsh/Modules/Official/spill/spill/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/spill.md",
+      "symbol": "SpillSource",
+      "source": "rsh/Modules/Official/spill/spill/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/spill.md",
+      "symbol": "SpillRef",
+      "source": "rsh/Modules/Official/spill/spill/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/spill.md",
+      "symbol": "SpillLocator",
+      "source": "rsh/Modules/Official/spill/spill/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workflow.md",
+      "symbol": "WorkflowStartRequest",
+      "source": "rsh/Engine/workflow/workflow/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workflow.md",
+      "symbol": "WorkflowMeta",
+      "source": "rsh/Engine/workflow/workflow/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workflow.md",
+      "symbol": "WorkflowResult",
+      "source": "rsh/Engine/workflow/workflow/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workflow.md",
+      "symbol": "WorkflowRun",
+      "source": "rsh/Engine/workflow/workflow/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspOperation",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspPosition",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspRange",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspQueryRequest",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspProviderQuery",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspLocation",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspHover",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspQueryResult",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspProvider",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/lsp.md",
+      "symbol": "LspService",
+      "source": "rsh/Modules/Official/lsp/lsp/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionPersistenceRevision",
+      "source": "rsh/Engine/session/session-persistence/src/revision.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/persistence.md",
+      "symbol": "SessionPersistenceSnapshot",
+      "source": "rsh/Engine/session/session-persistence/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionResultFilter",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventResultFilter",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventSearchDocument",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionSearchCursor",
+      "source": "rsh/Engine/session-query/session-query/src/cursor.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionSearchRequest",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventSearchRequest",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionSearchPage",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventSearchPage",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionEventSearchHit",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "SessionSearchHit",
+      "source": "rsh/Engine/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessSpawnSpec",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessHandle",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessOutputReader",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessOutputRead",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessOutcome",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "DshEnvironmentKey",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "DshEnvironment",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "CollectedOutput",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessStdinMode",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessCollect",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessOutputMode",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessStdio",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subprocess.md",
+      "symbol": "SubprocessCollectedOutputs",
+      "source": "rsh/Core/subprocess/subprocess/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsNamespace",
+      "source": "rsh/Modules/Official/settings/settings/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsRegisterOptions",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsApplies",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsScope",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsDescriptor",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsUpdateSource",
+      "source": "rsh/Modules/Official/settings/settings/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/credentials.md",
+      "symbol": "ResolvedCredential",
+      "source": "rsh/Modules/Official/credentials/credentials/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/credentials.md",
+      "symbol": "CredentialInfo",
+      "source": "rsh/Modules/Official/credentials/credentials/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsDescribeOptions",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "LlmConfigurableProvider",
+      "source": "rsh/Engine/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsPathOp",
+      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/permission-presets.md",
+      "symbol": "Config",
+      "source": "rsh/Modules/Official/interaction/permission-presets/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/permission-presets.md",
+      "symbol": "PresetOption",
+      "source": "rsh/Modules/Official/interaction/permission-presets/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/plan.md",
+      "symbol": "PlanModeConfig",
+      "source": "rsh/Modules/Official/plan/plan-mode/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/invariants.md",
+      "symbol": "Config",
+      "source": "rsh/Core/runtime-diagnostics/invariants/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/invariants.md",
+      "symbol": "InvariantFailure",
+      "source": "rsh/Core/runtime-diagnostics/invariants/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/invariants.md",
+      "symbol": "InvariantInstaller",
+      "source": "rsh/Core/runtime-diagnostics/invariants/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web-server.md",
+      "symbol": "WebRouteKind",
+      "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web-server.md",
+      "symbol": "WebRoute",
+      "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web-server.md",
+      "symbol": "Config",
+      "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "StorageForms",
+      "source": "rsh/Core/storage/storage/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "StorageBackend",
+      "source": "rsh/Core/storage/storage/src/backend.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "DomainSpec",
+      "source": "rsh/Core/storage/storage-domain/src/spec.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "Domain",
+      "source": "rsh/Core/storage/storage-domain/src/domain.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "DomainChangedBase",
+      "source": "rsh/Core/storage/storage-domain/src/events.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/storage.md",
+      "symbol": "DomainChanged",
+      "source": "rsh/Core/storage/storage-domain/src/events.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workspace.md",
+      "symbol": "WorkspaceId",
+      "source": "rsh/Modules/Official/workspace/workspace/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/workspace.md",
+      "symbol": "Workspace",
+      "source": "rsh/Modules/Official/workspace/workspace/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/client-modules.md",
+      "symbol": "WebBootEntry",
+      "source": "rsh/Programs/Web/client/modules/src/client/manifest.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/client-modules.md",
+      "symbol": "WebBootBatchPhase",
+      "source": "rsh/Programs/Web/client/modules/src/client/manifest.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/client-modules.md",
+      "symbol": "WebBootBatch",
+      "source": "rsh/Programs/Web/client/modules/src/client/manifest.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/client-modules.md",
+      "symbol": "WebBootGraph",
+      "source": "rsh/Programs/Web/client/modules/src/client/manifest.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/client-modules.md",
+      "symbol": "ClientArtifactBaseline",
+      "source": "rsh/Programs/Web/client/modules/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetryCapture",
+      "source": "rsh/Engine/session/session-telemetry/src/coordinator.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetryCaptureOptions",
+      "source": "rsh/Engine/session/session-telemetry/src/coordinator.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetrySharingStatus",
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetrySeverity",
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetryRecord",
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "SessionTelemetrySink",
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertLookupMap",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertContextMap",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertLookupDefinition",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertCodec",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "InvocationParameterDescriptor",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "InvocationDescriptor",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertRegistryContract",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertRemoteNamespaceMap",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "InvokeRemoteRequest",
+      "source": "rsh/Programs/Web/api/gateway/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertGatewayErrorCode",
+      "source": "rsh/Programs/Web/api/gateway/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertGateway",
+      "source": "rsh/Programs/Web/api/gateway/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/typert.md",
+      "symbol": "TypertClientRemote",
+      "source": "rsh/Core/typert/protocol/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/credentials.md",
+      "symbol": "CredentialRef",
+      "source": "rsh/Modules/Official/credentials/credentials/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/permission-presets.md",
+      "symbol": "PresetSpec",
+      "source": "rsh/Modules/Official/interaction/permission-presets/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-projection.md",
+      "symbol": "ProjectionDefinition",
+      "source": "rsh/Engine/session/session-projection/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-projection.md",
+      "symbol": "ProjectionSnapshot",
+      "source": "rsh/Engine/session/session-projection/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-projection.md",
+      "symbol": "ProjectionChangeListener",
+      "source": "rsh/Engine/session/session-projection/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "AgentHandle",
+      "source": "rsh/Engine/core/agent/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "AgentStatus",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "AssistantStreamFrame",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "AgentOptions",
+      "source": "rsh/Engine/core/agent/src/runtime-types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackVersion",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackRating",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackItem",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackPut",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackDelete",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackListRequest",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackListValue",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackPutRequest",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackDeleteRequest",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackDeleteValue",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackSessionNotFound",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackTargetNotFound",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackVersionConflict",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackNoteBlank",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackNoteTooLarge",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackFailure",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackSuccess",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackRejected",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackListResult",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackPutResult",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "MessageFeedbackDeleteResult",
+      "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "FeedbackCategory",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "FeedbackRecord",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "SessionFeedbackRecordRequest",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "SessionFeedbackRecordValue",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "SessionFeedbackSessionNotFound",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/feedback.md",
+      "symbol": "SessionFeedbackRecordResult",
+      "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"
+    },
+    {
+      "doc": "rsh/Programs/Web/client/ui-conversation/README.md",
+      "symbol": "ComposerChainProps",
+      "source": "rsh/Programs/Web/client/ui-conversation/src/client/contract/slots.ts"
+    }
+  ]
+}

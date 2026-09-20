@@ -1,0 +1,99 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../store"
+    },
+    {
+      "path": "../ui-layout"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/llm/llm-retry"
+    },
+    {
+      "path": "../../../../Modules/Official/workspace/workspace"
+    },
+    {
+      "path": "../../../../Engine/llm/token-meter"
+    },
+    {
+      "path": "../../../../Modules/Official/plan/plan-mode"
+    },
+    {
+      "path": "../../../../Engine/goal/goal"
+    },
+    {
+      "path": "../../../../Modules/Official/todo/tool-todo"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/permission-presets"
+    },
+    {
+      "path": "../ui-settings"
+    },
+    {
+      "path": "../../../../Core/util/crypto"
+    },
+    {
+      "path": "../../../../Core/util/workspace-path"
+    }
+  ],
+  "exclude": [
+    "**/*.legacy.*"
+  ]
+}

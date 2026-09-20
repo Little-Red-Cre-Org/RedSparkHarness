@@ -8,7 +8,7 @@ permissions:
 env:
   PRIMARY_NODE_VERSION: '24'
   # CI runs must never report to the production telemetry endpoint baked
-  # into apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 # Cancel a superseded pull-request run on a new push so a fresh head does not
@@ -178,7 +178,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile &
           install_pid=$!
-          bash scripts/prepare-ci-bubblewrap.sh &
+          bash rsh/Scripts/prepare-ci-bubblewrap.sh &
           sandbox_pid=$!
           install_status=0
           wait "$install_pid" || install_status=$?
@@ -316,7 +316,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile &
           install_pid=$!
-          bash scripts/prepare-ci-bubblewrap.sh &
+          bash rsh/Scripts/prepare-ci-bubblewrap.sh &
           sandbox_pid=$!
           install_status=0
           wait "$install_pid" || install_status=$?
@@ -398,7 +398,7 @@ jobs:
       - uses: actions/setup-node@v6
         env:
           # The runner overwrites RUNNER_* step env before starting JavaScript actions.
-          NODE_OPTIONS: ${{ runner.environment == 'self-hosted' && '--import=./scripts/ci-compatible-toolcache.mjs' || '' }}
+          NODE_OPTIONS: ${{ runner.environment == 'self-hosted' && '--import=./rsh/Scripts/ci-compatible-toolcache.mjs' || '' }}
         with:
           node-version: ${{ matrix.node }}
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
@@ -426,7 +426,7 @@ jobs:
       # changes with the Node version, so this belongs to the version matrix
       # rather than to every commit's checks.
       - name: Check Loader internal shape detection
-        run: pnpm exec vitest run packages/boot/app-boot/tests/loader-shape.compat.spec.ts
+        run: pnpm exec vitest run rsh/Compatibility/DSH/boot/app-boot/tests/loader-shape.compat.spec.ts
 
   python-sdk:
     if: github.event_name == 'pull_request'
@@ -444,7 +444,7 @@ jobs:
         run: python -m pip install uv==0.11.23
 
       - name: Run complete keyless Python suite
-        run: uv run --python 3.10 --group test --project python/sdk pytest
+        run: uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk pytest
 
   # The reusable builder owns each published executable, wheel, clean-install,
   # keyless black-box, and trusted real-API path. Linux/Windows x64 block PRs;
@@ -452,7 +452,7 @@ jobs:
   python-runtime:
     if: github.event_name == 'pull_request'
     name: python runtime / release-shaped matrix
-    uses: ./.github/workflows/build-exe-for-python-sdk.yml
+    uses: .github/workflows/build-exe-for-python-sdk.yml
     with:
       targets: node24-linux-x64,node24-win-x64
       ci: true
@@ -631,10 +631,10 @@ jobs:
           pnpm exec vitest run
           --no-file-parallelism
           --testTimeout 90000
-          packages/shell/tool-pwsh/tests/loader.spec.ts
-          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
-          packages/workflow/tool-ralph/tests/integration.spec.ts
-          packages/subprocess/subprocess-local/tests/process-exit.spec.ts
+          rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts
+          rsh/Engine/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+          rsh/Engine/workflow/tool-ralph/tests/integration.spec.ts
+          rsh/Core/subprocess/subprocess-local/tests/process-exit.spec.ts
 
   windows-observational:
     if: github.event_name == 'pull_request'

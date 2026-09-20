@@ -47,7 +47,7 @@ Withdrawal settles an attempt whether or not its flow reacts to the signal. A fl
 - **A dedicated login-interaction seam beside `user-questions`.** Authorization prompts look like questions, and reusing `ctx.userQuestions` was tempting. But that seam is built for a model's tool call to pause on an agent's behalf: it validates the calling agent, refuses a delegated caller, and has one ambient UI provider. An authorization prompt has no agent, must reach the configuration page that started it, and can be withdrawn per prompt by a browser callback winning a race. The vocabularies overlap; the lifecycles do not.
 - **Reading `~/.codex/auth.json` into a store.** It makes Codex work without any of this, and pi-ai would own the refresh. It also binds the harness to another tool's private file format for one provider, and leaves every other login unbuilt.
 - **Joining a second `begin()` to the attempt already running.** Friendlier than refusing, until two humans are answering the same flow's questions. Refusal with `inFlight` on the entry lets a surface disable the button rather than discover the state by error.
-- **Keeping the OAuth-only withholding as a safety net.** It would now hide a provider that works. The predicate is deleted rather than left inert; `docs/subsystems/credentials.md` and the package READMEs carry what replaced it.
+- **Keeping the OAuth-only withholding as a safety net.** It would now hide a provider that works. The predicate is deleted rather than left inert; `rsh/Docs/subsystems/credentials.md` and the package READMEs carry what replaced it.
 
 ## Consequences
 

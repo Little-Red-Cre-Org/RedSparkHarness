@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write rsh/Docs/cookbook/adding-a-settings-card.md
+adding-a-settings-card.md: ab72c232f337ae9ba469c548e63ffe6075fc4ea4
+adding-a-settings-card.zh.md: 6501c22c2da840b7dbd3421212f8f8d5736b251e

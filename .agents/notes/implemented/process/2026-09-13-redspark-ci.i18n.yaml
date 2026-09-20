@@ -1,6 +1,6 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-09-13-redspark-ci.md
-2026-09-13-redspark-ci.md: 1141445764916d4f5f3a72f43ab6cdccda9c4ceb
+2026-09-13-redspark-ci.md: b660be2ea4705f5a4359c0765a8e4b9052fb949d
 2026-09-13-redspark-ci.zh.md: 1bf149506331f63979f670a7de72e970d9564c63

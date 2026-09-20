@@ -40,7 +40,7 @@ catch 是基础 `next`（而非 waterfall 之外的东西）这一点至关重�
 
 ### `timeout-policy` 插件
 
-该插件是 `@deepseek-ai/dsh-tool-call-timeout-policy`，一个零配置的函数/命名空间插件（`name` / `inject` / `apply`），位于 `packages/guard/` 组。每个工具的预算声明在工具自身，而非本插件：`ToolDefinition` 携带一个可选的 `timeoutMs`，由拥有该工具的插件从自身配置中设置。例如 `dsh-tool-web` 将 `fetchTimeoutMs` / `searchTimeoutMs`（默认 30000）解析到 `web_fetch` / `web_search` 的定义上：
+该插件是 `@deepseek-ai/dsh-tool-call-timeout-policy`，一个零配置的函数/命名空间插件（`name` / `inject` / `apply`），位于 `rsh/Modules/Official/guard/` 组。每个工具的预算声明在工具自身，而非本插件：`ToolDefinition` 携带一个可选的 `timeoutMs`，由拥有该工具的插件从自身配置中设置。例如 `dsh-tool-web` 将 `fetchTimeoutMs` / `searchTimeoutMs`（默认 30000）解析到 `web_fetch` / `web_search` 的定义上：
 
 ```yaml
 - id: timeout-policy
@@ -54,7 +54,7 @@ catch 是基础 `next`（而非 waterfall 之外的东西）这一点至关重�
 
 超时放在工具定义上而非自由文本名称映射中，消除了拼错名称导致策略不生效的问题。`defineTool` 校验预算为正有限数。分发期间，执行器派生截止信号并将其赋给 `exec.signal`；注册表依据[工具取消约定](2026-07-19-cooperative-tool-cancellation.zh.md)，在执行工具体之前将该截止信号与调用方的原始信号融合。执行器随后恢复调用方信号，并将自身的超时转换为 `TOOL_TIMEOUT`；没有预算的工具原样通过。
 
-信号替换采用**就地修改 `exec.signal`** 的方式，而非向 `next()` 传递新对象。Cordis 的 waterfall `next()` 忽略传入的任何参数，并以共享的 payload 数组重新调用下游监听器（`vendor/cordis/src/events.ts`），因此修改共享对象是包装器向注册表提供截止信号的方式。注册表会在进入工具体前再次融合已捕获的调用方信号；插件则在 `finally` 中将 `exec.signal` 恢复为调用方的原始值，使 `tools/post-execute` 永远不会看到本插件的截止信号。
+信号替换采用**就地修改 `exec.signal`** 的方式，而非向 `next()` 传递新对象。Cordis 的 waterfall `next()` 忽略传入的任何参数，并以共享的 payload 数组重新调用下游监听器（`rsh/Core/vendor/cordis/src/events.ts`），因此修改共享对象是包装器向注册表提供截止信号的方式。注册表会在进入工具体前再次融合已捕获的调用方信号；插件则在 `finally` 中将 `exec.signal` 恢复为调用方的原始值，使 `tools/post-execute` 永远不会看到本插件的截止信号。
 
 `timeout-policy` 拥有 `TOOL_TIMEOUT` 代码的两种用途：传递给 `deadline()`/`timeoutOf()` 的内部截止代码（有作用域，使嵌套的外层截止被识别为普通取消）和结构化工具结果错误代码。其替换结果为：
 
@@ -89,7 +89,7 @@ function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
 
 ## 曾考虑的替代方案
 
-**将插件命名为 `tool-timeout`。** 字面的 Agent Note 名称匹配了 `gen-tool-catalog` 完整性守卫的 `packages/*/tool-*` glob，该 glob 要求每个匹配项注册一个面向模型的工具。本插件不注册任何工具——它是一个 `tools/execute` 包装器——因此 `tool-*` 名称要么导致 `verify-tool-catalog` 失败，要么强制产生一个误导性的启动条目。包为 `@deepseek-ai/dsh-tool-call-timeout-policy`，位于新的 `packages/guard/` 组；cordis.yml 的 `id` 仍可为 `timeout-policy`。
+**将插件命名为 `tool-timeout`。** 字面的 Agent Note 名称匹配了 `gen-tool-catalog` 完整性守卫的 `rsh/*/tool-*` glob，该 glob 要求每个匹配项注册一个面向模型的工具。本插件不注册任何工具——它是一个 `tools/execute` 包装器——因此 `tool-*` 名称要么导致 `verify-tool-catalog` 失败，要么强制产生一个误导性的启动条目。包为 `@deepseek-ai/dsh-tool-call-timeout-policy`，位于新的 `rsh/Modules/Official/guard/` 组；cordis.yml 的 `id` 仍可为 `timeout-policy`。
 
 **仅保留逐工具的超时处理。** 这是 `bash` 和 `web_fetch` 的既有形态，也与 Claude Code 和 Codex 对 shell 命令的做法一致。它对 web 类工具不利，因为每个新的支持超时的工具都必须自行选择校验方式、上限语义、文档、快照和分类。插件集中了策略和分类，让每个工具的 schema 专注于业务输入。
 

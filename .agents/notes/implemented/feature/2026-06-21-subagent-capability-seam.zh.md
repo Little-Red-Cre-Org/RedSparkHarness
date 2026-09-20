@@ -8,7 +8,7 @@ Status: implemented
 
 ## 问题
 
-harness 有一个长期搁置的 seam 用于 **subagent**：一个 agent 将工作委派给另一个 agent。这一意图在 `Agent`/`AgentLoop` 接口中已有草案（[packages/core/agent/src/types.ts](../../../../packages/core/agent/src/types.ts)、[packages/core/agent-loop/src/index.ts](../../../../packages/core/agent-loop/src/index.ts)）：一个创建选项引用父 agent（fork = 用父会话的事件日志初始化子会话；spawn = 全新会话），子 agent 以 `Agent` 句柄返回，使 steering（中途引导）和事件订阅可以统一工作。
+harness 有一个长期搁置的 seam 用于 **subagent**：一个 agent 将工作委派给另一个 agent。这一意图在 `Agent`/`AgentLoop` 接口中已有草案（[rsh/Engine/core/agent/src/types.ts](../../../../rsh/Engine/core/agent/src/types.ts)、[rsh/Engine/core/agent-loop/src/index.ts](../../../../rsh/Engine/core/agent-loop/src/index.ts)）：一个创建选项引用父 agent（fork = 用父会话的事件日志初始化子会话；spawn = 全新会话），子 agent 以 `Agent` 句柄返回，使 steering（中途引导）和事件订阅可以统一工作。
 
 **多种 subagent 实现必须在运行时共存。**一个父 agent 可能在同一个会话中既需要一个廉价的进程内子 agent 处理有限范围的子任务，又需要一个隔离的进程外子 agent（通过 ACP）。传输方式：
 
@@ -27,7 +27,7 @@ bash seam（[能力 seam](../architecture/2026-06-13-capability-seams.zh.md)）�
 
 ### 由三类包构成的边界
 
-新建包组 `packages/subagent/`：
+新建包组 `rsh/Engine/subagent/`：
 
 | 包 | 角色 |
 |---|---|
@@ -66,7 +66,7 @@ bash seam（[能力 seam](../architecture/2026-06-13-capability-seams.zh.md)）�
 
 ## 测试
 
-注册表与工具测试仅用包内脚本化提供方替换非确定性的子 agent，同时测试真实的 `SubagentRuntime`、生命周期、任务集成和面向模型的工具。loader 回归测试仍覆盖提供方与消费方的 export，以防止[事故复盘（postmortem）0001](../../../../docs/postmortem/0001-acp-default-export-drops-inject.zh.md) 中描述的失败。注册表测试覆盖重载安全性、重名和启动时能力拒绝；嵌套 agent 场景通过[逐会话快照回放](../../archived/testing/2026-06-22-subagent-snapshot-replay.md)进行无密钥回放；进程内后端还有真实循环的单元测试和带密钥的 e2e 测试。
+注册表与工具测试仅用包内脚本化提供方替换非确定性的子 agent，同时测试真实的 `SubagentRuntime`、生命周期、任务集成和面向模型的工具。loader 回归测试仍覆盖提供方与消费方的 export，以防止[事故复盘（postmortem）0001](../../../../rsh/Docs/postmortem/0001-acp-default-export-drops-inject.zh.md) 中描述的失败。注册表测试覆盖重载安全性、重名和启动时能力拒绝；嵌套 agent 场景通过[逐会话快照回放](../../archived/testing/2026-06-22-subagent-snapshot-replay.md)进行无密钥回放；进程内后端还有真实循环的单元测试和带密钥的 e2e 测试。
 
 ## 后果
 

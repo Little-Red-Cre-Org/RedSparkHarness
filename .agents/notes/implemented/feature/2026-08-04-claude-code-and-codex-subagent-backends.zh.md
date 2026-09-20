@@ -12,7 +12,7 @@ Status: implemented
 
 ## 决策
 
-harness 交付两个同级的一次性提供方包，其默认注册名称分别为 `codex` 与 `claude-code`。本说明负责它们的产品协议、结果映射和进程生命周期；[命名实例决策](../../archived/feature/2026-08-18-product-subagent-named-instances.md)负责 Profile 选择的提供方身份、可选实例模型与静态工具绑定；[生产安装排除决策](../../archived/simplification/2026-08-12-production-dsh-excludes-product-subagent-providers.md)负责各自独立的可选 Bundle 与 host plane（宿主平面）放置；[tool-subagent README](../../../../packages/subagent/tool-subagent/README.zh.md) 负责模型可见的调度选择；[非交互权限决策](2026-08-15-product-subagent-noninteractive-permissions.zh.md)负责各产品提供方的 Profile 模式选择与安全权限决定；[最小诊断决策](../../archived/simplification/2026-08-21-product-subagent-minimal-diagnostics.md)负责粗粒度产品行动类别。两个包都接受多个命名实例。加载任一提供方都不会启动产品进程，而且每个工具只接受独立文本任务；产品与实例选择仍属于部署配置。
+harness 交付两个同级的一次性提供方包，其默认注册名称分别为 `codex` 与 `claude-code`。本说明负责它们的产品协议、结果映射和进程生命周期；[命名实例决策](../../archived/feature/2026-08-18-product-subagent-named-instances.md)负责 Profile 选择的提供方身份、可选实例模型与静态工具绑定；[生产安装排除决策](../../archived/simplification/2026-08-12-production-dsh-excludes-product-subagent-providers.md)负责各自独立的可选 Bundle 与 host plane（宿主平面）放置；[tool-subagent README](../../../../rsh/Engine/subagent/tool-subagent/README.zh.md) 负责模型可见的调度选择；[非交互权限决策](2026-08-15-product-subagent-noninteractive-permissions.zh.md)负责各产品提供方的 Profile 模式选择与安全权限决定；[最小诊断决策](../../archived/simplification/2026-08-21-product-subagent-minimal-diagnostics.md)负责粗粒度产品行动类别。两个包都接受多个命名实例。加载任一提供方都不会启动产品进程，而且每个工具只接受独立文本任务；产品与实例选择仍属于部署配置。
 
 这两个提供方都报告 `inheritsParentContext: false`，不声明任何可选的启动能力，并传递父会话 cwd，但不会复制父级对话。文档所示的工具使用 `backgroundMode: 'one-shot'` 与 `maxDepth: 'provider-managed'`：消费方默认在前台收集结果，也可把同一次运行放入通用 Job 运行时，而递归策略仍由进程外产品负责。每次调用都会创建一个全新的产品进程和一次不可续接的产品对话。`ctx.subagents` 负责具名请求解析与成对生命周期事件；`dsh-tool-subagent` 负责模型可见的调度以及前台与 Job 适配；`ctx.jobs` 和 `dsh-tool-jobs` 负责 Job id、状态、输出、控制、通知与父级 owner 取消；各产品提供方负责原生结果映射，`dsh-subprocess` 则负责凭证清洗、进程树终止以及整棵进程树的退出观测。
 
@@ -88,7 +88,7 @@ Claude Code 证据会锁定 Agent SDK 0.3.263、Claude Code 2.1.263 与八个 SD
 
 ## 后果
 
-用户通过由 Profile 配置、并由官方产品集成支持的一次性工具进行委派。显式 Profile 安装与 host plane 提供方放置由[生产安装排除决策](../../archived/simplification/2026-08-12-production-dsh-excludes-product-subagent-providers.md)负责；命名实例身份与工具绑定由[命名实例决策](../../archived/feature/2026-08-18-product-subagent-named-instances.md)负责；按 Preset 暴露工具以及默认前台且可选通用 Job 的调度方式由 [tool-subagent README](../../../../packages/subagent/tool-subagent/README.zh.md) 负责。本说明规定的提供方生命周期会保留原生设置与行为，而共享服务继续独占作业结算与进程树完全停稳的责任。
+用户通过由 Profile 配置、并由官方产品集成支持的一次性工具进行委派。显式 Profile 安装与 host plane 提供方放置由[生产安装排除决策](../../archived/simplification/2026-08-12-production-dsh-excludes-product-subagent-providers.md)负责；命名实例身份与工具绑定由[命名实例决策](../../archived/feature/2026-08-18-product-subagent-named-instances.md)负责；按 Preset 暴露工具以及默认前台且可选通用 Job 的调度方式由 [tool-subagent README](../../../../rsh/Engine/subagent/tool-subagent/README.zh.md) 负责。本说明规定的提供方生命周期会保留原生设置与行为，而共享服务继续独占作业结算与进程树完全停稳的责任。
 
 每次委派都要承担新建产品进程和独立模型上下文的开销。成功的产品载荷仍只有最终 assistant 文本；失败的产品运行可以另行公开共享安全诊断，其中包含由提供方拥有的权限事实与安全产品失败类别。后台调度还会额外公开通用 Job id、状态、完成通知以及收集或取消结果。两个产品都使用 Bundle 锁定的平台 CLI，并保留原生账户与工作区设置以及所选提供方权限模式；受支持的可选实例模型只覆盖该次运行的原生模型选择。带密钥 e2e 运行还会消耗外部 API 配额，并依赖 DeepSeek 官方端点；对协议、失败、取消与审批的确定性覆盖仍由无密钥层级承担。提供方不会恢复会话、以流式方式传送进度、接受新的人工交互、回滚工具或文件副作用，也不会施加按实际经过时间触发的超时。
 

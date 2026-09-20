@@ -43,12 +43,12 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: ['./tsconfig.base.json'] }), standardDecoratorPlugin()],
   test: {
     execArgv: vitestExecArgv,
-    setupFiles: ['./scripts/test-proxy-environment.ts', './scripts/test-invariants.ts'],
+    setupFiles: ['./rsh/Scripts/test-proxy-environment.ts', './rsh/Scripts/test-invariants.ts'],
     include: [
-      'scripts/session-snapshot-corpus.corpus.ts',
+      'rsh/Scripts/session-snapshot-corpus.corpus.ts',
       // The assembled Web snapshot executes generated client bundles; source
       // mode remains the zero-build path, while lib mode requires a prior build.
-      ...(process.env.DSH_EXAMPLE_MODE === 'lib' ? ['apps/web/tests/**/*.snapshot.ts'] : []),
+      ...(process.env.DSH_EXAMPLE_MODE === 'lib' ? ['rsh/Programs/Web/application/tests/**/*.snapshot.ts'] : []),
       'snapshots/**/*.snapshot.ts',
     ],
     // Replay never writes committed outputs and every scenario owns its

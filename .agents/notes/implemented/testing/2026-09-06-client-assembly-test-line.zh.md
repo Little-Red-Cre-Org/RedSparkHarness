@@ -14,7 +14,7 @@ API 客户端 spec 用一个可编程的 Remote 面假件驱动对象。这个�
 
 ## 决定
 
-整机档放在 `@deepseek-ai/dsh-client-test-runtime` 的深 import `src/assembly/` 下，新的 test-support 包 `@deepseek-ai/dsh-remote-mock` 按端点名应答 Remote 流量。两者的用法由各自 README 描述（[client-runtime](../../../../packages/test-support/client-runtime/README.zh.md)、[remote-mock](../../../../packages/test-support/remote-mock/README.zh.md)）；本文记录它们背后的决定。
+整机档放在 `@deepseek-ai/dsh-client-test-runtime` 的深 import `src/assembly/` 下，新的 test-support 包 `@deepseek-ai/dsh-remote-mock` 按端点名应答 Remote 流量。两者的用法由各自 README 描述（[client-runtime](../../../../rsh/Tests/test-support/client-runtime/README.zh.md)、[remote-mock](../../../../rsh/Tests/test-support/remote-mock/README.zh.md)）；本文记录它们背后的决定。
 
 **roster 从 bundle 现读，绝不拷贝。** `bundleRoster(bundles)` 用 include 插件自己的 YAML 方言（带 `!!js` 的 `entryListSchema`）解析每个 bundle 的 `dsh.bundle.patch`，用它的 `applyEntryPatches` 合成各层，再保留每个未禁用且其包声明 `dsh.client.platform === 'web'` 的行，带上该声明的 `inject` 与 `immediately`。`webApp` 是 `web` profile 的 roster（先 `dsh-base`、再 `dsh-web-app`），import 时算出。spec 点名它要测的东西，其余推导：`webApp.closure([row])` 保留一行及其传递 `inject` 锥；`pick` 与 `without` 留给刻意裁剪。测试运行时仍是 Client 面的包：它不 import 任何 Host 模块，此处不用动态 import，其 client 面的 `types` 在 `client-build-environment` 之外加了 `node`，好让读取器使用 `node:fs`。`closure` 把 shell 静态种入的平台模块（`PLATFORM_MODULES`）视为无需行即已满足。
 
@@ -28,7 +28,7 @@ API 客户端 spec 用一个可编程的 Remote 面假件驱动对象。这个�
 
 **`remoteDefaultResponses` 是启动期 Remote 端点的默认响应。** 这张表恰好列出 `web` roster 在没有 session、没有 workspace、默认设置下启动并渲染时会打的端点，每行注明调用方。spec 在其上叠加自己的 `RemoteTable`；新的启动期调用会在 `dispose()` 时让 spec 失败。
 
-`mock.remote` 使用直接调用方与 Connection 分发共用的原生 `@vitest/spy.fn` 函数。`MockedRemote` 对完整生成的命名空间映射应用 Vitest 深层 mock 类型转换；映射为空时仅这个 Proxy 弱化为 `any`。生产 `Context` 与 Remote 声明保持严格，不需要命名空间专属类型副本或编译器 Flag。[Proxy 类型指引](../../../../packages/test-support/remote-mock/README.zh.md#remote-proxy)要求即使无构建测试通过，本地也必须执行构建后的类型检查。
+`mock.remote` 使用直接调用方与 Connection 分发共用的原生 `@vitest/spy.fn` 函数。`MockedRemote` 对完整生成的命名空间映射应用 Vitest 深层 mock 类型转换；映射为空时仅这个 Proxy 弱化为 `any`。生产 `Context` 与 Remote 声明保持严格，不需要命名空间专属类型副本或编译器 Flag。[Proxy 类型指引](../../../../rsh/Tests/test-support/remote-mock/README.zh.md#remote-proxy)要求即使无构建测试通过，本地也必须执行构建后的类型检查。
 
 ## 为本档新增的产品导出
 
@@ -87,4 +87,4 @@ spec 起的是真插件：整个 `web` roster 冷启动约五秒、热启动远�
 
 ## 测试
 
-`packages/test-support/remote-mock/tests/` 覆盖规则、流、日志与载体面；`packages/test-support/client-runtime/tests/` 下的 `assembly-` 系列 spec 覆盖在真 bundle 与临时安装上的 roster 读取器、模块加载、含折叠的代理，以及 jsdom 与纯 Node 下的 `TestClient`。七条改造后的 spec 使用本档。`packages/client/ui-settings-general/tests/` 下，shell 与 apply 两条起整个 `web` roster；apply 从 mock 应答的 Host settings 文档读它的中文文案，并为 off-loopback 分支重配 jsdom 页面 URL。`packages/api/session-controller/tests/` 下，Session、queue-store、pending-submission 三条在 gateway 依赖锥上经 `remote.<ns>` 代理走 roster 的真 Connection 驱动对象（`$stream` 的重试循环仍是 Gateway 客户端自己的），client-apply 起插件的依赖锥，把 Remote 事件作为 `$events` 上的 emit 帧投递。`packages/api/workspace-controller/tests/` 下，transport 的 apply 用例起插件锥、手工构造流与 controller 的用例起 gateway 锥，因为进了 roster 的插件会共用 follow 端点。每个包在 `tests/remote/` 保有自己的默认响应与帧构造。fixture 测试包含预期的断言失败，并独立观察客户端清理完成；settings 重载测试观察注册身份被替换，写入测试断言全部 mutation 参数。teardown 失败测试先执行真实树清理，再报告注入的失败，并观察 `$events` 流的取消状态。
+`rsh/Tests/test-support/remote-mock/tests/` 覆盖规则、流、日志与载体面；`rsh/Tests/test-support/client-runtime/tests/` 下的 `assembly-` 系列 spec 覆盖在真 bundle 与临时安装上的 roster 读取器、模块加载、含折叠的代理，以及 jsdom 与纯 Node 下的 `TestClient`。七条改造后的 spec 使用本档。`rsh/Programs/Web/client/ui-settings-general/tests/` 下，shell 与 apply 两条起整个 `web` roster；apply 从 mock 应答的 Host settings 文档读它的中文文案，并为 off-loopback 分支重配 jsdom 页面 URL。`rsh/Programs/Web/api/session-controller/tests/` 下，Session、queue-store、pending-submission 三条在 gateway 依赖锥上经 `remote.<ns>` 代理走 roster 的真 Connection 驱动对象（`$stream` 的重试循环仍是 Gateway 客户端自己的），client-apply 起插件的依赖锥，把 Remote 事件作为 `$events` 上的 emit 帧投递。`rsh/Programs/Web/api/workspace-controller/tests/` 下，transport 的 apply 用例起插件锥、手工构造流与 controller 的用例起 gateway 锥，因为进了 roster 的插件会共用 follow 端点。每个包在 `tests/remote/` 保有自己的默认响应与帧构造。fixture 测试包含预期的断言失败，并独立观察客户端清理完成；settings 重载测试观察注册身份被替换，写入测试断言全部 mutation 参数。teardown 失败测试先执行真实树清理，再报告注入的失败，并观察 `$events` 流的取消状态。

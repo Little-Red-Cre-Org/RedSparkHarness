@@ -27,7 +27,7 @@ env:
   # is deliberately a name no deployment uses, so no unprotected URL exists.
   CF_PROJECT: dsh-build-preview
   # CI runs must never report to the production telemetry endpoint baked into
-  # apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
       - name: Install (immutable)
         run: pnpm install --frozen-lockfile
 
-      # apps/web consumes workspace packages as built lib products, and
+      # rsh/Programs/Web/application consumes workspace packages as built lib products, and
       # build:preview packs the image through the packer's installed bin
       # (lib/bin.js), so neither half exists before the full build runs.
       - name: Build workspace
@@ -84,15 +84,15 @@ jobs:
       # the deployment root the usable entry instead of a page that never boots.
       - name: Shape the upload
         run: |
-          find apps/web/dist -name '*.map' -delete
-          cp apps/web/dist/preview.html apps/web/dist/index.html
+          find rsh/Programs/Web/application/dist -name '*.map' -delete
+          cp rsh/Programs/Web/application/dist/preview.html rsh/Programs/Web/application/dist/index.html
 
       - name: Upload to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4 pages deploy apps/web/dist \
+          npx --yes wrangler@4 pages deploy rsh/Programs/Web/application/dist \
             --project-name "$CF_PROJECT" \
             --branch "pr-${{ github.event.pull_request.number }}" \
             --commit-dirty=true

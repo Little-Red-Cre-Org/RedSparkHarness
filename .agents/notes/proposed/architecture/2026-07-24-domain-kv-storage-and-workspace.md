@@ -6,7 +6,7 @@ English | [中文](2026-07-24-domain-kv-storage-and-workspace.zh.md)
 
 ## Problem
 
-The host's only persistence surface is the session event log (`packages/session/session-persistence`: append-only, one file per session). Anything that does not belong to a single session has nowhere to live, and two shipped needs exist:
+The host's only persistence surface is the session event log (`rsh/Engine/session/session-persistence`: append-only, one file per session). Anything that does not belong to a single session has nowhere to live, and two shipped needs exist:
 
 - **The workspace entity.** The GUI needs workspace as a real object: path, title, and the list of owned sessions. Ownership belongs to the workspace — "which sessions belong to this workspace" is not any single session's fact, so writing it into the session log is semantically wrong. Before this design, workspace was only a sidebar visual grouping derived from cwd, with no entity.
 - **Dynamic session metadata** (the foreseeable second consumer). Cold session listings read only the first log line (an immutable creation-time snapshot); title, terminal status, and anything that evolves with the session is unavailable. The fix direction is a sidecar metadata table — exactly a KV table with high-frequency per-key updates.
@@ -17,29 +17,29 @@ The later [Workspace registration deletion decision](../../implemented/feature/2
 
 ## Proposal
 
-Create the `packages/storage/` group — the `ctx.storage` hub (backend registry + data-form mounts), two backends, the domain data form — plus the workspace consumer package; extend `SessionPersistence` with a delete primitive.
+Create the `rsh/Core/storage/` group — the `ctx.storage` hub (backend registry + data-form mounts), two backends, the domain data form — plus the workspace consumer package; extend `SessionPersistence` with a delete primitive.
 
 | Package | Path | ctx surface | This phase |
 | --- | --- | --- | --- |
-| `@deepseek-ai/dsh-storage` | `packages/storage/storage/` | `ctx.storage` (the hub) | ✓ |
-| `@deepseek-ai/dsh-storage-json` | `packages/storage/storage-json/` | registers backend `json` | ✓ |
-| `@deepseek-ai/dsh-storage-sqlite` | `packages/storage/storage-sqlite/` | registers backend `sqlite` | ✓ |
-| `@deepseek-ai/dsh-storage-domain` | `packages/storage/storage-domain/` | mounts `ctx.storage.domain` | ✓ |
-| `@deepseek-ai/dsh-workspace` | `packages/workspace/workspace/` | `ctx.workspaceRegistry` | ✓ |
-| `SessionPersistence.delete` extension + cascade orchestration | `packages/session/session-persistence*` | new method on the existing seam | ✗ future work (session side untouched this phase) |
+| `@deepseek-ai/dsh-storage` | `rsh/Core/storage/storage/` | `ctx.storage` (the hub) | ✓ |
+| `@deepseek-ai/dsh-storage-json` | `rsh/Core/storage/storage-json/` | registers backend `json` | ✓ |
+| `@deepseek-ai/dsh-storage-sqlite` | `rsh/Core/storage/storage-sqlite/` | registers backend `sqlite` | ✓ |
+| `@deepseek-ai/dsh-storage-domain` | `rsh/Core/storage/storage-domain/` | mounts `ctx.storage.domain` | ✓ |
+| `@deepseek-ai/dsh-workspace` | `rsh/Modules/Official/workspace/workspace/` | `ctx.workspaceRegistry` | ✓ |
+| `SessionPersistence.delete` extension + cascade orchestration | `rsh/Engine/session/session-persistence*` | new method on the existing seam | ✗ future work (session side untouched this phase) |
 | `workspace.*` / `session.delete` RPC, GUI wiring, boot assembly | — | — | ✗ next phase |
 
-(workspace lives in its own group rather than `packages/host/`: the host group's naming rule requires the `dsh-host-*` prefix while this package is named `dsh-workspace`; and the workspace entity is a domain concept, not bound to the host assembly tier. Unrelated to the existing `agent-instructions` package — that is an AGENTS.md instruction loader.)
+(workspace lives in its own group rather than `rsh/Programs/Web/host/`: the host group's naming rule requires the `dsh-host-*` prefix while this package is named `dsh-workspace`; and the workspace entity is a domain concept, not bound to the host assembly tier. Unrelated to the existing `agent-instructions` package — that is an AGENTS.md instruction loader.)
 
 Dependency direction: `dsh-workspace` → `dsh-domain` → `dsh-storage` ← the two backends. `dsh-workspace` additionally depends on the read-only face of `ctx.sessionPersistence` (attach's cwd check reads the session header; when the service is absent, attach rejects outright — no verification, no bookkeeping). The `ctx.sessions` running-check for session deletion moves into future work together with the cascade.
 
 ### `dsh-storage`: the storage hub
 
-A pure registration hub, no IO of its own, no Config. The `Storage` service mounts at `ctx.storage` with two faces: `backend` (a `BackendRegistry`: `register(name, backend)` returns the disposer, duplicate names throw; `get(name)` throws `backend-not-found` for unknown names) and data-form mounting (`mount(form, facility)` over the merge-extensible `StorageForms` map, into which `dsh-domain` merges the `domain` key; unmounted access throws `form-not-mounted`). The signature text lives in `packages/storage/storage/src/index.ts` and `src/registry.ts`.
+A pure registration hub, no IO of its own, no Config. The `Storage` service mounts at `ctx.storage` with two faces: `backend` (a `BackendRegistry`: `register(name, backend)` returns the disposer, duplicate names throw; `get(name)` throws `backend-not-found` for unknown names) and data-form mounting (`mount(form, facility)` over the merge-extensible `StorageForms` map, into which `dsh-domain` merges the `domain` key; unmounted access throws `form-not-mounted`). The signature text lives in `rsh/Core/storage/storage/src/index.ts` and `src/registry.ts`.
 
 **Multiple backends stay mounted side by side**; which backend serves a domain is `dsh-domain`'s configuration (below), never a global either-or. Disposer semantics = remove the name from the table; closing the backend itself belongs to the backend package's effect closure, unregister first then close.
 
-A backend is one **medium owner** (a file-tree root / one db file) exposing primitives through **data-shape facets** — only `kv` this phase; the session migration adds `log` (see the migration section). A facet is an optional member: absence means the backend cannot serve that shape, and resolution fails loud. The `kv` facet's primitive surface: `open(descriptor)` (descriptor = name/version/table list/global flag, with names and table names restricted to `^[a-z][a-z0-9_]*$` doubling as file-name and SQL-identifier segments) returns a unit exposing `loadAll` / `putRecord` / `deleteRecord` (missing key is a no-op) / `setGlobal` / `close` (idempotent); values are opaque JSON to the backend. The normative text (with per-method JSDoc) is `packages/storage/storage/src/backend.ts`.
+A backend is one **medium owner** (a file-tree root / one db file) exposing primitives through **data-shape facets** — only `kv` this phase; the session migration adds `log` (see the migration section). A facet is an optional member: absence means the backend cannot serve that shape, and resolution fails loud. The `kv` facet's primitive surface: `open(descriptor)` (descriptor = name/version/table list/global flag, with names and table names restricted to `^[a-z][a-z0-9_]*$` doubling as file-name and SQL-identifier segments) returns a unit exposing `loadAll` / `putRecord` / `deleteRecord` (missing key is a no-op) / `setGlobal` / `close` (idempotent); values are opaque JSON to the backend. The normative text (with per-method JSDoc) is `rsh/Core/storage/storage/src/backend.ts`.
 
 The backend contract (asserted clause by clause by the shared conformance suite, one suite for both backends):
 
@@ -51,7 +51,7 @@ The backend contract (asserted clause by clause by the shared conformance suite,
 6. Any string key / any JSON value is safe (keys never reach file paths, a structural property).
 7. `close` is idempotent; any operation after close → `StorageError('closed')`.
 
-The error vocabulary is `StorageError` with a code discriminant: `backend-not-found` / `form-not-mounted` / `duplicate-backend` / `duplicate-mount` / `version-mismatch` / `malformed-medium` / `closed` (`packages/storage/storage/src/error.ts`).
+The error vocabulary is `StorageError` with a code discriminant: `backend-not-found` / `form-not-mounted` / `duplicate-backend` / `duplicate-mount` / `version-mismatch` / `malformed-medium` / `closed` (`rsh/Core/storage/storage/src/error.ts`).
 
 ### `dsh-storage-json`
 
@@ -159,7 +159,7 @@ Rules:
 - **Records are plain data**: immutable, directly JSON-serializable POJOs; values returned by `get`/`entries` must not be mutated in place (TypeScript readonly projection, no runtime freezing). Behavior-carrying domain objects belong to consumer packages.
 - **Serialized writes**: one promise chain per domain; `put`/`delete`/`update`/`global.set` all queue on it; `update`'s fn runs on the chain, so concurrency cannot interleave. No active-record (pulling out a mutable object that auto-persists — uncontrollable persist timing, in conflict with the whole-unit atomic-rewrite model).
 - **Version fails loud**: a stored version differing from the spec throws outright; no migration, no rebuild (the data is not regenerable; pre-release rejects old formats).
-- **Change events**: after each write's durability resolves, emit `domain/changed` (`@mode emit`), one per record, no old value (matching the repository's "new snapshot + operation discriminant" convention, template `goal/changed`); the payload `DomainChanged` is a put/deleted discriminated union — domain + table + key (both `''` for global changes) + operation, with the put branch carrying the new snapshot value and the deleted branch carrying none (`packages/storage/storage-domain/src/events.ts`). This is next phase's RPC push-frame event source. The error vocabulary is `DomainError`, codes: `already-open` / `facet-unsupported` / `invalid-record` (with `{ table, key }`) / `missing-key` / `closed`.
+- **Change events**: after each write's durability resolves, emit `domain/changed` (`@mode emit`), one per record, no old value (matching the repository's "new snapshot + operation discriminant" convention, template `goal/changed`); the payload `DomainChanged` is a put/deleted discriminated union — domain + table + key (both `''` for global changes) + operation, with the put branch carrying the new snapshot value and the deleted branch carrying none (`rsh/Core/storage/storage-domain/src/events.ts`). This is next phase's RPC push-frame event source. The error vocabulary is `DomainError`, codes: `already-open` / `facet-unsupported` / `invalid-record` (with `{ table, key }`) / `missing-key` / `closed`.
 
 ### Future work: session-side deletion (design settled, not implemented this phase)
 

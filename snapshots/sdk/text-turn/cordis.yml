@@ -1,5 +1,18 @@
 # TypeScript SDK snapshot-record patch over `dsh --profile sdk`.
 
+# This recorded composition owns Bash schemas on every replay host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
 # The fixture corpus must not depend on the developer's personal skill roots.
 # Ordinary product launches retain the sdk profile's default skill discovery.
 - id: skill-filesystem

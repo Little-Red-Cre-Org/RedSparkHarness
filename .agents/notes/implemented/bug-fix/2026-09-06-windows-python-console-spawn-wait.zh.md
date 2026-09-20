@@ -10,9 +10,9 @@ Python 安装的 `dsh.exe` 控制台命令会在初始化 profile 前间歇性�
 
 ## 决策
 
-[Python 控制台入口](../../../../python/sdk-runtime/src/deepseek_harness_runtime/__init__.py) 在 Windows 上使用 `subprocess.run`，继承标准流与环境，等待运行时结束，再以运行时状态退出。POSIX 保留 `os.execvpe` 进程替换。Windows CRT exec 并非 POSIX 进程替换；显式启动并等待的路径避开观测到的原生 exec 操作。
+[Python 控制台入口](../../../../rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/__init__.py) 在 Windows 上使用 `subprocess.run`，继承标准流与环境，等待运行时结束，再以运行时状态退出。POSIX 保留 `os.execvpe` 进程替换。Windows CRT exec 并非 POSIX 进程替换；显式启动并等待的路径避开观测到的原生 exec 操作。
 
-[安装后 wheel 冒烟测试](../../../../scripts/smoke-python-runtime.py) 在 profile 安装失败时，同时报告十进制、无符号 32 位十六进制状态与捕获的标准流。这保留普通命令失败和原生进程异常的区别。
+[安装后 wheel 冒烟测试](../../../../rsh/Scripts/smoke-python-runtime.py) 在 profile 安装失败时，同时报告十进制、无符号 32 位十六进制状态与捕获的标准流。这保留普通命令失败和原生进程异常的区别。
 
 ## 已考虑的替代方案
 
@@ -24,4 +24,4 @@ Python 安装的 `dsh.exe` 控制台命令会在初始化 profile 前间歇性�
 
 Windows 保留 Python 父进程直到运行时退出，不再依赖 CRT overlay 行为。标准同步子进程实现负责等待和中断清理。不添加自定义进程树管理器或全局主机设置。
 
-[运行时解析测试](../../../../python/sdk/tests/test_runtime_resolution.py) 保留 POSIX 转发验证，并覆盖 Windows 参数／环境转发、状态 0/37/513、真实子进程完成、Unicode 标准流和带空格的参数。宽退出状态由原生 Windows 验证，因为 POSIX 会将进程状态截断为八位。[原生固定次数对照](https://github.com/deepseek-harness/deepseek-harness/actions/runs/34031142773) 中，启用编译缓存的四次修复后启动全部通过；该批次四次未修复对照也全部通过，因此它不是同批次复现。完整安装后 wheel CI 必须独立于本地分支级测试，验证最终产物。
+[运行时解析测试](../../../../rsh/Programs/SDK/python/sdk/tests/test_runtime_resolution.py) 保留 POSIX 转发验证，并覆盖 Windows 参数／环境转发、状态 0/37/513、真实子进程完成、Unicode 标准流和带空格的参数。宽退出状态由原生 Windows 验证，因为 POSIX 会将进程状态截断为八位。[原生固定次数对照](https://github.com/deepseek-harness/deepseek-harness/actions/runs/34031142773) 中，启用编译缓存的四次修复后启动全部通过；该批次四次未修复对照也全部通过，因此它不是同批次复现。完整安装后 wheel CI 必须独立于本地分支级测试，验证最终产物。

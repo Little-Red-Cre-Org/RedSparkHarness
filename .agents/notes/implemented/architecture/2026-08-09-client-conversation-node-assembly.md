@@ -35,7 +35,7 @@ Registry contributions are Cordis effects. Removing a Definition causes a low-fr
 
 ### Overall `ConversationNodeDefinition` contract
 
-Each [`ConversationNodeDefinition`](../../../../packages/client/ui-conversation/src/client/contract/conversation.ts) independently owns one business object's conversion from `SessionEventLike` inputs to State and final view Nodes. A Definition's `kind` is its unique Registry name and the namespace for its business IDs.
+Each [`ConversationNodeDefinition`](../../../../rsh/Programs/Web/client/ui-conversation/src/client/contract/conversation.ts) independently owns one business object's conversion from `SessionEventLike` inputs to State and final view Nodes. A Definition's `kind` is its unique Registry name and the namespace for its business IDs.
 
 One input may be claimed by several ordinary Definitions. For example, an Assistant event or packed run updates both the Assistant Node and Turn Tail, while a Retry Event updates Retry, Assistant, and Turn Tail. The Assembler asks the fallback only when every ordinary Definition returns `null`.
 
@@ -162,7 +162,7 @@ IDs are never reused. Completed Contexts remain in the current window, providing
 
 ### Location is a first-class engine fact
 
-[`ConversationLocationIndex`](../../../../packages/client/ui-conversation/src/client/conversation/location-index.ts) maps standard events and packed runs to Locations from `turn/start`, `step/start`, explicit turn and step payloads, `step/end`, and `turn/end`. All members of a row share its turn, step, block index, and delta kind, so the row needs one Location entry at its first `seq`.
+[`ConversationLocationIndex`](../../../../rsh/Programs/Web/client/ui-conversation/src/client/conversation/location-index.ts) maps standard events and packed runs to Locations from `turn/start`, `step/start`, explicit turn and step payloads, `step/end`, and `turn/end`. All members of a row share its turn, step, block index, and delta kind, so the row needs one Location entry at its first `seq`.
 
 Location has four shapes: `session`, `turn`, `step`, and `unresolved`. Turns and Steps each carry `open`, `closed`, or `unknown` status plus any loaded start and end Events.
 
@@ -307,7 +307,7 @@ Unknown fallback demonstrates Registry ownership: it handles only append-surface
 
 ## View Builder and React identity
 
-[`ConversationViewRegistry`](../../../../packages/client/ui-conversation/src/client/conversation/view-registry.ts) stores an independent builder factory for each target and shares no Session's ordering or caches.
+[`ConversationViewRegistry`](../../../../rsh/Programs/Web/client/ui-conversation/src/client/conversation/view-registry.ts) stores an independent builder factory for each target and shares no Session's ordering or caches.
 
 A shell selection or a target source's first subscriber adds that target to the Session's monotonic active-target set. The Assembler indexes each Context under its sole target but creates no builder, Node, or snapshot for an inactive target. First activation flushes pending target-neutral work, creates the builder, and calls `replace({ nodes, timeline })` once from that target's current Contexts.
 
@@ -315,15 +315,15 @@ The shell synchronously resolves the persisted selection when a Session binding 
 
 Ordinary prepend and append flushes call `apply({ upserts, timeline })` only for active targets. Complete window replacement and Registry rebuild call `replace()` only for active targets. Unsubscription does not remove a target, so returning to an opened View does not rebuild it.
 
-[`ChatSnapshotBuilder`](../../../../packages/client/ui-chat/src/client/conversation-nodes/chat-snapshot-builder.ts) maintains `order`, a keyed `nodes` store with identity-stable Node and Turn-process sources, the turn/step `locations` index, `timeline`, and the `legacy` slice used by StatsPills and mirrored into top-level public compatibility fields.
+[`ChatSnapshotBuilder`](../../../../rsh/Programs/Web/client/ui-chat/src/client/conversation-nodes/chat-snapshot-builder.ts) maintains `order`, a keyed `nodes` store with identity-stable Node and Turn-process sources, the turn/step `locations` index, `timeline`, and the `legacy` slice used by StatsPills and mirrored into top-level public compatibility fields.
 
 Only a new key or a change to `anchorSeq`, visibility, or Location identity makes a Chat update structural. An ordinary content change does not rebuild `order`; the keyed Node store replaces that key's value and publishes only its source. The Turn-process projector recalculates cross-Node presentation only for a Turn whose structure, specification, or status changed, then publishes only that Turn's process sources.
 
 For a structural change, the Builder computes visible order from current store values and reuses unchanged index arrays by reference. Prepend may add earlier history keys, append may add a key at the tail or its business anchor, and ordering never renames existing keys.
 
-[`ChatView`](../../../../packages/client/ui-chat/src/client/chat/ChatView.tsx) only traverses `order` and resolves the two stable sources for each key. Each [`ChatNodeSeat`](../../../../packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx) remains in the same parent list under its Context key, subscribes only to its Node and Turn-process sources, and dispatches the `'conversation.chat.node'` keyed slot by `node.kind`.
+[`ChatView`](../../../../rsh/Programs/Web/client/ui-chat/src/client/chat/ChatView.tsx) only traverses `order` and resolves the two stable sources for each key. Each [`ChatNodeSeat`](../../../../rsh/Programs/Web/client/ui-chat/src/client/chat/ChatNodeSeat.tsx) remains in the same parent list under its Context key, subscribes only to its Node and Turn-process sources, and dispatches the `'conversation.chat.node'` keyed slot by `node.kind`.
 
-[`ChatNodeDataMap`](../../../../packages/client/ui-chat/src/client/contract/chat-nodes.ts) is a declaration-merged renderer payload registry. Each business module registers its own Definition and keyed renderer; `registerConversationNodes()` and `registerChatNodeRenderers()` only assemble those independent contributions and do not interpret business through a closed union or central switch. Built-ins live in `ui-chat`, and this type and registration boundary allows a business to move into an independent package without changing the Chat dispatcher.
+[`ChatNodeDataMap`](../../../../rsh/Programs/Web/client/ui-chat/src/client/contract/chat-nodes.ts) is a declaration-merged renderer payload registry. Each business module registers its own Definition and keyed renderer; `registerConversationNodes()` and `registerChatNodeRenderers()` only assemble those independent contributions and do not interpret business through a closed union or central switch. Built-ins live in `ui-chat`, and this type and registration boundary allows a business to move into an independent package without changing the Chat dispatcher.
 
 The Chat entry in `conversation.view` registers `ChatNodeTurnDataInjected` once when it declares the `conversation.chat.node` child slot. `ChatNodeSeat` passes the Node's stable Turn data store as `hookContext`; the Slot renderer binds `useTurnData(businessKey)` directly to that store. Every keyed Chat renderer therefore reads strongly typed, read-only data from its own Node's Turn, and the Assistant renderer has no special injection authority.
 

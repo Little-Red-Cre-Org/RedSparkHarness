@@ -8,7 +8,7 @@ English | [中文](2026-06-21-subagent-capability-seam.zh.md)
 
 ## Problem
 
-The harness has a long-deferred seam for **subagents** — an agent delegating work to another agent. The intent was sketched in the `Agent`/`AgentLoop` interfaces ([packages/core/agent/src/types.ts](../../../../packages/core/agent/src/types.ts), [packages/core/agent-loop/src/index.ts](../../../../packages/core/agent-loop/src/index.ts)): a creation option referencing a parent agent (fork = seed the child session with the parent's event log; spawn = fresh session), with the child returned as an `Agent` handle so steering and event subscription work uniformly.
+The harness has a long-deferred seam for **subagents** — an agent delegating work to another agent. The intent was sketched in the `Agent`/`AgentLoop` interfaces ([rsh/Engine/core/agent/src/types.ts](../../../../rsh/Engine/core/agent/src/types.ts), [rsh/Engine/core/agent-loop/src/index.ts](../../../../rsh/Engine/core/agent-loop/src/index.ts)): a creation option referencing a parent agent (fork = seed the child session with the parent's event log; spawn = fresh session), with the child returned as an `Agent` handle so steering and event subscription work uniformly.
 
 **Multiple subagent implementations must coexist at runtime.** A parent may want a cheap in-process child for a scoped subtask AND an isolated out-of-process child (over ACP) in the same session. The transports:
 
@@ -27,7 +27,7 @@ The bash seam ([capability seams](../architecture/2026-06-13-capability-seams.md
 
 ### The three-package boundary
 
-A new package group `packages/subagent/`:
+A new package group `rsh/Engine/subagent/`:
 
 | Package | Role |
 |---|---|
@@ -66,7 +66,7 @@ Each in-process subagent runs in its **own `Session`** (own id, `parentSession` 
 
 ## Testing
 
-Registry and tool tests replace only the nondeterministic child with a package-local scripted provider while exercising the real `SubagentRuntime`, lifecycle, task integration, and model-facing tool. Loader regression tests still cover the provider and consumer exports for the failure described in [postmortem 0001](../../../../docs/postmortem/0001-acp-default-export-drops-inject.md). Registry tests cover reload safety, duplicate names, and start-time capability rejection; nested-agent scenarios replay keylessly through [per-session snapshot replay](../../archived/testing/2026-06-22-subagent-snapshot-replay.md); in-process backends also have real-loop unit tests and a with-key e2e.
+Registry and tool tests replace only the nondeterministic child with a package-local scripted provider while exercising the real `SubagentRuntime`, lifecycle, task integration, and model-facing tool. Loader regression tests still cover the provider and consumer exports for the failure described in [postmortem 0001](../../../../rsh/Docs/postmortem/0001-acp-default-export-drops-inject.md). Registry tests cover reload safety, duplicate names, and start-time capability rejection; nested-agent scenarios replay keylessly through [per-session snapshot replay](../../archived/testing/2026-06-22-subagent-snapshot-replay.md); in-process backends also have real-loop unit tests and a with-key e2e.
 
 ## Consequences
 

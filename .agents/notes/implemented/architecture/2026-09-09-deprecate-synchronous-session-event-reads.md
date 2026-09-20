@@ -16,7 +16,7 @@ All operations that synchronously read arbitrary positions or ranges of Session 
 
 The three methods carry this rule in `@deprecated` JSDoc. This is an API-use decision; the current Session implementation still retains the complete event sequence in memory.
 
-Repository test files, including `scripts/**/*.spec.{ts,tsx}`, may call these three readers to inspect emitted events and exercise Session history behavior. The test-file lint override allows `snapshotEvents`, `eventAt`, and `ownEvents`; all other deprecated names remain errors. This allowance also covers unrelated declarations with the same three names under the current linter. It does not apply to production source or non-test repository scripts.
+Repository test files, including `rsh/Scripts/**/*.spec.{ts,tsx}`, may call these three readers to inspect emitted events and exercise Session history behavior. The test-file lint override allows `snapshotEvents`, `eventAt`, and `ownEvents`; all other deprecated names remain errors. This allowance also covers unrelated declarations with the same three names under the current linter. It does not apply to production source or non-test repository scripts.
 
 ### State needed after resume
 

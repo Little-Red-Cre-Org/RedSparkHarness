@@ -2,7 +2,7 @@
 
 ## Summary
 
-The documentation website is a tested projection of repository Markdown, never a second copy. [website/docs.ts](../../../../website/docs.ts) is the explicit public allowlist, [scripts/project-doc-site.ts](../../../../scripts/project-doc-site.ts) rewrites mapped sources into the disposable `website/.generated/` tree, and VitePress builds that tree. The build also emits a raw-Markdown twin of every route and a root `llms.txt` index from the same manifest. This reference owns the manifest fields, the projector's link rules, preview and validation commands, and the deployment boundary.
+The documentation website is a tested projection of repository Markdown, never a second copy. [rsh/Docs/website/docs.ts](../../../../rsh/Docs/website/docs.ts) is the explicit public allowlist, [rsh/Scripts/project-doc-site.ts](../../../../rsh/Scripts/project-doc-site.ts) rewrites mapped sources into the disposable `rsh/Docs/website/.generated/` tree, and VitePress builds that tree. The build also emits a raw-Markdown twin of every route and a root `llms.txt` index from the same manifest. This reference owns the manifest fields, the projector's link rules, preview and validation commands, and the deployment boundary.
 
 ## Table of Contents
 
@@ -16,23 +16,23 @@ The documentation website is a tested projection of repository Markdown, never a
 
 ## Manifest ownership
 
-Read [docs/AGENTS.md](../../../../docs/AGENTS.md) and the current `DocsPage` type and entries in [website/docs.ts](../../../../website/docs.ts) before changing the manifest; do not rely on a remembered field set. Read [website/.vitepress/config.ts](../../../../website/.vitepress/config.ts) before adding a new section, sidebar collection, locale, or top-level navigation item. For an edited bilingual source, follow the lightweight routine path in [docs/AGENTS.md](../../../../docs/AGENTS.md#writing-rules) and the [pairing contract](../../../../docs/i18n/README.md); never invoke the extended translation skill automatically.
+Read [rsh/Docs/AGENTS.md](../../../../rsh/Docs/AGENTS.md) and the current `DocsPage` type and entries in [rsh/Docs/website/docs.ts](../../../../rsh/Docs/website/docs.ts) before changing the manifest; do not rely on a remembered field set. Read [rsh/Docs/website/.vitepress/config.ts](../../../../rsh/Docs/website/.vitepress/config.ts) before adding a new section, sidebar collection, locale, or top-level navigation item. For an edited bilingual source, follow the lightweight routine path in [rsh/Docs/AGENTS.md](../../../../rsh/Docs/AGENTS.md#writing-rules) and the [pairing contract](../../../../rsh/Docs/i18n/README.md); never invoke the extended translation skill automatically.
 
-Never edit or commit `website/.generated/`, `website/.cache/`, or `website/.dist/`. Except for `website/AGENTS.md`, never add Markdown under `website/`; locale and route directories such as `website/zh-CN/`, `website/en/`, and `website/api/` are invalid source layouts. Keep generated catalogs under `docs/`, freshness-gate them there, and publish them through the manifest.
+Never edit or commit `rsh/Docs/website/.generated/`, `rsh/Docs/website/.cache/`, or `rsh/Docs/website/.dist/`. Except for `rsh/Docs/website/AGENTS.md`, never add Markdown under `rsh/Docs/website/`; locale and route directories such as `rsh/Docs/website/zh-CN/`, `rsh/Docs/website/en/`, and `rsh/Docs/website/api/` are invalid source layouts. Keep generated catalogs under `rsh/Docs/`, freshness-gate them there, and publish them through the manifest.
 
 ## Classify the change
 
 - **Edit an already published page:** change only its canonical Markdown source. Do not touch the manifest unless its route or navigation metadata changes.
-- **Publish a new page:** create it in its owning `docs/` tier, then add one manifest entry.
+- **Publish a new page:** create it in its owning `rsh/Docs/` tier, then add one manifest entry.
 - **Rename, move, or remove a page:** update the canonical file, manifest entry, and inbound repository links atomically. Remove stale manifest entries; `docs:check` rejects missing sources.
-- **Publish a generated catalog:** map the generated `docs/` file, but change its generator or source metadata rather than editing the catalog by hand.
+- **Publish a generated catalog:** map the generated `rsh/Docs/` file, but change its generator or source metadata rather than editing the catalog by hand.
 - **Change site structure:** update the manifest for ordinary pages; update VitePress configuration only when the existing sidebar, section, or locale model cannot express the change.
 
-Keep the manifest an explicit public allowlist. Do not publish RFCs, postmortems, testing guides, `AGENTS.md`, or maintainer workflows merely because they exist under `docs/`; add internal material only when the user explicitly expands what the site publishes.
+Keep the manifest an explicit public allowlist. Do not publish RFCs, postmortems, testing guides, `AGENTS.md`, or maintainer workflows merely because they exist under `rsh/Docs/`; add internal material only when the user explicitly expands what the site publishes.
 
 ## DocsPage fields
 
-Set every `DocsPage` field deliberately. The canonical field set and the `DocsSidebar` union live in [website/docs.ts](../../../../website/docs.ts) — read them there rather than copying values into prose; sections are owned by the `sections` record in that file, with no separate order list in the VitePress config.
+Set every `DocsPage` field deliberately. The canonical field set and the `DocsSidebar` union live in [rsh/Docs/website/docs.ts](../../../../rsh/Docs/website/docs.ts) — read them there rather than copying values into prose; sections are owned by the `sections` record in that file, with no separate order list in the VitePress config.
 
 - `source`: repository-relative canonical Markdown path. For a complete bilingual pair, add the English `.md` path through `pairedPages()`; it derives the sibling `.zh.md`, the content locales, and counterpart aliases.
 - `route`: public VitePress path including the `.md` suffix.

@@ -23,7 +23,7 @@ Long-running tools are producers. `dsh-tool-bash` adapts a `ShellProcess` into i
 
 ## Runtime contract
 
-The literal types live on the [tasks subsystem page](../../../../docs/subsystems/jobs.md). A producer calls `ctx.jobs.start()` with a kind, label, optional owning `Agent`, optional positive `outputLimitBytes`, and a `run()` function. The runtime completes all failable preflight work before calling `run()` and invokes it once. After `run()` returns hooks, registration commits without another failable step; a producer cannot start work that lacks a collectable job id.
+The literal types live on the [tasks subsystem page](../../../../rsh/Docs/subsystems/jobs.md). A producer calls `ctx.jobs.start()` with a kind, label, optional owning `Agent`, optional positive `outputLimitBytes`, and a `run()` function. The runtime completes all failable preflight work before calling `run()` and invokes it once. After `run()` returns hooks, registration commits without another failable step; a producer cannot start work that lacks a collectable job id.
 
 The process-local provider also owns bounded admission, whose rationale is recorded in the [bounded background job admission decision](../../archived/bug-fix/2026-08-11-bounded-background-job-admission.md). Its positive-safe-integer `maxConcurrentJobsPerOwner` config defaults to `10`; `start()` derives each exact `Agent` object's active count from `running` and `stopping` records, while every unowned task shares one service bucket. Capacity rejection occurs before `run()` and id allocation, and producer `done` settlement is the only event that releases a stopping task's place. The provider does not queue, preempt, or retain a second mutable count.
 
@@ -131,7 +131,7 @@ Unit coverage pins preflight atomicity, per-kind ids, per-exact-owner and unowne
 
 ## Consequences
 
-Bash commands and subagents share one id vocabulary, listing, notice format, prompt habit, and set of control tools. New long-running producers implement execution hooks instead of another registry and tool family. The [tool cookbook](../../../../docs/cookbook/adding-a-tool.md) points producers to this contract.
+Bash commands and subagents share one id vocabulary, listing, notice format, prompt habit, and set of control tools. New long-running producers implement execution hooks instead of another registry and tool family. The [tool cookbook](../../../../rsh/Docs/cookbook/adding-a-tool.md) points producers to this contract.
 
 One exact owner cannot grow process-local Task-backed work without bound, and another owner does not consume its allowance. A cancellation request keeps capacity occupied until the producer actually releases its resource, so replacing slow-stopping work cannot exceed the configured live-resource budget.
 

@@ -14,7 +14,7 @@ The shape matches the timeout policy design: a tool author declares a canonical 
 
 ## Decision
 
-A thin spill storage seam plus a default spill policy plugin, in a new `packages/spill/` group:
+A thin spill storage seam plus a default spill policy plugin, in a new `rsh/Modules/Official/spill/` group:
 
 | Package | Role |
 |---|---|
@@ -60,7 +60,7 @@ interface SpillRef {
 }
 ```
 
-`SpillLocator` is a [branded](../../../../packages/util/brand) model-facing handle returned by the backend. The local backend renders it as a filesystem path; a remote or database backend can render a URI, key, or command token. Consumers treat it as opaque and render it with `retrievalHint` instead of assuming `read` is always the right retrieval mechanism. `SpillOwner.sessionId` is the save-time storage namespace: forked sessions inherit existing spill locators from the seeded log without copying or re-owning them, and new spills after the fork use the child session id. A retention-period cleanup may expire old locators with other old session artifacts; the spill seam does not define a per-session cleanup policy.
+`SpillLocator` is a [branded](../../../../rsh/Core/util/brand) model-facing handle returned by the backend. The local backend renders it as a filesystem path; a remote or database backend can render a URI, key, or command token. Consumers treat it as opaque and render it with `retrievalHint` instead of assuming `read` is always the right retrieval mechanism. `SpillOwner.sessionId` is the save-time storage namespace: forked sessions inherit existing spill locators from the seeded log without copying or re-owning them, and new spills after the fork use the child session id. A retention-period cleanup may expire old locators with other old session artifacts; the spill seam does not define a per-session cleanup policy.
 
 `dsh-spill-local` owns storage details: session-scoped directory selection, safe names, path-traversal protection, the write, local artifact lifetime, and returning `{ locator, bytes, retrievalHint }`. It does not own tool-result replacement, model-facing preview policy, search, file inspection, or a seam-wide/per-session retention policy. Files land at `<root>/session-<hash>/<random>-<safeName>`, where `root` is a configured path or a lazily-created private (0700) per-process temp dir, the session subdir is a short `sha256(sessionId)` prefix, and the leaf is a random hex prefix plus the caller's `suggestedName` sanitized to one path segment (mirrors the JSONL backend's `encodeSegment`). The write is `open(path, 'wx', 0o600)` — exclusive and owner-only, so a planted symlink cannot redirect it. The locator is the path, and the retrieval hint tells the model it can use `read` or `grep` on that path. Its one-shot startup cleanup applies the backend-specific artifact lifetime described in the [local spill cleanup note](../../archived/architecture/2026-07-17-local-spill-startup-cleanup.md).
 

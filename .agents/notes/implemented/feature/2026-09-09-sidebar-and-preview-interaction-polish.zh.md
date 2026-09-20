@@ -10,15 +10,15 @@ Status: implemented
 
 ## Decision
 
-**默认页惰性播种。**[stores.ts](../../../../packages/client/ui-sidebar-right/src/client/stores.ts) 的 `createSurface` 铸造一个折叠且为空的停靠面；store 的 `advance` 只在意图让列保持展开时才把种子工厂传给 `planSettle`。首次会展示空布局的那次展开播种彼时的默认页；关闭最后一个可关 tab 时收起整列，布局保持为空直到下次展开。[最后一个 tab 的关闭规则](2026-09-08-sidebar-last-tab-close-rules.zh.md)与[默认页选择](2026-09-08-sidebar-default-pages.zh.md)维持原决定；默认页在展开时创建。对空分栏执行 split 不产生变化，不创建 tab，不记录历史，也不返回新分栏。
+**默认页惰性播种。**[stores.ts](../../../../rsh/Programs/Web/client/ui-sidebar-right/src/client/stores.ts) 的 `createSurface` 铸造一个折叠且为空的停靠面；store 的 `advance` 只在意图让列保持展开时才把种子工厂传给 `planSettle`。首次会展示空布局的那次展开播种彼时的默认页；关闭最后一个可关 tab 时收起整列，布局保持为空直到下次展开。[最后一个 tab 的关闭规则](2026-09-08-sidebar-last-tab-close-rules.zh.md)与[默认页选择](2026-09-08-sidebar-default-pages.zh.md)维持原决定；默认页在展开时创建。对空分栏执行 split 不产生变化，不创建 tab，不记录历史，也不返回新分栏。
 
 **页唯一性以格为界。**只对引导页的合并规则推广到每种页 kind（`pageKind`/`panePage`）：打开一个页只在这次打开的目标格内聚焦既有 tab；把页拖入、放入或收回到已展示该 kind 页的格会并入该格自己的 tab。资源 tab 保留套件的全停靠面聚焦。
 
-**有工厂回填时，唯一 tab 可对本格分栏。**[planner.ts](../../../../packages/client/ui-dockkit/src/engine/planner.ts) 的 `planDropTab` 接受可选 `TabFactory`：带工厂时，先前被拒绝的本格边缘释放会分栏，工厂的 tab 先于移动回填腾出的格，因此被拖的 tab 最终保持聚焦。不带工厂时该释放仍不改变任何东西。
+**有工厂回填时，唯一 tab 可对本格分栏。**[planner.ts](../../../../rsh/Programs/Web/client/ui-dockkit/src/engine/planner.ts) 的 `planDropTab` 接受可选 `TabFactory`：带工厂时，先前被拒绝的本格边缘释放会分栏，工厂的 tab 先于移动回填腾出的格，因此被拖的 tab 最终保持聚焦。不带工厂时该释放仍不改变任何东西。
 
-**焦点进入 iframe 时关闭菜单。**[Menu.tsx](../../../../packages/client/ui-primitives/src/Menu.tsx) 增加 window `blur` 监听，以 `document.activeElement instanceof HTMLIFrameElement` 为门：焦点移动是跨源 iframe 内 pointerdown 留下的唯一信号，这道门也让应用或标签页切换不会误关列表。
+**焦点进入 iframe 时关闭菜单。**[Menu.tsx](../../../../rsh/Programs/Web/client/ui-primitives/src/Menu.tsx) 增加 window `blur` 监听，以 `document.activeElement instanceof HTMLIFrameElement` 为门：焦点移动是跨源 iframe 内 pointerdown 留下的唯一信号，这道门也让应用或标签页切换不会误关列表。
 
-**代码预览把复制条与滚动源码分开，并去掉卡片填充。**共享 CodeBlock 用稳定的 `data-code-block-content` 节点包裹渲染后的源码；该节点默认使用 `display: contents`，因此既有消费者保持原布局。[CodeBody.module.css](../../../../packages/client/ui-sidebar-documentpreview/src/client/code/CodeBody.module.css) 将该节点实体化为复制条下方占满剩余高度的内部滚动区；代码渲染器通过 callback ref 报告该节点，使文档 owner 在 Slot 替换后仍能用当前节点恢复位置、分页和跳转代码行。共享 CodeBlock 的填充通过 `--dsl-code-block-background` 设置（默认值不变，会话保持灰色卡片），预览将它设为 `transparent`，代码因此直接使用分栏背景。
+**代码预览把复制条与滚动源码分开，并去掉卡片填充。**共享 CodeBlock 用稳定的 `data-code-block-content` 节点包裹渲染后的源码；该节点默认使用 `display: contents`，因此既有消费者保持原布局。[CodeBody.module.css](../../../../rsh/Programs/Web/client/ui-sidebar-documentpreview/src/client/code/CodeBody.module.css) 将该节点实体化为复制条下方占满剩余高度的内部滚动区；代码渲染器通过 callback ref 报告该节点，使文档 owner 在 Slot 替换后仍能用当前节点恢复位置、分页和跳转代码行。共享 CodeBlock 的填充通过 `--dsl-code-block-background` 设置（默认值不变，会话保持灰色卡片），预览将它设为 `transparent`，代码因此直接使用分栏背景。
 
 ## Alternatives considered
 

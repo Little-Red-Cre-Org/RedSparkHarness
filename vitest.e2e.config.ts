@@ -1,6 +1,7 @@
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 import { standardDecoratorPlugin, vitestExecArgv } from './vitest.shared.ts'
+import { PACKAGE_MANIFEST_GLOBS } from './rsh/Scripts/workspace-manifest-globs.ts'
 
 // Real-API suite, separate because it spends tokens. Each test self-skips without
 // its provider credential for keyless CI; credentialed workflows preflight the
@@ -39,13 +40,16 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: ['./tsconfig.base.json'] }), standardDecoratorPlugin()],
   test: {
     execArgv: vitestExecArgv,
-    setupFiles: ['./scripts/test-proxy-environment.ts', './scripts/test-invariants.ts'],
-    // apps/cli only, not apps/*: apps/web/tests/*.e2e.ts needs the built
+    setupFiles: ['./rsh/Scripts/test-proxy-environment.ts', './rsh/Scripts/test-invariants.ts'],
+    // rsh/Programs/CLI only, not rsh/Programs/*: rsh/Programs/Web/application/tests/*.e2e.ts needs the built
     // frontend dist and runs under vitest.web.config.ts (the test:web job).
-    include: ['packages/*/*/tests/**/*.e2e.ts', 'apps/cli/tests/**/*.e2e.ts'],
+    include: [
+      ...PACKAGE_MANIFEST_GLOBS.map(pattern => pattern.replace('/package.json', '/tests/**/*.e2e.ts')),
+      'rsh/Programs/CLI/tests/**/*.e2e.ts',
+    ],
     exclude: [
       '**/*.expected.e2e.ts',
-      'packages/experimental/inspector/tests/client-browser.e2e.ts',
+      'rsh/Modules/Community/experimental/inspector/tests/client-browser.e2e.ts',
     ],
     // Real model calls: generous timeouts, and retries for transient flakes
     // (the shared internal key hits concurrency quotas). No coverage — the

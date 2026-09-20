@@ -10,7 +10,7 @@ The shared base selects both `read`/`write`/`edit` and `str_replace_editor`, whi
 
 ## Decision
 
-The [base patch](../../../../packages/bundle/base/cordis.patch.yml) selects `read`, `write`, and `edit` for file editing. It does not insert `tool-str-replace-editor`; SDK and Web application patches therefore need no disabling override. The editor package remains available to compositions that insert it explicitly.
+The [base patch](../../../../rsh/Compatibility/DSH/bundle/base/cordis.patch.yml) selects `read`, `write`, and `edit` for file editing. It does not insert `tool-str-replace-editor`; SDK and Web application patches therefore need no disabling override. The editor package remains available to compositions that insert it explicitly.
 
 Web minimal and the standalone `sdk-minimal` bundle own their tool selection independently of base. The [persistent-shell-only decision](2026-09-03-minimal-profiles-persistent-shell-only.md) owns their single-tool defaults.
 
@@ -28,4 +28,4 @@ Base-backed SDK, headless, ACP, and custom profiles omit the editor schema by de
 
 ## Verification
 
-The [SDK process tests](../../../../apps/cli/tests/profiles/sdk/keyless-smoke.e2e.ts) capture actual model requests for default file tools, explicit editor insertion, and the standalone minimal roster. The [headless process test](../../../../apps/cli/tests/profiles/headless/tests/keyless-smoke.e2e.ts) checks the shared default through its application. The [headless](../../../../snapshots/session/headless.snapshot.ts), [SDK](../../../../snapshots/sdk/sdk.snapshot.ts), and [ACP](../../../../snapshots/acp/acp.snapshot.ts) recorded sessions pin the assembled model-visible outputs, including the SDK fixture that explicitly inserts the editor.
+The [SDK process tests](../../../../rsh/Programs/CLI/tests/profiles/sdk/keyless-smoke.e2e.ts) capture actual model requests for default file tools, explicit editor insertion, and the standalone minimal roster. The [headless process test](../../../../rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts) checks the shared default through its application. The [headless](../../../../snapshots/session/headless.snapshot.ts), [SDK](../../../../snapshots/sdk/sdk.snapshot.ts), and [ACP](../../../../snapshots/acp/acp.snapshot.ts) recorded sessions pin the assembled model-visible outputs, including the SDK fixture that explicitly inserts the editor.

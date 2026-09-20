@@ -19,11 +19,11 @@ Accept `mode: automatic | interactive`; default to `automatic`. Enter interactiv
 
 `mode` controls questions, not write authority. Review and audit tasks report findings without editing; explicitly requested write, fix, or trim tasks apply clear changes.
 
-Always exclude `vendor/` from discovery, review, and edits, even when the requested scope is the whole repository. Do not follow a symlink into it. Put exclusions after inclusion globs so a later include cannot re-admit it: for example, end ripgrep commands with `--glob '!vendor/**'`, and give Git commands an explicit `:(exclude)vendor/**` pathspec. If the requested scope contains only `vendor/`, report that no eligible files remain.
+Always exclude `vendor/` from discovery, review, and edits, even when the requested scope is the whole repository. Do not follow a symlink into it. Put exclusions after inclusion globs so a later include cannot re-admit it: for example, end ripgrep commands with `--glob '!rsh/Core/vendor/**'`, and give Git commands an explicit `:(exclude)rsh/Core/vendor/**` pathspec. If the requested scope contains only `vendor/`, report that no eligible files remain.
 
 Also exclude `.agents/notes/archived/` from prose review and edits. Archived Agent Notes are frozen snapshots; inspect an exact target only to understand a historical inbound citation, never to modernize its prose or outbound links.
 
-Treat generated catalogs, snapshots, and fixtures as derivative. Trace every consumer before editing: source JSDoc may also feed a generated model-visible catalog. Edit the owning source or scenario first, then regenerate every derivative. When a generator extracts a summary from owner prose, make the extracted sentence complete for that surface. Bilingual pairs have no permanent owner: either language may be the authored side for an update. Follow the [lightweight routine path](../../../docs/AGENTS.md#writing-rules), update the counterpart minimally, and re-record the pair.
+Treat generated catalogs, snapshots, and fixtures as derivative. Trace every consumer before editing: source JSDoc may also feed a generated model-visible catalog. Edit the owning source or scenario first, then regenerate every derivative. When a generator extracts a summary from owner prose, make the extracted sentence complete for that surface. Bilingual pairs have no permanent owner: either language may be the authored side for an update. Follow the [lightweight routine path](../../../rsh/Docs/AGENTS.md#writing-rules), update the counterpart minimally, and re-record the pair.
 
 ## Preserve the complete proposition
 
@@ -50,7 +50,7 @@ This is not a one-way shortening pass. Add or restore prose when code, types, an
 - **Module comments:** state the module's role, dependencies, responsibilities, and non-obvious architecture choices; link architecture choices to their owning explanation.
 - **Tests:** explain only non-obvious test design—why a fixture, assertion, platform accommodation, real entry path, or indirect observation is necessary. Delete walkthroughs and inventories.
 - **Cookbooks:** include prerequisites, required actions, the real entry path, observable verification, and concise warnings.
-- **READMEs:** include the consumer contract: configuration, semantics, failures, limitations, extension points, and model-visible effects. Quote stable model-visible text owned by the package; link generated catalogs and cross-package owners. Keep durable gaps and maintainer traps, not ordinary cleanup inventories. Follow the [package README requirements](../../../docs/cookbook/adding-a-package.md#4-write-the-package-readme).
+- **READMEs:** include the consumer contract: configuration, semantics, failures, limitations, extension points, and model-visible effects. Quote stable model-visible text owned by the package; link generated catalogs and cross-package owners. Keep durable gaps and maintainer traps, not ordinary cleanup inventories. Follow the [package README requirements](../../../rsh/Docs/cookbook/adding-a-package.md#4-write-the-package-readme).
 - **Agent Notes:** retain unique rationale, mechanisms, alternatives, consequences, shipped verification evidence, and named coverage gaps. Implemented Agent Notes state shipped reality in the present tense; remove planning checklists, not evidence of what pins the decision.
 - **Postmortems:** retain the incident sequence, evidence, causal chain, impact, and prevention. Remove repeated persuasion or implementation detail that does not establish causality.
 - **Skills and agent instructions:** state behavioral guardrails and explicit scope limitations such as “guidance, not a script/checklist.” Keep the workflow concise and link its source of truth.
@@ -63,7 +63,7 @@ Preserve searchable mechanism names and meaningful modal, temporal, or negative 
 ## Workflow
 
 1. Confirm the scope, mode, current branch or PR base, and applicable `AGENTS.md` files. Do not inspect unrelated branches.
-2. Read [the documentation standard](../../../docs/AGENTS.md) and the owning code or document before judging a passage. For calibration or unfamiliar cases, read [the distilled examples](references/examples.md).
+2. Read [the documentation standard](../../../rsh/Docs/AGENTS.md) and the owning code or document before judging a passage. For calibration or unfamiliar cases, read [the distilled examples](references/examples.md).
 3. Inspect the requested scope, not only the largest files. Use searches and word counts to find candidates, then judge passages semantically.
 4. Classify each candidate as keep, add, trim, restore, restructure, or defer. Apply clear changes only when the task authorizes edits; do not manufacture edits to satisfy a deletion target.
 5. Update the owner before derivative artifacts. Re-check analogous passages after learning a new rule.

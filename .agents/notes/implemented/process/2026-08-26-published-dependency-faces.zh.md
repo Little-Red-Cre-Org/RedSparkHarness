@@ -14,9 +14,9 @@ Client 构建输入由发布 profile 选择，而 Host value import 由导入它
 
 ### 包选择
 
-[`verify-package-dependencies`](../../../../scripts/verify-package-dependencies.ts) 统一负责依赖区段策略。它始终覆盖 `packages/client/` 下的包，以及声明 `dsh.client` 的每个非实验包。在该目录内，`dsh.client` 标记需要扫描 Host 入口的 Client/Host 包；没有该声明的包是仅供 Client 编译的静态输入。在目录外，`dsh.client` 选择相同的 Client/Host 扫描。仅有 `"./client"` export 只是 API，不参与 npm 依赖策略选包。
+[`verify-package-dependencies`](../../../../rsh/Scripts/verify-package-dependencies.ts) 统一负责依赖区段策略。它始终覆盖 `rsh/Programs/Web/client/` 下的包，以及声明 `dsh.client` 的每个非实验包。在该目录内，`dsh.client` 标记需要扫描 Host 入口的 Client/Host 包；没有该声明的包是仅供 Client 编译的静态输入。在目录外，`dsh.client` 选择相同的 Client/Host 扫描。仅有 `"./client"` export 只是 API，不参与 npm 依赖策略选包。
 
-[`package-dependency-policy.ts`](../../../../scripts/package-dependency-policy.ts) 提供显式 Client 门面 include 与 exclude 列表。include 用于没有 `dsh.client` 的例外包，exclude 用于移除 `packages/client/` 之外自动发现的双面包。验证器拒绝未知、失效、冗余、重复、相互重叠和无法生效的配置项。include 列表为空；exclude 列表包含 `@deepseek-ai/dsh-api-session-controller` 和 `@deepseek-ai/dsh-api-workspace-controller`。把 Session Controller 加回会多迁移九条 Host 边，而五次候选复测的 resolver 中位数仅改善 0.15 秒。
+[`package-dependency-policy.ts`](../../../../rsh/Scripts/package-dependency-policy.ts) 提供显式 Client 门面 include 与 exclude 列表。include 用于没有 `dsh.client` 的例外包，exclude 用于移除 `rsh/Programs/Web/client/` 之外自动发现的双面包。验证器拒绝未知、失效、冗余、重复、相互重叠和无法生效的配置项。include 列表为空；exclude 列表包含 `@deepseek-ai/dsh-api-session-controller` 和 `@deepseek-ai/dsh-api-workspace-controller`。把 Session Controller 加回会多迁移九条 Host 边，而五次候选复测的 resolver 中位数仅改善 0.15 秒。
 
 Host-only 包通过另一份显式列表加入同一策略。该列表包含 `@deepseek-ai/dsh-llm` 和 `@deepseek-ai/dsh-session`；源码 import 不会自动扩大列表。
 
@@ -42,13 +42,13 @@ Client bundle 使用的 workspace import、纯类型 import、模块扩充、`ds
 pnpm run verify-package-dependencies
 ```
 
-生成 manifest 前，在 [`package-dependency-policy.ts`](../../../../scripts/package-dependency-policy.ts) 中分类每个新增 Host 运行期导出。`duplicateSafePackages` 允许一个精确根入口的全部运行期导出使用普通 dependency；`safeHostDependencyExports` 只允许列出的导出；`peerRequiredHostExports` 让整个提供包依赖边保留在范围一致的 peer 与开发区段。一个导出只能获得一种分类。移除包级的 identity 或状态要求后，按包分类其根入口；只改变混合包中的一个导出时，则更新精确导出表。只有当一条依赖边的所有 import 都不再使用 peer-required 导出时，它才会成为普通 dependency。
+生成 manifest 前，在 [`package-dependency-policy.ts`](../../../../rsh/Scripts/package-dependency-policy.ts) 中分类每个新增 Host 运行期导出。`duplicateSafePackages` 允许一个精确根入口的全部运行期导出使用普通 dependency；`safeHostDependencyExports` 只允许列出的导出；`peerRequiredHostExports` 让整个提供包依赖边保留在范围一致的 peer 与开发区段。一个导出只能获得一种分类。移除包级的 identity 或状态要求后，按包分类其根入口；只改变混合包中的一个导出时，则更新精确导出表。只有当一条依赖边的所有 import 都不再使用 peer-required 导出时，它才会成为普通 dependency。
 
 用一条命令生成受管 manifest 和所有直接派生产物。存在策略违规时，`--fix` 不写任何文件；成功后，它会刷新 `pnpm-lock.yaml`、重新生成中英文 module graph 及其配对记录，并打印普通 dependency 与 peer-required 依赖边。
 
 ```sh
 pnpm run verify-package-dependencies -- --fix
-git diff -- packages pnpm-lock.yaml docs/module-graph.md docs/module-graph.zh.md docs/module-graph.i18n.yaml
+git diff -- packages pnpm-lock.yaml rsh/Docs/module-graph.md rsh/Docs/module-graph.zh.md rsh/Docs/module-graph.i18n.yaml
 ```
 
 通过仅 metadata 的本地 registry 测量工作树依赖图与 Git ref。每轮都会创建全新 consumer 与 npm cache，用明确的 peer、hoisting 和 registry 设置替换继承的 npm 配置，执行 `npm install --package-lock-only`，拒绝下载包归档，并保持仓库不变。`--runs` 控制重复次数，`--timeout-ms` 会在期限到达后终止 npm 进程树，可选 `--max-ms` 会在最慢一轮超过阈值时让命令失败。
@@ -72,7 +72,7 @@ pnpm run benchmark:npm-resolution:next -- --runs=1 --finalist-runs=5 --finalists
 
 ### 性能验证
 
-[`verify-npm-install-layout`](../../../../scripts/verify-npm-install-layout.ts) 是 `Release (dsh)` workflow 在每个 pull request 和 master push 上运行的确定性包路径与版本检查；它不限制 resolver 耗时。[`benchmark-npm-resolution`](../../../../scripts/benchmark-npm-resolution.ts) 与 [`benchmark-next-package-dependency`](../../../../scripts/benchmark-next-package-dependency.ts) 保持为手动工具，因为 resolver 耗时会随机器负载和 metadata 完成顺序变化。它们通过全新 consumer 和仅 metadata 的运行，把 npm 依赖树计算与 registry 延迟、包归档下载分离，因此相对结果可以定位 peer 中继，但不构成发布时性能承诺。
+[`verify-npm-install-layout`](../../../../rsh/Scripts/verify-npm-install-layout.ts) 是 `Release (dsh)` workflow 在每个 pull request 和 master push 上运行的确定性包路径与版本检查；它不限制 resolver 耗时。[`benchmark-npm-resolution`](../../../../rsh/Scripts/benchmark-npm-resolution.ts) 与 [`benchmark-next-package-dependency`](../../../../rsh/Scripts/benchmark-next-package-dependency.ts) 保持为手动工具，因为 resolver 耗时会随机器负载和 metadata 完成顺序变化。它们通过全新 consumer 和仅 metadata 的运行，把 npm 依赖树计算与 registry 延迟、包归档下载分离，因此相对结果可以定位 peer 中继，但不构成发布时性能承诺。
 
 生成后的策略目前在 13 个包中留下 27 条位于 `dependencies` 的受管 Host 运行时边。两条边仍位于 `peerDependencies`：`dsh-api-remotes → dsh-scope` 使用 `carrierKeyOf`，`dsh-session → dsh-scope` 使用 `scopeOf` 与 `scopeTarget`。
 
@@ -80,7 +80,7 @@ pnpm run benchmark:npm-resolution:next -- --runs=1 --finalist-runs=5 --finalists
 
 **把内部关系继续保留为 peer。** npm 必须沿汇合的祖先路径放置并验证每个必需 peer；即使内部版本全部兼容，也会重新产生已报告的安装耗时问题。
 
-**用 `"./client"` export 作为 Client 门面名册。** 包可能发布 Client 类型或浏览器 API，却不贡献动态装载 row。选中这类包会把迁移扩大到 Goal、Session Title 和 Todo 等无关 Host 包。`dsh.client` 标识动态 row，而 `packages/client/` 目录独立覆盖静态 Client 输入。
+**用 `"./client"` export 作为 Client 门面名册。** 包可能发布 Client 类型或浏览器 API，却不贡献动态装载 row。选中这类包会把迁移扩大到 Goal、Session Title 和 Todo 等无关 Host 包。`dsh.client` 标识动态 row，而 `rsh/Programs/Web/client/` 目录独立覆盖静态 Client 输入。
 
 **拍平全部 Host 包。** 这会移除更多 peer 工作，却把迁移扩大到单包 benchmark 收益可忽略的包。显式 Host 列表会保留其余 peer 约束，直到测量结果证明应增加新成员。
 

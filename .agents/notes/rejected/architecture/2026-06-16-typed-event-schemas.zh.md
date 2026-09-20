@@ -6,7 +6,7 @@ Status: rejected — runtime event-schema registry declined; event maps stay com
 
 ## 问题
 
-harness 将其核心词汇——内容块、消息来源、结束原因、轮次触发器、轮次结束原因与会话事件——建模为 **merge-extensible map**：一个 TypeScript `interface`（如 `SessionEventMap`、`ContentBlockMap`），插件通过声明合并对其扩展，公开联合类型则以 `Map[keyof Map]` 派生。这是本仓库的通用扩展模式，记录在 [docs/architecture.md](../../../../docs/architecture.zh.md) 中（「The same merge-extensible-map pattern is used for `MessageSource`, `FinishReason`, `TurnTrigger`, and `TurnEndReason`」），`defineTool` 的 `InferArgs` DSL 和 `assertNever` 穷举约定都依赖于它。
+harness 将其核心词汇——内容块、消息来源、结束原因、轮次触发器、轮次结束原因与会话事件——建模为 **merge-extensible map**：一个 TypeScript `interface`（如 `SessionEventMap`、`ContentBlockMap`），插件通过声明合并对其扩展，公开联合类型则以 `Map[keyof Map]` 派生。这是本仓库的通用扩展模式，记录在 [rsh/Docs/architecture.md](../../../../rsh/Docs/architecture.zh.md) 中（「The same merge-extensible-map pattern is used for `MessageSource`, `FinishReason`, `TurnTrigger`, and `TurnEndReason`」），`defineTool` 的 `InferArgs` DSL 和 `assertNever` 穷举约定都依赖于它。
 
 该模式**仅存在于编译期**。类型在运行时消失：没有 schema 对象可供校验传入值、解析不可信输入或在运行时枚举变体。[会话持久化约定](../../implemented/architecture/2026-06-14-session-persistence.zh.md)暴露了两个后果：
 

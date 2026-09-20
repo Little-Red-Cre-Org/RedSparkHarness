@@ -1,6 +1,6 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-31-code-runtime-python-fd3-protocol.md
-2026-07-31-code-runtime-python-fd3-protocol.md: 7f928b9cc996b545538e86a67399d5441509471a
-2026-07-31-code-runtime-python-fd3-protocol.zh.md: 568b6ff3d7025ba55080e9677375c4b88303f621
+2026-07-31-code-runtime-python-fd3-protocol.md: e8b496c9dd18b368c6a57c9fd6907751c3e04d9e
+2026-07-31-code-runtime-python-fd3-protocol.zh.md: 029a4e2cc36953a4b5008ad5e0ad5dc2f2bf717a

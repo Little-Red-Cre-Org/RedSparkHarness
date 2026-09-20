@@ -1,0 +1,85 @@
+{
+  "extends": "../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "types": ["client-build-environment", "node"]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Core/vendor/loader"
+    },
+    {
+      "path": "../../../Core/vendor/include"
+    },
+    {
+      "path": "../../../Programs/Web/api/gateway/tsconfig.client.json"
+    },
+    {
+      "path": "../../../Programs/Web/api/session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../Programs/Web/api/workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../Engine/core/session"
+    },
+    {
+      "path": "../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../Programs/Web/client/connection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../Programs/Web/client/store"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-chat"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-conversation"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-layout"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-slots"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-renderer"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-session"
+    },
+    {
+      "path": "../../../Programs/Web/client/ui-settings"
+    },
+    {
+      "path": "../../../Engine/subagent/subagent"
+    },
+    {
+      "path": "../../../Programs/Web/api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../../Programs/Web/client/modules"
+    },
+    {
+      "path": "../../../Programs/Web/client/web"
+    },
+    {
+      "path": "../remote-mock"
+    },
+    {
+      "path": "../../../Programs/Web/client/hmr"
+    }
+  ]
+}

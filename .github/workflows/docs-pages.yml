@@ -30,7 +30,7 @@ env:
   # source link on an older deploy unresolvable.
   DOCS_REPOSITORY_REF: master
   # CI runs must never report to the production telemetry endpoint baked
-  # into apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 jobs:
@@ -76,7 +76,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: website/.dist
+          path: rsh/Docs/website/.dist
 
   deploy:
     needs: build

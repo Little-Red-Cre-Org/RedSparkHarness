@@ -137,7 +137,7 @@ If a page request is canceled with its physical carrier generation, the journal 
 
 ### Session Controller
 
-`packages/api/session-controller` provides Host `ctx.sessionController` and the generated `ctx.remote.session` namespace.
+`rsh/Programs/Web/api/session-controller` provides Host `ctx.sessionController` and the generated `ctx.remote.session` namespace.
 
 It owns Session list, search, create, selectModel, rename, fork, prompt, attachment, updateQueue, cancel, page, follow, and control. The Host-generation model catalog is exposed separately through `session/modelCatalog` because it is not Session-specific.
 
@@ -218,7 +218,7 @@ Session-list `updatedAt` is `max(header.createdAt, sessionListMetadata.lastPromp
 
 ### Workspace Controller
 
-`packages/api/workspace-controller` provides Host `ctx.workspaceController` and the generated `ctx.remote.workspace` namespace.
+`rsh/Programs/Web/api/workspace-controller` provides Host `ctx.workspaceController` and the generated `ctx.remote.workspace` namespace.
 
 It owns create, rename, delete, insertBefore, insertSessionBefore, archiveSession, and `follow`. Workspace registry remains the durable source of truth; the Controller owns Remote commands, projection, and error mapping.
 
@@ -246,7 +246,7 @@ Workspace Remote methods, state feed, and Client data model do not pass through 
 
 Remote Event reuses owner packages' Cordis `Events` declarations. The original Host event is the sole business signature, and Client `ctx.remote.$on(event, listener)` derives its parameters, waterfall result, and `next()` from that declaration.
 
-The allowlist in `packages/api/remotes` is the sole source of application selection. Each entry explicitly marks `emit` or `waterfall`; this mode determines Host listening, the legal Client key set, and the wire frame type together.
+The allowlist in `rsh/Programs/Web/api/remotes` is the sole source of application selection. Each entry explicitly marks `emit` or `waterfall`; this mode determines Host listening, the legal Client key set, and the wire frame type together.
 
 The system declares no `RemoteInvocationMap`, requires no second Client `@Remote`, and does not infer invocation mode by checking whether the final runtime argument is a function.
 

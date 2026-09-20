@@ -18,8 +18,8 @@ Agent 产出的文件是最尖锐的案例。产出文件 chip 或 `read` 行的
 
 | 包 | 形态 | 所有物 |
 |---|---|---|
-| `packages/client/ui-dockkit` | 静态链接库，零 DSH 依赖 | 布局引擎与渲染/驱动它的 React 组件；消费方编译其源码，且它只保留一张样式表，因为消费方按文件名去重注入的样式表 |
-| `packages/client/ui-sidebar-right` | 动态插件 | 共用一个 store 的 `rightbar` 面板坑位与 `conversation.session.header.corner` 展开按钮、每会话一份 surface、两种呈现模式、浮层宿主、`ctx.sidebarRight`、`ctx.sidebarRightTabs`、tab 域（每条 tab 记录一个 occurrence）、三个扩展坑位、引导 tab 类型与 `sidebarRight` 文案命名空间 |
+| `rsh/Programs/Web/client/ui-dockkit` | 静态链接库，零 DSH 依赖 | 布局引擎与渲染/驱动它的 React 组件；消费方编译其源码，且它只保留一张样式表，因为消费方按文件名去重注入的样式表 |
+| `rsh/Programs/Web/client/ui-sidebar-right` | 动态插件 | 共用一个 store 的 `rightbar` 面板坑位与 `conversation.session.header.corner` 展开按钮、每会话一份 surface、两种呈现模式、浮层宿主、`ctx.sidebarRight`、`ctx.sidebarRightTabs`、tab 域（每条 tab 记录一个 occurrence）、三个扩展坑位、引导 tab 类型与 `sidebarRight` 文案命名空间 |
 
 该库的第一个嵌入方就是本产品，而库对此一无所知：所有字符串经 `DockLabels` 传入，所有 tab 正文经按不透明 `kind` 分派的 `TabRenderer` 传入，所有手势经 `DockIntents` 传出。集成包提供库拒绝知晓的一切。
 
@@ -31,7 +31,7 @@ Agent 产出的文件是最尖锐的案例。产出文件 chip 或 `read` 行的
 
 ### 框架的右列
 
-[响应式 Sidebar 与标签信息](../architecture/2026-09-07-sidebar-responsive-tab-info.zh.md)取代本记录中的无让步布局、覆盖模式与产品窗格上限。`ui-layout` 仍拥有三列几何与像素宽度偏好，Sidebar 占位项通过 `ctx.layout.openRightbar(track, fullscreen)` 和 `closeRightbar()` 报告呈现方式，框架不注入 Sidebar 包。具体宽度规则见 [ui-layout](../../../../packages/client/ui-layout/README.zh.md)。
+[响应式 Sidebar 与标签信息](../architecture/2026-09-07-sidebar-responsive-tab-info.zh.md)取代本记录中的无让步布局、覆盖模式与产品窗格上限。`ui-layout` 仍拥有三列几何与像素宽度偏好，Sidebar 占位项通过 `ctx.layout.openRightbar(track, fullscreen)` 和 `closeRightbar()` 报告呈现方式，框架不注入 Sidebar 包。具体宽度规则见 [ui-layout](../../../../rsh/Programs/Web/client/ui-layout/README.zh.md)。
 
 右栏在普通与全屏模式下使用同一棵已挂载内容树；隐藏保留标签状态，全屏覆盖视口并保留底层列占位。浮窗仍经 portal 使用视口坐标，不随右栏关闭。产品限制为两个水平窗格与 20–80% 分割比例，通用引擎保留自己的默认值。
 
@@ -71,7 +71,7 @@ Agent 产出的文件是最尖锐的案例。产出文件 chip 或 `read` 行的
 
 **空 pane 作为一种持久状态。** 第一版允许 pane 在最后一个 tab 离开后带占位留下。否决，因为没有任何方式关掉这样的 pane；每个意图都会整理 surface，被清空的侧 pane 合并掉。空根 pane 只在该列展开时填入当前默认页。
 
-**经 `packages/util` 与 `INLINE_SAFE` 清单内联库。** 构建探针证明可行，但 util 构建链没有 CSS 管线而库带样式表；在知晓改库须重建壳并刷新页面的前提下，选择静态链接的 client 包（`ui-primitives` 先例）。
+**经 `rsh/Core/util` 与 `INLINE_SAFE` 清单内联库。** 构建探针证明可行，但 util 构建链没有 CSS 管线而库带样式表；在知晓改库须重建壳并刷新页面的前提下，选择静态链接的 client 包（`ui-primitives` 先例）。
 
 ## Consequences
 

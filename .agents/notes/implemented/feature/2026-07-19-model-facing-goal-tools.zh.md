@@ -12,7 +12,7 @@ Status: implemented
 
 ## 决策
 
-位于 `packages/goal/tool-goal/` 的 `@deepseek-ai/dsh-tool-goal` 在 `ctx.goals` 之上贡献三个独占工具和一个系统提示词策略段：`get_goal`、`create_goal` 与 `update_goal`。工具名称和读取—创建—更新形态遵循 Codex 的紧凑目标工具表面，而权限规则使用本仓库公共的 agent（智能体）、会话、工具与目标服务。
+位于 `rsh/Engine/goal/tool-goal/` 的 `@deepseek-ai/dsh-tool-goal` 在 `ctx.goals` 之上贡献三个独占工具和一个系统提示词策略段：`get_goal`、`create_goal` 与 `update_goal`。工具名称和读取—创建—更新形态遵循 Codex 的紧凑目标工具表面，而权限规则使用本仓库公共的 agent（智能体）、会话、工具与目标服务。
 
 ### 工具与模型约定
 
@@ -65,5 +65,5 @@ Status: implemented
 - 模型不能恢复持久 paused goal；该用户独占路径由独立的[用户独占 goal 暂停决策](../bug-fix/2026-09-03-user-owned-goal-pause-activation.zh.md)强制执行。
 - 这些工具会改变目标状态，但不调度 Goal Round、不分类异常驱动停止，也不取消活跃轮次；这些行为由同会话驱动器负责。
 - 除非另行挂载的继续执行驱动器接纳了目标来源的用户轮次，否则 Goal Round 权限路径处于休眠状态；本工具包本身不会制造这种权限。
-- 面向人类的斜杠命令发现与渲染由独立的 [`dsh-command-goal`](../../../../packages/goal/command-goal/README.zh.md) 插件负责。
+- 面向人类的斜杠命令发现与渲染由独立的 [`dsh-command-goal`](../../../../rsh/Engine/goal/command-goal/README.zh.md) 插件负责。
 - 若部署没有同时设定两个注册项的作用域，某个作用域可能隐藏工具注册，却保留独立注册的提示词段。

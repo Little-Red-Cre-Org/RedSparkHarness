@@ -1,5 +1,18 @@
 # SDK snapshot-record composition without provider-specific upload metadata.
 
+# This recorded composition owns Bash schemas on every replay host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   config:

@@ -1,6 +1,6 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-08-sidebar-last-tab-close-rules.md
-2026-09-08-sidebar-last-tab-close-rules.md: ed76b0ad0b8bbadcf5eace12a7da3bd38c733d0e
-2026-09-08-sidebar-last-tab-close-rules.zh.md: bcc54c0c39cc65434f21ef8f6f81a382b6eecdb7
+2026-09-08-sidebar-last-tab-close-rules.md: 3f122dc7f84293fcd31b2ea01bb1a6cb543131b7
+2026-09-08-sidebar-last-tab-close-rules.zh.md: 89df1c5658ed9855399cdfe9add08cff73af2e1b

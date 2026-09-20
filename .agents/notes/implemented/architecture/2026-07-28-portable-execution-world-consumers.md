@@ -28,7 +28,7 @@ Generic consumers use that execution world:
 
 ## E2B POC boundary
 
-The opt-in E2B realization has exactly three provider-specific packages under `packages/e2b/`: `dsh-e2b` creates one sandbox and deletes it on timeout or disposal, `dsh-fs-e2b` implements `ctx.fs`, and `dsh-subprocess-e2b` implements `ctx.subprocess` over E2B Commands, PTYs, and remote Linux process groups. The two adapters obtain the sole SDK handle from the owner and never create private sandboxes.
+The opt-in E2B realization has exactly three provider-specific packages under `rsh/Modules/Official/e2b/`: `dsh-e2b` creates one sandbox and deletes it on timeout or disposal, `dsh-fs-e2b` implements `ctx.fs`, and `dsh-subprocess-e2b` implements `ctx.subprocess` over E2B Commands, PTYs, and remote Linux process groups. The two adapters obtain the sole SDK handle from the owner and never create private sandboxes.
 
 E2B owns the mutable filesystem, managed command and Bash processes, terminal allocation and terminal-session groups, language-server processes and source reads, and adapter-private files under `.dsh-e2b`. The host owns Cordis and plugin objects, the agent loop, agent/session/goal state, session logs and persistence, LLM calls, prompts and tools, authority, skills, subagent orchestration, PTY buffers and readiness, LSP protocol state, and E2B SDK/network buffers. The overlay neither uploads nor synchronizes the host workspace.
 

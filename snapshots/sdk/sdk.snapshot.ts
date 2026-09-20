@@ -63,6 +63,7 @@ import {
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 
 const corpusRoot = fileURLToPath(new URL('../', import.meta.url))
+const snapshotPackageAnchor = fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url))
 
 const MINIMAL_SYSTEM_PROMPT = 'You are the environment-selected minimal software engineer.'
 const MINIMAL_BASH_DESCRIPTION = `Run commands in a bash shell
@@ -91,7 +92,7 @@ const dshSdkDiagnosticChildPatch = fileURLToPath(new URL(
   import.meta.url,
 ))
 const dshSdkChildConfig = fileURLToPath(new URL(
-  '../../packages/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
+  '../../rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
   import.meta.url,
 ))
 
@@ -317,6 +318,8 @@ function contextOf(logs: readonly { content: string; header: Record<string, unkn
   return {
     sessionIds: logs.flatMap(log => typeof log.header.id === 'string' ? [log.header.id] : []),
     cwd,
+    // Sandbox policy text embeds the allocated workspace as a JSON string.
+    cwdAliases: [JSON.stringify(cwd).slice(1, -1), ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : [])],
   }
 }
 
@@ -339,10 +342,11 @@ async function fixtureFiles(scenario: CorpusScenario): Promise<string[]> {
 
 async function hydrateReplayFixtures(scenario: CorpusScenario, cwd: string): Promise<string[]> {
   const root = join(cwd, '.replay-fixtures')
+  const replayCwd = process.platform === 'win32' ? cwd.replaceAll('\\', '/') : cwd
   await mkdir(root, { recursive: true })
   return Promise.all((await fixtureFiles(scenario)).map(async (source) => {
     const destination = join(root, basename(source))
-    await writeFile(destination, (await readFile(source, 'utf8')).replaceAll('{{cwd}}', cwd))
+    await writeFile(destination, (await readFile(source, 'utf8')).replaceAll('{{cwd}}', JSON.stringify(replayCwd).slice(1, -1)))
     return destination
   }))
 }
@@ -539,7 +543,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   await mkdir(patchRoot, { recursive: true })
   const assertions = SDK_ASSERTIONS[scenario.name] ?? {}
   const patches = [...authoredPatches(scenario, !recording), ...assertions.patches ?? []]
-    .map((patch, index) => materializeProfilePatch(patch, cwd, patchRoot, index))
+    .map((patch, index) => materializeProfilePatch(patch, cwd, patchRoot, index, snapshotPackageAnchor))
   let childSessionsRoot: string | undefined
   let childEnvironment: Record<string, string> = {}
   if (assertions.dshSdkChild !== undefined) {

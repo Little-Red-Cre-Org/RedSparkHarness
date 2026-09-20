@@ -8,7 +8,7 @@ English | [中文](2026-07-27-web-subagent-conversations.zh.md)
 
 Session-backed subagents have durable identities, persisted transcripts, and a direct-child catalog, but ordinary session lineage cannot distinguish them from forks or prove their descriptor mode and continuation authority. Generic Agent-bound Host operations can otherwise resume or drive a child outside its direct-parent continuation owner.
 
-The browser must preserve the [continuable subagent contract](../../implemented/feature/2026-07-28-continuable-subagent-conversations.md): a continuable child has at most one process-local Activation, accepts later work only through the exact live direct parent, and uses the Agent inbox as its sole FIFO. Viewing history must not create an Activation. Once an inbox message is accepted, the HTTP caller neither owns its execution nor gains a cancellation handle.
+The browser must preserve the [continuable subagent contract](2026-07-28-continuable-subagent-conversations.md): a continuable child has at most one process-local Activation, accepts later work only through the exact live direct parent, and uses the Agent inbox as its sole FIFO. Viewing history must not create an Activation. Once an inbox message is accepted, the HTTP caller neither owns its execution nor gains a cancellation handle.
 
 The UI must also preserve the membership, modes, and diagnostics of the [durable catalog](../../archived/feature/2026-07-22-durable-subagent-catalog-and-list-agents.md). The shared service reports live-preferred corpus activity, while the Web projection replaces it with the exact child Agent driver's `running` or `inactive` state. Neither activity is a durable outcome or a promise that continuation will succeed.
 
@@ -85,7 +85,7 @@ The shipped Web composition mounts SQLite session query beside JSONL persistence
 
 **Put the adapter in the webserver.** Rejected because catalog and continuation are channel-independent client capabilities; the webserver only carries validated messages.
 
-**Put Host-backed file and session references in this package.** Rejected because catalog and addressed-child presentation depend on subagent lineage, while combined reference discovery is a separate Host capability consumed by [`ui-reference`](../../../../packages/client/ui-reference/README.md).
+**Put Host-backed file and session references in this package.** Rejected because catalog and addressed-child presentation depend on subagent lineage, while combined reference discovery is a separate Host capability consumed by [`ui-reference`](../../../../rsh/Programs/Web/client/ui-reference/README.md).
 
 **Auto-resume an absent parent.** Rejected because continuation requires the exact live direct parent. Child navigation must not mutate the parent lifecycle.
 

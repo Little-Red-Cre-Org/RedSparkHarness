@@ -21,7 +21,7 @@ Surface metadata belongs only to the four surface event types (`system/message`,
 
 ### SurfaceOp: two operations
 
-The [source-backed `SurfaceOp` reference](../../../../docs/subsystems/session.md#surface-types) defines the exact union. Replacement objects contain only `op`, `startSeq`, and `endSeq`; endpoints use the `SessionSeq` brand.
+The [source-backed `SurfaceOp` reference](../../../../rsh/Docs/subsystems/session.md#surface-types) defines the exact union. Replacement objects contain only `op`, `startSeq`, and `endSeq`; endpoints use the `SessionSeq` brand.
 
 1. **Append** — add the new event seq to the tail. Used by `system/message`, `user/message`, `assistant/message`, `tool/result`. The loop passes `surfaceOp: 'append'` on all such appends and records `sourceEventSeqs` where applicable: `tool/result` records its `tool/call` source, while `assistant/message` owns its embedded stream directly.
 
@@ -37,7 +37,7 @@ Delta processing is O(1) when no new events and O(new events) when new events ar
 
 ### Persistence
 
-The fields are serialized as top-level JSON properties. JSONL preserves placement and provenance without a separate column mapping. The [V3 canonical-envelope decision](2026-09-06-v3-canonical-session-envelopes.md) owns exact replacement keys and strict-acceptance rationale; the [V2-to-V3 specification](../../../../packages/session/session-format-v2-to-v3/README.md#canonical-envelopes) owns historical conversion. This note retains ordered-projection ownership and replacement rationale.
+The fields are serialized as top-level JSON properties. JSONL preserves placement and provenance without a separate column mapping. The [V3 canonical-envelope decision](2026-09-06-v3-canonical-session-envelopes.md) owns exact replacement keys and strict-acceptance rationale; the [V2-to-V3 specification](../../../../rsh/Engine/session/session-format-v2-to-v3/README.md#canonical-envelopes) owns historical conversion. This note retains ordered-projection ownership and replacement rationale.
 
 ### Crash recovery
 
@@ -47,7 +47,7 @@ The `repair.ts` module synthesizes `tool/result` closers for orphaned tool calls
 
 `Session` validates `sourceEventSeqs` and `surfaceOp` at the always-on seed/append boundary: source lists are non-empty, unique, earlier, and known; `assistant/message` carries no source list; replacement endpoints exist in surface order; and `sourceEventSeqs` covers every shadowed node. These are single-record acceptance and storage-projection rules, not optional invariant-service contributions.
 
-Every surface-eligible event must carry `surfaceOp` or it would disappear from derived history. Typed `append` overloads enforce this for literal event types; runtime checks in `append` and the seed constructor cover widened unions and current loaded logs. Released validation and conversion belong to their versioned migration edges rather than generic Session code; see the [V2-to-V3 placement rules](../../../../packages/session/session-format-v2-to-v3/README.md#canonical-envelopes).
+Every surface-eligible event must carry `surfaceOp` or it would disappear from derived history. Typed `append` overloads enforce this for literal event types; runtime checks in `append` and the seed constructor cover widened unions and current loaded logs. Released validation and conversion belong to their versioned migration edges rather than generic Session code; see the [V2-to-V3 placement rules](../../../../rsh/Engine/session/session-format-v2-to-v3/README.md#canonical-envelopes).
 
 ## Alternatives considered
 
@@ -58,10 +58,10 @@ Every surface-eligible event must carry `surfaceOp` or it would disappear from d
 
 ## Consequences
 
-- **`packages/core/session`**: `surface.ts` (`SurfaceManager`) maintains one ordered seq array for candidate acceptance and live projection; `SessionSurface` is its readonly public view. `SurfaceOp`/`SurfaceIntent` and the top-level session-event fields record how entries join it. `append()` requires a `SurfaceIntent` for surface events, `deriveMessages()` walks the surface as the sole derivation path, and `repair.ts` emits surface-aware closers. The seed constructor rejects a surface-eligible seed event missing its `surfaceOp` marker (see § Invariants).
-- **`packages/core/agent-loop`**: All surface-capable appends pass surface opts. Each `assistant/message` embeds its exact provider stream and forbids `sourceEventSeqs`; each `tool/result` cites its `tool/call` seq.
-- **`packages/session/session-persistence-jsonl`**: Persists canonical surface metadata and restores current events through validated format preparation.
-- **`packages/session/session-persistence`**: Keeps storage ownership separate from the in-memory surface projection.
+- **`rsh/Engine/core/session`**: `surface.ts` (`SurfaceManager`) maintains one ordered seq array for candidate acceptance and live projection; `SessionSurface` is its readonly public view. `SurfaceOp`/`SurfaceIntent` and the top-level session-event fields record how entries join it. `append()` requires a `SurfaceIntent` for surface events, `deriveMessages()` walks the surface as the sole derivation path, and `repair.ts` emits surface-aware closers. The seed constructor rejects a surface-eligible seed event missing its `surfaceOp` marker (see § Invariants).
+- **`rsh/Engine/core/agent-loop`**: All surface-capable appends pass surface opts. Each `assistant/message` embeds its exact provider stream and forbids `sourceEventSeqs`; each `tool/result` cites its `tool/call` seq.
+- **`rsh/Engine/session/session-persistence-jsonl`**: Persists canonical surface metadata and restores current events through validated format preparation.
+- **`rsh/Engine/session/session-persistence`**: Keeps storage ownership separate from the in-memory surface projection.
 
 The surface is the foundation history manipulation ships on — dsh-compaction's compaction rides it. A compaction or tool-result-pruner plugin appends one of the existing message-producing event types (a `user/message` carrying the summary, say) with `surfaceOp: { op: 'replace', startSeq, endSeq }` and `sourceEventSeqs` covering the shadowed entries — the new event takes the range's place on the surface while the plugin's own trace events (e.g. `compaction/start`, `compaction/end`) stay off it. Replay preserves the decision deterministically.
 

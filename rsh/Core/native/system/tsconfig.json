@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": [],
+  "include": ["rsh/Scripts/**/*.ts"],
+  "references": [
+    { "path": "./packages/entry" }
+  ]
+}

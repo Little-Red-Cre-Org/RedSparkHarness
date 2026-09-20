@@ -14,9 +14,9 @@ The package that chooses a Client build input is the shipped profile, while a Ho
 
 ### Package selection
 
-[`verify-package-dependencies`](../../../../scripts/verify-package-dependencies.ts) owns dependency-section policy. It always covers packages under `packages/client/` and every non-experimental package that declares `dsh.client`. Inside the directory, `dsh.client` marks a Client/Host package whose Host entry is scanned; a package without that declaration is a Client-only static build input. Outside the directory, `dsh.client` selects the same Client/Host scan. A `"./client"` export alone is an API and does not select npm dependency policy.
+[`verify-package-dependencies`](../../../../rsh/Scripts/verify-package-dependencies.ts) owns dependency-section policy. It always covers packages under `rsh/Programs/Web/client/` and every non-experimental package that declares `dsh.client`. Inside the directory, `dsh.client` marks a Client/Host package whose Host entry is scanned; a package without that declaration is a Client-only static build input. Outside the directory, `dsh.client` selects the same Client/Host scan. A `"./client"` export alone is an API and does not select npm dependency policy.
 
-[`package-dependency-policy.ts`](../../../../scripts/package-dependency-policy.ts) provides explicit Client-face include and exclude lists. An include handles an exceptional package without `dsh.client`, while an exclude removes an automatically discovered dual-face package outside `packages/client/`. The verifier rejects unknown, stale, redundant, duplicate, overlapping, and ineffective entries. The include list is empty; the exclude list contains `@deepseek-ai/dsh-api-session-controller` and `@deepseek-ai/dsh-api-workspace-controller`. Adding Session Controller back would migrate nine more Host edges while its five-run candidate retest improved median resolution by only 0.15 seconds.
+[`package-dependency-policy.ts`](../../../../rsh/Scripts/package-dependency-policy.ts) provides explicit Client-face include and exclude lists. An include handles an exceptional package without `dsh.client`, while an exclude removes an automatically discovered dual-face package outside `rsh/Programs/Web/client/`. The verifier rejects unknown, stale, redundant, duplicate, overlapping, and ineffective entries. The include list is empty; the exclude list contains `@deepseek-ai/dsh-api-session-controller` and `@deepseek-ai/dsh-api-workspace-controller`. Adding Session Controller back would migrate nine more Host edges while its five-run candidate retest improved median resolution by only 0.15 seconds.
 
 Host-only packages join the same policy through a separate explicit list. The list contains `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-session`; source imports do not expand it.
 
@@ -42,13 +42,13 @@ Run the verifier without `--fix` for a read-only check of package selection, exp
 pnpm run verify-package-dependencies
 ```
 
-Classify each new Host runtime export in [`package-dependency-policy.ts`](../../../../scripts/package-dependency-policy.ts) before generating manifests. `duplicateSafePackages` permits every runtime export from one exact root entry as an ordinary dependency; `safeHostDependencyExports` permits only listed exports; `peerRequiredHostExports` keeps the whole provider package edge in matching peer and development sections. An export may receive only one classification. After removing a package-wide identity or state requirement, classify its root entry at package level; after changing one export in a mixed package, update the exact export table. An edge becomes an ordinary dependency only after none of its imported exports remain peer-required.
+Classify each new Host runtime export in [`package-dependency-policy.ts`](../../../../rsh/Scripts/package-dependency-policy.ts) before generating manifests. `duplicateSafePackages` permits every runtime export from one exact root entry as an ordinary dependency; `safeHostDependencyExports` permits only listed exports; `peerRequiredHostExports` keeps the whole provider package edge in matching peer and development sections. An export may receive only one classification. After removing a package-wide identity or state requirement, classify its root entry at package level; after changing one export in a mixed package, update the exact export table. An edge becomes an ordinary dependency only after none of its imported exports remain peer-required.
 
 Generate the managed manifests and every directly derived artifact with one command. `--fix` writes nothing while a policy violation exists; after success it refreshes `pnpm-lock.yaml`, regenerates both module-graph languages and their pairing record, and prints the ordinary-dependency and peer-required edge lists.
 
 ```sh
 pnpm run verify-package-dependencies -- --fix
-git diff -- packages pnpm-lock.yaml docs/module-graph.md docs/module-graph.zh.md docs/module-graph.i18n.yaml
+git diff -- packages pnpm-lock.yaml rsh/Docs/module-graph.md rsh/Docs/module-graph.zh.md rsh/Docs/module-graph.i18n.yaml
 ```
 
 Measure the working-tree graph and a Git ref through the local metadata-only registry. Each run creates a fresh consumer and npm cache, replaces inherited npm configuration with explicit peer, hoisting, and registry settings, executes `npm install --package-lock-only`, rejects archive downloads, and leaves the repository unchanged. `--runs` controls repetitions, `--timeout-ms` terminates the npm process tree after its deadline, and optional `--max-ms` makes the command fail when the slowest run exceeds a threshold.
@@ -72,7 +72,7 @@ pnpm run benchmark:npm-resolution:next -- --runs=1 --finalist-runs=5 --finalists
 
 ### Performance verification
 
-[`verify-npm-install-layout`](../../../../scripts/verify-npm-install-layout.ts) is a deterministic package-path and version check in the `Release (dsh)` workflow on every pull request and master push; it does not enforce resolver duration. [`benchmark-npm-resolution`](../../../../scripts/benchmark-npm-resolution.ts) and [`benchmark-next-package-dependency`](../../../../scripts/benchmark-next-package-dependency.ts) remain manual because resolver time varies with machine load and metadata completion order. Their fresh-consumer, metadata-only runs isolate npm's dependency-tree calculation from registry latency and archive downloads, so relative results identify peer relays without creating a release-time performance promise.
+[`verify-npm-install-layout`](../../../../rsh/Scripts/verify-npm-install-layout.ts) is a deterministic package-path and version check in the `Release (dsh)` workflow on every pull request and master push; it does not enforce resolver duration. [`benchmark-npm-resolution`](../../../../rsh/Scripts/benchmark-npm-resolution.ts) and [`benchmark-next-package-dependency`](../../../../rsh/Scripts/benchmark-next-package-dependency.ts) remain manual because resolver time varies with machine load and metadata completion order. Their fresh-consumer, metadata-only runs isolate npm's dependency-tree calculation from registry latency and archive downloads, so relative results identify peer relays without creating a release-time performance promise.
 
 The generated policy currently leaves 27 managed Host runtime edges in `dependencies` across 13 packages. Two edges remain in `peerDependencies`: `dsh-api-remotes → dsh-scope` for `carrierKeyOf`, and `dsh-session → dsh-scope` for `scopeOf` and `scopeTarget`.
 
@@ -80,7 +80,7 @@ The generated policy currently leaves 27 managed Host runtime edges in `dependen
 
 **Keep internal relationships as peers.** npm must place and validate each required peer along converging ancestry paths, which recreates the reported install-time failure even when all internal versions are compatible.
 
-**Use the `"./client"` export as the Client-face roster.** A package may publish Client-facing types or a browser API without contributing a dynamically loaded row. Selecting that package broadens the migration to unrelated Host packages such as Goal, Session Title, and Todo. `dsh.client` identifies dynamic rows, while the `packages/client/` directory independently covers static Client inputs.
+**Use the `"./client"` export as the Client-face roster.** A package may publish Client-facing types or a browser API without contributing a dynamically loaded row. Selecting that package broadens the migration to unrelated Host packages such as Goal, Session Title, and Todo. `dsh.client` identifies dynamic rows, while the `rsh/Programs/Web/client/` directory independently covers static Client inputs.
 
 **Flatten every Host package.** This removes more peer work but expands the migration to packages whose individual benchmark result is negligible. The explicit Host list preserves the remaining peer contracts until measurement justifies another entry.
 
