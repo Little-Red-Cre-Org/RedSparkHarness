@@ -37,6 +37,66 @@ it('migrates v1 without losing tasks and persists acknowledgement separately fro
 })
 
 const notice: TaskNotice = { id: 'run:due', title: 'Lunch', body: 'Time for lunch', phase: 'due', time: 1, sessionId: null, read: false }
+
+it('queues acknowledgement and deletion behind an in-flight poll without overlapping requests', async () => {
+  const polling = Promise.withResolvers<TaskNotice[]>()
+  const acknowledging = Promise.withResolvers<TaskNotice[]>()
+  const list = vi.fn(() => polling.promise)
+  const acknowledge = vi.fn(() => acknowledging.promise)
+  const remove = vi.fn(async () => [])
+  const controller = createNoticeController({ list, acknowledge, remove, notify: vi.fn() })
+  try {
+    const refresh = controller.refresh()
+    const read = controller.acknowledge(notice.id)
+    const deletion = controller.remove(notice.id)
+    await controller.refresh()
+    expect(list).toHaveBeenCalledOnce()
+    expect(acknowledge).not.toHaveBeenCalled()
+    expect(remove).not.toHaveBeenCalled()
+    polling.resolve([notice])
+    await refresh
+    await vi.waitFor(() => { expect(acknowledge).toHaveBeenCalledWith(notice.id) })
+    expect(remove).not.toHaveBeenCalled()
+    acknowledging.resolve([{ ...notice, read: true }])
+    await Promise.all([read, deletion])
+    expect(remove).toHaveBeenCalledWith(notice.id)
+    expect(controller.store.getSnapshot().items).toEqual([])
+  } finally {
+    controller.dispose()
+    polling.resolve([])
+    acknowledging.resolve([])
+  }
+})
+
+it('discards queued actions and late poll publication after disposal', async () => {
+  const polling = Promise.withResolvers<TaskNotice[]>()
+  const acknowledge = vi.fn(async () => [])
+  const notify = vi.fn()
+  const controller = createNoticeController({ list: () => polling.promise, acknowledge, remove: async () => [], notify })
+  const refresh = controller.refresh()
+  const read = controller.acknowledge(notice.id)
+  controller.dispose()
+  polling.resolve([notice])
+  await Promise.all([refresh, read])
+  expect(acknowledge).not.toHaveBeenCalled()
+  expect(notify).not.toHaveBeenCalled()
+  expect(controller.store.getSnapshot().items).toEqual([])
+})
+
+it('continues queued deletion after an acknowledgement request fails', async () => {
+  const acknowledging = Promise.withResolvers<TaskNotice[]>()
+  const remove = vi.fn(async () => [])
+  const controller = createNoticeController({ list: async () => [], acknowledge: () => acknowledging.promise, remove, notify: vi.fn() })
+  try {
+    const read = controller.acknowledge(notice.id)
+    const deletion = controller.remove(notice.id)
+    expect(remove).not.toHaveBeenCalled()
+    acknowledging.reject(new Error('offline'))
+    await Promise.all([read, deletion])
+    expect(remove).toHaveBeenCalledWith(notice.id)
+    expect(controller.store.getSnapshot()).toMatchObject({ items: [], error: null })
+  } finally { controller.dispose() }
+})
 it.each(['completed', 'failed', 'blocked', 'interrupted'] as const)('uses persisted settlement time for %s reminders without changing their identity', (state) => {
   const dir = mkdtempSync(join(tmpdir(), 'scheduler-result-time-'))
   const path = join(dir, 'tasks.sqlite')

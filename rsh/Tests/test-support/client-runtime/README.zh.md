@@ -91,6 +91,8 @@ test('registers into the sidebar', async ({ remote, start }) => {
 
 ### 何时使用
 
+task-scheduler 自行挂载的 Remote 贡献在测试中替换为空贡献，`remote.taskScheduler` 由端点代理拥有；默认通知轮询返回空收件箱。这使整客户端测试不依赖生成的 Remote 产物，并避免重复注册命名空间。这些测试覆盖插件激活和销毁，不覆盖生成传输层的验证。
+
 当功能套件要在真实运行时下检验 slot、存储、渲染与销毁时使用本测试台——生产 `SlotRegistry`、渲染器与 provide bundle 物化都会被挂载，绝不重实现。它是客户端测试基础设施：永远不触及模型请求，功能包仅以 `devDependencies` 依赖之。
 
 ### 可能出什么问题

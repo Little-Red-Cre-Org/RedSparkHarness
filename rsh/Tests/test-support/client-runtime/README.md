@@ -91,6 +91,8 @@ The [generic Remote proxy](../remote-mock/README.md#remote-proxy) supports every
 
 ### When to use it
 
+Self-mounting task-scheduler Remote contributions use an empty test contribution while endpoint proxies own `remote.taskScheduler`; default notification polling returns an empty inbox. This keeps whole-client tests independent of generated Remote artifacts and avoids duplicate namespace registration. These tests cover plugin activation and disposal, not generated transport validation.
+
 Use the bench for feature suites that exercise slots, stores, rendering, and disposal under a real runtime — the production `SlotRegistry`, renderer, and provide-bundle materialization are mounted, never reimplemented. It is client-side test infrastructure: it never reaches a model request, and feature packages depend on it in `devDependencies` only.
 
 ### What can go wrong

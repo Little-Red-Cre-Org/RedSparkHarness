@@ -4,6 +4,7 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 import { resolvePwshPath } from './rsh/Modules/Official/shell/pwsh-local/src/resolve.ts'
 import { defineConfig } from 'vitest/config'
 import { standardDecoratorPlugin, vitestExecArgv } from './vitest.shared.ts'
+import { schedulerRemoteTestPlugin } from './rsh/Scripts/test-scheduler-remote.ts'
 import { COVERAGE_EXEMPT_ENV, coverageExemptHeavySuites } from './rsh/Scripts/coverage-exempt.ts'
 import { COVERAGE_PARTITION_MODE_ENV } from './rsh/Scripts/coverage-partitions.ts'
 import { PACKAGE_MANIFEST_GLOBS } from './rsh/Scripts/workspace-manifest-globs.ts'
@@ -157,7 +158,7 @@ const processBoundTests = [
 ]
 
 export default defineConfig({
-  plugins: [pathsPlugin(), standardDecoratorPlugin()],
+  plugins: [pathsPlugin(), standardDecoratorPlugin(), schedulerRemoteTestPlugin()],
   test: {
     setupFiles: ['./rsh/Scripts/test-proxy-environment.ts', './rsh/Scripts/test-invariants.ts'],
     // .tsx: client component specs (jsdom via per-file @vitest-environment pragma).
@@ -167,7 +168,7 @@ export default defineConfig({
     // Node stability; process-bound suites stay separate for inventory control.
     projects: [
       {
-        plugins: [pathsPlugin(), standardDecoratorPlugin()],
+        plugins: [pathsPlugin(), standardDecoratorPlugin(), schedulerRemoteTestPlugin()],
         test: {
           name: 'thread-safe',
           execArgv: vitestExecArgv,
@@ -185,7 +186,7 @@ export default defineConfig({
         },
       },
       {
-        plugins: [pathsPlugin(), standardDecoratorPlugin()],
+        plugins: [pathsPlugin(), standardDecoratorPlugin(), schedulerRemoteTestPlugin()],
         test: {
           name: 'process-bound',
           execArgv: vitestExecArgv,

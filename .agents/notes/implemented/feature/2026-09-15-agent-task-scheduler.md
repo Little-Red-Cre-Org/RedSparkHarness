@@ -20,6 +20,8 @@ Scoped tools inherit workspace/model/preset selections from their creating root 
 
 ## Reminder outlet
 
+The inbox serializes acknowledgement and deletion behind pending requests instead of dropping clicks during polling. Background refreshes skip a busy queue. Disposal suppresses queued mutations and late publication; deferred-response tests pin ordering and disposal without timing sleeps.
+
 A sidebar inbox and persistent unread count expose committed due and result notices without asking a model to deliver UI. The client owns one disposable poller independently of Settings; native notifications supplement the in-app dialog only after permission. SQLite v2 stores acknowledgement separately from receipt state, so marking a due card read preserves acknowledgement while a later outcome updates the same card. The client observes phase transitions independently of read status to deliver one native outcome banner without adding a second card. Retention bounds notices to 100 and prunes acknowledgement with receipts. This avoids coupling the scheduler to Electron while accepting connected-client polling latency and OS delivery limits. Tests cover migration, restart acknowledgement, fresh-result delivery, no repeated popup, native denial and disposal; the real Loader checks a generated run notice and acknowledgement.
 
 ## Alternatives considered
@@ -35,6 +37,8 @@ A sidebar inbox and persistent unread count expose committed due and result noti
 Plans survive restart and do not depend on a live originating conversation. SQLite transactions coordinate concurrent claimers, while execution logs remain normal sessions. The cost is deliberately at-most-once automatic admission rather than exactly-once external execution: a crash after claim but before submission can lose an occurrence. The application must run to execute work. Calendar cron, external notifications, and total task/transcript retention remain outside this first version. Agent completion does not certify verification success.
 
 ## Testing
+
+The whole-client source roster resolves the scheduler through its explicit `/client` alias. Endpoint proxies replace its generated Remote contribution, answer empty-inbox polling, and retain strict rejection of unscripted calls. Assembled Settings tests include the task-center section and exercise reload and disposal; these checks do not validate generated Remote schemas.
 
 Store tests exercise two-connection claims, recurrence alignment, owner isolation, pause/delete, expired recovery and retention. Engine tests cover asynchronous settlement, failure, timeout and drained disposal. A real Loader composition mounts the production Agent loop, persistence, presets, workspace, and permission services with only model transport replaced; it creates a task through the actual tool and checks its durable execution receipt and model-facing description snapshot.
 

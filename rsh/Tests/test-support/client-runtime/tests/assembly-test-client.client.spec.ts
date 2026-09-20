@@ -32,6 +32,9 @@ describe('TestClient (jsdom)', () => {
   it('boots the whole web-app roster, connects, mounts, and disposes with nothing unmatched', async () => {
     const mock = RemoteMock.create().load(remoteDefaultResponses)
     const client = await TestClient.start({ roster: webApp }, mock, { mount: true })
+    onTestFinished(() => client.dispose())
+    expect(client.ctx.slots.entries('settings.section').map(entry => entry.options.id)).toContain('task-scheduler')
+    await vi.waitFor(() => { expect(mock.log.calls('taskScheduler/notifications').length).toBeGreaterThan(0) })
     expect(client.connection.state.getSnapshot()).toBe('connected')
     expect(mock.log.streams('$events')).toHaveLength(1)
     const container = client.container!

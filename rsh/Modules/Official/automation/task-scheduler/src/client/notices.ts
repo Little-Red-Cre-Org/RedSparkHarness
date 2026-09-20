@@ -18,6 +18,7 @@ export interface NoticeApi {
 }
 /**
  * Poll committed notices with one in-flight operation and no repeated popups per mount.
+ * User actions queue behind pending requests; disposal suppresses queued actions and late publications.
  * @param api - Authenticated transport plus best-effort native notification callback.
  * @returns Observable inbox, acknowledgement actions and lifecycle controls.
  */
@@ -35,7 +36,7 @@ export function createNoticeController(api: NoticeApi): {
   const seen = new Map<string, TaskNotice['phase']>()
   let disposed = false
   const isDisposed = (): boolean => disposed
-  let busy = false
+  let pending: Promise<void> | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   const open = (): void => { if (!disposed) store.update((s) => { s.open = true }) }
   const publish = (items: TaskNotice[]): void => {
@@ -67,14 +68,20 @@ export function createNoticeController(api: NoticeApi): {
       try { api.notify(item, open) } catch { /* The durable in-app reminder remains visible. */ }
     }
   }
-  const run = async (operation: () => Promise<TaskNotice[]>): Promise<void> => {
-    if (disposed || busy) return
-    busy = true
-    try { publish(await operation()) }
-    catch (error) { if (!isDisposed()) store.update((s) => { s.error = error instanceof Error ? error.message : String(error) }) }
-    finally { busy = false }
+  const run = (operation: () => Promise<TaskNotice[]>, queue = true): Promise<void> => {
+    if (disposed || (!queue && pending)) return Promise.resolve()
+    const execute = async (): Promise<void> => {
+      if (disposed) return
+      try { publish(await operation()) }
+      catch (error) { if (!isDisposed()) store.update((s) => { s.error = error instanceof Error ? error.message : String(error) }) }
+    }
+    const result = (pending ? pending.then(execute) : execute()).finally(() => {
+      if (pending === result) pending = undefined
+    })
+    pending = result
+    return result
   }
-  const refresh = (): Promise<void> => run(api.list)
+  const refresh = (): Promise<void> => run(api.list, false)
   const tick = async (): Promise<void> => {
     await refresh()
     if (!disposed) timer = setTimeout(() => { void tick() }, 500)

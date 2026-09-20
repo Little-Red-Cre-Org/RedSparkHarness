@@ -69,6 +69,7 @@
       "@deepseek-ai/dsh-session-projection/types": ["./rsh/Engine/session/session-projection/src/types.ts"],
       "@deepseek-ai/dsh-tool-todo/types": ["./rsh/Modules/Official/todo/tool-todo/src/types.ts"],
       "@deepseek-ai/dsh-tool-todo/client": ["./rsh/Modules/Official/todo/tool-todo/src/client.ts"],
+      "@deepseek-ai/dsh-task-scheduler/client": ["./rsh/Modules/Official/automation/task-scheduler/src/client/index.ts"],
       "@deepseek-ai/dsh-session-title/types": ["./rsh/Engine/session/session-title/src/types.ts"],
       "@deepseek-ai/dsh-session-title/client": ["./rsh/Engine/session/session-title/src/client.ts"],
       "@deepseek-ai/dsh-subagent/client": ["./rsh/Engine/subagent/subagent/src/client.ts"],

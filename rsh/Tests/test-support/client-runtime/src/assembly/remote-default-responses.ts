@@ -30,6 +30,8 @@ export const remoteDefaultResponses: RemoteTable = {
     'dynamicCordisRunner/inventory': ok([]),
     // ui-settings-plugins web-search card `readCredential()` when the settings mirror first publishes.
     'credentials/describe': ok({}),
+    // task-scheduler application-scoped inbox polling, including while Settings is closed.
+    'taskScheduler/notifications': ok([]),
   },
   // Stream endpoints the roster opens later than boot; declared so a spec that forgets the script gets a stream miss.
   streams: [
