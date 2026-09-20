@@ -18,7 +18,7 @@ parent Session 的 required `subagent/catalog` 事件是直接 child discovery �
 
 child header 与 `subagent/descriptor` 继续拥有恢复与 composition 权威。Activation 与精确 parent 关系继续拥有授权与投递权威。mode 与 label 只快照一次，同一份分离值写入 parent catalog fact 与 child descriptor。
 
-注册的 `subagentCatalog` projection 物化 parent fact。它将存储、追加、迭代和检查点校验交给 [`dsh-chunked-list`](../../../../packages/util/chunked-list/README.zh.md)，后者以每块 64 项的持久 stack 保存事实，因此 append 最多复制 head chunk，以有界 O(1) 工作完成。materialization 从旧到新访问 chunk，对 D 条事实以 O(D) 时间保留父目录事件顺序。并发创建按目录成功追加的顺序排列，与 child 时间戳和 id 无关。projection checkpoint 以 O(D) 克隆 state；projection-cache 继续异步写入，并使用既有创建、turn-end 与 disposal 强制点。
+注册的 `subagentCatalog` projection 物化 parent fact。它将存储、追加、迭代和检查点校验交给 [`dsh-chunked-list`](../../../../rsh/Core/util/chunked-list/README.zh.md)，后者以每块 64 项的持久 stack 保存事实，因此 append 最多复制 head chunk，以有界 O(1) 工作完成。materialization 从旧到新访问 chunk，对 D 条事实以 O(D) 时间保留父目录事件顺序。并发创建按目录成功追加的顺序排列，与 child 时间戳和 id 无关。projection checkpoint 以 O(D) 克隆 state；projection-cache 继续异步写入，并使用既有创建、turn-end 与 disposal 强制点。
 
 工具库拥有分块布局及其共享容量常量；目录拥有事件校验、fork 过滤和目录行转换。目录 projection state 版本 2 保存通用块值，因此 projection registry 从 Session 事件重建不兼容的缓存。Session 事件载荷和公开目录行保持各自格式。
 

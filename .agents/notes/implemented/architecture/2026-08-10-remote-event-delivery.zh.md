@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-[Typert Remote 方法调用](../../implemented/architecture/2026-08-02-typert-remote-method-calls.zh.md)最初只覆盖「一次请求一个结果」的定向调用，明确把 Session 事件流与有状态交互留在别处；Host 向消费端的事件需要一个不归 API Proxy 领域所有的投递机制。
+[Typert Remote 方法调用](2026-08-02-typert-remote-method-calls.zh.md)最初只覆盖「一次请求一个结果」的定向调用，明确把 Session 事件流与有状态交互留在别处；Host 向消费端的事件需要一个不归 API Proxy 领域所有的投递机制。
 
 Host 拥有 `agent-preset/selected`、`commands/change`、`credentials/reference-updated`、`llm/adapters-updated`、`settings/document-updated` 等单向事件；它们既不依赖 AgentScope，载荷也本来就是 JSON。若每条事件都要穿过 API Proxy 手写帧、Client Runtime 手写桥和 Client 事件别名才能抵达 UI，这些层不会陈述 owner 事件之外的新事实。
 
@@ -16,7 +16,7 @@ Host 拥有 `agent-preset/selected`、`commands/change`、`credentials/reference
 
 消费端 Remote 面持有一个事件订阅动词 `ctx.remote.$on(event, listener)`；**名单驱动、原样转发**：
 
-- `packages/api/remotes/src/remote-events.ts` 持有一份带 `emit`／`waterfall` mode 的可转发 Host 事件名单，它同时是「消费端能订阅什么」的唯一控制点。旁边的 `src/types.ts` 由它派生类型投影并填充 selection 座位，按包约定保持纯类型。两个文件**都同时列进本包 Host 与 Client 两个 face 的 `files`**，两侧读同一份。
+- `rsh/Programs/Web/api/remotes/src/remote-events.ts` 持有一份带 `emit`／`waterfall` mode 的可转发 Host 事件名单，它同时是「消费端能订阅什么」的唯一控制点。旁边的 `src/types.ts` 由它派生类型投影并填充 selection 座位，按包约定保持纯类型。两个文件**都同时列进本包 Host 与 Client 两个 face 的 `files`**，两侧读同一份。
 - wire 上的事件名 **就是 host cordis 事件原名**（`settings/document-updated`），不加 `host/` 前缀；载荷 **就是 host 的实参列表**，逐元素原样过 JSON，无投影、无脱敏、无改名。
 - Host source 由 `api/remotes` 注册到 API Gateway；Gateway 在既有 `/api/remote.mux` 上保留内部 logical endpoint `$events`，不增加物理连接，也不让 API Proxy 解释事件。waterfall 结果通过 HTTP 一元 endpoint `$events/result` 返回。
 - 事件**签名**不另立表：owner 包把自己的 cordis `Events` 声明搬进 client-safe 的 `./types` 纯类型出口，两侧读**同一份**——`$on` 的 listener 参数、结果和 `next()` 都由 `Events[Event]` 推导。「原样」不需要证明，是构造性成立的。
@@ -78,7 +78,7 @@ Client 以 Remote 实例私有 Cordis key 分发。普通 `emit` 使用 `paralle
 
 ### 名单：两个 face 共读的同一份声明
 
-`packages/api/remotes/src/remote-events.ts` 同时列进 `tsconfig.host.json` 与 `tsconfig.client.json` 的 `files`，是名单的**唯一家**；`src/types.ts` 由它派生类型面：
+`rsh/Programs/Web/api/remotes/src/remote-events.ts` 同时列进 `tsconfig.host.json` 与 `tsconfig.client.json` 的 `files`，是名单的**唯一家**；`src/types.ts` 由它派生类型面：
 
 ```ts ignore-check
 // remote-events.ts — the value
@@ -136,13 +136,13 @@ Client 要求首项是带非空 `clientId` 与 `host.home` 的 `ready`；后续 
 
 `$events` 是 Gateway 内部 endpoint，不进入生成的 Typert Remote descriptor，也不成为 `ctx.remote.<namespace>`。应用选择仍只存在于 `api/remotes` 的 allowlist 和 Host source；Gateway 只拥有注册、payload 校验与物理传输。
 
-### apps/web 的 browser e2e 属于 Host 面
+### rsh/Programs/Web/application 的 browser e2e 属于 Host 面
 
-`apps/web/tests/**` 那批 e2e 在**根 `tsconfig.host.json`** 做类型检查：它们在进程内起真 harness、直接访问 `ctx.connection`、Host `SessionStore.get/create/flush` 与 `ctx.sessionProjectionCache`。**运行时用浏览器 ≠ 类型上属于 Client 程序**——把它们搬进 Client 聚合会报错，因为一个 program 装不下两个 face 对同一个 Context key 的合并。
+`rsh/Programs/Web/application/tests/**` 那批 e2e 在**根 `tsconfig.host.json`** 做类型检查：它们在进程内起真 harness、直接访问 `ctx.connection`、Host `SessionStore.get/create/flush` 与 `ctx.sessionProjectionCache`。**运行时用浏览器 ≠ 类型上属于 Client 程序**——把它们搬进 Client 聚合会报错，因为一个 program 装不下两个 face 对同一个 Context key 的合并。
 
 由此得到一条对本设计要紧的连带纪律：**这些测试从客户端包 import 值或类型，会把该包的整个 project——以及它引用的每个 project——拖进 Host 构建图**。`ui-settings-general`/`ui-settings-models`/`ui-permission`/`ui-commands` 四个消费者 references `api/remotes` 的 client face，而该 face 必须等 host tsdown 生成 `@deepseek-ai/dsh-goal/remote` 才能编译，于是形成构建期死锁：host tsc → api/remotes client face → `goal/remote` → host tsdown → 排在 host tsc 之后。
 
-所需的客户端符号在测试侧**镜像**了一份（`scaffold.ts` 导出镜像后的 welcome-notice 常量，两个 chat e2e 直接引 `dsh-client-runtime/client` 因为 `runtime` 工程本来就在 host 图里），从而让那 4 个消费者离开了 host 图；`apps/cli/tsconfig.json` 里 15 条 client 工程引用随之失去 owner-map 职责，已一并删除。镜像值与源逐字一致，漂移的表现是选择器失配或通知未被抑制，都是响亮失败。
+所需的客户端符号在测试侧**镜像**了一份（`scaffold.ts` 导出镜像后的 welcome-notice 常量，两个 chat e2e 直接引 `dsh-client-runtime/client` 因为 `runtime` 工程本来就在 host 图里），从而让那 4 个消费者离开了 host 图；`rsh/Programs/CLI/tsconfig.json` 里 15 条 client 工程引用随之失去 owner-map 职责，已一并删除。镜像值与源逐字一致，漂移的表现是选择器失配或通知未被抑制，都是响亮失败。
 
 ### 改动清单
 
@@ -157,7 +157,7 @@ Client 要求首项是带非空 `clientId` 与 `host.home` 的 `ready`；后续 
 | `client/runtime` | 删除 Host frame 到 Remote subscription table 的桥；只继续在 Connection generation 建立后发布 `connection/reset` |
 | 消费方 | Client 插件直接订阅 `ctx.remote.$on(...)`，type-only 引入 owner 事件声明并把 `'remote'` 加进 `inject` |
 | `client/connection` | 提供唯一 generation source 注册位；`ConnectionController` 发布 `$events` ready 携带的 Host 信息，fixture 也从同一 source 产生事件 |
-| `apps/web/tests` + `apps/cli` | 客户端符号镜像（见上节）；`apps/cli/tsconfig.json` 删 15 条 client 工程引用 |
+| `rsh/Programs/Web/application/tests` + `rsh/Programs/CLI` | 客户端符号镜像（见上节）；`rsh/Programs/CLI/tsconfig.json` 删 15 条 client 工程引用 |
 
 ## 备选方案
 
@@ -171,7 +171,7 @@ Client 要求首项是带非空 `clientId` 与 `host.home` 的 `ready`；后续 
 
 **给可转发事件加载荷投影函数**（`{ 事件名, 投影, zod }` 转发表）。能一举覆盖 `models-changed` 的 fan-in 与 workspace 的 view 派生；代价是投影逻辑与载荷类型手工对齐，回到方法侧刚刚消灭的中心表形态。
 
-**把 apps/web 的 browser e2e 搬进 client 聚合**。看似「客户端测试归客户端面」，实测立刻 21 条错：它们用 host 服务，而 client 程序里 `ctx.sessions` 是 `ISessions`。已否。
+**把 rsh/Programs/Web/application 的 browser e2e 搬进 client 聚合**。看似「客户端测试归客户端面」，实测立刻 21 条错：它们用 host 服务，而 client 程序里 `ctx.sessions` 是 `ISessions`。已否。
 
 **给 `directory-picker-browse`/`-native` 做 host/client 双 face 切分**，从根上让客户端包不进 host 图。方向正确（它们确实是未切分的双半包），但改动落在别人属地，而收益只是「构建图更干净」——本设计在测试侧镜像客户端符号之后已经不需要它。**已评估不做**。
 
@@ -193,7 +193,7 @@ Client 要求首项是带非空 `clientId` 与 `host.home` 的 `ready`；后续 
 - **两个文件打破了 api/remotes 的 face 互斥约定**：`src/remote-events.ts` 与 `src/types.ts` 同属两个工程，各自向共享的 `lib/types` 发射一份相同声明。内容逐字节相同、`.tsbuildinfo` 各自独立，实践上无害；README 的构建边界节陈述了这个例外及其成因（`paths` 指向源码面）。
 - **生产方保持私有**：业务插件只能调用 `$on`；Host source 注册和 Client 派发都不在 `TypertClientRemote` 上暴露，测试 double 以自己的 `emit` 方法驱动订阅，不伪装成生产接口。
 - **畸形实参在 emit 点失败**：`api/remotes` listener 在入队前抛出，因此调用 Host `ctx.emit` 的操作立即看到名单配置错误；队列仍可继续投递后续合法事件。
-- **测试侧镜像值可能漂移**：没有任何机制核对 `apps/web/tests` 中镜像的 client 常量与其源；安全网只是漂移会让选择器失配。规则写在 `apps/web/tests/README.md`，由 review 守；grep 级门禁经评估后刻意不做。
+- **测试侧镜像值可能漂移**：没有任何机制核对 `rsh/Programs/Web/application/tests` 中镜像的 client 常量与其源；安全网只是漂移会让选择器失配。规则写在 `rsh/Programs/Web/application/tests/README.md`，由 review 守；grep 级门禁经评估后刻意不做。
 - **放弃的能力**：不支持投影或脱敏载荷，不支持 Agent 以外的 Scope，也不为普通通知提供重放。需要可靠恢复的状态必须拥有查询、cursor 或 opening baseline；waterfall 只重放仍处于同一次 Host 调用生命周期内的 pending request。
 - **仍有 client 包留在 host 图里**：12 个工程（`connection`、`runtime`、`ui-slots` 等）经未拆分的 `directory-picker-browse`/`-native` 与 `api/gateway → client/connection` 仍可达 host 图。它们都能编译且不再牵连 api/remotes 的 client face，因此没有阻塞本次改动；拆分那些包能减少几个，但经评估后不做。两个 chat e2e 直接引 `dsh-client-runtime/client` 依赖 `runtime` 本来就在图里——属偶然而非保证。
 - **本包不发布 invariant companion**：早先的修订曾在活事件总线上断言投递形状（`thisArg === null`、`mode === 'emit'`），这让诊断逻辑与名单值耦合，并使 rolldown 把它提成第三个 bundle chunk——而机械推导的发布文件清单并不携带它。Host 面的 `TypertForwardableEventEntry` 断言已在编译期拒绝这些偏离，包 README 也记录了不再存在独立运行时关系的原因。

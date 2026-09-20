@@ -1,0 +1,16 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Core/vendor/schemastery" },
+    { "path": "../../../../Engine/core/agent" },
+    { "path": "../../../../Engine/core/tools" },
+    { "path": "../../terminal/terminal" },
+    { "path": "../../../../Core/util/timeout" }
+  ]
+}

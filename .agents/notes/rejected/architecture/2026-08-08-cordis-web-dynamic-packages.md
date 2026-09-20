@@ -1,6 +1,6 @@
 # Agent Note: Cordis Host/Client Dynamic Plugin Runtime
 
-Status: rejected — closed as a proposal: the shipped packages/extensions runtime and its READMEs own the design
+Status: rejected — closed as a proposal: the shipped rsh/Modules/Official/extensions runtime and its READMEs own the design
 
 English | [中文](2026-08-08-cordis-web-dynamic-packages.zh.md)
 
@@ -27,7 +27,7 @@ Combining definition, approval, execution, version switching, capability discove
 
 ### Package responsibilities and dependency direction
 
-Four packages under `packages/self-modification/` implement the dynamic runtime:
+Four packages under `rsh/self-modification/` implement the dynamic runtime:
 
 | Package | npm package | Responsibility |
 | --- | --- | --- |

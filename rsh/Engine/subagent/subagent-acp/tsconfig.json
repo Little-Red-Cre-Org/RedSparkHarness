@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../subagent"
+    },
+    {
+      "path": "../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../Tests/test-support/loader-smoke"
+    }
+  ]
+}

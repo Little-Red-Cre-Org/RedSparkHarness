@@ -1,6 +1,6 @@
 # Agent Note: Cordis Host/Client 动态插件运行体系
 
-Status: rejected — closed as a proposal: the shipped packages/extensions runtime and its READMEs own the design
+Status: rejected — closed as a proposal: the shipped rsh/Modules/Official/extensions runtime and its READMEs own the design
 
 [English](2026-08-08-cordis-web-dynamic-packages.md) | 中文
 
@@ -27,7 +27,7 @@ Status: rejected — closed as a proposal: the shipped packages/extensions runti
 
 ### 包职责与依赖方向
 
-动态运行体系由 `packages/self-modification/` 下四个包组成：
+动态运行体系由 `rsh/self-modification/` 下四个包组成：
 
 | 包 | npm 包名 | 职责 |
 | --- | --- | --- |

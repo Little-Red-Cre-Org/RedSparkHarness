@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../Engine/core/agent-loop"
+    },
+    {
+      "path": "../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../Engine/core/session"
+    },
+    {
+      "path": "../../../Engine/core/system-prompt"
+    },
+    {
+      "path": "../../../Engine/core/tools"
+    },
+    {
+      "path": "../../../Engine/session/session-projection"
+    }
+  ]
+}

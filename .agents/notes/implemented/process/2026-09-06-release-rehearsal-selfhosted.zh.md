@@ -24,4 +24,4 @@ Status: implemented
 
 取消变量或将其改为非 `selfhosted` 值，会将后续符合条件的作业路由到托管 Ubuntu。这是运维人员选择的回退，不会自动探测运行器健康，也不会切换已排队的作业。共享虚拟机仍可能与其他受信任作业竞争资源；仓库写权限维护者仍对进入持久化信任域的代码负责。工作流不安装主机系统包，也不修改全局主机配置。
 
-[scripts/tests/ci-release-selfhosted.spec.ts](../../../../scripts/tests/ci-release-selfhosted.spec.ts) 使用受信任事件和 fork、Dependabot、其他仓库、非 master 推送、手动触发、缺失 PR 数据、禁用开关等负向对照求值已提交的选择器。测试固定设置顺序、检出清理、仅托管运行器访问远端缓存、发布隔离和保留命令。真实发布构建与打包安装执行仍由 PR CI 验证；选择器测试不声称重现这些构建。
+[rsh/Scripts/tests/ci-release-selfhosted.spec.ts](../../../../rsh/Scripts/tests/ci-release-selfhosted.spec.ts) 使用受信任事件和 fork、Dependabot、其他仓库、非 master 推送、手动触发、缺失 PR 数据、禁用开关等负向对照求值已提交的选择器。测试固定设置顺序、检出清理、仅托管运行器访问远端缓存、发布隔离和保留命令。真实发布构建与打包安装执行仍由 PR CI 验证；选择器测试不声称重现这些构建。

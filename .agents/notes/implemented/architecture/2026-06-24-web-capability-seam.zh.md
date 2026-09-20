@@ -18,9 +18,9 @@ harness 需要面向模型的 web 工具，但不能将模型约定绑定到某�
 
 Web 访问是一个一等能力 seam，遵循[能力 seam Agent Note](2026-06-13-capability-seams.zh.md)：
 
-1. `@deepseek-ai/dsh-web`（`packages/web/web`）拥有 `ctx.web`、提供方注册、提供方选择、共享的请求/结果词汇，以及 web 特有的错误。
+1. `@deepseek-ai/dsh-web`（`rsh/Modules/Official/web/web`）拥有 `ctx.web`、提供方注册、提供方选择、共享的请求/结果词汇，以及 web 特有的错误。
 2. 提供方包实现具体后端并向 `ctx.web` 注册能力，例如 `@deepseek-ai/dsh-web-search-exa`、`@deepseek-ai/dsh-web-search-perplexity`、`@deepseek-ai/dsh-web-search-deepseek` 和 `@deepseek-ai/dsh-web-fetch-http`。
-3. `@deepseek-ai/dsh-tool-web`（`packages/web/tool-web`）拥有面向模型的 `web_search` 和 `web_fetch` 工具 schema、提示词段落、参数校验、结果格式化，以及通过 `ctx.web` 实现的工具展示。
+3. `@deepseek-ai/dsh-tool-web`（`rsh/Modules/Official/web/tool-web`）拥有面向模型的 `web_search` 和 `web_fetch` 工具 schema、提示词段落、参数校验、结果格式化，以及通过 `ctx.web` 实现的工具展示。
 
 提供方不注册工具。提供方注册能力。`dsh-tool-web` 是面向模型的名称、描述、提示词引导、JSON Schema、展示的唯一所有者。
 
@@ -38,7 +38,7 @@ Web 访问是一个一等能力 seam，遵循[能力 seam Agent Note](2026-06-13
 
 ## 包拓扑
 
-由三个包构成的 Service Definition / Service Provider / Consumer 拆分沿用 bash 和 filesystem 的模式，但*接口*包更接近 LLM（大语言模型） seam。`LlmRuntime`（`packages/llm/llm/src/index.ts`）是一个按名称键控的提供方注册表：`registerAdapter(models, adapter)` 将适配器存入 `Map`、返回 disposer、对重复键抛出 `DUPLICATE_ADAPTER`、在解析时抛出 `NO_ADAPTER`。`ctx.web` 沿用该注册表形状，但有两种能力类别和更丰富的选择策略（配置的提供方 id，或在恰好只有一个可用提供方注册时自动选择），因此执行时抛出的 `WebError` 能解释搜索或 fetch 能力为何无法运行。
+由三个包构成的 Service Definition / Service Provider / Consumer 拆分沿用 bash 和 filesystem 的模式，但*接口*包更接近 LLM（大语言模型） seam。`LlmRuntime`（`rsh/Engine/llm/llm/src/index.ts`）是一个按名称键控的提供方注册表：`registerAdapter(models, adapter)` 将适配器存入 `Map`、返回 disposer、对重复键抛出 `DUPLICATE_ADAPTER`、在解析时抛出 `NO_ADAPTER`。`ctx.web` 沿用该注册表形状，但有两种能力类别和更丰富的选择策略（配置的提供方 id，或在恰好只有一个可用提供方注册时自动选择），因此执行时抛出的 `WebError` 能解释搜索或 fetch 能力为何无法运行。
 
 依赖方向与 bash 和 filesystem 一致：
 
@@ -74,7 +74,7 @@ flowchart LR
 
 ## `ctx.web` 约定
 
-`ctx.web` 是一个提供方注册表加上一个带提供方选择的执行 API。注册表部分与 `LlmRuntime` 保持接近：每种能力类别一个 `Map<id, provider>`，`registerSearchProvider`/`registerFetchProvider` 方法返回 disposer，重复 id 抛出 `WebError`，执行时解析在选定提供方缺失或不可用时抛出异常。权威签名见 `packages/web/web/src/types.ts`；seam 的形状：
+`ctx.web` 是一个提供方注册表加上一个带提供方选择的执行 API。注册表部分与 `LlmRuntime` 保持接近：每种能力类别一个 `Map<id, provider>`，`registerSearchProvider`/`registerFetchProvider` 方法返回 disposer，重复 id 抛出 `WebError`，执行时解析在选定提供方缺失或不可用时抛出异常。权威签名见 `rsh/Modules/Official/web/web/src/types.ts`；seam 的形状：
 
 ```ts
 import type { WebFetchRequest, WebFetchResult, WebSearchRequest, WebSearchResult } from '@deepseek-ai/dsh-web'
@@ -282,7 +282,7 @@ fetch 提供方的资源控制：
 
 ## 测试
 
-每一层在自己的边界处固定：`dsh-web` 中的注册/选择/截断/abort 约定与 `WebError` 码；每个提供方基于录制的 fixture（测试前置数据）的请求/响应映射（Perplexity fixture 包含纯 URL 引用，以保持可选 source 字段的诚实性），加上每个真实提供方的自跳过带密钥冒烟测试；`web-fetch-http` 中的真实本地 HTTP 行为；`dsh-tool-web` 中通过真实工具注册表的启用驱动注册、结构化执行错误和结果格式化。一个真实 Loader 冒烟测试守护两种导出形状（[事故复盘（postmortem） 0001](../../../../docs/postmortem/0001-acp-default-export-drops-inject.zh.md)）：`dsh-web` 是默认导出的服务，而提供方和 `tool-web` 是命名空间插件，误加 `export default` 会丢失 `inject`。
+每一层在自己的边界处固定：`dsh-web` 中的注册/选择/截断/abort 约定与 `WebError` 码；每个提供方基于录制的 fixture（测试前置数据）的请求/响应映射（Perplexity fixture 包含纯 URL 引用，以保持可选 source 字段的诚实性），加上每个真实提供方的自跳过带密钥冒烟测试；`web-fetch-http` 中的真实本地 HTTP 行为；`dsh-tool-web` 中通过真实工具注册表的启用驱动注册、结构化执行错误和结果格式化。一个真实 Loader 冒烟测试守护两种导出形状（[事故复盘（postmortem） 0001](../../../../rsh/Docs/postmortem/0001-acp-default-export-drops-inject.zh.md)）：`dsh-web` 是默认导出的服务，而提供方和 `tool-web` 是命名空间插件，误加 `export default` 会丢失 `inject`。
 
 ## 曾考虑的替代方案
 

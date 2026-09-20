@@ -12,7 +12,7 @@ Status: implemented
 
 ## 决策
 
-[Schedule 指南](../../../../docs/user/guide/schedule.zh.md)使用显式加载 `@deepseek-ai/dsh-time-context` 与 `@deepseek-ai/dsh-schedule`，并启用 Web bundle 中默认 disabled 的 `ui-schedule` row 的 overlay。默认 Web 启动图不会激活 Schedule。Schedule 只观察插件加载后发布的根 Agent，并在该 Agent scope 中安装三个工具和一个可丢弃 owner。cold history 读取、已发布的根、child Agent 与其他 host 都不会激活 runtime。
+[Schedule 指南](../../../../rsh/Docs/user/guide/schedule.zh.md)使用显式加载 `@deepseek-ai/dsh-time-context` 与 `@deepseek-ai/dsh-schedule`，并启用 Web bundle 中默认 disabled 的 `ui-schedule` row 的 overlay。默认 Web 启动图不会激活 Schedule。Schedule 只观察插件加载后发布的根 Agent，并在该 Agent scope 中安装三个工具和一个可丢弃 owner。cold history 读取、已发布的根、child Agent 与其他 host 都不会激活 runtime。
 
 用户可见边界是 `session-local`：原 Session 只有在 live 时才会准时运行提醒，cold 期间不发送任何外部通知；该 Session 再次 live 后才会处理 overdue 提醒。到期工作会等待 Agent 完全 idle，再通过 `followup()` 进入普通的下一轮队列；它绝不会中途引导当前轮次，也没有独立 Web 回执（[对话式交付](../../archived/simplification/2026-08-09-conversational-schedule-delivery.md)）。
 
@@ -60,7 +60,7 @@ dispatch 记录的是队列准入，而不是模型完成或用户收到提醒�
 
 ### 只读 Web 目录
 
-Schedule overlay 会把默认禁用的 [`dsh-client-ui-schedule`](../../../../packages/client/ui-schedule/README.zh.md) client 与 Host 服务一同启用。完整活动 projection 也会交给 [`dsh-client-ui-workspace`](../../../../packages/client/ui-workspace/README.zh.md)。本 Note 拥有这条 opt-in 只读呈现边界：该 projection 表示当前活动状态，而非 dispatch 或交付回执，因此普通 Assistant 轮次仍是交付呈现。目录是挂到 `document.body` 的 fixed portal；空间足够时左边缘跟随触发按钮，靠近视口右侧时向左避让并保留 16px 边距。`useAnchoredPosition` 拥有测量以及 resize、捕获阶段 scroll、面板 resize 与清理行为；Schedule 提供触发器与 portal ref、bottom 放置、5px 间距和既有内外 dismissal 边界，不增加通用 popover 抽象。
+Schedule overlay 会把默认禁用的 [`dsh-client-ui-schedule`](../../../../rsh/Programs/Web/client/ui-schedule/README.zh.md) client 与 Host 服务一同启用。完整活动 projection 也会交给 [`dsh-client-ui-workspace`](../../../../rsh/Programs/Web/client/ui-workspace/README.zh.md)。本 Note 拥有这条 opt-in 只读呈现边界：该 projection 表示当前活动状态，而非 dispatch 或交付回执，因此普通 Assistant 轮次仍是交付呈现。目录是挂到 `document.body` 的 fixed portal；空间足够时左边缘跟随触发按钮，靠近视口右侧时向左避让并保留 16px 边距。`useAnchoredPosition` 拥有测量以及 resize、捕获阶段 scroll、面板 resize 与清理行为；Schedule 提供触发器与 portal ref、bottom 放置、5px 间距和既有内外 dismissal 边界，不增加通用 popover 抽象。
 
 ## 已考虑的替代方案
 

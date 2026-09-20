@@ -14,7 +14,7 @@ After v2 embedded streams settlement widened with the message content and Chat a
 
 `@deepseek-ai/dsh-llm` answers consumer questions directly from compact records; every remaining consumer folds records once with early exit.
 
-`packages/llm/llm/src/assistant-stream.ts` exports record-level readers beside the accumulator and `expandAssistantStream`:
+`rsh/Engine/llm/llm/src/assistant-stream.ts` exports record-level readers beside the accumulator and `expandAssistantStream`:
 
 - Chunk rules: `isTokenDelta` (non-empty text, reasoning, or Tool-call arguments fragment, or any name-bearing Tool-call delta), `isVisibleChunk` (non-whitespace text or reasoning, or a block start or end of any kind other than text, reasoning, or Tool call), and `chunkHasVisibleText` (non-whitespace text delta or completed text block).
 - Run readers: `runFirstTokenTime` and `runFirstVisibleTime` reconstruct the first qualifying member's time from `time0` and the `dt` gaps and stop scanning there; a name-bearing Tool-call run yields `time0` without reading a fragment.

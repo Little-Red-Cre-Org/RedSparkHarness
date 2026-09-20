@@ -18,8 +18,8 @@ The right column is a per-session docking surface — split panes, tabs, floatin
 
 | Package | Kind | Owns |
 |---|---|---|
-| `packages/client/ui-dockkit` | static-linked library, zero DSH dependencies | the layout engine and the React components that render and drive it; consumers compile its sources, and it keeps exactly one stylesheet because a consumer de-duplicates injected sheets by file name |
-| `packages/client/ui-sidebar-right` | dynamic plugin | the `rightbar` panel seat and the `conversation.session.header.corner` expand button over one store, one surface per session, both presentations, the float host, `ctx.sidebarRight`, `ctx.sidebarRightTabs`, the tab domain (one occurrence per tab record), the three extension seats, the guide tab type, and the `sidebarRight` copy namespace |
+| `rsh/Programs/Web/client/ui-dockkit` | static-linked library, zero DSH dependencies | the layout engine and the React components that render and drive it; consumers compile its sources, and it keeps exactly one stylesheet because a consumer de-duplicates injected sheets by file name |
+| `rsh/Programs/Web/client/ui-sidebar-right` | dynamic plugin | the `rightbar` panel seat and the `conversation.session.header.corner` expand button over one store, one surface per session, both presentations, the float host, `ctx.sidebarRight`, `ctx.sidebarRightTabs`, the tab domain (one occurrence per tab record), the three extension seats, the guide tab type, and the `sidebarRight` copy namespace |
 
 The kit is the product's first embedder and knows nothing about it: every string arrives through `DockLabels`, every tab body through a `TabRenderer` dispatching on an opaque `kind`, and every gesture leaves through `DockIntents`. The integration package supplies what the kit refuses to know.
 
@@ -31,7 +31,7 @@ Components render a snapshot and report settled intents, one per gesture: a drag
 
 ### The frame's right column
 
-[Responsive Sidebar and tab information](../architecture/2026-09-07-sidebar-responsive-tab-info.md) supersedes this note's no-concession layout, overlay presentation and product pane limit. `ui-layout` still owns three-column geometry and pixel width preferences; the Sidebar occupant reports presentation through `ctx.layout.openRightbar(track, fullscreen)` and `closeRightbar()`, without the frame injecting the Sidebar package. Exact width rules belong to [ui-layout](../../../../packages/client/ui-layout/README.md).
+[Responsive Sidebar and tab information](../architecture/2026-09-07-sidebar-responsive-tab-info.md) supersedes this note's no-concession layout, overlay presentation and product pane limit. `ui-layout` still owns three-column geometry and pixel width preferences; the Sidebar occupant reports presentation through `ctx.layout.openRightbar(track, fullscreen)` and `closeRightbar()`, without the frame injecting the Sidebar package. Exact width rules belong to [ui-layout](../../../../rsh/Programs/Web/client/ui-layout/README.md).
 
 The right Sidebar uses one mounted content tree in normal and fullscreen modes; hiding preserves tab state, and fullscreen covers the viewport while retaining underlying column reservation. Floats still use viewport coordinates through a portal and remain open when the Sidebar closes. The product limits docking to two horizontal panes and a 20–80% divider; the generic engine keeps its own defaults.
 
@@ -71,7 +71,7 @@ The surface renders tabs whose bodies it does not know: each tab carries a `kind
 
 **Empty panes as a persistent state.** The first design allowed a pane to stay after its last tab left, with a placeholder. Rejected because nothing offered a way to close such a pane; every intent settles the surface so an emptied side pane is merged away. An empty root receives the current default page only while the column is expanded.
 
-**Inline the kit through `packages/util` and the `INLINE_SAFE` list.** A build probe showed it works, but the util build chain has no CSS pipeline and the kit ships a stylesheet; the static-linked client package (the `ui-primitives` precedent) was chosen knowing that changing the kit means rebuilding the shell and reloading.
+**Inline the kit through `rsh/Core/util` and the `INLINE_SAFE` list.** A build probe showed it works, but the util build chain has no CSS pipeline and the kit ships a stylesheet; the static-linked client package (the `ui-primitives` precedent) was chosen knowing that changing the kit means rebuilding the shell and reloading.
 
 ## Consequences
 

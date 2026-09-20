@@ -10,7 +10,7 @@ publint 脚本测试自设五秒同步子进程期限，低于 Windows 覆盖率
 
 ## 决策
 
-[publint 测试](../../../../scripts/publint-all.spec.ts) 使用现有 Execa 依赖和 Vitest 测试上下文信号，不设独立子进程超时。[工作流](../../../../.github/workflows/ci.yml) 和[覆盖率参数所有者](../../../../scripts/coverage-partitions.ts) 继续负责预算。这与[子代理清理测试](2026-09-07-subagent-teardown-test-budgets.zh.md) 采用相同的通道所有权规则，但不改变其清理逻辑。
+[publint 测试](../../../../rsh/Scripts/publint-all.spec.ts) 使用现有 Execa 依赖和 Vitest 测试上下文信号，不设独立子进程超时。[工作流](../../../../.github/workflows/ci.yml) 和[覆盖率参数所有者](../../../../rsh/Scripts/coverage-partitions.ts) 继续负责预算。这与[子代理清理测试](2026-09-07-subagent-teardown-test-budgets.zh.md) 采用相同的通道所有权规则，但不改变其清理逻辑。
 
 每个直接 Node 子进程创建后立即登记，取消请求发送 SIGKILL；清理先等待所有已登记子进程的结果与 close 事件，再删除私有包根目录。预期退出码断言之前先诊断进程错误、取消、超时标记、信号及捕获的输出流。正常退出码一仍是 publint 负例的有效结果。五个用例均通过隔离的发布夹具调用真实脚本。
 

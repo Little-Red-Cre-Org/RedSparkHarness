@@ -16,7 +16,7 @@ monorepo 中可运行的源码并不能证明发布后的包可运行。workspac
 
 发布流程以一个不可变的 release bundle（发布包集合）为边界。pack 阶段从一个确定的 Git commit 构建全部目标包、生成全部 tarball、检查 tarball 内容，并通过安装后集成测试；publish 阶段只读取这组 tarball 及其 manifest（元数据清单），禁止重建或重新 pack。
 
-目标集合只包含 `packages/*/*/package.json` 与 `apps/*/package.json` 中命名为 `@deepseek-ai/*` 的 workspace 包。根项目、`website/`、vendor、Python 与 native workspace 不属于该 NPM 基线。发现机制必须拒绝重复包名、不同基础版本、意外的 `private` 发布状态以及集合中的未知包，而不是维护另一份手工包名列表。
+目标集合只包含 `rsh/*/*/package.json` 与 `rsh/Programs/*/package.json` 中命名为 `@deepseek-ai/*` 的 workspace 包。根项目、`website/`、vendor、Python 与 native workspace 不属于该 NPM 基线。发现机制必须拒绝重复包名、不同基础版本、意外的 `private` 发布状态以及集合中的未知包，而不是维护另一份手工包名列表。
 
 预发布版本由包的稳定基础版本、命令启动时精确到秒的 UTC 时间戳和目标 commit 的 10 位短 SHA 组成：`<base>-<YYYYMMDDHHmmss>-<short-commit>`。dist-tag 由基础版本派生为 `dev-<base>`。例如，基础版本 `0.0.1`、时间 `2026-08-04T00:32:00Z` 和 commit `909292dd7b` 生成版本 `0.0.1-20260804003200-909292dd7b` 与 tag `dev-0.0.1`。同一 release bundle 的重试必须沿用原版本和 manifest；重新 pack 会按新的命令启动时间生成新版本。
 
@@ -95,7 +95,7 @@ PR 与普通 push 可以运行无凭据的 pack-and-test 信号，从而在合�
 
 ## 验收标准
 
-- 一个 pack 入口从确定 commit 发现 `packages/*/*` 和 `apps/*` 的全部目标包，以 UTC 秒级时间戳与短 commit 生成并显示版本，再等待 Enter；它在任何注册表写入前生成完整 release bundle，并输出一个可复制的 publish 命令；`release` 在 pack 后再次等待，`--yes` 跳过两次确认。
+- 一个 pack 入口从确定 commit 发现 `rsh/*/*` 和 `rsh/Programs/*` 的全部目标包，以 UTC 秒级时间戳与短 commit 生成并显示版本，再等待 Enter；它在任何注册表写入前生成完整 release bundle，并输出一个可复制的 publish 命令；`release` 在 pack 后再次等待，`--yes` 跳过两次确认。
 - 静态 manifest 门禁和 tarball 内容门禁都拒绝发布 `src` 与 `.d.ts.map`，同时保留源码 manifest 中的 `exports["./src/*"]`。
 - release bundle 记录完整包集合、commit、派生版本、tag、注册表和逐 tarball integrity；所有内部依赖都精确固化到该版本，publish 只消费该 bundle，绝不重建。
 - 一个隔离集成测试从本地 tarball 安装消费方，并用普通 Node 启动安装后的默认 `dsh` TUI；删除任一所需动态 chunk 会使该测试稳定失败。

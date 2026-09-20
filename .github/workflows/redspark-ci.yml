@@ -49,7 +49,7 @@ jobs:
       - name: RSH terminal regressions
         run: pnpm --filter @deepseek-ai/dsh-rsh test
       - name: RSH profile smoke
-        run: pnpm exec vitest run --config vitest.expected.config.ts apps/cli/tests/profiles/rsh/rsh.expected.e2e.ts
+        run: pnpm exec vitest run --config vitest.expected.config.ts rsh/Programs/CLI/tests/profiles/rsh/rsh.expected.e2e.ts
         env:
           DSH_EXAMPLE_MODE: lib
       - name: Client tests (no API credentials)

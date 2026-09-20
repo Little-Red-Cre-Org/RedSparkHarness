@@ -40,7 +40,7 @@ That the catch is the base `next` — not something outside the waterfall — is
 
 ### The `timeout-policy` plugin
 
-The plugin is `@deepseek-ai/dsh-tool-call-timeout-policy`, a zero-config function/namespace plugin (`name` / `inject` / `apply`) in the `packages/guard/` group (originally its own `timeout/` group). The per-tool budget is DECLARED on the tool, not on this plugin: a `ToolDefinition` carries an optional `timeoutMs`, which the owning tool plugin sets from its own config. `dsh-tool-web`, for example, resolves `fetchTimeoutMs` / `searchTimeoutMs` (default 30000) onto the `web_fetch` / `web_search` definitions:
+The plugin is `@deepseek-ai/dsh-tool-call-timeout-policy`, a zero-config function/namespace plugin (`name` / `inject` / `apply`) in the `rsh/Modules/Official/guard/` group (originally its own `timeout/` group). The per-tool budget is DECLARED on the tool, not on this plugin: a `ToolDefinition` carries an optional `timeoutMs`, which the owning tool plugin sets from its own config. `dsh-tool-web`, for example, resolves `fetchTimeoutMs` / `searchTimeoutMs` (default 30000) onto the `web_fetch` / `web_search` definitions:
 
 ```yaml
 - id: timeout-policy
@@ -54,7 +54,7 @@ The plugin is `@deepseek-ai/dsh-tool-call-timeout-policy`, a zero-config functio
 
 Timeouts live on tool definitions rather than a free-text name map, eliminating misspelled unused policy. `defineTool` validates a positive finite budget. During dispatch the enforcer derives a deadline signal and assigns it to `exec.signal`; the registry fuses that deadline with the original caller signal before the body under the [tool-cancellation contract](2026-07-19-cooperative-tool-cancellation.md). The enforcer restores the caller signal afterward and converts its own expiry into `TOOL_TIMEOUT`; tools without a budget pass through unchanged.
 
-Signal replacement is by **in-place mutation of `exec.signal`**, not by passing a new object to `next()`. Cordis's waterfall `next()` ignores any arguments handed to it and re-invokes downstream listeners with the shared payload array (`vendor/cordis/src/events.ts`), so mutation is how the wrapper supplies its deadline to the registry. The registry re-fuses the captured caller signal immediately before the body, and the plugin restores `exec.signal` to the caller's original in a `finally` so `tools/post-execute` never sees the plugin's deadline signal.
+Signal replacement is by **in-place mutation of `exec.signal`**, not by passing a new object to `next()`. Cordis's waterfall `next()` ignores any arguments handed to it and re-invokes downstream listeners with the shared payload array (`rsh/Core/vendor/cordis/src/events.ts`), so mutation is how the wrapper supplies its deadline to the registry. The registry re-fuses the captured caller signal immediately before the body, and the plugin restores `exec.signal` to the caller's original in a `finally` so `tools/post-execute` never sees the plugin's deadline signal.
 
 `timeout-policy` owns both uses of the `TOOL_TIMEOUT` code: the internal deadline code passed to `deadline()`/`timeoutOf()` (scoped so a nested outer deadline reads as an ordinary cancel) and the structured tool-result error code. Its replacement result is:
 
@@ -89,7 +89,7 @@ A future model-facing grep/glob tool can be implemented on top of `ctx.shell` wi
 
 ## Alternatives considered
 
-**Name the plugin `tool-timeout`.** The literal Agent Note name matched the `gen-tool-catalog` completeness guard's `packages/*/tool-*` glob, which requires every match to register a model-facing tool. This plugin registers none — it is a `tools/execute` wrapper — so a `tool-*` name would either fail `verify-tool-catalog` or force a misleading boot entry. The package is `@deepseek-ai/dsh-tool-call-timeout-policy` in what was then a new `timeout/` group, since folded into `packages/guard/`; the cordis.yml `id` can still be `timeout-policy`.
+**Name the plugin `tool-timeout`.** The literal Agent Note name matched the `gen-tool-catalog` completeness guard's `rsh/*/tool-*` glob, which requires every match to register a model-facing tool. This plugin registers none — it is a `tools/execute` wrapper — so a `tool-*` name would either fail `verify-tool-catalog` or force a misleading boot entry. The package is `@deepseek-ai/dsh-tool-call-timeout-policy` in what was then a new `timeout/` group, since folded into `rsh/Modules/Official/guard/`; the cordis.yml `id` can still be `timeout-policy`.
 
 **Keep per-tool timeout handling only.** This was the shape for `bash` and `web_fetch`, and it matches Claude Code and Codex for shell commands. It loses for web-style tools because every new timeout-capable tool must choose validation, cap semantics, docs, snapshots, and classification. The plugin centralizes policy and classification while leaving each tool's schema focused on business input.
 

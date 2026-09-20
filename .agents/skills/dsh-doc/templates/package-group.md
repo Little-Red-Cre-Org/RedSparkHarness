@@ -1,12 +1,12 @@
 # Template: package-group
 
-Use this template for `packages/README.md` and every `packages/<group>/README.md`. The page is a map: it orients the capability family, lists its direct packages with one-line roles, and links package-owned details. It never restates a package's contract.
+Use this template for `rsh/README.md` and every `<group-path>/README.md`. The page is a map: it orients the capability family, lists its direct packages with one-line roles, and links package-owned details. It never restates a package's contract.
 
 ## Frontmatter
 
 ```yaml
 ---
-description: "The <group> package group: what the packages under packages/<group>/ own, for readers choosing or navigating the family."
+description: "The <group> package group: what the packages under <group-path>/ own, for readers choosing or navigating the family."
 kind: "package-group"
 ---
 ```
@@ -52,8 +52,9 @@ None.
 
 ## Rules
 
+- Replace `<group-path>` with the group's actual repository-relative directory.
 - One row per direct package; role text states the package's contribution, never its internals.
 - Add a `ctx key`, package shape, or npm-name column only when that distinction helps readers choose among the direct packages.
 - Related documentation links adjacent owners (group maps, subsystem pages, Agent Notes) with a short phrase per link.
 - Do not add a Model Experience or Known Limitations section; the group map owns no runtime behavior.
-- Re-run `pnpm run verify-translation-pairing --write packages/<group>/README.md` after editing the pair.
+- Re-run `pnpm run verify-translation-pairing --write <group-path>/README.md` after editing the pair.

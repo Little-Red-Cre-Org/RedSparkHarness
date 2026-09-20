@@ -1,0 +1,108 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/compaction/compaction"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/core/tools"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/llm/llm-retry"
+    },
+    {
+      "path": "../../../../Engine/llm/token-meter"
+    },
+    {
+      "path": "../../../../Core/util/workspace-path"
+    },
+    {
+      "path": "../../../../Engine/session/session-stats"
+    },
+    {
+      "path": "../../../../Engine/session/session-turn-outline"
+    },
+    {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../store"
+    },
+    {
+      "path": "../ui-approval"
+    },
+    {
+      "path": "../ui-conversation"
+    },
+    {
+      "path": "../ui-layout"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
+      "path": "../ui-sidebar-right"
+    },
+    {
+      "path": "../ui-settings"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-workspace"
+    },
+    {
+      "path": "../ui-sidebar-documentpreview"
+    },
+    {
+      "path": "../ui-input-trigger"
+    }
+  ]
+}

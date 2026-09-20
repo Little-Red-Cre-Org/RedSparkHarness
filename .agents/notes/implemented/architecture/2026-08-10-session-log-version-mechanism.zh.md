@@ -20,9 +20,9 @@ Session log 在发布后必须能升级格式，而最先发布的运行时决�
 
 ### 写入器与发布真源
 
-`SESSION_FORMAT_VERSION` 拥有工作区写入器版本号；[发布状态参考](../../../../docs/session-format-status.zh.md)拥有唯一的双语 `latestReleasedVersion` 与 `evidenceTag` 记录。发布状态独立于源码开发而变化，因此通过比较这两个事实推导状态，而不另行维护 `released` 布尔值。一般文档链接到这些真源；固定版本约定与历史证据保留明确版本号。
+`SESSION_FORMAT_VERSION` 拥有工作区写入器版本号；[发布状态参考](../../../../rsh/Docs/session-format-status.zh.md)拥有唯一的双语 `latestReleasedVersion` 与 `evidenceTag` 记录。发布状态独立于源码开发而变化，因此通过比较这两个事实推导状态，而不另行维护 `released` 布尔值。一般文档链接到这些真源；固定版本约定与历史证据保留明确版本号。
 
-[文档标准检查](../../../../scripts/doc-standard.spec.ts)在不访问网络的情况下，校验记录结构、双语一致性、证据链接一致性及本地发布版本与写入器版本的大小关系。它证明内部一致性，而非发布事实或记录新鲜度。[发布流程](../process/2026-08-10-npm-release-sequences.zh.md)要求发布操作者在更高格式交付后核实发布并更新记录。这让兼容性评审不依赖凭据与 GitHub 可用性，同时明确人工维护新鲜度的义务。
+[文档标准检查](../../../../rsh/Scripts/doc-standard.spec.ts)在不访问网络的情况下，校验记录结构、双语一致性、证据链接一致性及本地发布版本与写入器版本的大小关系。它证明内部一致性，而非发布事实或记录新鲜度。[发布流程](../process/2026-08-10-npm-release-sequences.zh.md)要求发布操作者在更高格式交付后核实发布并更新记录。这让兼容性评审不依赖凭据与 GitHub 可用性，同时明确人工维护新鲜度的义务。
 
 ## 影响
 

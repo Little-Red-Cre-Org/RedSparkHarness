@@ -14,7 +14,7 @@ Session 格式 v2 将每次模型尝试的紧凑流（`AssistantStreamRecord[]`�
 
 `@deepseek-ai/dsh-llm` 直接从紧凑记录回答消费方问题；剩余消费方对记录做一次带提前退出的折叠。
 
-`packages/llm/llm/src/assistant-stream.ts` 在累加器与 `expandAssistantStream` 之外导出记录级读取器：
+`rsh/Engine/llm/llm/src/assistant-stream.ts` 在累加器与 `expandAssistantStream` 之外导出记录级读取器：
 
 - Chunk 规则：`isTokenDelta`（非空文本、reasoning 或 Tool-call 参数片段，或任何带名称的 Tool-call delta）、`isVisibleChunk`（非空白文本或 reasoning，或 text/reasoning/Tool call 之外的任意块开始或结束）、`chunkHasVisibleText`（非空白文本 delta 或完成的文本块）。
 - Run 读取器：`runFirstTokenTime` 与 `runFirstVisibleTime` 从 `time0` 与 `dt` 间隔重建首个合格成员的时间并停止扫描；带名称的 Tool-call run 直接产出 `time0`，不读片段。

@@ -1,0 +1,42 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../shell/pwsh-local"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../terminal"
+    },
+    {
+      "path": "../../sandbox/sandbox"
+    },
+    {
+      "path": "../../sandbox/sandbox-policy"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ English | [中文](2026-08-10-remote-event-delivery.zh.md)
 
 ## Problem
 
-[Typert Remote method calls](../../implemented/architecture/2026-08-02-typert-remote-method-calls.md) initially cover targeted calls with one result per request and deliberately leave Session streams and stateful interactions elsewhere. Host-to-consumer events need a delivery mechanism that is not owned by the API Proxy domain.
+[Typert Remote method calls](2026-08-02-typert-remote-method-calls.md) initially cover targeted calls with one result per request and deliberately leave Session streams and stateful interactions elsewhere. Host-to-consumer events need a delivery mechanism that is not owned by the API Proxy domain.
 
 The Host owns one-way events such as `agent-preset/selected`, `commands/change`, `credentials/reference-updated`, `llm/adapters-updated`, and `settings/document-updated`. They do not depend on AgentScope, and their payloads are already JSON. Requiring every event to cross a handwritten API Proxy frame, a handwritten Client Runtime bridge, and a Client event alias adds no fact beyond the owner event declaration.
 
@@ -16,7 +16,7 @@ That duplicate declaration is also lossy: the Client side restates an event as `
 
 The consumer Remote surface has one event-subscription verb, `ctx.remote.$on(event, listener)`, with allowlist-driven, verbatim forwarding:
 
-- `packages/api/remotes/src/remote-events.ts` owns one list of forwardable Host events with explicit `emit`/`waterfall` modes. It is also the sole control point for what consumers may subscribe to. Adjacent `src/types.ts` derives the type projection and fills the selection seat while remaining type-only. Both files appear in the `files` of the package's Host and Client faces, so both read one declaration.
+- `rsh/Programs/Web/api/remotes/src/remote-events.ts` owns one list of forwardable Host events with explicit `emit`/`waterfall` modes. It is also the sole control point for what consumers may subscribe to. Adjacent `src/types.ts` derives the type projection and fills the selection seat while remaining type-only. Both files appear in the `files` of the package's Host and Client faces, so both read one declaration.
 - The event name on the wire is the original Host Cordis name (`settings/document-updated`) without a `host/` prefix. The payload is the Host argument list, element for element through JSON, without projection, redaction, or renaming.
 - `api/remotes` registers the Host source with API Gateway. Gateway reserves internal logical endpoint `$events` on the existing `/api/remote.mux`, adding no physical connection and giving API Proxy no event interpretation. Waterfall results return through HTTP unary endpoint `$events/result`.
 - Event signatures have no second table. Owner packages place their Cordis `Events` declarations in Client-safe, type-only `./types` exports so both faces read the same declaration. `$on` listener parameters, result, and `next()` derive from `Events[Event]`; verbatim correspondence holds by construction.
@@ -78,7 +78,7 @@ The Client dispatches on a Cordis key private to each Remote instance. Ordinary 
 
 ### The allowlist: one declaration read by both faces
 
-`packages/api/remotes/src/remote-events.ts` appears in both `tsconfig.host.json` and `tsconfig.client.json` and is the allowlist's sole home. `src/types.ts` derives the type face:
+`rsh/Programs/Web/api/remotes/src/remote-events.ts` appears in both `tsconfig.host.json` and `tsconfig.client.json` and is the allowlist's sole home. `src/types.ts` derives the type face:
 
 ```ts ignore-check
 // remote-events.ts — the value
@@ -136,13 +136,13 @@ The Client requires an opening `ready` item with a non-empty `clientId` and `hos
 
 `$events` is an internal Gateway endpoint. It does not enter a generated Typert Remote descriptor or become `ctx.remote.<namespace>`. Application selection exists only in the API Remotes allowlist and Host source; Gateway owns registration, payload validation, and physical transport only.
 
-### The `apps/web` browser e2e belongs to the Host face
+### The `rsh/Programs/Web/application` browser e2e belongs to the Host face
 
-The `apps/web/tests/**` e2e files typecheck in root `tsconfig.host.json`: they boot a real harness in process and directly access `ctx.connection`, Host `SessionStore.get/create/flush`, and `ctx.sessionProjectionCache`. Driving a browser at runtime does not place a file in the Client TypeScript program. Moving these tests to the Client aggregate produces errors because one program cannot hold both faces' merges for the same Context key.
+The `rsh/Programs/Web/application/tests/**` e2e files typecheck in root `tsconfig.host.json`: they boot a real harness in process and directly access `ctx.connection`, Host `SessionStore.get/create/flush`, and `ctx.sessionProjectionCache`. Driving a browser at runtime does not place a file in the Client TypeScript program. Moving these tests to the Client aggregate produces errors because one program cannot hold both faces' merges for the same Context key.
 
 This implies one build rule needed by the design: importing a value or type from a Client package in those tests brings that package's whole project and all its project references into the Host build graph. Four consumers (`ui-settings-general`, `ui-settings-models`, `ui-permission`, and `ui-commands`) reference API Remotes' Client face, which cannot compile until Host tsdown generates `@deepseek-ai/dsh-goal/remote`. That forms a build-order cycle: Host tsc needs API Remotes Client, which needs generated `goal/remote`, which Host tsdown emits after Host tsc.
 
-The few required Client symbols are mirrored on the test side: `scaffold.ts` exports the mirrored welcome-notice constants, while the two chat e2e files import `dsh-client-runtime/client` directly because the Runtime project already belongs to the Host graph. This removes those four consumers from the Host graph, and the 15 Client project references in `apps/cli/tsconfig.json` no longer serve an owner-map role. Each mirror is byte-identical to its source; drift produces a selector mismatch or an unsuppressed notice and fails loudly.
+The few required Client symbols are mirrored on the test side: `scaffold.ts` exports the mirrored welcome-notice constants, while the two chat e2e files import `dsh-client-runtime/client` directly because the Runtime project already belongs to the Host graph. This removes those four consumers from the Host graph, and the 15 Client project references in `rsh/Programs/CLI/tsconfig.json` no longer serve an owner-map role. Each mirror is byte-identical to its source; drift produces a selector mismatch or an unsuppressed notice and fails loudly.
 
 ### Change inventory
 
@@ -157,7 +157,7 @@ The few required Client symbols are mirrored on the test side: `scaffold.ts` exp
 | `client/runtime` | Removes the bridge from Host frames to the Remote subscription table; it only publishes `connection/reset` after a Connection generation is established |
 | Consumers | Client plugins subscribe directly through `ctx.remote.$on(...)`, import owner event declarations type-only, and inject `'remote'` |
 | `client/connection` | Provides the one generation-source registration point; `ConnectionController` publishes the Host facts from `$events` ready, and the fixture emits events from the same source |
-| `apps/web/tests` + `apps/cli` | Mirrors Client symbols on the test side as described above and removes 15 Client project references from `apps/cli/tsconfig.json` |
+| `rsh/Programs/Web/application/tests` + `rsh/Programs/CLI` | Mirrors Client symbols on the test side as described above and removes 15 Client project references from `rsh/Programs/CLI/tsconfig.json` |
 
 ## Alternatives considered
 
@@ -171,7 +171,7 @@ The few required Client symbols are mirrored on the test side: `scaffold.ts` exp
 
 **Give forwardable events a payload projection function.** A `{ event, project, zod }` table could combine model-directory inputs and derive Workspace views, but would manually align projection logic with payload types and recreate the central table removed from Remote methods.
 
-**Move the `apps/web` browser e2e into the Client aggregate.** The intuition that browser tests belong to the Client face fails with 21 errors because the tests use Host services while the Client program's `ctx.sessions` is `ISessions`.
+**Move the `rsh/Programs/Web/application` browser e2e into the Client aggregate.** The intuition that browser tests belong to the Client face fails with 21 errors because the tests use Host services while the Client program's `ctx.sessions` is `ISessions`.
 
 **Split `directory-picker-browse`/`-native` into Host and Client faces.** This would remove Client packages from the Host graph, but changes another owner's packages for only a cleaner build graph. Mirroring the required Client symbols on the test side removes the need for that split.
 
@@ -191,7 +191,7 @@ The few required Client symbols are mirrored on the test side: `scaffold.ts` exp
 - **Two files break API Remotes' face-disjointness rule.** `src/remote-events.ts` and `src/types.ts` belong to both projects and emit identical declarations into shared `lib/types`. Their content is byte-identical and `.tsbuildinfo` files remain separate, so this is safe in practice; the README records why source-plane `paths` require the exception.
 - **Producer operations remain private.** Business plugins can call only `$on`. Host-source registration and Client dispatch are absent from `TypertClientRemote`; test doubles drive subscriptions through their own `emit` operations rather than impersonating a production API.
 - **Malformed arguments fail at emit.** An API Remotes listener throws before queueing, so Host `ctx.emit` immediately observes an allowlist composition error and the queue can still deliver subsequent valid events.
-- **Test-side mirrors can drift.** No mechanism compares mirrored Client constants under `apps/web/tests` with their source. Drift instead produces a selector mismatch. `apps/web/tests/README.md` records the review rule; a grep-level gate is deliberately omitted.
+- **Test-side mirrors can drift.** No mechanism compares mirrored Client constants under `rsh/Programs/Web/application/tests` with their source. Drift instead produces a selector mismatch. `rsh/Programs/Web/application/tests/README.md` records the review rule; a grep-level gate is deliberately omitted.
 - **Capabilities deliberately omitted.** Payload projection and redaction are unsupported, scopes other than Agent are unsupported, and ordinary notifications are not replayed. Recoverable state needs a query, cursor, or opening baseline; a waterfall is replayed only while its original Host invocation remains pending.
 - **Some Client packages remain in the Host graph.** Twelve projects, including `connection`, `runtime`, and `ui-slots`, remain reachable through unsplit `directory-picker-browse`/`-native` and `api/gateway → client/connection`. They compile and no longer pull in API Remotes' Client face, so this change does not split them. Direct `dsh-client-runtime/client` imports in two chat e2e files rely on Runtime's current presence in that graph rather than a general guarantee.
 - **The package intentionally publishes no invariant companion.** A prior revision asserted delivery form on the live event bus, coupling diagnostics to the allowlist and causing Rolldown to emit a third bundle chunk omitted by the mechanically derived publication list. The Host-face `TypertForwardableEventEntry` assertion already rejects those mismatches at compile time, and the package README records why no independent runtime relation remains.

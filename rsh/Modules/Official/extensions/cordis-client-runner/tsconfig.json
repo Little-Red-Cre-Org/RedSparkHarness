@@ -1,0 +1,33 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/loader"
+    },
+    {
+      "path": "../../../../Programs/Web/api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Programs/Web/client/modules"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-renderer"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-slots"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-theme"
+    }
+  ]
+}

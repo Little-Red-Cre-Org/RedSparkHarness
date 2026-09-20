@@ -5,8 +5,8 @@ updates:
     open-pull-requests-limit: 0
     directory: "/"
     exclude-paths:
-      # Vendored Cordis sources follow vendor/README.md instead of registry updates.
-      - "vendor/**"
+      # Vendored Cordis sources follow rsh/Core/vendor/README.md instead of registry updates.
+      - "rsh/Core/vendor/**"
     schedule:
       interval: "cron"
       cronjob: "0 4 * * *"

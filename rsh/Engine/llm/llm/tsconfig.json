@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Core/util/brand"
+    },
+    {
+      "path": "../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../Core/util/crypto"
+    },
+    {
+      "path": "../../../Core/util/values"
+    },
+    {
+      "path": "../../../Core/typert/protocol"
+    }
+  ]
+}

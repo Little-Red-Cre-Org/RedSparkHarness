@@ -6,7 +6,7 @@ English | [中文](2026-06-16-typed-event-schemas.zh.md)
 
 ## Problem
 
-The harness models its core vocabulary — content blocks, message sources, finish reasons, turn triggers, turn-end reasons, and session events — as **merge-extensible maps**: a TypeScript `interface` (e.g. `SessionEventMap`, `ContentBlockMap`) that plugins augment via declaration merging, with the public union derived as `Map[keyof Map]`. This is the repo's universal extension pattern, documented in [docs/architecture.md](../../../../docs/architecture.md) ("The same merge-extensible-map pattern is used for `MessageSource`, `FinishReason`, `TurnTrigger`, and `TurnEndReason`") and relied on by the `defineTool` `InferArgs` DSL and the `assertNever` exhaustiveness convention.
+The harness models its core vocabulary — content blocks, message sources, finish reasons, turn triggers, turn-end reasons, and session events — as **merge-extensible maps**: a TypeScript `interface` (e.g. `SessionEventMap`, `ContentBlockMap`) that plugins augment via declaration merging, with the public union derived as `Map[keyof Map]`. This is the repo's universal extension pattern, documented in [rsh/Docs/architecture.md](../../../../rsh/Docs/architecture.md) ("The same merge-extensible-map pattern is used for `MessageSource`, `FinishReason`, `TurnTrigger`, and `TurnEndReason`") and relied on by the `defineTool` `InferArgs` DSL and the `assertNever` exhaustiveness convention.
 
 The pattern is **compile-time only**. The types vanish at runtime: there is no schema object to validate an incoming value against, parse untrusted input with, or enumerate at runtime. The [session-persistence contract](../../implemented/architecture/2026-06-14-session-persistence.md) exposes two consequences:
 

@@ -1,0 +1,57 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Modules/Official/spill/spill-policy"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../connection/tsconfig.client.json"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../ui-chat"
+    },
+    {
+      "path": "../ui-conversation"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../../../../Engine/core/tools"
+    },
+    {
+      "path": "../../../../Core/util/workspace-path"
+    }
+  ]
+}

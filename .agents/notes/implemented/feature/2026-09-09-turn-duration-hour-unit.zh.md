@@ -6,11 +6,11 @@ Status: implemented
 
 ## 问题
 
-Web 聊天的回合耗时标签分钟数无界增长。[message-chrome.ts](../../../../packages/client/ui-chat/src/client/chat/message-chrome.ts) 里的 `formatRunDuration` 只把毫秒拆成秒和分两级，于是一个跑了 90 分钟的回合在共用一个格式化器的三处都读作 `90分05秒` / `90m 05s`：`Deep diving...` 后的实时计时、收尾的 `Ran for {duration}` 页脚，以及耗时详情弹窗里的总用时。已归档的[回合运行时长决策](../../archived/feature/2026-08-03-web-turn-run-time.md)确定了计时锚点和共用的整秒向下取整；它把格式化器留在两级单位，一旦回合跨过一小时就不再正确。
+Web 聊天的回合耗时标签分钟数无界增长。[message-chrome.ts](../../../../rsh/Programs/Web/client/ui-chat/src/client/chat/message-chrome.ts) 里的 `formatRunDuration` 只把毫秒拆成秒和分两级，于是一个跑了 90 分钟的回合在共用一个格式化器的三处都读作 `90分05秒` / `90m 05s`：`Deep diving...` 后的实时计时、收尾的 `Ran for {duration}` 页脚，以及耗时详情弹窗里的总用时。已归档的[回合运行时长决策](../../archived/feature/2026-08-03-web-turn-run-time.md)确定了计时锚点和共用的整秒向下取整；它把格式化器留在两级单位，一旦回合跨过一小时就不再正确。
 
 ## 决定
 
-`formatRunDuration` 增加小时分支：总时长达到或超过 3600 秒时经 `duration.hours` 渲染，分和秒补零——`1小时05分03秒` / `1h 05m 03s`——不足一小时的时长保持原有的秒、分两级不变。小时只在达到或超过 3600 秒时出现，因此 3599 秒仍读作 `59分59秒`，不会出现 `60分00秒`。出现小时后保留秒而不丢弃，因为实时计时每秒都在走，`1小时05分` 这样的标签会整整一分钟静止不动。负值仍然钳到 0，不足一秒仍然向下取整。[locale.ts](../../../../packages/client/ui-chat/src/client/locale.ts) 的两套字典都新增 `duration.hours`，`RunDurationTranslate` 扩为三个键。
+`formatRunDuration` 增加小时分支：总时长达到或超过 3600 秒时经 `duration.hours` 渲染，分和秒补零——`1小时05分03秒` / `1h 05m 03s`——不足一小时的时长保持原有的秒、分两级不变。小时只在达到或超过 3600 秒时出现，因此 3599 秒仍读作 `59分59秒`，不会出现 `60分00秒`。出现小时后保留秒而不丢弃，因为实时计时每秒都在走，`1小时05分` 这样的标签会整整一分钟静止不动。负值仍然钳到 0，不足一秒仍然向下取整。[locale.ts](../../../../rsh/Programs/Web/client/ui-chat/src/client/locale.ts) 的两套字典都新增 `duration.hours`，`RunDurationTranslate` 扩为三个键。
 
 改动只限于回合计时器。`StatsPills.formatDuration`——会话级聚合胶囊，读作 `45.2s` / `2m42s`——保留自己的两级格式。
 

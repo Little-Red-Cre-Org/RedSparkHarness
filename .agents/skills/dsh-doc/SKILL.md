@@ -27,9 +27,9 @@ The DeepSeek Harness documentation standard: make every page searchable, newcome
 
 Follow this sequence for each requested scope. Keep the common reader path brief, but do not delete failures, ownership, limitations, or other required contracts merely to reduce words.
 
-1. Read root and more-specific `AGENTS.md`, [the documentation standard](../../../docs/AGENTS.md), the target page, its source/tests, navigation owner, and bilingual record.
+1. Read root and more-specific `AGENTS.md`, [the documentation standard](../../../rsh/Docs/AGENTS.md), the target page, its source/tests, navigation owner, and bilingual record.
 2. Classify the page by one primary job and reader: product quick start, user task guide, contributor tutorial, architecture overview, package/subsystem reference, generated reference, agent instruction, decision record, or scratch.
-3. Place the page at its nearest owner. Keep package contracts beside package code; use `docs/` for cross-package learning, user, developer, architecture, discussion, and expiring scratch material.
+3. Place the page at its nearest owner. Keep package contracts beside package code; use `rsh/Docs/` for cross-package learning, user, developer, architecture, discussion, and expiring scratch material.
 4. Define the reader's starting state, observable outcome, likely failure, recovery path, and next useful depth before writing details.
 5. Add or revise YAML metadata — assign the `kind` that maps to the template for this document's job — then write `Summary`, `Table of Contents`, user-facing content, developer-facing content, optional `Further Exploration`, and final `Dev Note` in that order where the document type permits.
 6. Update the bilingual counterpart in the same pass. Keep headings, lists, tables, code, links, frontmatter layout, and physical line count aligned.
@@ -50,7 +50,7 @@ Documentation states how the product behaves today, and the only admissible evid
 
 The `kind` frontmatter field selects exactly one README template. Every kind in [the metadata reference](references/metadata-links-i18n.md#the-kind-system) maps to one template file in [`templates/`](templates/), and every template backs exactly one kind; the documentation check derives the expected kind from the same mechanical facts.
 
-- `package-group` → [templates/package-group.md](templates/package-group.md): group maps (`packages/README.md`, `packages/<group>/README.md`) — orient the family, map its direct packages, link package-owned details.
+- `package-group` → [templates/package-group.md](templates/package-group.md): group maps (`rsh/README.md`, `<group-path>/README.md`) — orient the family, map its direct packages, link package-owned details.
 - `package-reference` → [templates/package-reference.md](templates/package-reference.md): a Cordis plugin or service package — mount configuration, the config table, folded implementation, Model Experience and Known Limitations in the gate-owned forms.
 - `package-library` → [templates/package-library.md](templates/package-library.md): a package with no plugin surface — consumer entry points, no profile-install path, no mount configuration.
 - `package-bundle` → [templates/package-bundle.md](templates/package-bundle.md): a package declaring `dsh.bundle.patch` — the verified `dsh plugin` install path, layer semantics, patch document.
@@ -82,7 +82,7 @@ Do not apply a universal word limit to exhaustive references. Measure entry-path
 
 ## Audit the corpus
 
-Read, do not re-summarize, the owning contracts: [docs/AGENTS.md](../../../docs/AGENTS.md) for hierarchy, tutorial/reference forms, taxonomy, budgets, and the slop checklist; [.agents/notes/README.md](../../notes/README.md) for Agent Note lifecycle; [docs/i18n/README.md](../../../docs/i18n/README.md) for the bilingual pairing rules; and [root AGENTS.md](../../../AGENTS.md) for standing orders. Exclude `.agents/notes/archived/` from audits and edits — archived notes are frozen history.
+Read, do not re-summarize, the owning contracts: [rsh/Docs/AGENTS.md](../../../rsh/Docs/AGENTS.md) for hierarchy, tutorial/reference forms, taxonomy, budgets, and the slop checklist; [.agents/notes/README.md](../../notes/README.md) for Agent Note lifecycle; [rsh/Docs/i18n/README.md](../../../rsh/Docs/i18n/README.md) for the bilingual pairing rules; and [root AGENTS.md](../../../AGENTS.md) for standing orders. Exclude `.agents/notes/archived/` from audits and edits — archived notes are frozen history.
 
 Apply the standard's authoring order to every human-facing document in scope (not to Agent Notes): locate the document and state its own subject; set the permitted detail level and move deeper explanations to owning descendants with links; classify tutorial or reference from intended use, not path; for a tutorial, order concepts by prerequisite and difficulty; split substantial mixed forms. Then check placement constraints: paired docs cost a counterpart update and a `--write` re-record on every edit; generated catalogs are never hand-edited; a move is atomic with every inbound link repaired in the same change.
 
@@ -90,11 +90,11 @@ After the structural pass, hunt the slop checklist with the cheapest probes firs
 
 ## Wordcount budgets
 
-`pnpm run verify-doc-budgets` compares standing documents against ceilings in [scripts/doc-budgets.manifest.json](../../../scripts/doc-budgets.manifest.json); a red gate follows the ordered relocate-condense-raise policy in [docs/AGENTS.md](../../../docs/AGENTS.md#wordcount-budgets). Ceilings are guardrails, not reduction targets: at or below target, retain at least 5% headroom; raise a ceiling only when the words need the space, and justify the manifest diff in the PR.
+`pnpm run verify-doc-budgets` compares standing documents against ceilings in [rsh/Scripts/doc-budgets.manifest.json](../../../rsh/Scripts/doc-budgets.manifest.json); a red gate follows the ordered relocate-condense-raise policy in [rsh/Docs/AGENTS.md](../../../rsh/Docs/AGENTS.md#wordcount-budgets). Ceilings are guardrails, not reduction targets: at or below target, retain at least 5% headroom; raise a ceiling only when the words need the space, and justify the manifest diff in the PR.
 
 ## Website publication
 
-The website is a tested projection, never a second copy: [website/docs.ts](../../../website/docs.ts) is the explicit public allowlist mapping canonical `docs/` sources into route trees, [scripts/project-doc-site.ts](../../../scripts/project-doc-site.ts) rewrites them into the disposable `website/.generated/` tree, and VitePress builds that tree. Repository Markdown stays the only editable content source; translations stay sibling pairs (`foo.md`, `foo.zh.md`, `foo.i18n.yaml`), never locale directories. Edit an already published page in its canonical source only; add one manifest entry for a new page; update source, manifest entry, and inbound links atomically for a move or removal; never edit `website/.generated/`, `website/.cache/`, or `website/.dist/`. Set every `DocsPage` field deliberately and honor the projector's link rules; see [references/website-sync.md](references/website-sync.md) for the fields, sidebar collections, and preview commands. Synchronizing content into the build does not publish it: deployment stays a separate, explicitly requested step.
+The website is a tested projection, never a second copy: [rsh/Docs/website/docs.ts](../../../rsh/Docs/website/docs.ts) is the explicit public allowlist mapping canonical `rsh/Docs/` sources into route trees, [rsh/Scripts/project-doc-site.ts](../../../rsh/Scripts/project-doc-site.ts) rewrites them into the disposable `rsh/Docs/website/.generated/` tree, and VitePress builds that tree. Repository Markdown stays the only editable content source; translations stay sibling pairs (`foo.md`, `foo.zh.md`, `foo.i18n.yaml`), never locale directories. Edit an already published page in its canonical source only; add one manifest entry for a new page; update source, manifest entry, and inbound links atomically for a move or removal; never edit `rsh/Docs/website/.generated/`, `rsh/Docs/website/.cache/`, or `rsh/Docs/website/.dist/`. Set every `DocsPage` field deliberately and honor the projector's link rules; see [references/website-sync.md](references/website-sync.md) for the fields, sidebar collections, and preview commands. Synchronizing content into the build does not publish it: deployment stays a separate, explicitly requested step.
 
 ## Detailed references
 
@@ -108,7 +108,7 @@ Load only the reference needed for the task. Each reference links directly from 
 
 The four README templates in [`templates/`](templates/) are the working skeletons for the four `kind` labels; open the one your document's kind names before writing.
 
-Use [dsh-prose-standard](../dsh-prose-standard/SKILL.md) for sentence-level contract coverage and editorial judgment. The `session-persistence-jsonl` README pair ([English](../../../packages/session/session-persistence-jsonl/README.md), [Chinese](../../../packages/session/session-persistence-jsonl/README.zh.md)) is the reference example: searchable YAML, Summary and Table of Contents, user-to-developer progression with a folded developer section, Further Exploration, canonical Model Experience and Known Limitations sections, and a final Dev Note.
+Use [dsh-prose-standard](../dsh-prose-standard/SKILL.md) for sentence-level contract coverage and editorial judgment. The `session-persistence-jsonl` README pair ([English](../../../rsh/Engine/session/session-persistence-jsonl/README.md), [Chinese](../../../rsh/Engine/session/session-persistence-jsonl/README.zh.md)) is the reference example: searchable YAML, Summary and Table of Contents, user-to-developer progression with a folded developer section, Further Exploration, canonical Model Experience and Known Limitations sections, and a final Dev Note.
 
 ## Validation
 

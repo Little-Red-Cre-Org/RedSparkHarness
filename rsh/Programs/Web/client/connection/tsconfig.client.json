@@ -1,0 +1,58 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
+  },
+  "files": [
+    "src/api-path.ts",
+    "src/client/api.ts",
+    "src/client/connection.ts",
+    "src/client/fixture.ts",
+    "src/client/index.ts",
+    "src/client/random-uuid.ts",
+    "src/client/rpc.ts",
+    "src/loopback-hostname.ts",
+    "src/recovery-config.ts",
+    "src/rpc.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Modules/Official/todo/tool-todo"
+    },
+    {
+      "path": "../../../../Engine/core/tools"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/credentials"
+    },
+    {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../host/directory-picker"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Core/util/brand"
+    }
+  ]
+}

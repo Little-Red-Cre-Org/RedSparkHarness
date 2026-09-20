@@ -60,7 +60,7 @@ Status: implemented
 
 - 默认行为改变：空闲所有者现在每次完成会花掉一次模型请求，按所有者、在两次用户消息之间由 `maxConsecutiveWakes` 封顶。想要旧行为的部署设置 `completionDelivery: quiet`。
 - `tool-jobs` 的提示词段落无需改动；「任务完成时你会在会话内收到通知」从愿景变成了事实。
-- `JobSnapshot.reported` 新增 teardown 作为第四个置位方，记录在 Service Definition 与[子系统参考](../../../../docs/subsystems/jobs.zh.md)中。
+- `JobSnapshot.reported` 新增 teardown 作为第四个置位方，记录在 Service Definition 与[子系统参考](../../../../rsh/Docs/subsystems/jobs.zh.md)中。
 - `settle()` 在提交记录并发布可见集变更之后才宣布完成。任何依赖「在释放等待方之前或在 `onJobsChanged` 之前运行」的监听器现在都排在两者之后。
 - `tool-bash` 的 real-composition 测试去掉了第二条用户消息：仅靠结算就能把通知带入一个收集输出的轮次。它断言持久结果而非轮次边界，因为命令是否活得比它的轮次久是一场竞态；通道选择改由 `tool-jobs` 单元测试钉住。
 - 单元覆盖钉住：空闲唤醒、繁忙注入、quiet 交付、预算耗尽、用户输入恢复预算、插件通知不恢复预算，以及 teardown 静默。

@@ -49,8 +49,8 @@ The controller is launcher infrastructure rather than a Cordis plugin: it makes 
 
 ## Testing
 
-`apps/cli/tests/process-shutdown.spec.ts` pins natural completion after resolved disposal, forced exit after rejected disposal, the five-second backstop, normal-call coalescing, signal-owned disposal, a signal interrupting normal disposal or post-disposal handle draining, and second-signal escalation.
+`rsh/Programs/CLI/tests/process-shutdown.spec.ts` pins natural completion after resolved disposal, forced exit after rejected disposal, the five-second backstop, normal-call coalescing, signal-owned disposal, a signal interrupting normal disposal or post-disposal handle draining, and second-signal escalation.
 
-`apps/cli/tests/headless-shutdown.e2e.ts` boots the real shipped Web/headless Loader tree in a PTY with a test-only plugin whose disposer announces entry and never settles. The test sends SIGINT after the observation URL, waits for proof that disposal started, sends SIGINT again, and requires exit 130. The source/artifact launch resolver keeps the same regression on both execution planes. This PTY case covers the user-visible process state; no model-output snapshot changes.
+`rsh/Programs/CLI/tests/headless-shutdown.e2e.ts` boots the real shipped Web/headless Loader tree in a PTY with a test-only plugin whose disposer announces entry and never settles. The test sends SIGINT after the observation URL, waits for proof that disposal started, sends SIGINT again, and requires exit 130. The source/artifact launch resolver keeps the same regression on both execution planes. This PTY case covers the user-visible process state; no model-output snapshot changes.
 
-`packages/session/session-telemetry-otel/tests/otel.spec.ts` holds a real OTLP request open after timer export begins and pins that Cordis disposal returns at `shutdownTimeoutMillis`, despite the SDK's `forceFlush()` remaining pending. The collector is then released so the still-observed provider Promise settles cleanly.
+`rsh/Engine/session/session-telemetry-otel/tests/otel.spec.ts` holds a real OTLP request open after timer export begins and pins that Cordis disposal returns at `shutdownTimeoutMillis`, despite the SDK's `forceFlush()` remaining pending. The collector is then released so the still-observed provider Promise settles cleanly.

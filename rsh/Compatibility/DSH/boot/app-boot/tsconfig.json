@@ -1,0 +1,42 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/loader"
+    },
+    {
+      "path": "../../../../Core/vendor/include"
+    },
+    {
+      "path": "../../../../Core/vendor/group"
+    },
+    {
+      "path": "../../../../Core/vendor/hmr"
+    },
+    {
+      "path": "../../../../Engine/core/system-prompt"
+    },
+    {
+      "path": "../../../../Core/util/atomic-write"
+    },
+    {
+      "path": "../../../../Core/util/launch-environment"
+    },
+    {
+      "path": "../../../../Core/util/home-paths"
+    },
+    {
+      "path": "../../../../Core/util/package-manifest"
+    }
+  ]
+}

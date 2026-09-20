@@ -30,7 +30,7 @@ Headless stderr 重建会同时展开 `assistant/message` 与仅写入日志的 
 
 Workspace 输入继续归各场景本地所有。变更文件的场景比较完整的预期最终 workspace，record 与 refresh 绝不改写该预期，因此模型或工具的自报结果无法满足测试。现有的有意会话复用继续使用显式、无环的所有者引用；语料不增加 workspace 继承或通用 fixture 合并机制。
 
-当前 writer 的 request-header pin 与保留的迁移输入分离：`tool-call-turn` 固定 default 组合，`empty-response-retry-current` 固定 retry 组合。可读 sidecar 仍由 `text-turn` 持有。六份保留的历史输入保持字节冻结，并继续被选为回放输入；其固定历史版本的目录不含会取代它们的更新的规范同角色文件。单独的 `writer.expected.jsonl` 与 `writer.<ordinal>.expected.jsonl` 文件固定精确的规范化原生当前格式的父子会话输出，保留历史输入的 SDK 场景则通过 `notifications.current.expected.jsonl` 固定当前通知。这些输出比较基准不是 replay 代际。[快照工具包](../../../../packages/test-support/session-snapshot/README.zh.md)负责选择与刷新行为。结构迁移可以保留请求含义而不复现原生 writer 的事件布局，因此正式迁移拥有独立的正确性测试。反向投影为历史 header、剥除结构差异、跳过输出相等断言或替换冻结输入都会掩盖回归，而不是验证这些相互独立的约定。
+当前 writer 的 request-header pin 与保留的迁移输入分离：`tool-call-turn` 固定 default 组合，`empty-response-retry-current` 固定 retry 组合。可读 sidecar 仍由 `text-turn` 持有。六份保留的历史输入保持字节冻结，并继续被选为回放输入；其固定历史版本的目录不含会取代它们的更新的规范同角色文件。单独的 `writer.expected.jsonl` 与 `writer.<ordinal>.expected.jsonl` 文件固定精确的规范化原生当前格式的父子会话输出，保留历史输入的 SDK 场景则通过 `notifications.current.expected.jsonl` 固定当前通知。这些输出比较基准不是 replay 代际。[快照工具包](../../../../rsh/Tests/test-support/session-snapshot/README.zh.md)负责选择与刷新行为。结构迁移可以保留请求含义而不复现原生 writer 的事件布局，因此正式迁移拥有独立的正确性测试。反向投影为历史 header、剥除结构差异、跳过输出相等断言或替换冻结输入都会掩盖回归，而不是验证这些相互独立的约定。
 
 ## Alternatives considered
 

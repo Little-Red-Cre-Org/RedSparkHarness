@@ -15,4 +15,4 @@
 
 - insert:
     - id: child-mock-llm
-      name: '../../../packages/subagent/subagent-dsh-sdk/tests/fixtures/loader/child-mock-llm.ts'
+      name: '../../../rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/child-mock-llm.ts'

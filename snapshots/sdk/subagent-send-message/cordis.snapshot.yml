@@ -53,4 +53,4 @@
 
 - insert:
     - id: send-message-fence
-      name: '../../../packages/test-support/session-snapshot/tests/fixtures/subagent-send-message-fence.ts'
+      name: '../../../rsh/Tests/test-support/session-snapshot/tests/fixtures/subagent-send-message-fence.ts'

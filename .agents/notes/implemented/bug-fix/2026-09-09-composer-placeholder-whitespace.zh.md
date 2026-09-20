@@ -18,4 +18,4 @@ Status: implemented
 
 ## Consequences
 
-所有占位提示，包括排队消息的插话提示，都会在输入空白字符后隐藏，删除后恢复。没有附件的纯空白草稿仍无法发送。[组件测试](../../../../packages/client/ui-conversation/tests/input-bar.client.spec.tsx) 覆盖显示、输入法组合、重新渲染和提交；[浏览器回归](../../../../apps/web/tests/composer-placeholder.e2e.ts) 使用构建后的界面检查键盘和剪贴板操作。
+所有占位提示，包括排队消息的插话提示，都会在输入空白字符后隐藏，删除后恢复。没有附件的纯空白草稿仍无法发送。[组件测试](../../../../rsh/Programs/Web/client/ui-conversation/tests/input-bar.client.spec.tsx) 覆盖显示、输入法组合、重新渲染和提交；[浏览器回归](../../../../rsh/Programs/Web/application/tests/composer-placeholder.e2e.ts) 使用构建后的界面检查键盘和剪贴板操作。

@@ -1,0 +1,32 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../../../../Engine/core/agent-default-model"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets"
+    }
+  ]
+}

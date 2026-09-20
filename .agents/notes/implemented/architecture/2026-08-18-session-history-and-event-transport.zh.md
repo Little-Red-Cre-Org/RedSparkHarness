@@ -137,7 +137,7 @@ repair 期间旧 window 保持可读；page 与期间积累的 live entries 拼�
 
 ### Session Controller
 
-`packages/api/session-controller` 提供 Host `ctx.sessionController` 与生成的 `ctx.remote.session` namespace。
+`rsh/Programs/Web/api/session-controller` 提供 Host `ctx.sessionController` 与生成的 `ctx.remote.session` namespace。
 
 它拥有 Session list、search、create、selectModel、rename、fork、prompt、attachment、updateQueue、cancel、page、follow 与 control。Host generation 的 model catalog 通过独立的 `session/modelCatalog` 公开，因为它不属于特定 Session。
 
@@ -218,7 +218,7 @@ Session 列表的 `updatedAt` 取 `max(header.createdAt, sessionListMetadata.las
 
 ### Workspace Controller
 
-`packages/api/workspace-controller` 提供 Host `ctx.workspaceController` 与生成的 `ctx.remote.workspace` namespace。
+`rsh/Programs/Web/api/workspace-controller` 提供 Host `ctx.workspaceController` 与生成的 `ctx.remote.workspace` namespace。
 
 它拥有 create、rename、delete、insertBefore、insertSessionBefore、archiveSession 与 `follow`。Workspace registry 仍是持久事实来源，Controller 负责 Remote 命令、投影和错误映射。
 
@@ -246,7 +246,7 @@ Workspace Remote 方法、状态 feed 和 Client 数据模型均不经过 API Pr
 
 Remote Event 复用 owner 包的 Cordis `Events` 声明。Host 原事件是唯一业务签名，Client `ctx.remote.$on(event, listener)` 从同一声明推导参数、waterfall 结果与 `next()`。
 
-`packages/api/remotes` 的 allowlist 是应用选择的唯一来源。每项显式标注 `emit` 或 `waterfall`，该 mode 同时决定 Host 监听方式、Client 合法键集和 wire frame 类型。
+`rsh/Programs/Web/api/remotes` 的 allowlist 是应用选择的唯一来源。每项显式标注 `emit` 或 `waterfall`，该 mode 同时决定 Host 监听方式、Client 合法键集和 wire frame 类型。
 
 系统不声明 `RemoteInvocationMap`，不要求 Client 再写一份 `@Remote`，也不以最后一个运行时参数是否为函数来猜测调用模式。
 

@@ -10,13 +10,13 @@ JSONL 写入方依赖的 `fs-ext` 在用户安装时编译 NAN addon。因此，
 
 ## Decision
 
-[native/system](../../../../native/system/README.zh.md) 中独立版本的 `@deepseek-ai/node-addon-system` 包族分发既有 `landlock-run` 可执行文件和使用稳定 Node-API v8 的 `system.node` addon。平台包按操作系统和 CPU 选择；Linux 分别携带 glibc 与 musl addon 文件。macOS 携带 addon，但不包含 Landlock 可执行文件。入口包和平台包都不在安装期间编译。
+[rsh/Core/native/system](../../../../rsh/Core/native/system/README.zh.md) 中独立版本的 `@deepseek-ai/node-addon-system` 包族分发既有 `landlock-run` 可执行文件和使用稳定 Node-API v8 的 `system.node` addon。平台包按操作系统和 CPU 选择；Linux 分别携带 glibc 与 musl addon 文件。macOS 携带 addon，但不包含 Landlock 可执行文件。入口包和平台包都不在安装期间编译。
 
-包不提供根导出。`./landlock-run` JavaScript 入口保留 Landlock API 和 [CLI 协议](../../../../native/system/docs/cli-contract.md)。`./flock` 入口仅在调用 `tryLockExclusive(fd)` 时加载 addon。它在异步原生工作中执行 `flock(fd, LOCK_EX | LOCK_NB)`，并在该工作线程保存 errno。调用方在完成前持有描述符，并通过关闭它释放锁。绑定缺失时拒绝获取锁，不授予没有保护的锁。
+包不提供根导出。`./landlock-run` JavaScript 入口保留 Landlock API 和 [CLI 协议](../../../../rsh/Core/native/system/docs/cli-contract.md)。`./flock` 入口仅在调用 `tryLockExclusive(fd)` 时加载 addon。它在异步原生工作中执行 `flock(fd, LOCK_EX | LOCK_NB)`，并在该工作线程保存 errno。调用方在完成前持有描述符，并通过关闭它释放锁。绑定缺失时拒绝获取锁，不授予没有保护的锁。
 
 [Session 写租约决策](../feature/2026-08-31-cross-process-session-write-lease.zh.md) 继续负责获取时机、inode 校验、关闭所有权和崩溃语义。Windows 保留既有 koffi 信号量。浏览器 worker 仅替换 flock 子路径，使用未经修改的 `./landlock-run` JavaScript API。
 
-源码构建在需要 addon 的仓库测试与构建之前显式编译当前宿主 addon。Native CI 构建完整平台产物，并让相同 addon 字节跨 Node 版本测试；Linux 还在 Alpine 中执行 musl 产物。平台 prepack 拒绝格式错误或不完整的二进制，离线 npm 安装演练检查安装字节与真实锁行为。Native [测试](../../../../native/system/test/flock.test.js) 覆盖描述符与进程竞争、关闭和崩溃释放、独立 errno 值及 worker 清理。
+源码构建在需要 addon 的仓库测试与构建之前显式编译当前宿主 addon。Native CI 构建完整平台产物，并让相同 addon 字节跨 Node 版本测试；Linux 还在 Alpine 中执行 musl 产物。平台 prepack 拒绝格式错误或不完整的二进制，离线 npm 安装演练检查安装字节与真实锁行为。Native [测试](../../../../rsh/Core/native/system/test/flock.test.js) 覆盖描述符与进程竞争、关闭和崩溃释放、独立 errno 值及 worker 清理。
 
 ## Alternatives considered
 

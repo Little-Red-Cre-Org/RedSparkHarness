@@ -1,0 +1,40 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../../Modules/Official/interaction/commands"
+    },
+    {
+      "path": "../compaction"
+    },
+    {
+      "path": "../compaction-tool-result-pruner"
+    }
+  ]
+}

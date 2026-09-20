@@ -20,9 +20,9 @@ Session logs must be upgradable after release, and the runtime that ships first 
 
 ### Writer and publication authority
 
-`SESSION_FORMAT_VERSION` owns the checkout writer number; the [release-status reference](../../../../docs/session-format-status.md) owns one bilingual `latestReleasedVersion` and `evidenceTag` record. Publication changes independently of source development, so status is derived by comparing those facts rather than maintaining a second `released` boolean. General documentation links to these authorities; fixed-version contracts and historical evidence keep their explicit numbers.
+`SESSION_FORMAT_VERSION` owns the checkout writer number; the [release-status reference](../../../../rsh/Docs/session-format-status.md) owns one bilingual `latestReleasedVersion` and `evidenceTag` record. Publication changes independently of source development, so status is derived by comparing those facts rather than maintaining a second `released` boolean. General documentation links to these authorities; fixed-version contracts and historical evidence keep their explicit numbers.
 
-The [documentation-standard check](../../../../scripts/doc-standard.spec.ts) validates record structure, bilingual equality, evidence-link consistency, and the local release/writer ordering without network access. It proves internal consistency, not publication or freshness. The release operator verifies publication and updates the record after a higher format ships, as required by the [release process](../process/2026-08-10-npm-release-sequences.md). This keeps compatibility review independent of credentials and GitHub availability while making the manual freshness obligation explicit.
+The [documentation-standard check](../../../../rsh/Scripts/doc-standard.spec.ts) validates record structure, bilingual equality, evidence-link consistency, and the local release/writer ordering without network access. It proves internal consistency, not publication or freshness. The release operator verifies publication and updates the record after a higher format ships, as required by the [release process](../process/2026-08-10-npm-release-sequences.md). This keeps compatibility review independent of credentials and GitHub availability while making the manual freshness obligation explicit.
 
 ## Consequences
 

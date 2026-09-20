@@ -10,7 +10,7 @@ English | [中文](2026-06-17-ts-build-config.zh.md)
 
 The current TypeScript build and typecheck setup had these issues:
 
-- `build` used `tsc` to transform `.ts` to `.d.ts` files for packages under `packages/<group>/<pkg>` and `vendor/*`, and then used `tsdown` to transform `.ts` to bundled `.js` files. This made two tools do TypeScript transform.
+- `build` used `tsc` to transform `.ts` to `.d.ts` files for packages under `packages/<group>/<pkg>` and `rsh/Core/vendor/*`, and then used `tsdown` to transform `.ts` to bundled `.js` files. This made two tools do TypeScript transform.
 - `typecheck` tended to validate packages, vendor source, examples, tests, and scripts through one root typecheck config.
 
 Build and typecheck use matching tsconfig boundaries and TypeScript resolution/transform behavior. Build generates `.js`, `.d.ts`, `.js.map`, and `.d.ts.map` through one compiler and config, so publish output and type validation stay consistent.
@@ -21,9 +21,9 @@ Concrete constraints:
     - Bundled `.d.ts` emitted by `tsdown` conflicts with Cordis' internal relative module augmentation shape.
     - The tsc output is affected by `allowImportingTsExtensions`: generated `.js` files must not import `.ts` files, and generated `.d.ts` files must keep explicit relative specifiers that NodeNext/Node16 accepts. Therefore, in-package relative imports use explicit `.ts` specifiers in TypeScript source and `rewriteRelativeImportExtensions` rewrites those specifiers to `.js` in emitted JS.
     - Bundled `.js` emitted by `tsdown` is not the same behavior as per-file `.js` emitted by `tsc -b`, such as decorator transform behavior.
-- `vendor/*/src`, examples, tests, and scripts cannot all be plain-included in one root strict program.
-    - Directly typechecking `vendor/*/src` under the root strict config triggers many type errors outside this project's ownership.
-    - Package dependencies under `packages/*/*` on `vendor` are resolved to the `vendor/*/lib` for different tsconfig strictness.
+- `rsh/Core/vendor/*/src`, examples, tests, and scripts cannot all be plain-included in one root strict program.
+    - Directly typechecking `rsh/Core/vendor/*/src` under the root strict config triggers many type errors outside this project's ownership.
+    - Package dependencies under `rsh/*/*` on `vendor` are resolved to the `rsh/Core/vendor/*/lib` for different tsconfig strictness.
 
 
 ## Decision
@@ -40,7 +40,7 @@ In-package relative imports use explicit `.ts` specifiers.
 
 `pnpm run typecheck` first runs the Host lib phase to generate the Remote declarations required by Client typechecking, then runs `tsc -b` against `tsconfig.client.json`. The two aggregates themselves check their respective examples, tests, and scripts with `noEmit`; referenced package/vendor projects retain the same emit behavior as the build.
 
-Composite projects keep their incremental build information inside their project-local `lib/` output. `pnpm run clean` derives live output directories from the root TypeScript project-reference graph, removes legacy root build information, and removes deleted `packages/*/*` directories that contain only known generated residue. Before removing an existing target, it resolves the target's parent and refuses it if that resolved parent is outside the repository, so a symlinked project reference cannot redirect cleanup outside the checkout. It preserves `node_modules` for every package that still has a `package.json`, and refuses to remove a manifest-less directory containing unknown files. Build does not invoke clean automatically, so ordinary builds retain incremental state.
+Composite projects keep their incremental build information inside their project-local `lib/` output. `pnpm run clean` derives live output directories from the root TypeScript project-reference graph, removes legacy root build information, and removes deleted `rsh/*/*` directories that contain only known generated residue. Before removing an existing target, it resolves the target's parent and refuses it if that resolved parent is outside the repository, so a symlinked project reference cannot redirect cleanup outside the checkout. It preserves `node_modules` for every package that still has a `package.json`, and refuses to remove a manifest-less directory containing unknown files. Build does not invoke clean automatically, so ordinary builds retain incremental state.
 
 The command orchestration shape is:
 
@@ -53,14 +53,14 @@ tsdown --env.DSH_BUILD_FACE client
 pnpm run build:web
 
 pnpm run verify-node-next-types:
-tsx scripts/verify-node-next-types.ts
+tsx rsh/Scripts/verify-node-next-types.ts
 
 pnpm run typecheck:
 pnpm run build:lib:host
 tsc -b tsconfig.client.json
 
 pnpm run clean:
-tsx scripts/clean.ts
+tsx rsh/Scripts/clean.ts
 ```
 
 The source-mode demos run through their declared TypeScript launchers and the root paths map. The `dsh` TUI chain uses Node's native transform plus its app-owned paths loader, the Web demo builds its required artifacts before entering that same CLI source chain, and the other source demos continue to use tsx.
@@ -76,7 +76,7 @@ The source-mode demos run through their declared TypeScript launchers and the ro
 
 Build responsibilities are clearer:
 
-- Each ordinary module under `packages/<group>/<pkg>` and `vendor/*` has one local tsconfig for build, typecheck, and tools that run source directly, such as the `dsh` source loader, `tsx`, and `vitest`. `api/remotes` is the sole exception: generated-contract ordering requires one solution and two mutually exclusive emitting projects.
+- Each ordinary module under `packages/<group>/<pkg>` and `rsh/Core/vendor/*` has one local tsconfig for build, typecheck, and tools that run source directly, such as the `dsh` source loader, `tsx`, and `vitest`. `api/remotes` is the sole exception: generated-contract ordering requires one solution and two mutually exclusive emitting projects.
 - The `build` command runs the Host and Client Project Reference graphs in order. In each phase, `tsc -b` owns the publishable per-module `.js` and `.d.ts` output, while the bundler owns only the published runtime bundles.
     - `lib/types/*.d.ts` is the publish declaration output; `.d.ts.map` remains only as a local compilation artifact.
     - `lib/types/*.d.ts` uses explicit `.ts` relative specifiers, which TypeScript's NodeNext/Node16 resolver maps to sibling `.d.ts` files.

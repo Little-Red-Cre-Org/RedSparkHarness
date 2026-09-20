@@ -5,7 +5,7 @@
 - id: spill-local
   name: '@deepseek-ai/dsh-spill-local'
   config:
-    root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT ?? './.spill'
+    root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT ?? '.spill'
 
 - id: spill-policy
   name: '@deepseek-ai/dsh-spill-policy'
@@ -14,7 +14,7 @@
 
 - insert:
     - id: snapshot-spill-locators
-      name: ../../../scripts/snapshot-spill-locators.ts
+      name: ../../../rsh/Scripts/snapshot-spill-locators.ts
       config:
         root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT
         locatorRoot: !!js process.env.DSH_SNAPSHOT_SPILL_LOCATOR_ROOT

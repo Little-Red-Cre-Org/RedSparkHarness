@@ -1,0 +1,21 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/schemastery" },
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Modules/Official/settings/settings" },
+    { "path": "../../../../Engine/compaction/compaction" },
+    { "path": "../../../../Engine/llm/llm-retry" },
+    { "path": "../../api/session-controller/tsconfig.client.json" },
+    { "path": "../locale" },
+    { "path": "../store" },
+    { "path": "../ui-conversation" },
+    { "path": "../ui-primitives" },
+    { "path": "../ui-renderer" },
+    { "path": "../ui-session" },
+    { "path": "../ui-settings" },
+    { "path": "../ui-slots" }
+  ]
+}

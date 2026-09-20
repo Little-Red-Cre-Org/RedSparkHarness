@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../scope"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../system-prompt"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../Core/typert/protocol"
+    }
+  ]
+}

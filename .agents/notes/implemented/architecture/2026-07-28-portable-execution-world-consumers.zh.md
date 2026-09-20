@@ -28,7 +28,7 @@ Status: implemented
 
 ## E2B POC 边界
 
-可选启用的 E2B 实现在 `packages/e2b/` 下恰好只有三个提供方专用包：`dsh-e2b` 创建一个沙箱，并在超时或资源释放时将其删除；`dsh-fs-e2b` 实现 `ctx.fs`；`dsh-subprocess-e2b` 基于 E2B Commands、PTY 和远程 Linux 进程组实现 `ctx.subprocess`。两个适配器都从所有者取得唯一的 SDK 句柄，绝不创建私有沙箱。
+可选启用的 E2B 实现在 `rsh/Modules/Official/e2b/` 下恰好只有三个提供方专用包：`dsh-e2b` 创建一个沙箱，并在超时或资源释放时将其删除；`dsh-fs-e2b` 实现 `ctx.fs`；`dsh-subprocess-e2b` 基于 E2B Commands、PTY 和远程 Linux 进程组实现 `ctx.subprocess`。两个适配器都从所有者取得唯一的 SDK 句柄，绝不创建私有沙箱。
 
 E2B 负责可变文件系统、受管命令与 Bash 进程、终端分配与终端会话组、语言服务器进程与源文件读取，以及 `.dsh-e2b` 下的适配器私有文件。宿主负责 Cordis 与插件对象、agent loop（智能体循环）、agent 状态、会话状态与目标状态、会话日志与持久化、LLM（大语言模型）调用、提示词与工具、权限、skill（技能）、subagent 编排、PTY 缓冲区与就绪状态、LSP 协议状态，以及 E2B SDK／网络缓冲区。该叠加层既不上传，也不同步宿主工作区。
 

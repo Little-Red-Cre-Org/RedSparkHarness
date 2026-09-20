@@ -10,7 +10,7 @@ The per-file 100% coverage gate ([the quality-gates decision](../../implemented/
 
 ## Proposal
 
-Stryker (`@stryker-mutator/vitest-runner`) over `packages/*/src`:
+Stryker (`@stryker-mutator/vitest-runner`) over `rsh/*/src`:
 
 - **PR-scoped incremental runs** (changed files only) as a CI job — fast enough to gate merges once tuned.
 - **Nightly full runs** with a tracked mutation score; start by recording, then set the threshold at the observed baseline and ratchet upward (same policy as coverage: thresholds only ever tighten).
@@ -25,7 +25,7 @@ Stryker (`@stryker-mutator/vitest-runner`) over `packages/*/src`:
 
 ## Acceptance criteria
 
-- A Stryker config runs over `packages/*/src` with the vitest runner; a nightly job records the mutation score, and a ratcheting threshold fails the run when the score drops below the recorded baseline.
+- A Stryker config runs over `rsh/*/src` with the vitest runner; a nightly job records the mutation score, and a ratcheting threshold fails the run when the score drops below the recorded baseline.
 - PR-scoped incremental runs gate merges once runtime is acceptable — or are explicitly kept nightly-only, with that outcome recorded here.
 - Equivalent mutants carry annotated exclusions with reasons, mirroring the `/* v8 ignore */` policy.
 

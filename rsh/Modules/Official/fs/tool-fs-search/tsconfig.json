@@ -1,0 +1,43 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Core/util/output-retention"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/core/tools"
+    },
+    {
+      "path": "../../../../Engine/core/system-prompt"
+    },
+    {
+      "path": "../../shell/shell"
+    },
+    {
+      "path": "../../spill/spill"
+    },
+    {
+      "path": "../../../../Core/util/timeout"
+    }
+  ]
+}

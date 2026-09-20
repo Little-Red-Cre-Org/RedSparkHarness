@@ -22,7 +22,7 @@ Neither half of the fix was available to an author. No checklist told them to lo
 
 **The component catalog in the `ui-primitives` README is what makes the rule usable.** It lists every exported component with its purpose and the case it is wrong for, and it names the three pairs that are easy to confuse: `Tag` against `Pill`, `DisclosureRow` against card-shaped disclosure, and the package-internal `FoldToggle` against the exported surface. `Pill` is the selectable capsule button — it takes `active` and `onClick` and drives view switchers and filters; `Tag` is the read-only badge and takes neither. `Pill`'s own header comment previously advertised itself for badges, which contradicted the catalog, and no longer does.
 
-The rule is stated in [packages/client/AGENTS.md](../../../../packages/client/AGENTS.md) as the first step of the new-component checklist, and [docs/web-styling.md](../../../../docs/web-styling.md) points at the catalog so an author arriving from the styling side reaches it too.
+The rule is stated in [rsh/Programs/Web/client/AGENTS.md](../../../../rsh/Programs/Web/client/AGENTS.md) as the first step of the new-component checklist, and [rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.md) points at the catalog so an author arriving from the styling side reaches it too.
 
 ## Finding the duplicates
 
@@ -54,11 +54,11 @@ A mechanical search groups these controls with the promoted three. They stay in 
 
 **Rendering no dot for `pending` and `unloading` instead of adding `idle`.** Rejected. Those rows show a grey dot today, and dropping it would remove information from the inventory in a change whose purpose is to consolidate presentation.
 
-**Putting the reuse rule in the root `AGENTS.md`.** Rejected. The rule governs `packages/client` alone, and the root file sits exactly at its 1950-word ceiling in `scripts/doc-budgets.manifest.json`, so stating it there would have to displace an unrelated repository-wide rule.
+**Putting the reuse rule in the root `AGENTS.md`.** Rejected. The rule governs `rsh/Programs/Web/client` alone, and the root file sits exactly at its 1950-word ceiling in `rsh/Scripts/doc-budgets.manifest.json`, so stating it there would have to displace an unrelated repository-wide rule.
 
 ## Testing
 
-`Tag`, `Switch`, and the extended `StateDot` carry component specs in `packages/client/ui-primitives/tests`, inside the per-file 100% coverage gate. `StateDot`'s palette is pinned by reading its stylesheet: CSS Modules resolve to class-name maps in the component suites, so a state whose color rule is missing renders on the inherited color and no render assertion notices.
+`Tag`, `Switch`, and the extended `StateDot` carry component specs in `rsh/Programs/Web/client/ui-primitives/tests`, inside the per-file 100% coverage gate. `StateDot`'s palette is pinned by reading its stylesheet: CSS Modules resolve to class-name maps in the component suites, so a state whose color rule is missing renders on the inherited color and no render assertion notices.
 
 The migrated render sites keep their existing package specs unchanged. The web e2e goldens are ARIA snapshots, and the full replayed web suite passes without re-recording, because the migration preserves every role, accessible name, and state — `Switch` keeps `role="switch"` with `aria-checked`, and the inventory's phase dot keeps its `role="img"` name on a wrapper, since `StateDot` is `aria-hidden`.
 
@@ -69,6 +69,6 @@ That is also the limit of the automated evidence. No gate in this repository com
 - A new client control now has one place to check and one place to add, and the catalog makes the check a single file read rather than a `grep` over forty exports.
 - `TagTone` is eight members wide because eight appearances shipped. Adding a ninth requires a render site that needs it, not a symmetry argument.
 - The plugin inventory's tags change from a 5px rectangle to a capsule, and the disabled tag's fill moves from `--dsw-alias-bg-layer-1` to the `neutral` tone's `--dsw-alias-bg-module-platform`, which is a visible grey where it used to be near-transparent. Its phase dots gain a halo and animate through `loading` and `unloading`. The unconfigured-secret badge in the plugin settings fields moves from 400 to the baseline 500 weight. These are deliberate visual changes, recorded here so a later reader does not treat them as regressions.
-- The migration removes a literal `#b45309`. The plugin inventory's `conditional` tag read `var(--dsw-alias-state-warning-primary, #b45309)`, and no such alias exists — the real token is `--dsw-alias-state-warn-primary` — so both themes had been painting the hardcoded fallback that [docs/web-styling.md](../../../../docs/web-styling.md) forbids.
+- The migration removes a literal `#b45309`. The plugin inventory's `conditional` tag read `var(--dsw-alias-state-warning-primary, #b45309)`, and no such alias exists — the real token is `--dsw-alias-state-warn-primary` — so both themes had been painting the hardcoded fallback that [rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.md) forbids.
 - The rule cannot be checked mechanically. A future author can still copy a control, and only review will catch it. That is the accepted cost of not gating: the alternative rejects legitimate work, and the packages that stay local above are proof that legitimate work exists.
 - `ui-primitives` grows two components that one package each consumes today. The switch in particular is a single-consumer primitive, promoted because it is a general control and because the plugin-management work already in flight will adopt it rather than adding two further copies.

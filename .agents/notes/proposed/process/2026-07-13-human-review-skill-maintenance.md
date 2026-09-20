@@ -52,7 +52,7 @@ The promote helper starts from a clean checkout at refreshed `origin/master` and
 
 ### Where the mechanism lives
 
-The tool source, adapter binaries, provider credentials, and intended daily scheduler are kept private to the maintainer's machine rather than committed to this repository. This document specifies the protocol; the reference implementation is private infrastructure. The mechanism serves a single skill maintained by a single operator, so the ongoing cost of vetting mechanism edits through repository review outweighs the benefit of committing the tool and its history. If the mechanism is ever handed off to a second maintainer, that handoff is a follow-up Agent Note that revises this decision — the operator doc at [docs/cookbook/maintaining-dsh-code-review.md](../../../../docs/cookbook/maintaining-dsh-code-review.md) is the entry point for anyone taking over.
+The tool source, adapter binaries, provider credentials, and intended daily scheduler are kept private to the maintainer's machine rather than committed to this repository. This document specifies the protocol; the reference implementation is private infrastructure. The mechanism serves a single skill maintained by a single operator, so the ongoing cost of vetting mechanism edits through repository review outweighs the benefit of committing the tool and its history. If the mechanism is ever handed off to a second maintainer, that handoff is a follow-up Agent Note that revises this decision — the operator doc at [rsh/Docs/cookbook/maintaining-dsh-code-review.md](../../../../rsh/Docs/cookbook/maintaining-dsh-code-review.md) is the entry point for anyone taking over.
 
 ## Alternatives considered
 

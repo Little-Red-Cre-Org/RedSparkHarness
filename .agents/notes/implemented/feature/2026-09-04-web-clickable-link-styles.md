@@ -29,6 +29,6 @@ Coverage: a LinkIcon unit spec (one distinct glyph per kind, classification tabl
 
 ## Consequences
 
-- A new clickable artifact surface should consume `--dsw-alias-link` and the LinkIcon vocabulary rather than introduce another color or underline form; the rule lives in [docs/web-styling.md](../../../../docs/web-styling.md).
+- A new clickable artifact surface should consume `--dsw-alias-link` and the LinkIcon vocabulary rather than introduce another color or underline form; the rule lives in [rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.md).
 - Long produced-file names take their natural width; when a row overflows, flex shrinks all chips proportionally, so several long names shrink together instead of the last one yielding first.
 - mailto links currently share the `url` globe; a distinct mail category is a one-line addition if ever wanted.

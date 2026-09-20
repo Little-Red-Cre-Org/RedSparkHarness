@@ -23,7 +23,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: native/system
+    working-directory: rsh/Core/native/system
 
 jobs:
   matrix:
@@ -83,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: native/system/${{ matrix.dir }}/bin/**
+          path: rsh/Core/native/system/${{ matrix.dir }}/bin/**
           if-no-files-found: error
           retention-days: 7
 
@@ -119,7 +119,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: prebuild-*
-          path: native/system/.release/prebuild-artifacts
+          path: rsh/Core/native/system/.release/prebuild-artifacts
 
       - name: Assemble and verify prebuilds
         run: node ./scripts/assemble-prebuilds.mjs .release/prebuild-artifacts
@@ -141,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-tarballs
-          path: native/system/dist/npm/*
+          path: rsh/Core/native/system/dist/npm/*
           if-no-files-found: error
           retention-days: 7
 
@@ -170,7 +170,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: npm-tarballs
-          path: native/system/dist/npm
+          path: rsh/Core/native/system/dist/npm
 
       - name: Configure npm token fallback
         env:

@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-`packages/api/workspace-files` 拥有两面的实现。Host 与 Client 叶配置仍由各自的根聚合直接引用，solution 根配置引用两片叶子。Host 导出文件服务，`./client` 导出实际的资源提供者插件，`dsh.client` 声明浏览器插件。web-app 的一个条目加载两面。这只取代[工作区文件服务记录](2026-09-05-workspace-files-service.zh.md)中的拆包决定，其授权、分页与流语义保持不变。
+`rsh/Programs/Web/api/workspace-files` 拥有两面的实现。Host 与 Client 叶配置仍由各自的根聚合直接引用，solution 根配置引用两片叶子。Host 导出文件服务，`./client` 导出实际的资源提供者插件，`dsh.client` 声明浏览器插件。web-app 的一个条目加载两面。这只取代[工作区文件服务记录](2026-09-05-workspace-files-service.zh.md)中的拆包决定，其授权、分页与流语义保持不变。
 
 两条依赖方向使编译图保持无环：
 

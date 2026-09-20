@@ -14,7 +14,7 @@ The `ToolRuntime` already accepts raw JSON Schema tool definitions (documented i
 
 ### Package
 
-A single package `@deepseek-ai/dsh-mcp-client` at `packages/mcp/mcp-client/`. No capability-seam three-package split — there is no foreseeable second MCP client implementation, and the convention is "don't split preemptively" ([capability seams Agent Note](../architecture/2026-06-13-capability-seams.md)).
+A single package `@deepseek-ai/dsh-mcp-client` at `rsh/Modules/Official/mcp/mcp-client/`. No capability-seam three-package split — there is no foreseeable second MCP client implementation, and the convention is "don't split preemptively" ([capability seams Agent Note](../architecture/2026-06-13-capability-seams.md)).
 
 ### SDK
 

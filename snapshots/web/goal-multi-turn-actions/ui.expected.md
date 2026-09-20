@@ -31,7 +31,7 @@
 - paragraph:
   - strong: Turn 1 / 2
   - text: — 随机选中的包：
-  - code: packages/context/session-reference
+  - code: rsh/Engine/context/session-reference
   - text: 📦
 - button "Copy"
 - code: session-reference ├── README.md ├── package.json ├── src │ ├── index.ts │ └── uri.ts └── tests └── session-reference.spec.ts
@@ -64,14 +64,14 @@
   - listitem:
     - strong: Turn 1
     - text: — 随机选中
-    - code: packages/context/session-reference
+    - code: rsh/Engine/context/session-reference
     - text: ，输出了文件结构：
     - button "Copy"
     - code: session-reference/ ├── README.md ├── package.json ├── src/ │ ├── index.ts │ └── uri.ts └── tests/ └── session-reference.spec.ts
   - listitem:
     - strong: Turn 2
     - text: — 随机选中
-    - code: packages/llm/token-meter
+    - code: rsh/Engine/llm/token-meter
     - text: ，输出了文件结构：
     - button "Copy"
     - code: token-meter/ ├── README.md ├── package.json ├── src/ │ └── index.ts └── tests/ └── token-meter.spec.ts

@@ -10,7 +10,7 @@ The `dsh-tool-owned-render` prototype (`Chinesezjc/dsh-tool-owned-render`) ships
 
 ## Proposal
 
-- Add `packages/client/tool-owned-render` as a workspace package.
+- Add `rsh/Programs/Web/client/tool-owned-render` as a workspace package.
 - Port the `read`, `bash`, `write`/`edit`, `grep`/`glob`, and `web_search`/`web_fetch` registrants to derive from current `ToolCallBlock` fields.
 - Add a `read_image` registrant using the same ToolCard/Segment primitives.
 - Wire `ctx.slots` type augmentation through `dsh-client-ui-renderer`.
@@ -23,7 +23,7 @@ The `dsh-tool-owned-render` prototype (`Chinesezjc/dsh-tool-owned-render`) ships
 
 ## Acceptance criteria
 
-- `packages/client/tool-owned-render` exists as a workspace package.
+- `rsh/Programs/Web/client/tool-owned-render` exists as a workspace package.
 - The ported registrants derive card state from current `ToolCallBlock` fields and typecheck on master.
 - A `read_image` registrant renders through the same primitives as `read`.
 - The `ctx.slots` type augmentation resolves through `dsh-client-ui-renderer`.

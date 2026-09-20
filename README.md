@@ -28,7 +28,7 @@ This retained command installs upstream DeepSeek Harness, not the RedSpark fork.
 npx @deepseek-ai/dsh web
 ```
 
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
+The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](rsh/Docs/user/guide/index.md).
 
 ### Run from source
 
@@ -44,7 +44,7 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
 
-For the Electron desktop client, run `pnpm run start:desktop` after building. The development desktop keeps its own data under `apps/desktop/.desktop-build/development/home`. API keys are configured in the application, not in this repository.
+For the Electron desktop client, run `pnpm run start:desktop` after building. The development desktop keeps its own data under `rsh/Programs/Desktop/.desktop-build/development/home`. API keys are configured in the application, not in this repository.
 
 ## Upstream community and support
 
@@ -60,7 +60,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
+Start with the [development guide](rsh/Docs/development.md) and [architecture documentation](rsh/Docs/architecture.md).
 
 For agents, follow [AGENTS.md](AGENTS.md).
 

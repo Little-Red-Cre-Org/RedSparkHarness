@@ -22,7 +22,7 @@ Issue 生命周期工作流把评审 webhook 视为命令。`pull_request.review
 
 ## 验证
 
-[Issue 管理测试](../../../../.github/issue-management/policy.test.mjs)锁定事件到命令的映射、请求修改命令后重复请求评审所触发的状态转换、请求修改后的状态回退、终态保护，以及保留人工覆盖状态。[工作流测试](../../../../scripts/ci-workflow.spec.ts)锁定订阅事件、job 级无 `if` 且 token/看板步骤带 step 级门控（使 approved/commented 评审以 pass 呈现且不铸 token），以及独立的 `ready_for_review` 策略触发器。
+[Issue 管理测试](../../../../.github/issue-management/policy.test.mjs)锁定事件到命令的映射、请求修改命令后重复请求评审所触发的状态转换、请求修改后的状态回退、终态保护，以及保留人工覆盖状态。[工作流测试](../../../../rsh/Scripts/ci-workflow.spec.ts)锁定订阅事件、job 级无 `if` 且 token/看板步骤带 step 级门控（使 approved/commented 评审以 pass 呈现且不铸 token），以及独立的 `ready_for_review` 策略触发器。
 
 ## 考虑过的替代方案
 

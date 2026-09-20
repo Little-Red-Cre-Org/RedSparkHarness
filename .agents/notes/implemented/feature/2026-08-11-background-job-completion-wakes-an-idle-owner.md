@@ -60,7 +60,7 @@ The bound exists because this chain is self-exciting in a way subagent settlemen
 
 - Default behavior changes: an idle owner now spends a model request per completion, capped at `maxConsecutiveWakes` per owner between user messages. Deployments that want the old behavior set `completionDelivery: quiet`.
 - The `tool-jobs` prompt section needs no edit; "You are notified in-session when a task finishes" became true rather than aspirational.
-- `JobSnapshot.reported` gains teardown as a fourth setter, documented at the Service Definition and in [the subsystem reference](../../../../docs/subsystems/jobs.md).
+- `JobSnapshot.reported` gains teardown as a fourth setter, documented at the Service Definition and in [the subsystem reference](../../../../rsh/Docs/subsystems/jobs.md).
 - `settle()` announces completion after committing the record and publishing the visible-set change. Any listener relying on running before waiters were released or before `onJobsChanged` now runs after both.
 - The `tool-bash` real-composition test dropped its second user message: settlement alone carries the notice into a turn that collects the output. It asserts the durable outcome rather than a turn boundary, because whether the command outlives its turn is a race; the lane choice is pinned in `tool-jobs` unit tests instead.
 - Unit coverage pins idle wake, busy injection, quiet delivery, budget exhaustion, budget restore on user input, non-restore on plugin notices, and teardown silence.

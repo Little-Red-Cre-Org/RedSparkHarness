@@ -14,7 +14,7 @@ Status: implemented
 
 共享基础配置把未设置或为空的 `DSH_TELEMETRY_MODE` 解析为 `FEEDBACK_ONLY`。插件自身省略 `mode` 的默认值是 `DISABLED`；`FULL` 被拒绝，非空 `DSH_TELEMETRY_DISABLED` 是加载前的强制关闭开关。新的自身文本反馈、消息评分编辑和撤回释放尚未交接的权威前缀，截止该事件，包含存储的上下文。继承的父会话反馈不授权子会话导出。
 
-反馈门控释放让报告者无需复现问题就能共享出问题的 Session。它用显式反馈触发取代持续导出。[已归档默认关闭](../../archived/feature/2026-08-10-telemetry-default-off.md)与[默认挂载](../../archived/feature/2026-07-31-web-telemetry-default-mount.md)记录记载早期组合；当前配置由[基础补丁](../../../../packages/bundle/base/cordis.patch.yml)与 [OTel README](../../../../packages/session/session-telemetry-otel/README.zh.md) 持有。
+反馈门控释放让报告者无需复现问题就能共享出问题的 Session。它用显式反馈触发取代持续导出。[已归档默认关闭](../../archived/feature/2026-08-10-telemetry-default-off.md)与[默认挂载](../../archived/feature/2026-07-31-web-telemetry-default-mount.md)记录记载早期组合；当前配置由[基础补丁](../../../../rsh/Compatibility/DSH/bundle/base/cordis.patch.yml)与 [OTel README](../../../../rsh/Engine/session/session-telemetry-otel/README.zh.md) 持有。
 
 ## 考虑过的替代方案
 

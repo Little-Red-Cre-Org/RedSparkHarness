@@ -8,6 +8,11 @@
 
 *.pdf binary
 
+# Unified diff blank context lines carry a required space prefix.
+patches/node-pty@1.2.0-beta.15.patch whitespace=-blank-at-eol
+# Preserve upstream indentation and blank context lines in the MSYS2 patch.
+rsh/Core/native/windows-bash/patches/restricted-ipc.patch whitespace=-blank-at-eol,-space-before-tab
+
 # Pairing records are generated from the three confirmed owner-blob pairs.
 # The worktree-local installer registers the fail-closed driver command.
 *.i18n.yaml merge=dsh-translation-pairing

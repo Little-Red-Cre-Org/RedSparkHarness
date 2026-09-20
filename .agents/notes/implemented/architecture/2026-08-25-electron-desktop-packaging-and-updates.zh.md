@@ -85,7 +85,7 @@ Electron 更新只使用一个 `electron-updater` 发布流和签名 `electron-b
 
 Electron 发布产物必须签名；macOS 产物必须公证。发布自动化必须通过明确的环境变量提供应用 ID、macOS Developer ID 限定名、预期 Team ID 与一套完整的 notarytool 凭据。配置加载会拒绝缺失或格式错误的标识符和不完整的公证凭据，macOS 打包还会强制签名，避免证书发现过程静默选择其他已安装身份或生成未签名发布。运行时准备会验证每个内嵌 Mach-O 文件的精确 Authority 与 Team ID，以及时间戳和 hardened-runtime 标记。签名后钩子会执行 Apple 的深度严格应用验证，并要求同一叶证书 Authority 与 Team ID 完全匹配，验证通过后才继续生成产物。固定目标安装包命令使用[隔离的 App 副本并行公证](../process/2026-09-09-parallel-macos-notarization.zh.md)：ZIP 包含已钉票的 App，签名 DMG 则携带覆盖其中未钉票 App 的票据。DMG 的 artifact-completion hook 要求其使用配置的身份、具备有效票据并通过 Gatekeeper。只有两条产物流都成功，命令才会移入其输出并写入发布完成记录；仅生成目录的命令仍会公证 App 并钉票。macOS 更新使用签名 ZIP，因此 DMG 不生成 blockmap；否则钉票会让已经生成的 DMG blockmap 失效。自定义协议提供已安装的前端分发目录和活跃模块图点名的客户端文件，并拒绝路径穿越或访问这些根目录之外的内容。插件安装器 API 只对 Electron 拥有的管理 GUI 可用，不存在于浏览器应用或后端 RPC 中。
 
-[固定版本的 osx-sign 补丁](../../../../patches/@electron__osx-sign@1.3.3.patch)在两种已发布模块构建中使用 `lstat`，因此 Framework 的文件和目录别名不会触发重复签名。选定的上游版本能够跳过这些别名前，仍需保留该补丁。PAK 文件由外层 bundle 签名记录完整性；逐个签名会增加串行时间戳请求，但不会增加资源完整性保护。Desktop 保留全部语言文件，只跳过其单独签名。可执行代码仍使用 Developer ID 签名、安全时间戳和 hardened runtime。[签名器遍历回归测试](../../../../apps/desktop/tests/macos-signing-walk.spec.ts)使用真实 Framework 别名执行已安装依赖；发布验收仍要求严格应用验证、公证和启动。
+[固定版本的 osx-sign 补丁](../../../../patches/@electron__osx-sign@1.3.3.patch)在两种已发布模块构建中使用 `lstat`，因此 Framework 的文件和目录别名不会触发重复签名。选定的上游版本能够跳过这些别名前，仍需保留该补丁。PAK 文件由外层 bundle 签名记录完整性；逐个签名会增加串行时间戳请求，但不会增加资源完整性保护。Desktop 保留全部语言文件，只跳过其单独签名。可执行代码仍使用 Developer ID 签名、安全时间戳和 hardened runtime。[签名器遍历回归测试](../../../../rsh/Programs/Desktop/tests/macos-signing-walk.spec.ts)使用真实 Framework 别名执行已安装依赖；发布验收仍要求严格应用验证、公证和启动。
 
 Windows 发布打包通过 `/f` 向已配置且与 SafeNet 兼容的 SignTool 提供 `DSH_DESKTOP_WINDOWS_CER_FILE` 指定的公开 EV 叶证书，并通过必需的 `DSH_DESKTOP_WINDOWS_KEY_CONTAINER` 标识匹配的私钥。证书文件保留在源码仓库之外，私钥仍留在 USB Token 上。electron-builder hook 把每个产物交给采用 CRLF 的 `windows-sign.cmd`；该 CMD 只调用一次 SignTool，并指定 SafeNet `/kc "[{{PIN}}]=容器"` 值与 CSP、SHA-256 文件摘要和 DigiCert SHA-256 RFC 3161 时间戳。hook 不会改用其他 SignTool，也不会重试失败的请求。打包编排不会把任何 `DSH_DESKTOP_WINDOWS_*` 字段传给构建与 运行时准备子进程，只会把证书路径、SignTool 路径、密钥容器和 PIN 传入 electron-builder。签名器在已清理的 CMD 环境中只提供经过校验的签名字段；CMD 会禁用延迟展开，在 SignTool 启动前清除这些字段，并仅在 SignTool 必需的命令行中保留 PIN。所有对外诊断都会替换 PIN，而且只能允许专用构建账号和管理员检查该 runner。签名器会在企业 Code Integrity 检查 electron-builder 的临时 NSIS bootstrap 前先为该可执行文件签名；对于生成的可执行文件，只有证书表条目指向文件末尾之外时，才会在最终签名前清除该条目。SignTool、证书、容器、PIN、Token 或签名不可用时，打包会在产生未签名产物前失败。自定义协议提供已安装的前端分发目录和活跃模块图点名的客户端文件，并拒绝路径穿越或访问这些根目录之外的内容。插件安装器 API 只对 Electron 持有的管理 GUI 可用，不存在于浏览器应用或后端 RPC 中。
 
@@ -93,9 +93,9 @@ Windows 打包调用强制设置 `ELECTRON_BUILDER_7Z_FILTER=BCJ`。内置的 7-
 
 本地 Windows 安装测试使用显式的 `--unsigned` 打包调用，并执行相同的构建和运行时准备。它清除证书输入，将产物隔离到 `unsigned-artifacts`，并省略更新器配置和发布完成记录。即使父进程环境请求未签名模式，常规打包命令也会显式选择签名模式。这样既能在没有 EV Token 时诊断安装问题，也能防止本地测试产物通过发布上传校验。
 
-NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录。Finish 启动应用后，默认退出清理可能与后端的文件读取重叠。[安装器 hook](../../../../apps/desktop/scripts/installer.nsh) 在 `customInstall` 阶段仅删除该解压目录，早于交互和静默启动分支。它保留包归档、插件 DLL、回滚目录、寄存器和错误状态；[原生清理 smoke](../../../../apps/desktop/tests/fixtures/installer-cleanup-smoke.nsi) 检查这些约束。把清理移入安装阶段并不会减少文件系统工作，因此必须分别测量安装总耗时与点击 Finish 到窗口出现的耗时。
+NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录。Finish 启动应用后，默认退出清理可能与后端的文件读取重叠。[安装器 hook](../../../../rsh/Programs/Desktop/scripts/installer.nsh) 在 `customInstall` 阶段仅删除该解压目录，早于交互和静默启动分支。它保留包归档、插件 DLL、回滚目录、寄存器和错误状态；[原生清理 smoke](../../../../rsh/Programs/Desktop/tests/fixtures/installer-cleanup-smoke.nsi) 检查这些约束。把清理移入安装阶段并不会减少文件系统工作，因此必须分别测量安装总耗时与点击 Finish 到窗口出现的耗时。
 
-安装器不开启直接向应用目录执行 `Nsis7z::Extract`。原生[文件占用探针](../../../../apps/desktop/tests/fixtures/installer-write-failure-smoke.nsi)会在未报错的情况下留下被占用的旧文件和新资源；暂存后执行的 `CopyFiles` 在相同替换失败时会设置错误标志。Windows 上同一份 737,557,488 字节载荷经过解压、复制和清理耗时 172.625 秒，直接解压耗时 28.031 秒，但每条路径的单次样本不足以支持放弃失败检测。计时不包括注册表修改、旧版删除及解压后的验证，也没有清空系统缓存。桌面专用载荷过滤减少需要复制的文件，同时保留安装器的替换错误处理。这种处理并不承诺完整的安装回滚。
+安装器不开启直接向应用目录执行 `Nsis7z::Extract`。原生[文件占用探针](../../../../rsh/Programs/Desktop/tests/fixtures/installer-write-failure-smoke.nsi)会在未报错的情况下留下被占用的旧文件和新资源；暂存后执行的 `CopyFiles` 在相同替换失败时会设置错误标志。Windows 上同一份 737,557,488 字节载荷经过解压、复制和清理耗时 172.625 秒，直接解压耗时 28.031 秒，但每条路径的单次样本不足以支持放弃失败检测。计时不包括注册表修改、旧版删除及解压后的验证，也没有清空系统缓存。桌面专用载荷过滤减少需要复制的文件，同时保留安装器的替换错误处理。这种处理并不承诺完整的安装回滚。
 
 打包应用会忽略开发资源和项目环境变量覆盖。只有未打包的 Electron 进程可以替换 Node.js 可执行文件、pnpm 入口、dsh 资源 或活跃项目。
 
@@ -105,7 +105,7 @@ NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录�
 
 | 表面 | 实现 |
 |---|---|
-| 壳 | `apps/desktop` 负责 Electron 窗口、受限 preload、自定义协议、子进程生命周期、项目事务、插件 GUI、更新协调和 electron-builder 配置。 |
+| 壳 | `rsh/Programs/Desktop` 负责 Electron 窗口、受限 preload、自定义协议、子进程生命周期、项目事务、插件 GUI、更新协调和 electron-builder 配置。 |
 | 已安装运行时 | 私有 `@deepseek-ai/dsh-desktop-host` 从活跃项目启动无端口桌面组合，并通过经过验证的分帧字节管道流式传输 API 与资源响应。 |
 | 包状态 | 内置 Node.js 执行不可变核心资源；内置 pnpm 只修改 Desktop profile 中的外部插件依赖图。 |
 | 资格验证 | macOS 打包要求已配置的公司身份与公证凭据可用，在生成清单前验证每个原生运行时文件，验证完整应用签名，并要求应用和 DMG 都完成公证且通过 Gatekeeper。Windows 打包要求已配置的公开证书、SafeNet 私钥容器、Token Password 与 SignTool，并验证生成的每个签名。更新托管、跨上一版本的已安装产物测试和各平台 GUI 录制仍是发布环境门槛。 |

@@ -1,0 +1,228 @@
+--- a/winsup/cygwin/sigproc.cc
++++ b/winsup/cygwin/sigproc.cc
+@@ -518,13 +518,94 @@
+     sig_send (myself, fast ? __SIGFLUSHFAST : __SIGFLUSH);
+ }
+ 
++/* A restricted process must be able to open its own signal pipe for writing.
++   Prefer its private default-DACL capability; read-only tokens can use their
++   existing logon SID.  This changes only the new pipe, never the token or files.
++   This local experiment is not a general restricted-token compatibility layer. */
++PSID
++ipc_restricting_sid (PSID destination)
++{
++  HANDLE token;
++  if (!NT_SUCCESS (NtOpenProcessToken (GetCurrentProcess (), TOKEN_QUERY, &token)))
++    api_fatal ("signal pipe token query failed, %E");
++  DWORD size = 0;
++  NtQueryInformationToken (token, TokenRestrictedSids, NULL, 0, &size);
++  if (!size)
++    api_fatal ("signal pipe restricting SID query failed, %E");
++  PTOKEN_GROUPS groups = (PTOKEN_GROUPS) HeapAlloc (GetProcessHeap (), 0, size);
++  if (!groups || !NT_SUCCESS (NtQueryInformationToken (token, TokenRestrictedSids,
++                                                       groups, size, &size)))
++    api_fatal ("signal pipe restricting SID read failed, %E");
++  PSID selected = NULL;
++  if (groups->GroupCount)
++    {
++      size = 0;
++      NtQueryInformationToken (token, TokenDefaultDacl, NULL, 0, &size);
++      if (!size)
++        api_fatal ("signal pipe default DACL query failed, %E");
++      PTOKEN_DEFAULT_DACL info = (PTOKEN_DEFAULT_DACL)
++        HeapAlloc (GetProcessHeap (), 0, size);
++      if (!info || !NT_SUCCESS (NtQueryInformationToken (token, TokenDefaultDacl,
++                                                        info, size, &size)) || !info->DefaultDacl)
++        api_fatal ("signal pipe default DACL read failed, %E");
++      for (DWORD i = 0; i < groups->GroupCount && !selected; ++i)
++        {
++          PSID candidate = groups->Groups[i].Sid;
++          if (RtlEqualSid (candidate, well_known_world_sid))
++            continue;
++          for (DWORD j = 0; j < info->DefaultDacl->AceCount; ++j)
++            {
++              PVOID raw;
++              if (!NT_SUCCESS (RtlGetAce (info->DefaultDacl, j, &raw)))
++                api_fatal ("signal pipe ACE read failed, %E");
++              PACCESS_ALLOWED_ACE ace = (PACCESS_ALLOWED_ACE) raw;
++              if (ace->Header.AceType == ACCESS_ALLOWED_ACE_TYPE
++                  && !(ace->Header.AceFlags & INHERIT_ONLY_ACE)
++                  && ((ace->Mask & GENERIC_ALL)
++                      || (ace->Mask & FILE_ALL_ACCESS) == FILE_ALL_ACCESS)
++                  && RtlEqualSid (candidate, &ace->SidStart))
++                {
++                  selected = candidate;
++                  break;
++                }
++            }
++        }
++      HeapFree (GetProcessHeap (), 0, info);
++      if (!selected)
++        {
++          SID_IDENTIFIER_AUTHORITY nt = SECURITY_NT_AUTHORITY;
++          for (DWORD i = 0; i < groups->GroupCount; ++i)
++            {
++              PSID candidate = groups->Groups[i].Sid;
++              if (sid_sub_auth_count (candidate) == 3
++                  && sid_id_auth (candidate) == nt.Value[5]
++                  && sid_sub_auth (candidate, 0) == SECURITY_LOGON_IDS_RID)
++                {
++                  selected = candidate;
++                  break;
++                }
++            }
++        }
++      if (!selected || !NT_SUCCESS (RtlCopySid (SECURITY_MAX_SID_SIZE, destination, selected)))
++        api_fatal ("signal pipe has no usable restricting SID, %E");
++    }
++  const bool restricted = groups->GroupCount != 0;
++  HeapFree (GetProcessHeap (), 0, groups);
++  CloseHandle (token);
++  return restricted ? destination : NULL;
++}
++
+ /* Signal thread initialization.  Called from dll_crt0_1.
+    This routine starts the signal handling thread.  */
+ void
+ sigproc_init ()
+ {
+   char char_sa_buf[1024];
+-  PSECURITY_ATTRIBUTES sa = sec_user_nih ((PSECURITY_ATTRIBUTES) char_sa_buf, cygheap->user.sid());
++  BYTE pipe_sid[SECURITY_MAX_SID_SIZE];
++  PSECURITY_ATTRIBUTES sa = sec_user_nih ((PSECURITY_ATTRIBUTES) char_sa_buf,
++                                        cygheap->user.sid (),
++                                        ipc_restricting_sid (pipe_sid),
++                                        GENERIC_READ | GENERIC_WRITE);
+   DWORD err = fhandler_pipe::create (sa, &my_readsig, &my_sendsig,
+ 				     PIPE_DEPTH * sizeof (sigpacket), "sigwait",
+ 				     PIPE_ADD_PID);
+--- a/winsup/cygwin/local_includes/security.h
++++ b/winsup/cygwin/local_includes/security.h
+@@ -510,6 +510,9 @@
+ 
+ /* Various types of security attributes for use in Create* functions. */
+ extern SECURITY_ATTRIBUTES sec_none, sec_none_nih, sec_all, sec_all_nih;
++extern PSID ipc_restricting_sid (PSID);
++extern PSECURITY_ATTRIBUTES sec_restricted_pipe (PVOID, PSECURITY_ATTRIBUTES);
++extern void grant_restricted_ipc_access (PSECURITY_ATTRIBUTES, size_t, DWORD);
+ extern SECURITY_ATTRIBUTES *__sec_user (PVOID, PSID, PSID,
+ 						  DWORD, BOOL);
+ 
+--- a/winsup/cygwin/sec/helper.cc
++++ b/winsup/cygwin/sec/helper.cc
+@@ -627,6 +627,51 @@
+   return psa;
+ }
+ 
++/* Append a capability to a caller-owned, inline IPC descriptor.  File creation
++   must not use this helper.  Existing owner and public-read ACEs are preserved. */
++void
++grant_restricted_ipc_access (PSECURITY_ATTRIBUTES attributes, size_t capacity,
++                             DWORD access)
++{
++  BYTE sid[SECURITY_MAX_SID_SIZE];
++  PSID restricted = ipc_restricting_sid (sid);
++  if (!restricted)
++    return;
++  BOOLEAN present, defaulted;
++  PACL acl;
++  if (!NT_SUCCESS (RtlGetDaclSecurityDescriptor (attributes->lpSecurityDescriptor,
++                                                &present, &acl, &defaulted))
++      || !present || !acl)
++    api_fatal ("restricted IPC requires an explicit DACL");
++  size_t extra = sizeof (ACCESS_ALLOWED_ACE) - sizeof (DWORD)
++                 + RtlLengthSid (restricted);
++  size_t expanded = acl->AclSize + extra;
++  if ((char *) acl < (char *) attributes
++      || (char *) acl + expanded > (char *) attributes + capacity
++      || expanded > USHRT_MAX)
++    api_fatal ("restricted IPC DACL capacity exceeded");
++  acl->AclSize = expanded;
++  if (!NT_SUCCESS (RtlAddAccessAllowedAce (acl, ACL_REVISION, access, restricted)))
++    api_fatal ("restricted IPC capability grant failed");
++}
++
++/* Private runtime experiment: native pipe defaults do not consistently use
++   TokenDefaultDacl.  Confined default-ACL pipes need an explicit capability.
++   Explicit caller descriptors remain unchanged.  sa_buf holds 1024 bytes. */
++PSECURITY_ATTRIBUTES
++sec_restricted_pipe (PVOID sa_buf, PSECURITY_ATTRIBUTES original)
++{
++  if (original && original->lpSecurityDescriptor)
++    return original;
++  BYTE sid[SECURITY_MAX_SID_SIZE];
++  PSID restricted = ipc_restricting_sid (sid);
++  if (!restricted)
++    return original;
++  return __sec_user (sa_buf, cygheap->user.sid (), restricted,
++                     GENERIC_READ | GENERIC_WRITE,
++                     original ? original->bInheritHandle : FALSE);
++}
++
+ /* Helper function to create a file security descriptor which allows
+    full access to admins, system, and the sid given as parameter.  See
+    try_to_bin for how it's used. */
+--- a/winsup/cygwin/fhandler/pipe.cc
++++ b/winsup/cygwin/fhandler/pipe.cc
+@@ -816,6 +816,8 @@
+ 		       DWORD psize, const char *name, DWORD open_mode,
+ 		       int64_t *unique_id)
+ {
++  char restricted_sa[1024];
++  sa_ptr = sec_restricted_pipe (restricted_sa, sa_ptr);
+   /* Default to error. */
+   if (r)
+     *r = NULL;
+@@ -1043,6 +1045,8 @@
+ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
+ 	   int64_t *unique_id)
+ {
++  char restricted_sa[1024];
++  sa_ptr = sec_restricted_pipe (restricted_sa, sa_ptr);
+   NTSTATUS status;
+   HANDLE npfsh;
+   ACCESS_MASK access;
+--- a/winsup/cygwin/fork.cc
++++ b/winsup/cygwin/fork.cc
+@@ -119,7 +119,9 @@
+ {
+   if (!detached)
+     {
+-      if (!CreatePipe (&rd_proc_pipe, &wr_proc_pipe, &sec_none_nih, 16))
++      char restricted_sa[1024];
++      if (!CreatePipe (&rd_proc_pipe, &wr_proc_pipe,
++                       sec_restricted_pipe (restricted_sa, &sec_none_nih), 16))
+ 	api_fatal ("prefork: couldn't create pipe process tracker, %E");
+ 
+       if (!SetHandleInformation (wr_proc_pipe, HANDLE_FLAG_INHERIT,
+@@ -345,8 +347,9 @@
+   PSECURITY_ATTRIBUTES sa = (PSECURITY_ATTRIBUTES) alloca (1024);
+   if (!sec_user_nih (sa, cygheap->user.saved_sid (),
+ 		     well_known_authenticated_users_sid,
+-		     PROCESS_QUERY_LIMITED_INFORMATION))
++			     PROCESS_QUERY_LIMITED_INFORMATION))
+     sa = &sec_none_nih;
++  grant_restricted_ipc_access (sa, 1024, GENERIC_ALL);
+ 
+   while (1)
+     {
+--- a/winsup/cygwin/pinfo.cc
++++ b/winsup/cygwin/pinfo.cc
+@@ -387,6 +387,7 @@
+   PSECURITY_ATTRIBUTES sec_attribs = sec_user_nih (sa_buf, cygheap->user.sid(),
+ 						   well_known_world_sid,
+ 						   FILE_MAP_READ);
++  grant_restricted_ipc_access (sec_attribs, 1024, GENERIC_ALL);
+ 
+   for (int i = 0; i < 20; i++)
+     {
+--- a/winsup/cygwin/spawn.cc
++++ b/winsup/cygwin/spawn.cc
+@@ -606,6 +606,7 @@
+ 			 well_known_authenticated_users_sid,
+ 			 PROCESS_QUERY_LIMITED_INFORMATION))
+ 	sa = &sec_none_nih;
++      grant_restricted_ipc_access (sa, 1024, GENERIC_ALL);
+ 
+       int fileno_stdin = in__stdin < 0 ? 0 : in__stdin;
+       int fileno_stdout = in__stdout < 0 ? 1 : in__stdout;

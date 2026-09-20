@@ -71,10 +71,10 @@
   - img
   - img
   - text: Bash Randomly select one package with Python
-- 'button "Think The random pick for turn 1 is `packages/context/session-reference`. Now I''ll output its file structure. Let me get the file tree."':
+- 'button "Think The random pick for turn 1 is `rsh/Engine/context/session-reference`. Now I''ll output its file structure. Let me get the file tree."':
   - img
   - img
-  - text: "Think The random pick for turn 1 is `packages/context/session-reference`. Now I'll output its file structure. Let me get the file tree."
+  - text: "Think The random pick for turn 1 is `rsh/Engine/context/session-reference`. Now I'll output its file structure. Let me get the file tree."
 - button "Bash List all files in session-reference package":
   - img
   - img
@@ -86,7 +86,7 @@
 - paragraph:
   - strong: Turn 1 / 2
   - text: — 随机选中的包：
-  - code: packages/context/session-reference
+  - code: rsh/Engine/context/session-reference
   - text: 📦
 - button "Copy"
 - code: session-reference ├── README.md ├── package.json ├── src │ ├── index.ts │ └── uri.ts └── tests └── session-reference.spec.ts
@@ -116,10 +116,10 @@
   - img
   - img
   - text: Context injection goal
-- 'button "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."':
+- 'button "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `rsh/Engine/context/session-reference`. Let me pick a different one randomly this time."':
   - img
   - img
-  - text: "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."
+  - text: "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `rsh/Engine/context/session-reference`. Let me pick a different one randomly this time."
 - button "Bash Randomly select another package with Python":
   - img
   - img
@@ -136,14 +136,14 @@
   - img
   - img
   - text: Bash List all files in token-meter package
-- 'button "Think This is turn 2 of 2. I''ve output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."':
+- 'button "Think This is turn 2 of 2. I''ve output the file structure for `rsh/Engine/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."':
   - img
   - img
-  - text: "Think This is turn 2 of 2. I've output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."
+  - text: "Think This is turn 2 of 2. I've output the file structure for `rsh/Engine/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."
 - paragraph:
   - strong: Turn 2 / 2
   - text: — 随机选中的包：
-  - code: packages/llm/token-meter
+  - code: rsh/Engine/llm/token-meter
   - text: 📦
 - button "Copy"
 - code: token-meter ├── README.md ├── package.json ├── src │ └── index.ts └── tests └── token-meter.spec.ts
@@ -175,14 +175,14 @@
   - listitem:
     - strong: Turn 1
     - text: — 随机选中
-    - code: packages/context/session-reference
+    - code: rsh/Engine/context/session-reference
     - text: ，输出了文件结构：
     - button "Copy"
     - code: session-reference/ ├── README.md ├── package.json ├── src/ │ ├── index.ts │ └── uri.ts └── tests/ └── session-reference.spec.ts
   - listitem:
     - strong: Turn 2
     - text: — 随机选中
-    - code: packages/llm/token-meter
+    - code: rsh/Engine/llm/token-meter
     - text: ，输出了文件结构：
     - button "Copy"
     - code: token-meter/ ├── README.md ├── package.json ├── src/ │ └── index.ts └── tests/ └── token-meter.spec.ts

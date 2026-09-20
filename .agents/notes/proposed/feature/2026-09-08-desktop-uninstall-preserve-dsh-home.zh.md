@@ -8,7 +8,7 @@ Status: proposed
 
 用户需要 Desktop 卸载删除应用文件及外部应用状态，同时保留完整的 Harness 主目录。删除应用目录并不能覆盖浏览器存储、安装器缓存或原生更新器状态。浏览器存储还包含未发送草稿和界面偏好，因此清理它不只是释放磁盘缓存。
 
-[打包配置](../../../../apps/desktop/electron-builder.config.mjs)、[桌面入口](../../../../apps/desktop/src/main.ts)和[更新协调器](../../../../apps/desktop/src/update-coordinator.ts)是代码检查依据。源码检查用于识别清理候选项；实现验收前，必须通过已安装产物的观察确定受支持的完整清单。目前尚未通过卸载实验建立完整的 Windows 或 macOS 清单。
+[打包配置](../../../../rsh/Programs/Desktop/electron-builder.config.mjs)、[桌面入口](../../../../rsh/Programs/Desktop/src/main.ts)和[更新协调器](../../../../rsh/Programs/Desktop/src/update-coordinator.ts)是代码检查依据。源码检查用于识别清理候选项；实现验收前，必须通过已安装产物的观察确定受支持的完整清单。目前尚未通过卸载实验建立完整的 Windows 或 macOS 清单。
 
 ## 提案
 
@@ -67,7 +67,7 @@ Windows 控制面板和设置中的卸载将通过 NSIS 执行此操作。macOS 
 
 在 Windows 和两个已发布 macOS 架构上执行已安装产物的 e2e 检查。覆盖首次安装且未更新、下载并安装一次更新、更新失败、按用户或共享安装、移动应用，以及拖拽删除后的独立 macOS 清理。独立比较文件系统和注册信息清单，不以卸载器的成功响应代替验证。应用和 CLI 静止后、删除前对保留的 `.dsh` 内容计算哈希；要求删除后内容、路径和链接条目完全一致。应用目标被删除后，不要求保留的运行时链接仍可解析。
 
-为卸载界面和失败结果增加归属模块旁的预期输出。增加无密钥的录制会话场景，证明已有会话能跨卸载和重装保留；纯安装器或界面预期不放入顶层 Session 树。为实现 PR（Pull Request）录制规则要求的真实服务器和模型 GUI GIF。实现交付时更新 [Desktop README](../../../../apps/desktop/README.zh.md)、英文对应文档、用户说明、语言字典、JSDoc 和本提案的生命周期。通过 [dsh-pre-push-checks](../../../skills/dsh-pre-push-checks/SKILL.md) 选择针对性检查；签名打包和真实操作系统卸载证据为必需项，不能由单元测试替代。
+为卸载界面和失败结果增加归属模块旁的预期输出。增加无密钥的录制会话场景，证明已有会话能跨卸载和重装保留；纯安装器或界面预期不放入顶层 Session 树。为实现 PR（Pull Request）录制规则要求的真实服务器和模型 GUI GIF。实现交付时更新 [Desktop README](../../../../rsh/Programs/Desktop/README.zh.md)、英文对应文档、用户说明、语言字典、JSDoc 和本提案的生命周期。通过 [dsh-pre-push-checks](../../../skills/dsh-pre-push-checks/SKILL.md) 选择针对性检查；签名打包和真实操作系统卸载证据为必需项，不能由单元测试替代。
 
 ## 考虑过的替代方案
 

@@ -10,7 +10,7 @@ The workspace file service and its browser resource provider evolve together, bu
 
 ## Decision
 
-`packages/api/workspace-files` owns both implementations. Its Host and Client leaf configurations remain direct references of their respective root aggregates; the solution root references both leaves. The Host exports the file service, `./client` exports the actual resource-provider plugin, and `dsh.client` declares the browser plugin. One web-app row loads both faces. This supersedes only the package-splitting decision in the [workspace file service note](2026-09-05-workspace-files-service.md), whose authorization, paging, and stream semantics remain unchanged.
+`rsh/Programs/Web/api/workspace-files` owns both implementations. Its Host and Client leaf configurations remain direct references of their respective root aggregates; the solution root references both leaves. The Host exports the file service, `./client` exports the actual resource-provider plugin, and `dsh.client` declares the browser plugin. One web-app row loads both faces. This supersedes only the package-splitting decision in the [workspace file service note](2026-09-05-workspace-files-service.md), whose authorization, paging, and stream semantics remain unchanged.
 
 Two dependency directions keep the compiler graph acyclic:
 

@@ -30,3 +30,112 @@ index 6966d24..18f1d25 100644
  var DEFAULT_FILE = 'sh';
  var DEFAULT_NAME = 'xterm';
  var DESTROY_SOCKET_TIMEOUT_MS = 200;
+diff --git a/lib/windowsPtyAgent.js b/lib/windowsPtyAgent.js
+--- a/lib/windowsPtyAgent.js
++++ b/lib/windowsPtyAgent.js
+@@ -268,6 +268,8 @@
+         this._inSocket.readable = false;
+         this._outSocket.readable = false;
+         this._outSocket.destroy();
++        this._inSocket.destroy();
++        this._conoutSocketWorker.dispose();
+     };
+     return WindowsPtyAgent;
+ }());
+diff --git a/binding.gyp b/binding.gyp
+--- a/binding.gyp
++++ b/binding.gyp
+@@ -1,7 +1,7 @@
+ {
+   'target_defaults': {
+     'dependencies': [
+-      "<!(node -p \"require('node-addon-api').targets\"):node_addon_api_except",
++      "<!(node -p \"require('path').resolve(require('node-addon-api').targets).split(require('path').sep).join('/')\"):node_addon_api_except",
+     ],
+     'conditions': [
+       ['OS=="win"', {
+diff --git a/scripts/prebuild.js b/scripts/prebuild.js
+--- a/scripts/prebuild.js
++++ b/scripts/prebuild.js
+@@ -3,6 +3,12 @@
+ const fs = require('fs');
+ const path = require('path');
+ 
++// The Windows native source carries a local ConPTY lifetime fix.
++if (process.platform === 'win32') {
++  console.log('> Building patched Windows ConPTY sources');
++  process.exit(1);
++}
++
+ /**
+  * This script checks for the prebuilt binaries for the current platform and
+  * architecture. It exits with 0 if prebuilds are found and 1 if not.
+diff --git a/src/win/conpty.cc b/src/win/conpty.cc
+index 931c5362d1..542f7094ed 100644
+--- a/src/win/conpty.cc
++++ b/src/win/conpty.cc
+@@ -71,7 +71,7 @@ struct ExitEvent {
+   int exit_code = 0;
+ };
+ 
+-void SetupExitCallback(Napi::Env env, Napi::Function cb, pty_baton* baton) {
++void SetupExitCallback(Napi::Env env, Napi::Function cb, pty_baton* baton, PFNCLOSEPSEUDOCONSOLE closePseudoConsole) {
+   std::thread *th = new std::thread;
+   // Don't use Napi::AsyncWorker which is limited by UV_THREADPOOL_SIZE.
+   auto tsfn = Napi::ThreadSafeFunction::New(
+@@ -84,7 +84,7 @@ void SetupExitCallback(Napi::Env env, Napi::Function cb, pty_baton* baton) {
+         th->join();
+         delete th;
+       });
+-  *th = std::thread([tsfn = std::move(tsfn), baton] {
++  *th = std::thread([tsfn = std::move(tsfn), baton, closePseudoConsole] {
+     auto callback = [](Napi::Env env, Napi::Function cb, ExitEvent *exit_event) {
+       cb.Call({Napi::Number::New(env, exit_event->exit_code)});
+       delete exit_event;
+@@ -93,16 +93,23 @@ void SetupExitCallback(Napi::Env env, Napi::Function cb, pty_baton* baton) {
+     ExitEvent *exit_event = new ExitEvent;
+     // Wait for process to complete.
+     WaitForSingleObject(baton->hShell, INFINITE);
++    HPCON exitedConsole = nullptr;
+     {
+       std::lock_guard<std::mutex> lock(g_ptyHandlesMutex);
+       GetExitCodeProcess(baton->hShell, (LPDWORD)(&exit_event->exit_code));
+       CloseHandle(baton->hShell);
++      exitedConsole = baton->hpc;
++      baton->hpc = nullptr;
+       const int id = baton->id;
+       std::erase_if(ptyHandles, [id](const auto& ptyHandle) {
+         return ptyHandle->id == id;
+       });
+     }
+ 
++    if (exitedConsole != nullptr && closePseudoConsole != nullptr) {
++      closePseudoConsole(exitedConsole);
++    }
++
+     auto status = tsfn.BlockingCall(exit_event, callback); // In main thread
+     switch (status) {
+       case napi_closing:
+@@ -467,7 +474,9 @@ static Napi::Value PtyConnect(const Napi::CallbackInfo& info) {
+   // Close the input read and output write handle of the pseudoconsole
+   closePipeHandles();
+ 
+-  SetupExitCallback(env, exitCallback, handle);
++  auto closePseudoConsole = hLibrary == nullptr ? nullptr : reinterpret_cast<PFNCLOSEPSEUDOCONSOLE>(GetProcAddress(
++      (HMODULE)hLibrary, useConptyDll ? "ConptyClosePseudoConsole" : "ClosePseudoConsole"));
++  SetupExitCallback(env, exitCallback, handle, closePseudoConsole);
+ 
+   // Return
+   auto marshal = Napi::Object::New(env);
+@@ -577,9 +586,10 @@ static Napi::Value PtyKill(const Napi::CallbackInfo& info) {
+       PFNCLOSEPSEUDOCONSOLE const pfnClosePseudoConsole = (PFNCLOSEPSEUDOCONSOLE)GetProcAddress(
+         (HMODULE)hLibrary,
+         useConptyDll ? "ConptyClosePseudoConsole" : "ClosePseudoConsole");
+-      if (pfnClosePseudoConsole)
++      if (pfnClosePseudoConsole && handle->hpc != nullptr)
+       {
+         pfnClosePseudoConsole(handle->hpc);
++        handle->hpc = nullptr;
+       }
+     }
+     // Defensive: if PtyConnect was never called (or failed before closing the

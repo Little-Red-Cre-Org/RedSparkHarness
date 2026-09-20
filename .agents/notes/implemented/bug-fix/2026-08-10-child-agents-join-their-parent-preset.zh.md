@@ -40,11 +40,11 @@ Status: implemented
 
 ## 测试
 
-`packages/preset/agent-presets/tests/mount.spec.ts` 用真实 fixture 组装覆盖该加入：子 agent 看到父方的工具与提示段、不会挂载出第二个代际、加入在父方 dispose 后依然成立（活得比父方久的后台子 agent）、上报的 id 一致、没有 preset 的父方不产生加入、以及无 scope 的上下文被拒绝。
+`rsh/Engine/preset/agent-presets/tests/mount.spec.ts` 用真实 fixture 组装覆盖该加入：子 agent 看到父方的工具与提示段、不会挂载出第二个代际、加入在父方 dispose 后依然成立（活得比父方久的后台子 agent）、上报的 id 一致、没有 preset 的父方不产生加入、以及无 scope 的上下文被拒绝。
 
-`packages/core/tools/tests/scoped.spec.ts` 直接覆盖该限制规则：子 agent 的过滤器能移除它从祖先作用域继承来的工具、子 agent 自身的注册在自己的过滤器下存活、祖先的限制仍作用于其内嵌套的每个作用域。
+`rsh/Engine/core/tools/tests/scoped.spec.ts` 直接覆盖该限制规则：子 agent 的过滤器能移除它从祖先作用域继承来的工具、子 agent 自身的注册在自己的过滤器下存活、祖先的限制仍作用于其内嵌套的每个作用域。
 
-`packages/subagent/subagent-in-process-driver/tests/preset-inheritance.spec.ts` 在一个不含任何面向模型行的宿主组装上，通过 `startInProcessRun()` 断言模型可见的结果：子 agent 自身请求中的 schema、父方的提示段、记录下来的 header preset、施加在继承来的 preset 工具之上的 `toolFilter`，以及在空白期切换过 preset 的父方——切换到**另一个** preset，这样断言才能区分"读父方活 scope 链"与"读父方创建 header"。
+`rsh/Engine/subagent/subagent-in-process-driver/tests/preset-inheritance.spec.ts` 在一个不含任何面向模型行的宿主组装上，通过 `startInProcessRun()` 断言模型可见的结果：子 agent 自身请求中的 schema、父方的提示段、记录下来的 header preset、施加在继承来的 preset 工具之上的 `toolFilter`，以及在空白期切换过 preset 的父方——切换到**另一个** preset，这样断言才能区分"读父方活 scope 链"与"读父方创建 header"。
 
 组装记录这一层用的是真实 shipped Web 组装的 e2e，而不是无密钥快照。本仓库所有可运行 example 都不组装 preset roster，因此该缺陷在快照 harness 里根本不可观察：要做快照场景，得先有一个既挂载 roster 又发起委派的 example。Web e2e 启动的是真实的 `base` + `web-app` 补丁层与两个 shipped preset，这正是测试政策要求的组装证据；Web 浏览器 lane 的 subagent golden 承载了可见后果——记录了 preset 的子 agent 现在会显示与其父方相同的 preset 徽标。
 

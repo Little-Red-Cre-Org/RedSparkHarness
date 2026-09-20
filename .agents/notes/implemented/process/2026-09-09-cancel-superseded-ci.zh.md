@@ -36,4 +36,4 @@ master 快速更新可能反复取消耗时更长的热备演练，使其无法�
 
 ## 验证
 
-[工作流回归测试](../../../../scripts/ci-workflow.spec.ts)固定工作流/引用隔离、发布所属构建豁免、聚合状态条件、覆盖率历史取消及保留的 Wine 清理。[平台路由回归测试](../../../../scripts/tests/ci-master-platforms.spec.ts)保留 master/PR 目标划分与发布矩阵；[发布演练回归测试](../../../../scripts/tests/ci-release-selfhosted.spec.ts)在验证取消策略的同时保留运行器准入与发布隔离。这些配置检查不重现 GitHub 调度或运行器停止过程。真实运行取代行为与已完成热备证据仍由 CI 负责验证。
+[工作流回归测试](../../../../rsh/Scripts/ci-workflow.spec.ts)固定工作流/引用隔离、发布所属构建豁免、聚合状态条件、覆盖率历史取消及保留的 Wine 清理。[平台路由回归测试](../../../../rsh/Scripts/tests/ci-master-platforms.spec.ts)保留 master/PR 目标划分与发布矩阵；[发布演练回归测试](../../../../rsh/Scripts/tests/ci-release-selfhosted.spec.ts)在验证取消策略的同时保留运行器准入与发布隔离。这些配置检查不重现 GitHub 调度或运行器停止过程。真实运行取代行为与已完成热备证据仍由 CI 负责验证。

@@ -29,19 +29,21 @@ kind: "package-reference"
 
 ## The kind system
 
+`<group-path>` and `<package-path>` denote the actual repository-relative directories in the [package map](../../../../rsh/README.md), not fixed-depth patterns.
+
 `kind` selects the document template directly; every kind maps to exactly one template that exists in this skill, and no template exists without a kind. Derive the kind mechanically, in this order:
 
-1. The README is `packages/README.md` or `packages/<group>/README.md` → `package-group`.
+1. The README is `rsh/README.md` or `<group-path>/README.md` → `package-group`.
 2. The package manifest declares `dsh.bundle.patch` → `package-bundle`.
-3. The package is in the audited library registry of `scripts/doc-standard.spec.ts` → `package-library`.
+3. The package is in the audited library registry of `rsh/Scripts/doc-standard.spec.ts` → `package-library`.
 4. Everything else — a service default export or an `apply` plugin — is `package-reference`.
 
 | `kind` | Repository position | Template | Standard |
 |---|---|---|---|
-| `package-group` | `packages/README.md`, `packages/<group>/README.md` | [package-group.md](../templates/package-group.md) | Group map: orient the capability family, map its direct packages, explain composition relationships, and link package-owned details. |
-| `package-reference` | `packages/<group>/<package>/README.md` with a plugin entry | [package-reference.md](../templates/package-reference.md) | Package contract: follow the [package README review standard](review.md#package-readme-review) and the canonical [package documentation requirements](../../../../docs/cookbook/adding-a-package.md#4-write-the-package-readme). |
-| `package-library` | `packages/<group>/<package>/README.md` with a plain module entry | [package-library.md](../templates/package-library.md) | Library contract: consumer entry points and boundaries; no profile-install path and no mount configuration. |
-| `package-bundle` | `packages/<group>/<package>/README.md` declaring `dsh.bundle.patch` | [package-bundle.md](../templates/package-bundle.md) | Installable layer: the verified `dsh plugin` install path, layer semantics, and patch document. |
+| `package-group` | `rsh/README.md`, `<group-path>/README.md` | [package-group.md](../templates/package-group.md) | Group map: orient the capability family, map its direct packages, explain composition relationships, and link package-owned details. |
+| `package-reference` | `<package-path>/README.md` with a plugin entry | [package-reference.md](../templates/package-reference.md) | Package contract: follow the [package README review standard](review.md#package-readme-review) and the canonical [package documentation requirements](../../../../rsh/Docs/cookbook/adding-a-package.md#4-write-the-package-readme). |
+| `package-library` | `<package-path>/README.md` with a plain module entry | [package-library.md](../templates/package-library.md) | Library contract: consumer entry points and boundaries; no profile-install path and no mount configuration. |
+| `package-bundle` | `<package-path>/README.md` declaring `dsh.bundle.patch` | [package-bundle.md](../templates/package-bundle.md) | Installable layer: the verified `dsh plugin` install path, layer semantics, and patch document. |
 
 Before assigning `package-library` or `package-bundle`, inspect the facts: read `package.json` for `dsh.bundle.patch` and `src/index.ts` for the entry shape (`apply` export or a default service export is a plugin; a plain module API is a library). `dsh plugin --profile <name> add <package>` installs any npm dependency, but the profile reconcile activates a layer only for a package that declares `dsh.bundle`; never present that command as an install path for a library or a plain plugin. The documentation check derives the expected kind from these same facts, rejects another value, and rejects `name`, `audience`, `tags`, and README-local `i18n` metadata. Add a new kind only with a distinct template, an unambiguous repository position or declared owner, and a focused check that maps documents to it.
 
@@ -57,7 +59,7 @@ Weak: `The best and most advanced session storage implementation with lots of op
 
 Keep link destinations machine-checkable and mentions context-relative. Use fragment-only links for the current page's menu. Use full URLs for external resources.
 
-The desired internal-link model names a target from the repository root, but a leading `/docs/...` Markdown URL resolves outside the repository on GitHub, remains untouched by the website projector, and is skipped by `verify-md-links`. Until a repository-owned resolver supports root paths in every renderer, use the current renderer-valid relative URL in Markdown links and write logical path mentions such as `docs/` or `packages/session/` relative to the discussion. Never adopt an unchecked leading-slash link merely to resemble an absolute path.
+The desired internal-link model names a target from the repository root, but a leading `/docs/...` Markdown URL resolves outside the repository on GitHub, remains untouched by the website projector, and is skipped by `verify-md-links`. Until a repository-owned resolver supports root paths in every renderer, use the current renderer-valid relative URL in Markdown links and write logical path mentions such as `rsh/Docs/` or `rsh/Engine/session/` relative to the discussion. Never adopt an unchecked leading-slash link merely to resemble an absolute path.
 
 ## Bilingual line alignment
 

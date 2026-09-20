@@ -48,7 +48,7 @@ permissions:
 
 env:
   # CI runs must never report to the production telemetry endpoint baked
-  # into apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
       # bwrap so trusted CI exercises it; the functional probe remains the
       # authority on whether the runner can use the sandbox.
       - name: Prepare bubblewrap (unrestrict userns)
-        run: bash scripts/prepare-ci-bubblewrap.sh
+        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
 
       # Guard against a false green: the e2e suites self-skip when the key is
       # absent, so a missing/misconfigured secret would otherwise pass as

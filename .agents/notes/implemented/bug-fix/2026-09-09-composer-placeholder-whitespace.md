@@ -18,4 +18,4 @@ The Composer hides its placeholder whenever the raw draft is nonempty. Submissio
 
 ## Consequences
 
-All placeholder variants, including queued-message steering guidance, disappear after whitespace input and return after deletion. A whitespace-only draft without attachments remains unsendable. [Component tests](../../../../packages/client/ui-conversation/tests/input-bar.client.spec.tsx) cover visibility, composition, rerendering and submission; the [browser regression](../../../../apps/web/tests/composer-placeholder.e2e.ts) checks keyboard and clipboard gestures against built UI.
+All placeholder variants, including queued-message steering guidance, disappear after whitespace input and return after deletion. A whitespace-only draft without attachments remains unsendable. [Component tests](../../../../rsh/Programs/Web/client/ui-conversation/tests/input-bar.client.spec.tsx) cover visibility, composition, rerendering and submission; the [browser regression](../../../../rsh/Programs/Web/application/tests/composer-placeholder.e2e.ts) checks keyboard and clipboard gestures against built UI.

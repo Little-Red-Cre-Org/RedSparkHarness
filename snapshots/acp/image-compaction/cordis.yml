@@ -4,6 +4,18 @@
 # commits through. The store resolves its root from $DSH_HOME, which the
 # snapshot harness scopes per run, so the patch itself carries no attachment
 # path. The ACP row selects the shipped vision model.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
 - id: acp
   name: '@deepseek-ai/dsh-acp'
   config:
@@ -13,7 +25,7 @@
 - id: session-persistence-jsonl
   name: '@deepseek-ai/dsh-session-persistence-jsonl'
   config:
-    root: !!js process.env.DSH_SNAPSHOT_SESSIONS_ROOT ?? './.sessions'
+    root: !!js process.env.DSH_SNAPSHOT_SESSIONS_ROOT ?? '.sessions'
     compression: none
 
 - id: agent-instructions

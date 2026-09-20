@@ -8,9 +8,9 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: ['./tsconfig.base.json'] }), standardDecoratorPlugin()],
   test: {
     execArgv: vitestExecArgv,
-    setupFiles: ['./scripts/test-proxy-environment.ts', './scripts/test-invariants.ts'],
+    setupFiles: ['./rsh/Scripts/test-proxy-environment.ts', './rsh/Scripts/test-invariants.ts'],
     include: [
-      'apps/cli/tests/**/*.expected.e2e.ts',
+      'rsh/Programs/CLI/tests/**/*.expected.e2e.ts',
     ],
     testTimeout: 120_000,
     hookTimeout: 30_000,

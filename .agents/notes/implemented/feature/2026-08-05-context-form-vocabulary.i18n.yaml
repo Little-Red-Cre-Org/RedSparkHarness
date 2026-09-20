@@ -1,6 +1,6 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-05-context-form-vocabulary.md
-2026-08-05-context-form-vocabulary.md: e1c909b761fee60ebacb306ef204a4212a03baa4
-2026-08-05-context-form-vocabulary.zh.md: 4d595bf52fba2f7323643ddc47bd365ce6508c9e
+2026-08-05-context-form-vocabulary.md: 7be1e8eb3a9c8d2f07bb83ee64a6d72f7a2ab701
+2026-08-05-context-form-vocabulary.zh.md: b0491e89af698622200dff0666488e3761535262

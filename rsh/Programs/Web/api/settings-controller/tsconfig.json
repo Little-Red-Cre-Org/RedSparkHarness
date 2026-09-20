@@ -1,0 +1,42 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/authorization"
+    },
+    {
+      "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/credentials"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Core/util/native-command"
+    },
+    {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../../../Core/typert/protocol"
+    }
+  ]
+}

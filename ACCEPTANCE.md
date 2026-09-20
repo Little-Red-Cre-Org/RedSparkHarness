@@ -16,10 +16,10 @@
 ## 文件
 
 - [中文 README](README.zh.md) / [English README](README.md)
-- [RedSpark 原始品牌图](apps/web/public/brand/redspark-reference.png)
-- [赤绯原始设定图](apps/web/public/brand/kitsune-reference.png)
-- [SVG 应用标记](apps/web/public/favicon.svg)
-- [一键启动脚本](scripts/launch-redspark.ps1)
+- [RedSpark 原始品牌图](rsh/Programs/Web/application/public/brand/redspark-reference.png)
+- [赤绯原始设定图](rsh/Programs/Web/application/public/brand/kitsune-reference.png)
+- [SVG 应用标记](rsh/Programs/Web/application/public/favicon.svg)
+- [一键启动脚本](rsh/Scripts/launch-redspark.ps1)
 
 ## 验证范围
 

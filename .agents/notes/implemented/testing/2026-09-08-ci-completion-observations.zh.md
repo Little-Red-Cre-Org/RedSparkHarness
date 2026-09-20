@@ -10,27 +10,27 @@ Status: implemented
 
 ## 决策
 
-[GitHub 评审浏览器测试](../../../../apps/web/tests/github-ready-review.e2e.ts)在 HTTP 202 后阻塞真实 Workspace 创建，验证 Agent 和模型请求均不存在，再释放创建并等待对应 Session 的 `turn/end`。即使测试超时，清理也会释放屏障、恢复方法并移除事件监听器。Workspace 归属、请求数量、提示词内容和浏览器预期保留原有断言。
+[GitHub 评审浏览器测试](../../../../rsh/Programs/Web/application/tests/github-ready-review.e2e.ts)在 HTTP 202 后阻塞真实 Workspace 创建，验证 Agent 和模型请求均不存在，再释放创建并等待对应 Session 的 `turn/end`。即使测试超时，清理也会释放屏障、恢复方法并移除事件监听器。Workspace 归属、请求数量、提示词内容和浏览器预期保留原有断言。
 
-[PowerShell 执行器测试](../../../../packages/shell/pwsh-local/tests/executor.spec.ts)用私有文件屏障控制启动与消费式读取。测试决定后续输出何时可用；最终 stdin／环境变量输出在 `done` 后读取。轮询使用当前测试预算，每个创建的 Context 都在插件初始化前登记。清理在等待释放前同时取得 Context 与目录，完成释放后才删除目录。
+[PowerShell 执行器测试](../../../../rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts)用私有文件屏障控制启动与消费式读取。测试决定后续输出何时可用；最终 stdin／环境变量输出在 `done` 后读取。轮询使用当前测试预算，每个创建的 Context 都在插件初始化前登记。清理在等待释放前同时取得 Context 与目录，完成释放后才删除目录。
 
-[排队图片测试](../../../../apps/web/tests/queue-image.e2e.ts)分别阻塞接纳和附件读取，再捕获已接纳行中加载完成的缩略图。清理共享一个 Promise，释放保留的请求，并在关闭浏览器前等待其 handler 完成。
+[排队图片测试](../../../../rsh/Programs/Web/application/tests/queue-image.e2e.ts)分别阻塞接纳和附件读取，再捕获已接纳行中加载完成的缩略图。清理共享一个 Promise，释放保留的请求，并在关闭浏览器前等待其 handler 完成。
 
-[详情 Session 生命周期测试](../../../../apps/web/tests/details-session-lifecycle.e2e.ts)在关闭状态出现后等待框架已捕获的动画 Promise，再检查轨道宽度为零。取消的过渡同样进入该断言；动画结束不能让持续非零的轨道通过。
+[详情 Session 生命周期测试](../../../../rsh/Programs/Web/application/tests/details-session-lifecycle.e2e.ts)在关闭状态出现后等待框架已捕获的动画 Promise，再检查轨道宽度为零。取消的过渡同样进入该断言；动画结束不能让持续非零的轨道通过。
 
-[整队列 steering 测试](../../../../apps/web/tests/steering.e2e.ts)等待 steering 操作可用以及 composer 显示队列 steering 提示。模型流屏障在测试观察 steering 时阻止后续问题 composer 接管。清理在关闭浏览器前释放该屏障。
+[整队列 steering 测试](../../../../rsh/Programs/Web/application/tests/steering.e2e.ts)等待 steering 操作可用以及 composer 显示队列 steering 提示。模型流屏障在测试观察 steering 时阻止后续问题 composer 接管。清理在关闭浏览器前释放该屏障。
 
-[Workspace 管理测试](../../../../apps/web/tests/workspace-management.e2e.ts)在下一次目录对话框操作前等待恢复后的 composer 焦点。归档用例通过 Session controller 为已知 seed id 设置显式用户标题，再用该精确标题跨重载定位行。无关的恢复行无法匹配该定位器；持久化归档断言仍检查 seed id 和保留的日志。
+[Workspace 管理测试](../../../../rsh/Programs/Web/application/tests/workspace-management.e2e.ts)在下一次目录对话框操作前等待恢复后的 composer 焦点。归档用例通过 Session controller 为已知 seed id 设置显式用户标题，再用该精确标题跨重载定位行。无关的恢复行无法匹配该定位器；持久化归档断言仍检查 seed id 和保留的日志。
 
-[Worker 预算测试](../../../../packages/code-runtime/code-runtime-worker-thread/tests/budget.spec.ts)保留真实 worker 执行与绑定传输，只控制 Host 定时器和 ELU 样本。测试先确认绑定已进入，再检验 idle、active 和壁钟决策，使启动超时不能冒充绑定期间的预算决策。[真实 worker 测试](../../../../packages/code-runtime/code-runtime-worker-thread/tests/runtime.spec.ts)独立保留实际 ELU、空闲绑定和热循环覆盖。
+[Worker 预算测试](../../../../rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/budget.spec.ts)保留真实 worker 执行与绑定传输，只控制 Host 定时器和 ELU 样本。测试先确认绑定已进入，再检验 idle、active 和壁钟决策，使启动超时不能冒充绑定期间的预算决策。[真实 worker 测试](../../../../rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/runtime.spec.ts)独立保留实际 ELU、空闲绑定和热循环覆盖。
 
-[分离启动测试](../../../../packages/host/open-in-app/tests/launch-detached.spec.ts)控制观察时间，并通过真实 launcher 登记的回调发送迟到进程事件。测试检查仅完成一次、仅 unref 一次且不终止子进程。[Resolver 测试](../../../../packages/host/open-in-app/tests/resolver.spec.ts)保留真实进程的环境变量和提前退出用例。
+[分离启动测试](../../../../rsh/Programs/Web/host/open-in-app/tests/launch-detached.spec.ts)控制观察时间，并通过真实 launcher 登记的回调发送迟到进程事件。测试检查仅完成一次、仅 unref 一次且不终止子进程。[Resolver 测试](../../../../rsh/Programs/Web/host/open-in-app/tests/resolver.spec.ts)保留真实进程的环境变量和提前退出用例。
 
-[LSP 背压测试](../../../../packages/lsp/lsp-stdio/tests/instance.spec.ts)保留真实暂停读取的 fixture 与大型原生管道写入。接受 abort 错误前，测试验证待处理写入回调已完成、捕获的子进程也已结束；`instance.dead` 在释放开始时就可能为真。
+[LSP 背压测试](../../../../rsh/Modules/Official/lsp/lsp-stdio/tests/instance.spec.ts)保留真实暂停读取的 fixture 与大型原生管道写入。接受 abort 错误前，测试验证待处理写入回调已完成、捕获的子进程也已结束；`instance.dead` 在释放开始时就可能为真。
 
 ### 已构建 Client 的导入分类
 
-[Node import sweep](../../../../packages/experimental/webworker-runtime/tests/compile/transform-corpus-check.ts)只有在 Node 针对某个 `.css` 文件报告 `ERR_UNKNOWN_FILE_EXTENSION` 时才接受 Dockkit bundle，其他每个错误以及每个意外成功的豁免导入都会失败；该豁免覆盖哪些样式表由[样式表豁免决策](../bug-fix/2026-09-10-built-bundle-css-exemption.zh.md)拥有。限定范围的 resolve/load hook 覆盖预期 CSS 失败、其他样式表、其他扩展名、任意失败、其他错误码和陈旧豁免，不修改共享构建产物。
+[Node import sweep](../../../../rsh/Modules/Community/experimental/webworker-runtime/tests/compile/transform-corpus-check.ts)只有在 Node 针对某个 `.css` 文件报告 `ERR_UNKNOWN_FILE_EXTENSION` 时才接受 Dockkit bundle，其他每个错误以及每个意外成功的豁免导入都会失败；该豁免覆盖哪些样式表由[样式表豁免决策](../bug-fix/2026-09-10-built-bundle-css-exemption.zh.md)拥有。限定范围的 resolve/load hook 覆盖预期 CSS 失败、其他样式表、其他扩展名、任意失败、其他错误码和陈旧豁免，不修改共享构建产物。
 
 ## 考虑过的替代方案
 

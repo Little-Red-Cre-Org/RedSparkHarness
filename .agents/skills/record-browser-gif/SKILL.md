@@ -35,7 +35,7 @@ A GIF for a specific pull request demonstrates that pull request's tree, so stag
 
 Follow the available browser-control workflow's setup, interaction, and cleanup instructions. When it exposes `recordVideo`, enable video on the same controlled context to capture more intermediate frames. Otherwise use [screenshot capture](#screenshot-capture) within that workflow; video availability does not determine which browser-control workflow to use. Existing user browser state remains an explicit provenance exception.
 
-Only when browser control is unavailable, use the repository-declared Playwright dependency in an isolated headless browser and state that fallback in the provenance. In this repository it resolves from `apps/web/package.json`; do not install another driver or open the user's browser.
+Only when browser control is unavailable, use the repository-declared Playwright dependency in an isolated headless browser and state that fallback in the provenance. In this repository it resolves from `rsh/Programs/Web/application/package.json`; do not install another driver or open the user's browser.
 
 Before recording, identify the origin, built or development server, transport, and any mode overrides. When a production default opens a native surface that automation cannot drive, select an official browser-operable production backend through normal application configuration and disclose the override.
 
@@ -48,7 +48,7 @@ Match `viewport` and `recordVideo.size` explicitly: Playwright otherwise scales 
 Configure video through the chosen browser-control workflow. The standalone Playwright fallback uses:
 
 ```js
-const { chromium } = createRequire(join(repo, 'apps/web/package.json'))('playwright')
+const { chromium } = createRequire(join(repo, 'rsh/Programs/Web/application/package.json'))('playwright')
 const browser = await chromium.launch()
 const size = { width: 1440, height: 900 }
 const context = await browser.newContext({

@@ -10,7 +10,7 @@ Status: proposed
 
 ## 提案
 
-使用 Stryker（`@stryker-mutator/vitest-runner`）对 `packages/*/src` 运行变异测试：
+使用 Stryker（`@stryker-mutator/vitest-runner`）对 `rsh/*/src` 运行变异测试：
 
 - **PR（Pull Request）范围的增量运行**（仅变更文件），作为一个 CI job。调优后速度足以作为合并门禁。
 - **每夜全量运行**，跟踪变异分数；先记录基线，再将阈值设为观测到的基线并只升不降（与覆盖率策略一致：阈值只收紧）。
@@ -25,7 +25,7 @@ Status: proposed
 
 ## 验收标准
 
-- Stryker 配置在 `packages/*/src` 上以 vitest runner 运行；每夜 job 记录变异分数并采用只升不降的阈值，分数低于已记录的基线时任务失败。
+- Stryker 配置在 `rsh/*/src` 上以 vitest runner 运行；每夜 job 记录变异分数并采用只升不降的阈值，分数低于已记录的基线时任务失败。
 - PR 范围的增量运行在运行时间可接受后作为合并门禁；否则明确决定只保留每夜运行，并将该结论记录于此。
 - 等价变异体带有注释排除及理由，与 `/* v8 ignore */` 策略一致。
 

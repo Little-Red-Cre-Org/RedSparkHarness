@@ -1,0 +1,42 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../../../Modules/Official/code-runtime/code-runtime"
+    },
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../system-prompt"
+    },
+    {
+      "path": "../agent"
+    },
+    {
+      "path": "../scope"
+    },
+    {
+      "path": "../../../Modules/Official/interaction/user-approval"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/invariants"
+    }
+  ]
+}

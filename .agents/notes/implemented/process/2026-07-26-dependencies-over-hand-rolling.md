@@ -19,7 +19,7 @@ The bar for a new dependency:
 - **Fit at the boundary.** The package's semantics cover our actual contract; residual semantics we still hand-roll around it count against the swap.
 - **Not a settled seam.** schemastery (config schemas), vendored Cordis, the `@earendil-works` twins, and other decisions recorded in implemented Agent Notes are not reopened by this policy; a swap that collapses a recorded design needs to beat the recorded rationale, not just cite this note.
 
-`packages/util/`'s "zero-dependency" charter describes that group's *export* discipline — util packages stay free of harness dependencies so any group can depend on them — and does not ban external packages where they simplify; a util package whose entire job a maintained external package does better should be replaced by the dependency, not preserved for the charter.
+`rsh/Core/util/`'s "zero-dependency" charter describes that group's *export* discipline — util packages stay free of harness dependencies so any group can depend on them — and does not ban external packages where they simplify; a util package whose entire job a maintained external package does better should be replaced by the dependency, not preserved for the charter.
 
 Dependency-swap proposals are recorded as `proposed/simplification` Agent Notes like any other removal, with the candidate package, the deletable surface, residual semantics, and supply-chain considerations stated. The [supply-chain proposal](../../proposed/process/2026-06-11-supply-chain-and-vendor-drift.md) owns advisory scanning and update cadence for the dependency list this policy grows.
 

@@ -10,11 +10,11 @@ Status: implemented
 
 ## Decision
 
-[`contentHasFile`](../../../../packages/llm/llm/src/content.ts) 使用直接迭代，替代递归的 `Array.some` 回调。它保留提前退出、嵌套工具结果遍历，以及其他块类型返回 false 的行为。它不存储身份、校验结果或冻结证明。图片检测、文件投影和请求构建保持既有行为。[请求冻结校准](2026-09-06-agent-request-freeze-provenance.zh.md)拥有请求历史预算。
+[`contentHasFile`](../../../../rsh/Engine/llm/llm/src/content.ts) 使用直接迭代，替代递归的 `Array.some` 回调。它保留提前退出、嵌套工具结果遍历，以及其他块类型返回 false 的行为。它不存储身份、校验结果或冻结证明。图片检测、文件投影和请求构建保持既有行为。[请求冻结校准](2026-09-06-agent-request-freeze-provenance.zh.md)拥有请求历史预算。
 
 ## Measurement evidence
 
-Apple M4 Pro、Node 24.19.0：九组交替原始/候选配对在全新的普通 Node 进程中运行不变的[请求历史 worker](../../../../benchmarks/agent-continuation/agent-continuation.worker.ts)。每个进程接收同一个原生 V3 种子的副本。只有构建后的 LLM 入口变化；每个样本均完成 40 次请求、零次实时工具调用与 13,925 个事件。以下全部总耗时单位为毫秒，按配对顺序排列。
+Apple M4 Pro、Node 24.19.0：九组交替原始/候选配对在全新的普通 Node 进程中运行不变的[请求历史 worker](../../../../rsh/Tests/benchmarks/agent-continuation/agent-continuation.worker.ts)。每个进程接收同一个原生 V3 种子的副本。只有构建后的 LLM 入口变化；每个样本均完成 40 次请求、零次实时工具调用与 13,925 个事件。以下全部总耗时单位为毫秒，按配对顺序排列。
 
 | 变体 | 原始总耗时 | 中位数 |
 |---|---|---:|
@@ -29,4 +29,4 @@ Apple M4 Pro、Node 24.19.0：九组交替原始/候选配对在全新的普通 
 
 ## Consequences
 
-扫描仍与访问块数呈线性关系，每次调用都重新读取可变的嵌套内容。[内容测试](../../../../packages/llm/llm/tests/content.spec.ts)覆盖空数组、冻结数组、嵌套数组与后续变更的数组；服务测试保留文件 handle 投影，请求冻结、重建与恢复测试保留原生历史语义。模型可见文本与 Session 格式均不改变。冻结来源证明与[后端基线](../testing/2026-09-06-backend-continuation-performance.zh.md)记录仍各自拥有独立决策；两者均未被取代。
+扫描仍与访问块数呈线性关系，每次调用都重新读取可变的嵌套内容。[内容测试](../../../../rsh/Engine/llm/llm/tests/content.spec.ts)覆盖空数组、冻结数组、嵌套数组与后续变更的数组；服务测试保留文件 handle 投影，请求冻结、重建与恢复测试保留原生历史语义。模型可见文本与 Session 格式均不改变。冻结来源证明与[后端基线](../testing/2026-09-06-backend-continuation-performance.zh.md)记录仍各自拥有独立决策；两者均未被取代。

@@ -40,4 +40,4 @@ Session 正文中的本地媒体路径通过同源文件路由渲染。本记录
 
 ## Testing
 
-渲染器测试覆盖稳定与流式门禁、引用式图片、协议复查、加载失败回退和来源替换。聊天测试覆盖词表与组件连接。`apps/web/tests/markdown-images.e2e.ts` 浏览器场景使用已播种 Session 启动交付的 Web 组合，检查实际加载与回退文本。模型驱动的记录 Session 往返仍独立于此 UI 期望；后续记录说明当前路由覆盖。
+渲染器测试覆盖稳定与流式门禁、引用式图片、协议复查、加载失败回退和来源替换。聊天测试覆盖词表与组件连接。`rsh/Programs/Web/application/tests/markdown-images.e2e.ts` 浏览器场景使用已播种 Session 启动交付的 Web 组合，检查实际加载与回退文本。模型驱动的记录 Session 往返仍独立于此 UI 期望；后续记录说明当前路由覆盖。

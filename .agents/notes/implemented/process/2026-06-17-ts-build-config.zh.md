@@ -10,7 +10,7 @@ Status: implemented
 
 此前的 TypeScript 构建与类型检查配置存在以下问题：
 
-- `build` 使用 `tsc` 将 `packages/<group>/<pkg>` 和 `vendor/*` 下的 `.ts` 转换为 `.d.ts` 文件，然后使用 `tsdown` 将 `.ts` 转换为打包后的 `.js` 文件。这导致两个工具各自执行 TypeScript 转换。
+- `build` 使用 `tsc` 将 `packages/<group>/<pkg>` 和 `rsh/Core/vendor/*` 下的 `.ts` 转换为 `.d.ts` 文件，然后使用 `tsdown` 将 `.ts` 转换为打包后的 `.js` 文件。这导致两个工具各自执行 TypeScript 转换。
 - `typecheck` 倾向于通过一个根目录的类型检查配置来校验包、vendor 源码、示例、测试和脚本。
 
 构建与类型检查使用一致的 tsconfig 边界和 TypeScript 解析/转换行为。构建通过单一编译器和配置生成 `.js`、`.d.ts`、`.js.map` 和 `.d.ts.map`，使发布产物与类型校验保持一致。
@@ -21,9 +21,9 @@ Status: implemented
     - `tsdown` 输出的打包 `.d.ts` 与 Cordis 内部的相对模块增强（module augmentation）结构冲突。
     - tsc 的输出受 `allowImportingTsExtensions` 影响：生成的 `.js` 文件不得导入 `.ts` 文件，且生成的 `.d.ts` 文件必须保留 NodeNext/Node16 接受的显式相对说明符。为此，包内相对导入在 TypeScript 源码中使用显式 `.ts` 说明符，由 `rewriteRelativeImportExtensions` 在输出的 JS 中将其重写为 `.js`。
     - `tsdown` 输出的打包 `.js` 与 `tsc -b` 逐文件输出的 `.js` 行为不同，例如装饰器转换行为。
-- `vendor/*/src`、示例、测试和脚本无法全部以 plain-include 方式纳入一个根目录的严格程序。
-    - 在根目录严格配置下直接对 `vendor/*/src` 做类型检查，会触发大量不属于本项目所有权范围的类型错误。
-    - `packages/*/*` 对 `vendor` 的包依赖解析到 `vendor/*/lib`，以适应不同的 tsconfig 严格度。
+- `rsh/Core/vendor/*/src`、示例、测试和脚本无法全部以 plain-include 方式纳入一个根目录的严格程序。
+    - 在根目录严格配置下直接对 `rsh/Core/vendor/*/src` 做类型检查，会触发大量不属于本项目所有权范围的类型错误。
+    - `rsh/*/*` 对 `vendor` 的包依赖解析到 `rsh/Core/vendor/*/lib`，以适应不同的 tsconfig 严格度。
 
 
 ## 决策
@@ -40,7 +40,7 @@ Status: implemented
 
 `pnpm run typecheck` 先执行 Host lib 阶段，以生成 Client 类型检查所需的 Remote 声明，再对 `tsconfig.client.json` 执行 `tsc -b`。两个 aggregate 本身以 `noEmit` 方式检查各自的示例、测试与脚本；被引用的包项目和 vendor 项目保持与构建相同的发射行为。
 
-复合项目将增量构建信息保存在各项目本地的 `lib/` 输出中。`pnpm run clean` 会根据根 TypeScript project-reference 图确定当前有效的输出目录，删除遗留的根目录构建信息，并删除已删除包留下且仅包含已知生成残留的 `packages/*/*` 目录。在删除现有目标前，该命令会解析目标父目录的真实路径；如果解析后的父目录位于仓库之外，则拒绝删除，防止使用符号链接的 project reference 将清理操作重定向到工作副本之外。对于仍有 `package.json` 的每个包，该命令都会保留 `node_modules`；如果不含 `package.json` 的目录中存在未知文件，则拒绝删除。构建不会自动调用 clean，因此常规构建会保留增量状态。
+复合项目将增量构建信息保存在各项目本地的 `lib/` 输出中。`pnpm run clean` 会根据根 TypeScript project-reference 图确定当前有效的输出目录，删除遗留的根目录构建信息，并删除已删除包留下且仅包含已知生成残留的 `rsh/*/*` 目录。在删除现有目标前，该命令会解析目标父目录的真实路径；如果解析后的父目录位于仓库之外，则拒绝删除，防止使用符号链接的 project reference 将清理操作重定向到工作副本之外。对于仍有 `package.json` 的每个包，该命令都会保留 `node_modules`；如果不含 `package.json` 的目录中存在未知文件，则拒绝删除。构建不会自动调用 clean，因此常规构建会保留增量状态。
 
 命令编排结构如下：
 
@@ -53,14 +53,14 @@ tsdown --env.DSH_BUILD_FACE client
 pnpm run build:web
 
 pnpm run verify-node-next-types:
-tsx scripts/verify-node-next-types.ts
+tsx rsh/Scripts/verify-node-next-types.ts
 
 pnpm run typecheck:
 pnpm run build:lib:host
 tsc -b tsconfig.client.json
 
 pnpm run clean:
-tsx scripts/clean.ts
+tsx rsh/Scripts/clean.ts
 ```
 
 源码模式 demo 通过各自声明的 TypeScript 启动器和根路径映射运行。`dsh` TUI 链使用 Node 原生转换及应用自有的路径 loader，Web demo 在进入同一条 CLI 源码链路前先构建所需产物，其他源码 demo 继续使用 tsx。
@@ -76,7 +76,7 @@ tsx scripts/clean.ts
 
 构建职责更加清晰：
 
-- `packages/<group>/<pkg>` 和 `vendor/*` 下的每个普通模块有一份本地 tsconfig，同时服务于构建、类型检查和直接运行源码的工具（如 `dsh` 源码 loader、`tsx` 和 `vitest`）。`api/remotes` 因生成约定顺序使用一个 solution 和两个互斥的 emitting project，是唯一例外。
+- `packages/<group>/<pkg>` 和 `rsh/Core/vendor/*` 下的每个普通模块有一份本地 tsconfig，同时服务于构建、类型检查和直接运行源码的工具（如 `dsh` 源码 loader、`tsx` 和 `vitest`）。`api/remotes` 因生成约定顺序使用一个 solution 和两个互斥的 emitting project，是唯一例外。
 - `build` 命令依次运行 Host 和 Client 的 Project Reference 图。每个阶段都由 `tsc -b` 负责可发布的逐模块 `.js` 和 `.d.ts` 输出，打包器仅负责发布 runtime bundle。
     - `lib/types/*.d.ts` 是发布用的声明输出；`.d.ts.map` 只作为本地编译产物保留。
     - `lib/types/*.d.ts` 使用显式 `.ts` 相对说明符，TypeScript 的 NodeNext/Node16 解析器会将其映射到同级的 `.d.ts` 文件。

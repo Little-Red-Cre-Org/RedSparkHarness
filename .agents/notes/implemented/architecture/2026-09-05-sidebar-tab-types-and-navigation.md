@@ -46,7 +46,7 @@ Two further seats extend the guide and the menu: `sidebar.right.tab.guide` is a 
 
 ### Tab occurrence information
 
-[Responsive Sidebar and tab information](2026-09-07-sidebar-responsive-tab-info.md) supersedes this note's choice of flat owner props for occurrence information. Bodies, titles and guide replacements receive the framework-injected `useTabInfo()` to read `{ sidebar, panel, tab }`. The record, navigation, visibility, signal and bound actions live inside `tab`; exact fields belong to the [Sidebar reference](../../../../docs/subsystems/sidebar-right.md).
+[Responsive Sidebar and tab information](2026-09-07-sidebar-responsive-tab-info.md) supersedes this note's choice of flat owner props for occurrence information. Bodies, titles and guide replacements receive the framework-injected `useTabInfo()` to read `{ sidebar, panel, tab }`. The record, navigation, visibility, signal and bound actions live inside `tab`; exact fields belong to the [Sidebar reference](../../../../rsh/Docs/subsystems/sidebar-right.md).
 
 The Tab domain still owns one occurrence per committed record, with an `AbortController`, navigation snapshot and actions bound to its Session. It pins the address in the [resource model](2026-09-05-client-resource-model.md) for the record's lifetime; hiding and switching Sessions do not end it, while closing the record aborts and releases it. Existing framework store and navigation hooks provide live reads, without subscriptions in tab implementations.
 

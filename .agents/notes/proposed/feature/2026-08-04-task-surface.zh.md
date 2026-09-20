@@ -226,13 +226,13 @@ Web 插件将未提交值保存在一个有界、按会话持久化的 slot stor
 
 | 包 | 职责 |
 |---|---|
-| `packages/core/agent` 和 `packages/core/agent-loop` | 为已认领的下一轮 inbox 条目提供通用终态结果，让 Host 观察方无需使用 Task Surface 专用类型，即可区分持久接纳和丢弃 |
-| `packages/task-surface/task-surface` | 浏览器安全的模型、带品牌类型的 ID、关联和待处理类型、解析器、限制、提交校验器／格式化器、会话事件扩展、投影单元，以及 Host 服务约定 |
-| `packages/task-surface/tool-task-surface` | `show_task_surface`、规范输出、呈现元数据、通用 render intent、活动 Surface 检查和 `concludeTurn()` 行为 |
-| `packages/client/runtime` | 通用排队消息 `source` 投影和会话作用域的活动投影访问 |
-| `packages/client/ui-primitives` | 与 Task Surface 无关的 `MarkdownText.remoteImages` 策略，包括 `alt-only` 图片分支和 URL 策略测试 |
-| `packages/client/ui-task-surface` | 静态且可操作的 `TaskSurfaceDock`、带 key 的只读 transcript 行、消费 Task Surface 模型并以 `alt-only` 模式使用 `MarkdownText` 的声明式 Web 渲染器、按会话划分的草稿 store，以及提交客户端 |
-| `packages/host/apiproxy` | 类型化的活动 Surface 读取／提交／关闭传输、用户消息来源扩展与传递、队列操作限制，以及认领和终态结果的路由；将校验、待处理协调和接纳委托给 Task Surface 服务 |
+| `rsh/Engine/core/agent` 和 `rsh/Engine/core/agent-loop` | 为已认领的下一轮 inbox 条目提供通用终态结果，让 Host 观察方无需使用 Task Surface 专用类型，即可区分持久接纳和丢弃 |
+| `rsh/task-surface/task-surface` | 浏览器安全的模型、带品牌类型的 ID、关联和待处理类型、解析器、限制、提交校验器／格式化器、会话事件扩展、投影单元，以及 Host 服务约定 |
+| `rsh/task-surface/tool-task-surface` | `show_task_surface`、规范输出、呈现元数据、通用 render intent、活动 Surface 检查和 `concludeTurn()` 行为 |
+| `rsh/Programs/Web/client/runtime` | 通用排队消息 `source` 投影和会话作用域的活动投影访问 |
+| `rsh/Programs/Web/client/ui-primitives` | 与 Task Surface 无关的 `MarkdownText.remoteImages` 策略，包括 `alt-only` 图片分支和 URL 策略测试 |
+| `rsh/Programs/Web/client/ui-task-surface` | 静态且可操作的 `TaskSurfaceDock`、带 key 的只读 transcript 行、消费 Task Surface 模型并以 `alt-only` 模式使用 `MarkdownText` 的声明式 Web 渲染器、按会话划分的草稿 store，以及提交客户端 |
+| `rsh/Programs/Web/host/apiproxy` | 类型化的活动 Surface 读取／提交／关闭传输、用户消息来源扩展与传递、队列操作限制，以及认领和终态结果的路由；将校验、待处理协调和接纳委托给 Task Surface 服务 |
 
 `ui-task-surface` 依赖浏览器安全的 Task Surface 领域包、客户端连接与运行时、locale、`ui-conversation` 所声明的 slot 约定、用于注册的 `ui-slots`，以及 `ui-primitives`；`ui-primitives` 不反向依赖 Task Surface。ApiProxy 依赖 Task Surface 服务约定和通用 AgentLoop 终态结果。核心 Agent 包不导入 Task Surface 类型。
 

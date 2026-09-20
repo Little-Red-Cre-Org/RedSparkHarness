@@ -10,9 +10,9 @@ Status: implemented
 
 ## 决策
 
-[系统提示词注册表](../../../../packages/core/system-prompt/README.zh.md)将固定 Harness 身份保留在最前，并将 `DEPLOYMENT_PERSONA_PREFIX` 保留在 `0`。截至 `STRUCTURED_OUTPUT` 的第一方可复用指令位于环境后缀之前：`HARNESS_SOURCE` 位于 `10000`，`WEB_SURFACE` 位于 `10100`，`DEPLOYMENT_PERSONA_SUFFIX` 位于 `10200`。
+[系统提示词注册表](../../../../rsh/Engine/core/system-prompt/README.zh.md)将固定 Harness 身份保留在最前，并将 `DEPLOYMENT_PERSONA_PREFIX` 保留在 `0`。截至 `STRUCTURED_OUTPUT` 的第一方可复用指令位于环境后缀之前：`HARNESS_SOURCE` 位于 `10000`，`WEB_SURFACE` 位于 `10100`，`DEPLOYMENT_PERSONA_SUFFIX` 位于 `10200`。
 
-全局 system-prompt 配置接受 `personaPrefix` 与 `personaSuffix`，两者均默认为空。[带作用域的 persona 行](../../../../packages/preset/persona/README.zh.md)要求提供 `prefix`，并接受默认为空的 `suffix`。它们通过导出的 `PERSONA_PREFIX_SECTION` 与 `PERSONA_SUFFIX_SECTION` 名称注册 `deployment:persona-prefix` 与 `deployment:persona-suffix`。省略或为空的作用域 `suffix` 会遮蔽掉全局后缀。交付的 Web、headless、SDK、ACP bundle 以及 standard、PTC、Cordis preset 将模型介绍保留在前缀中，仅将 `Your working directory is {{cwd}}.` 放入后缀。这些名称指定位置，而不对文本分类；不添加 persona 解析或 OS 字段。
+全局 system-prompt 配置接受 `personaPrefix` 与 `personaSuffix`，两者均默认为空。[带作用域的 persona 行](../../../../rsh/Engine/preset/persona/README.zh.md)要求提供 `prefix`，并接受默认为空的 `suffix`。它们通过导出的 `PERSONA_PREFIX_SECTION` 与 `PERSONA_SUFFIX_SECTION` 名称注册 `deployment:persona-prefix` 与 `deployment:persona-suffix`。省略或为空的作用域 `suffix` 会遮蔽掉全局后缀。交付的 Web、headless、SDK、ACP bundle 以及 standard、PTC、Cordis preset 将模型介绍保留在前缀中，仅将 `Your working directory is {{cwd}}.` 放入后缀。这些名称指定位置，而不对文本分类；不添加 persona 解析或 OS 字段。
 
 [提示词变量与工具指导归属记录](../architecture/2026-07-05-prompt-variables-and-tool-guidance-ownership.zh.md)仍保留 identity-first 的 persona 位置、单一归属规则、严格插值和工具指导职责。
 
@@ -34,4 +34,4 @@ Status: implemented
 
 ## 测试
 
-[注册表测试](../../../../packages/core/system-prompt/tests/system-prompt.spec.ts)在模型相同、checkout 路径、URL 和 cwd 值变化时比较可复用前缀；同时覆盖严格插值与完整覆盖。[循环测试](../../../../packages/core/agent-loop/tests/loop.spec.ts)固定靠前的模型身份和会话 cwd 插值。[Persona 测试](../../../../packages/preset/persona/tests/persona.spec.ts)覆盖作用域后缀替换、空值遮蔽与完整 persona。[录制的提示词快照](../../../../docs/testing.zh.md)覆盖原生工具与生成 SDK 组合发出的提示词；它们不测量提供方缓存命中。
+[注册表测试](../../../../rsh/Engine/core/system-prompt/tests/system-prompt.spec.ts)在模型相同、checkout 路径、URL 和 cwd 值变化时比较可复用前缀；同时覆盖严格插值与完整覆盖。[循环测试](../../../../rsh/Engine/core/agent-loop/tests/loop.spec.ts)固定靠前的模型身份和会话 cwd 插值。[Persona 测试](../../../../rsh/Engine/preset/persona/tests/persona.spec.ts)覆盖作用域后缀替换、空值遮蔽与完整 persona。[录制的提示词快照](../../../../rsh/Docs/testing.zh.md)覆盖原生工具与生成 SDK 组合发出的提示词；它们不测量提供方缓存命中。

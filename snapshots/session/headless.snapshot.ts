@@ -11,7 +11,7 @@ import ts from 'typescript'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import { releasedV0SessionFormatCodec } from '@deepseek-ai/dsh-session-format-v0-to-v1'
 import type { SessionFormatEvent, SessionFormatMigrationContext } from '@deepseek-ai/dsh-session-format'
-import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../scripts/snapshot-workspace-parent.ts'
+import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
 import {
   assertPersistedSessionVersion,
   assertSessionFixtureVersion,
@@ -55,11 +55,11 @@ import { parseSessionLog, prepareSessionSnapshotFixtureForComparison } from '@de
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const snapshotsRoot = fileURLToPath(new URL('./', import.meta.url))
-const dshBin = join(repoRoot, 'apps/cli/src/bin.ts')
+const dshBin = join(repoRoot, 'rsh/Programs/CLI/src/bin.ts')
 const tsconfigPath = join(repoRoot, 'tsconfig.json')
 const editingCordisSkill = join(
   repoRoot,
-  'packages/preset/agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md',
+  'rsh/Engine/preset/agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md',
 )
 
 type SnapshotMode = 'replay' | 'record' | 'refresh'
@@ -953,7 +953,8 @@ describe('headless recorded-session snapshots', () => {
             await mkdir(join(cwd, patchRoot), { recursive: true })
             patchSources.forEach((source, index) => {
               if (source.endsWith('.snapshot.yml')) {
-                materializeProfilePatch(source, cwd, join(cwd, patchRoot), index)
+                materializeProfilePatch(source, cwd, join(cwd, patchRoot), index,
+                  fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url)))
               }
             })
             await seedWorkspace(scenario, cwd)

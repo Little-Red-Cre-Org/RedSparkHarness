@@ -30,4 +30,4 @@ Wine 作为独立的托管 Ubuntu master 作业运行一次。其现有的按镜
 
 macOS、Linux ARM64 或 Wine 特定回归可能在必需 PR 检查为绿时合并。master 失败仍是普通失败作业，不是 `continue-on-error` 观测项。Linux/Windows x64 安装后 wheel 包检查及原生 Windows 构建和进程检查继续阻塞 PR 聚合；其依赖绝不引用已移除的 Wine PR 作业。
 
-[路由回归测试](../../../../scripts/tests/ci-master-platforms.spec.ts) 通过现有脚本 spec 覆盖率清单运行，检查目标划分、仅 master 条件、凭据传递、取消、Wine 唯一性、聚合依赖有效性及完整发布矩阵。已执行的负对照移除 Intel 目标、错误路由 Wine 并恢复失效聚合依赖；每项均产生预期失败。真实平台执行仍由 CI 负责；本地调度测试不声称执行了原生运行时或 Wine。
+[路由回归测试](../../../../rsh/Scripts/tests/ci-master-platforms.spec.ts) 通过现有脚本 spec 覆盖率清单运行，检查目标划分、仅 master 条件、凭据传递、取消、Wine 唯一性、聚合依赖有效性及完整发布矩阵。已执行的负对照移除 Intel 目标、错误路由 Wine 并恢复失效聚合依赖；每项均产生预期失败。真实平台执行仍由 CI 负责；本地调度测试不声称执行了原生运行时或 Wine。

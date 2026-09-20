@@ -20,13 +20,13 @@ Nothing named an agent that joined no preset. The join is a scope-parent link; w
 
 **An unjoined agent is named twice, at two different points.** `AgentPresets` logs one warning per agent published with a scope chain of length one while a roster is configured. The invariant companion fails instead — and at `system-prompt/assemble`, not at publication, because an unjoined agent is legal until it addresses a model: `recompose` binds exactly such an agent as its first link, and prompt assembly is the only caller that supplies an agent scope, so a host assembly and a standing mount are both correctly out of range.
 
-Three limits stay open and are recorded where they bite rather than fixed here: projection key presence is not a per-session capability signal ([`dsh-session-projection`](../../../../packages/session/session-projection/README.md)); a superseded standing generation is never reclaimed, which the settings-page authoring flow turns into a per-save cost ([`dsh-agent-presets`](../../../../packages/preset/agent-presets/README.md)); and a temporary plugin mounted through `cordis_mount` belongs to the composition rather than the session that mounted it ([`dsh-tool-cordis`](../../../../packages/extensions/tool-cordis/README.md)).
+Three limits stay open and are recorded where they bite rather than fixed here: projection key presence is not a per-session capability signal ([`dsh-session-projection`](../../../../rsh/Engine/session/session-projection/README.md)); a superseded standing generation is never reclaimed, which the settings-page authoring flow turns into a per-save cost ([`dsh-agent-presets`](../../../../rsh/Engine/preset/agent-presets/README.md)); and a temporary plugin mounted through `cordis_mount` belongs to the composition rather than the session that mounted it ([`dsh-tool-cordis`](../../../../rsh/Modules/Official/extensions/tool-cordis/README.md)).
 
 ## Testing
 
-`apps/cli/tests/web-agent-presets.e2e.ts` reads `ctx.get('tokenMeter')` on the booted Web composition before any preset in the file mounts — a preset-side meter sits behind an `isolate` realm and is invisible to `ctx.get`, so the read is an ownership assertion rather than a mount-order coincidence — then asserts a `minimal` session's snapshot carries all three units.
+`rsh/Programs/CLI/tests/web-agent-presets.e2e.ts` reads `ctx.get('tokenMeter')` on the booted Web composition before any preset in the file mounts — a preset-side meter sits behind an `isolate` realm and is invisible to `ctx.get`, so the read is an ownership assertion rather than a mount-order coincidence — then asserts a `minimal` session's snapshot carries all three units.
 
-`packages/preset/agent-presets/tests/mount.spec.ts` asserts the warning fires exactly once for a bare agent and not at all for a joined one. `tests/invariant.spec.ts` carries the negative control: an unjoined agent's assembly rejects, while a joined agent's assembly and a scopeless host assembly both pass.
+`rsh/Engine/preset/agent-presets/tests/mount.spec.ts` asserts the warning fires exactly once for a bare agent and not at all for a joined one. `tests/invariant.spec.ts` carries the negative control: an unjoined agent's assembly rejects, while a joined agent's assembly and a scopeless host assembly both pass.
 
 ## Alternatives considered
 

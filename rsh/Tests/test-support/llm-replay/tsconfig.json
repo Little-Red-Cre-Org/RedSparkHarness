@@ -1,0 +1,33 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Engine/compaction/compaction"
+    },
+    {
+      "path": "../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../Engine/llm/deepseek-llm-api-extensions"
+    },
+    {
+      "path": "../../../Engine/core/session"
+    },
+    {
+      "path": "../../../Engine/session/session-format-catalog"
+    }
+  ]
+}

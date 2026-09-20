@@ -6,7 +6,7 @@ English | [中文](2026-06-21-mandatory-app-attribution-headers.zh.md)
 
 ## Problem
 
-LLM provider requests should identify the product making them. That is useful for provider-side support, abuse investigation, compatibility debugging, and traffic analytics. Before this Agent Note the harness only partially did this: the hand-rolled DeepSeek adapter sent a hand-copied `User-Agent` constant (`packages/llm/llm-deepseek/src/adapter.ts`), while the pi-ai-backed twin sent no harness-owned headers at all (`packages/llm/llm-pi-ai/src/adapter.ts`). New adapters could therefore omit attribution silently, and a library-backed adapter could drift from the hand-rolled adapter even though [the twin-adapter Agent Note](2026-06-13-twin-llm-adapters.md) exists to keep the provider contract honest across both implementations.
+LLM provider requests should identify the product making them. That is useful for provider-side support, abuse investigation, compatibility debugging, and traffic analytics. Before this Agent Note the harness only partially did this: the hand-rolled DeepSeek adapter sent a hand-copied `User-Agent` constant (`rsh/Engine/llm/llm-deepseek/src/adapter.ts`), while the pi-ai-backed twin sent no harness-owned headers at all (`rsh/Engine/llm/llm-pi-ai/src/adapter.ts`). New adapters could therefore omit attribution silently, and a library-backed adapter could drift from the hand-rolled adapter even though [the twin-adapter Agent Note](2026-06-13-twin-llm-adapters.md) exists to keep the provider contract honest across both implementations.
 
 The immediate prompt came from OpenRouter's [App Attribution](https://openrouter.ai/docs/app-attribution) docs. OpenRouter creates app pages and rankings from `HTTP-Referer` plus display/category headers. That is valuable, but it is not the HTTP standard for application identity. The risk is adopting OpenRouter's exact header set as if it were universal, then leaking provider-specific headers to direct DeepSeek requests, future OpenAI/Anthropic/Vertex adapters, test servers, or proxies that log unknown fields indefinitely.
 
@@ -28,7 +28,7 @@ Provider-neutral app attribution is mandatory at the LLM adapter boundary, using
 
 OpenRouter app attribution is deliberately not implemented. `HTTP-Referer`, `X-OpenRouter-Title`, `X-Title`, and `X-OpenRouter-Categories` are OpenRouter-specific product-surface headers, not provider-neutral model-request attribution. They can be proposed later by an OpenRouter adapter or explicit OpenRouter mode, with its own privacy/product decision, tests, and docs. Until then, even requests pointed at OpenRouter send only the shared `User-Agent` attribution from this decision.
 
-The provider-neutral identity is owned by `dsh-llm` (`packages/llm/llm/src/attribution.ts`), not by individual adapters. `AppIdentity` contains only public product facts needed to build `User-Agent`, and the default `APP_IDENTITY` values:
+The provider-neutral identity is owned by `dsh-llm` (`rsh/Engine/llm/llm/src/attribution.ts`), not by individual adapters. `AppIdentity` contains only public product facts needed to build `User-Agent`, and the default `APP_IDENTITY` values:
 
 - product token for `User-Agent`: `deepseek-harness` (continuity with the pre-Agent Note wire value and the repo/org identity)
 - version: read from the owning package's manifest via `createRequire`, never a hand-copied constant
@@ -51,7 +51,7 @@ Endpoint detection is not part of this Agent Note because no endpoint-specific m
 
 The landed contract:
 
-- `dsh-llm` documents the mandatory `User-Agent` attribution contract for `LlmAdapter` authors (`LlmAdapter` JSDoc, package README, and the adapter-contract section of `docs/subsystems/llm-streaming.md`).
+- `dsh-llm` documents the mandatory `User-Agent` attribution contract for `LlmAdapter` authors (`LlmAdapter` JSDoc, package README, and the adapter-contract section of `rsh/Docs/subsystems/llm-streaming.md`).
 - A shared helper (`attributionHeaders` / `userAgent`) constructs the app identity and the standard `User-Agent` value from package metadata, so adapters do not hand-copy version constants.
 - `dsh-llm-deepseek` sends the shared `User-Agent` on every request and its mock-server suite asserts the exact value.
 - `dsh-llm-pi-ai` sends the same `User-Agent` through pi-ai's `StreamOptions.headers` hook and its mock-server suite asserts the exact value.

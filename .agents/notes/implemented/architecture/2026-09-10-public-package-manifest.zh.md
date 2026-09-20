@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-[`DshPackageManifest`](../../../../packages/util/package-manifest/src/types.ts) 描述 DSH 使用的 package.json 字段，其中 `name` 和 `version` 必填。其可选的 `dsh` 成员使用 `DshManifest` 描述公共组合与作者元数据。该类型只选取所需 npm 字段，不是完整的 package.json schema（模式）。App-boot 通过 `Partial` 适配无需发布身份的本地 profile。
+[`DshPackageManifest`](../../../../rsh/Core/util/package-manifest/src/types.ts) 描述 DSH 使用的 package.json 字段，其中 `name` 和 `version` 必填。其可选的 `dsh` 成员使用 `DshManifest` 描述公共组合与作者元数据。该类型只选取所需 npm 字段，不是完整的 package.json schema（模式）。App-boot 通过 `Partial` 适配无需发布身份的本地 profile。
 
 运行时要求位于顶层 `engines`：`dsh`、`node` 和 `npm` 均为可选版本字符串，也允许其他 engine 名称。`dsh.manifestVersion` 标识声明格式 `1`。当前安装器和加载器不强制检查格式与 DSH 兼容性声明。
 

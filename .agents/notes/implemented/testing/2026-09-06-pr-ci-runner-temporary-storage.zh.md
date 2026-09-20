@@ -46,6 +46,6 @@ Queue 快照在捕获前将指针移离 Stop/Send 控件，并等待其 Send too
 
 遵循 `TMPDIR` 的输出随作业生命周期清理，而不累积于无人管理的主机存储。包管理器和浏览器缓存保持持久化。本方案不回收既有共享临时文件、不保证文件系统容量，也不清理 runner 账号无权删除的文件。历史残留、磁盘配置以及本 PR 工作流以外的作业仍由运维人员负责。
 
-Linux bwrap 和 Landlock 的 workspace-write profile 允许写入字面路径 `/tmp` 和 workspace，而不允许写入其外部继承的 `TMPDIR`；受限测试夹具必须将临时写入放在这些已授权路径中。[快照 spill helper](../../../../packages/test-support/session-snapshot/src/harness.ts) 将固定长度的逻辑定位符与原子分配的实际存储分开。仅用于夹具的适配器将保存操作委托给真实的本地 spill provider，并仅将本次运行已保存的定位符解析到实际文件。录制的预览长度、省略计数及检索断言保持不变；逻辑 `/tmp/dsh-acp-snap-*` 前缀下不分配文件。本变更不扩大产品沙箱授权。
+Linux bwrap 和 Landlock 的 workspace-write profile 允许写入字面路径 `/tmp` 和 workspace，而不允许写入其外部继承的 `TMPDIR`；受限测试夹具必须将临时写入放在这些已授权路径中。[快照 spill helper](../../../../rsh/Tests/test-support/session-snapshot/src/harness.ts) 将固定长度的逻辑定位符与原子分配的实际存储分开。仅用于夹具的适配器将保存操作委托给真实的本地 spill provider，并仅将本次运行已保存的定位符解析到实际文件。录制的预览长度、省略计数及检索断言保持不变；逻辑 `/tmp/dsh-acp-snap-*` 前缀下不分配文件。本变更不扩大产品沙箱授权。
 
-[ci-workflow.spec.ts](../../../../scripts/ci-workflow.spec.ts) 的 YAML 解析用例要求三个 worker 都包含该赋值，并拒绝步骤级别的覆盖。它们在未修改的工作流上失败。独立进程 smoke 检查和重复 PR 运行验证实际工具链；仅有 YAML 断言不能证明主机容量充足。
+[ci-workflow.spec.ts](../../../../rsh/Scripts/ci-workflow.spec.ts) 的 YAML 解析用例要求三个 worker 都包含该赋值，并拒绝步骤级别的覆盖。它们在未修改的工作流上失败。独立进程 smoke 检查和重复 PR 运行验证实际工具链；仅有 YAML 断言不能证明主机容量充足。

@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-[ChatView](../../../../packages/client/ui-chat/src/client/chat/ChatView.tsx) 使用现有的已观察顶部位置比较，通过同一个清除待处理工作的采样操作，同步采样非读者引起的贴底滚动事件。这会在后续增长前恢复布局跟随。真实读者移动即使位于跟随阈值内，也保持待处理直到现有周期或 `scrollend`：增长不能在小幅操作累积为离底滚动前将其抵消。立即执行的贴底采样只读取滚动指标，不读取语义行几何。
+[ChatView](../../../../rsh/Programs/Web/client/ui-chat/src/client/chat/ChatView.tsx) 使用现有的已观察顶部位置比较，通过同一个清除待处理工作的采样操作，同步采样非读者引起的贴底滚动事件。这会在后续增长前恢复布局跟随。真实读者移动即使位于跟随阈值内，也保持待处理直到现有周期或 `scrollend`：增长不能在小幅操作累积为离底滚动前将其抵消。立即执行的贴底采样只读取滚动指标，不读取语义行几何。
 
 ## Alternatives considered
 
@@ -20,4 +20,4 @@ Status: implemented
 
 ## Consequences
 
-贴底事件会立即读取滚动指标。历史阅读保留有界采样节奏，显式回到底部的滚动事件会清除任何待处理的离底采样。[聚焦测试](../../../../packages/client/ui-chat/tests/chat-view.client.spec.tsx) 覆盖 scrollend 前的收缩与增长、无需行测量的观察器增长、存在待处理采样时重新贴底、定时器与 scrollend 采样，以及卸载取消。[无密钥浏览器场景](../../../../apps/web/tests/chat-scroll-contract.e2e.ts) 覆盖长 transcript 中贴底发送、真实离底输入、流式输出与工具详情展开。
+贴底事件会立即读取滚动指标。历史阅读保留有界采样节奏，显式回到底部的滚动事件会清除任何待处理的离底采样。[聚焦测试](../../../../rsh/Programs/Web/client/ui-chat/tests/chat-view.client.spec.tsx) 覆盖 scrollend 前的收缩与增长、无需行测量的观察器增长、存在待处理采样时重新贴底、定时器与 scrollend 采样，以及卸载取消。[无密钥浏览器场景](../../../../rsh/Programs/Web/application/tests/chat-scroll-contract.e2e.ts) 覆盖长 transcript 中贴底发送、真实离底输入、流式输出与工具详情展开。

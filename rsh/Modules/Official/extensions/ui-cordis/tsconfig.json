@@ -1,0 +1,48 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Programs/Web/client/locale"
+    },
+    {
+      "path": "../cordis-client-runner"
+    },
+    {
+      "path": "../../../../Programs/Web/api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-sidebar"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-input-trigger"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-primitives"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-renderer"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-session"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-slots"
+    },
+    {
+      "path": "../../../../Programs/Web/client/ui-tool"
+    }
+  ]
+}

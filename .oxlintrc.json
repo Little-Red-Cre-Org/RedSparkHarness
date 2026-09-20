@@ -20,26 +20,26 @@
     "**/.node-next-types-*/**",
     "**/.oxlint-contract-*/**", // Scratch files created by the executable lint-contract tests.
     "**/oxlint-contract-*", // Flat probes use real TypeScript project include paths.
-    "packages/typert/generator/tests/fixtures/type-model/**", // tsgolint rejects this fixture's preserved project shapes before rules run.
-    "website/.generated/**",
-    "vendor/**", // Vendored source keeps upstream style and idioms.
-    "native/**", // The imported landlock-run subtree has its own gates; see native/README.md.
+    "rsh/Core/typert/generator/tests/fixtures/type-model/**", // tsgolint rejects this fixture's preserved project shapes before rules run.
+    "rsh/Docs/website/.generated/**",
+    "rsh/Core/vendor/**", // Vendored source keeps upstream style and idioms.
+    "rsh/Core/native/**", // The imported landlock-run subtree has its own gates; see rsh/Core/native/README.md.
     "**/*.js",
     "**/*.mjs",
     "**/*.config.ts", // Tool and app configs are outside the repository TypeScript programs.
-    "packages/client/tsdown.client.ts" // Shared client build preset, also outside a TypeScript program.
+    "rsh/Programs/Web/client/tsdown.client.ts" // Shared client build preset, also outside a TypeScript program.
   ],
   "overrides": [
     {
       // Shared strict type-aware rules. Source/test differences stay in the short overrides below.
       "files": [
-        "packages/*/*/src/**/*.{ts,tsx}",
-        "packages/*/*/tests/**/*.{ts,tsx}",
-        "apps/*/src/**/*.{ts,tsx}",
-        "apps/*/tests/**/*.{ts,tsx}",
+        "rsh/**/src/**/*.{ts,tsx}",
+        "rsh/**/tests/**/*.{ts,tsx}",
+        "rsh/Programs/*/src/**/*.{ts,tsx}",
+        "rsh/Programs/*/tests/**/*.{ts,tsx}",
         "examples/**/*.{ts,tsx}",
-        "scripts/**/*.{ts,tsx}",
-        "website/**/*.{ts,tsx}"
+        "rsh/Scripts/**/*.{ts,tsx}",
+        "rsh/Docs/website/**/*.{ts,tsx}"
       ],
       "rules": {
         "no-var": "error",
@@ -150,11 +150,11 @@
     },
     {
       "files": [
-        "packages/*/*/src/**/*.{ts,tsx}",
-        "apps/*/src/**/*.{ts,tsx}",
+        "rsh/**/src/**/*.{ts,tsx}",
+        "rsh/Programs/*/src/**/*.{ts,tsx}",
         "examples/**/*.{ts,tsx}",
-        "scripts/**/*.{ts,tsx}",
-        "website/**/*.{ts,tsx}"
+        "rsh/Scripts/**/*.{ts,tsx}",
+        "rsh/Docs/website/**/*.{ts,tsx}"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error",
@@ -197,10 +197,10 @@
     },
     {
       "files": [
-        "packages/*/*/tests/**/*.{ts,tsx}",
-        "apps/*/tests/**/*.{ts,tsx}",
+        "rsh/**/tests/**/*.{ts,tsx}",
+        "rsh/Programs/*/tests/**/*.{ts,tsx}",
         "examples/*/tests/**/*.{ts,tsx}",
-        "scripts/**/*.spec.{ts,tsx}"
+        "rsh/Scripts/**/*.spec.{ts,tsx}"
       ],
       "rules": {
         // Session assertions inspect the log; other deprecated APIs remain errors.
@@ -211,7 +211,7 @@
               {
                 "from": "file",
                 "name": ["snapshotEvents", "eventAt", "ownEvents"],
-                "path": "packages/core/session/src/index.ts"
+                "path": "rsh/Engine/core/session/src/index.ts"
               }
             ]
           }
@@ -229,11 +229,11 @@
     },
     {
       "files": [
-        "packages/**/*.{ts,tsx}",
-        "apps/**/*.{ts,tsx}",
+        "rsh/**/*.{ts,tsx}",
+        "rsh/Programs/**/*.{ts,tsx}",
         "examples/**/*.{ts,tsx}",
-        "scripts/**/*.{ts,tsx}",
-        "website/**/*.{ts,tsx}"
+        "rsh/Scripts/**/*.{ts,tsx}",
+        "rsh/Docs/website/**/*.{ts,tsx}"
       ],
       "rules": {
         "sonarjs/duplicates-in-character-class": "error",
@@ -251,11 +251,11 @@
     },
     {
       "files": [
-        "packages/**/*.{ts,tsx}",
-        "apps/**/*.{ts,tsx}",
+        "rsh/**/*.{ts,tsx}",
+        "rsh/Programs/**/*.{ts,tsx}",
         "examples/**/*.{ts,tsx}",
-        "scripts/**/*.{ts,tsx}",
-        "website/**/*.{ts,tsx}"
+        "rsh/Scripts/**/*.{ts,tsx}",
+        "rsh/Docs/website/**/*.{ts,tsx}"
       ],
       "rules": {
         "@stylistic/indent": [
@@ -323,7 +323,7 @@
     {
       // The project-free staged profile re-includes this syntax-coverage fixture.
       "files": [
-        "packages/typert/generator/tests/fixtures/type-model/**/*.{ts,tsx}"
+        "rsh/Core/typert/generator/tests/fixtures/type-model/**/*.{ts,tsx}"
       ],
       "rules": {
         "typescript/no-explicit-any": "off"
@@ -332,7 +332,7 @@
     {
       // TypeGraph coverage must retain source-authored syntax that the normal quote rule forbids.
       "files": [
-        "packages/typert/generator/tests/fixtures/type-model/packages/host/src/models.ts"
+        "rsh/Core/typert/generator/tests/fixtures/type-model/packages/host/src/models.ts"
       ],
       "rules": {
         "@stylistic/quotes": "off"
@@ -340,10 +340,10 @@
     },
     {
       "files": [
-        "packages/experimental/webworker-runtime/src/node/**/*.ts",
-        "packages/experimental/webworker-runtime/src/storage/memory.ts",
-        "packages/experimental/webworker-runtime/src/module-system/module-loader.ts",
-        "packages/experimental/webworker-runtime/src/transport/synthetic-http.ts"
+        "rsh/Modules/Community/experimental/webworker-runtime/src/node/**/*.ts",
+        "rsh/Modules/Community/experimental/webworker-runtime/src/storage/memory.ts",
+        "rsh/Modules/Community/experimental/webworker-runtime/src/module-system/module-loader.ts",
+        "rsh/Modules/Community/experimental/webworker-runtime/src/transport/synthetic-http.ts"
       ],
       "rules": {
         "typescript/require-await": "off", // Async faces Node and Cordis define (fs promises, the module seam) reject rather than throw; the VFS beneath them never awaits.

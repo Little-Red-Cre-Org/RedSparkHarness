@@ -10,7 +10,7 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 ## 决策
 
-在 `packages/workflow/` 下以 bash seam 的形态（Service Definition／Service Provider／Consumer）提供一组工作流能力，以及它在 subagent seam 上所需的结构化输出基础。
+在 `rsh/Engine/workflow/` 下以 bash seam 的形态（Service Definition／Service Provider／Consumer）提供一组工作流能力，以及它在 subagent seam 上所需的结构化输出基础。
 
 ### 脚本约定（兼容 Claude Code）
 
@@ -20,7 +20,7 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 ### seam（dsh-workflow）
 
-`ctx.workflowEngine` 是 bash 形态的抽象 `WorkflowEngine`——每个上下文一个引擎，无命名提供方注册表（引擎是部署级替换，不是共存者）。`start(request)` 对无法启动的脚本同步抛出；返回的 `WorkflowRun` 的 `result` 永不 reject（失败时结算为 `stopReason: 'error' | 'cancelled'`）。`workflow/*` 事件是仅观察的 emit，携带数据快照（id + meta；`workflow/end` 省略 result 值），按监听器隔离，与 `subagent/start`/`subagent/end` 对称——控制权留在 run 的持有者手中。词汇详情见 [subsystems/workflow.md](../../../../docs/subsystems/workflow.zh.md)。
+`ctx.workflowEngine` 是 bash 形态的抽象 `WorkflowEngine`——每个上下文一个引擎，无命名提供方注册表（引擎是部署级替换，不是共存者）。`start(request)` 对无法启动的脚本同步抛出；返回的 `WorkflowRun` 的 `result` 永不 reject（失败时结算为 `stopReason: 'error' | 'cancelled'`）。`workflow/*` 事件是仅观察的 emit，携带数据快照（id + meta；`workflow/end` 省略 result 值），按监听器隔离，与 `subagent/start`/`subagent/end` 对称——控制权留在 run 的持有者手中。词汇详情见 [subsystems/workflow.md](../../../../rsh/Docs/subsystems/workflow.zh.md)。
 
 ### 引擎（dsh-workflow-worker-thread）：每次运行一个 worker 线程
 
@@ -40,7 +40,7 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 一个 `workflow` 工具，镜像 `dsh-tool-subagent` 的同步形态：启动、await、`try/finally` dispose、abort 桥接 `exec.signal`、非 `completed` → `isError`。渲染意图：一张以调用的 `meta.name` 参数为标题的 `generic` 卡片（展示是参数的纯函数）。工具描述即面向模型的编写规范。使用策略以工具自身的 `tool:<toolName>` 提示词段落随工具发布（显式请求才使用的引导——工具引导存在于工具插件中，从不在部署 persona 中）；harness 没有 ultracode 风格的 effort 门控。
 
-对于顶层工具执行，同一消费方还会把运行及实际成员生命周期写入调用方父 Session，形成四类 log-only `tool-workflow/*` 事件。记录路径只观察、不控制执行：第一次 append 失败会禁用本运行后续写入并留下合法前缀，不改变工具结果。[`ui-workflow-run`](../../../../packages/client/ui-workflow-run/README.zh.md) 通过 Conversation Node 引擎重建这些事实，形成独立 keyed Chat 行；现有 generic 工具行继续拥有自己的展示。持久化、回放、展开/收起与实时导航的详细决策见 [Chat 中的持久工作流运行](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md)。
+对于顶层工具执行，同一消费方还会把运行及实际成员生命周期写入调用方父 Session，形成四类 log-only `tool-workflow/*` 事件。记录路径只观察、不控制执行：第一次 append 失败会禁用本运行后续写入并留下合法前缀，不改变工具结果。[`ui-workflow-run`](../../../../rsh/Programs/Web/client/ui-workflow-run/README.zh.md) 通过 Conversation Node 引擎重建这些事实，形成独立 keyed Chat 行；现有 generic 工具行继续拥有自己的展示。持久化、回放、展开/收起与实时导航的详细决策见 [Chat 中的持久工作流运行](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md)。
 
 ### 基础：subagent seam 上的结构化输出
 

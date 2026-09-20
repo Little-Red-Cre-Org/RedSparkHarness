@@ -6,13 +6,13 @@ Status: implemented
 
 ## 问题
 
-大型设计与评审会话会留下工作速记：决策序号、审计条目代号、计划章节编号、任务与栈序号、评审人裁定。这些速记在会话 transcript（文本记录）还开着时读起来顺理成章，一旦关闭就什么也解析不到。一次全仓库审计发现该模式集中在 `packages/client`：裸写的 `(decision 12/16/19/20/21)` 引用中只有决策 21 有已提交的归属文档；`(audit C2/S1/S3/S7)` 代号在任何地方都没有对应的审计文档；`design §4.7`／`web2 §0`／`plan §1.4` 指向未提交的草稿；计划阶段标签（`T2/T5/T9`、`P-I`、`W5`）；持久 JSDoc 里的栈内位置（"a later PR in this stack"）；以及「ruling」（裁定）、「design ledger」（设计台账）一类词汇。同样的几类模式也出现在测试、CSS 注释、生成器模板、CI 注释与 Agent Note 中（「本 PR／本分支／本评审轮」视角、评审编排式的归因、目标其后已经交付却仍写着「推迟到后续 PR」的陈旧说法）。[文档标准](../../../../docs/AGENTS.md)早已禁止了变更历史这一半（previously/now、PR（Pull Request）与 commit 引用），却没有为引用写下对应的规则，于是无法解析的序号不断落进仓库。
+大型设计与评审会话会留下工作速记：决策序号、审计条目代号、计划章节编号、任务与栈序号、评审人裁定。这些速记在会话 transcript（文本记录）还开着时读起来顺理成章，一旦关闭就什么也解析不到。一次全仓库审计发现该模式集中在 `rsh/Programs/Web/client`：裸写的 `(decision 12/16/19/20/21)` 引用中只有决策 21 有已提交的归属文档；`(audit C2/S1/S3/S7)` 代号在任何地方都没有对应的审计文档；`design §4.7`／`web2 §0`／`plan §1.4` 指向未提交的草稿；计划阶段标签（`T2/T5/T9`、`P-I`、`W5`）；持久 JSDoc 里的栈内位置（"a later PR in this stack"）；以及「ruling」（裁定）、「design ledger」（设计台账）一类词汇。同样的几类模式也出现在测试、CSS 注释、生成器模板、CI 注释与 Agent Note 中（「本 PR／本分支／本评审轮」视角、评审编排式的归因、目标其后已经交付却仍写着「推迟到后续 PR」的陈旧说法）。[文档标准](../../../../rsh/Docs/AGENTS.md)早已禁止了变更历史这一半（previously/now、PR（Pull Request）与 commit 引用），却没有为引用写下对应的规则，于是无法解析的序号不断落进仓库。
 
 ## 决策
 
 持久行文（注释、JSDoc、文档、Agent Note、测试注释与测试标题）只引用已提交的产物，无需 grep 考古即可在仓库内解析：
 
-- 点名归属的 Agent Note（其路径在每个文件里至少出现一次，行内用可检索的名称）、文档页面路径，或 GitHub issue 编号。PR、commit、分支与栈位置依文档标准在文档与代码中仍在禁止之列；issue 是持久且可引用的，Agent Note 与事故复盘（postmortem）可依[文档标准](../../../../docs/AGENTS.md)的变更故事归置规则引用已合并的 PR 与 issue 作为证据。
+- 点名归属的 Agent Note（其路径在每个文件里至少出现一次，行内用可检索的名称）、文档页面路径，或 GitHub issue 编号。PR、commit、分支与栈位置依文档标准在文档与代码中仍在禁止之列；issue 是持久且可引用的，Agent Note 与事故复盘（postmortem）可依[文档标准](../../../../rsh/Docs/AGENTS.md)的变更故事归置规则引用已合并的 PR 与 issue 作为证据。
 - 决策有已提交归属文档的设计会话序号替换为该决策的名称——曾以「决策 21」记录的序号如今是「纯文本引用决策」，归属于 [web 输入状态机 note](../../archived/architecture/2026-07-25-web-input-machine-and-slash-pipeline.md)；该序号本身在仓库内无从解析，已全部移除。没有归属文档的序号予以删除，其事实性语句改写为可独立成立的表述。
 - 已修复的回归以现在时反事实句固定下来（「没有 X 就会发生 Y」、「朴素的 X 会……」），绝不写成仓库历史（「过去曾 Y」）。
 - 已实现的 Agent Note 陈述已交付的现实：「推迟到后续 PR」的说法若其目标已经交付，就改为点名那篇已交付的 note。
@@ -20,7 +20,7 @@ Status: implemented
 - 召回检索使用词法边界，并以一个已知正例和一个近似反例校准。写作语言残留检索仅在另一语言的行文表面运行，不把整个中文语料库当作未翻译残留。
 - 先改归属源时追踪每个生成消费方。围栏代码块在双语配对中逐字节复制；模型或用户可见的文字只有在归属场景的行为证据随同更新时才改，否则审计保持原文并报告推迟项。
 
-一次全仓库清理把这些规则应用到了各个行文表面，包括生成器持有的模板（`scripts/gen-doc-graphs.ts`、`scripts/gen-tool-catalog.ts`、typert 生成器的页面提示语，改后重新生成）、type-equiv 源码中的 JSDoc（改后重新同步到文档页）以及双语对侧文件（改后重新记录配对）。[dsh-trim-cot-leakage 技能](../../../skills/dsh-trim-cot-leakage/SKILL.md)把这些规则落地为可执行工作流：审计分类法、已提交的成批召回检索，以及用于判断保留或删除内容的少样本示例。
+一次全仓库清理把这些规则应用到了各个行文表面，包括生成器持有的模板（`rsh/Scripts/gen-doc-graphs.ts`、`rsh/Scripts/gen-tool-catalog.ts`、typert 生成器的页面提示语，改后重新生成）、type-equiv 源码中的 JSDoc（改后重新同步到文档页）以及双语对侧文件（改后重新记录配对）。[dsh-trim-cot-leakage 技能](../../../skills/dsh-trim-cot-leakage/SKILL.md)把这些规则落地为可执行工作流：审计分类法、已提交的成批召回检索，以及用于判断保留或删除内容的少样本示例。
 
 ## 曾考虑的替代方案
 

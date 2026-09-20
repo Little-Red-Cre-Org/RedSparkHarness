@@ -14,7 +14,7 @@ The session log remains authoritative: every started call has an audit event, or
 
 ## Decision
 
-Each tool may provide an optional `isConcurrencySafe(args)` classifier. It is synchronous and pure: it examines only the current call's parsed arguments and performs no I/O or mutation. Only an explicit `true` opts in; a missing classifier, invalid arguments, a thrown classifier, or any other return value makes the call exclusive. The canonical type contract lives in the [tool data structures](../../../../docs/subsystems/tools.md).
+Each tool may provide an optional `isConcurrencySafe(args)` classifier. It is synchronous and pure: it examines only the current call's parsed arguments and performs no I/O or mutation. Only an explicit `true` opts in; a missing classifier, invalid arguments, a thrown classifier, or any other return value makes the call exclusive. The canonical type contract lives in the [tool data structures](../../../../rsh/Docs/subsystems/tools.md).
 
 The classifier is deliberately unary. Returning `true` is the tool's promise that this call may overlap with any sibling call that also returns `true`; the scheduler does not compare calls or prove that their resource accesses are compatible.
 
@@ -58,7 +58,7 @@ Any shared state touched during execution must be concurrency-safe. This include
 
 ## Configuration and declarations
 
-`maxParallelToolCalls` is a positive AgentLoop deployment cap shared by every agent the factory creates. It defaults to `10`; `1` preserves serial execution. Exact fields and defaults live in the generated [configuration catalog](../../../../docs/config-catalog.md).
+`maxParallelToolCalls` is a positive AgentLoop deployment cap shared by every agent the factory creates. It defaults to `10`; `1` preserves serial execution. Exact fields and defaults live in the generated [configuration catalog](../../../../rsh/Docs/config-catalog.md).
 
 The shipped declarations are conservative. Web search, web fetch, filesystem read, the session-query trace/read tools, and subagent delegation opt in — delegation because a child works in its own session and its run never mutates the parent session, with sibling workspace coordination owned by the model ([parallel subagent Agent Note](../../archived/feature/2026-08-09-parallel-subagent-delegations.md)). Filesystem writes and edits, bash tools, the session-query search tools, workflow, user interaction, todo mutation, PTC mode, and Cordis mutation tools remain exclusive. Bash has no proven input-sensitive classifier and remains exclusive.
 

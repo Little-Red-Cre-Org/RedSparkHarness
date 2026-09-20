@@ -15,7 +15,7 @@ try {
 
 export default defineConfig({
   // Same resolution note as vitest.config.ts: the tsconfig.base.json paths
-  // facade has no include (match-all), so apps/web/tests resolves bare
+  // facade has no include (match-all), so rsh/Programs/Web/application/tests resolves bare
   // workspace imports to source like every other lane.
   plugins: [
     tsconfigPaths({ projects: ['./tsconfig.base.json'] }),
@@ -24,9 +24,9 @@ export default defineConfig({
   test: {
     execArgv: vitestExecArgv,
     include: [
-      'apps/web/tests/**/*.e2e.ts',
-      'apps/web/tests/**/*.snapshot.ts',
-      'packages/experimental/inspector/tests/client-browser.e2e.ts',
+      'rsh/Programs/Web/application/tests/**/*.e2e.ts',
+      'rsh/Programs/Web/application/tests/**/*.snapshot.ts',
+      'rsh/Modules/Community/experimental/inspector/tests/client-browser.e2e.ts',
     ],
     // Local and record runs stay serial. CI runs workspace-mutating HMR and
     // dynamic Cordis lifecycle coverage before parallelizing the remaining files.

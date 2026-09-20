@@ -2,7 +2,7 @@
 
 ## Summary
 
-Each page gives a newcomer a short front door before it exposes operational or implementation depth. Cross-package learning and engineering material lives under a deliberate `docs/` hierarchy, while package contracts stay beside code. Small rule files own one independently searchable requirement, but arbitrary fragmentation is not a goal. The final Dev Note isolates active working context from the stable explanation above it.
+Each page gives a newcomer a short front door before it exposes operational or implementation depth. Cross-package learning and engineering material lives under a deliberate `rsh/Docs/` hierarchy, while package contracts stay beside code. Small rule files own one independently searchable requirement, but arbitrary fragmentation is not a goal. The final Dev Note isolates active working context from the stable explanation above it.
 
 ## Table of Contents
 
@@ -47,10 +47,10 @@ Keep exhaustive generated types, schemas, or catalogs behind a compact entry par
 
 ## Documentation hierarchy
 
-Use package-local READMEs for package contracts and keep them next to source. Organize cross-package Markdown under audience and learning intent instead of leaving unrelated pages flat at `docs/`.
+Use package-local READMEs for package contracts and keep them next to source. Organize cross-package Markdown under audience and learning intent instead of leaving unrelated pages flat at `rsh/Docs/`.
 
 ```text
-docs/
+rsh/Docs/
   learn/
     overview/
     cordis/
@@ -64,11 +64,11 @@ docs/
 
 Treat this as a target map, not permission for an opportunistic mass move. Move one coherent topic at a time, repair every inbound link and website mapping atomically, preserve public routes or aliases, and keep `subsystems/` flat because its pages are logically parallel.
 
-`docs/scratch/` contains tracked, expiring discussion that must survive a handoff. Each scratch page names its owner, creation date, expiry, and promotion target. Local disposable notes remain ignored and uncommitted.
+`rsh/Docs/scratch/` contains tracked, expiring discussion that must survive a handoff. Each scratch page names its owner, creation date, expiry, and promotion target. Local disposable notes remain ignored and uncommitted.
 
 ## Small rule files
 
-Give an independently searchable rule, practice, example family, or decision one small file when it has its own owner, change cadence, inbound links, or validation. Group related files under a descriptive hierarchy such as `docs/developer/code-quality/`. Keep tightly coupled rules together when splitting would force readers to open several files to understand one obligation.
+Give an independently searchable rule, practice, example family, or decision one small file when it has its own owner, change cadence, inbound links, or validation. Group related files under a descriptive hierarchy such as `rsh/Docs/developer/code-quality/`. Keep tightly coupled rules together when splitting would force readers to open several files to understand one obligation.
 
 An index page explains the folder in three to five sentences and links its direct children by purpose. It does not restate each child's rule.
 

@@ -18,7 +18,7 @@ The evaluation publishes `success` only when the pull request is ready, the poin
 
 ## Verification
 
-[Approval policy tests](../../../../.github/review-ownership/check-approval.test.mjs) pin the threshold-reaching blocker case and the exact published `pending` payload. [Workflow tests](../../../../scripts/ci-workflow.spec.ts) pin the separate publisher job name.
+[Approval policy tests](../../../../.github/review-ownership/check-approval.test.mjs) pin the threshold-reaching blocker case and the exact published `pending` payload. [Workflow tests](../../../../rsh/Scripts/ci-workflow.spec.ts) pin the separate publisher job name.
 
 ## Alternatives considered
 

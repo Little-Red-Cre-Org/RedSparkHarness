@@ -1,0 +1,87 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
+  },
+  "files": [
+    "src/client/index.ts",
+    "src/remote-events.ts",
+    "src/types.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../gateway/tsconfig.client.json"
+    },
+    {
+      "path": "../../client/connection/tsconfig.client.json"
+    },
+    {
+      "path": "../../client/file-upload/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/credentials"
+    },
+    {
+      "path": "../../../../Engine/context/file-reference"
+    },
+    {
+      "path": "../../../../Engine/context/session-reference"
+    },
+    {
+      "path": "../../../../Modules/Official/extensions/cordis-host-runner"
+    },
+    {
+      "path": "../../../../Engine/goal/goal"
+    },
+    {
+      "path": "../../../../Modules/Official/feedback/message-feedback"
+    },
+    {
+      "path": "../../host/plugin-inventory"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets"
+    },
+    {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../../../Engine/subagent/subagent"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/user-approval"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/user-questions"
+    },
+    {
+      "path": "../session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../workspace-files/tsconfig.client.json"
+    },
+    {
+      "path": "../settings-controller"
+    },
+    {
+      "path": "../workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../../Modules/Official/feedback/command-feedback"
+    }
+  ]
+}

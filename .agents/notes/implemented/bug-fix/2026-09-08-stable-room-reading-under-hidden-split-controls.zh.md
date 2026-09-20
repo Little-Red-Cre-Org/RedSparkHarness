@@ -10,7 +10,7 @@ dockkit 的空间规则在每次 commit 后测量各 pane 的标签条，判断�
 
 ## Decision
 
-当嵌入方选择隐藏被阻止的分屏控件时，空间规则无条件将分屏控件的占位排除在标签条固定部分之外，使读数与控件当前是否挂载无关。[`measurePaneFits`](../../../../packages/client/ui-dockkit/src/components/measure.ts) 接收嵌入方的 `hideSplitWhenBlocked` 选择，测量已渲染控件的盒子加标签条的列间距（`splitControlFootprint`），并作为 [`PaneMeasure.splitControlWidth`](../../../../packages/client/ui-dockkit/src/engine/geometry.ts) 传入，由 `halvesFit` 从固定部分中减去。排除该占位本身也是正确的：窄到无法分屏的一半会隐藏自己的控件，所以这份占位并不属于一半必须承载的内容。将被阻止控件渲染为禁用态的嵌入方不传该值，控件照旧计入固定部分。
+当嵌入方选择隐藏被阻止的分屏控件时，空间规则无条件将分屏控件的占位排除在标签条固定部分之外，使读数与控件当前是否挂载无关。[`measurePaneFits`](../../../../rsh/Programs/Web/client/ui-dockkit/src/components/measure.ts) 接收嵌入方的 `hideSplitWhenBlocked` 选择，测量已渲染控件的盒子加标签条的列间距（`splitControlFootprint`），并作为 [`PaneMeasure.splitControlWidth`](../../../../rsh/Programs/Web/client/ui-dockkit/src/engine/geometry.ts) 传入，由 `halvesFit` 从固定部分中减去。排除该占位本身也是正确的：窄到无法分屏的一半会隐藏自己的控件，所以这份占位并不属于一半必须承载的内容。将被阻止控件渲染为禁用态的嵌入方不传该值，控件照旧计入固定部分。
 
 ## Alternatives considered
 
@@ -22,4 +22,4 @@ dockkit 的空间规则在每次 commit 后测量各 pane 的标签条，判断�
 
 ## Consequences
 
-空间读数在控件可见性变化下是不动点，`hideSplitWhenBlocked` 的嵌入方获得隐藏控件的呈现且无反馈循环。临界宽度附近的 pane 会比禁用态嵌入方的报告稍早读成可分屏，因为被询问的那一半不会承载控件。[dockkit 回归测试](../../../../packages/client/ui-dockkit/tests/components.client.spec.tsx) 模拟标签条卸下控件占位的反馈，在未修复的代码上以 React 更新深度错误失败；[Sidebar 浏览器用例](../../../../apps/web/tests/sidebar-right.e2e.ts) 在收窄视口上把面板把手拖过两侧钳位，断言面板、把手与干净的 console 均存活——崩溃只以 console error 形式出现，而脚手架的 tripwire 不监听它。
+空间读数在控件可见性变化下是不动点，`hideSplitWhenBlocked` 的嵌入方获得隐藏控件的呈现且无反馈循环。临界宽度附近的 pane 会比禁用态嵌入方的报告稍早读成可分屏，因为被询问的那一半不会承载控件。[dockkit 回归测试](../../../../rsh/Programs/Web/client/ui-dockkit/tests/components.client.spec.tsx) 模拟标签条卸下控件占位的反馈，在未修复的代码上以 React 更新深度错误失败；[Sidebar 浏览器用例](../../../../rsh/Programs/Web/application/tests/sidebar-right.e2e.ts) 在收窄视口上把面板把手拖过两侧钳位，断言面板、把手与干净的 console 均存活——崩溃只以 console error 形式出现，而脚手架的 tripwire 不监听它。

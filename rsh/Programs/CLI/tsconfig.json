@@ -1,0 +1,75 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../Core/vendor/loader"
+    },
+    {
+      "path": "../../Core/vendor/include"
+    },
+    {
+      "path": "../../Compatibility/DSH/boot/app-boot"
+    },
+    {
+      "path": "../../Compatibility/DSH/boot/cmdline"
+    },
+    {
+      "path": "../../Compatibility/DSH/bundle/base"
+    },
+    {
+      "path": "../../Compatibility/DSH/bundle/headless"
+    },
+    {
+      "path": "../../Compatibility/DSH/bundle/web-app"
+    },
+    {
+      "path": "../Web/host/webserver"
+    },
+    {
+      "path": "../Web/host/frontend-static"
+    },
+    {
+      "path": "../../Engine/core/session"
+    },
+    {
+      "path": "../../Engine/core/system-prompt"
+    },
+    {
+      "path": "../../Engine/core/tools"
+    },
+    {
+      "path": "../../Core/util/launch-environment"
+    },
+    {
+      "path": "../../Core/util/home-paths"
+    },
+    {
+      "path": "../../Modules/Official/mcp/mcp-client"
+    },
+    {
+      "path": "../../Tests/test-support/loader-smoke"
+    },
+    {
+      "path": "../../Engine/session-query/session-query-sqlite"
+    },
+    {
+      "path": "../../Engine/session-query/session-query"
+    },
+    {
+      "path": "../../Modules/Official/shell/shell-env"
+    },
+    {
+      "path": "../../Modules/Official/shell/tool-bash"
+    }
+  ]
+}

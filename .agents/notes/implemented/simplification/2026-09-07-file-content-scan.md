@@ -10,11 +10,11 @@ Every model dispatch checks complete message content for files, including nested
 
 ## Decision
 
-[`contentHasFile`](../../../../packages/llm/llm/src/content.ts) uses direct iteration instead of recursive `Array.some` callbacks. It preserves early exit, nested tool-result traversal, and false results for other block kinds. It stores no identities, validation results, or freeze proofs. Image detection, file projection, and request construction keep their existing behavior. The [request-freeze calibration](2026-09-06-agent-request-freeze-provenance.md) owns the request-history budget.
+[`contentHasFile`](../../../../rsh/Engine/llm/llm/src/content.ts) uses direct iteration instead of recursive `Array.some` callbacks. It preserves early exit, nested tool-result traversal, and false results for other block kinds. It stores no identities, validation results, or freeze proofs. Image detection, file projection, and request construction keep their existing behavior. The [request-freeze calibration](2026-09-06-agent-request-freeze-provenance.md) owns the request-history budget.
 
 ## Measurement evidence
 
-Apple M4 Pro, Node 24.19.0: nine alternating original/candidate pairs run the unchanged [request-history worker](../../../../benchmarks/agent-continuation/agent-continuation.worker.ts) in fresh plain-Node processes. Each process receives a copy of one native-V3 seed. Only the built LLM entry changes; every sample completes 40 requests, zero live tools, and 13,925 events. All totals below are milliseconds, in pair order.
+Apple M4 Pro, Node 24.19.0: nine alternating original/candidate pairs run the unchanged [request-history worker](../../../../rsh/Tests/benchmarks/agent-continuation/agent-continuation.worker.ts) in fresh plain-Node processes. Each process receives a copy of one native-V3 seed. Only the built LLM entry changes; every sample completes 40 requests, zero live tools, and 13,925 events. All totals below are milliseconds, in pair order.
 
 | Variant | Raw totals | Median |
 |---|---|---:|
@@ -29,4 +29,4 @@ A weak negative-result cache needs proof that every relevant descendant is immut
 
 ## Consequences
 
-The scan remains linear in visited blocks and rereads mutable nested content on each call. [Content tests](../../../../packages/llm/llm/tests/content.spec.ts) cover empty, frozen, nested, and subsequently mutated arrays; service tests preserve file-handle projection, and request-freeze, reconstruction, and resume tests preserve native-history semantics. No model-visible text or Session format changes. The freeze-provenance and [backend-baseline](../testing/2026-09-06-backend-continuation-performance.md) notes retain independent ownership; neither is superseded.
+The scan remains linear in visited blocks and rereads mutable nested content on each call. [Content tests](../../../../rsh/Engine/llm/llm/tests/content.spec.ts) cover empty, frozen, nested, and subsequently mutated arrays; service tests preserve file-handle projection, and request-freeze, reconstruction, and resume tests preserve native-history semantics. No model-visible text or Session format changes. The freeze-provenance and [backend-baseline](../testing/2026-09-06-backend-continuation-performance.md) notes retain independent ownership; neither is superseded.

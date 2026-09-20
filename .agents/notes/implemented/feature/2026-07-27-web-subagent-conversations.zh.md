@@ -8,7 +8,7 @@ Status: implemented
 
 由会话支撑的 subagent 具有持久化身份、持久化 transcript（文本记录）与直接 child 目录，但普通会话谱系无法将它们与 fork 区分开，也无法证明其描述符 mode 与继续执行授权。否则，绑定到 agent（智能体）的通用 Host 操作可能在其直接 parent 继续执行 owner 之外恢复或驱动 child。
 
-浏览器必须遵守[可继续 subagent 约定](../../implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)：一个可继续 child 在进程内最多只能有一项 Activation，只能通过确切的存活直接 parent 接受后续工作，并将 agent inbox 用作唯一的 FIFO。查看历史不得创建 Activation。inbox 消息一经接受，HTTP 调用方既不拥有其执行过程，也不会获得取消句柄。
+浏览器必须遵守[可继续 subagent 约定](2026-07-28-continuable-subagent-conversations.zh.md)：一个可继续 child 在进程内最多只能有一项 Activation，只能通过确切的存活直接 parent 接受后续工作，并将 agent inbox 用作唯一的 FIFO。查看历史不得创建 Activation。inbox 消息一经接受，HTTP 调用方既不拥有其执行过程，也不会获得取消句柄。
 
 UI 还必须保留[持久化目录](../../archived/feature/2026-07-22-durable-subagent-catalog-and-list-agents.md)的成员、mode 与 diagnostic。共享服务报告采用实时优先规则的语料活动状态，而 Web 投影会将其替换为确切 child Agent driver 的 `running` 或 `inactive` 状态。这两种活动状态都不是持久化结果，也不承诺继续执行会成功。
 
@@ -85,7 +85,7 @@ one-shot 行始终会用文案替代输入框，说明执行记录为只读。�
 
 **将适配器放入 webserver。** 不予采纳，因为目录与继续执行是通道无关的客户端能力；webserver 只承载已校验的消息。
 
-**把由 Host 支撑的文件与会话引用放进本包。** 不予采纳，因为目录与已寻址 child 呈现依赖 subagent 谱系，而组合引用发现是独立的 Host 功能，由 [`ui-reference`](../../../../packages/client/ui-reference/README.zh.md) 消费。
+**把由 Host 支撑的文件与会话引用放进本包。** 不予采纳，因为目录与已寻址 child 呈现依赖 subagent 谱系，而组合引用发现是独立的 Host 功能，由 [`ui-reference`](../../../../rsh/Programs/Web/client/ui-reference/README.zh.md) 消费。
 
 **自动恢复缺失的 parent。** 不予采纳，因为继续执行要求确切的存活直接 parent。child 导航不得改变 parent 生命周期。
 

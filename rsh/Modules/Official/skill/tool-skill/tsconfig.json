@@ -1,0 +1,34 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/core/scope"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/core/agent"
+    },
+    {
+      "path": "../skill"
+    },
+    {
+      "path": "../../../../Engine/core/tools"
+    }
+  ]
+}

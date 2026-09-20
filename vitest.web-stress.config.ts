@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: ['./tsconfig.base.json'] })],
   test: {
     execArgv: vitestExecArgv,
-    include: ['apps/web/stress-tests/**/*.stress.ts'],
+    include: ['rsh/Programs/Web/application/stress-tests/**/*.stress.ts'],
     testTimeout: 600_000,
     hookTimeout: 120_000,
     fileParallelism: false,

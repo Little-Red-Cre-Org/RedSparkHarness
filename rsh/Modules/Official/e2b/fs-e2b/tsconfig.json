@@ -1,0 +1,22 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../e2b"
+    },
+    {
+      "path": "../../fs/fs"
+    }
+  ]
+}

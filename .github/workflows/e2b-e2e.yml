@@ -10,7 +10,7 @@ permissions:
 
 env:
   # CI runs must never report to the production telemetry endpoint baked
-  # into apps/cli/cordis.yml (AppCLIEntry disables the row when set).
+  # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
   DSH_TELEMETRY_DISABLED: '1'
 
 jobs:
@@ -55,4 +55,4 @@ jobs:
           DSH_EXAMPLE_MODE: lib
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts
-          packages/e2b/e2b/tests/composition.e2e.ts
+          rsh/Modules/Official/e2b/e2b/tests/composition.e2e.ts

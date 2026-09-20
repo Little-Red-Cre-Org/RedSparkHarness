@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "files": [
+    "src/index.ts",
+    "src/types.ts",
+    "src/changes.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Modules/Official/fs/fs"
+    },
+    {
+      "path": "../../../../Modules/Official/sandbox/sandbox-policy"
+    },
+    {
+      "path": "../../../../Engine/session/session-persistence"
+    },
+    {
+      "path": "../../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../../Core/util/deque"
+    }
+  ]
+}

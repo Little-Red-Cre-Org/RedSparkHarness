@@ -9,8 +9,8 @@ This skill helps turn a broad "find things to simplify" request into evidence-ba
 
 ## Start With Repo Context
 
-- Read `AGENTS.md`, especially the pre-release stance and the conventions (including the tests-are-not-golden-truth and Agent Notes-are-not-golden-truth doctrines), plus [docs/defensive-patterns.md](../../../docs/defensive-patterns.md) and [docs/testing.md](../../../docs/testing.md).
-- Skim [docs/architecture.md](../../../docs/architecture.md) before judging anything under `packages/`; simplifications that fight the service map or event taxonomy need extra evidence.
+- Read `AGENTS.md`, especially the pre-release stance and the conventions (including the tests-are-not-golden-truth and Agent Notes-are-not-golden-truth doctrines), plus [rsh/Docs/defensive-patterns.md](../../../rsh/Docs/defensive-patterns.md) and [rsh/Docs/testing.md](../../../rsh/Docs/testing.md).
+- Skim [rsh/Docs/architecture.md](../../../rsh/Docs/architecture.md) before judging anything under `rsh/`; simplifications that fight the service map or event taxonomy need extra evidence.
 - Use the Agent Note tree and its [rules](../../notes/README.md) to understand intentional architecture. The most relevant implemented examples are [drop mutable session summary](../../notes/archived/simplification/2026-06-19-drop-mutable-session-summary.md), [handle-based session persistence](../../notes/implemented/architecture/2026-08-27-handle-based-session-persistence.md), [JSONL-only first-party Session persistence](../../notes/implemented/simplification/2026-08-30-jsonl-only-session-persistence.md), [capability seams](../../notes/implemented/architecture/2026-06-13-capability-seams.md), and the twin-adapter Agent Notes.
 - Treat dual LLM adapters as intentional by default. Session persistence is different: JSONL is the sole first-party provider, while the backend-neutral service remains available to out-of-tree providers. Do not propose deleting an LLM twin or the persistence seam as "low effort" unless the user explicitly overrides that constraint. Removing an unused method or hook inside a protected seam can still be valid if it does not collapse the protected design.
 
@@ -76,7 +76,7 @@ Prove a dependency-swap candidate like any other, plus:
 
 For every symbol or behavior, classify consumers before writing:
 
-- Production corpus: `packages/*/src`, `examples/*/src`, `examples/**/*.yml`, runtime scripts, and loader/config paths.
+- Production corpus: package `src/` directories under `rsh/`, package-owned examples and compositions, runtime scripts, and loader/config paths.
 - Non-production corpus: tests, README/docs, Agent Notes, snapshots, generated expected outputs, and comments.
 - Ambiguous corpus: examples and scripts that may be product smoke paths. Inspect usage before classifying.
 
@@ -87,7 +87,7 @@ Reject or downgrade a candidate when:
 - A production caller exists and the simplification would be a feature decision rather than a cleanup.
 - The API is explicitly justified by an implemented Agent Note or a hard-won defensive pattern, and the new evidence does not beat that reason.
 - The removal would force unrelated churn without actually reducing the public API or required behavior.
-- The idea is correct but tiny. Add a targeted TODO/FIXME/XXX instead, using the urgency semantics in [docs/development.md](../../../docs/development.md).
+- The idea is correct but tiny. Add a targeted TODO/FIXME/XXX instead, using the urgency semantics in [rsh/Docs/development.md](../../../rsh/Docs/development.md).
 
 ## Coalesce Superseded Agent Notes
 

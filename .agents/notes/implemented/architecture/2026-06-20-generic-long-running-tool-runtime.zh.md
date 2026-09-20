@@ -23,7 +23,7 @@ Status: implemented
 
 ## 运行时约定
 
-字面类型见[任务子系统页面](../../../../docs/subsystems/jobs.zh.md)。生产方调用 `ctx.jobs.start()`，传入 kind、label、可选的所属 `Agent`、可选的正数 `outputLimitBytes` 与一个 `run()` 函数。运行时会在调用 `run()` 前完成所有可能失败的预检工作，并且只调用一次。`run()` 返回钩子后，注册过程不会再执行可能失败的步骤而直接提交；生产方无法启动没有可收集 job id 的工作。
+字面类型见[任务子系统页面](../../../../rsh/Docs/subsystems/jobs.zh.md)。生产方调用 `ctx.jobs.start()`，传入 kind、label、可选的所属 `Agent`、可选的正数 `outputLimitBytes` 与一个 `run()` 函数。运行时会在调用 `run()` 前完成所有可能失败的预检工作，并且只调用一次。`run()` 返回钩子后，注册过程不会再执行可能失败的步骤而直接提交；生产方无法启动没有可收集 job id 的工作。
 
 进程内 Service Provider 还拥有有界准入，其理由记录在[有界后台任务准入决策](../../archived/bug-fix/2026-08-11-bounded-background-job-admission.md)中。它的 `maxConcurrentJobsPerOwner` 配置必须是正的安全整数，默认值为 `10`；`start()` 从 `running` 与 `stopping` 记录派生每个确切 `Agent` 对象的活动数量，而全部无 owner 任务共享一个服务级桶。容量拒绝发生在 `run()` 与 id 分配之前，处于 stopping 的任务只有在生产方 `done` 结算时才释放名额。Service Provider 不排队或抢占任务，也不保留第二份可变计数。
 
@@ -131,7 +131,7 @@ bash seam 暴露 `resolve`、`run` 和 `start`。`start(spec)` 返回一个 `She
 
 ## 后果
 
-bash 命令与 subagent 共享一套 id 词汇、列表、通知格式、提示词习惯和控制工具。新的长时间运行生产方只需实现执行钩子，而不必再实现一套注册表与工具族。[工具实操手册](../../../../docs/cookbook/adding-a-tool.zh.md)将生产方指向本约定。
+bash 命令与 subagent 共享一套 id 词汇、列表、通知格式、提示词习惯和控制工具。新的长时间运行生产方只需实现执行钩子，而不必再实现一套注册表与工具族。[工具实操手册](../../../../rsh/Docs/cookbook/adding-a-tool.zh.md)将生产方指向本约定。
 
 单个确切 owner 无法再无限增加进程内由 Task 承载的工作，另一个 owner 也不会消耗它的额度。取消请求会继续占用容量，直到生产方真正释放资源，因此用新工作替换缓慢停止的任务不会突破已配置的实时资源预算。
 

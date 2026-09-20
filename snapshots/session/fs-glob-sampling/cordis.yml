@@ -53,6 +53,10 @@
   name: '@deepseek-ai/dsh-skill'
   disabled: true
 
+- id: archify
+  name: '@deepseek-ai/dsh-archify'
+  disabled: true
+
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   disabled: true
@@ -70,11 +74,11 @@
 - id: spill-local
   name: '@deepseek-ai/dsh-spill-local'
   config:
-    root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT ?? './.spill'
+    root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT ?? '.spill'
 
 - insert:
     - id: snapshot-spill-locators
-      name: ../../../scripts/snapshot-spill-locators.ts
+      name: ../../../rsh/Scripts/snapshot-spill-locators.ts
       config:
         root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT
         locatorRoot: !!js process.env.DSH_SNAPSHOT_SPILL_LOCATOR_ROOT

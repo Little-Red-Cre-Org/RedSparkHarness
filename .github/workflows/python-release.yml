@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     name: Build six wheels
-    uses: ./.github/workflows/build-exe-for-python-sdk.yml
+    uses: .github/workflows/build-exe-for-python-sdk.yml
     with:
       targets: node24-linux-x64,node24-linux-arm64,node24-macos-arm64,node24-macos-x64,node24-win-x64
       release: true
@@ -60,7 +60,7 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import runpy
 
-          release = runpy.run_path("scripts/build-python-release.py")
+          release = runpy.run_path("rsh/Scripts/build-python-release.py")
           repository_version = release["repository_version"]()
           print(f"version={release['pep440_version'](repository_version)}")
           PY
@@ -72,8 +72,8 @@ jobs:
           python -m pip install \
             "dist/deepseek_harness_sdk-$VERSION-py3-none-any.whl" \
             "dist/deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl"
-          python scripts/smoke-python-runtime.py --scenario sdk-default
-          python scripts/smoke-python-runtime.py --scenario sdk-mcp
+          python rsh/Scripts/smoke-python-runtime.py --scenario sdk-default
+          python rsh/Scripts/smoke-python-runtime.py --scenario sdk-mcp
 
   validate:
     name: Validate release candidate
@@ -97,7 +97,7 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import runpy
 
-          release = runpy.run_path("scripts/build-python-release.py")
+          release = runpy.run_path("rsh/Scripts/build-python-release.py")
           repository_version = release["repository_version"]()
           wheel_version = release["pep440_version"](repository_version)
           print(f"repository-version={repository_version}")

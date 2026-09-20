@@ -1,6 +1,6 @@
 # Template: package-reference
 
-Use this template for a package whose entry is a Cordis plugin — a service default export or an `apply` function — mounted in a composition. This is the default for `packages/<group>/<pkg>/README.md`. The `session-persistence-jsonl` README pair is the worked example of this template.
+Use this template for a package whose entry is a Cordis plugin — a service default export or an `apply` function — mounted in a composition. This is the default for `<package-path>/README.md`. The `session-persistence-jsonl` README pair is the worked example of this template.
 
 ## Frontmatter
 
@@ -50,7 +50,7 @@ The smallest mount that works, as a `cordis.yml` snippet, plus the config table:
 |---|---|---|
 | `<field>` | `<default>` or `required` | One-line meaning |
 
-The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-<name>) is the exhaustive source for every accepted field.
+The generated [configuration catalog](<relative-path-to-rsh-Docs>/config-catalog.md#deepseek-aidsh-<name>) is the exhaustive source for every accepted field.
 
 -----
 
@@ -76,13 +76,13 @@ Three to seven adjacent pages, closest prerequisite first, one short phrase each
 <a id="model-experience"></a>
 ## Model Experience
 
-<per the Model Experience contract in docs/cookbook/adding-a-package.md#4-write-the-package-readme; the verify-package-readme-model-experience gate owns the required form>
+<per the Model Experience contract in rsh/Docs/cookbook/adding-a-package.md#4-write-the-package-readme; the verify-package-readme-model-experience gate owns the required form>
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
-One orienting sentence, then top-level bullets naming current package constraints. Packages with none use the allowlist in scripts/verify-package-readme-limitations.ts.
+One orienting sentence, then top-level bullets naming current package constraints. Packages with none use the allowlist in rsh/Scripts/verify-package-readme-limitations.ts.
 
 <a id="dev-note"></a>
 ### Dev Note
@@ -97,7 +97,8 @@ None.
 
 ## Rules
 
+- Replace `<package-path>` with the package's actual repository-relative directory and `<relative-path-to-rsh-Docs>` with the relative path from that directory to `rsh/Docs`.
 - **Fact-check before writing.** Mount the package in a test composition and run every command, config field, default, and behavior claim this README makes. Delete anything you did not reproduce; link the generated config catalog instead of restating fields.
 - **Installation guidance.** A plugin package mounts through `cordis.yml` rows. Only a package declaring `dsh.bundle.patch` installs as a profile layer via `dsh plugin --profile <name> add <package>` — if this package lacks that declaration, say how it mounts in a composition, never `dsh plugin add`.
 - **Model Experience and Known Limitations are gate-owned.** Match the exact headings and per-package forms the two gates enforce; update the gates' audited lists in the same change when behavior moves a package between forms.
-- Re-run `pnpm run verify-translation-pairing --write packages/<group>/<pkg>/README.md` after editing the pair.
+- Re-run `pnpm run verify-translation-pairing --write <package-path>/README.md` after editing the pair.

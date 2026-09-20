@@ -22,7 +22,7 @@ Status: implemented
 
 **`ui-primitives` README 里的组件目录，是这条规则得以可用的前提。** 它列出每个导出组件的用途，以及它不适用的场合，并点名三组容易混淆的配对：`Tag` 与 `Pill`、`DisclosureRow` 与卡片式折叠、包内的 `FoldToggle` 与对外导出面。`Pill` 是可选中的胶囊按钮——它接受 `active` 与 `onClick`，用于视图切换与筛选器；`Tag` 是只读徽章，两者都不接受。`Pill` 自己的头注释此前把自身宣传为可用作徽章，与目录互相矛盾，现已改掉。
 
-规则写在 [packages/client/AGENTS.md](../../../../packages/client/AGENTS.md) 新组件清单的第一步，[docs/web-styling.md](../../../../docs/web-styling.zh.md) 指向该目录，让从样式一侧进来的作者也能到达。
+规则写在 [rsh/Programs/Web/client/AGENTS.md](../../../../rsh/Programs/Web/client/AGENTS.md) 新组件清单的第一步，[rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.zh.md) 指向该目录，让从样式一侧进来的作者也能到达。
 
 ## 如何找出重复
 
@@ -54,11 +54,11 @@ Status: implemented
 
 **让 `pending` 与 `unloading` 不渲染点，而不是新增 `idle`。** 否决。这两行今天显示灰点，在一个目的是统一呈现的改动里把它删掉，等于从清单中拿走信息。
 
-**把复用规则写进根 `AGENTS.md`。** 否决。这条规则只管 `packages/client`，而根文件正好处在 `scripts/doc-budgets.manifest.json` 给它的 1950 词上限上，写在那里就必须挤掉一条不相干的仓库级规则。
+**把复用规则写进根 `AGENTS.md`。** 否决。这条规则只管 `rsh/Programs/Web/client`，而根文件正好处在 `rsh/Scripts/doc-budgets.manifest.json` 给它的 1950 词上限上，写在那里就必须挤掉一条不相干的仓库级规则。
 
 ## Testing
 
-`Tag`、`Switch` 与扩展后的 `StateDot` 在 `packages/client/ui-primitives/tests` 中各有组件测试，处于每文件 100% 覆盖率门禁之内。`StateDot` 的配色通过读取其样式表来钉住：CSS Modules 在组件测试里解析为类名映射，因此某个状态缺了配色规则时会落到继承色上，而任何渲染断言都不会察觉。
+`Tag`、`Switch` 与扩展后的 `StateDot` 在 `rsh/Programs/Web/client/ui-primitives/tests` 中各有组件测试，处于每文件 100% 覆盖率门禁之内。`StateDot` 的配色通过读取其样式表来钉住：CSS Modules 在组件测试里解析为类名映射，因此某个状态缺了配色规则时会落到继承色上，而任何渲染断言都不会察觉。
 
 迁移后的渲染点保留各自包内原有的测试，未作改动。web e2e 的 golden 是 ARIA 快照，完整的 replay web 套件无需重录即可通过，因为这次迁移保住了每一个 role、无障碍名称与状态——`Switch` 保留带 `aria-checked` 的 `role="switch"`，而由于 `StateDot` 是 `aria-hidden`，插件清单的相位点把 `role="img"` 名称保留在外层包裹元素上。
 
@@ -69,6 +69,6 @@ Status: implemented
 - 新的客户端控件现在有一处可查、一处可加，而目录把这次查询变成读一个文件，而不是在四十多个导出上 `grep`。
 - `TagTone` 有八个成员，因为发布了八种外观。加第九个需要一个真的需要它的渲染点，而不是一个对称性论证。
 - 插件清单的标签从 5px 矩形变为胶囊，其中"已停用"标签的底色从 `--dsw-alias-bg-layer-1` 变为 `neutral` 色调的 `--dsw-alias-bg-module-platform`，由近乎透明变成可见的灰底。相位点获得光晕，并在 `loading` 与 `unloading` 两个相位动画。插件设置字段中"未配置"徽章的字重从 400 改为基准的 500。这些都是有意的视觉变更，记录在此，以免后来的读者把它们当成回归。
-- 本次迁移移除了一个 `#b45309` 字面量。插件清单的 `conditional` 标签写的是 `var(--dsw-alias-state-warning-primary, #b45309)`，而这个别名并不存在——真正的 token 是 `--dsw-alias-state-warn-primary`——所以明暗两套主题一直在绘制那个被 [docs/web-styling.md](../../../../docs/web-styling.zh.md) 禁止的硬编码兜底色。
+- 本次迁移移除了一个 `#b45309` 字面量。插件清单的 `conditional` 标签写的是 `var(--dsw-alias-state-warning-primary, #b45309)`，而这个别名并不存在——真正的 token 是 `--dsw-alias-state-warn-primary`——所以明暗两套主题一直在绘制那个被 [rsh/Docs/web-styling.md](../../../../rsh/Docs/web-styling.zh.md) 禁止的硬编码兜底色。
 - 这条规则无法被机械检查。将来的作者仍然可以复制一个控件，只有评审能拦住。这是不设门禁所接受的代价：另一条路会拒绝正当的工作，而上面那份保留在原包的清单就是正当工作确实存在的证据。
 - `ui-primitives` 多出两个各自只有一个消费方的组件。开关尤其如此，提升它是因为它是一个通用控件，也因为正在进行中的插件管理工作会采用它，而不是再加两份拷贝。

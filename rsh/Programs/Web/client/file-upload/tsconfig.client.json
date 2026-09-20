@@ -1,0 +1,23 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
+  },
+  "files": [
+    "src/client/contract.ts",
+    "src/client/index.ts",
+    "src/client/runtime.ts",
+    "src/protocol.ts",
+    "src/types.ts"
+  ],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Core/util/crypto" },
+    { "path": "../../../../Modules/Official/attachment/attachment" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Core/typert/protocol" }
+  ]
+}

@@ -6,7 +6,7 @@ English | [中文](2026-06-19-acp-snapshot-tests.zh.md)
 
 ## Problem
 
-Unit tests do not exercise the complete assembled-agent subprocess or its ACP automation wire, while real-API tests are nondeterministic and key-gated. Loader wiring, backend behavior, and protocol output can therefore regress despite green unit coverage, as the [default-export postmortem](../../../../docs/postmortem/0001-acp-default-export-drops-inject.md) demonstrated.
+Unit tests do not exercise the complete assembled-agent subprocess or its ACP automation wire, while real-API tests are nondeterministic and key-gated. Loader wiring, backend behavior, and protocol output can therefore regress despite green unit coverage, as the [default-export postmortem](../../../../rsh/Docs/postmortem/0001-acp-default-export-drops-inject.md) demonstrated.
 
 The blocker for a full-transcript test is the model: the agent's output is driven by a non-deterministic LLM, and a key-gated test that hits the real API on every run is neither deterministic nor CI-runnable. The tier needs the fidelity of a real run with the determinism of a fixture.
 

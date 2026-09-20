@@ -12,9 +12,9 @@ Status: proposed
 
 ## 提案
 
-在实时清单确认不再有任何开放 PR（Pull Request）需要转换会话格式 JSONL 后，移除临时 CLI `scripts/migrate-packed-session-fixtures.ts`，以及根包提供的 `migrate:packed-session-fixtures` 命令。在同一变更中，移除测试政策、ACP 快照 README 和已实现打包行 Agent Note 中指向该过渡命令的链接，并将 `scripts/session-fixture-layout.snapshot.ts` 中仅适用于该命令的修复指引替换为与具体命令无关的规范布局指引。
+在实时清单确认不再有任何开放 PR（Pull Request）需要转换会话格式 JSONL 后，移除临时 CLI `rsh/Scripts/migrate-packed-session-fixtures.ts`，以及根包提供的 `migrate:packed-session-fixtures` 命令。在同一变更中，移除测试政策、ACP 快照 README 和已实现打包行 Agent Note 中指向该过渡命令的链接，并将 `rsh/Scripts/session-fixture-layout.snapshot.ts` 中仅适用于该命令的修复指引替换为与具体命令无关的规范布局指引。
 
-保留 `scripts/session-fixture-layout.ts`、其单元测试和 `scripts/session-fixture-layout.snapshot.ts`。它们定义并强制执行永久规范布局；只有面向分支的写入器是临时机制。
+保留 `rsh/Scripts/session-fixture-layout.ts`、其单元测试和 `rsh/Scripts/session-fixture-layout.snapshot.ts`。它们定义并强制执行永久规范布局；只有面向分支的写入器是临时机制。
 
 移除命令前，每个受影响分支都要合并当前 `master`，运行一次迁移器，将由此产生且仅包含 fixture 重写的改动单独提交，并验证仓库级快照布局检查通过。已关闭或被取代的分支无需迁移。
 
