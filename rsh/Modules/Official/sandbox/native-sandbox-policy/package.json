@@ -1,0 +1,25 @@
+{
+  "name": "@deepseek-ai/dsh-native-sandbox-policy",
+  "description": "Explicit native filesystem sandbox policy per Session",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Modules/Official/sandbox/native-sandbox-policy" },
+  "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": [], "provides": ["sandboxPolicy"] } },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-sandbox": "workspace:^"
+  }
+}

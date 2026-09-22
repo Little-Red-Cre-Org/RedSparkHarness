@@ -75,6 +75,7 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`cli/`](Programs/CLI/README.md) | Profile-only command-line application launcher |
 | [`interaction/`](Modules/Official/interaction/README.md) | Human-collaboration plane: approval/interaction seams, permission preset, commands, ask-user tool |
 | [`boot/`](Compatibility/DSH/boot/README.md) | Shared app-bin boot glue |
+| [`bridge/`](Compatibility/DSH/bridge/README.md) | Explicit Cordis contributions selected by native runtime profiles |
 | [`host/`](Programs/Web/host/README.md) | Web-GUI host half: API gateway + HTTP route server |
 | [`client/`](Programs/Web/client/README.md) | Web-GUI browser half: shell, wire, object services, slots, `ui-*` plugins |
 | [`test-support/`](Tests/test-support/README.md) | Support infrastructure (testkits, invariants, replay, Loader smokes) |

@@ -15,7 +15,7 @@
       "entry": "./native",
       "targets": ["host"],
       "requires": ["fs", "sessionPersistence", "model"],
-      "optional": [],
+      "optional": ["tools", "promptSections", "sandboxPolicy"],
       "provides": ["application"]
     }
   },
@@ -35,6 +35,9 @@
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^",
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
   }
 }

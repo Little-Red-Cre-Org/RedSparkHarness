@@ -75,6 +75,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`cli/`](Programs/CLI/README.zh.md) | 仅通过 profile 启动的命令行应用入口 |
 | [`interaction/`](Modules/Official/interaction/README.zh.md) | 人机协作平面：批准／交互 seam、权限预设、命令、询问用户的工具 |
 | [`boot/`](Compatibility/DSH/boot/README.zh.md) | 共享的 app bin 启动粘合层 |
+| [`bridge/`](Compatibility/DSH/bridge/README.zh.md) | 由原生运行时 profile 选择的显式 Cordis 贡献 |
 | [`host/`](Programs/Web/host/README.zh.md) | web GUI 宿主半侧：API 网关 + HTTP 路由服务器 |
 | [`client/`](Programs/Web/client/README.zh.md) | web GUI 浏览器半侧：shell、协议层、对象服务、slot、`ui-*` 插件 |
 | [`test-support/`](Tests/test-support/README.zh.md) | 支持基础设施（testkit、不变式、回放、Loader 冒烟测试） |

@@ -23,7 +23,7 @@
       "targets": ["host"],
       "requires": [],
       "optional": [],
-      "provides": []
+      "provides": ["fsObservationPolicy"]
     }
   },
   "main": "lib/index.js",
