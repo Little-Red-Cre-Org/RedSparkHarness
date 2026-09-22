@@ -24,26 +24,16 @@ The package does not publish an invariant companion. Descriptor reservation and 
 <a id="use-the-adapter"></a>
 ## Use the adapter
 
-Mount `RshPluginHost` before any adapted row, then publish a dedicated runtime subpath that keeps the legacy package's normal entry unchanged.
+Mount both the host and the adapted runtime entry in the same Loader configuration. The filesystem observation policy publishes the `/runtime` entry below using `adaptFilesystemPlugin(...)`, which delegates to `adaptCordisPlugin(...)`; other packages can publish dedicated runtime subpaths without changing their ordinary entries. Service injection activates the adapter when `ctx.pluginHost` is available; row order alone does not establish that dependency.
 
-```ts
-import { Context } from '@deepseek-ai/cordis'
-import RshPluginHost, { adaptCordisPlugin } from '@deepseek-ai/dsh-plugin-host'
-
-const ctx = new Context()
-const legacyPlugin = () => {}
-
-await ctx.plugin(RshPluginHost)
-
-export default adaptCordisPlugin({
-  packageName: '@example/filesystem-tool',
-  apiVersion: 1,
-  role: 'consumer',
-  capability: 'filesystem',
-}, legacyPlugin)
+```yaml
+- id: plugin-host
+  name: '@deepseek-ai/dsh-plugin-host'
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy/runtime'
 ```
 
-The descriptor's `packageName`, `role`, and `capability` are validated before the legacy plugin starts. A duplicate active package name fails mounting. Adapting a plugin does not sandbox it: a same-process Cordis plugin remains trusted code with the Context access that its own `inject` declaration receives.
+The descriptor's `packageName`, `role`, and `capability` are validated before the legacy plugin starts. A duplicate active package name fails mounting; during module HMR, a replacement adapter waits for the disposing prior adapter and its child to finish cleanup before claiming the name. Adapting a plugin does not sandbox it: a same-process Cordis plugin remains trusted code with the Context access that its own `inject` declaration receives.
 
 <a id="dev-note"></a>
 ## Dev Note

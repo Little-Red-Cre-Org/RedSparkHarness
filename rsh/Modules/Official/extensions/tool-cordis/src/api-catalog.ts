@@ -1434,9 +1434,9 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     methods: [
       {
         signature: 'register(descriptor: RshPluginDescriptor): () => void',
-        description: 'Reserve a descriptor while its owner is mounted.',
+        description: 'Reserve a descriptor while its owner is mounted. Active duplicate names fail immediately.',
         parameters: [{ name: 'descriptor', description: 'declared RSH ownership facts.' }],
-        returns: 'an idempotent disposer that releases the reservation.',
+        returns: 'an idempotent disposer that releases only this reservation.',
       },
       {
         signature: 'get(packageName: string): RshPluginDescriptor | undefined',

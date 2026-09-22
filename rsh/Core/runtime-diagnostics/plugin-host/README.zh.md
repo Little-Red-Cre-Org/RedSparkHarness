@@ -24,26 +24,16 @@ kind: "package-reference"
 <a id="use-the-adapter"></a>
 ## 使用 adapter
 
-先挂载 `RshPluginHost`，再发布专用 runtime 子路径，保留旧包的普通入口不变。
+在同一个 Loader 配置中挂载 host 与适配后的 runtime 入口。下面的文件系统观察策略通过 `adaptFilesystemPlugin(...)` 发布 `/runtime` 入口；该函数会委托给 `adaptCordisPlugin(...)`。其他包也可以发布专用 runtime 子路径，而不改变普通入口。服务注入会在 `ctx.pluginHost` 可用后激活适配器；仅靠配置项顺序不能建立该依赖。
 
-```ts
-import { Context } from '@deepseek-ai/cordis'
-import RshPluginHost, { adaptCordisPlugin } from '@deepseek-ai/dsh-plugin-host'
-
-const ctx = new Context()
-const legacyPlugin = () => {}
-
-await ctx.plugin(RshPluginHost)
-
-export default adaptCordisPlugin({
-  packageName: '@example/filesystem-tool',
-  apiVersion: 1,
-  role: 'consumer',
-  capability: 'filesystem',
-}, legacyPlugin)
+```yaml
+- id: plugin-host
+  name: '@deepseek-ai/dsh-plugin-host'
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy/runtime'
 ```
 
-描述符的 `packageName`、`role` 和 `capability` 会在旧插件启动前验证。重复的活动包名会导致挂载失败。适配插件并不沙箱化它：同进程 Cordis 插件仍是可信代码，并按自己的 `inject` 声明获得 Context 访问权限。
+描述符的 `packageName`、`role` 和 `capability` 会在旧插件启动前验证。重复的活动包名会导致挂载失败；模块 HMR（热模块替换）期间，替换适配器会等到正在释放的旧适配器及其子 fiber 完成清理后，才占用该包名。适配插件并不沙箱化它：同进程 Cordis 插件仍是可信代码，并按自己的 `inject` 声明获得 Context 访问权限。
 
 <a id="dev-note"></a>
 ## 开发备注

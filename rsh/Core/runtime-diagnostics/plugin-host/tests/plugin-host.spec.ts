@@ -44,6 +44,26 @@ describe('RshPluginHost', () => {
     expect(ctx.pluginHost.entries()).toEqual([])
   })
 
+  it('rejects invalid package names, capabilities, and roles', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    for (const packageName of ['', ' leading', 'two words']) {
+      expect(() => ctx.pluginHost.register({ ...descriptor, packageName })).toThrow('packageName')
+    }
+    for (const capability of ['', ' trailing ', 'two words']) {
+      expect(() => ctx.pluginHost.register({ ...descriptor, capability })).toThrow('invalid')
+    }
+    expect(() => ctx.pluginHost.register({ ...descriptor, role: 'unknown' as 'consumer' })).toThrow('unsupported role unknown')
+    expect(ctx.pluginHost.entries()).toEqual([])
+  })
+
+  it('reports a missing host for both entry forms', async () => {
+    const ctx = new Context()
+    const adapter = adaptCordisPlugin(descriptor, () => {})
+    await expect(adapter.apply(ctx, {})).rejects.toThrow('requires ctx.pluginHost')
+    await expect(mountCordisPlugin(ctx, descriptor, () => {})).rejects.toThrow('requires ctx.pluginHost')
+  })
+
   it('preserves wrapped plugin metadata and resolved default config', async () => {
     const ctx = new Context()
     await ctx.plugin(RshPluginHost)
@@ -117,6 +137,239 @@ describe('RshPluginHost', () => {
       config: { path: pathToFileURL(configPath).href },
     })).rejects.toThrow('legacy Loader child failure')
     expect(loaderContext.get('pluginHost')).toBeUndefined()
+  })
+
+  it('waits for an HMR adapter owner to finish asynchronous child teardown before replacement', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    let beginTeardown!: () => void
+    let finishTeardown!: () => void
+    const teardownStarted = new Promise<void>((resolve) => { beginTeardown = resolve })
+    const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+    const first = adaptCordisPlugin(descriptor, (child: Context) => {
+      child.effect(() => async () => {
+        beginTeardown()
+        await teardownGate
+      })
+    })
+    let replacementStarts = 0
+    const second = adaptCordisPlugin(descriptor, () => { replacementStarts++ })
+    const oldFiber = await ctx.plugin(first)
+    try {
+      ctx.registry.delete(first)
+      const replacement = ctx.plugin(second)
+      const oldTeardown = oldFiber.inertia
+      await teardownStarted
+      expect(ctx.pluginHost.get(descriptor.packageName)).toBe(descriptor)
+      expect(replacementStarts).toBe(0)
+      finishTeardown()
+      await oldTeardown
+      await replacement
+      expect(replacementStarts).toBe(1)
+      expect(ctx.pluginHost.entries()).toEqual([descriptor])
+      await replacement.dispose()
+      expect(ctx.pluginHost.entries()).toEqual([])
+    } finally {
+      finishTeardown()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('keeps rejecting duplicate active adapter owners', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const first = await ctx.plugin(adaptCordisPlugin(descriptor, () => {}))
+    try {
+      await expect(ctx.plugin(adaptCordisPlugin(descriptor, () => {}))).rejects.toThrow('already registered')
+      expect(ctx.pluginHost.entries()).toEqual([descriptor])
+    } finally {
+      await first.dispose()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('cancels a waiting HMR adapter without starting its child', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    let beginTeardown!: () => void
+    let finishTeardown!: () => void
+    const teardownStarted = new Promise<void>((resolve) => { beginTeardown = resolve })
+    const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+    const first = adaptCordisPlugin(descriptor, (child: Context) => {
+      child.effect(() => async () => {
+        beginTeardown()
+        await teardownGate
+      })
+    })
+    let replacementStarts = 0
+    const oldFiber = await ctx.plugin(first)
+    try {
+      ctx.registry.delete(first)
+      const replacement = ctx.plugin(adaptCordisPlugin(descriptor, () => { replacementStarts++ }))
+      await teardownStarted
+      await replacement.dispose()
+      finishTeardown()
+      await oldFiber.inertia
+      await replacement
+      expect(replacementStarts).toBe(0)
+      expect(ctx.pluginHost.entries()).toEqual([])
+    } finally {
+      finishTeardown()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('holds HMR replacement through teardown after a repeated child disposal', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    let beginTeardown!: () => void
+    let finishTeardown!: () => void
+    const teardownStarted = new Promise<void>((resolve) => { beginTeardown = resolve })
+    const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+    let childFiber: Context['fiber'] | undefined
+    const first = adaptCordisPlugin(descriptor, (child: Context) => {
+      childFiber = child.fiber
+      child.effect(() => async () => {
+        beginTeardown()
+        await teardownGate
+      })
+    })
+    let replacementStarts = 0
+    await ctx.plugin(first)
+    try {
+      const disposingChild = childFiber!.dispose()
+      await teardownStarted
+      ctx.registry.delete(first)
+      const replacement = ctx.plugin(adaptCordisPlugin(descriptor, () => { replacementStarts++ }))
+      expect(ctx.pluginHost.get(descriptor.packageName)).toBe(descriptor)
+      expect(replacementStarts).toBe(0)
+      finishTeardown()
+      await disposingChild
+      await replacement
+      expect(replacementStarts).toBe(1)
+      expect(ctx.pluginHost.entries()).toEqual([descriptor])
+    } finally {
+      finishTeardown()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('settles an adapter disposed during child startup before HMR replacement', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    let beginStartup!: () => void
+    let finishStartup!: () => void
+    const startupStarted = new Promise<void>((resolve) => { beginStartup = resolve })
+    const startupGate = new Promise<void>((resolve) => { finishStartup = resolve })
+    let beginTeardown!: () => void
+    let finishTeardown!: () => void
+    const teardownStarted = new Promise<void>((resolve) => { beginTeardown = resolve })
+    const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+    const first = adaptCordisPlugin(descriptor, async (child: Context) => {
+      child.effect(() => async () => {
+        beginTeardown()
+        await teardownGate
+      })
+      beginStartup()
+      await startupGate
+    })
+    try {
+      const starting = ctx.plugin(first)
+      await startupStarted
+      ctx.registry.delete(first)
+      const replacement = ctx.plugin(adaptCordisPlugin(descriptor, () => {}))
+      finishStartup()
+      await teardownStarted
+      expect(ctx.pluginHost.get(descriptor.packageName)).toBe(descriptor)
+      finishTeardown()
+      await starting
+      await replacement
+      expect(ctx.pluginHost.entries()).toEqual([descriptor])
+    } finally {
+      finishStartup()
+      finishTeardown()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('allows only one concurrent HMR replacement to claim a package name', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    let beginTeardown!: () => void
+    let finishTeardown!: () => void
+    const teardownStarted = new Promise<void>((resolve) => { beginTeardown = resolve })
+    const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+    const first = adaptCordisPlugin(descriptor, (child: Context) => {
+      child.effect(() => async () => {
+        beginTeardown()
+        await teardownGate
+      })
+    })
+    let replacementStarts = 0
+    await ctx.plugin(first)
+    try {
+      ctx.registry.delete(first)
+      const replacements = [1, 2].map(() => ctx.plugin(adaptCordisPlugin(descriptor, () => { replacementStarts++ })))
+      await teardownStarted
+      expect(replacementStarts).toBe(0)
+      finishTeardown()
+      const outcomes = await Promise.allSettled(replacements)
+      expect(outcomes.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+      expect(outcomes.filter(result => result.status === 'rejected').map(result => String(result.reason)))
+        .toEqual([expect.stringContaining('already registered')])
+      expect(replacementStarts).toBe(1)
+      expect(ctx.pluginHost.entries()).toEqual([descriptor])
+    } finally {
+      finishTeardown()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('keeps package names in order and merges object-style injections', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const second = { ...descriptor, packageName: '@example/z' }
+    const first = { ...descriptor, packageName: '@example/a' }
+    const releaseSecond = ctx.pluginHost.register(second)
+    const releaseFirst = ctx.pluginHost.register(first)
+    expect(ctx.pluginHost.entries()).toEqual([first, second])
+    const adapter = adaptCordisPlugin({ ...descriptor, packageName: '@example/object' }, {
+      inject: { requiredService: undefined },
+      apply() {},
+    })
+    expect(adapter.inject).toEqual({ pluginHost: undefined, requiredService: undefined })
+    releaseFirst()
+    releaseSecond()
+  })
+
+  it('keeps a successor when the previous disposer runs again', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const unregister = ctx.pluginHost.register(descriptor)
+    unregister()
+    const successor = { ...descriptor, capability: 'successor' }
+    const releaseSuccessor = ctx.pluginHost.register(successor)
+    unregister()
+    expect(ctx.pluginHost.get(descriptor.packageName)).toBe(successor)
+    releaseSuccessor()
+    expect(ctx.pluginHost.entries()).toEqual([])
+  })
+
+  it('releases descriptors when a direct mount is disposed through its helper', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const mounted = await mountCordisPlugin(ctx, descriptor, () => {})
+    await mounted.dispose()
+    expect(ctx.pluginHost.get(descriptor.packageName)).toBeUndefined()
+  })
+
+  it('preserves child metadata when the original plugin declares no injections', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const adapter = adaptCordisPlugin(descriptor, { apply() {} })
+    expect(adapter.inject).toEqual(['pluginHost'])
+    const fiber = await ctx.plugin(adapter)
+    await fiber.dispose()
   })
 
   it('releases a descriptor when its direct fiber is disposed', async () => {

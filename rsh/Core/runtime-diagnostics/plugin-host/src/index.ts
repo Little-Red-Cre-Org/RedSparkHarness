@@ -52,6 +52,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 function assertDescriptor(descriptor: RshPluginDescriptor): void {
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- descriptors can come from runtime package metadata.
   if (descriptor.apiVersion !== RSH_PLUGIN_API_VERSION) {
     throw new Error(`plugin-host: ${descriptor.packageName} declares unsupported runtime API ${String(descriptor.apiVersion)}`)
   }
@@ -64,40 +65,103 @@ function assertDescriptor(descriptor: RshPluginDescriptor): void {
     throw new Error(`plugin-host: ${descriptor.packageName} declares an invalid capability`)
   }
   if (!['definition', 'provider', 'consumer', 'policy', 'projection', 'adapter'].includes(descriptor.role)) {
-    throw new Error(`plugin-host: ${descriptor.packageName} declares an unsupported role ${String(descriptor.role)}`)
+    throw new Error(`plugin-host: ${descriptor.packageName} declares an unsupported role ${descriptor.role}`)
   }
 }
+
+interface DescriptorReservation {
+  descriptor: RshPluginDescriptor
+  owner?: Fiber
+  settled?: Promise<void>
+  settle?: () => void
+}
+
+const reserveAdapter = Symbol('plugin-host reserve adapter')
 
 /**
  * Owns declared RSH plugin identities and adapts legacy Cordis plugins without
  * replacing Cordis services, events, Loader configuration, or fiber lifecycle.
  */
 export class RshPluginHost extends Service {
-  private readonly descriptors = new Map<string, RshPluginDescriptor>()
+  private readonly descriptors = new Map<string, DescriptorReservation>()
+  private readonly ownerCtx: Context
 
   /** Install the registry as `ctx.pluginHost`. */
   constructor(ctx: Context) {
     super(ctx, 'pluginHost')
+    this.ownerCtx = ctx
   }
 
-  /**
-   * Reserve a descriptor while its owner is mounted.
-   * @param descriptor - declared RSH ownership facts.
-   * @returns an idempotent disposer that releases the reservation.
-   */
-  register(descriptor: RshPluginDescriptor): () => void {
+  private reserve(descriptor: RshPluginDescriptor, owner?: Fiber): () => void {
     assertDescriptor(descriptor)
     const current = this.descriptors.get(descriptor.packageName)
     if (current !== undefined) {
-      throw new Error(`plugin-host: ${descriptor.packageName} is already registered as ${current.role} for ${current.capability}`)
+      throw new Error(`plugin-host: ${descriptor.packageName} is already registered as ${current.descriptor.role} for ${current.descriptor.capability}`)
     }
-    this.descriptors.set(descriptor.packageName, descriptor)
+    const reservation: DescriptorReservation = { descriptor, ...(owner === undefined ? {} : { owner }) }
+    if (owner !== undefined) {
+      reservation.settled = new Promise<void>((resolve) => { reservation.settle = resolve })
+    }
+    this.descriptors.set(descriptor.packageName, reservation)
     let disposed = false
     return () => {
       if (disposed) return
       disposed = true
-      this.descriptors.delete(descriptor.packageName)
+      const finish = () => {
+        /* v8 ignore next -- the disposer is idempotent and exclusively owns this slot. */
+        if (this.descriptors.get(descriptor.packageName) === reservation) {
+          this.descriptors.delete(descriptor.packageName)
+        }
+        reservation.settle?.()
+      }
+      if (owner === undefined || owner.uid !== null) {
+        finish()
+        return
+      }
+      // The wrapper's own effect cannot await its Fiber; finish outside that unload.
+      const retire = async () => {
+        try {
+          while (owner.inertia !== undefined) await owner.inertia
+        } finally {
+          finish()
+        }
+      }
+      /* v8 ignore next 3 -- Cordis's unload task rejects only when its logger fails. */
+      void retire().catch((error: unknown) => {
+        this.ownerCtx.logger.error(error)
+      })
     }
+  }
+
+  /**
+   * Reserve a descriptor while its owner is mounted. Active duplicate names fail immediately.
+   * @param descriptor - declared RSH ownership facts.
+   * @returns an idempotent disposer that releases only this reservation.
+   */
+  register(descriptor: RshPluginDescriptor): () => void {
+    return this.reserve(descriptor)
+  }
+
+  async [reserveAdapter](descriptor: RshPluginDescriptor, owner: Fiber): Promise<(() => void) | undefined> {
+    assertDescriptor(descriptor)
+    while (owner.uid !== null) {
+      const current = this.descriptors.get(descriptor.packageName)
+      if (current === undefined) return this.reserve(descriptor, owner)
+      if (current.owner?.uid !== null || current.settled === undefined) {
+        throw new Error(`plugin-host: ${descriptor.packageName} is already registered as ${current.descriptor.role} for ${current.descriptor.capability}`)
+      }
+      let cancel!: () => void
+      const cancelled = new Promise<void>((resolve) => { cancel = resolve })
+      const off = this.ownerCtx.on('internal/plugin', (fiber) => {
+        if (fiber === owner && fiber.uid === null) cancel()
+      }, { global: true })
+      try {
+        await Promise.race([current.settled, cancelled])
+      } finally {
+        off()
+      }
+    }
+    return undefined
   }
 
   /**
@@ -106,7 +170,7 @@ export class RshPluginHost extends Service {
    * @returns the descriptor, or undefined when no owner is active.
    */
   get(packageName: string): RshPluginDescriptor | undefined {
-    return this.descriptors.get(packageName)
+    return this.descriptors.get(packageName)?.descriptor
   }
 
   /**
@@ -114,7 +178,8 @@ export class RshPluginHost extends Service {
    * @returns every descriptor currently reserved by a mounted adapter.
    */
   entries(): readonly RshPluginDescriptor[] {
-    return [...this.descriptors.values()].sort((left, right) => left.packageName.localeCompare(right.packageName))
+    return [...this.descriptors.values()].map(({ descriptor }) => descriptor)
+      .sort((left, right) => left.packageName.localeCompare(right.packageName))
   }
 }
 
@@ -124,7 +189,7 @@ function pluginName(plugin: Plugin, fallback: string): string {
 
 function mergedInject(inject: Inject | undefined): Inject {
   if (inject === undefined) return ['pluginHost']
-  if (Array.isArray(inject)) return [...new Set(['pluginHost', ...inject])]
+  if (Array.isArray(inject)) return [...new Set<string>(['pluginHost', ...inject])]
   return { pluginHost: undefined, ...inject }
 }
 
@@ -150,6 +215,8 @@ function pluginMetadata(plugin: Plugin, name: string): Pick<CordisPluginAdapter,
  * Adapt an existing Cordis plugin for a Loader row without changing its public
  * configuration. The wrapper preserves the original Cordis metadata and awaits
  * the child Fiber, so child activation failure rejects the owning Loader entry.
+ * Module HMR waits for the prior adapter Fiber and its child to finish disposal
+ * before reusing the package name; another active owner remains a duplicate.
  * @param descriptor - declared RSH role and capability identity.
  * @param plugin - existing Cordis plugin entrypoint.
  * @returns a Loader-compatible object plugin.
@@ -161,19 +228,27 @@ export function adaptCordisPlugin(descriptor: RshPluginDescriptor, plugin: Plugi
     rsh: descriptor,
     async apply(ctx: Context, config: unknown): Promise<void> {
       const host = ctx.pluginHost
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- a Loader composition can omit the host at runtime.
       if (host === undefined) throw new Error(`plugin-host: ${descriptor.packageName} requires ctx.pluginHost`)
-      const unregister = host.register(descriptor)
+      const unregister = await host[reserveAdapter](descriptor, ctx.fiber)
+      if (unregister === undefined) return
+      let child: Fiber | undefined
+      let cleanup: Promise<void> | undefined
+      const dispose = (): Promise<void> => cleanup ??= (async () => {
+        try {
+          await child?.dispose()
+          while (child?.inertia !== undefined) await child.inertia
+        } finally {
+          unregister()
+        }
+      })()
       try {
-        const child = await ctx.plugin(plugin, config)
-        ctx.effect(() => async () => {
-          try {
-            await child.dispose()
-          } finally {
-            unregister()
-          }
-        }, `plugin-host adapter ${descriptor.packageName}`)
+        ctx.effect(() => dispose, `plugin-host adapter ${descriptor.packageName}`)
+        const startingChild = ctx.plugin(plugin, config)
+        child = startingChild
+        await startingChild
       } catch (error) {
-        unregister()
+        await dispose()
         throw error
       }
     },
@@ -197,6 +272,7 @@ export async function mountCordisPlugin(
   config?: unknown,
 ): Promise<MountedRshPlugin> {
   const host = ctx.pluginHost
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- an integration Context can omit the host at runtime.
   if (host === undefined) throw new Error(`plugin-host: ${descriptor.packageName} requires ctx.pluginHost`)
   const unregister = host.register(descriptor)
   let fiber: Fiber

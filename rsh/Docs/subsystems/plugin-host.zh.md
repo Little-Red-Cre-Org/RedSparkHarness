@@ -27,9 +27,9 @@ Owns declared RSH plugin identities and adapts legacy Cordis plugins without rep
 
 ```ts cordis-catalog
 /**
- * Reserve a descriptor while its owner is mounted.
+ * Reserve a descriptor while its owner is mounted. Active duplicate names fail immediately.
  * @param descriptor - declared RSH ownership facts.
- * @returns an idempotent disposer that releases the reservation.
+ * @returns an idempotent disposer that releases only this reservation.
  */
 register(descriptor: RshPluginDescriptor): () => void
 

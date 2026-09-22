@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Docs/subsystems/plugin-host.md
-plugin-host.md: 2b8d06e7fd226ae14fc07daacf2f762900bca57a
-plugin-host.zh.md: ae0f20ab2ac8fe0ea840e645a6041e4ea9e48f35
+plugin-host.md: 0539002baa46397fb676551721e49a09f3996a24
+plugin-host.zh.md: 6d0d090b650815c725bdebb889386bb7cc4ddcd7
