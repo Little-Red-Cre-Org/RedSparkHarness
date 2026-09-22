@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
+import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { SessionId } from '@deepseek-ai/dsh-session'
@@ -19,13 +20,19 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
   const scope = new NativeScope()
   const adapter = new MockAdapter(script)
   let app: NativeApplication | undefined
+  let filesystem: LocalFileSystemBackend | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application'], provides: [],
-    resolve: () => (context) => { app = context.require('application') },
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs'], provides: [],
+    resolve: () => (context) => {
+      app = context.require('application')
+      const provided = context.require('fs')
+      if (!(provided instanceof LocalFileSystemBackend)) throw new Error('missing local filesystem')
+      filesystem = provided
+    },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
@@ -36,8 +43,8 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
     { plugin: model, scope, config: undefined },
   ], 'host'))
   await host.start()
-  if (app === undefined) throw new Error('missing native application')
-  return { host, scope, app, adapter, directory, workspace, sessions }
+  if (app === undefined || filesystem === undefined) throw new Error('missing native application or filesystem')
+  return { host, scope, app, filesystem, adapter, directory, workspace, sessions }
 }
 
 it('logs the model-visible request and tool result, then resumes the same stored Session', async () => {
@@ -114,6 +121,38 @@ it('waits for an admitted model stream and persists the cancelled turn before sh
     } finally { await storage.close() }
   } finally {
     release.resolve(true)
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('repairs a persisted tool call when shutdown interrupts the file write', async () => {
+  const state = await fixture([toolCallResponse('write-1', 'write_file', { path: 'interrupted.txt', content: 'uncommitted' })])
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  state.filesystem.internals.inspectTemp = async () => { entered.resolve(undefined); await release.promise }
+  try {
+    const running = state.host.run(state.scope, { kind: 'cancel-write' }, invocation => state.app.run(['create', 'a', 'file'], invocation.signal))
+    await entered.promise
+    const stopping = state.host.stop()
+    release.resolve(undefined)
+    await expect(running).rejects.toThrow()
+    await stopping
+    await expect(readFile(join(state.workspace, 'interrupted.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('interrupted Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'tool/call')).toHaveLength(1)
+        expect(events.filter(event => event.type === 'tool/result')).toHaveLength(1)
+        expect(events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    release.resolve(undefined)
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
