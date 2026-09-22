@@ -48,6 +48,14 @@ Engine 所有者定义业务静止顺序：停止接收 turn 和工具工作，�
 
 配置重载与插件替换必须在 live Web profile 切换前保留其受支持行为。替换流程先关闭旧实例接收入口，并在发布后继实例前完成冲突资源清理。替换失败时报告失败，不静默恢复不兼容或已部分释放的装配。
 
+### 元数据与 profile 配置
+
+新增 `package.json.dsh.native` 声明，字段为 `apiVersion: 1`、`entry`（已导出的包子路径）、`targets`（`host` 和/或 `client`），以及服务名数组 `requires`、`optional` 和 `provides`。入口导出 `plugin`，其原生协议声明必须与元数据一致。其 `resolve(config)` 操作校验配置并返回激活数据，不获取资源。未知版本、无效导出和不受支持的目标在激活前失败；可静态判定的元数据错误在导入插件代码前失败。保留 `dsh.runtime` 作为角色元数据，含义不变；npm、原生 API、DSH 兼容和 Session 版本分别管理。
+
+通过 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"` 选择原生装配；迁移期间未填写 runtime 时保留现有 legacy 解释方式。`rsh.profile.json` 是 JSON，字段为 `formatVersion: 1`、`scopes` 和 `installations`。作用域行包含唯一 `id` 和可选 `parent`；安装行包含唯一 `id`、包名 `plugin`、`scope`、可选 `config` 和可选 `disabled`。根作用域省略 `parent`。拒绝未知字段、缺失引用及作用域环；`disabled: true` 在依赖规划前排除该行。包元数据负责解析导出入口；用户配置不能选择任意模块路径。部署选择 Host 或 Client，并据此校验每个选中入口。
+
+保留 `dsh --profile` 和现有 `--patch` 选项。原生 profile 的 patch 为 JSON，包含 `formatVersion: 1` 及按已有安装 `id` 索引的 `installations` 行；每行替换完整 `config` 值和/或设置 `disabled`。拒绝重复或未知 id、未知字段、可执行 YAML 及隐式 Cordis 解释。解析计划前按参数顺序应用显式 patch。legacy bundle、home 和 profile Cordis patch 仍由兼容解释器负责；迁移必须预览并显式映射适用值，或拒绝不支持的输入，不能静默忽略用户已有 patch。P1 负责协议声明与校验；P2 在启用原生启动前同步更新 manifest reader、profile 解析、生成器和消费者。不引入新的 CLI 参数或可执行文件。
+
 ### 首批兼容范围
 
 以下是选定的首批兼容目标，不代表原生桥当前已经支持它们。桥必须为每个作用域选择一个 Provider，为每种事件选择一个权威方向；原生与旧贡献不能同时执行或记录同一操作。
