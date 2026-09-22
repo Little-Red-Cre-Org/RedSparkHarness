@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-09-21-rsh-runtime-layers-and-cordis-adaptation.md
-2026-09-21-rsh-runtime-layers-and-cordis-adaptation.md: 2b4c4720dbf17613850383da25335dc218ce423f
-2026-09-21-rsh-runtime-layers-and-cordis-adaptation.zh.md: 80fc28be272bbe2b76cc395c544f3d887bea9a15
+2026-09-21-rsh-runtime-layers-and-cordis-adaptation.md: 06015c95db4ea0547c8fad5f99decc8dc5482a11
+2026-09-21-rsh-runtime-layers-and-cordis-adaptation.zh.md: 893178eaa44e0d7cf6e662154210de8ba7217220
