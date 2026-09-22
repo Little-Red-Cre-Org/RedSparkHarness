@@ -51,6 +51,7 @@ The following metadata fields are optional. Omitting them leaves the format vers
 |---|---|
 | `dsh.manifestVersion` | Manifest format identifier; the declared format is `1`, independent of the npm package version and Session format version. |
 | `engines.dsh` | Author-declared compatible DSH versions as a SemVer range, including exact prerelease versions. This field sits beside `engines.node` and `engines.npm`; an engines object may omit `dsh`. |
+| `dsh.runtime` | RSH runtime role declaration: API revision, capability domain, and Definition, Provider, Consumer, policy, projection, or adapter role. Readers validate the declaration they consume. |
 
 Public composition declarations are defined in [`src/types.ts`](src/types.ts). Internal `configTrees`, `sessionFormatMigration`, and generated `moduleFallback` metadata remain owned by their image-packer, catalog, and launcher readers; the public types do not expose them.
 

@@ -88,9 +88,11 @@ flowchart LR
   cfg --> plugin_dsh_base_tool_pwsh
   plugin_dsh_base_tool_jobs["tool-jobs<br/>@deepseek-ai/dsh-tool-jobs"]
   cfg --> plugin_dsh_base_tool_jobs
-  plugin_dsh_base_fs_observation_policy["fs-observation-policy<br/>@deepseek-ai/dsh-fs-observation-policy"]
+  plugin_dsh_base_plugin_host["plugin-host<br/>@deepseek-ai/dsh-plugin-host"]
+  cfg --> plugin_dsh_base_plugin_host
+  plugin_dsh_base_fs_observation_policy["fs-observation-policy<br/>@deepseek-ai/dsh-fs-observation-policy/runtime"]
   cfg --> plugin_dsh_base_fs_observation_policy
-  plugin_dsh_base_tool_fs["tool-fs<br/>@deepseek-ai/dsh-tool-fs"]
+  plugin_dsh_base_tool_fs["tool-fs<br/>@deepseek-ai/dsh-tool-fs/runtime"]
   cfg --> plugin_dsh_base_tool_fs
   plugin_dsh_base_tool_fs_search["tool-fs-search<br/>@deepseek-ai/dsh-tool-fs-search"]
   cfg --> plugin_dsh_base_tool_fs_search
@@ -174,7 +176,7 @@ flowchart LR
   cfg --> plugin_dsh_base_system_prompt
   plugin_dsh_base_agent_loop["agent-loop<br/>@deepseek-ai/dsh-agent-loop"]
   cfg --> plugin_dsh_base_agent_loop
-  plugin_dsh_base_fs_sandbox["fs-sandbox<br/>@deepseek-ai/dsh-fs-sandbox"]
+  plugin_dsh_base_fs_sandbox["fs-sandbox<br/>@deepseek-ai/dsh-fs-sandbox/runtime"]
   cfg --> plugin_dsh_base_fs_sandbox
   plugin_dsh_base_llm_deepseek["llm-deepseek<br/>@deepseek-ai/dsh-llm-deepseek"]
   cfg --> plugin_dsh_base_llm_deepseek
@@ -222,8 +224,9 @@ flowchart LR
 | `tool-bash` | `@deepseek-ai/dsh-tool-bash` |
 | `tool-pwsh` | `@deepseek-ai/dsh-tool-pwsh` |
 | `tool-jobs` | `@deepseek-ai/dsh-tool-jobs` |
-| `fs-observation-policy` | `@deepseek-ai/dsh-fs-observation-policy` |
-| `tool-fs` | `@deepseek-ai/dsh-tool-fs` |
+| `plugin-host` | `@deepseek-ai/dsh-plugin-host` |
+| `fs-observation-policy` | `@deepseek-ai/dsh-fs-observation-policy/runtime` |
+| `tool-fs` | `@deepseek-ai/dsh-tool-fs/runtime` |
 | `tool-fs-search` | `@deepseek-ai/dsh-tool-fs-search` |
 | `agent-instructions` | `@deepseek-ai/dsh-agent-instructions` |
 | `skill` | `@deepseek-ai/dsh-skill` |
@@ -265,7 +268,7 @@ flowchart LR
 | `tools` | `@deepseek-ai/dsh-tools` |
 | `system-prompt` | `@deepseek-ai/dsh-system-prompt` |
 | `agent-loop` | `@deepseek-ai/dsh-agent-loop` |
-| `fs-sandbox` | `@deepseek-ai/dsh-fs-sandbox` |
+| `fs-sandbox` | `@deepseek-ai/dsh-fs-sandbox/runtime` |
 | `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` |
 
 Source config: [`rsh/Compatibility/DSH/bundle/base/cordis.patch.yml`](../../Compatibility/DSH/bundle/base/cordis.patch.yml).

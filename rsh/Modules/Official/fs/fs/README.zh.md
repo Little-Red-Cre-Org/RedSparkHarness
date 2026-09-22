@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-应用需要在宿主、受限或远程执行环境中使用一致的文件系统操作时，选择 `dsh-fs`。消费方可以解析稳定的文件身份、在受支持时映射共享宿主文件、执行有界的文本与字节读取、列出目录，并原子地写入文本及执行字面量编辑。版本防护是可选的，因此后端无需策略强制也能工作；调用方可以提供防护，在文件变化后拒绝变更。根据所需执行环境选择 `fs-local`、`fs-sandbox` 或 `fs-e2b`。面向模型的文件系统工具由 `dsh-tool-fs` 单独提供。
+需要一致的宿主、受限或远程文件系统操作时选择 `dsh-fs`。Consumer 可解析稳定身份、在支持时映射共享宿主文件、执行有界读取、列出目录，并原子地变更文本。guard 是可选的；调用方可拒绝已变化的文件。选择 `fs-local`、`fs-sandbox` 或 `fs-e2b`；`dsh-tool-fs` 提供模型工具。`dsh.runtime` 声明 filesystem Definition，`runtime` 适配 Cordis service 入口而不改变 `ctx.fs`。
 
 ## 目录
 

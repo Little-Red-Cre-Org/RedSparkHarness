@@ -564,6 +564,13 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Runs one model-written program against host-provided async bindings; backends differ by substrate and language (the tool registry consumes it for PTC mode).',
   },
   {
+    key: 'pluginHost',
+    pkg: 'plugin-host',
+    title: 'RSH plugin-role registry',
+    mode: 'core',
+    note: 'Records native package roles and mounts legacy Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container.',
+  },
+  {
     key: 'fs',
     pkg: 'fs',
     title: 'Filesystem provider seam',

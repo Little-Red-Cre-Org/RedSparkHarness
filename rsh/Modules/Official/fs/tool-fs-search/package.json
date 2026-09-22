@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/fs/tool-fs-search"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "consumer",
+      "capability": "filesystem-discovery"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

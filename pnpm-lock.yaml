@@ -304,6 +304,9 @@ importers:
       '@deepseek-ai/dsh-plan-mode':
         specifier: workspace:^
         version: link:../../../../Modules/Official/plan/plan-mode
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/dsh-plugin-package-inventory-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/plugin-package-inventory-deepseek
@@ -975,6 +978,16 @@ importers:
   rsh/Core/native/system/packages/linux-arm64: {}
 
   rsh/Core/native/system/packages/linux-x64: {}
+
+  rsh/Core/runtime-diagnostics/plugin-host:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../vendor/schemastery
+        version: link:../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../vendor/cordis
 
   rsh/Core/runtime-diagnostics/invariants:
     dependencies:

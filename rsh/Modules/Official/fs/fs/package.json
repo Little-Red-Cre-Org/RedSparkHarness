@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/fs/fs"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "definition",
+      "capability": "filesystem"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -22,18 +29,24 @@
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
+    "./runtime": {
+      "types": "./lib/types/runtime-definition.d.ts",
+      "default": "./lib/runtime-definition.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/runtime-definition.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-plugin-host": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
@@ -41,6 +54,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-plugin-host": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"

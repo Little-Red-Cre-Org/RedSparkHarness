@@ -28,6 +28,10 @@ export {
   FsTargetKey,
   FsVersion,
 } from './types.ts'
+export {
+  adaptFilesystemPlugin,
+  type FilesystemPluginDescriptor,
+} from './runtime.ts'
 export type {
   FsEditOutcome,
   FsEditRequest,

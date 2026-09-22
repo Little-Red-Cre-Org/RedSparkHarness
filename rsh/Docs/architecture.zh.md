@@ -10,7 +10,7 @@
 
 [Cordis](cordis-primer.zh.md) 是 dsh 底层的框架：插件向共享上下文贡献服务、类型化事件和可逆的副作用。产品的每一部分都是插件，包括模型适配器、工具注册表、会话日志，以及 agent loop（智能体循环）本身，因此每个都可以从配置替换。
 
-不存在需要打补丁的特权内核：扩展 dsh 的方式是把插件挂载到其他插件旁边，而各项注册都是副作用，会在其插件卸载时撤销。
+不存在需要打补丁的特权内核：插件彼此并列挂载，各项注册会随其插件卸载而撤销。RSH runtime 将原生包角色记录为 Definition、Provider、Consumer、policy、projection 或 adapter；`dsh-plugin-host` 使用同一个 Cordis Fiber 生命周期。
 
 ## Profile 与组合包
 

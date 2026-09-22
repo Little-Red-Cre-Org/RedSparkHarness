@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/fs/fs-local"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "provider",
+      "capability": "filesystem"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -18,16 +25,22 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./runtime": {
+      "types": "./lib/types/runtime.d.ts",
+      "default": "./lib/runtime.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/runtime.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/dsh-fs": "workspace:^",
+    "@deepseek-ai/dsh-plugin-host": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
   "dependencies": {

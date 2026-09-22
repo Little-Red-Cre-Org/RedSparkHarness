@@ -22,7 +22,7 @@ kind: "package-group"
 <a id="packages"></a>
 ## 包
 
-八个包加上远程同级 `fs-e2b` 承担文件系统角色；子系统参考文档完整收录各项约定与错误分类体系。
+八个包加上远程同级 `fs-e2b` 承担文件系统角色；子系统参考文档完整收录各项约定与错误分类体系。它们的 `dsh.runtime` 声明为 RSH runtime 检查标识 Definition、Provider、Consumer 或 policy 角色，而 `runtime` 导出通过 `dsh-plugin-host` 保留现有 Cordis 生命周期。
 
 | 包 | 职责 | ctx 键 |
 |---|---|---|

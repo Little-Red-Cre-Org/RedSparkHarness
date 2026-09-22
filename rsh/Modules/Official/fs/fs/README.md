@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-fs` when an application needs consistent filesystem operations across host, confined, or remote execution environments. It lets consumers resolve stable file identities, map shared host files where supported, perform bounded text and byte reads, list directories, and apply atomic text writes and literal edits. Version guards are optional, so a backend works without policy enforcement; callers can supply a guard to reject a mutation after the file changes. Choose `fs-local`, `fs-sandbox`, or `fs-e2b` for the required execution environment. Model-facing filesystem tools are provided separately by `dsh-tool-fs`.
+Use `dsh-fs` for consistent host, confined, or remote filesystem operations. Consumers resolve stable identities, map shared host files when supported, perform bounded reads, list directories, and make atomic text changes. Guards are optional; callers may reject a changed file. Choose `fs-local`, `fs-sandbox`, or `fs-e2b`; `dsh-tool-fs` provides model tools. `dsh.runtime` declares the filesystem Definition, and `runtime` adapts its Cordis service entry without changing `ctx.fs`.
 
 ## Table of Contents
 

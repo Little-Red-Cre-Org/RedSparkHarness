@@ -172,6 +172,8 @@ flowchart LR
   svc_codeRuntime["ctx.codeRuntime<br/>Code-execution seam"]
   pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
   pkg_experimental_code_runtime_python["experimental-code-runtime-python"]
+  pkg_plugin_host["plugin-host"]
+  svc_pluginHost["ctx.pluginHost<br/>RSH plugin-role registry"]
   pkg_fs["fs"]
   svc_fs["ctx.fs<br/>Filesystem provider seam"]
   pkg_fs_local["fs-local"]
@@ -287,6 +289,7 @@ flowchart LR
   pkg_message_feedback --> svc_messageFeedback
   pkg_permission_presets --> svc_permissionPresets
   pkg_plan_mode --> svc_planMode
+  pkg_plugin_host --> svc_pluginHost
   pkg_plugin_package_inventory_deepseek --> svc_deepseekLlmApiExtensions
   pkg_pwsh_local --> svc_shell
   pkg_sandbox --> svc_sandbox
@@ -537,6 +540,7 @@ flowchart LR
 | `ctx.approval` | `seam` | [`user-approval`](../Modules/Official/interaction/user-approval) | - | [`tools`](../Engine/core/tools), [`tool-bash`](../Modules/Official/shell/tool-bash), [`acp`](../Programs/ACP/packages/acp) | - | One-shot permission decisions dispatched over the `approval/request` waterfall; answerers are listeners (the ACP bridge for its own agents), absence fails closed to `unavailable`. |
 | `ctx.permissionPresets` | `core` | [`permission-presets`](../Modules/Official/interaction/permission-presets) | - | - | - | User-facing preset table (`workspace-write`/`danger-full-access`) bundling the sandbox-mode and approval-policy knobs; a switch writes one `permission/preset` event through to both knob events. |
 | `ctx.codeRuntime` | `seam` | [`code-runtime`](../Modules/Official/code-runtime/code-runtime) | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | Runs one model-written program against host-provided async bindings; backends differ by substrate and language (the tool registry consumes it for PTC mode). |
+| `ctx.pluginHost` | `core` | [`plugin-host`](../Core/runtime-diagnostics/plugin-host) | - | - | - | Records native package roles and mounts legacy Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container. |
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs executes read/write/edit through ctx.fs; fs-sandbox fences mutations by the shared sandbox mode; fs-observation-policy contributes observed-state checks through the fs/* event gate. |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | The basic backend consumes post-step pressure and request-error recovery events; there is no model-facing compact tool. |
 | `ctx.subagents` | `seam` | [`subagent`](../Engine/subagent/subagent) | [`subagent-spawn-in-process`](../Engine/subagent/subagent-spawn-in-process), [`subagent-fork-in-process`](../Engine/subagent/subagent-fork-in-process), [`subagent-acp`](../Engine/subagent/subagent-acp), [`subagent-codex`](../Engine/subagent/subagent-codex), [`subagent-claude-code`](../Engine/subagent/subagent-claude-code), [`subagent-dsh-sdk`](../Engine/subagent/subagent-dsh-sdk) | [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-subagent-control`](../Engine/subagent/tool-subagent-control), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | Providers implement transports; the service also owns optional Activation-based continuation orchestration, tool-subagent selects one-shot or continuable delegation, tool-subagent-control delivers follow-ups, and tool-ralph requires one fresh structured-output route. |

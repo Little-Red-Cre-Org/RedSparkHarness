@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/e2b/fs-e2b"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "provider",
+      "capability": "filesystem"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

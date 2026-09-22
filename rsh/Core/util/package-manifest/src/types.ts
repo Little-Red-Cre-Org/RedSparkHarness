@@ -34,6 +34,8 @@ export interface DshManifest {
   profile?: DshProfileManifest
   /** Client module loading and build metadata. */
   client?: DshClientManifest
+  /** RSH runtime role and capability declaration for a package entry. */
+  runtime?: DshRuntimeManifest
 }
 
 /** Runtime version requirements under `package.json.engines`. */
@@ -64,6 +66,19 @@ export interface DshProfileManifest {
 
 /** Whether user patch files reload while a profile remains active or apply only at startup. */
 export type ProfilePatchReload = 'live' | 'startup'
+
+/** RSH runtime-role declaration for one package entry. */
+export interface DshRuntimeManifest {
+  /** Runtime API revision implemented by this entry. */
+  apiVersion: 1
+  /** Architectural role of the entry within its capability domain. */
+  role: DshRuntimeRole
+  /** Stable capability domain, for example `filesystem`. */
+  capability: string
+}
+
+/** Roles that a native RSH package entry may declare. */
+export type DshRuntimeRole = 'definition' | 'provider' | 'consumer' | 'policy' | 'projection' | 'adapter'
 
 /** Client module declaration read by client-modules and the client build. */
 export interface DshClientManifest {

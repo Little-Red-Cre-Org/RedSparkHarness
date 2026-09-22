@@ -22,7 +22,7 @@ The `fs/` group gives agents durable, policy-governed access to files: the `ctx.
 <a id="packages"></a>
 ## Packages
 
-Eight packages plus the remote sibling `fs-e2b` play the filesystem roles; the subsystem reference owns the exhaustive contracts and the error taxonomy.
+Eight packages plus the remote sibling `fs-e2b` play the filesystem roles; the subsystem reference owns the exhaustive contracts and the error taxonomy. Their `dsh.runtime` declarations identify the Definition, Provider, Consumer, or policy role for the RSH runtime checks, while their `runtime` exports retain the existing Cordis lifecycle through `dsh-plugin-host`.
 
 | Package | Role | ctx key |
 |---|---|---|

@@ -1428,6 +1428,31 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'pluginHost',
+    summary: 'Owns declared RSH plugin identities and adapts legacy Cordis plugins without replacing Cordis services, events, Loader configuration, or fiber lifecycle.',
+    description: 'Owns declared RSH plugin identities and adapts legacy Cordis plugins without replacing Cordis services, events, Loader configuration, or fiber lifecycle.',
+    methods: [
+      {
+        signature: 'register(descriptor: RshPluginDescriptor): () => void',
+        description: 'Reserve a descriptor while its owner is mounted.',
+        parameters: [{ name: 'descriptor', description: 'declared RSH ownership facts.' }],
+        returns: 'an idempotent disposer that releases the reservation.',
+      },
+      {
+        signature: 'get(packageName: string): RshPluginDescriptor | undefined',
+        description: 'Return the current descriptor for one package.',
+        parameters: [{ name: 'packageName', description: 'full npm package name.' }],
+        returns: 'the descriptor, or undefined when no owner is active.',
+      },
+      {
+        signature: 'entries(): readonly RshPluginDescriptor[]',
+        description: 'List active descriptors in stable package-name order.',
+        parameters: [],
+        returns: 'every descriptor currently reserved by a mounted adapter.',
+      },
+    ],
+  },
+  {
     key: 'sandbox',
     summary: 'Abstract process-sandbox service.',
     description: 'Abstract process-sandbox service. confine must return enforcing argv or fail closed at wrap or runner-execution time; silent unconfined passthrough is forbidden. Functional probes arbitrate multi-runner chains and may be skipped for a sole candidate, whose own refusal remains the fail-closed end.',
@@ -5079,6 +5104,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ResumeAgentOptions',
     declaration: 'export interface ResumeAgentOptions {\n    readonly resumeSessionId: SessionId;\n    readonly parentAgent?: Agent;\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
+  },
+  {
+    name: 'RshPluginDescriptor',
+    declaration: 'export interface RshPluginDescriptor {\n    readonly packageName: string;\n    readonly apiVersion: typeof RSH_PLUGIN_API_VERSION;\n    readonly role: RshPluginRole;\n    readonly capability: string;\n}',
+  },
+  {
+    name: 'RshPluginRole',
+    declaration: 'export type RshPluginRole = \'definition\' | \'provider\' | \'consumer\' | \'policy\' | \'projection\' | \'adapter\';',
   },
   {
     name: 'Run',

@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/fs/tool-present"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "consumer",
+      "capability": "filesystem-delivery"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

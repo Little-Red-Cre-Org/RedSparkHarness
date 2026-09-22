@@ -61,7 +61,7 @@ export default defineConfig(({ env }) => {
           'rsh/Programs/Web/host/*',
           'rsh/Tests/test-support/*',
         ],
-    entry: client ? '' : ['lib/types/{index,invariant,startup}.js'],
+    entry: client ? '' : ['lib/types/{index,invariant,startup,runtime,runtime-definition}.js'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

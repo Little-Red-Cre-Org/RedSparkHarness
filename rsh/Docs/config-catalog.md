@@ -3562,6 +3562,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-host-plugin-inventory` — requires `loader` ([`rsh/Programs/Web/host/plugin-inventory/src/index.ts`](../Programs/Web/host/plugin-inventory/src/index.ts))
 - `@deepseek-ai/dsh-llm` ([`rsh/Engine/llm/llm/src/index.ts`](../Engine/llm/llm/src/index.ts))
 - `@deepseek-ai/dsh-lsp` ([`rsh/Modules/Official/lsp/lsp/src/index.ts`](../Modules/Official/lsp/lsp/src/index.ts))
+- `@deepseek-ai/dsh-plugin-host` ([`rsh/Core/runtime-diagnostics/plugin-host/src/index.ts`](../Core/runtime-diagnostics/plugin-host/src/index.ts))
 - `@deepseek-ai/dsh-rsh` — requires `agentDefaultModel` · `agentPresets` · `agents` · `commands` · `llm` · `permissionPresets` · `sessions` ([`rsh/Compatibility/DSH/bundle/rsh/src/index.ts`](../Compatibility/DSH/bundle/rsh/src/index.ts))
 - `@deepseek-ai/dsh-schedule` — requires `agents` · `sessions` · `tools` · `sessionPersistence` ([`rsh/Engine/schedule/schedule/src/index.ts`](../Engine/schedule/schedule/src/index.ts))
 - `@deepseek-ai/dsh-session` ([`rsh/Engine/core/session/src/index.ts`](../Engine/core/session/src/index.ts))

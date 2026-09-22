@@ -10,7 +10,7 @@ We recommend using an agent to explore the codebase and understand its architect
 
 [Cordis](cordis-primer.md) is the framework under dsh: plugins contribute services, typed events, and reversible effects to a shared context. Every part of the product is a plugin, including the model adapter, the tool registry, the session log, and the agent loop itself, so each is replaceable from configuration.
 
-There is no privileged core to patch: you extend dsh by mounting a plugin beside the others, and registrations are effects that unwind when their plugin unloads.
+There is no privileged core to patch: plugins mount beside each other, and registrations unwind with their plugin. RSH records native package roles as Definition, Provider, Consumer, policy, projection, or adapter; `dsh-plugin-host` uses the same Cordis Fiber lifecycle.
 
 ## Profiles and bundles
 

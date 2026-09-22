@@ -111,6 +111,11 @@ export interface PackageManifest {
     bundle?: {
       patch?: string
     }
+    runtime?: {
+      apiVersion?: unknown
+      role?: unknown
+      capability?: unknown
+    }
   }
 }
 
@@ -217,6 +222,10 @@ export function expectedDshPackageFiles(manifest: PackageManifest): readonly str
     // A surface bundle's startup row is its own bundle: the Loader imports it
     // as a row module, so it cannot ride inside the package entry.
     ...exportDefault(manifest, './startup') === './lib/startup.js' ? ['lib/startup.js'] : [],
+    // A runtime adapter is a Loader-imported host bundle; published packages
+    // must carry it independently of their ordinary index entry.
+    ...exportDefault(manifest, './runtime') === './lib/runtime.js' ? ['lib/runtime.js'] : [],
+    ...exportDefault(manifest, './runtime') === './lib/runtime-definition.js' ? ['lib/runtime-definition.js'] : [],
     ...extras,
     // Subpaths whose runtime default is the tsc-emitted tree (lib/types/*.js —
     // browser-safe source channels rehomed off src so plain Node can import
@@ -503,6 +512,166 @@ function checkRepositoryVersion(): string[] {
 const dependencySections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'] as const
 /** Dependency sections present in an installed runtime. */
 const runtimeDependencySections = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
+const runtimeRoles = ['definition', 'provider', 'consumer', 'policy', 'projection', 'adapter'] as const
+type RuntimeRole = typeof runtimeRoles[number]
+type RuntimeLayer = 'core' | 'engine' | 'module' | 'compatibility' | 'program' | 'support'
+
+/** One reviewed dependency that temporarily crosses the runtime ownership rules. */
+interface RuntimeLayerException {
+  readonly consumer: string
+  readonly section: typeof runtimeDependencySections[number]
+  readonly dependency: string
+  readonly reason: string
+}
+
+/**
+ * Current transition edges whose consumers need a published capability outside
+ * their ordinary runtime layer. Every exception names one manifest edge and is
+ * rejected when it becomes stale.
+ */
+const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
+  {
+    consumer: '@deepseek-ai/dsh-agent-loop',
+    section: 'peerDependencies',
+    dependency: '@deepseek-ai/dsh-settings',
+    reason: 'Agent-loop configuration still reads the published settings capability during the adapter-first transition.',
+  },
+  {
+    consumer: '@deepseek-ai/dsh-subagent-codex',
+    section: 'dependencies',
+    dependency: '@deepseek-ai/dsh-sdk-protocol',
+    reason: 'The Codex subagent transport uses the published SDK protocol while its transport contract remains Program-owned.',
+  },
+  {
+    consumer: '@deepseek-ai/dsh-subagent-dsh-sdk',
+    section: 'peerDependencies',
+    dependency: '@deepseek-ai/dsh-sdk-client',
+    reason: 'The DSH SDK subagent bridge consumes the current Program-owned client API.',
+  },
+  {
+    consumer: '@deepseek-ai/dsh-webhook-github',
+    section: 'peerDependencies',
+    dependency: '@deepseek-ai/dsh-host-webserver',
+    reason: 'The GitHub webhook adapter integrates with the current Web host API.',
+  },
+  {
+    consumer: '@deepseek-ai/dsh-tools',
+    section: 'peerDependencies',
+    dependency: '@deepseek-ai/dsh-user-approval',
+    reason: 'The tool execution pipeline consumes the published approval capability until interaction contracts move to Engine.',
+  },
+  {
+    consumer: '@deepseek-ai/dsh-tools',
+    section: 'peerDependencies',
+    dependency: '@deepseek-ai/dsh-code-runtime',
+    reason: 'The tool registry carries the existing code-runtime execution integration while that capability remains an official module.',
+  },
+]
+
+/** Classify a workspace package by its physical owner. */
+export function runtimeLayerOf(dir: string): RuntimeLayer {
+  if (dir.startsWith('rsh/Core/')) return 'core'
+  if (dir.startsWith('rsh/Engine/')) return 'engine'
+  if (dir.startsWith('rsh/Modules/Official/') || dir.startsWith('rsh/Modules/Community/')) return 'module'
+  if (dir.startsWith('rsh/Compatibility/')) return 'compatibility'
+  if (dir.startsWith('rsh/Programs/')) return 'program'
+  return 'support'
+}
+
+function runtimeRoleOf(manifest: PackageManifest): RuntimeRole | undefined {
+  const runtime = manifest.dsh?.runtime
+  if (runtime === undefined) return undefined
+  if (runtime.apiVersion !== 1) return undefined
+  return runtimeRoles.find(role => role === runtime.role)
+}
+
+function runtimeExceptionKey(exception: RuntimeLayerException): string {
+  return `${exception.consumer}\0${exception.section}\0${exception.dependency}`
+}
+
+/**
+ * Reject runtime dependencies that bypass Core/Engine/module ownership. Package
+ * manifests state the initial policy because source import enforcement must
+ * separately resolve Host and Client compiler faces.
+ * @param manifests - all workspace package manifests.
+ * @param options - enables stale-exception enforcement for complete workspace scans.
+ * @returns deterministic diagnostics for invalid declarations and stale exemptions.
+ */
+export function collectRuntimeLayerViolations(
+  manifests: readonly WorkspaceManifest[],
+  options: { validateExceptions?: boolean } = {},
+): string[] {
+  const packages = new Map(manifests
+    .filter(entry => entry.manifest.name !== undefined)
+    .map(entry => [entry.manifest.name as string, entry]))
+  const errors: string[] = []
+  const exceptions = new Map<string, RuntimeLayerException>()
+  for (const exception of runtimeLayerExceptions) {
+    const key = runtimeExceptionKey(exception)
+    if (exceptions.has(key)) {
+      errors.push(`runtime-layer policy duplicates exception ${exception.consumer}: ${exception.section}.${exception.dependency}`)
+    }
+    exceptions.set(key, exception)
+  }
+
+  const consumedExceptions = new Set<string>()
+  for (const entry of manifests) {
+    const consumer = entry.manifest.name
+    if (consumer === undefined) continue
+    const consumerLayer = runtimeLayerOf(entry.dir)
+    const consumerRole = runtimeRoleOf(entry.manifest)
+    const runtime = entry.manifest.dsh?.runtime
+    if (runtime !== undefined) {
+      if (runtime.apiVersion !== 1 || runtimeRoleOf(entry.manifest) === undefined
+        || typeof runtime.capability !== 'string' || runtime.capability.length === 0 || runtime.capability.trim() !== runtime.capability) {
+        errors.push(`${consumer}: dsh.runtime must declare apiVersion 1, a supported role, and a non-blank capability`)
+      }
+    }
+
+    for (const section of runtimeDependencySections) {
+      for (const dependency of Object.keys(entry.manifest[section] ?? {}).sort()) {
+        const target = packages.get(dependency)
+        if (target === undefined) continue
+        const key = runtimeExceptionKey({ consumer, section, dependency, reason: '' })
+        const exception = exceptions.get(key)
+        if (exception !== undefined) {
+          consumedExceptions.add(key)
+          continue
+        }
+
+        const targetLayer = runtimeLayerOf(target.dir)
+        const targetRole = runtimeRoleOf(target.manifest)
+        let violation: string | undefined
+        if (consumerLayer === 'core' && targetLayer !== 'core') {
+          violation = 'Core packages may not consume Engine, module, compatibility, or Program packages'
+        } else if (consumerLayer === 'engine' && targetLayer === 'program') {
+          violation = 'Engine packages may not consume Program packages'
+        } else if (consumerLayer === 'engine' && targetLayer === 'compatibility') {
+          violation = 'Engine packages may not consume Compatibility packages'
+        } else if (consumerLayer === 'engine' && targetLayer === 'module' && targetRole === 'provider') {
+          violation = 'Engine packages may not consume module Providers'
+        } else if (consumerLayer === 'module' && targetLayer === 'program'
+          && !entry.dir.startsWith('rsh/Modules/Community/experimental/')) {
+          violation = 'Module packages may not consume Program packages'
+        } else if (consumerLayer === 'module' && consumerRole === 'consumer' && targetLayer === 'module' && targetRole === 'provider') {
+          violation = 'module Consumers may not consume module Providers'
+        }
+        if (violation !== undefined) {
+          errors.push(`${consumer}: ${section}.${dependency} violates runtime-layer policy: ${violation}`)
+        }
+      }
+    }
+  }
+
+  if (options.validateExceptions) {
+    for (const [key, exception] of exceptions) {
+      if (!consumedExceptions.has(key)) {
+        errors.push(`runtime-layer policy has stale exception ${exception.consumer}: ${exception.section}.${exception.dependency}`)
+      }
+    }
+  }
+  return errors.sort()
+}
 
 /**
  * Prevent an official runtime from requiring a package its release omits.
@@ -563,6 +732,7 @@ export function main(): void {
     ...manifests.flatMap(checkWorkspaceManifest),
     ...checkWorkspaceProtocol(manifests),
     ...checkExperimentalDependencyIsolation(dependencyManifests),
+    ...collectRuntimeLayerViolations(manifests, { validateExceptions: true }),
     ...checkHierarchyShape(),
     ...collectProjectReferenceFaceViolations(root),
   ]
