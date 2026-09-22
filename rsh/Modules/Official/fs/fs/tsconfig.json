@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../../../Core/vendor/cosmokit"
@@ -16,9 +18,6 @@
       "path": "../../../../Core/util/brand"
     },
     {
-      "path": "../../../../Engine/llm/llm"
-    },
-    {
       "path": "../../../../Core/runtime-diagnostics/invariants"
     },
     {
@@ -26,6 +25,12 @@
     },
     {
       "path": "../../sandbox/sandbox"
+    },
+    {
+      "path": "../../../../Core/util/errors"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

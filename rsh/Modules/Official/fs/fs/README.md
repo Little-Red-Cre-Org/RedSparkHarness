@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 Use `dsh-fs` for consistent host, confined, or remote filesystem operations. Consumers resolve stable identities, map shared host files when supported, perform bounded reads, list directories, and make atomic text changes. Guards are optional; callers may reject a changed file. Choose `fs-local`, `fs-sandbox`, or `fs-e2b`; `dsh-tool-fs` provides model tools. `dsh.runtime` declares the filesystem Definition, and `runtime` adapts its Cordis service entry without changing `ctx.fs`.
 
+`FsError` extends the shared Core `HarnessError` from `dsh-errors`, preserving constructor identity with the LLM re-export without a model-service dependency.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)
@@ -26,6 +28,8 @@ Use `dsh-fs` for consistent host, confined, or remote filesystem operations. Con
 ## Use this package
 
 You rarely load `dsh-fs` directly: you mount a backend that registers as `ctx.fs`, then either call the service from your own plugin or let the `dsh-tool-fs` tools call it for you. This page serves the two audiences that do touch it — deployments choosing a backend, and developers implementing or consuming the contract.
+
+`@deepseek-ai/dsh-fs/native` declares the native `fs` service and scoped decision/observation events; it installs no provider. Native consumers use `FileSystemOperations`, while the root Cordis entry retains `FileSystem` registration. The operations declarations still reference sandbox policy types from the current compatibility-bound package.
 
 ### Choosing and mounting a backend
 
@@ -58,7 +62,8 @@ The contract is built on one separation and three commitments:
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service definition: the abstract `FileSystem` class, the `ctx.fs` declaration, and the `fs/*` event vocabulary |
+| [`src/operations.ts`](src/operations.ts) | Runtime-independent operation declarations and defaults |
+| [`src/index.ts`](src/index.ts) | Cordis service registration, the `ctx.fs` declaration, and the `fs/*` event vocabulary |
 | [`src/types.ts`](src/types.ts) | Vocabulary: `FsTarget`/`FsTargetKey`, `FsVersion`, `FsObservation`, `FsWriteIntent`, `FsError` and its codes |
 
 ### How a call flows

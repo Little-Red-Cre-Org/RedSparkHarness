@@ -11,7 +11,7 @@ import { chmod, link, lstat, mkdir, open, readFile, realpath, readdir, rename, r
 import type { BigIntStats, Dirent, Stats } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { TextDecoder } from 'node:util'
-import { FsError, FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs'
+import { FsError, FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs/types'
 import { copyFileDaclWin32, replaceFileWin32 } from './win32.ts'
 
 const BINARY_SAMPLE_BYTES = 8192

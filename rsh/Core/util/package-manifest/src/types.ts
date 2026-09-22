@@ -36,6 +36,18 @@ export interface DshManifest {
   client?: DshClientManifest
   /** RSH runtime role and capability declaration for a package entry. */
   runtime?: DshRuntimeManifest
+  /** Static native entry metadata checked before importing plugin code. */
+  native?: DshNativeManifest
+}
+
+/** Published native entry selection, independent of role and Session versions. */
+export interface DshNativeManifest {
+  apiVersion: 1
+  entry: string
+  targets: readonly ('host' | 'client')[]
+  requires: readonly string[]
+  optional: readonly string[]
+  provides: readonly string[]
 }
 
 /** Runtime version requirements under `package.json.engines`. */
@@ -62,6 +74,10 @@ export interface DshProfileManifest {
   bundles?: string[]
   /** User patch lifecycle; omitted means `live` for custom profiles. */
   patchReload?: ProfilePatchReload
+  /** Explicit native execution; omission preserves the Cordis bundle interpretation. */
+  runtime?: 'native'
+  /** Native JSON composition filename when runtime is native. */
+  config?: 'rsh.profile.json'
 }
 
 /** Whether user patch files reload while a profile remains active or apply only at startup. */

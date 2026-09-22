@@ -42,6 +42,8 @@ kind: "package-reference"
 
 `root` 必填且无默认值：`process.cwd()` 默认值会随进程 cwd 变更而分散会话文件。现有根必须是可读目录；缺失根在第一次实体化时创建。
 
+`./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。原生 Host 移除 Provider 时会等待已打开句柄关闭。
+
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `root` | 必填 | 所有会话文件的根目录 |

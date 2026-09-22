@@ -9,6 +9,7 @@ import { SESSION_FORMAT_VERSION, SessionLogOffset, SessionSeq, SessionId } from 
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import type { JsonlSessionBackend } from '../src/index.ts'
 import {
   assertNoRetiredHeaderFields, encodeSegment, eventLines, generationLogFilename, generationLogPath,
   logPath, parseGenerationLogFilename, projectDir, projectKey, scanLog, sessionDir, SessionLogScanner,
@@ -345,7 +346,8 @@ runLiveWritePathContract('jsonl', LIVE_WRITE_BATCH_MAX_DELAY_MS, async () => {
     await ctx.plugin(JsonlSessionPersistence, { root: dir, compression: 'none' })
     return ctx
   }
-  return { ctx: await mount(), remount: mount }
+  const ctx = await mount()
+  return { ctx, remount: mount, storage: (ctx.sessionPersistence as unknown as { backend: unknown }).backend }
 })
 
 describe('JsonlSessionPersistence: format helpers', () => {
@@ -742,7 +744,7 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
   })
 
   it('resolves absent, current, and historical current-generation paths', async () => {
-    const persistence = ctx.sessionPersistence as JsonlSessionPersistence
+    const persistence = (ctx.sessionPersistence as unknown as { backend: JsonlSessionBackend }).backend
     expect(await persistence.resolveCurrentLog(SessionId('missing-generation'))).toBeUndefined()
 
     const current = meta('resolved-current', '/work')
@@ -830,7 +832,7 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
     const controller = new AbortController()
     const reason = new Error('first historical waiter cancelled')
 
-    const internals = ctx.sessionPersistence as unknown as {
+    const internals = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       migrationPreparations: Map<SessionId, { waiters: number }>
     }
     const first = ctx.sessionPersistence.open(header.id, 'read', { signal: controller.signal })
@@ -1003,7 +1005,7 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
     const currentPath = rawLogPath(root, header.cwd, header.id)
     await mkdir(dirname(sourcePath), { recursive: true })
     await writeFile(sourcePath, `${JSON.stringify(releasedV0Header(header))}\n`)
-    const persistence = ctx.sessionPersistence as JsonlSessionPersistence
+    const persistence = (ctx.sessionPersistence as unknown as { backend: JsonlSessionBackend }).backend
 
     await expect(persistence.resolveCurrentLog(header.id, new AbortController().signal)).resolves.toBeUndefined()
     expect(await readFile(sourcePath, 'utf8')).toBe(`${JSON.stringify(releasedV0Header(header))}\n`)
@@ -1247,7 +1249,7 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
     await writeFile(path, `${JSON.stringify({
       ...toHeaderLine(header), version: SESSION_FORMAT_VERSION + 1,
     })}\n`)
-    const storage = ctx.sessionPersistence as unknown as {
+    const storage = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       readStoredLog(path: string, expectedId: SessionId, signal?: AbortSignal): Promise<unknown>
     }
 
@@ -1266,7 +1268,7 @@ describe('JsonlSessionPersistence: immutable format generations', () => {
     const path = logPath(compressedRoot, header.cwd, header.id, 'zstd')
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, '')
-    const storage = compressed.sessionPersistence as unknown as {
+    const storage = (compressed.sessionPersistence as unknown as { backend: unknown }).backend as {
       readStoredLog(path: string, expectedId: SessionId, signal?: AbortSignal): Promise<unknown>
     }
     try {
@@ -1321,7 +1323,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   it('close drains a routed event that arrives while it waits for an in-flight append', async () => {
     const m = meta('late-closer', '/work')
     const handle = await ctx.sessionPersistence.create(m) as JsonlSessionHandle
-    const service = ctx.sessionPersistence as unknown as {
+    const service = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       persistBatch: (...args: [SessionHeader, readonly SessionEvent[], boolean]) => Promise<void>
     }
     const original = service.persistBatch.bind(service)
@@ -1356,7 +1358,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   it('service flush skips a write claim whose handle is still opening', async () => {
     const m = meta('opening-claim', '/work')
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
-    const service = ctx.sessionPersistence as unknown as {
+    const service = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       requireStoredLog: (
         id: SessionId,
         signal?: AbortSignal,
@@ -1483,7 +1485,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
     const handle = await ctx.sessionPersistence.open(m.id, 'read')
     try {
-      const internals = ctx.sessionPersistence as unknown as { coldLogMemo: Map<SessionId, unknown> }
+      const internals = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as { coldLogMemo: Map<SessionId, unknown> }
       internals.coldLogMemo.clear()
       statRace.path = rawLogPath(root, '/work', m.id)
       expect((await handle.read()).events).toEqual(oneTurnLog())
@@ -1502,7 +1504,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
     const handle = await ctx.sessionPersistence.open(m.id, 'read')
     try {
-      const internals = ctx.sessionPersistence as unknown as { coldLogMemo: Map<SessionId, unknown> }
+      const internals = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as { coldLogMemo: Map<SessionId, unknown> }
       internals.coldLogMemo.clear()
       statRace.mode = 'churn'
       statRace.path = rawLogPath(root, '/work', m.id)
@@ -1684,7 +1686,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
       if (!failed) { failed = true; throw new Error('simulated append fsync failure') }
       return realSync.call(this)
     })
-    const backend = ctx.sessionPersistence as unknown as {
+    const backend = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       rollbackAppend: (path: string, size: number) => Promise<void>
     }
     const realRollback = backend.rollbackAppend.bind(backend)
@@ -1786,7 +1788,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
     const m = meta('stored-revision-race')
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
     const persistence = ctx.sessionPersistence as JsonlSessionPersistence
-    const internals = persistence as unknown as {
+    const internals = (persistence as unknown as { backend: unknown }).backend as {
       findLog(id: SessionId, signal?: AbortSignal): Promise<{
         sourcePath: string
         sourceVersion: number
@@ -1907,7 +1909,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   it('omits a listed artifact removed after discovery', async () => {
     const m = meta('vanishing-snapshot')
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
-    const persistence = ctx.sessionPersistence as unknown as {
+    const persistence = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       listArtifacts(): Promise<Array<{ header: SessionHeader; path: string }>>
     }
     const listArtifacts = persistence.listArtifacts.bind(persistence)
@@ -1922,7 +1924,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   })
 
   it('surfaces non-ENOENT stat failures during listing', async () => {
-    const persistence = ctx.sessionPersistence as unknown as {
+    const persistence = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       listArtifacts(): Promise<Array<{ header: SessionHeader; path: string }>>
     }
     const discovery = vi.spyOn(persistence, 'listArtifacts').mockResolvedValue([{
@@ -1935,7 +1937,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   })
 
   it('forwards list cancellation and awaits in-flight discovery cleanup', async () => {
-    const persistence = ctx.sessionPersistence as unknown as {
+    const persistence = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       listArtifacts(signal?: AbortSignal): Promise<Array<{ header: SessionHeader; path: string }>>
     }
     const started = Promise.withResolvers<AbortSignal>()
@@ -1967,7 +1969,7 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   it('checks cancellation after an uncancellable list stat settles', async () => {
     const m = meta('snapshot-stat-cancellation')
     await writeLog(ctx.sessionPersistence, m, oneTurnLog())
-    const persistence = ctx.sessionPersistence as unknown as {
+    const persistence = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as {
       listArtifacts(signal?: AbortSignal): Promise<Array<{ header: SessionHeader; path: string }>>
     }
     const discovery = vi.spyOn(persistence, 'listArtifacts').mockResolvedValue([{
@@ -2622,7 +2624,7 @@ describe('JsonlSessionPersistence: edge cases', () => {
   it('per-id lookup surfaces non-ENOENT storage errors', async () => {
     const blocker = join(root, 'not-a-directory')
     await writeFile(blocker, 'x')
-    const backend = ctx.sessionPersistence as unknown as { exists(path: string): Promise<boolean> }
+    const backend = (ctx.sessionPersistence as unknown as { backend: unknown }).backend as { exists(path: string): Promise<boolean> }
 
     await expect(backend.exists(join(blocker, 'child.jsonl'))).rejects.toThrow(/ENOTDIR/)
   })

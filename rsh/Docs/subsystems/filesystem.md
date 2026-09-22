@@ -289,9 +289,19 @@ Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by 
 
 ### `ctx.fs` — `FileSystem` (abstract seam)
 
-Abstract filesystem provider. Targets must preserve identity across aliases; reads expose regular UTF-8 text or typed errors, listings are stable and content-free, and mutations are atomic. Optional guards add stale protection without changing the unguarded provider contract.
+Cordis registration for the shared filesystem operations.
 
 ```ts cordis-catalog
+/**
+ * Map an absolute path from the harness host into this filesystem's
+ * execution world when both paths identify the same file. The base provider
+ * exposes no mapping; host-backed or explicitly shared backends override it.
+ * @param hostPath - absolute path in the harness host filesystem.
+ * @returns the process path for the same file, or undefined when this
+ *   execution world cannot read that host file.
+ */
+processPathFromHostPath(hostPath: string): string | undefined
+
 /**
  * Resolve a model/plugin-supplied path into a stable {@link FsTarget}. May perform I/O (a
  * remote/sandboxed backend may need a round-trip to map a path to a stable identity), hence
@@ -312,16 +322,6 @@ abstract resolve(path: string, opts?: { cwd?: string; signal?: AbortSignal }): P
  * @returns an absolute path in the backend's execution world.
  */
 abstract processPath(target: FsTarget): string
-
-/**
- * Map an absolute path from the harness host into this filesystem's
- * execution world when both paths identify the same file. The base provider
- * exposes no mapping; host-backed or explicitly shared backends override it.
- * @param hostPath - absolute path in the harness host filesystem.
- * @returns the process path for the same file, or undefined when this
- *   execution world cannot read that host file.
- */
-processPathFromHostPath(hostPath: string): string | undefined
 
 /**
  * Return the canonical `file:` URI for a target in this filesystem's

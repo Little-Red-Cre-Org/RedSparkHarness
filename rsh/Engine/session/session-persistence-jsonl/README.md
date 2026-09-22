@@ -42,6 +42,8 @@ Choose this backend when consumers benefit from one artifact per session — nav
 
 `root` is required and has no default: a `process.cwd()` default would scatter session files as the process's cwd changes. An existing root must be a readable directory; an absent root is created on first materialization.
 
+The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. The native host awaits open-handle closure when it removes the Provider.
+
 | Field | Default | Meaning |
 |---|---|---|
 | `root` | required | Root directory for all session files |

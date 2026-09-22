@@ -30,6 +30,13 @@ export async function runCli(): Promise<void> {
 
   switch (invocation.mode) {
     case 'profile': {
+      const { profileRuntime } = await import('./native-profile-config.ts')
+      if (profileRuntime(invocation.profile) === 'native') {
+        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
+        const { runNativeProfile } = await import('./native-profile-boot.ts')
+        await runNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches, args: invocation.args })
+        break
+      }
       const { runProfile } = await import('./profile-boot.ts')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
@@ -46,6 +53,14 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'dump-config': {
+      const { profileRuntime } = await import('./native-profile-config.ts')
+      if (profileRuntime(invocation.profile) === 'native') {
+        if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
+        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
+        const { readNativeProfile } = await import('./native-profile-loader.ts')
+        process.stdout.write(`${JSON.stringify(readNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches }), null, 2)}\n`)
+        break
+      }
       const { runDumpConfig } = await import('./dump-config.ts')
       runDumpConfig(
         invocation.profile,

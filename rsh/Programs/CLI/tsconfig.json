@@ -54,6 +54,9 @@
       "path": "../../Core/util/home-paths"
     },
     {
+      "path": "../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../Modules/Official/mcp/mcp-client"
     },
     {

@@ -27,6 +27,10 @@ Use `dsh-fs-local` to read, list, atomically write, and edit files on the host f
 
 Mount this backend when a composition needs `ctx.fs` backed by the real host filesystem and accepts a process-local implementation. The common path is explicit: load the backend, give it a base directory, and the model-facing tools (`dsh-tool-fs`) or your own plugins can read, write, and edit files.
 
+`@deepseek-ai/dsh-fs-local/backend` exposes `LocalFileSystemBackend` for direct composition with explicit `cwd` and `diffBasisMaxBytes`. The Cordis service delegates to one instance of this same implementation. `resolveLocalFilesystemConfig(input)` validates configuration and captures defaults before construction. Direct callers use `close()` to stop I/O admission, cancel operations, close paused text streams and await cleanup. Completed writes remain committed. The package still declares compatibility dependencies; this subpath alone does not establish a Cordis-free installation.
+
+`@deepseek-ai/dsh-fs-local/native` exports `localFilesystemPlugin` for `resolveInstallation`. It provides the explicitly selected `fs` service on Host, binds cancellation to its installation and awaits backend cleanup on removal or stop. Cordis registration uses the same backend and owns its shutdown through an effect. Current application profiles still use their existing composition.
+
 ### When to choose it
 
 Choose `fs-local` for ordinary host-file access in a single process. Choose [`fs-sandbox`](../fs-sandbox/README.md) when a session's writes and edits must be confined to its workspace and temp roots — it extends this backend and adds only the mode fence. Choose [`fs-e2b`](../../e2b/fs-e2b/README.md) when files must live in a remote execution world shared with subprocesses. `config.cwd` is a resolution default, not a containment boundary: absolute paths and `..` escape it.
@@ -76,7 +80,8 @@ The backend builds on three ideas:
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service wiring: `LocalFileSystem`, `Config`, per-target mutation lock |
+| [`src/backend.ts`](src/backend.ts) | Shared local operations, per-target mutation locks and resolved configuration |
+| [`src/index.ts`](src/index.ts) | Cordis registration and forwarding to the shared backend |
 | [`src/fsio.ts`](src/fsio.ts) | Cordis-free raw I/O: probe, reads, atomic write, literal edit, line-ending handling |
 | [`src/win32.ts`](src/win32.ts) | Windows-specific DACL preservation for atomic replacement |
 

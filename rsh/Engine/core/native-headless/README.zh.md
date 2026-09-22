@@ -1,0 +1,55 @@
+---
+description: "面向显式文件系统与持久 Session profile 的原生一次性 headless agent。"
+kind: "package-reference"
+---
+
+# @deepseek-ai/dsh-native-headless
+
+[English](README.md) | 中文
+
+## 概述
+
+`dsh-native-headless` 为原生 `dsh --profile` 组合提供一个应用。它把用户提示词发送给选定模型，执行限定在工作目录内的 UTF-8 文件读写，将模型可见消息与工具结果写入已发布格式的 Session 日志，并在退出前关闭存储。原生 profile 还须安装文件系统、观察策略、Session 持久化及模型 Provider。
+
+## 目录
+
+- [配置](#configuration)
+- [开发备注](#dev-note)
+- [模型体验](#model-experience)
+- [已知限制与后续工作](#known-limitations-and-deferred-work)
+
+<a id="configuration"></a>
+## 配置
+
+`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。工具 schema 提供 `read_file` 与 `write_file`。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
+
+应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
+
+<a id="dev-note"></a>
+## 开发备注
+
+不发布 invariant companion：应用没有能够独立核对其自身状态的进程内观测。Session 持久化与文件系统 Provider 保留各自的校验。
+
+<a id="model-experience"></a>
+## 模型体验
+
+### 文件工具请求
+
+#### 模型看到什么
+
+模型收到配置的系统提示词、用户消息、续接时的既有 Session 消息及 `read_file`、`write_file` schema。下一次模型请求前，文件内容或错误会进入工具结果消息。完成的文本响应写入标准输出。
+
+#### Token 影响
+
+每个步骤都发送系统文本和工具 schema；保留的消息与文件工具结果会增加后续步骤及续接请求的 token 数。
+
+#### KV Cache 影响
+
+未变化的系统提示词、schema 列表与消息前缀可复用 Provider 缓存。配置变化或更早消息的新增会从首个不同 token 起改变前缀。
+
+<a id="known-limitations-and-deferred-work"></a>
+## 已知限制与后续工作
+
+- 仅提供两个文件工具，工具调用串行执行；没有通用工具注册表、审批系统、SDK 协议或 Web UI。
+- 原生模型 Provider 与更广泛的能力适配器位于其他包。
+- Session 与持久化包仍携带 Cordis 依赖，但此组合不会创建 Cordis Context。

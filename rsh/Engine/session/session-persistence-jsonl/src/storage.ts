@@ -522,6 +522,19 @@ export class JsonlBackendTracker {
     if (errors.length > 0) throw new AggregateError(errors, `${this.name} flush failed`)
   }
 
+  /** Close every open handle and report all drain failures after all handles settle. */
+  async closeAll(): Promise<void> {
+    const errors: unknown[] = []
+    for (const handle of [...this.openHandles]) {
+      try {
+        await handle.close()
+      } catch (error: unknown) {
+        errors.push(error)
+      }
+    }
+    if (errors.length > 0) throw new AggregateError(errors, `${this.name} dispose failed`)
+  }
+
   /**
    * Install the backend's live session routing and teardown. Persistence
    * enforces one active write handle per id, so the listeners route published
@@ -552,16 +565,6 @@ export class JsonlBackendTracker {
         ctx.logger.warn(`session-persistence: final drain for session "${session.id}" failed: ${String(error)}`)
       })
     })
-    ctx.effect(() => async () => {
-      const errors: unknown[] = []
-      for (const handle of [...this.openHandles]) {
-        try {
-          await handle.close()
-        } catch (error: unknown) {
-          errors.push(error)
-        }
-      }
-      if (errors.length > 0) throw new AggregateError(errors, `${this.name} dispose failed`)
-    }, `${this.name} open handles`)
+    ctx.effect(() => () => this.closeAll(), `${this.name} open handles`)
   }
 }

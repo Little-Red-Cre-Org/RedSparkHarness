@@ -27,6 +27,10 @@ kind: "package-reference"
 
 当组合需要由真实宿主文件系统支撑的 `ctx.fs`、且可以接受进程本地实现时，挂载此后端。常用路径是显式的：加载后端、给出基准目录，然后面向模型的工具（`dsh-tool-fs`）或你自己的插件即可读取、写入和编辑文件。
 
+`@deepseek-ai/dsh-fs-local/backend` 导出 `LocalFileSystemBackend`，直接装配时显式提供 `cwd` 和 `diffBasisMaxBytes`。Cordis 服务委托同一个实现的单个实例。`resolveLocalFilesystemConfig(input)` 在构造前验证配置并固定默认值。直接调用方通过 `close()` 停止接收 I/O、取消操作、关闭暂停的文本流并等待清理。已完成的写入保持提交状态。本包仍声明兼容依赖；仅使用这个子路径并不代表安装产物已无 Cordis。
+
+`@deepseek-ai/dsh-fs-local/native` 导出用于 `resolveInstallation` 的 `localFilesystemPlugin`。它在 Host 提供显式选择的 `fs` 服务，将取消绑定到安装实例，并在移除或停止时等待后端清理。Cordis 注册使用相同后端，并通过 effect 拥有其关闭操作。当前应用 profile 仍使用已有装配。
+
 ### 何时选择
 
 在单个进程中进行普通宿主文件访问时，请选择 `fs-local`。会话的写入与编辑必须限制在工作区与临时根目录内时，选择 [`fs-sandbox`](../fs-sandbox/README.zh.md)——它扩展此后端，只增加模式围栏。文件必须位于与子进程共享的远程执行世界时，选择 [`fs-e2b`](../../e2b/fs-e2b/README.zh.md)。`config.cwd` 只是解析默认值，不是约束边界：绝对路径与 `..` 都可以逃逸它。
@@ -76,7 +80,8 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 服务接线：`LocalFileSystem`、`Config`、每目标变更锁 |
+| [`src/backend.ts`](src/backend.ts) | 共享本地操作、每目标变更锁与已解析配置 |
+| [`src/index.ts`](src/index.ts) | Cordis 注册与共享后端转发 |
 | [`src/fsio.ts`](src/fsio.ts) | 不依赖 Cordis 的原始 I/O：探测、读取、原子写入、字面量编辑、行尾处理 |
 | [`src/win32.ts`](src/win32.ts) | 原子替换的 Windows 专属 DACL 保留 |
 
