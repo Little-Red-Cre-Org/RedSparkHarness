@@ -119,6 +119,24 @@ describe('RshPluginHost', () => {
     expect(loaderContext.get('pluginHost')).toBeUndefined()
   })
 
+  it('releases a descriptor when its direct fiber is disposed', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const mounted = await mountCordisPlugin(ctx, descriptor, () => {})
+    await mounted.fiber.dispose()
+    expect(ctx.pluginHost.get(descriptor.packageName)).toBeUndefined()
+    await expect(mountCordisPlugin(ctx, descriptor, () => {})).resolves.toMatchObject({ descriptor })
+  })
+
+  it('releases a descriptor when its direct mount parent is disposed', async () => {
+    const ctx = new Context()
+    await ctx.plugin(RshPluginHost)
+    const parent = await ctx.plugin(Object.assign(() => {}, { inject: ['pluginHost'] }))
+    await mountCordisPlugin(parent.ctx, descriptor, () => {})
+    await parent.dispose()
+    expect(ctx.pluginHost.get(descriptor.packageName)).toBeUndefined()
+  })
+
   it('releases a descriptor when a direct legacy mount fails', async () => {
     const ctx = new Context()
     await ctx.plugin(RshPluginHost)

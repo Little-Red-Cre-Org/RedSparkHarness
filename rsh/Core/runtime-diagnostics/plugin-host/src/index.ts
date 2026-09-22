@@ -202,23 +202,15 @@ export async function mountCordisPlugin(
   let fiber: Fiber
   try {
     fiber = await ctx.plugin(plugin, config)
+    fiber.ctx.effect(() => unregister, `plugin-host direct mount ${descriptor.packageName}`)
   } catch (error) {
     unregister()
     throw error
   }
-  let disposed = false
   return {
     descriptor,
     fiber,
-    async dispose(): Promise<void> {
-      if (disposed) return
-      disposed = true
-      try {
-        await fiber.dispose()
-      } finally {
-        unregister()
-      }
-    },
+    dispose: () => fiber.dispose(),
   }
 }
 
