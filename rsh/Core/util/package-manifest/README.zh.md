@@ -51,6 +51,7 @@ const manifest: DshPackageManifest = {
 |---|---|
 | `dsh.manifestVersion` | manifest（元数据清单）格式标识；声明的格式为 `1`，独立于 npm 包版本和 Session 格式版本。 |
 | `engines.dsh` | 作者声明的兼容 DSH 版本，使用 SemVer 范围，也可填写精确的预发布版本。此字段与 `engines.node`、`engines.npm` 并列；engines 对象可省略 `dsh`。 |
+| `dsh.runtime` | RSH 运行时角色声明：API 修订、能力域，以及 Definition、Provider、Consumer、policy、projection 或 adapter 角色。读取方验证其消费的声明。 |
 
 公共组合声明定义在 [`src/types.ts`](src/types.ts) 中。内部 `configTrees`、`sessionFormatMigration` 和生成的 `moduleFallback` 元数据分别由镜像打包器、目录生成器和启动器读取方拥有；公共类型不暴露这些字段。
 

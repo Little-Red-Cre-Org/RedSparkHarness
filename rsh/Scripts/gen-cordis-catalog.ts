@@ -85,6 +85,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   inspector: 'extensions.md',
   webServer: 'web-server.md',
   invariants: 'invariants.md',
+  pluginHost: 'plugin-host.md',
   llm: 'llm-streaming.md',
   lsp: 'lsp.md',
   messageFeedback: 'feedback.md',
@@ -763,6 +764,7 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   WebUpgradeRoute:
     'upgrade route registration contract is owned by rsh/Programs/Web/host/webserver/src/index.ts',
   InvariantRegistration: 'service-local lifecycle handle is owned by rsh/Core/runtime-diagnostics/invariants/README.md',
+  RshPluginDescriptor: 'plugin-role declaration is owned by rsh/Core/runtime-diagnostics/plugin-host/README.md',
   JsonValue: 'JSON value union is owned by rsh/Engine/core/session/src/json.ts',
   KnobState: 'projection unit state fields are owned by rsh/Modules/Official/interaction/permission-presets/README.md',
   PermissionSelect: 'permissions projection payload is owned by rsh/Modules/Official/interaction/permission-presets/src/types.ts',

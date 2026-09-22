@@ -302,6 +302,7 @@
     { "path": "./rsh/Modules/Official/spill/spill-policy" },
     { "path": "./rsh/Modules/Official/guard/timeout-policy" },
     { "path": "./rsh/Core/runtime-diagnostics/invariants" },
+    { "path": "./rsh/Core/runtime-diagnostics/plugin-host" },
     { "path": "./rsh/Tests/test-support/agent-loop-testkit" },
     { "path": "./rsh/Programs/ACP/packages/acp" },
     { "path": "./rsh/Compatibility/DSH/bundle/acp-app" },

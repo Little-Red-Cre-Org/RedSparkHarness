@@ -10,5 +10,7 @@ export type {
   DshManifest,
   DshPackageManifest,
   DshProfileManifest,
+  DshRuntimeManifest,
+  DshRuntimeRole,
   ProfilePatchReload,
 } from './types.ts'

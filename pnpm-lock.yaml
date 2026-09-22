@@ -304,6 +304,9 @@ importers:
       '@deepseek-ai/dsh-plan-mode':
         specifier: workspace:^
         version: link:../../../../Modules/Official/plan/plan-mode
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/dsh-plugin-package-inventory-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/plugin-package-inventory-deepseek
@@ -977,6 +980,16 @@ importers:
   rsh/Core/native/system/packages/linux-x64: {}
 
   rsh/Core/runtime-diagnostics/invariants:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../vendor/schemastery
+        version: link:../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../vendor/cordis
+
+  rsh/Core/runtime-diagnostics/plugin-host:
     dependencies:
       '@deepseek-ai/schemastery':
         specifier: link:../../vendor/schemastery
@@ -5189,12 +5202,18 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
 
   rsh/Modules/Official/fs/fs-local:
     dependencies:
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -5213,6 +5232,10 @@ importers:
         version: link:../../../../Engine/llm/llm
 
   rsh/Modules/Official/fs/fs-observation-policy:
+    dependencies:
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5235,6 +5258,9 @@ importers:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../fs-local
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -5247,6 +5273,9 @@ importers:
 
   rsh/Modules/Official/fs/tool-fs:
     dependencies:
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery

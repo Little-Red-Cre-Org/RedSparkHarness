@@ -254,11 +254,14 @@
     - id: tool-jobs
       name: '@deepseek-ai/dsh-tool-jobs'
 
+    - id: plugin-host
+      name: '@deepseek-ai/dsh-plugin-host'
+
     - id: fs-observation-policy
-      name: '@deepseek-ai/dsh-fs-observation-policy'
+      name: '@deepseek-ai/dsh-fs-observation-policy/runtime'
 
     - id: tool-fs
-      name: '@deepseek-ai/dsh-tool-fs'
+      name: '@deepseek-ai/dsh-tool-fs/runtime'
 
     - id: tool-fs-search
       name: '@deepseek-ai/dsh-tool-fs-search'
@@ -484,7 +487,7 @@
     # The sandboxed filesystem provider. `cwd` defaults to `process.cwd()`; an
     # overlay can pin another workspace.
     - id: fs-sandbox
-      name: '@deepseek-ai/dsh-fs-sandbox'
+      name: '@deepseek-ai/dsh-fs-sandbox/runtime'
 
     # The native DeepSeek adapter. No key or endpoint is inlined: both resolve per
     # request from the `llm-deepseek:` settings section over this entry, with the

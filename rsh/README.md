@@ -95,7 +95,7 @@ Most groups are product — stable API. The exceptions: `e2b/` is a POC, `experi
 
 The dependency graph is generated: [rsh/Docs/module-graph.md](Docs/module-graph.md) (`pnpm run gen-module-graph`, freshness-gated in CI).
 
-**Extension plugins depend on Service Definitions, never concrete providers.** `dsh-agent-loop` is swappable; UI, hook, and tool plugins use `dsh-agent`. Composition bundles may depend on spine plugins. Capabilities separate Service Definition / Service Provider / Consumer roles when they evolve independently; see [capability seams](../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md).
+**Extension plugins depend on Service Definitions, never concrete providers.** `dsh-agent-loop` is swappable; UI, hook, and tool plugins use `dsh-agent`. Composition bundles may depend on spine plugins. Capabilities separate Service Definition / Service Provider / Consumer roles when they evolve independently; see [capability seams](../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md). `dsh.runtime` records a package's RSH role; the runtime-layer constraint check rejects Core-to-product dependencies and concrete Provider coupling while preserving reviewed composition and transition edges.
 
 -----
 

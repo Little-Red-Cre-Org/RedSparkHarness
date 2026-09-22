@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   checkDshFamilyVersion,
+  collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
   expectedDshPackageFiles,
@@ -99,7 +100,75 @@ describe('experimental workspace constraints', () => {
   })
 })
 
+describe('runtime-layer constraints', () => {
+  const definition: WorkspaceManifest = {
+    dir: 'rsh/Modules/Official/fs/fs',
+    manifest: {
+      name: '@deepseek-ai/dsh-fs',
+      dsh: { runtime: { apiVersion: 1, role: 'definition', capability: 'filesystem' } },
+    },
+  }
+  const provider: WorkspaceManifest = {
+    dir: 'rsh/Modules/Official/fs/fs-local',
+    manifest: {
+      name: '@deepseek-ai/dsh-fs-local',
+      dsh: { runtime: { apiVersion: 1, role: 'provider', capability: 'filesystem' } },
+    },
+  }
+  const consumer: WorkspaceManifest = {
+    dir: 'rsh/Modules/Official/fs/tool-fs',
+    manifest: {
+      name: '@deepseek-ai/dsh-tool-fs',
+      dsh: { runtime: { apiVersion: 1, role: 'consumer', capability: 'filesystem' } },
+    },
+  }
+
+  it('allows a module Consumer to require its capability Definition', () => {
+    expect(collectRuntimeLayerViolations([definition, {
+      ...consumer,
+      manifest: { ...consumer.manifest, peerDependencies: { '@deepseek-ai/dsh-fs': 'workspace:^' } },
+    }])).toEqual([])
+  })
+
+  it.each(['dependencies', 'optionalDependencies', 'peerDependencies'] as const)(
+    'rejects a module Consumer that depends on a concrete Provider through %s',
+    (section) => {
+      expect(collectRuntimeLayerViolations([provider, {
+        ...consumer,
+        manifest: { ...consumer.manifest, [section]: { '@deepseek-ai/dsh-fs-local': 'workspace:^' } },
+      }])).toEqual([
+        `@deepseek-ai/dsh-tool-fs: ${section}.@deepseek-ai/dsh-fs-local violates runtime-layer policy: module Consumers may not consume module Providers`,
+      ])
+    },
+  )
+
+  it('rejects Core and Engine dependencies that cross their runtime ownership', () => {
+    expect(collectRuntimeLayerViolations([definition, provider, {
+      dir: 'rsh/Core/util/example',
+      manifest: { name: '@deepseek-ai/dsh-core-example', dependencies: { '@deepseek-ai/dsh-fs': 'workspace:^' } },
+    }, {
+      dir: 'rsh/Engine/core/example',
+      manifest: { name: '@deepseek-ai/dsh-engine-example', dependencies: { '@deepseek-ai/dsh-fs-local': 'workspace:^' } },
+    }])).toEqual([
+      '@deepseek-ai/dsh-core-example: dependencies.@deepseek-ai/dsh-fs violates runtime-layer policy: Core packages may not consume Engine, module, compatibility, or Program packages',
+      '@deepseek-ai/dsh-engine-example: dependencies.@deepseek-ai/dsh-fs-local violates runtime-layer policy: Engine packages may not consume module Providers',
+    ])
+  })
+
+  it('rejects malformed runtime metadata', () => {
+    expect(collectRuntimeLayerViolations([{
+      dir: 'rsh/Modules/Official/fs/example',
+      manifest: {
+        name: '@deepseek-ai/dsh-fs-example',
+        dsh: { runtime: { apiVersion: 2, role: 'unknown', capability: ' ' } },
+      },
+    }])).toEqual([
+      '@deepseek-ai/dsh-fs-example: dsh.runtime must declare apiVersion 1, a supported role, and a non-blank capability',
+    ])
+  })
+})
 describe('dsh family version coherence', () => {
+
   it('rejects a package carrying a stale shared version', () => {
     expect(checkDshFamilyVersion(
       { name: '@deepseek-ai/dsh-http-proxy', version: '0.1.2-alpha.5' },
@@ -132,13 +201,34 @@ describe('dsh family version coherence', () => {
 })
 
 describe('package payload constraints', () => {
-  it('includes a declared profile patch without a package-name allowlist', () => {
+  it('includes a runtime adapter exported as a separate bundle', () => {
     expect(expectedDshPackageFiles({
-      name: '@deepseek-ai/dsh-private-profile',
-      dsh: { bundle: { patch: './cordis.patch.yml' } },
+      name: '@deepseek-ai/dsh-private-runtime',
+      exports: {
+        './runtime': {
+          types: './lib/types/runtime.d.ts',
+          default: './lib/runtime.js',
+        },
+      },
     })).toEqual([
       'lib/index.js',
-      'cordis.patch.yml',
+      'lib/runtime.js',
+      'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('includes a runtime Definition adapter exported as a separate bundle', () => {
+    expect(expectedDshPackageFiles({
+      name: '@deepseek-ai/dsh-private-runtime-definition',
+      exports: {
+        './runtime': {
+          types: './lib/types/runtime-definition.d.ts',
+          default: './lib/runtime-definition.js',
+        },
+      },
+    })).toEqual([
+      'lib/index.js',
+      'lib/runtime-definition.js',
       'lib/types/**/*.d.ts',
     ])
   })

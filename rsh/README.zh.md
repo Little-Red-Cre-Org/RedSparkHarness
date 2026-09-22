@@ -95,7 +95,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 
 依赖图由工具生成：[rsh/Docs/module-graph.md](Docs/module-graph.zh.md)（`pnpm run gen-module-graph`，CI 中有新鲜度门禁）。
 
-**扩展插件依赖 Service Definition，绝不依赖具体提供方。** `dsh-agent-loop` 可替换；UI、钩子和工具插件使用 `dsh-agent`。组合包可以依赖主干插件。能力在需要独立演进时分离 Service Definition／Service Provider／Consumer 角色；详见[能力 seam](../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)。
+**扩展插件依赖 Service Definition，绝不依赖具体提供方。** `dsh-agent-loop` 可替换；UI、钩子和工具插件使用 `dsh-agent`。组合包可以依赖主干插件。能力在需要独立演进时分离 Service Definition／Service Provider／Consumer 角色；详见[能力 seam](../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)。`dsh.runtime` 记录包的 RSH 角色；runtime-layer constraint check 拒绝 Core 到产品的依赖和具体 Provider 耦合，同时保留经过审阅的组合与迁移边。
 
 -----
 

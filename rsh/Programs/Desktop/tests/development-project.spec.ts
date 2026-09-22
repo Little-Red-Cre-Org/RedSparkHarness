@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -65,6 +65,30 @@ describe('desktop development project', () => {
     }
     expect(manifest.dependencies['@deepseek-ai/dsh']).toBe('1.2.3')
     expect(manifest.dependencies['@deepseek-ai/dsh-desktop-host']).toBe('1.2.3')
+  })
+
+  it('projects runtime entrypoints from linked dependency packages', () => {
+    const root = temporaryRoot()
+    const cli = join(root, 'apps', 'cli')
+    const host = join(root, 'apps', 'desktop-host')
+    const dependencies = join(root, 'workspace-dependencies')
+    const adapter = join(dependencies, '@deepseek-ai', 'dsh-example-runtime')
+    mkdirSync(join(cli, 'lib'), { recursive: true })
+    mkdirSync(join(host, 'lib'), { recursive: true })
+    mkdirSync(join(adapter, 'lib'), { recursive: true })
+    writeFileSync(join(cli, 'package.json'), '{"name":"@deepseek-ai/dsh","version":"1.2.3"}\n')
+    writeFileSync(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh-desktop-host","version":"1.2.3"}\n')
+    writeFileSync(join(host, 'lib', 'index.js'), '')
+    writeFileSync(join(adapter, 'lib', 'runtime.js'), '')
+
+    const project = prepareDevelopmentProject({
+      projectDir: join(root, 'development'),
+      cliDir: cli,
+      hostDir: host,
+      dependencyDir: dependencies,
+      release: release(),
+    })
+    expect(existsSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
   })
 
   it('rejects a CLI package from another release', () => {

@@ -174,6 +174,8 @@ flowchart LR
   svc_codeRuntime["ctx.codeRuntime<br/>Code-execution seam"]
   pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
   pkg_experimental_code_runtime_python["experimental-code-runtime-python"]
+  pkg_plugin_host["plugin-host"]
+  svc_pluginHost["ctx.pluginHost<br/>RSH plugin-role registry"]
   pkg_fs["fs"]
   svc_fs["ctx.fs<br/>Filesystem provider seam"]
   pkg_fs_local["fs-local"]
@@ -289,6 +291,7 @@ flowchart LR
   pkg_message_feedback --> svc_messageFeedback
   pkg_permission_presets --> svc_permissionPresets
   pkg_plan_mode --> svc_planMode
+  pkg_plugin_host --> svc_pluginHost
   pkg_plugin_package_inventory_deepseek --> svc_deepseekLlmApiExtensions
   pkg_pwsh_local --> svc_shell
   pkg_sandbox --> svc_sandbox
@@ -539,6 +542,7 @@ flowchart LR
 | `ctx.approval` | `seam` | [`user-approval`](../Modules/Official/interaction/user-approval) | - | [`tools`](../Engine/core/tools), [`tool-bash`](../Modules/Official/shell/tool-bash), [`acp`](../Programs/ACP/packages/acp) | - | 一次性权限决策通过 `approval/request` waterfall（瀑布式事件）分派；回答方是监听器（即 ACP 为自身 agent 提供的桥接），没有回答方时以 `unavailable` 关闭失败。 |
 | `ctx.permissionPresets` | `core` | [`permission-presets`](../Modules/Official/interaction/permission-presets) | - | - | - | 面向用户的预设表（`workspace-write`／`danger-full-access`），将沙箱模式与审批策略选项组合在一起；一次切换会写入一个 `permission/preset` 事件，并贯通到两个选项事件。 |
 | `ctx.codeRuntime` | `seam` | [`code-runtime`](../Modules/Official/code-runtime/code-runtime) | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | 使用 Host 提供的异步绑定运行一段由模型编写的程序；各后端采用不同的基础环境和语言（工具注册表在 PTC mode 下消费该服务）。 |
+| `ctx.pluginHost` | `core` | [`plugin-host`](../Core/runtime-diagnostics/plugin-host) | - | - | - | 记录原生包角色，并通过既有 Fiber 生命周期挂载旧式 Cordis 入口；它不替换 Cordis Loader 或服务容器。 |
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs 通过 ctx.fs 执行读取／写入／编辑；fs-sandbox 按共享沙箱模式限制变更；fs-observation-policy 通过 fs/* 事件门禁贡献基于观测状态的检查。 |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | 基础后端消费步骤后的压力事件和请求错误恢复事件；不存在面向模型的压缩工具。 |
 | `ctx.subagents` | `seam` | [`subagent`](../Engine/subagent/subagent) | [`subagent-spawn-in-process`](../Engine/subagent/subagent-spawn-in-process), [`subagent-fork-in-process`](../Engine/subagent/subagent-fork-in-process), [`subagent-acp`](../Engine/subagent/subagent-acp), [`subagent-codex`](../Engine/subagent/subagent-codex), [`subagent-claude-code`](../Engine/subagent/subagent-claude-code), [`subagent-dsh-sdk`](../Engine/subagent/subagent-dsh-sdk) | [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-subagent-control`](../Engine/subagent/tool-subagent-control), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | 提供方实现传输；该服务还负责可选的、基于 Activation 的延续编排，tool-subagent 选择一次性或可延续委派，tool-subagent-control 传递后续消息，而 tool-ralph 要求一条全新的结构化输出路由。 |

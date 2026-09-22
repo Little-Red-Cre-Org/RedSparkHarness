@@ -11,6 +11,13 @@
     "directory": "rsh/Modules/Official/fs/tool-str-replace-editor"
   },
   "type": "module",
+  "dsh": {
+    "runtime": {
+      "apiVersion": 1,
+      "role": "consumer",
+      "capability": "filesystem"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

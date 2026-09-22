@@ -32,6 +32,18 @@ describe('dsh-base bundle', () => {
     )
     expect(rows.length).toBeGreaterThan(50)
     expect(rows.some(row => row.id === 'agent-loop')).toBe(true)
+    expect(rows.find(row => row.id === 'plugin-host')).toMatchObject({
+      name: '@deepseek-ai/dsh-plugin-host',
+    })
+    expect(rows.find(row => row.id === 'fs-observation-policy')).toMatchObject({
+      name: '@deepseek-ai/dsh-fs-observation-policy/runtime',
+    })
+    expect(rows.find(row => row.id === 'tool-fs')).toMatchObject({
+      name: '@deepseek-ai/dsh-tool-fs/runtime',
+    })
+    expect(rows.find(row => row.id === 'fs-sandbox')).toMatchObject({
+      name: '@deepseek-ai/dsh-fs-sandbox/runtime',
+    })
     expect(rows.find(row => row.id === 'session-telemetry-otel')?.disabled).toBeUndefined()
     expect(rows.find(row => row.id === 'session-telemetry-otel')?.config?.['mode']).toEqual({
       __jsExpr: "process.env.DSH_TELEMETRY_MODE || 'FEEDBACK_ONLY'",
