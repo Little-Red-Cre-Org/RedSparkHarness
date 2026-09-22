@@ -14,6 +14,8 @@ wheel 包会安装 `dsh` 控制台命令和 `deepseek_harness_runtime` Python �
 
 两种载体执行相同的 `dsh` 语法与随附 profile，包括独立的 `sdk-minimal` 配置树，以及包含前端产物的完整 `web` profile。私有 `dsh-python-runtime-closure` manifest（元数据清单）定义打包依赖闭包；不存在 Python 专用 Node 应用或检入的默认 `cordis.yml`。
 
+闭包显式携带这些 profile 使用的共享 peer Provider，包括用于文件系统适配器的 `dsh-plugin-host` 和用于模型错误构造函数的 `dsh-errors`。
+
 ## Python 模块 API
 
 - `bundled_package_dir() -> Path` 返回已安装模块数据根目录，并校验发布元数据。

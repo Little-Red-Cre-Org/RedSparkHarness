@@ -12,6 +12,8 @@ We recommend using an agent to explore the codebase and understand its architect
 
 There is no privileged core to patch: plugins mount beside each other, and registrations unwind with their plugin. RSH records native package roles as Definition, Provider, Consumer, policy, projection, or adapter; `dsh-plugin-host` uses the same Cordis Fiber lifecycle.
 
+The independent [native library](../Core/runtime-diagnostics/native-runtime/README.md) owns installation and cleanup. Profiles use Cordis; their migration belongs to the [native-runtime proposal](../../.agents/notes/proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md).
+
 ## Profiles and bundles
 
 A running `dsh` is a plugin tree composed at boot from ordered layers.

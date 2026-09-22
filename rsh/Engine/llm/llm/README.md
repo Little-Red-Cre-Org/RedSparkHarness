@@ -27,6 +27,8 @@ Use `@deepseek-ai/dsh-llm` to stream model calls through configured provider ada
 
 Any composition that calls a model provider — an agent loop, a session-title generator, a compaction summarizer — streams its requests through this service. Mount it together with at least one provider adapter; the service itself has no configuration and no provider wire code.
 
+`dsh-errors` is a required peer of this package so the re-exported `HarnessError` constructor has one identity across consumers.
+
 ### When to choose it
 
 Choose this package whenever a plugin or composition needs to call a model: it is the only supported path into provider adapters, and it keeps one vocabulary across the loop, the session log, and every consumer. Do not reach for it when you need provider-specific wire behavior (that belongs in an adapter such as `dsh-llm-deepseek` or `dsh-llm-pi-ai`) or retry execution (that belongs in `dsh-llm-retry`).
@@ -94,7 +96,7 @@ The service is built on one separation: **the logical contract is provider-neutr
 | [`src/assistant-stream.ts`](src/assistant-stream.ts) | Compact timed Assistant stream accumulation, strict validation, exact expansion, and record-level readers |
 | [`src/call-config.ts`](src/call-config.ts) | Call-config validation, adapter-default materialization, and request freezing |
 | [`src/retry-policy.ts`](src/retry-policy.ts) | Provider-owned retry policy resolution (normal and always modes) |
-| [`src/error.ts`](src/error.ts) | `HarnessError`/`LlmError` taxonomy and provider-neutral failure codes |
+| [`src/error.ts`](src/error.ts) | Model-specific failure codes and re-exports of the shared [error primitives](../../../Core/util/errors/README.md) |
 | [`src/content.ts`](src/content.ts) | Shared file and image projection helpers, including request-image offloading |
 | [`src/api-key.ts`](src/api-key.ts) | Credential format check shared by every adapter |
 | [`src/adapter-failure.ts`](src/adapter-failure.ts) | Failure normalization into terminal finish chunks |

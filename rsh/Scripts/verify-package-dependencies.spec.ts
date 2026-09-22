@@ -215,6 +215,9 @@ describe('package dependency scope', () => {
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-scope']).toEqual([
       'carrierKeyOf', 'scopeOf', 'scopeTarget',
     ])
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-errors']).toEqual([
+      'HarnessError', 'errorChain', 'isHarnessError',
+    ])
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
   })
 

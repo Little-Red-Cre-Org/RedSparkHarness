@@ -26,6 +26,7 @@ kind: "package-group"
 
 | 包 | 职责 |
 |---|---|
+| [`errors/`](errors/README.zh.md) | 共享错误码与原因链诊断渲染 |
 | [`brand/`](brand/README.zh.md) | 提供名义字符串类型及其无状态构造函数 |
 | [`package-manifest/`](package-manifest/README.zh.md) | 包 manifest（元数据清单）的共享 TypeScript 声明 |
 | [`crypto/`](crypto/README.zh.md) | 基于跨运行时 `crypto.getRandomValues` 原语生成 RFC 9562 v4 UUID |

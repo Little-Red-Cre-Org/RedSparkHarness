@@ -49,6 +49,8 @@ const KIND_TEMPLATES: Readonly<Record<string, string>> = {
  * library; the check re-derives the entry shape so a stale entry fails loud.
  */
 const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
+  'rsh/Core/util/errors': 'Portable error values and diagnostics without a service registration.',
+  'rsh/Core/runtime-diagnostics/native-runtime': 'Portable native installation and resource ownership API; no Cordis plugin entry.',
   'rsh/Compatibility/DSH/boot/app-boot': 'Boot library the app bins import; plain helper exports.',
   'rsh/Compatibility/DSH/boot/cmdline': 'Command-line library the app bins import; plain module exports.',
   'rsh/Programs/Web/client/store': 'Browser-side state primitives; plain function/type exports.',

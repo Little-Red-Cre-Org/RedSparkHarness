@@ -12,6 +12,8 @@
 
 不存在需要打补丁的特权内核：插件彼此并列挂载，各项注册会随其插件卸载而撤销。RSH runtime 将原生包角色记录为 Definition、Provider、Consumer、policy、projection 或 adapter；`dsh-plugin-host` 使用同一个 Cordis Fiber 生命周期。
 
+独立的[原生库](../Core/runtime-diagnostics/native-runtime/README.zh.md) 负责安装和清理。Profile 使用 Cordis；其迁移归[原生运行时提案](../../.agents/notes/proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md) 所有。
+
 ## Profile 与组合包
 
 运行中的 `dsh` 是一棵插件树，由启动时按序叠加的各层组合而成。

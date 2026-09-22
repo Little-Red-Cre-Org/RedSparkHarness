@@ -26,6 +26,7 @@ The runtime-diagnostics group provides runtime self-checking and plugin ownershi
 |---|---|---|
 | [`invariants`](invariants/README.md) | Runs package-owned runtime checks and reports each failure by owning package | registers on `ctx.invariants` |
 | [`plugin-host`](plugin-host/README.md) | Records RSH plugin roles and adapts legacy Cordis plugin lifecycles | registers on `ctx.pluginHost` |
+| [`native-runtime`](native-runtime/README.md) | Resolves and activates native plugin plans with scoped services and owned cleanup | no Cordis context |
 
 -----
 
