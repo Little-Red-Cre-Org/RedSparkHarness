@@ -10,6 +10,8 @@ The RSH physical layout identifies package ownership, but current Cordis composi
 
 ## Proposal
 
+The [native-runtime proposal](2026-09-22-rsh-native-runtime-and-optional-cordis.md) supersedes this proposal's choice of Cordis as the sole execution framework. This record retains the role classification, adapter behavior and dependency-policy rationale applicable to legacy composition.
+
 RSH has five runtime owners: Core provides substrate services and the owned Cordis framework; Engine owns Agent execution and durable Agent data; Modules provide capability Definitions, Providers, Consumers, policies, and projections; Compatibility composes profiles and adapts supported ecosystems; Programs host, transport, and present the composed application. Dependency checks apply these ownership rules to declared runtime edges rather than asserting a single directory-order DAG.
 
 A native package declares `dsh.runtime` with API revision, capability, and role. `dsh-plugin-host` reserves that declaration for an active Fiber and adapts a legacy Cordis plugin without wrapping its services, events, loader configuration, or disposal. Cordis remains the sole plugin runtime. Filesystem is the first capability pilot: its Definition, Providers, Consumers, and observation policy receive role declarations and profile rows select their adapter subpaths while retaining the existing `ctx.fs`, tool schemas, Session events, and patch IDs.

@@ -10,6 +10,8 @@ RSH 物理目录布局标识包所有权，但当前 Cordis 组合仍可能让 C
 
 ## Proposal
 
+[原生运行时提案](2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md) 替代本提案将 Cordis 作为唯一执行框架的选择。本记录保留适用于旧装配的角色分类、adapter 行为和依赖策略理由。
+
 RSH 有五类运行时所有者：Core 提供基础服务和受控 Cordis framework；Engine 拥有 Agent 执行与持久化 Agent 数据；Modules 提供能力 Definition、Provider、Consumer、policy 和 projection；Compatibility 组合 profile 并适配受支持生态；Programs 承载、传输并呈现已组合的应用。依赖检查将这些所有权规则应用于已声明运行时边，而不是断言单一的目录顺序 DAG。
 
 原生包通过 `dsh.runtime` 声明 API 修订、能力和角色。`dsh-plugin-host` 为活动 Fiber 保留该声明，并适配旧式 Cordis 插件，不包装其服务、事件、Loader 配置或释放。Cordis 仍是唯一插件运行时。Filesystem 是首个能力试点：其 Definition、Provider、Consumer 和 observation policy 获得角色声明，profile 行选择其 adapter 子路径，同时保留现有 `ctx.fs`、工具 schema、Session event 和 patch id。
