@@ -9,7 +9,7 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-fs-observation-policy',
   targets: ['host'],
   requires: [],
-  provides: [],
+  provides: ['fsObservationPolicy'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
       throw new Error('fs-observation-policy: configuration must be empty')
@@ -20,6 +20,7 @@ export const plugin: NativePlugin = {
       context.on('fs/write-intent', (target, actor) => gate.writeIntent(target, actor))
       context.on('fs/edit-intent', (target, actor) => gate.editIntent(target, actor))
       context.on('fs/observed', (target, observation, actor) => { gate.observe(target, observation, actor) })
+      context.provide('fsObservationPolicy', { kind: 'observed-state' })
     }
   },
 }

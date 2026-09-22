@@ -3,6 +3,9 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
   "include": ["src"],
   "references": [
+    { "path": "../native-tools" },
+    { "path": "../native-prompt" },
+    { "path": "../../../Modules/Official/sandbox/native-sandbox-policy" },
     { "path": "../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../../Modules/Official/fs/fs" },
     { "path": "../session" },

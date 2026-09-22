@@ -1,0 +1,17 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Modules/Official/fs/fs" },
+    { "path": "../../../../Modules/Official/fs/tool-fs" },
+    { "path": "../../../../Engine/core/tools" },
+    { "path": "../../../../Engine/core/system-prompt" },
+    { "path": "../../../../Engine/core/agent" },
+    { "path": "../../../../Engine/core/native-tools" },
+    { "path": "../../../../Engine/core/native-prompt" },
+    { "path": "../../../../Modules/Official/sandbox/native-sandbox-policy" }
+  ]
+}

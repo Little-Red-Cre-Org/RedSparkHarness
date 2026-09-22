@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "scopes": [{ "id": "root" }],
+  "installations": [
+    { "id": "app", "plugin": "@deepseek-ai/dsh-native-headless", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED", "provider": "mock", "model": "fixture", "systemPrompt": "Use the filesystem tool.", "maxSteps": 3 } },
+    { "id": "storage", "plugin": "@deepseek-ai/dsh-session-persistence-jsonl", "scope": "root", "config": { "root": "PROFILE_PATCH_REQUIRED", "compression": "none" } },
+    { "id": "fs", "plugin": "@deepseek-ai/dsh-compat-fs-local", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED" } },
+    { "id": "policy", "plugin": "@deepseek-ai/dsh-compat-fs-policy", "scope": "root" },
+    { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "scope": "root" },
+    { "id": "prompt", "plugin": "@deepseek-ai/dsh-native-prompt", "scope": "root" },
+    { "id": "tool-fs", "plugin": "@deepseek-ai/dsh-compat-tool-fs", "scope": "root" },
+    { "id": "model", "plugin": "native-compat-fixture-model", "scope": "root" }
+  ]
+}

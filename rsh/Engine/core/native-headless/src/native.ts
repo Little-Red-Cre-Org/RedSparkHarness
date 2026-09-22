@@ -5,10 +5,16 @@ import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-a
 import type {} from '@deepseek-ai/dsh-fs/native'
 import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type {} from '@deepseek-ai/dsh-native-prompt/native'
+import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
+import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
+import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import {
   AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, createSystemMessage,
   createToolResultMessage, createUserMessage,
-  type GenerateOptions, type StreamChunk, type ToolCallBlock, type ToolSchema,
+  type ContentBlock, type GenerateOptions, type StreamChunk, type ToolCallBlock, type ToolSchema,
 } from '@deepseek-ai/dsh-llm'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
 import type { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
@@ -100,6 +106,9 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly storage: JsonlSessionBackend,
     private readonly model: NativeModel,
     private readonly config: Config,
+    private readonly tools: NativeToolRegistry | undefined,
+    private readonly promptSections: NativePromptRegistry | undefined,
+    private readonly sandboxPolicy: NativeSandboxPolicy | undefined,
   ) {}
 
   private async target(path: string, root: FsTarget, signal: AbortSignal): Promise<FsTarget> {
@@ -108,7 +117,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     return target
   }
 
-  private async execute(call: ToolCallBlock, root: FsTarget, actor: object, signal: AbortSignal): Promise<string> {
+  private async execute(call: ToolCallBlock, root: FsTarget, actor: object, session: Session, signal: AbortSignal): Promise<string> {
     if (call.name !== 'read_file' && call.name !== 'write_file') throw new Error(`unknown tool ${call.name}`)
     const args = toolArguments(call.arguments, call.name)
     const target = await this.target(args.path, root, signal)
@@ -125,7 +134,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     const intent = await this.context.events.waterfall(
       this.context.scope, 'fs/write-intent', (): FsWriteIntent => ({ kind: 'createIfAbsent' }), target, actor,
     )
-    const outcome = await this.fs.writeText(target, args.content ?? '', intent, signal)
+    const outcome = await this.fs.writeText(target, args.content ?? '', intent, signal, this.sandboxPolicy?.resolve({ session }))
     this.context.events.emit(this.context.scope, 'fs/observed', target, { kind: 'present', version: outcome.version }, actor)
     return `${outcome.operation}: ${args.path}`
   }
@@ -134,6 +143,12 @@ export class NativeHeadlessApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     const request = parseArgs(args)
     if (request.prompt.length === 0 && request.resume === undefined) throw new Error('native-headless: a prompt is required')
+    const additions = await this.promptSections?.render() ?? ''
+    const systemPrompt = additions === '' ? this.config.systemPrompt : `${this.config.systemPrompt}\n\n${additions}`
+    const schemas = [...TOOL_SCHEMAS, ...(this.tools?.schemas() ?? [])]
+    if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
+      throw new Error('native-headless: duplicate tool schema')
+    }
     const root = await this.fs.resolve(this.config.cwd, { signal })
     const rootInfo = await this.fs.stat(root, signal)
     if (rootInfo?.type !== 'directory') throw new Error('native-headless: cwd must be a directory')
@@ -172,7 +187,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           throw new Error('native-headless: resumed Session workspace differs from profile configuration')
         }
         const priorSystem = session.deriveMessages().findLast(message => message.role === 'system')
-        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== this.config.systemPrompt)) {
+        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== systemPrompt)) {
           throw new Error('native-headless: resumed Session systemPrompt differs from profile configuration')
         }
         if (closersToAppend.length > 0) await writer.append(closersToAppend, { signal })
@@ -186,7 +201,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           pending.push(session.append('step/start', { turn, step }))
           if (step === 1) {
             if (session.deriveMessages().every(message => message.role !== 'system')) {
-              pending.push(session.append('system/message', { turn, step, message: createSystemMessage(this.config.systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
+              pending.push(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
             }
             if (request.prompt.length > 0) {
               pending.push(session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: request.prompt }] }), { surfaceOp: 'append' }))
@@ -195,7 +210,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           const priorHeader = session.requestHeader()
           if (priorHeader === undefined || step === 1 && request.resume !== undefined) {
             pending.push(session.append('request/header', {
-              header: { config: { provider: this.config.provider, model: this.config.model }, tools: TOOL_SCHEMAS },
+              header: { config: { provider: this.config.provider, model: this.config.model }, tools: schemas },
               reason: priorHeader === undefined ? 'initial' : 'resume',
             }))
           }
@@ -206,7 +221,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           await persist()
           const options: GenerateOptions = {
             provider: this.config.provider, model: this.config.model,
-            messages: session.deriveMessages(), tools: TOOL_SCHEMAS, sessionId: id, signal,
+            messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
           }
           const accumulator = new AssistantStreamAccumulator()
           const assembler = new BlockAssembler()
@@ -245,17 +260,29 @@ export class NativeHeadlessApplication implements NativeApplication {
           for (const call of calls) {
             pending.push(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
             await persist()
-            let content: string
+            let content: ContentBlock[]
+            let isError = false
             let error: { name: string; code: string } | undefined
             try {
-              content = await this.execute(call, root, actor, signal)
+              if (call.name === 'read_file' || call.name === 'write_file') {
+                content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal) }]
+              } else {
+                if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
+                const result = await this.tools.execute({
+                  callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                })
+                content = [...result.content]
+                isError = result.isError
+                error = result.error === undefined ? undefined : { ...result.error }
+              }
             } catch (failure: unknown) {
               if (signal.aborted) throw failure
-              content = failure instanceof Error ? failure.message : String(failure)
+              content = [{ type: 'text', text: failure instanceof Error ? failure.message : String(failure) }]
+              isError = true
               error = { name: failure instanceof Error ? failure.name : 'Error', code: failure instanceof FsError ? failure.code : 'UNKNOWN' }
             }
             pending.push(session.append('tool/result', {
-              turn, step, message: createToolResultMessage({ callId: call.id, content: [{ type: 'text', text: content }], isError: error !== undefined }),
+              turn, step, message: createToolResultMessage({ callId: call.id, content, isError }),
               ...error === undefined ? {} : { error },
             }, { surfaceOp: 'append', sourceEventSeqs: [SessionSeq(session.seq - 1)] }))
             await persist()
@@ -298,12 +325,13 @@ export class NativeHeadlessApplication implements NativeApplication {
 /** Native application entry loaded only after all profile manifests are checked. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model'], provides: ['application'],
+  requires: ['fs', 'sessionPersistence', 'model'], optional: ['tools', 'promptSections', 'sandboxPolicy'], provides: ['application'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
       context.provide('application', new NativeHeadlessApplication(
         context, context.require('fs'), context.require('sessionPersistence'), context.require('model'), config,
+        context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'),
       ))
     }
   },

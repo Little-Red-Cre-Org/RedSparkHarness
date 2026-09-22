@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。工具 schema 提供 `read_file` 与 `write_file`。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
+`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本，而可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
 
 应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
 
@@ -33,23 +33,43 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-### 文件工具请求
+### 系统提示词
 
 #### 模型看到什么
 
-模型收到配置的系统提示词、用户消息、续接时的既有 Session 消息及 `read_file`、`write_file` schema。下一次模型请求前，文件内容或错误会进入工具结果消息。完成的文本响应写入标准输出。
+模型在用户消息前收到配置的 `systemPrompt` 及已注册提示词 section。
+
+##### Profile 提示词
+
+```markdown
+<configured systemPrompt>
+```
 
 #### Token 影响
 
-每个步骤都发送系统文本和工具 schema；保留的消息与文件工具结果会增加后续步骤及续接请求的 token 数。
+每个步骤都会发送系统文本，保留的消息会增加后续步骤及续接请求的 token 数。
 
 #### KV Cache 影响
 
-未变化的系统提示词、schema 列表与消息前缀可复用 Provider 缓存。配置变化或更早消息的新增会从首个不同 token 起改变前缀。
+未变化的提示词前缀可复用 Provider 缓存；配置或提示词 section 变化会从首个不同 token 起改变它。
+
+### 工具操作
+
+#### 模型看到什么
+
+模型收到固定 `read_file` 和 `write_file` schema，以及可选 `tools` 注册表中的每个 schema。下一次请求前，文件内容、固定工具错误和已注册工具结果会进入一条工具结果消息。
+
+#### Token 影响
+
+每个步骤都会发送 schema，工具结果会保留在后续步骤和续接请求中。
+
+#### KV Cache 影响
+
+添加、移除或改变操作 schema 会从首个不同 token 起改变请求前缀。
 
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-- 仅提供两个文件工具，工具调用串行执行；没有通用工具注册表、审批系统、SDK 协议或 Web UI。
+- 固定文件工具和已注册工具串行执行；审批、SDK 协议和 Web UI 仍然缺失。
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
 - Session 与持久化包仍携带 Cordis 依赖，但此组合不会创建 Cordis Context。

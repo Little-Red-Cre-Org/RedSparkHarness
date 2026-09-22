@@ -9,6 +9,7 @@ export * from './types.ts'
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     fs: FileSystemOperations
+    fsObservationPolicy: { readonly kind: 'observed-state' }
   }
   interface NativeEvents {
     /**

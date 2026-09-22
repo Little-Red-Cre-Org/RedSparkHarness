@@ -47,6 +47,12 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Core/util/errors': { kind: 'none', reason: 'Shared error representation does not create model requests.' },
   'rsh/Core/runtime-diagnostics/native-runtime': { kind: 'none', reason: 'The native lifecycle library owns no model request content or durable Session events.' },
+  'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },
+  'rsh/Engine/core/native-prompt': { kind: 'indirect', reason: 'The registry delegates rendered prompt placement and Session logging to its consuming native application.' },
+  'rsh/Modules/Official/sandbox/native-sandbox-policy': { kind: 'indirect', reason: 'The policy delegates model-visible denial text and durable results to filesystem tools and their application.' },
+  'rsh/Compatibility/DSH/bridge/compat-fs-local': { kind: 'indirect', reason: 'The bridge delegates every model-visible filesystem outcome to its native consumer.' },
+  'rsh/Compatibility/DSH/bridge/compat-fs-policy': { kind: 'indirect', reason: 'The bridge changes filesystem decisions but delegates model rendering to the native tool consumer.' },
+  'rsh/Compatibility/DSH/bridge/compat-fs-sandbox': { kind: 'indirect', reason: 'The bridge delegates sandbox-denial rendering and durable result recording to its native consumer.' },
   'rsh/Modules/Official/attachment/attachment': { kind: 'indirect', reason: 'The storage seam delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/attachment/attachment-local': { kind: 'indirect', reason: 'The local backend delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/shell/shell': { kind: 'indirect', reason: 'The service interface delegates all model rendering to dsh-tool-bash.' },
