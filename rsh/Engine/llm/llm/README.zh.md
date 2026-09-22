@@ -27,6 +27,8 @@ kind: "package-reference"
 
 任何调用模型提供方的组合——agent loop（智能体循环）、会话标题生成器、压缩（compaction）摘要器——都会通过本服务流式发起请求。与至少一个提供方适配器一起挂载它；服务本身没有任何配置，也不包含提供方协议代码。
 
+`dsh-errors` 是本包的必需 peer，使重新导出的 `HarnessError` 构造函数在各消费者之间保持同一身份。
+
 ### 何时选择
 
 当插件或组合需要调用模型时选择本包：它是进入提供方适配器的唯一受支持路径，并在 loop、会话日志与每个消费方之间保持同一套词汇。当需要提供方特定的协议行为（那属于 `dsh-llm-deepseek` 或 `dsh-llm-pi-ai` 之类的适配器）或重试执行（那属于 `dsh-llm-retry`）时，不要选择它。
@@ -94,7 +96,7 @@ for await (const chunk of ctx.llm.stream({
 | [`src/assistant-stream.ts`](src/assistant-stream.ts) | 带时间信息的紧凑 Assistant 流累积、严格校验、精确展开与记录级读取器 |
 | [`src/call-config.ts`](src/call-config.ts) | 调用配置校验、适配器默认值填入与请求冻结 |
 | [`src/retry-policy.ts`](src/retry-policy.ts) | 提供方自有重试策略解析（normal 与 always 模式） |
-| [`src/error.ts`](src/error.ts) | `HarnessError`/`LlmError` 分类体系与提供方无关失败 code |
+| [`src/error.ts`](src/error.ts) | 模型专用失败码与共享[错误原语](../../../Core/util/errors/README.zh.md)的重新导出 |
 | [`src/content.ts`](src/content.ts) | 共享文件与图片投影辅助函数，包括请求图片卸载 |
 | [`src/api-key.ts`](src/api-key.ts) | 每个适配器共享的凭据格式校验 |
 | [`src/adapter-failure.ts`](src/adapter-failure.ts) | 把失败归一化为终止 finish 分片 |

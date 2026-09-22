@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url'
 import { isPublicExperimentalPackageDirectory } from './experimental-package-policy.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
+import { nativePackageDirectories } from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 /** pnpm workspace manifests after the physical RSH migration. */
@@ -426,8 +427,10 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
     const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
 
-    if (!peer) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
-    if (!dev) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
+    const native = nativePackageDirectories.has(dir)
+    if (native && (peer || dev)) errors.push(`${label}: native runtime must not depend on Cordis`)
+    if (!native && !peer) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
+    if (!native && !dev) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
     if (peer && dev && peer !== dev) {
       errors.push(`${label}: @deepseek-ai/cordis peer (${peer}) and dev (${dev}) ranges must match`)
     }

@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 `dsh-plugin-host` records a mounted package's RSH role and capability domain while leaving plugin execution, services, events, configuration, and disposal with Cordis. `adaptCordisPlugin()` wraps a legacy Cordis entry for a Loader row; the wrapper requires `ctx.pluginHost`, reserves the descriptor, mounts the original entry in a child Fiber, and releases the descriptor when the wrapper Fiber unloads. `mountCordisPlugin()` provides the equivalent direct-mount helper for integration code.
 
-The package does not publish an invariant companion. Descriptor reservation and removal have one lifecycle authority, the owning Cordis Fiber; package tests observe both facts through the registry and disposer.
+No invariant companion is published: descriptor reservation and removal have one lifecycle authority, the owning Cordis Fiber; package tests observe both facts through the registry and disposer.
 
 ## Table of Contents
 

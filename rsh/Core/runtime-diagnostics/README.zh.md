@@ -26,6 +26,7 @@ runtime-diagnostics 组为 DeepSeek Harness 组合提供运行时自检与插件
 |---|---|---|
 | [`invariants`](invariants/README.zh.md) | 运行包自有运行时检查，并按所属包报告每次失败 | 注册到 `ctx.invariants` |
 | [`plugin-host`](plugin-host/README.zh.md) | 记录 RSH 插件角色并适配旧式 Cordis 插件生命周期 | 注册到 `ctx.pluginHost` |
+| [`native-runtime`](native-runtime/README.zh.md) | 解析并激活原生插件计划，提供作用域服务和所属资源清理 | 无 Cordis context |
 
 -----
 

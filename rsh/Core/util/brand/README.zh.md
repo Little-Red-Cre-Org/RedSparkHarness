@@ -11,6 +11,8 @@ kind: "package-library"
 
 `dsh-brand` 让结构相同的字符串或数字在类型层面不可互换：`SessionId` 无法传给期望 `ToolCallId` 的位置，事件序号也无法传给需要日志偏移量的位置。`brandString<T>()` 与 `brandNumber<T>()` 在不持有共享运行时状态的情况下应用名义品牌，让所属包可以定义领域类型，而无需导入不相关的能力。
 
+manifest 不包含框架 peer 依赖；原生依赖检查将本包与其消费者一起验证。
+
 ## 目录
 
 - [使用本包](#use-this-package)

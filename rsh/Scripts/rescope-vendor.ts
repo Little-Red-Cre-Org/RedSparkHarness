@@ -191,8 +191,10 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     replace: `    const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
     const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
 
-    if (!peer) errors.push(\`\${label}: @deepseek-ai/cordis must be a peerDependency\`)
-    if (!dev) errors.push(\`\${label}: @deepseek-ai/cordis must also be a devDependency\`)
+    const native = nativePackageDirectories.has(dir)
+    if (native && (peer || dev)) errors.push(\`\${label}: native runtime must not depend on Cordis\`)
+    if (!native && !peer) errors.push(\`\${label}: @deepseek-ai/cordis must be a peerDependency\`)
+    if (!native && !dev) errors.push(\`\${label}: @deepseek-ai/cordis must also be a devDependency\`)
     if (peer && dev && peer !== dev) {
       errors.push(\`\${label}: @deepseek-ai/cordis peer (\${peer}) and dev (\${dev}) ranges must match\`)`,
     expect: 1,
@@ -245,7 +247,7 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     id: 'root-agents-vendored-name-contract',
     file: 'AGENTS.md',
     find: 'vendored packages keep upstream names and are `private: true`. `cordis` is a peerDependency (+ dev) of every harness package.',
-    replace: 'vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. `@deepseek-ai/cordis` is a peerDependency (+ dev) of every harness package.',
+    replace: 'vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. Harness packages carry `@deepseek-ai/cordis` as peerDependency (+ dev), except the explicit [native package roster](rsh/Scripts/native-package-policy.ts), whose source and manifest dependencies are checked by `verify-native-dependencies`.',
     expect: 1,
   },
   {

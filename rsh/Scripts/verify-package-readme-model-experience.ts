@@ -45,6 +45,8 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  'rsh/Core/util/errors': { kind: 'none', reason: 'Shared error representation does not create model requests.' },
+  'rsh/Core/runtime-diagnostics/native-runtime': { kind: 'none', reason: 'The native lifecycle library owns no model request content or durable Session events.' },
   'rsh/Modules/Official/attachment/attachment': { kind: 'indirect', reason: 'The storage seam delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/attachment/attachment-local': { kind: 'indirect', reason: 'The local backend delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/shell/shell': { kind: 'indirect', reason: 'The service interface delegates all model rendering to dsh-tool-bash.' },

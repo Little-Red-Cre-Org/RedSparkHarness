@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `dsh-brand` makes structurally identical strings or numbers non-interchangeable at the type level: a `SessionId` cannot be passed where a `ToolCallId` is expected, and an event sequence cannot be passed where a log offset is required. `brandString<T>()` and `brandNumber<T>()` apply nominal brands without shared runtime state, so owning packages can define domain types without importing an unrelated capability.
 
+The manifest has no framework peer dependency; the native dependency gate checks this package alongside its consumers.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

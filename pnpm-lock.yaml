@@ -989,6 +989,12 @@ importers:
         specifier: workspace:^
         version: link:../../vendor/cordis
 
+  rsh/Core/runtime-diagnostics/native-runtime:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../util/brand
+
   rsh/Core/runtime-diagnostics/plugin-host:
     dependencies:
       '@deepseek-ai/schemastery':
@@ -1163,11 +1169,7 @@ importers:
         specifier: workspace:^
         version: link:../../vendor/cordis
 
-  rsh/Core/util/brand:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
+  rsh/Core/util/brand: {}
 
   rsh/Core/util/chunked-list:
     dependencies:
@@ -1190,6 +1192,8 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
+
+  rsh/Core/util/errors: {}
 
   rsh/Core/util/home-paths:
     devDependencies:
@@ -2334,6 +2338,9 @@ importers:
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../../Modules/Official/attachment/attachment
+      '@deepseek-ai/dsh-errors':
+        specifier: workspace:^
+        version: link:../../../Core/util/errors
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
@@ -7897,6 +7904,9 @@ importers:
       '@deepseek-ai/dsh-deepseek-llm-api-extensions':
         specifier: workspace:^
         version: link:../../../../Engine/llm/deepseek-llm-api-extensions
+      '@deepseek-ai/dsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -7969,6 +7979,9 @@ importers:
       '@deepseek-ai/dsh-plan-mode':
         specifier: workspace:^
         version: link:../../../../Modules/Official/plan/plan-mode
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
       '@deepseek-ai/dsh-plugin-package-inventory-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/plugin-package-inventory-deepseek
