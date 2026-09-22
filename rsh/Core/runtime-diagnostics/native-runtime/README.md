@@ -31,7 +31,7 @@ This library resolves explicit plugin selections and activates them without Cord
 
 `context.optional()` reads only explicitly optional capabilities and returns undefined when no provider was selected. `host.remove(request)` accepts the original installation request object and stops that installation and its transitive consumers. Unrelated owners remain active; affected subscriptions close admission and drain their callbacks before resource disposal. Removal is idempotent and does not automatically select another provider.
 
-`host.diagnostics()` reports each planned installation's opaque identity, scope, selected service providers, lifecycle state, failure phase and cleanup outcome. It excludes configuration values and error messages. `host.run(scope, initiator, work)` captures the initiating execution explicitly per call; parallel calls retain separate actors and stop waits for admitted work to settle before releasing providers.
+`host.diagnostics()` reports each planned installation's opaque identity, opaque scope identity, selected service providers, lifecycle state, failure phase and cleanup outcome. It excludes configuration values, scope objects and error messages. `host.run(scope, initiator, work)` captures the initiating execution explicitly per call; parallel calls retain separate actors and stop waits for admitted work to settle before releasing providers.
 
 <a id="entry-metadata"></a>
 ## Entry metadata

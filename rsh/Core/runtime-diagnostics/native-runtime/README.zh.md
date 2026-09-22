@@ -31,7 +31,7 @@ kind: "package-library"
 
 `context.optional()` 仅读取显式可选的能力，在未选择 Provider 时返回 undefined。`host.remove(request)` 接收原始安装请求对象，停止该安装及其传递消费者。无关所有者保持活动；受影响的订阅停止接收事件，并在资源释放前等待回调结束。移除是幂等操作，不会自动选择其他 Provider。
 
-`host.diagnostics()` 报告各安装的不透明标识、作用域、选定服务 Provider、生命周期状态、失败阶段及清理结果，不包含配置值和错误消息。`host.run(scope, initiator, work)` 为每次调用显式捕获发起执行；并行调用保留各自的 actor，停止时等待已接收工作结束，再释放 Provider。
+`host.diagnostics()` 报告各安装的不透明标识、不透明作用域标识、选定服务 Provider、生命周期状态、失败阶段及清理结果，不包含配置值、作用域对象和错误消息。`host.run(scope, initiator, work)` 为每次调用显式捕获发起执行；并行调用保留各自的 actor，停止时等待已接收工作结束，再释放 Provider。
 
 <a id="entry-metadata"></a>
 ## 入口元数据

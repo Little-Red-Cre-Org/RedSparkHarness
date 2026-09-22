@@ -1,10 +1,16 @@
 /** Hierarchical visibility and installation-owned asynchronous cleanup. */
+import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 
 /** Release one owned resource; completion means the resource is quiescent. */
 export type Disposer = () => void | Promise<void>
 
+/** Opaque identity for one visibility scope. */
+export type NativeScopeId = Branded<'NativeScopeId'>
+
 /** Identity-based visibility tree; constructing a new root creates an isolated realm. */
 export class NativeScope {
+  /** Stable diagnostic identity without exposing attached scope data. */
+  readonly id = brandString<NativeScopeId>(globalThis.crypto.randomUUID())
   /** @param parent - enclosing scope, omitted for an isolated root. */
   constructor(readonly parent?: NativeScope) {}
 

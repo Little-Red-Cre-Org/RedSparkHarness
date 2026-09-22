@@ -25,6 +25,7 @@ describe('native installation', () => {
   it('reports dependency selection and cleanup without exposing configuration', async () => {
     const scope = new NativeScope()
     const secret = 'private-config-value'
+    Object.assign(scope, { attachedConfig: secret })
     const provider: InstallationRequest = { scope, config: { secret }, plugin: plugin('provider', {
       provides: ['value'], resolve: () => (ctx) => { ctx.provide('value', { read: () => 1 }) },
     }) }
@@ -34,6 +35,7 @@ describe('native installation', () => {
     expect(planned.map(entry => entry.state)).toEqual(['planned', 'planned'])
     expect(planned[1]?.dependencies).toEqual([{ service: 'value', provider: planned[0]?.id }])
     expect(planned[0]?.id).not.toBe(planned[1]?.id)
+    expect(planned[0]?.scope).toBe(scope.id)
     const other = new NativeHost(resolveInstallation([{ ...provider }], 'host'))
     expect(other.diagnostics()[0]?.id).not.toBe(planned[0]?.id)
     expect(JSON.stringify(planned)).not.toContain(secret)

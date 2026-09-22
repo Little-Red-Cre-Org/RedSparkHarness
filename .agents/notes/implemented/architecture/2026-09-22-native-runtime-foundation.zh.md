@@ -12,7 +12,7 @@ Status: implemented
 
 `rsh/Core/runtime-diagnostics/native-runtime` 下的 `@deepseek-ai/dsh-native-runtime` 提供独立安装计划、作用域服务、四种事件模式、自有注册和可等待释放。`resolveInstallation` 在激活前拒绝不支持的目标、依赖问题和 Provider 冲突。配置解析返回激活工作，不获取资源。Host 仅在激活成功后发布全部承诺服务；失败时回滚注册和资源。
 
-Host 记录不含配置值的诊断，包括不透明安装标识、选定 Provider 标识、生命周期状态、失败阶段和清理结果。`run(scope, initiator, work)` 向每次异步操作显式传入发起 actor，停止时排空已接收工作。运行时不从插件安装作用域推断 actor。`parseNativeEntryManifest` 在加载代码前检查新的 `dsh.native` JSON 声明和已导出子路径；`validateNativePluginEntry` 在规划前核对导入入口的声明。现有 `dsh.runtime` 仍是角色元数据。
+Host 记录不含配置值的诊断，包括不透明安装和作用域标识、选定 Provider 标识、生命周期状态、失败阶段和清理结果。`run(scope, initiator, work)` 向每次异步操作显式传入发起 actor，停止时排空已接收工作。运行时不从插件安装作用域推断 actor。`parseNativeEntryManifest` 在加载代码前检查新的 `dsh.native` JSON 声明和已导出子路径；`validateNativePluginEntry` 在规划前核对导入入口的声明。现有 `dsh.runtime` 仍是角色元数据。
 
 `@deepseek-ai/dsh-brand` 与新增的 `@deepseek-ai/dsh-errors` 是可移植的 Core 工具。模型错误模块为现有消费者重导出同一个错误身份；`dsh-llm` 将 `dsh-errors` 列为 peer，使 `instanceof HarnessError` 使用同一个构造函数。`verify-native-dependencies` 门禁从两个 TypeScript 编译面检查明确列入名单的全部原生源码所有者，拒绝外部源码和 manifest 依赖、计算式加载与无效原生元数据。非原生包继续遵守仓库的 Cordis peer 规则。
 

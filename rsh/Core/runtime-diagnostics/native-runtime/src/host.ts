@@ -1,6 +1,6 @@
 /** Explicit installation planning and native activation without a framework adapter. */
 import { RuntimeEvents, type EventKey, type EventListener } from './events.ts'
-import { NativeScope, ResourceOwner, type Disposer } from './scope.ts'
+import { NativeScope, ResourceOwner, type Disposer, type NativeScopeId } from './scope.ts'
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 
 /** Extend in service Definition packages with the capability name and its interface. */
@@ -88,7 +88,7 @@ export type NativeInstallationId = Branded<'NativeInstallationId'>
 export interface InstallationDiagnostic {
   readonly id: NativeInstallationId
   readonly name: string
-  readonly scope: NativeScope
+  readonly scope: NativeScopeId
   readonly state: 'planned' | 'activating' | 'ready' | 'draining' | 'failed' | 'disposed'
   readonly dependencies: readonly { service: ServiceKey; provider: NativeInstallationId }[]
   readonly failure: 'activation' | 'cleanup' | undefined
@@ -220,7 +220,7 @@ export class NativeHost {
       const current = this.diagnosticState.get(entry)
       if (current === undefined) throw new Error('native-runtime: missing installation diagnostic')
       return {
-        id: entry.id, name: entry.name, scope: entry.scope, ...current,
+        id: entry.id, name: entry.name, scope: entry.scope.id, ...current,
         dependencies: [...entry.dependencies].map(([service, provider]) => ({ service, provider: provider.id })),
       }
     })
