@@ -46,6 +46,7 @@ export default defineConfig({
     include: [
       ...PACKAGE_MANIFEST_GLOBS.map(pattern => pattern.replace('/package.json', '/tests/**/*.e2e.ts')),
       'rsh/Programs/CLI/tests/**/*.e2e.ts',
+      'snapshots/native-headless/native-headless.snapshot.ts',
     ],
     exclude: [
       '**/*.expected.e2e.ts',

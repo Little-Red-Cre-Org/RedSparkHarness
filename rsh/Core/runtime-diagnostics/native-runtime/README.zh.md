@@ -36,7 +36,7 @@ kind: "package-library"
 <a id="entry-metadata"></a>
 ## 入口元数据
 
-`parseNativeEntryManifest(value, exports)` 在导入入口前校验 `package.json.dsh.native`。修订版 1 声明已导出的包子路径、Host/Client 目标和必需、可选、提供的服务名称。`validateNativePluginEntry(plugin, manifest)` 随后在规划前核对具名 `plugin` 导出与元数据是否一致。P2 接入原生 profile 解析时，应用加载器必须调用这两个函数；本库不读取包文件，也不启动应用。
+`parseNativeEntryManifest(value, exports)` 在导入入口前校验 `package.json.dsh.native`。修订版 1 声明已导出的包子路径、Host/Client 目标和必需、可选、提供的服务名称。`validateNativePluginEntry(plugin, manifest)` 随后在规划前核对具名 `plugin` 导出与元数据是否一致。[CLI 原生加载器](../../../Programs/CLI/README.zh.md#profiles)使用这两项检查；本库不读取包文件，也不启动应用。应用 Provider 提供 `NativeApplication.run(args, signal)`；CLI 经 `host.run()` 调用，并等待 Host 完成资源释放。
 
 <a id="events"></a>
 ## 事件

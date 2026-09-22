@@ -164,6 +164,14 @@ describe('resolveBundleDir', () => {
 })
 
 describe('loadProfile', () => {
+  it('refuses to interpret an explicitly native profile as an empty Cordis bundle tree', () => {
+    const anchor = stageInstallation({})
+    const dir = join(tmp(), 'native')
+    mkdirSync(dir)
+    writeProfileManifest(dir, { name: 'native', dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } })
+    expect(() => loadProfileDirectory('dsh', dir, anchor)).toThrow('native profile launcher')
+  })
+
   it('loads an explicitly owned profile directory outside CLI discovery', () => {
     const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' } })
     const dir = join(tmp(), 'managed', 'desktop')

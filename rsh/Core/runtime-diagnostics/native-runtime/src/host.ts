@@ -4,7 +4,15 @@ import { NativeScope, ResourceOwner, type Disposer, type NativeScopeId } from '.
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 
 /** Extend in service Definition packages with the capability name and its interface. */
-export interface NativeServices {}
+export interface NativeServices {
+  /** The one application selected by a launched profile. */
+  application: NativeApplication
+}
+
+/** Program entry selected by a profile; exit follows its completed resource drain. */
+export interface NativeApplication {
+  run(args: readonly string[], signal: AbortSignal): Promise<number>
+}
 
 type ServiceKey = keyof NativeServices
 
@@ -137,7 +145,7 @@ export class InstallationPlan {
       const seen = new Set<ServiceKey>()
       for (const key of entry.provides) {
         if (seen.has(key) || entries.some(other => other !== entry && other.scope === entry.scope && other.provides.includes(key))) {
-          throw new Error(`native-runtime: duplicate provider for ${String(key)} in ${entry.name}'s scope`)
+          throw new Error(`native-runtime: duplicate provider for ${key} in ${entry.name}'s scope`)
         }
         seen.add(key)
       }
@@ -151,7 +159,7 @@ export class InstallationPlan {
         }
         if (provider === undefined) {
           if (entry.optional.includes(key) && !entry.requires.includes(key)) continue
-          throw new Error(`native-runtime: ${entry.name} requires missing ${String(key)}`)
+          throw new Error(`native-runtime: ${entry.name} requires missing ${key}`)
         }
         ;(entry.dependencies as Map<ServiceKey, PlannedInstallation>).set(key, provider)
       }
@@ -282,25 +290,25 @@ export class NativeHost {
               const dependency = entry.dependencies.get(key)
               const provider = dependency === undefined ? undefined : this.ready.get(dependency)
               if (!entry.requires.includes(key) || provider === undefined || !provider.services.has(key)) {
-                throw new Error(`native-runtime: ${entry.name} cannot read undeclared or unavailable ${String(key)}`)
+                throw new Error(`native-runtime: ${entry.name} cannot read undeclared or unavailable ${key}`)
               }
               return provider.services.get(key) as NativeServices[K]
             },
             optional: <K extends ServiceKey>(key: K): NativeServices[K] | undefined => {
               owner.controller.signal.throwIfAborted()
               if (!entry.optional.includes(key)) {
-                throw new Error(`native-runtime: ${entry.name} did not declare optional ${String(key)}`)
+                throw new Error(`native-runtime: ${entry.name} did not declare optional ${key}`)
               }
               const dependency = entry.dependencies.get(key)
               if (dependency === undefined) return undefined
               const provider = this.ready.get(dependency)
-              if (provider === undefined) throw new Error(`native-runtime: selected optional ${String(key)} is unavailable`)
+              if (provider === undefined) throw new Error(`native-runtime: selected optional ${key} is unavailable`)
               return provider.services.get(key) as NativeServices[K]
             },
             provide: (key, service) => {
               owner.controller.signal.throwIfAborted()
               if (this.ready.has(entry) || !entry.provides.includes(key) || services.has(key)) {
-                throw new Error(`native-runtime: ${entry.name} cannot publish ${String(key)}`)
+                throw new Error(`native-runtime: ${entry.name} cannot publish ${key}`)
               }
               services.set(key, service)
             },
@@ -308,7 +316,7 @@ export class NativeHost {
           await entry.activate(context)
           this.controller.signal.throwIfAborted()
           for (const key of entry.provides) {
-            if (!services.has(key)) throw new Error(`native-runtime: ${entry.name} did not provide ${String(key)}`)
+            if (!services.has(key)) throw new Error(`native-runtime: ${entry.name} did not provide ${key}`)
           }
           this.ready.set(entry, activation)
           this.diagnosticState.set(entry, { state: 'ready', failure: undefined, cleanup: 'pending' })

@@ -777,6 +777,9 @@ export function loadProfileDirectory(
   options: { userLayer?: boolean } = {},
 ): Profile {
   const manifest = readProfileManifest(binName, dir)
+  if (manifest.dsh?.profile?.runtime !== undefined || manifest.dsh?.profile?.config !== undefined) {
+    throw new Error(`${binName}: profile ${dir} declares native runtime metadata; use the native profile launcher`)
+  }
   const bundles = manifest.dsh?.profile?.bundles ?? []
   const rawPatchReload: unknown = manifest.dsh?.profile?.patchReload
   if (rawPatchReload !== undefined && rawPatchReload !== 'live' && rawPatchReload !== 'startup') {

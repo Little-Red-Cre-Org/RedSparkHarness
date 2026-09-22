@@ -25,6 +25,8 @@
   "files": [
     "lib/index.js",
     "cordis.patch.yml",
+    "lib/runtime.js",
+    "lib/runtime-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

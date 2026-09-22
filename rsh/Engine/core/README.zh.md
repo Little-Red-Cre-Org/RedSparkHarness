@@ -32,6 +32,7 @@ kind: "package-group"
 | [`agent/`](agent/README.zh.md) | 供插件编程使用的 `Agent` 句柄，以及其实时注册表与事件 | `ctx.agents` |
 | [`agent-default-model/`](agent-default-model/README.zh.md) | 入口对全新 agent 应用的部署默认模型选择 | `ctx.agentDefaultModel` |
 | [`agent-loop/`](agent-loop/README.zh.md) | 默认 agent 驱动器：创建 agent 并运行轮次与步骤生命周期 | `ctx.agentLoop` |
+| [`native-headless/`](native-headless/README.zh.md) | 提供文件工具与持久 Session 历史的一次性原生 profile 应用 | 原生 `application` 服务 |
 
 `scope` 提供共享作用域原语；`agent` 负责公开的 `Agent` 约定，而 `agent-loop` 是其默认实现，因此扩展插件依赖 `agent`，驱动器保持可替换。`agent-default-model` 负责入口在会话自身没有选择时应用的部署选择。可运行组合位于 [`rsh/Compatibility/DSH/bundle`](../../Compatibility/DSH/bundle/README.zh.md)；本分组只负责可替换的主干组件。
 

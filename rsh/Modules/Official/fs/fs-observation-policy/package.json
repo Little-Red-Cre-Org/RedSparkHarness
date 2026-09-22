@@ -16,6 +16,14 @@
       "apiVersion": 1,
       "role": "policy",
       "capability": "filesystem"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": []
     }
   },
   "main": "lib/index.js",
@@ -29,12 +37,17 @@
       "types": "./lib/types/runtime.d.ts",
       "default": "./lib/runtime.js"
     },
-    "./src/*": "./src/*",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/runtime.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -42,6 +55,9 @@
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-plugin-host": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-fs": "workspace:^",

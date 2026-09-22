@@ -1,0 +1,10 @@
+version: 1
+scenario: file-round
+profile: native-headless
+composition: native-file-round
+recording: authored
+header:
+  class: native-file-round
+  pin: true
+workspace:
+  final: true

@@ -1947,6 +1947,28 @@ importers:
         specifier: workspace:^
         version: link:../tools
 
+  rsh/Engine/core/native-headless:
+    dependencies:
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/fs
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../session/session-persistence-jsonl
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../Core/vendor/cordis
+
   rsh/Engine/core/scope:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -3112,6 +3134,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session-format':
         specifier: workspace:^
         version: link:../session-format
@@ -5196,6 +5221,13 @@ importers:
         version: link:../../../../Core/typert/protocol
 
   rsh/Modules/Official/fs/fs:
+    dependencies:
+      '@deepseek-ai/dsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5206,9 +5238,6 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/plugin-host
@@ -5218,6 +5247,9 @@ importers:
 
   rsh/Modules/Official/fs/fs-local:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/plugin-host
@@ -5240,6 +5272,9 @@ importers:
 
   rsh/Modules/Official/fs/fs-observation-policy:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/plugin-host
@@ -7330,6 +7365,9 @@ importers:
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../Engine/preset/persona

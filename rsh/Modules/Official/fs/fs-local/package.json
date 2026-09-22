@@ -16,6 +16,14 @@
       "apiVersion": 1,
       "role": "provider",
       "capability": "filesystem"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": ["fs"]
     }
   },
   "main": "lib/index.js",
@@ -29,12 +37,22 @@
       "types": "./lib/types/runtime.d.ts",
       "default": "./lib/runtime.js"
     },
-    "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./backend": {
+      "types": "./lib/types/backend.d.ts",
+      "default": "./lib/backend.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "files": [
     "lib/index.js",
     "lib/runtime.js",
+    "lib/native.js",
+    "lib/backend.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -45,7 +63,8 @@
   },
   "dependencies": {
     "koffi": "^3.1.0",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-fs": "workspace:^",

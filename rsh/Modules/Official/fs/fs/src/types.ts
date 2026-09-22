@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-fs/types
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm'
+import { HarnessError } from '@deepseek-ai/dsh-errors'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 
 /**

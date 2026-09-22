@@ -232,14 +232,9 @@ function waitWithAbort<T>(operation: Promise<T>, signal?: AbortSignal): Promise<
  * visible to this process immediately, reaches disk on its first append or
  * flush, and never existed if the process crashes before that.
  */
-class JsonlSessionPersistence extends SessionPersistence {
-  static Config: z<Config> = z.object({
-    root: z.string().required(),
-    compression: JsonlCompressionSchema,
-  })
-
-  /** Backend label for diagnostics and effects; shadows `Service.name` without changing the service key. */
-  override readonly name = 'session-persistence-jsonl'
+export class JsonlSessionBackend {
+  /** Backend label for diagnostics and revision tokens. */
+  readonly name = 'session-persistence-jsonl'
 
   private root: string
   private compression: JsonlCompression
@@ -257,8 +252,7 @@ class JsonlSessionPersistence extends SessionPersistence {
   /** One joinable decode/migration operation per selected historical Session file revision. */
   private readonly migrationPreparations = new Map<SessionId, MigrationPreparation>()
 
-  constructor(ctx: Context, public config: Config) {
-    super(ctx)
+  constructor(public config: Config, private readonly warn: (message: string) => void = () => {}) {
     /* v8 ignore next 5 -- generated catalog and Session source share one build-time version owner. */
     if (sessionFormatCatalog.currentVersion !== SESSION_FORMAT_VERSION) {
       throw new Error(
@@ -282,7 +276,19 @@ class JsonlSessionPersistence extends SessionPersistence {
         error instanceof SessionFormatUnsupportedMigrationError,
     }
     this.assertUsableRoot()
+  }
+
+  /**
+   * Attach the existing Cordis session event route when selected by a legacy profile.
+   * @param ctx - legacy registration owner.
+   */
+  installLegacy(ctx: Context): void {
     this.tracker.install(ctx)
+  }
+
+  /** Close every open handle after native work has stopped admitting new turns. */
+  async close(): Promise<void> {
+    await this.tracker.closeAll()
   }
 
   /**
@@ -840,7 +846,7 @@ class JsonlSessionPersistence extends SessionPersistence {
   async truncateTornTail(header: SessionHeader, truncateTo: number): Promise<void> {
     this.coldLogMemo.delete(header.id)
     await this.repair(header, truncateTo)
-    this.ctx.logger.warn(`${this.name}: session "${header.id}" recovered from a torn tail; incomplete tail bytes were discarded`)
+    this.warn(`${this.name}: session "${header.id}" recovered from a torn tail; incomplete tail bytes were discarded`)
   }
 
   /**
@@ -1643,5 +1649,42 @@ class JsonlSessionPersistence extends SessionPersistence {
  * scaffolding over this backend's file primitives. Reads re-scan the artifact
  * under the stable-read loop.
  */
+
+/** Cordis service adapter over the same JSONL storage implementation used by native profiles. */
+class JsonlSessionPersistence extends SessionPersistence {
+  static Config: z<Config> = z.object({
+    root: z.string().required(),
+    compression: JsonlCompressionSchema,
+  })
+
+  override readonly name = 'session-persistence-jsonl'
+  private readonly backend: JsonlSessionBackend
+
+  constructor(ctx: Context, public config: Config) {
+    super(ctx)
+    this.backend = new JsonlSessionBackend(config, (message) => { ctx.logger.warn(message) })
+    this.backend.installLegacy(ctx)
+  }
+
+  override create(header: SessionHeader, options?: SessionPersistenceCreateOptions): Promise<SessionHandle> {
+    return this.backend.create(header, options)
+  }
+
+  override open(id: SessionId, access: SessionAccess, options?: SessionPersistenceOpenOptions): Promise<SessionHandle> {
+    return this.backend.open(id, access, options)
+  }
+
+  override flush(): Promise<void> {
+    return this.backend.flush()
+  }
+
+  override stat(id: SessionId, options?: SessionPersistenceStatOptions): Promise<SessionPersistenceSnapshot | undefined> {
+    return this.backend.stat(id, options)
+  }
+
+  override list(options?: SessionPersistenceListOptions): Promise<readonly SessionPersistenceSnapshot[]> {
+    return this.backend.list(options)
+  }
+}
 
 export default JsonlSessionPersistence

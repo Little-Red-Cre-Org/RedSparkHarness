@@ -525,6 +525,7 @@ export class Session {
    * @param header - independently owned storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
    * @param eventState - aliasing state carried from the operation that produced the seed.
+   * @param onConstructorEvent - receives a resume marker appended during construction, if any.
    * @returns a restored detached session.
    */
   static fromRestore(
@@ -533,6 +534,7 @@ export class Session {
     header: SessionHeader,
     inheritedEventCount: SessionLogOffset,
     eventState: SessionSeedEventState,
+    onConstructorEvent?: (event: SessionEvent) => void,
   ): Session {
     return new Session(
       id,
@@ -540,6 +542,7 @@ export class Session {
       header,
       eventState,
       inheritedEventCount,
+      onConstructorEvent,
     )
   }
 
@@ -549,6 +552,7 @@ export class Session {
     header?: SessionHeader,
     mode: 'snapshot' | SessionSeedEventState = 'snapshot',
     suppliedInheritedEventCount?: SessionLogOffset,
+    onConstructorEvent?: (event: SessionEvent) => void,
   ) {
     const restoredHeader = mode === 'snapshot' ? undefined : validateRestoredSessionHeader(id, header)
     if (seed !== undefined) {
@@ -604,9 +608,11 @@ export class Session {
     // even when the copied prefix already ends in an ancestor marker. Restore
     // retains that durable marker and appends only the ordinary resume marker.
     if (seed !== undefined && mode === 'snapshot' && this.header.isSeeded) {
-      this.append('session/end-seed', { inherited: true })
+      const marker = this.append('session/end-seed', { inherited: true })
+      onConstructorEvent?.(marker)
     } else if (seed !== undefined && this.log.at(-1)?.type !== 'session/end-seed') {
-      this.append('session/end-seed', {})
+      const marker = this.append('session/end-seed', {})
+      onConstructorEvent?.(marker)
     }
   }
 

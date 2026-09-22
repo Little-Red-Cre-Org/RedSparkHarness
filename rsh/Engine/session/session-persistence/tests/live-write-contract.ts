@@ -22,6 +22,8 @@ export interface LiveWriteBackend {
   readonly ctx: Context
   /** Mount a FRESH context over the SAME storage, as after a process restart. */
   readonly remount: () => Promise<Context>
+  /** Provider-owned storage primitive for injected write-failure cases. */
+  readonly storage: unknown
 }
 
 async function readAll(persistence: SessionPersistence, id: ReturnType<typeof SessionId>): Promise<readonly SessionEvent[]> {
@@ -86,14 +88,14 @@ export function runLiveWritePathContract(
     })
 
     it('session/flush drains immediately and surfaces a retained background failure', async () => {
-      const { ctx } = await make()
+      const { ctx, storage } = await make()
       const session = ctx.sessions.create(SessionId('flush-surfaces'))
       const handle = await ctx.sessionPersistence.create(session.header)
       const warned = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => undefined)
       const failure = new Error('backend write refused')
       // Inject at the service's storage primitive: the routed drain writes
       // through the handle's internal chain, not the public append.
-      const persist = vi.spyOn(ctx.sessionPersistence as unknown as { persistBatch: () => Promise<void> }, 'persistBatch')
+      const persist = vi.spyOn(storage as { persistBatch: () => Promise<void> }, 'persistBatch')
         .mockRejectedValue(failure)
 
       vi.useFakeTimers()
@@ -116,12 +118,12 @@ export function runLiveWritePathContract(
     })
 
     it('service-level flush drains every active handle and aggregates the failures', async () => {
-      const { ctx } = await make()
+      const { ctx, storage } = await make()
       const healthy = ctx.sessions.create(SessionId('flush-all-healthy'))
       const failing = ctx.sessions.create(SessionId('flush-all-failing'))
       const healthyHandle = await ctx.sessionPersistence.create(healthy.header)
       const failingHandle = await ctx.sessionPersistence.create(failing.header)
-      const service = ctx.sessionPersistence as unknown as {
+      const service = storage as {
         persistBatch: (header: { id: string }, ...rest: unknown[]) => Promise<void>
       }
       const original = service.persistBatch.bind(service)
@@ -204,11 +206,11 @@ export function runLiveWritePathContract(
     })
 
     it('close itself surfaces a failing drain and still releases write ownership', async () => {
-      const { ctx } = await make()
+      const { ctx, storage } = await make()
       const session = ctx.sessions.create(SessionId('close-drain-fails'))
       const handle = await ctx.sessionPersistence.create(session.header)
       const failure = new Error('storage refused the drain')
-      vi.spyOn(ctx.sessionPersistence as unknown as { persistBatch: () => Promise<void> }, 'persistBatch')
+      vi.spyOn(storage as { persistBatch: () => Promise<void> }, 'persistBatch')
         .mockRejectedValue(failure)
       session.append('turn/start', { turn: 1 })
       await expect(handle.close()).rejects.toBe(failure)
@@ -219,10 +221,10 @@ export function runLiveWritePathContract(
     })
 
     it('close normalizes a non-Error drain failure', async () => {
-      const { ctx } = await make()
+      const { ctx, storage } = await make()
       const session = ctx.sessions.create(SessionId('close-drain-string'))
       const handle = await ctx.sessionPersistence.create(session.header)
-      vi.spyOn(ctx.sessionPersistence as unknown as { persistBatch: () => Promise<void> }, 'persistBatch')
+      vi.spyOn(storage as { persistBatch: () => Promise<void> }, 'persistBatch')
         // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- the non-Error arm is the case under test.
         .mockImplementation(() => Promise.reject('backend string refusal'))
       session.append('turn/start', { turn: 1 })
@@ -231,11 +233,11 @@ export function runLiveWritePathContract(
     })
 
     it('a failed drain retains order, quiets the timer, and recovers exactly once', async () => {
-      const { ctx } = await make()
+      const { ctx, storage } = await make()
       const session = ctx.sessions.create(SessionId('retained-order'))
       const handle = await ctx.sessionPersistence.create(session.header)
       const warned = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => undefined)
-      const host = ctx.sessionPersistence as unknown as { persistBatch: (...args: unknown[]) => Promise<void> }
+      const host = storage as { persistBatch: (...args: unknown[]) => Promise<void> }
       // Materialize under real timers first: the write lock is acquired ahead
       // of the first materializing write, and that real I/O must not sit
       // inside the fake-timer window below.

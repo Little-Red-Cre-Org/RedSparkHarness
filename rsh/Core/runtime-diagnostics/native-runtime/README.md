@@ -36,7 +36,7 @@ This library resolves explicit plugin selections and activates them without Cord
 <a id="entry-metadata"></a>
 ## Entry metadata
 
-`parseNativeEntryManifest(value, exports)` validates `package.json.dsh.native` before importing the entry. Revision 1 declares an exported package subpath, Host/Client targets and required, optional and provided service names. `validateNativePluginEntry(plugin, manifest)` then checks the named `plugin` export against that declaration before planning. The application loader must call these functions when P2 wires native profile resolution; this library does not read package files or launch an application.
+`parseNativeEntryManifest(value, exports)` validates `package.json.dsh.native` before importing the entry. Revision 1 declares an exported package subpath, Host/Client targets and required, optional and provided service names. `validateNativePluginEntry(plugin, manifest)` then checks the named `plugin` export against that declaration before planning. The [CLI native loader](../../../Programs/CLI/README.md#profiles) uses both checks; this library does not read package files or launch an application. An application Provider exposes `NativeApplication.run(args, signal)`; the CLI invokes it through `host.run()` and waits for host disposal.
 
 <a id="events"></a>
 ## Events

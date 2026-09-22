@@ -464,6 +464,7 @@ declare class Session {
    * @param header - independently owned storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
    * @param eventState - aliasing state carried from the operation that produced the seed.
+   * @param onConstructorEvent - receives a resume marker appended during construction, if any.
    * @returns a restored detached session.
    */
   static fromRestore(
@@ -472,6 +473,7 @@ declare class Session {
     header: SessionHeader,
     inheritedEventCount: SessionLogOffset,
     eventState: SessionSeedEventState,
+    onConstructorEvent?: (event: SessionEvent) => void,
   ): Session;
   /**
    * Return the immutable event stored at one exact sequence number.

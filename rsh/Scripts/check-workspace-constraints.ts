@@ -165,12 +165,26 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-presets': ['presets'],
+  // The terminal bundle's entry and runtime export share a generated chunk.
+  '@deepseek-ai/dsh-rsh': ['lib/runtime.js', 'lib/runtime-*.js'],
+  // Native filesystem entries share their storage and error implementations
+  // across the legacy root and direct native package exports.
+  '@deepseek-ai/dsh-fs': [
+    'lib/native.js', 'lib/runtime.js', 'lib/operations.js', 'lib/types.js', 'lib/shared-*.js',
+  ],
+  '@deepseek-ai/dsh-fs-local': [
+    'lib/native.js', 'lib/backend.js', 'lib/shared-*.js',
+  ],
+  '@deepseek-ai/dsh-fs-sandbox': ['lib/types-*.js'],
+  '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-fs': ['lib/types-*.js'],
+  '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
   '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
-  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs'],
+  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/shared-*.js'],
   // The argv-prefix runner entry ships beside the lib as its own bundle;
   // sandbox-local resolves it through the package's ./runner export. tsdown
   // also shares its generated FFI code through a hashed runtime chunk.

@@ -796,7 +796,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/fs/fs-local/src/index.ts:42`](../Modules/Official/fs/fs-local/src/index.ts)
+Source: [`rsh/Modules/Official/fs/fs-local/src/backend.ts:41`](../Modules/Official/fs/fs-local/src/backend.ts)
 
 <a id="deepseek-aidsh-fs-sandbox"></a>
 
@@ -3635,6 +3635,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-llm-mock-server` ([`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts))
 - `@deepseek-ai/dsh-loader-smoke` ([`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts))
 - `@deepseek-ai/dsh-native-command` ([`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts))
+- `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-output-retention` ([`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts))
 - `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))

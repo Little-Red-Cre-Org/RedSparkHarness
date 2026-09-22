@@ -11,6 +11,8 @@ kind: "package-reference"
 
 需要一致的宿主、受限或远程文件系统操作时选择 `dsh-fs`。Consumer 可解析稳定身份、在支持时映射共享宿主文件、执行有界读取、列出目录，并原子地变更文本。guard 是可选的；调用方可拒绝已变化的文件。选择 `fs-local`、`fs-sandbox` 或 `fs-e2b`；`dsh-tool-fs` 提供模型工具。`dsh.runtime` 声明 filesystem Definition，`runtime` 适配 Cordis service 入口而不改变 `ctx.fs`。
 
+`FsError` 继承 `dsh-errors` 的共享 Core `HarnessError`，与 LLM 重新导出的构造函数身份保持一致，而不依赖模型服务。
+
 ## 目录
 
 - [使用本包](#use-this-package)
@@ -26,6 +28,8 @@ kind: "package-reference"
 ## 使用本包
 
 你很少直接加载 `dsh-fs`：你挂载一个注册为 `ctx.fs` 的后端，然后从自己的插件调用该服务，或让 `dsh-tool-fs` 工具替你调用。本页服务于确实接触它的两类读者——选择后端的部署方，以及实现或消费该约定的开发者。
+
+`@deepseek-ai/dsh-fs/native` 声明原生 `fs` 服务及按作用域分发的决策与观察事件，不安装 Provider。原生 Consumer 使用 `FileSystemOperations`，根 Cordis 入口保留 `FileSystem` 注册。操作声明仍引用当前依赖兼容层的包中的 sandbox 策略类型。
 
 ### 选择并挂载后端
 
@@ -58,7 +62,8 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 服务定义：抽象 `FileSystem` 类、`ctx.fs` 声明与 `fs/*` 事件词汇 |
+| [`src/operations.ts`](src/operations.ts) | 不依赖运行时注册的操作声明与默认行为 |
+| [`src/index.ts`](src/index.ts) | Cordis 服务注册、`ctx.fs` 声明与 `fs/*` 事件词汇 |
 | [`src/types.ts`](src/types.ts) | 词汇：`FsTarget`/`FsTargetKey`、`FsVersion`、`FsObservation`、`FsWriteIntent`、`FsError` 及其错误码 |
 
 ### 调用流程
