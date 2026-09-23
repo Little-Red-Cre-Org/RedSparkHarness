@@ -8,11 +8,23 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
+import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
+import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
+import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
+import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
+import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../src/native.ts'
 
-async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
+async function fixture(
+  script: ConstructorParameters<typeof MockAdapter>[0],
+  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number } } = {},
+) {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
@@ -21,30 +33,42 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
   const adapter = new MockAdapter(script)
   let app: NativeApplication | undefined
   let filesystem: LocalFileSystemBackend | undefined
+  let agents: NativeAgentRegistry | undefined
+  let tools: NativeToolRegistry | undefined
+  let approval: NativeApprovalService | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools'], optional: ['approval'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       const provided = context.require('fs')
       if (!(provided instanceof LocalFileSystemBackend)) throw new Error('missing local filesystem')
       filesystem = provided
+      agents = context.require('agents')
+      tools = context.require('tools')
+      approval = context.optional('approval')
     },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
     { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: 4 } },
+    { plugin: agentPlugin, scope, config: undefined },
+    { plugin: modelExecutionPlugin, scope, config: undefined },
+    { plugin: codeRuntimePlugin, scope, config: { computeMs: 2_000, maxWallMs: 2_000 } },
+    ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
+    { plugin: toolsPlugin, scope, config: undefined },
     { plugin: policyPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
     { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
     { plugin: model, scope, config: undefined },
+    ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
   ], 'host'))
   await host.start()
-  if (app === undefined || filesystem === undefined) throw new Error('missing native application or filesystem')
-  return { host, scope, app, filesystem, adapter, directory, workspace, sessions }
+  if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined) throw new Error('missing native application dependencies')
+  return { host, scope, app, filesystem, agents, tools, approval, adapter, directory, workspace, sessions }
 }
 
 it('logs the model-visible request and tool result, then resumes the same stored Session', async () => {
@@ -187,6 +211,111 @@ it('supports empty writes, denies paths outside the workspace, and records both 
   }
 })
 
+it('projects a bounded worker-thread code result through the Session tool sequence', async () => {
+  const state = await fixture([
+    toolCallResponse('code-1', 'run_code', { program: 'console.log("native code"); return { total: 6 * 7 }' }),
+    textResponse('code completed'),
+  ])
+  try {
+    await state.host.run(state.scope, { kind: 'code-runtime' }, invocation => state.app.run(['calculate'], invocation.signal))
+    expect(state.adapter.requests[0]?.tools?.map(tool => tool.name)).toContain('run_code')
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('code Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const result = (await reader.read()).events.find(event => event.type === 'tool/result')
+        expect(result).toMatchObject({ data: { message: { content: [{ type: 'tool-result', content: [{ type: 'text', text: '{"logs":["native code"],"value":{"total":42}}' }] }] } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('projects a program failure as an explicit native code-runtime tool error', async () => {
+  const state = await fixture([
+    toolCallResponse('code-failure', 'run_code', { program: 'throw new Error("calculation failed")' }),
+    textResponse('code failure recorded'),
+  ])
+  try {
+    await state.host.run(state.scope, { kind: 'code-runtime-failure' }, invocation => state.app.run(['calculate'], invocation.signal))
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('failed code Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const result = (await reader.read()).events.find(event => event.type === 'tool/result')
+        expect(result).toMatchObject({ data: {
+          error: { name: 'NativeCodeRuntimeError', code: 'CODE_RUNTIME_EXCEPTION' },
+          message: { content: [{ type: 'tool-result', isError: true }] },
+        } })
+        expect(JSON.stringify(result)).toContain('calculation failed')
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('persists native time context before the model reads the request', async () => {
+  const state = await fixture([textResponse('time recorded')], { timeContext: { timeZone: 'UTC', refreshIntervalMs: 60_000 } })
+  try {
+    await state.host.run(state.scope, { kind: 'time-context' }, invocation => state.app.run(['report', 'time'], invocation.signal))
+    expect(state.adapter.requests[0]?.messages.some(message =>
+      message.role === 'user' && message.source.kind === 'plugin' && message.source.plugin === 'native-time-context',
+    )).toBe(true)
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('time-context Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        expect((await reader.read()).events.some(event =>
+          event.type === 'user/message'
+          && event.data.source.kind === 'plugin'
+          && event.data.source.plugin === 'native-time-context',
+        )).toBe(true)
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('rejects write_file under the installed never approval policy and persists its paired audit', async () => {
+  const state = await fixture([
+    toolCallResponse('write-denied', 'write_file', { path: 'denied.txt', content: 'must not exist' }),
+    textResponse('denied'),
+  ], { approvalPolicy: 'never' })
+  try {
+    await state.host.run(state.scope, { kind: 'approval-write' }, invocation => state.app.run(['try', 'a', 'write'], invocation.signal))
+    await expect(readFile(join(state.workspace, 'denied.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('approval Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'native-approval/asked')).toMatchObject([{
+          data: { toolName: 'write_file', callId: 'write-denied', reason: 'Writing a file changes the selected workspace.' },
+        }])
+        expect(events.filter(event => event.type === 'native-approval/decided')).toMatchObject([{ data: { policy: 'never', outcome: 'rejected' } }])
+        expect(events.find(event => event.type === 'tool/result')).toMatchObject({ data: { error: { code: 'APPROVAL_REJECTED' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
 it('records a max-token model finish without claiming normal completion', async () => {
   const state = await fixture([maxTokensResponse('partial')])
   try {
@@ -201,6 +330,66 @@ it('records a max-token model finish without claiming normal completion', async 
       } finally { await reader.close() }
     } finally { await storage.close() }
   } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('runs registered native tools under the exact live Agent initiator', async () => {
+  const state = await fixture([
+    toolCallResponse('identity-1', 'identity', {}),
+    textResponse('identity confirmed'),
+  ])
+  const dispose = state.tools.register({
+    schema: { name: 'identity', description: 'Confirm the current native Agent.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
+    async execute(call) {
+      expect(state.agents.requireInitiator()).toBe(call.agent)
+      expect(state.agents.get(call.agent.id)).toBe(call.agent)
+      return { content: [{ type: 'text', text: String(call.agent.id) }], isError: false }
+    },
+  })
+  try {
+    await state.host.run(state.scope, { kind: 'identity' }, invocation => state.app.run(['confirm', 'identity'], invocation.signal))
+    expect(state.agents.list()).toEqual([])
+  } finally {
+    dispose()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('stops a protected contribution before its executor under the selected approval policy', async () => {
+  const state = await fixture([
+    toolCallResponse('guarded-1', 'guarded', {}),
+    textResponse('guarded denied'),
+  ], { approvalPolicy: 'never' })
+  let executed = false
+  const dispose = state.tools.register({
+    schema: { name: 'guarded', description: 'A protected fixture contribution.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
+    approval: { reason: 'The fixture contribution changes protected state.' },
+    async execute() {
+      executed = true
+      return { content: [{ type: 'text', text: 'unexpected' }], isError: false }
+    },
+  })
+  try {
+    await state.host.run(state.scope, { kind: 'approval-contribution' }, invocation => state.app.run(['invoke', 'guarded'], invocation.signal))
+    expect(executed).toBe(false)
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('protected contribution Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'native-approval/asked')).toMatchObject([{
+          data: { toolName: 'guarded', reason: 'The fixture contribution changes protected state.' },
+        }])
+        expect(events.find(event => event.type === 'tool/result')).toMatchObject({ data: { error: { code: 'APPROVAL_REJECTED' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    dispose()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

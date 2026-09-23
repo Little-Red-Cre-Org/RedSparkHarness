@@ -1,5 +1,5 @@
 /**
- * Reject a static value import of an optional dependency.
+ * Reject a static value import of an optional dependency in a shipped entry.
  *
  * A dependency declared in `optionalDependencies`, or as a peer carrying
  * `peerDependenciesMeta.<name>.optional`, may be absent from an installed tree —
@@ -22,11 +22,14 @@
  * would elide because nothing references it in a value position is still
  * reported, and the fix it asks for (`import type`, or dropping the binding) is
  * what the published package wants regardless. Both compiler faces are scanned,
- * and only files that ship — a published package's `src` — are subject.
+ * and only files that ship — a published package's `src` — are subject. A
+ * package with a separate native export may make its Cordis peer optional:
+ * legacy entries may still load Cordis, while the native entry's static source
+ * closure may not. The packed-consumer test checks the emitted artifact too.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import ts from 'typescript'
 import { TypeScriptProject, type CompilerFace } from './ts-project.ts'
 
@@ -82,7 +85,12 @@ function optionalDependencies(manifest: Record<string, unknown>): Map<string, Op
 }
 
 /** One package directory's optional dependencies, resolved once per directory. */
-const optionalByDirectory = new Map<string, Map<string, OptionalKind>>()
+interface PackageOptionalImports {
+  readonly optional: Map<string, OptionalKind>
+  readonly nativeTypes: string | undefined
+}
+
+const optionalByDirectory = new Map<string, PackageOptionalImports>()
 
 /**
  * The optional dependencies of the package owning a source file.
@@ -90,7 +98,7 @@ const optionalByDirectory = new Map<string, Map<string, OptionalKind>>()
  * @param relativePath - repository-relative path of a source file.
  * @returns That package's optional dependencies, empty when it declares none.
  */
-function optionalFor(projectRoot: string, relativePath: string): Map<string, OptionalKind> {
+function optionalFor(projectRoot: string, relativePath: string): PackageOptionalImports {
   const directory = resolve(projectRoot, relativePath.slice(0, relativePath.indexOf('/src/')))
   const cached = optionalByDirectory.get(directory)
   if (cached !== undefined) return cached
@@ -100,8 +108,71 @@ function optionalFor(projectRoot: string, relativePath: string): Map<string, Opt
     ? parsed as Record<string, unknown>
     : {}
   const optional = optionalDependencies(manifest)
-  optionalByDirectory.set(directory, optional)
-  return optional
+  const native = record(manifest, 'exports')['./native']
+  const nativeTypes = native !== null && typeof native === 'object' && !Array.isArray(native)
+    ? (native as Record<string, unknown>).types
+    : undefined
+  const result = {
+    optional,
+    nativeTypes: typeof nativeTypes === 'string' ? nativeTypes : undefined,
+  }
+  optionalByDirectory.set(directory, result)
+  return result
+}
+
+/**
+ * Source files evaluated from a native export, including relative value imports.
+ * @param project - the bound compiler face.
+ * @param nativeTypes - declaration path from the package export map.
+ * @param directory - owning package directory.
+ * @returns The source closure; throws when the export cannot be checked.
+ */
+function nativeSourceClosure(
+  project: TypeScriptProject,
+  nativeTypes: string,
+  directory: string,
+): Set<string> {
+  if (!nativeTypes.startsWith('./lib/types/') || !nativeTypes.endsWith('.d.ts')) {
+    throw new Error(`optional Cordis peer has an unsupported native types path: ${nativeTypes}`)
+  }
+  const sourcePath = resolve(directory, 'src', nativeTypes.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
+  const entry = project.program.getSourceFile(sourcePath)
+  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded native source: ${sourcePath}`)
+  const visited = new Set<string>()
+  const pending = [entry]
+  while (pending.length > 0) {
+    const source = pending.pop() as ts.SourceFile
+    if (visited.has(source.fileName)) continue
+    visited.add(source.fileName)
+    for (const statement of source.statements) {
+      const isImport = ts.isImportDeclaration(statement)
+      if (!isImport && !ts.isExportDeclaration(statement)) continue
+      const specifier = statement.moduleSpecifier
+      if (specifier === undefined || !ts.isStringLiteral(specifier)) continue
+      const loads = isImport
+        ? importLoadsModule(statement, project.checker)
+        : exportLoadsModule(statement, project.checker)
+      if (!loads || packageOf(specifier.text) === '@deepseek-ai/cordis') continue
+      const resolved = ts.resolveModuleName(
+        specifier.text,
+        source.fileName,
+        project.program.getCompilerOptions(),
+        ts.sys,
+      ).resolvedModule?.resolvedFileName
+      if (resolved === undefined && specifier.text.startsWith('.')) {
+        throw new Error(`native source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
+      }
+      if (resolved === undefined) continue
+      const fromSource = relative(resolve(directory, 'src'), resolved)
+      if (fromSource.startsWith('..') || isAbsolute(fromSource)) continue
+      const target = project.program.getSourceFile(resolved)
+      if (target === undefined) {
+        throw new Error(`native source import is absent from the compiler face: ${resolved}`)
+      }
+      pending.push(target)
+    }
+  }
+  return visited
 }
 
 /**
@@ -160,11 +231,13 @@ function exportLoadsModule(declaration: ts.ExportDeclaration, checker: ts.TypeCh
 export function collectOptionalImportViolations(project: TypeScriptProject): string[] {
   const checker = project.checker
   const violations: string[] = []
+  const nativeClosureByDirectory = new Map<string, Set<string>>()
   for (const sourceFile of project.sourceFiles()) {
     if (sourceFile.isDeclarationFile) continue
     const relativePath = project.relativePath(sourceFile)
     if (!PUBLISHED_SOURCE.test(relativePath)) continue
-    const optional = optionalFor(project.projectRoot, relativePath)
+    const packageImports = optionalFor(project.projectRoot, relativePath)
+    const optional = packageImports.optional
     if (optional.size === 0) continue
 
     for (const statement of sourceFile.statements) {
@@ -174,6 +247,17 @@ export function collectOptionalImportViolations(project: TypeScriptProject): str
       if (specifierNode === undefined || !ts.isStringLiteral(specifierNode)) continue
       const kind = optional.get(packageOf(specifierNode.text))
       if (kind === undefined) continue
+      if (packageOf(specifierNode.text) === '@deepseek-ai/cordis'
+        && kind === 'peerDependenciesMeta'
+        && packageImports.nativeTypes !== undefined) {
+        const directory = dirname(resolve(project.projectRoot, relativePath.slice(0, relativePath.indexOf('/src/')), 'package.json'))
+        let closure = nativeClosureByDirectory.get(directory)
+        if (closure === undefined) {
+          closure = nativeSourceClosure(project, packageImports.nativeTypes, directory)
+          nativeClosureByDirectory.set(directory, closure)
+        }
+        if (!closure.has(sourceFile.fileName)) continue
+      }
       const loads = isImport
         ? importLoadsModule(statement, checker)
         : exportLoadsModule(statement, checker)
@@ -198,7 +282,7 @@ function main(): void {
     }
   }
   if (violations.size === 0) {
-    console.log('verify-optional-dependency-imports: no optional dependency is loaded at module scope.')
+    console.log('verify-optional-dependency-imports: no optional dependency is loaded by a disallowed source entry.')
     return
   }
   console.error(`verify-optional-dependency-imports: ${String(violations.size)} optional dependency load(s) at module scope:`)

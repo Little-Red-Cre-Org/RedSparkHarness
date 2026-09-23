@@ -1,4 +1,4 @@
-import { BlockAssembler, expandAssistantStream } from '@deepseek-ai/dsh-llm'
+import { BlockAssembler, expandAssistantStream } from '@deepseek-ai/dsh-llm/native'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import {
   SessionFormatError,

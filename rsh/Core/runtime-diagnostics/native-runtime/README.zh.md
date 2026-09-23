@@ -27,6 +27,8 @@ kind: "package-library"
 
 `resolveInstallation(requests, target)` 在解析配置前检查版本、目标、Provider 冲突、缺失依赖和依赖环。插件的 `resolve(config)` 验证配置而不获取资源，并返回激活函数。Consumer 仅读取已声明的服务，选择自身作用域或祖先中最近的 Provider；独立根隔离 realm。只有激活成功且声明的全部服务存在后，Provider 才可见。
 
+Service Definition 包在 `@deepseek-ai/dsh-native-runtime` 包根入口扩展 `NativeServices`，事件 Definition 包扩展 `NativeEvents`。Host 和事件总线使用相同的合并后声明。
+
 `NativeHost` 在调用每次激活前建立所有权。插件通过 `context.own()` 立即登记资源清理，并通过 `context.on()` 订阅。停止时中止所属信号、关闭事件接收、等待回调和启动结束，并先释放 Consumer、再释放 Provider。资源清理按获取顺序的逆序执行，尝试所有 disposer，并报告聚合失败。插件必须配合取消，并在释放期间等待自身在途工作。清理不会撤销已完成的外部写入。
 
 `context.optional()` 仅读取显式可选的能力，在未选择 Provider 时返回 undefined。`host.remove(request)` 接收原始安装请求对象，停止该安装及其传递消费者。无关所有者保持活动；受影响的订阅停止接收事件，并在资源释放前等待回调结束。移除是幂等操作，不会自动选择其他 Provider。
@@ -41,7 +43,7 @@ kind: "package-library"
 <a id="events"></a>
 ## 事件
 
-Definition 通过模式、参数和结果扩展 `NativeEvents`。同步分发传播异常；串行投递在拒绝时停止；并行投递在所有监听器结束后报告失败。Waterfall 要求显式调用 `next()` 委托，支持短路并拒绝重复委托。祖先订阅按注册顺序接收后代分发；其他 realm 不接收。异常隔离由事件所有者负责。
+事件 Definition 包从包根入口扩展 `NativeEvents`，并声明模式、参数和结果。同步分发传播异常；串行投递在拒绝时停止；并行投递在所有监听器结束后报告失败。Waterfall 要求显式调用 `next()` 委托，支持短路并拒绝重复委托。祖先订阅按注册顺序接收后代分发；其他 realm 不接收。异常隔离由事件所有者负责。
 
 <a id="model-experience"></a>
 ## 模型体验

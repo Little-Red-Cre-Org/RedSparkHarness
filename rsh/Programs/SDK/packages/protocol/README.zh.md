@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-protocol` 让 DeepSeek Harness 运行时与其 SDK 客户端通过按换行分帧的字节流交换 JSON-RPC 2.0 消息：一个传输类，加上协议两端共同使用的具名请求、结果与通知类型。服务端是 [`dsh-sdk-jsonrpc-server`](../server/README.zh.md) 插件；客户端是 TypeScript 的 [`dsh-sdk-client`](../client/README.zh.md) 与 [Python SDK](../../python/README.zh.md)（后者复现这些结构但不导入它们）。当你实现或调试协议某一端时使用本包：分帧规则、方法名、载荷类型与错误语义都在这里。它是纯库——无插件、无配置、无注册。
+`dsh-sdk-protocol` 定义 Harness 运行时与 SDK 客户端共用的具名请求、结果和通知类型，并从 [Core](../../../../Core/util/json-rpc-line/README.zh.md) 重新导出 JSON-RPC 行传输。服务端是 [`dsh-sdk-jsonrpc-server`](../server/README.zh.md) 插件；客户端是 TypeScript 的 [`dsh-sdk-client`](../client/README.zh.md) 与 [Python SDK](../../python/README.zh.md)（后者复现这些类型但不导入它们）。实现或调试 SDK 协议端时使用本库；它不注册插件或配置。
 
 ## 目录
 
@@ -29,7 +29,7 @@ kind: "package-library"
 
 ### 分帧与传输
 
-在你拥有的字节流上，每个 `\n` 结尾的行承载一条 JSON-RPC 2.0 消息。同时带 `id` 与 `method` 的帧是请求，仅 `id` 是响应，仅 `method` 是通知；格式错误的行会被忽略。没有注册处理器的请求应答 `-32601`，处理器失败应答 `-32603`，错误响应会以 `JsonRpcResponseError` 拒绝挂起的请求，并保留协议中的 `code` 与可选 `data`。`start()` 挂接流监听器，`close()` 移除监听器并拒绝挂起请求，但不销毁流。
+[Core 传输库](../../../../Core/util/json-rpc-line/README.zh.md)负责换行分帧、请求关联、错误映射、监听器挂接与关闭。本包重新导出其类，让现有 SDK 客户端与服务端共用同一个传输类。
 
 ### SDK 方法
 
@@ -69,14 +69,14 @@ kind: "package-library"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/transport.ts`](src/transport.ts) | `JsonRpcLineTransport`：行分帧、请求/响应/通知分发、错误映射、挂起请求记账 |
+| [`src/transport.ts`](src/transport.ts) | 从 Core 重新导出 JSON-RPC 行传输 |
 | [`src/types.ts`](src/types.ts) | 具名请求/结果与通知载荷类型，按方法索引 |
 | [`src/index.ts`](src/index.ts) | 消费方接口：传输与具名协议类型 |
-| — | 不发布运行时不变式伴生入口；这是一个由传输类和类型声明组成的纯协议库，自身没有事件流或可变数据关系；两个协议端各自负责其协议行为。 |
+| — | 不发布运行时不变式伴生入口；SDK 方法与载荷是类型声明，共用传输的待完成请求状态由 Core 库自身管理。 |
 
 ### 帧分发
 
-入站行逐条解析：带 `id` 与 `method` 的帧通过请求处理器应答（或应答 `-32601`），仅 `id` 的帧结算匹配的挂起请求（错误帧以 `JsonRpcResponseError` 拒绝它），仅 `method` 的帧交给通知处理器。`start()` 挂接输入监听器；`close()` 移除它们并在不销毁流的情况下失败所有挂起请求。
+帧分发由 [Core 传输库](../../../../Core/util/json-rpc-line/README.zh.md)负责并测试；SDK 协议只增加具名方法和载荷类型。
 
 </details>
 

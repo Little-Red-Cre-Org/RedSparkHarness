@@ -82,7 +82,6 @@ async function realInstanceFixture(
     'model_provider = "fixture"',
     'approval_policy = "on-request"',
     'sandbox_mode = "read-only"',
-    'disable_response_storage = true',
     'check_for_update_on_startup = false',
     '',
     '[model_providers.fixture]',
@@ -187,8 +186,10 @@ function expectedProcessExitDiagnostic(outcome: SubprocessOutcome): string {
 }
 
 interface JsonSchemaNode {
+  readonly oneOf?: JsonSchemaNode[]
   readonly properties?: Record<string, JsonSchemaNode>
   readonly required?: string[]
+  readonly title?: string
   readonly type?: string | string[]
 }
 
@@ -208,18 +209,18 @@ function responseInputTexts(body: Record<string, unknown>): string[] {
   })
 }
 
-describe('real @openai/codex 0.153.4 product', () => {
+describe('real @openai/codex 0.156.1 product', () => {
   it('starts approve-for-me through the real app-server and returns exact text', async () => {
     const sentinel = 'REAL_CODEX_SENTINEL_0_149_1'
     const task = 'Return the fixture sentinel exactly.'
     const { harness, fixture } = await realHarness([
       { kind: 'complete', text: sentinel },
     ], 'approve-for-me')
-    expect(codexPackage.version).toBe('0.153.4')
+    expect(codexPackage.version).toBe('0.156.1')
     const version = await execFileAsync(process.execPath, [codexEntry, '--version'], {
       env: { ...process.env, ...harness.env },
     })
-    expect(version.stdout.trim()).toBe('codex-cli 0.153.4')
+    expect(version.stdout.trim()).toBe('codex-cli 0.156.1')
     const schemaRoot = mkdtempSync(join(tmpdir(), 'dsh-codex-schema-'))
     roots.push(schemaRoot)
     await execFileAsync(process.execPath, [
@@ -241,6 +242,14 @@ describe('real @openai/codex 0.153.4 product', () => {
       type: ['string', 'null'],
     })
     expect(schema.definitions.ThreadStartParams.required).toBeUndefined()
+    const completedItemSchema = JSON.parse(readFileSync(
+      join(schemaRoot, 'v2', 'ItemCompletedNotification.json'),
+      'utf8',
+    )) as { definitions: { ThreadItem: JsonSchemaNode } }
+    const agentMessage = completedItemSchema.definitions.ThreadItem.oneOf
+      ?.find(item => item.title === 'AgentMessageThreadItem')
+    expect(agentMessage?.properties?.phase).toBeDefined()
+    expect(agentMessage?.required).not.toContain('phase')
 
     const run = await harness.ctx.subagents.start('codex', {
       prompt: [{ type: 'text', text: task }],

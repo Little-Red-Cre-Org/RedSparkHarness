@@ -7,8 +7,7 @@
  * @module dsh-session/request-header
  */
 
-import { callConfigEquals } from '@deepseek-ai/dsh-llm'
-import type { ToolSchema } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig, ToolSchema } from '@deepseek-ai/dsh-llm/native'
 import type { EpochHeader, SessionEvent } from './types.ts'
 
 /**
@@ -34,6 +33,17 @@ function sameSchema(a: ToolSchema, b: ToolSchema): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+/** Compare the request-header fields that can change the held LLM configuration. */
+function sameConfig(a: LlmCallConfig, b: LlmCallConfig): boolean {
+  if (a.provider !== b.provider
+    || a.model !== b.model
+    || a.reasoningEffort !== b.reasoningEffort
+    || a.temperature !== b.temperature
+    || a.maxTokens !== b.maxTokens) return false
+  if (a.stop === undefined || b.stop === undefined) return a.stop === b.stop
+  return a.stop.length === b.stop.length && a.stop.every((value, index) => value === b.stop?.[index])
+}
+
 /**
  * Field-wise equality over canonical headers. Tool schemas compare in order.
  * @param a - one canonical header.
@@ -42,7 +52,7 @@ function sameSchema(a: ToolSchema, b: ToolSchema): boolean {
  */
 export function headerEquals(a: EpochHeader, b: EpochHeader): boolean {
   if (
-    !callConfigEquals(a.config, b.config)
+    !sameConfig(a.config, b.config)
     || a.adapterDefaults?.reasoningEffort !== b.adapterDefaults?.reasoningEffort
     || a.adapterDefaults?.maxTokens !== b.adapterDefaults?.maxTokens
   ) return false

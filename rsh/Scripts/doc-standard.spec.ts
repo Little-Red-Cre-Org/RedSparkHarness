@@ -86,6 +86,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Core/util/crypto': 'Zero-dependency identifier minting utility.',
   'rsh/Core/util/deque': 'Zero-dependency circular deque utility.',
   'rsh/Core/util/chunked-list': 'Persistent collection operations and checkpoint validation without a plugin surface.',
+  'rsh/Core/util/json-rpc-line': 'Caller-owned Node stream transport with no plugin registration.',
   'rsh/Core/util/home-paths': 'Zero-dependency harness-home path resolver.',
   'rsh/Core/util/launch-environment': 'Zero-dependency environment resolver.',
   'rsh/Core/util/native-command': 'Host-side subprocess runner utility.',

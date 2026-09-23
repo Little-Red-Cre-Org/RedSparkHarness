@@ -556,6 +556,41 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`rsh/Programs/Web/api/session-controller/src/types.ts:40`](../Programs/Web/api/session-controller/src/types.ts)
 
+### `native-approval/*`
+
+<a id="native-approvalasked--log-only"></a>
+
+#### `native-approval/asked` — log-only
+
+```ts persistence-catalog
+/** One native approval question before a matching decision is recorded. */
+'native-approval/asked': {
+  id: NativeApprovalRequestId
+  toolName: string
+  callId?: ToolCallId
+  reason?: string
+}
+```
+
+类型：[ToolCallId](subsystems/core.zh.md)
+
+来源：[`rsh/Modules/Official/interaction/native-approval/src/types.ts:38`](../Modules/Official/interaction/native-approval/src/types.ts)
+
+<a id="native-approvaldecided--log-only"></a>
+
+#### `native-approval/decided` — log-only
+
+```ts persistence-catalog
+/** Closed native approval outcome paired with a preceding native-approval/asked event. */
+'native-approval/decided': {
+  id: NativeApprovalRequestId
+  policy: NativeApprovalPolicy
+  outcome: NativeApprovalOutcome
+}
+```
+
+来源：[`rsh/Modules/Official/interaction/native-approval/src/types.ts:45`](../Modules/Official/interaction/native-approval/src/types.ts)
+
 ### `permission/*`
 
 <a id="permissionpreset--log-only"></a>

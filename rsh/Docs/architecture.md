@@ -12,7 +12,7 @@ We recommend using an agent to explore the codebase and understand its architect
 
 There is no privileged core to patch: plugins mount beside each other, and registrations unwind with their plugin. RSH records native package roles as Definition, Provider, Consumer, policy, projection, or adapter; `dsh-plugin-host` uses the same Cordis Fiber lifecycle.
 
-The [native library](../Core/runtime-diagnostics/native-runtime/README.md) owns lifecycle. A `dsh.profile.runtime: "native"` profile selects installations; [native headless](../Engine/core/native-headless/README.md) runs model, tools, and Session. Other profiles use Cordis; see the [migration proposal](../../.agents/notes/proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md).
+[native library](../Core/runtime-diagnostics/native-runtime/README.md) owns lifecycle; profiles select installations; [native Agent](../Engine/core/native-agent/README.md) owns identity; [native model execution](../Engine/core/native-model-execution/README.md) records streams; [native headless](../Engine/core/native-headless/README.md) runs turns. Cordis profiles: [migration proposal](../../.agents/notes/proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md).
 
 ## Profiles and bundles
 

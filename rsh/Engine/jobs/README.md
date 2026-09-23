@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The jobs group is the background-work capability family: tools that run long work register it as a job, and the owning agent can read, wait on, list, and cancel it without blocking its own turn. Jobs belong to the agent session that started them, so one agent never sees another's work, and completion is delivered to the owning agent in-session instead of polled. The group splits into the registry contract (`jobs`), its process-local storage (`jobs-local`), and the model-facing control tools with completion notices (`tool-jobs`).
+The jobs group covers model-facing controls for background work. In a Cordis composition, `jobs` defines the registry, `jobs-local` stores owned work, and `tool-jobs` supplies controls and in-session completion notices. Native compositions use the separate [Agent-owned job registry](../core/native-jobs/README.md) and `native-tool-jobs` controls. Both fence access to the owning Agent; the native one-shot application currently releases its Agent at turn end and does not deliver idle completion notices.
 
 ## Table of Contents
 
@@ -27,6 +27,7 @@ The jobs group is the background-work capability family: tools that run long wor
 | [`jobs`](jobs/README.md) | Defines the background-job contract: ids, ownership, lifecycle, and completion listeners | `ctx.jobs` |
 | [`jobs-local`](jobs-local/README.md) | Runs and stores jobs in this process, fenced per owner | registers on `ctx.jobs` |
 | [`tool-jobs`](tool-jobs/README.md) | Lets the model read, list, and kill jobs and delivers completion notices | registers on `ctx.tools` |
+| [`native-tool-jobs`](native-tool-jobs/README.md) | Exposes Agent-owned native jobs to the selected native tool registry | native `tools` |
 
 -----
 

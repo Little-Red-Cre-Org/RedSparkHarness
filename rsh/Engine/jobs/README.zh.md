@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-jobs 组是后台工作能力家族：运行长时间工作的工具把工作注册为任务，拥有它的 agent（智能体）可以在不阻塞自身轮次的情况下读取、等待、列出或取消任务。任务属于启动它的 agent 会话，因此一个 agent 永远不会看到另一个 agent 的工作；任务完成时以会话内通知送达给拥有它的 agent，无需轮询。本组拆分为注册表约定（`jobs`）、其进程本地存储（`jobs-local`）以及带完成通知的模型侧控制工具（`tool-jobs`）。
+jobs 组涵盖后台工作面向模型的控制工具。在 Cordis 装配中，`jobs` 定义注册表，`jobs-local` 存储由 Agent 所有的工作，`tool-jobs` 提供控制工具和会话内完成通知。原生装配使用独立的 [Agent 所有任务注册表](../core/native-jobs/README.zh.md)和 `native-tool-jobs` 控制工具。两者都将访问限定为拥有任务的 Agent；目前原生单次运行应用在每轮结束时释放 Agent，也不向空闲 Agent 投递完成通知。
 
 ## 目录
 
@@ -27,6 +27,7 @@ jobs 组是后台工作能力家族：运行长时间工作的工具把工作注
 | [`jobs`](jobs/README.zh.md) | 定义后台任务约定：id、归属、生命周期与完成监听器 | `ctx.jobs` |
 | [`jobs-local`](jobs-local/README.zh.md) | 在本进程中运行并存储任务，按所有者隔离 | 注册到 `ctx.jobs` |
 | [`tool-jobs`](tool-jobs/README.zh.md) | 让模型读取、列出和终止任务，并投递完成通知 | 注册到 `ctx.tools` |
+| [`native-tool-jobs`](native-tool-jobs/README.zh.md) | 向选定的原生工具注册表公开由 Agent 所有的任务 | 原生 `tools` |
 
 -----
 

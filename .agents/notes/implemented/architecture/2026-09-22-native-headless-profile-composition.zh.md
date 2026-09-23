@@ -12,7 +12,7 @@ Status: implemented
 
 显式 `dsh.profile.runtime: "native"` 标记选择带版本号的 JSON profile。安装项列出包、作用域、id 与完整配置值；有序 JSON patch 只替换既有安装项。CLI 在导入插件入口前校验所有选中包的原生元数据，拒绝非空 Cordis patch 层，并通过 `NativeHost.run()` 启动恰好一个应用。
 
-原生 headless 应用在原生文件系统与观察策略 Provider、既有 Session 事件格式、JSONL 后端及原生模型流服务之上拥有最小单轮 agent。它将两个文件工具限定在配置的工作目录内，在下一次模型请求前记录模型可见输入与工具结果，并在退出前刷新及关闭存储。续接时异步读取持久历史，拒绝已改变的工作目录和系统提示词设置，并记录完整的续接请求头。Session 构造时向调用方报告新追加的 seed 标记，后续事件直接从 append 返回值收集，不同步扫描 Session 历史。失败或中止的轮次通过 Session 中断修复补齐未完成工具调用，再关闭步骤与轮次。
+原生 headless 应用在原生文件系统与观察策略 Provider、既有 Session 事件格式及 JSONL 后端之上拥有最小单轮 agent。原生模型执行 Provider 接收选定的模型流，以共享 LLM 流算法组装每个步骤，并在调用方的 Session 中记录完整助手事件或部分 attempt。这一分工让模型流收束可供复用，同时应用仍负责构建请求、执行工具、关闭 turn 和管理存储生命周期。它将两个文件工具限定在配置的工作目录内，在下一次模型请求前记录模型可见输入与工具结果，并在退出前刷新及关闭存储。可选的原生 prompt、tool、sandbox-policy、approval、worker code-runtime 与 time-context Provider 扩展该应用，但不会替换其 Session 或 Agent 权威；可选 time-context Consumer 会在派生模型请求前追加 Provider 返回的快照消息。续接时异步读取持久历史，拒绝已改变的工作目录和系统提示词设置，并记录完整的续接请求头。Session 构造时向调用方报告新追加的 seed 标记，后续事件直接从 append 返回值收集，不同步扫描 Session 历史。失败或中止的轮次通过 Session 中断修复补齐未完成工具调用，再关闭步骤与轮次。
 
 ## Alternatives considered
 
@@ -24,8 +24,8 @@ Status: implemented
 
 ## Consequences
 
-公开 CLI 能运行具备真实文件效果及已发布 Session 数据的原生 profile，同时保留 Cordis profile 行为。最小应用有意窄于 Cordis headless 组合；它没有审批、SDK、Web 或通用工具注册表。Session 与 JSONL 包在此阶段仍包含 Cordis 导入，但原生执行路径不会构造 Cordis Context。[迁移提案](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md)跟踪后续兼容及依赖工作。
+公开 CLI 能运行具备真实文件效果及已发布 Session 数据的原生 profile，同时保留 Cordis profile 行为。该应用仍窄于 Cordis headless 组合：approval、code-runtime、prompt、time-context、sandbox-policy 和通用工具注册表都是可选原生服务；SDK 与 Web 面仍不属于此组合。原生 headless 应用、model-execution、time-context、Session 与 JSONL 入口加载时不需要 Cordis，但这些包仍发布旧包根入口并声明必需的 Cordis peer。[迁移提案](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md)跟踪剩余依赖工作。
 
 ## Verification
 
-已构建的 `dsh` profile 测试使用真实文件系统、观察策略、JSONL 及应用包，仅替换外部模型。它检查文件内容、持久日志续接、中止，以及一旦构造 Cordis Context 就抛错的加载器探针。直接组合测试检查空文件写入、工作目录拒绝、Session 续接及模型结束行为。
+已构建的 `dsh` profile 测试使用真实文件系统、观察策略、JSONL 及应用包，仅替换外部模型。它检查文件内容、持久日志续接、中止，以及一旦构造 Cordis Context 就抛错的加载器探针。直接组合测试检查空文件写入、工作目录拒绝、Session 续接及模型结束行为。构建产物门禁在 Node 子进程中导入所有已声明的 Engine 与 Official Module 原生入口，并由解析钩子拒绝 `@deepseek-ai/cordis`。

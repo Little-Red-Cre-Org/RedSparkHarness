@@ -534,7 +534,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
     const stream = Buffer.concat([headerFrame, eventFrame, laterFrame])
     const controller = new AbortController()
     const reason = new Error('cancel after Zstandard decode starts')
-    const reader = ctx.sessionPersistence as unknown as ZstdReaderInternals
+    const reader = (ctx.sessionPersistence as unknown as { backend: ZstdReaderInternals }).backend
     vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValue(501)
     const pending = reader.readZstdPrefix(stream, controller.signal)
     queueMicrotask(() => { controller.abort(reason) })
@@ -552,7 +552,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
       compressZstdFrame(`${JSON.stringify(event)}\n`)
     )))
     const stream = Buffer.concat([headerFrame, ...eventFrames])
-    const reader = ctx.sessionPersistence as unknown as ZstdReaderInternals
+    const reader = (ctx.sessionPersistence as unknown as { backend: ZstdReaderInternals }).backend
     vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValue(501)
 
     const prefix = await reader.readZstdPrefix(stream)
@@ -673,8 +673,8 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
     const handle = await ctx.sessionPersistence.open(header.id, 'write')
     try {
       const failure = new Error('rewrite refused')
-      const service = ctx.sessionPersistence as unknown as { persistBatch: () => Promise<void> }
-      vi.spyOn(service, 'persistBatch').mockRejectedValueOnce(failure)
+      const storage = (ctx.sessionPersistence as unknown as { backend: { persistBatch: () => Promise<void> } }).backend
+      vi.spyOn(storage, 'persistBatch').mockRejectedValueOnce(failure)
       const closers: SessionEvent[] = [
         { type: 'step/end', seq: SessionSeq(8), time: 10, data: { turn: 2, step: 1 } },
         { type: 'turn/end', seq: SessionSeq(9), time: 11, data: { turn: 2, reason: { kind: 'interrupted' } } },

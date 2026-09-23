@@ -19,6 +19,12 @@ const contextProbeUrl = pathToFileURL(contextProbe).href
 const scenario = join(root, 'snapshots/native-headless/file-round')
 const shippedProfile = join(root, 'rsh/Programs/CLI/tests/profiles/native-headless')
 
+function normalizeTimeContextReadings(snapshot: string): string {
+  return snapshot
+    .replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d(?=\[UTC\])/g, '{{timestamp}}')
+    .replace(/(Elapsed since the preceding (?:model-visible message|step context): )[^.\r\n]+\./g, '$1{{elapsed}}.')
+}
+
 it('executes and restores a native profile through the published dsh command', async () => {
   if (!existsSync(bin)) throw new Error('build dsh before running built-native-profile.e2e.ts')
   const home = mkdtempSync(join(tmpdir(), 'dsh-built-native-'))
@@ -34,7 +40,14 @@ it('executes and restores a native profile through the published dsh command', a
   copyFileSync(join(shippedProfile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   for (const [name, path] of [
+    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['dsh-native-code-runtime', 'rsh/Engine/core/native-code-runtime'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['dsh-native-jobs', 'rsh/Engine/core/native-jobs'],
+    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['dsh-native-tool-jobs', 'rsh/Engine/jobs/native-tool-jobs'],
+    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['dsh-native-time-context', 'rsh/Engine/context/native-time-context'],
     ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
     ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
     ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
@@ -62,8 +75,14 @@ it('executes and restores a native profile through the published dsh command', a
           return;
         }
         const hasResult = request.messages.some(message => message.content.some(block => block.type === 'tool-result'));
+        const hasJobResult = request.messages.some(message => message.content.some(block => block.type === 'tool-result' && block.toolCallId === 'jobs-1'));
         if (!hasResult) {
           const call = { type: 'tool-call', id: 'file-1', name: 'write_file', arguments: JSON.stringify({ path: 'created.txt', content: 'from-native-profile\\n' }) };
+          yield { type: 'block-start', index: 0, blockType: 'tool-call' };
+          yield { type: 'block-end', index: 0, block: call };
+          yield { type: 'finish', reason: { kind: 'tool-calls' } };
+        } else if (!hasJobResult) {
+          const call = { type: 'tool-call', id: 'jobs-1', name: 'job_list', arguments: '{}' };
           yield { type: 'block-start', index: 0, blockType: 'tool-call' };
           yield { type: 'block-end', index: 0, block: call };
           yield { type: 'finish', reason: { kind: 'tool-calls' } };
@@ -91,15 +110,22 @@ it('executes and restores a native profile through the published dsh command', a
     expect(negativeControl.exitCode).not.toBe(0)
     expect(negativeControl.stderr).toContain('CORDIS_CONTEXT_CONSTRUCTED')
     const first = await invoke(['create', 'the', 'file'])
+    if (first.exitCode !== 0) throw new Error(`native profile exit ${first.exitCode}: ${first.stderr}`)
     expect(first.exitCode, first.stderr).toBe(0)
     expect(first.stdout).toBe('done')
     expect(readFileSync(join(workspace, 'created.txt'), 'utf8')).toBe('from-native-profile\n')
     const requests = readFileSync(modelAudit, 'utf8').trim().split('\n').map(line => JSON.parse(line) as {
-      messages: { content: { type: string }[] }[]; tools: { name: string }[]
+      messages: { content: { type: string; text?: string; toolCallId?: string; content?: { type: string; text?: string }[] }[] }[]; tools: { name: string }[]
     })
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(3)
     expect(requests[0]?.tools.map(tool => tool.name)).toContain('write_file')
+    expect(requests[0]?.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['job_output', 'job_list', 'job_kill']))
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'tool-result'))).toBe(true)
+    expect(requests[2]?.messages.some(message => message.content.some(block => block.type === 'tool-result'
+      && block.toolCallId === 'jobs-1' && block.content?.some(part => part.text?.includes('(no background jobs)'))))).toBe(true)
+    expect(requests[0]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 1')))).toBe(true)
+    expect(requests[1]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 2')))).toBe(true)
+    expect(requests[2]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 3')))).toBe(true)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
@@ -108,7 +134,10 @@ it('executes and restores a native profile through the published dsh command', a
       expect(second.exitCode, second.stderr).toBe(0)
       const reader = await storage.open(id, 'read')
       try {
-        expect((await reader.read()).events.filter(event => event.type === 'turn/end')).toHaveLength(2)
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
+        expect(events.filter(event => event.type === 'user/message'
+          && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-time-context')).toHaveLength(4)
       } finally { await reader.close() }
       const currentName = sessionFixtureName(0, SESSION_FORMAT_VERSION)
       const storedName = readdirSync(sessionRoot, { recursive: true })
@@ -116,11 +145,11 @@ it('executes and restores a native profile through the published dsh command', a
       if (storedName === undefined) throw new Error('native profile did not write current Session JSONL')
       const raw = readFileSync(join(sessionRoot, storedName), 'utf8')
       const context = { sessionIds: [id], cwd: workspace }
-      const normalized = normalizeSessionSnapshot(
+      const normalized = normalizeTimeContextReadings(normalizeSessionSnapshot(
         redactSessionSnapshotIds([raw])[0] ?? raw,
         { ...context, sessionIds: [] },
         { identityMode: 'preserve' },
-      )
+      ))
       if (normalized === undefined) throw new Error('Session snapshot normalization returned no output')
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)

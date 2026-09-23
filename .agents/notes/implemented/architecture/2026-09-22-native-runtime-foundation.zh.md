@@ -16,6 +16,8 @@ Host 记录不含配置值的诊断，包括不透明安装和作用域标识、
 
 `@deepseek-ai/dsh-brand` 与新增的 `@deepseek-ai/dsh-errors` 是可移植的 Core 工具。模型错误模块为现有消费者重导出同一个错误身份；`dsh-llm` 将 `dsh-errors` 列为 peer，使 `instanceof HarnessError` 使用同一个构造函数。`verify-native-dependencies` 门禁从两个 TypeScript 编译面检查明确列入名单的全部原生源码所有者，拒绝外部源码和 manifest 依赖、计算式加载与无效原生元数据。非原生包继续遵守仓库的 Cordis peer 规则。
 
+包根入口声明可扩展的 `NativeServices` 和 `NativeEvents` 接口。Provider Definition 包扩展该根入口，Host 和事件总线也从同一处导入声明，因此它们的服务键和事件键包含这些扩展。
+
 ## Alternatives considered
 
 **在重命名的接口后继续使用 Fiber：** 原生包仍会在类型或运行时加载时依赖 Cordis，无法满足独立分发目标。

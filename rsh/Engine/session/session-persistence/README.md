@@ -76,7 +76,7 @@ This section explains how the seam realizes durable storage and how backends plu
 
 ### Design concept
 
-The package is a seam, not a backend framework: it exports the abstract `SessionPersistence` service, the `SessionHandle` contract, the stable error classes consumers catch, the pure stored-record validation helpers (`storage-contract`), and the branded revision — nothing else. Each provider owns its complete storage runtime (handle class, mutation ordering, single-writer bookkeeping, live-event routing, teardown), and two shared test suites — `runPersistenceContract` and `runLiveWritePathContract` under `tests/` — pin the observable behavior every provider must agree on. Deliberate consequence: providers may resemble each other where their storage happens to be similar, but no implementation machinery crosses the package boundary.
+The package is a seam, not a backend framework: the root exports the abstract Cordis `SessionPersistence` service, while `./native` exports the same `SessionHandle` types, stable errors, stored-record validation helpers, and branded revision without loading that service. Each provider owns its complete storage runtime (handle class, mutation ordering, single-writer bookkeeping, live-event routing, teardown), and two shared test suites — `runPersistenceContract` and `runLiveWritePathContract` under `tests/` — pin the observable behavior every provider must agree on. No implementation machinery crosses the package boundary.
 
 ### The invariants every backend honors
 
@@ -92,6 +92,8 @@ The package is a seam, not a backend framework: it exports the abstract `Session
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: the abstract `SessionPersistence` service and re-exported seam vocabulary |
+| [`src/native.ts`](src/native.ts) | Provider-neutral storage contract entry |
+| [`src/types.ts`](src/types.ts) | Storage observations and operation options shared by both entries |
 | [`src/handle.ts`](src/handle.ts) | The `SessionHandle` contract: read/append/flush/close semantics and freshness rules |
 | [`src/storage-contract.ts`](src/storage-contract.ts) | Shared validation: version gate, fail-closed vocabulary, batch materialization, contiguity |
 | [`src/errors.ts`](src/errors.ts) | Stable handle/ownership failures and format refusals |

@@ -28,7 +28,8 @@ The context group provides plugins that add model-visible context to each reques
 | [`session-reference/`](session-reference/README.md) | References other sessions: mention one and its bounded read-only snapshot becomes context | `ctx.sessionReferenceResolver` |
 | [`file-reference/`](file-reference/README.md) | `@file` mention discovery and the shared mention grammar for host-backed UIs | `ctx.fileReferences` |
 | [`file-reference-local/`](file-reference-local/README.md) | Local-workspace completion provider for `@file` mentions | — |
-| [`time-context/`](time-context/README.md) | Current time, browser zone, and elapsed time per step | — |
+| [`time-context/`](time-context/README.md) | Cordis Agent pre-step Provider for current time, browser zone, and elapsed time | `ctx.sessionProjections` |
+| [`native-time-context/`](native-time-context/README.md) | Native Provider that returns durable current-time, browser-zone, and elapsed-time messages to an application Consumer | `timeContext` |
 | [`tmux-context/`](tmux-context/README.md) | The agent's tmux session, window, and pane location | — |
 
 -----

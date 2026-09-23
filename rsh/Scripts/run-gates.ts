@@ -802,6 +802,8 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'rsh/Engine/workflow/workflow-worker-thread/tests/built-worker.e2e.ts',
     'rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/built-lib.e2e.ts',
     'rsh/Engine/session/session-persistence-jsonl/tests/built-migration-worker.e2e.ts',
+    'rsh/Engine/core/native-headless/tests/built-native-imports.e2e.ts',
+    'rsh/Programs/Web/client/web/tests/built-native-consumer.e2e.ts',
     'rsh/Modules/Official/lsp/lsp-stdio/tests/built-lib.e2e.ts',
   ], {
     label: 'built-bin smoke',

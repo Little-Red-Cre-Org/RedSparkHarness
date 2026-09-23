@@ -12,7 +12,7 @@ import type {
   ToolResultMessage,
   ToolSchema,
   UserMessage,
-} from '@deepseek-ai/dsh-llm'
+} from '@deepseek-ai/dsh-llm/native'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
 /** Identifies one session in the store (and its persistence artifacts). */

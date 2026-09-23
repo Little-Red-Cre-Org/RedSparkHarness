@@ -83,6 +83,8 @@ This section explains how the package realizes the behavior above; the observabl
 
 The package is built on event sourcing: a `Session` is an append-only log of typed `SessionEvent`s, and everything else — model history, transcripts, telemetry, titles, persistence — derives from that stream. The surface is a derived projection: an incremental manager validates append candidates, advances the ordered view from committed events, and tracks a `replaceGeneration` that bumps on every committed rewrite. Model-visible means logged: anything that reaches a model request must be reconstructable from the log. Each model attempt that reaches settlement commits one event: `assistant/message` carries the assembled model-visible message plus its compact timed stream, while `assistant/attempt` retains a failed, retried, cancelled, or stream-error attempt without adding model history. A hard process loss before settlement leaves no durable attempt stream.
 
+The `./native` entry exports the Session object, event types, validation, and projections without loading the Cordis `SessionStore`. The package root retains the `ctx.sessions` service, scoped event publication, and existing exports; both entries use the same Session class.
+
 ### Request headers
 
 `request/header` stores a full canonical snapshot of the non-history request envelope with reason `initial`, `resume`, `change`, or `series`. An explicit message-series start or a surface replacement writes a `series` snapshot when the envelope is unchanged; a simultaneous change uses `startsSeries: true`. Same-series steps, retries, and ordinary later turns inherit the latest snapshot. `adapterDefaults` distinguishes values resolved by the adapter from explicit settings, and `foldRequestHeader()` selects the latest snapshot. This self-contained record supports partial-window rendering and exact reconstruction at the cost of growth per message series; the [reconstructable-requests Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-05-reconstructable-requests.md) owns the detail.
@@ -92,6 +94,8 @@ The package is built on event sourcing: a `Session` is an append-only log of typ
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `SessionStore` service, store lifecycle, `fork`, `flush` |
+| [`src/session-core.ts`](src/session-core.ts) | Shared Session object, validation, projections, and store publication hook |
+| [`src/native.ts`](src/native.ts) | Cordis-free public Session entry |
 | [`src/types.ts`](src/types.ts) | `SessionEventMap`, `SessionEvent`, `UserMessage`, `SessionHeader`, `TurnEndReasonMap` |
 | [`src/surface.ts`](src/surface.ts) | Ordered surface projection, replacement validation, `deriveEventMessage` |
 | [`src/request-header.ts`](src/request-header.ts) | `request/header` folding and reconstruction |

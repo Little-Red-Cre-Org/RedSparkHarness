@@ -391,7 +391,8 @@ describe('cross-process write lock', () => {
     const holder = await backend.create(meta('drain-and-release-fail')) as unknown as JsonlSessionHandle
     await holder.append([...EVENTS])
 
-    vi.spyOn(backend as unknown as { persistBatch: () => Promise<void> }, 'persistBatch')
+    const storage = (backend as unknown as { backend: { persistBatch: () => Promise<void> } }).backend
+    vi.spyOn(storage, 'persistBatch')
       .mockRejectedValueOnce(new Error('injected drain refusal'))
     holder.enqueueLive({ type: 'turn/start', seq: SessionSeq(2), time: 3, data: { turn: 2 } }, () => {})
     failReleaseOnce()

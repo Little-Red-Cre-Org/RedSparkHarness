@@ -22,7 +22,7 @@ Host-only packages join the same policy through a separate explicit list. The li
 
 ### Dependency sections
 
-Every covered package keeps `@deepseek-ai/cordis` in matching `peerDependencies` and `devDependencies`. Cordis is the shared plugin runtime whose identity the application controls.
+Every covered package keeps `@deepseek-ai/cordis` in matching `peerDependencies` and `devDependencies`. Cordis is the shared plugin runtime whose identity the application controls. A mixed package with a separate native export may mark the peer optional only under the [native browser export decision](2026-09-23-native-browser-export-dependency-closure.md), which requires an isolated packed consumer.
 
 A workspace package reached by a runtime value import from the Host entry closure belongs only in `dependencies` when its complete runtime entry is listed in `duplicateSafePackages`, or when every imported runtime export appears in `safeHostDependencyExports`. The package-level list contains `@deepseek-ai/dsh-brand`, `@deepseek-ai/dsh-typert-protocol`, `@deepseek-ai/dsh-util-crypto`, and `@deepseek-ai/dsh-util-values`: their values are stateless, structurally recognized, or stored through versioned interoperable descriptors. The export table handles reviewed values from packages whose other exports cannot make the same guarantee.
 
@@ -92,6 +92,6 @@ The generated policy currently leaves 27 managed Host runtime edges in `dependen
 
 The published dependency graph follows artifact ownership instead of source-directory coupling. Client bundles and shipped profiles provide browser identities, Host modules install duplicate-safe values they load, and Cordis plus explicitly peer-required Host exports retain shared package instances.
 
-Moving a public type-only relationship to `devDependencies` means a standalone TypeScript consumer must install the referenced type package when it consumes that declaration. The shipped profiles install the complete supported package family; supporting independently assembled TypeScript consumers would require a different policy.
+Moving a public type-only relationship to `devDependencies` means a standalone TypeScript consumer must install the referenced type package when it consumes that declaration. The shipped profiles install the complete supported package family; the native browser exports instead remove such references from their public declaration closure and verify an independently assembled consumer.
 
 The explicit overrides, Host list, package classifications, and export classifications are reviewable decisions. Class constructors used by `instanceof`, private symbols, and module-local registries require peers when identity or inaccessible state crosses package boundaries. A stable structural marker or versioned prototype descriptor can make a specific value interoperable, but being a value import alone does not. Changing a classification changes the installed graph and requires the focused verifier tests, the two-release layout check, and a fresh next-package benchmark. The metadata-only benchmark is diagnostic evidence, not a release-time performance promise.

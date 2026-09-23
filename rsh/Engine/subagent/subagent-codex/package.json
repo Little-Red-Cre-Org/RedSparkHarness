@@ -42,9 +42,9 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
+    "@deepseek-ai/dsh-json-rpc-line": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
-    "@openai/codex": "0.153.4"
+    "@openai/codex": "0.156.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

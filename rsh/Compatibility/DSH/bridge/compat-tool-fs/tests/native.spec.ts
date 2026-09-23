@@ -8,6 +8,9 @@ import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, t
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
@@ -37,12 +40,14 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
   await writeFile(file, 'before')
   const scope = new NativeScope()
   let tools: NativeToolRegistry | undefined
+  let agents: NativeAgentRegistry | undefined
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'sandbox-capture', targets: ['host'], requires: ['tools'], provides: [],
-    resolve: () => (context) => { tools = context.require('tools') },
+    apiVersion: 1, name: 'sandbox-capture', targets: ['host'], requires: ['tools', 'agents'], provides: [],
+    resolve: () => (context) => { tools = context.require('tools'); agents = context.require('agents') },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
+    { plugin: agentPlugin, scope, config: undefined },
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: promptPlugin, scope, config: undefined },
     { plugin: sandboxFsPlugin, scope, config: { cwd: directory } },
@@ -51,19 +56,23 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
   ], 'host'))
   try {
     await host.start()
-    if (tools === undefined) throw new Error('missing tools')
+    if (tools === undefined || agents === undefined) throw new Error('missing native execution authorities')
     const schema = tools.schemas().find(value => value.name === 'write')
     expect(schema?.parameters.properties).toHaveProperty('sandbox_permissions')
     const id = SessionId('sandbox-tool-session')
     const session = Session.create(id, undefined, {
       version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: directory, isSeeded: false, delegationDepth: 0,
     })
+    const agent: NativeAgent = { id: NativeAgentId('sandbox-tool-agent'), scope }
+    const unregister = agents.register(agent)
     const read = await tools.execute({
+      agent,
       callId: ToolCallId('read-1'), name: 'read', arguments: { file_path: 'sample.txt' }, session,
       signal: new AbortController().signal,
     })
     expect(read.isError).toBe(false)
     const result = await tools.execute({
+      agent,
       callId: ToolCallId('write-1'), name: 'write', arguments: { file_path: 'sample.txt', content: 'after' }, session,
       signal: new AbortController().signal,
     })
@@ -72,6 +81,7 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
     expect(denial?.type).toBe('text')
     if (denial?.type === 'text') expect(denial.text).toContain('file access denied under read-only mode')
     expect(await readFile(file, 'utf8')).toBe('before')
+    await unregister()
   } finally {
     await host.stop()
     await rm(directory, { recursive: true, force: true })
@@ -108,6 +118,8 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
     { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Read the file.', maxSteps: 3 } },
+    { plugin: agentPlugin, scope, config: undefined },
+    { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: modelPlugin, scope, config: undefined },
     { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },

@@ -2,14 +2,14 @@
 import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeContext, type InstallationRequest } from '../src/index.ts'
 
-declare module '../src/host.ts' {
+declare module '../src/index.ts' {
   interface NativeServices {
     value: { read(): number }
     other: { read(): number }
   }
 }
 
-declare module '../src/events.ts' {
+declare module '../src/index.ts' {
   interface NativeEvents {
     hold: { mode: 'serial'; args: []; result: undefined }
   }

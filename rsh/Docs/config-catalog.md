@@ -562,7 +562,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/credentials/credentials-local/src/index.ts:64`](../Modules/Official/credentials/credentials-local/src/index.ts)
+Source: [`rsh/Modules/Official/credentials/credentials-local/src/document.ts:12`](../Modules/Official/credentials/credentials-local/src/document.ts)
 
 <a id="deepseek-aidsh-e2b"></a>
 
@@ -1966,7 +1966,7 @@ export interface Config {
 export type JsonlCompression = 'zstd' | 'none'
 ```
 
-Source: [`rsh/Engine/session/session-persistence-jsonl/src/index.ts:88`](../Engine/session/session-persistence-jsonl/src/index.ts)
+Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:87`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 
@@ -3635,14 +3635,22 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-home-paths` ([`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts))
 - `@deepseek-ai/dsh-hook-protocol` ([`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts))
 - `@deepseek-ai/dsh-http-proxy` ([`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts))
+- `@deepseek-ai/dsh-json-rpc-line` ([`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts))
 - `@deepseek-ai/dsh-launch-environment` ([`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts))
 - `@deepseek-ai/dsh-llm-mock-server` ([`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts))
 - `@deepseek-ai/dsh-loader-smoke` ([`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts))
+- `@deepseek-ai/dsh-native-agent` ([`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts))
+- `@deepseek-ai/dsh-native-approval` ([`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts))
+- `@deepseek-ai/dsh-native-code-runtime` ([`rsh/Engine/core/native-code-runtime/src/index.ts`](../Engine/core/native-code-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-command` ([`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts))
 - `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
+- `@deepseek-ai/dsh-native-jobs` ([`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts))
+- `@deepseek-ai/dsh-native-model-execution` ([`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts))
 - `@deepseek-ai/dsh-native-prompt` ([`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-sandbox-policy` ([`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts))
+- `@deepseek-ai/dsh-native-time-context` ([`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts))
+- `@deepseek-ai/dsh-native-tool-jobs` ([`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-tools` ([`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts))
 - `@deepseek-ai/dsh-output-retention` ([`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts))
 - `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))

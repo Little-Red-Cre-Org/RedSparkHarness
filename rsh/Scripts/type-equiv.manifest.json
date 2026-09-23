@@ -552,7 +552,7 @@
     {
       "doc": "rsh/Docs/subsystems/session.md",
       "symbol": "Session",
-      "source": "rsh/Engine/core/session/src/index.ts",
+      "source": "rsh/Engine/core/session/src/session-core.ts",
       "projection": "public-api"
     },
     {
@@ -1549,7 +1549,7 @@
     {
       "doc": "rsh/Docs/subsystems/persistence.md",
       "symbol": "SessionPersistenceSnapshot",
-      "source": "rsh/Engine/session/session-persistence/src/index.ts"
+      "source": "rsh/Engine/session/session-persistence/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-query.md",
@@ -1704,7 +1704,7 @@
     {
       "doc": "rsh/Docs/subsystems/credentials.md",
       "symbol": "CredentialInfo",
-      "source": "rsh/Modules/Official/credentials/credentials/src/types.ts"
+      "source": "rsh/Modules/Official/credentials/credentials/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
@@ -1924,7 +1924,7 @@
     {
       "doc": "rsh/Docs/subsystems/credentials.md",
       "symbol": "CredentialRef",
-      "source": "rsh/Modules/Official/credentials/credentials/src/types.ts"
+      "source": "rsh/Modules/Official/credentials/credentials/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/permission-presets.md",

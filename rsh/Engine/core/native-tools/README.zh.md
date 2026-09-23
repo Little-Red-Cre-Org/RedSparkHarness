@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-tools` 让原生 profile 添加可由模型调用的工具，而不添加第二个工具循环或 Session 写入者。每项贡献提供一个 schema 和执行函数，其 disposer 只移除该项贡献。消费应用拥有工具调用校验，并且只记录一次返回结果。
+`dsh-native-tools` 让原生 profile 添加可由模型调用的工具，而不添加第二个工具循环或 Session 写入者。每项贡献提供一个 schema 和执行函数，其 disposer 只移除该项贡献。执行时会收到精确的原生 Agent、Session 和取消信号。消费应用拥有工具调用校验，并且只记录一次返回结果。
 
 ## 目录
 
@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口只接受空配置对象。它提供 `tools`；Consumer 必须在注册贡献前声明该服务。重复 schema 名称会在激活期间失败，释放时会清除其余注册项。
+`./native` 入口只接受空配置对象。它要求 `agents` 并提供 `tools`；Consumer 必须在注册贡献前声明该服务。贡献可声明带有 reason 的 `approval`。其消费应用提供对应的 `authorize()` 回调；注册表会在 executor 前调用它，受保护贡献没有审批 authority 时会失败。重复 schema 名称会在激活期间失败，携带未注册 Agent 的调用会在执行前失败，释放时会清除其余注册项。
 
 <a id="model-experience"></a>
 ## 模型体验

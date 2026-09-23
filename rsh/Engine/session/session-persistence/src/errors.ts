@@ -6,8 +6,8 @@
  * @module @deepseek-ai/dsh-session-persistence/errors
  */
 
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
 
 /** The requested Session identity has no durable log visible to this caller. */
 export class SessionPersistenceNotFoundError extends Error {

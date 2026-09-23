@@ -201,7 +201,7 @@ export function renderSessionFormatCatalog(
     ' * The direct imports make historical readability independent of mounted plugins.',
     ' */',
     '',
-    "import { KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'",
+    "import { KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session/native'",
     "import { createSessionFormatCatalog } from '@deepseek-ai/dsh-session-format'",
     "import { validateInstalledCurrentSessionArtifact, validateInstalledCurrentSessionHeader } from './current.ts'",
     ...imports,

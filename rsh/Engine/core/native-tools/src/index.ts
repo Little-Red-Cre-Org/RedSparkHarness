@@ -1,14 +1,25 @@
 /** Reversible native tool contributions consumed by a selected application. */
 import type { ContentBlock, ToolCallId, ToolSchema } from '@deepseek-ai/dsh-llm'
+import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { Session } from '@deepseek-ai/dsh-session'
 
 /** One model-requested tool invocation with its Session and cancellation. */
 export interface NativeToolExecution {
+  /** Exact live Agent that owns this invocation's scope and initiator attribution. */
+  readonly agent: NativeAgent
   readonly callId: ToolCallId
   readonly name: string
   readonly arguments: unknown
   readonly session: Session
   readonly signal: AbortSignal
+  /** Ask the consuming application's selected policy before a protected tool executes. */
+  readonly authorize?: (approval: NativeToolApproval) => Promise<void>
+}
+
+/** Optional pre-execution approval requested by one tool contribution. */
+export interface NativeToolApproval {
+  /** Human-readable explanation for the answerer and durable audit. */
+  readonly reason?: string
 }
 
 /** Model-visible outcome to append once to the authoritative Session. */
@@ -21,12 +32,17 @@ export interface NativeToolResult {
 /** Tool schema and execution supplied by one installation. */
 export interface NativeToolContribution {
   readonly schema: ToolSchema
+  /** Require the consuming application to authorize this exact invocation before execute(). */
+  readonly approval?: NativeToolApproval
   execute(call: NativeToolExecution): Promise<NativeToolResult>
 }
 
 /** A registry whose disposer removes only the contribution it installed. */
 export class NativeToolRegistry {
   private readonly tools = new Map<string, NativeToolContribution>()
+
+  /** @param agents - live native Agent authority selected by this tool scope. */
+  constructor(private readonly agents: NativeAgentRegistry) {}
 
   /**
    * Register one name; duplicate authorities fail at installation.
@@ -53,9 +69,14 @@ export class NativeToolRegistry {
    * @param call - model-requested operation, Session, and cancellation signal.
    * @returns the contribution result for the application to record.
    */
-  execute(call: NativeToolExecution): Promise<NativeToolResult> {
+  async execute(call: NativeToolExecution): Promise<NativeToolResult> {
+    if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const tool = this.tools.get(call.name)
     if (tool === undefined) throw new Error(`native-tools: unknown tool ${call.name}`)
+    if (tool.approval !== undefined) {
+      if (call.authorize === undefined) throw new Error(`native-tools: tool ${call.name} requires an approval authority`)
+      await call.authorize(tool.approval)
+    }
     return tool.execute(call)
   }
 

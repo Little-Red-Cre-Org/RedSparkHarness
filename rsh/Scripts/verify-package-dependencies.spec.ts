@@ -935,6 +935,29 @@ describe('dependency sections', () => {
     ]))
   })
 
+  it('allows an optional Cordis peer only for a separate native export', () => {
+    const manifest: PackageDependencyManifest = {
+      name: '@deepseek-ai/dsh-probe',
+      exports: { '.': './lib/index.js', './native': './lib/native.js' },
+      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      peerDependencies: { [CORDIS]: 'workspace:^' },
+      peerDependenciesMeta: { [CORDIS]: { optional: true } },
+    }
+    const subject = facts(manifest)
+    const state = { facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames }
+    expect(collectPackageDependencyViolations(state)).toEqual([])
+    repairPackageDependencyManifest(subject)
+    expect(manifest.peerDependenciesMeta).toEqual({ [CORDIS]: { optional: true } })
+
+    delete (manifest.exports as Record<string, unknown>)['./native']
+    expect(collectPackageDependencyViolations(state)).toContainEqual(
+      expect.stringContaining(`${CORDIS} must be matching peerDependencies + devDependencies`),
+    )
+    repairPackageDependencyManifest(subject)
+    expect(manifest.peerDependenciesMeta).toBeUndefined()
+  })
+
   it('repairs owned relationships without changing unrelated dependencies', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-package-dependencies-'))
     roots.push(root)

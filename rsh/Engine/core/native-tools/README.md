@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-native-tools` lets a native profile add model-callable tools without adding a second tool loop or Session writer. Each contribution supplies one schema and execution function, and its disposer removes only that contribution. The consuming application owns tool-call validation and records the returned result once.
+`dsh-native-tools` lets a native profile add model-callable tools without adding a second tool loop or Session writer. Each contribution supplies one schema and execution function, and its disposer removes only that contribution. Execution receives the exact native Agent alongside its Session and cancellation signal. The consuming application owns tool-call validation and records the returned result once.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry accepts only an empty configuration object. It provides `tools`; consumers must declare that service before registering contributions. Duplicate schema names fail during activation, and teardown clears remaining registrations.
+The `./native` entry accepts only an empty configuration object. It requires `agents` and provides `tools`; consumers must declare that service before registering contributions. A contribution can declare `approval` with a reason. Its consuming application supplies the matching `authorize()` callback; the registry invokes it before the executor, and fails when a protected contribution has no approval authority. Duplicate schema names fail during activation, calls with an unregistered Agent fail before execution, and teardown clears remaining registrations.
 
 <a id="model-experience"></a>
 ## Model Experience

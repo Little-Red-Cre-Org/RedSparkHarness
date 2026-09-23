@@ -14,11 +14,19 @@ import type { Context } from '@deepseek-ai/cordis'
 import { ClientModuleSystem } from './system.ts'
 import { parseBootManifest } from './manifest.ts'
 import type {
-  ClientBootstrapModule, ClientModuleCreateOptions, ClientModuleLoaderTarget,
+  ClientBootstrapModule, ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget,
 } from './manifest.ts'
 
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** The client module system the web shell builds at boot. */
+    modules: ClientModuleLoader
+  }
+}
+
 export { ClientModuleSystem }
-export { exactPackageSpecifier, parseBootManifest, parseDshClient, stripClientSuffix } from './manifest.ts'
+export { exactPackageSpecifier, parseBootManifest, stripClientSuffix } from './manifest.ts'
+export { parseDshClient } from './dsh-client.ts'
 export type {
   BootManifest, BootModuleRow, BootPluginRow, ClientBootstrapModule, ClientBundleRegistration,
   ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget, ClientModuleRecord,

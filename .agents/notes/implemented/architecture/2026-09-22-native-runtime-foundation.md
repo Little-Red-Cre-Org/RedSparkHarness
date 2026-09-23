@@ -16,6 +16,8 @@ The Host records configuration-free diagnostics with opaque installation and sco
 
 `@deepseek-ai/dsh-brand` and the new `@deepseek-ai/dsh-errors` are portable Core utilities. The model error module re-exports the shared error identity for existing consumers; `dsh-llm` requires `dsh-errors` as a peer so `instanceof HarnessError` retains one shared constructor. The `verify-native-dependencies` gate checks both TypeScript compiler faces and every native source owner against the explicit native roster, and refuses external source and manifest dependencies, computed loads and malformed native metadata. The repository's Cordis peer rule remains in force for non-native packages.
 
+The package root declares the extensible `NativeServices` and `NativeEvents` interfaces. Provider Definition packages augment that root entry, and the Host and event bus import the same declarations so their service and event keys include those additions.
+
 ## Alternatives considered
 
 **Keep Fiber behind a renamed interface:** The native packages would still require Cordis at type or runtime load and fail the independent distribution goal.

@@ -87,6 +87,14 @@ interface ApprovalRequest extends ApprovalRequestEvent {
 
 审计事件仅写入日志，不进入模型 transcript（文本记录）。模型可见的行为是调用方派生的工具结果与当前运行时上下文快照。服务 dispose（资源释放）时会移除其上下文贡献；应答者监听器独立地通过 effect 绑定到其所属插件。
 
+## 原生 profile 审批
+
+`dsh-native-approval` 为使用 `NativeAgentRegistry` 而非 Cordis Agent 的 profile 提供独立的原生 `approval` Provider。`NativeApprovalService` 接受同一组封闭 outcome 词汇及 `ask`/`never` 部署策略，确认精确登记的原生 Agent，并在 `ask` 下调用其有序应答者。应答者可返回 `undefined` 来委托；缺失或失败的应答者会解析为 `unavailable`，Provider 释放会将未完成请求解析为 `cancelled`。
+
+原生 Provider 不拥有 Session 或 Cordis 事件。其消费应用记录 `native-approval/asked` 和 `native-approval/decided` 审计对，然后渲染工具 outcome。原生 headless 将该路径应用于固定 `write_file` 工具，并转交给声明审批 reason 的贡献工具。不同的事件名称使原生请求 id 和策略数据与 user-approval 审计 payload 分离。
+
+源码：[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../../Modules/Official/interaction/native-approval/src/index.ts)
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

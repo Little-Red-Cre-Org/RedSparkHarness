@@ -24,15 +24,15 @@ import { pipeline, Readable } from 'node:stream'
 import { scheduler } from 'node:timers/promises'
 import { isDeepStrictEqual } from 'node:util'
 import { constants, createZstdCompress } from 'node:zlib'
-import { Session } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import { BlockAssembler, expandAssistantStream } from '@deepseek-ai/dsh-llm'
+import { Session } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { BlockAssembler, expandAssistantStream } from '@deepseek-ai/dsh-llm/native'
 import type {
   SessionFormatArtifact,
   SessionFormatJsonValue,
   SessionFormatRestore,
 } from '@deepseek-ai/dsh-session-format'
-import { validateStoredEvents } from '@deepseek-ai/dsh-session-persistence'
+import { validateStoredEvents } from '@deepseek-ai/dsh-session-persistence/native'
 import type { JsonlCompression } from './format.ts'
 import { generationLogFilename, logSuffix, SessionLogScanner } from './format.ts'
 import { publishNewFileWin32 } from './win32.ts'

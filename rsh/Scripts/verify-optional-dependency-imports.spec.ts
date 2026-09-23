@@ -27,6 +27,7 @@ const FIXTURE: Record<string, string> = {
       paths: {
         '@f/opt': ['./rsh/f/opt/src/index.ts'],
         '@f/hard': ['./rsh/f/hard/src/index.ts'],
+        '@deepseek-ai/cordis': ['./rsh/f/cordis/src/index.ts'],
       },
     },
     include: ['rsh/**/*.ts'],
@@ -41,6 +42,19 @@ const FIXTURE: Record<string, string> = {
 
   'rsh/f/hard/package.json': JSON.stringify({ name: '@f/hard', version: '0.0.1' }),
   'rsh/f/hard/src/index.ts': 'export const hardValue = 2\n',
+  'rsh/f/cordis/package.json': JSON.stringify({ name: '@deepseek-ai/cordis', version: '0.0.1' }),
+  'rsh/f/cordis/src/index.ts': 'export const context = 3\n',
+
+  'rsh/f/native-consumer/package.json': JSON.stringify({
+    name: '@f/native-consumer',
+    version: '0.0.1',
+    exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+    peerDependencies: { '@deepseek-ai/cordis': '*' },
+    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+  }),
+  'rsh/f/native-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+  'rsh/f/native-consumer/src/native.ts': "export { native } from './native-dependency.ts'\n",
+  'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@deepseek-ai/cordis'\nexport const native = context\n",
 
   // The consumer allows @f/opt to be absent and requires @f/hard.
   'rsh/f/consumer/package.json': JSON.stringify({
@@ -117,6 +131,7 @@ describe('optional dependency loads', () => {
       'rsh/f/consumer/src/rejected-bare.ts:1',
       'rsh/f/consumer/src/rejected-star-reexport.ts:1',
       'rsh/f/consumer/src/rejected-value.ts:1',
+      'rsh/f/native-consumer/src/native-dependency.ts:1',
     ])
   })
 

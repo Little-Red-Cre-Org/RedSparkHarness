@@ -24,7 +24,7 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../../Programs/SDK/packages/protocol"
+      "path": "../../../Core/util/json-rpc-line"
     },
     {
       "path": "../../core/session"
