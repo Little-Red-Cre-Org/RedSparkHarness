@@ -316,6 +316,70 @@ it('rejects write_file under the installed never approval policy and persists it
   }
 })
 
+it('durably records the approval question before dispatch and its grant before the tool runs', async () => {
+  const state = await fixture([
+    toolCallResponse('guarded-approval', 'guarded', {}),
+    textResponse('guarded complete'),
+  ], { approvalPolicy: 'ask' })
+  const approval = state.approval
+  if (approval === undefined) throw new Error('approval Provider was not installed')
+  const readAudit = async (): Promise<unknown[]> => {
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({
+      root: state.sessions,
+      compression: 'none',
+    })
+    try {
+      const entry = (await storage.list())[0]
+      if (entry === undefined) throw new Error('approval Session was not durable before answerer dispatch')
+      const reader = await storage.open(entry.header.id, 'read')
+      try {
+        return (await reader.read()).events.filter(event => (
+          event.type === 'native-approval/asked' || event.type === 'native-approval/decided'
+        ))
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  }
+  let requestId: string | undefined
+  let sawAskedBeforeAnswer = false
+  let sawDecisionBeforeExecution = false
+  let executed = false
+  const removeAnswerer = approval.registerAnswerer(async (request) => {
+    requestId = request.id
+    const events = await readAudit()
+    sawAskedBeforeAnswer = events.some(event => (
+      typeof event === 'object' && event !== null && 'type' in event && event.type === 'native-approval/asked'
+      && 'data' in event && typeof event.data === 'object' && event.data !== null && 'id' in event.data
+      && event.data.id === request.id
+    )) && !events.some(event => typeof event === 'object' && event !== null && 'type' in event && event.type === 'native-approval/decided')
+    return 'allowed-once' as const
+  })
+  const removeTool = state.tools.register({
+    schema: { name: 'guarded', description: 'A protected fixture contribution.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
+    approval: { reason: 'This contribution changes protected state.' },
+    async execute() {
+      const events = await readAudit()
+      sawDecisionBeforeExecution = events.some(event => (
+        typeof event === 'object' && event !== null && 'type' in event && event.type === 'native-approval/decided'
+        && 'data' in event && typeof event.data === 'object' && event.data !== null && 'id' in event.data
+        && event.data.id === requestId && 'outcome' in event.data && event.data.outcome === 'allowed-once'
+      ))
+      executed = true
+      return { content: [{ type: 'text', text: 'guarded complete' }], isError: false }
+    },
+  })
+  try {
+    await state.host.run(state.scope, { kind: 'approval-durability' }, invocation => state.app.run(['invoke', 'guarded'], invocation.signal))
+    expect(sawAskedBeforeAnswer).toBe(true)
+    expect(sawDecisionBeforeExecution).toBe(true)
+    expect(executed).toBe(true)
+  } finally {
+    removeAnswerer()
+    removeTool()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
 it('records a max-token model finish without claiming normal completion', async () => {
   const state = await fixture([maxTokensResponse('partial')])
   try {

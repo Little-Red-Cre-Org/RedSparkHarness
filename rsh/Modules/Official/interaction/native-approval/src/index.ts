@@ -1,5 +1,4 @@
 /** Native tool-approval policy, answerer dispatch, and durable audit vocabulary. */
-import { randomUUID } from 'node:crypto'
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
@@ -18,6 +17,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 /** One exact operation that requires an approval decision. */
 export interface NativeApprovalRequest {
+  /** Fresh id the Session owner has already written to `native-approval/asked`. */
+  readonly id: approvalTypes.NativeApprovalRequestId
   /** Registered Agent that owns the requested operation. */
   readonly agent: NativeAgent
   /** Model-visible tool name the application is about to execute. */
@@ -32,10 +33,10 @@ export interface NativeApprovalRequest {
 
 /** The immutable request passed to one native answerer. */
 export interface NativeApprovalAnswererRequest extends NativeApprovalRequest {
-  /** Fresh identifier for the request and its durable audit pair. */
-  readonly id: approvalTypes.NativeApprovalRequestId
   /** Effective policy selected before answerer dispatch. */
   readonly policy: approvalTypes.NativeApprovalPolicy
+  /** Aborted by the caller or Provider disposal; answerers must stop owned work. */
+  readonly signal: AbortSignal
 }
 
 /** One answerer may claim a request with an outcome or return undefined to delegate. */
@@ -69,6 +70,7 @@ export class NativeApprovalService {
   private readonly answerers = new Set<NativeApprovalAnswerer>()
   private readonly controller = new AbortController()
   private readonly active = new Set<Promise<approvalTypes.NativeApprovalDecision>>()
+  private readonly answererWork = new Set<Promise<void>>()
   private closing = false
   private disposal: Promise<void> | undefined
 
@@ -80,6 +82,8 @@ export class NativeApprovalService {
 
   /**
    * Register one ordered answerer; returning undefined delegates to the next answerer.
+   * The request signal is aborted when its caller cancels or this Provider is disposed.
+   * Answerers must stop their owned work and settle after that signal aborts.
    * @param answerer - deployment-owned decision callback.
    * @returns idempotent removal of this exact answerer.
    */
@@ -96,7 +100,7 @@ export class NativeApprovalService {
 
   /**
    * Resolve one approval request with policy, cancellation, and the selected answerer chain.
-   * @param request - exact live Agent and operation awaiting one decision.
+   * @param request - exact live Agent, operation, and id already recorded by its Session owner.
    * @returns a closed decision for the consumer to audit and enforce.
    */
   request(request: NativeApprovalRequest): Promise<approvalTypes.NativeApprovalDecision> {
@@ -104,9 +108,23 @@ export class NativeApprovalService {
     if (this.agents.get(request.agent.id) !== request.agent) {
       throw new Error(`native-approval: Agent "${request.agent.id}" is not registered`)
     }
-    const task = this.decide({ ...request, id: approvalTypes.NativeApprovalRequestId(randomUUID()), policy: this.policy })
+    const controller = new AbortController()
+    const abortFromService = (): void => { controller.abort(this.controller.signal.reason) }
+    const abortFromCaller = (): void => { controller.abort(request.signal?.reason) }
+    this.controller.signal.addEventListener('abort', abortFromService, { once: true })
+    if (request.signal?.aborted) abortFromCaller()
+    else request.signal?.addEventListener('abort', abortFromCaller, { once: true })
+    const answererRequest: NativeApprovalAnswererRequest = {
+      ...request,
+      signal: controller.signal,
+      policy: this.policy,
+    }
+    const task = this.decide(answererRequest)
     this.active.add(task)
-    void task.then(() => this.active.delete(task), () => this.active.delete(task))
+    void task.then(() => this.active.delete(task), () => this.active.delete(task)).finally(() => {
+      this.controller.signal.removeEventListener('abort', abortFromService)
+      request.signal?.removeEventListener('abort', abortFromCaller)
+    })
     return task
   }
 
@@ -119,6 +137,7 @@ export class NativeApprovalService {
       this.closing = true
       this.controller.abort()
       await Promise.allSettled([...this.active])
+      await Promise.allSettled([...this.answererWork])
       this.answerers.clear()
     })()
   }
@@ -142,14 +161,21 @@ export class NativeApprovalService {
       const complete = (outcome: approvalTypes.NativeApprovalOutcome | undefined): void => {
         if (settled) return
         settled = true
-        request.signal?.removeEventListener('abort', onAbort)
-        this.controller.signal.removeEventListener('abort', onAbort)
+        request.signal.removeEventListener('abort', onAbort)
         resolve(outcome)
       }
       const onAbort = (): void => { complete('cancelled') }
-      request.signal?.addEventListener('abort', onAbort, { once: true })
-      this.controller.signal.addEventListener('abort', onAbort, { once: true })
-      void Promise.resolve(answerer(request)).then(
+      request.signal.addEventListener('abort', onAbort, { once: true })
+      let work: Promise<approvalTypes.NativeApprovalOutcome | undefined>
+      try {
+        work = Promise.resolve(answerer(request))
+      } catch {
+        work = Promise.resolve<approvalTypes.NativeApprovalOutcome>('unavailable')
+      }
+      const quiescence = work.then(() => undefined, () => undefined)
+      this.answererWork.add(quiescence)
+      void quiescence.then(() => this.answererWork.delete(quiescence))
+      void work.then(
         (outcome) => { complete(outcome) },
         () => { complete('unavailable') },
       )
@@ -162,8 +188,8 @@ export class NativeApprovalService {
     return { id: request.id, policy: request.policy, outcome }
   }
 
-  private isAborted(signal: AbortSignal | undefined): boolean {
-    return this.controller.signal.aborted || signal?.aborted === true
+  private isAborted(signal: AbortSignal): boolean {
+    return signal.aborted
   }
 
   private assertOpen(): void {

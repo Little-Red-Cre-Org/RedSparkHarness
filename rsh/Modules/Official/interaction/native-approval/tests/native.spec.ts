@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { NativeApprovalService, plugin as approvalPlugin } from '../src/index.ts'
+import { NativeApprovalRequestId, NativeApprovalService, plugin as approvalPlugin } from '../src/index.ts'
 
 async function fixture(policy: 'ask' | 'never' = 'ask'): Promise<{
   host: NativeHost
@@ -50,15 +50,16 @@ describe('NativeApprovalService', () => {
         answers.push(`second:${request.toolName}`)
         return 'allowed-once' as const
       })
-      await expect(state.approval.request({ agent: owner, toolName: 'write_file' })).resolves.toMatchObject({
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-1'), agent: owner, toolName: 'write_file' })).resolves.toMatchObject({
+        id: 'approval-1',
         policy: 'ask', outcome: 'allowed-once',
       })
       expect(answers).toEqual(['first:write_file', 'second:write_file'])
       removeFirst()
       removeSecond()
-      await expect(state.approval.request({ agent: owner, toolName: 'write_file' })).resolves.toMatchObject({ outcome: 'unavailable' })
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-2'), agent: owner, toolName: 'write_file' })).resolves.toMatchObject({ outcome: 'unavailable' })
       const replacement: NativeAgent = { id: owner.id, scope: new NativeScope(state.root) }
-      expect(() => state.approval.request({ agent: replacement, toolName: 'write_file' })).toThrow('is not registered')
+      expect(() => state.approval.request({ id: NativeApprovalRequestId('approval-3'), agent: replacement, toolName: 'write_file' })).toThrow('is not registered')
     } finally {
       await unregister()
       await state.host.stop()
@@ -75,7 +76,7 @@ describe('NativeApprovalService', () => {
         called = true
         return 'allowed-once'
       })
-      await expect(state.approval.request({ agent: owner, toolName: 'write_file' })).resolves.toMatchObject({
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-4'), agent: owner, toolName: 'write_file' })).resolves.toMatchObject({
         policy: 'never', outcome: 'rejected',
       })
       expect(called).toBe(false)
@@ -85,25 +86,114 @@ describe('NativeApprovalService', () => {
     }
   })
 
-  it('cancels a pending answer when the Provider is disposed', async () => {
+  it('normalizes a synchronous answerer failure to unavailable', async () => {
     const state = await fixture()
     const owner = agent('owner', state.root)
     const unregister = state.agents.register(owner)
-    const entered = Promise.withResolvers<undefined>()
-    const release = Promise.withResolvers<undefined>()
     try {
-      state.approval.registerAnswerer(async () => {
-        entered.resolve(undefined)
-        await release.promise
+      state.approval.registerAnswerer(() => { throw new Error('answerer failed') })
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-sync-failure'), agent: owner, toolName: 'write_file' }))
+        .resolves.toMatchObject({ id: 'approval-sync-failure', policy: 'ask', outcome: 'unavailable' })
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('normalizes a rejected answerer promise to unavailable', async () => {
+    const state = await fixture()
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    try {
+      state.approval.registerAnswerer(async () => { throw new Error('answerer rejected') })
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-async-failure'), agent: owner, toolName: 'write_file' }))
+        .resolves.toMatchObject({ id: 'approval-async-failure', policy: 'ask', outcome: 'unavailable' })
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('returns cancelled without dispatch when the caller signal is already aborted', async () => {
+    const state = await fixture()
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    const caller = new AbortController()
+    caller.abort()
+    let called = false
+    try {
+      state.approval.registerAnswerer(() => {
+        called = true
+        return 'allowed-once'
+      })
+      await expect(state.approval.request({
+        id: NativeApprovalRequestId('approval-already-cancelled'), agent: owner, toolName: 'write_file', signal: caller.signal,
+      })).resolves.toMatchObject({ outcome: 'cancelled' })
+      expect(called).toBe(false)
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('aborts answerer work when the caller cancels', async () => {
+    const state = await fixture()
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    const caller = new AbortController()
+    const entered = Promise.withResolvers<AbortSignal>()
+    const stopped = Promise.withResolvers<undefined>()
+    let answererStopped = false
+    try {
+      state.approval.registerAnswerer(async (request) => {
+        entered.resolve(request.signal)
+        await new Promise<void>((resolve) => {
+          if (request.signal.aborted) resolve()
+          else request.signal.addEventListener('abort', () => { resolve() }, { once: true })
+        })
+        answererStopped = true
+        stopped.resolve(undefined)
         return 'allowed-once' as const
       })
-      const pending = state.approval.request({ agent: owner, toolName: 'write_file' })
-      await entered.promise
+      const pending = state.approval.request({
+        id: NativeApprovalRequestId('approval-caller-cancelled'), agent: owner, toolName: 'write_file', signal: caller.signal,
+      })
+      const answererSignal = await entered.promise
+      caller.abort()
+      await expect(pending).resolves.toMatchObject({ outcome: 'cancelled' })
+      await stopped.promise
+      expect(answererSignal.aborted).toBe(true)
+      expect(answererStopped).toBe(true)
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('aborts answerer work and waits for it when the Provider is disposed', async () => {
+    const state = await fixture()
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    const entered = Promise.withResolvers<AbortSignal>()
+    let answererStopped = false
+    try {
+      state.approval.registerAnswerer(async (request) => {
+        entered.resolve(request.signal)
+        await new Promise<void>((resolve) => {
+          if (request.signal.aborted) resolve()
+          else request.signal.addEventListener('abort', () => { resolve() }, { once: true })
+        })
+        answererStopped = true
+        return 'allowed-once' as const
+      })
+      const pending = state.approval.request({ id: NativeApprovalRequestId('approval-dispose'), agent: owner, toolName: 'write_file' })
+      const answererSignal = await entered.promise
       await state.approval.dispose()
       await expect(pending).resolves.toMatchObject({ outcome: 'cancelled' })
+      expect(answererSignal.aborted).toBe(true)
+      expect(answererStopped).toBe(true)
       expect(() => state.approval.registerAnswerer(() => 'allowed-once')).toThrow('service is disposed')
     } finally {
-      release.resolve(undefined)
       await unregister()
       await state.host.stop()
     }

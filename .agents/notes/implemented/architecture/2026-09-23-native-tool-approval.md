@@ -10,9 +10,9 @@ Native headless can execute fixed and contributed tools under a live Agent, but 
 
 ## Decision
 
-`@deepseek-ai/dsh-native-approval` provides the native `approval` service. It accepts a deployment `ask` or `never` policy, verifies the exact registered native Agent, dispatches ordered answerers under `ask`, and returns a fresh request id with one closed outcome. Missing and failed answerers resolve unavailable; cancellation resolves cancelled; only allowed-once permits the pending action. Provider disposal rejects new requests and cancels unsettled decisions.
+`@deepseek-ai/dsh-native-approval` provides the native `approval` service. It accepts a deployment `ask` or `never` policy, verifies the exact registered native Agent, dispatches ordered answerers under `ask`, and returns the caller-supplied request id with one closed outcome. The Session owner durably appends the `native-approval/asked` event before dispatch. Missing and failed answerers resolve unavailable; cancellation resolves cancelled; only allowed-once permits the pending action. Provider disposal rejects new requests, aborts answerer work, and waits for it to settle.
 
-The provider does not write a Session. Native headless owns the Session and records `native-approval/asked` plus the matching `native-approval/decided` before the affected tool result. It applies the service to fixed `write_file` calls when the provider is installed, and passes the same authorization callback to native tool contributions. A contribution may declare an approval reason; the registry invokes the callback before its executor and refuses a protected contribution when no approval authority is available.
+The provider does not write a Session. Native headless owns the Session and records `native-approval/asked` before dispatch, then durably records the matching `native-approval/decided` before an approved operation and its tool result. It applies the service to fixed `write_file` calls when the provider is installed, and passes the same authorization callback to native tool contributions. A contribution may declare an approval reason; the registry invokes the callback before its executor and refuses a protected contribution when no approval authority is available.
 
 The native audit names are separate from `approval/asked` and `approval/decided`, whose payloads and Cordis Agent semantics belong to the existing user-approval service. The Session persistence catalog includes the native names, so current readers recognize the native profile's durable records without reinterpreting legacy approval data.
 
@@ -30,4 +30,4 @@ Headless profiles can remain unattended without the Provider: fixed writes retai
 
 ## Verification
 
-Native approval tests cover ordered delegation, absent answerers, exact Agent identity, never-policy rejection, and cancellation on Provider disposal. Native headless tests cover durable rejected-write audits and the guarantee that a rejected protected contribution never reaches its executor.
+Native approval tests cover ordered delegation, absent answerers, exact Agent identity, never-policy rejection, synchronous callback failure, caller cancellation, and Provider disposal aborting and awaiting answerer work. Native headless tests cover durable rejected-write audits, protected-contribution refusal, and durable question-before-dispatch and grant-before-execution ordering.

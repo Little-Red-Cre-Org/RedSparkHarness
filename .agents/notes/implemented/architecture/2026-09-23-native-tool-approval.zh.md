@@ -10,9 +10,9 @@ Status: implemented
 
 ## Decision
 
-`@deepseek-ai/dsh-native-approval` 提供原生 `approval` 服务。它接受部署级 `ask` 或 `never` 策略，验证精确登记的原生 Agent，在 `ask` 下分派有序应答者，并返回带有新请求 id 的一次封闭 outcome。缺失或失败的应答者会解析为 unavailable；取消会解析为 cancelled；只有 allowed-once 会允许待执行操作。Provider 释放会拒绝新请求并取消未完成决定。
+`@deepseek-ai/dsh-native-approval` 提供原生 `approval` 服务。它接受部署级 `ask` 或 `never` 策略，验证精确登记的原生 Agent，在 `ask` 下分派有序应答者，并返回调用方传入 id 的一次封闭 outcome。Session 所有者会在分派前持久追加 `native-approval/asked` 事件。缺失或失败的应答者会解析为 unavailable；取消会解析为 cancelled；只有 allowed-once 会允许待执行操作。Provider 释放会拒绝新请求、取消应答者工作，并等待其结束。
 
-Provider 不写入 Session。原生 headless 拥有 Session，并在受影响的工具结果前记录 `native-approval/asked` 及匹配的 `native-approval/decided`。安装该 Provider 时，它会将服务用于固定 `write_file` 调用，并向原生工具贡献传递同一个授权回调。贡献可声明审批 reason；注册表会在 executor 前调用该回调，受保护贡献没有审批 authority 时会拒绝执行。
+Provider 不写入 Session。原生 headless 拥有 Session，并在分派前记录 `native-approval/asked`，随后在执行获准操作及生成工具结果前持久记录匹配的 `native-approval/decided`。安装该 Provider 时，它会将服务用于固定 `write_file` 调用，并向原生工具贡献传递同一个授权回调。贡献可声明审批 reason；注册表会在 executor 前调用该回调，受保护贡献没有审批 authority 时会拒绝执行。
 
 原生审计名称与 `approval/asked` 和 `approval/decided` 分离；后两者的 payload 及 Cordis Agent 语义属于既有 user-approval 服务。Session 持久化目录包含原生名称，因此当前读取器能识别原生 profile 的持久化记录，而不会重新解释旧审批数据。
 
@@ -30,4 +30,4 @@ Provider 不写入 Session。原生 headless 拥有 Session，并在受影响的
 
 ## Verification
 
-原生审批测试覆盖有序委托、缺失应答者、精确 Agent 标识、never 策略拒绝，以及 Provider 释放时取消。原生 headless 测试覆盖被拒绝写入的持久化审计，以及被拒绝的受保护贡献绝不会进入 executor 的保证。
+原生审批测试覆盖有序委托、缺失应答者、精确 Agent 标识、never 策略拒绝、同步回调失败、调用方取消，以及 Provider 释放时取消并等待应答者工作结束。原生 headless 测试覆盖被拒绝写入的持久化审计、受保护贡献拒绝执行，以及问题在分派前、授权在执行前持久化的顺序。

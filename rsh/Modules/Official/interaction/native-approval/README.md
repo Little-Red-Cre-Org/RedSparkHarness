@@ -21,9 +21,9 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry requires `agents`, provides `approval`, and accepts an optional `policy` of `ask` (the default) or `never`; unknown fields fail activation. `registerAnswerer()` registers an ordered callback. Returning `undefined` delegates to the next callback; a returned outcome decides the request. A rejected callback resolves the request as `unavailable`, and disposal cancels every unsettled decision before the Provider releases its answerers.
+The `./native` entry requires `agents`, provides `approval`, and accepts an optional `policy` of `ask` (the default) or `never`; unknown fields fail activation. `registerAnswerer()` registers an ordered callback. Returning `undefined` delegates to the next callback; a returned outcome decides the request. A rejected callback resolves the request as `unavailable`. The Session owner supplies a fresh request id after durably appending `native-approval/asked`; the Provider passes answerers an abort signal and waits for their work to settle during disposal.
 
-The service returns an id, policy, and closed outcome but does not write a Session. A consuming application records one `native-approval/asked` event and its matching `native-approval/decided` event before it records the associated tool result. Native headless supplies that application path for fixed writes and protected native tool contributions.
+The service returns the supplied id, policy, and closed outcome but does not write a Session. A consuming application durably records `native-approval/asked` before calling the service and durably records the matching `native-approval/decided` before it executes the approved operation. Native headless supplies that application path for fixed writes and protected native tool contributions.
 
 <a id="model-experience"></a>
 ## Model Experience

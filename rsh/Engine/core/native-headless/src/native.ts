@@ -18,7 +18,7 @@ import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import type { NativeApprovalOutcome, NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { NativeApprovalRequestId, type NativeApprovalOutcome, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
@@ -306,16 +306,20 @@ export class NativeHeadlessApplication implements NativeApplication {
               const authorize = async (requested: NativeToolApproval): Promise<void> => {
                 const service = this.approval
                 if (service === undefined) throw new Error(`native-headless: tool ${call.name} requires an approval authority`)
-                const decision = await service.request({
-                  agent, toolName: call.name, callId: call.id,
-                  ...requested.reason === undefined ? {} : { reason: requested.reason }, signal,
-                })
+                const id = NativeApprovalRequestId(randomUUID())
                 track(session.append('native-approval/asked', {
-                  id: decision.id, toolName: call.name, callId: call.id,
+                  id, toolName: call.name, callId: call.id,
                   ...requested.reason === undefined ? {} : { reason: requested.reason },
                 }))
+                await persist()
+                await writer.flush()
+                const decision = await service.request({
+                  id, agent, toolName: call.name, callId: call.id,
+                  ...requested.reason === undefined ? {} : { reason: requested.reason }, signal,
+                })
                 track(session.append('native-approval/decided', decision))
                 await persist()
+                await writer.flush()
                 if (decision.outcome !== 'allowed-once') throw new NativeApprovalRejection(decision.outcome, call.name)
               }
               if (call.name === 'read_file' || call.name === 'write_file') {
