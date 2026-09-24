@@ -134,6 +134,9 @@ export function makeConsoleShim(logs: LogBuffer): Record<(typeof CONSOLE_LEVELS)
  *   worker never needs to).
  */
 export function captureStreamWrites(logs: LogBuffer, stream: PatchableStream): () => void {
+  // Retain the method only for restoring the same slot; the runtime never
+  // invokes it detached from its stream.
+  // oxlint-disable-next-line typescript/unbound-method
   const original = stream.write
   stream.write = (chunk: unknown, ...rest: unknown[]): boolean => {
     logs.push(typeof chunk === 'string' ? chunk : String(chunk))
