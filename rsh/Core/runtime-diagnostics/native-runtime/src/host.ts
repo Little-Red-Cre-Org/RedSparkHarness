@@ -2,12 +2,7 @@
 import { RuntimeEvents, type EventKey, type EventListener } from './events.ts'
 import { NativeScope, ResourceOwner, type Disposer, type NativeScopeId } from './scope.ts'
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-
-/** Extend in service Definition packages with the capability name and its interface. */
-export interface NativeServices {
-  /** The one application selected by a launched profile. */
-  application: NativeApplication
-}
+import type { NativeServices } from './index.ts'
 
 /** Program entry selected by a profile; exit follows its completed resource drain. */
 export interface NativeApplication {

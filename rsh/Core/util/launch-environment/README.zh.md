@@ -26,6 +26,8 @@ kind: "package-library"
 
 当各层并非同等可信时，通过快照而非 `process.env` 解析面向用户的值——例如调用方绝不能从项目目录取得的凭据覆盖值。
 
+原生 Host 和 Client 从 `./native` 导入快照类型、构造函数和 SSH 检测，不加载 Cordis。根入口另外为 Cordis 消费者提供 `launchEnvironmentOf(ctx)`。原生 Host 将启动快照直接传给 Provider。
+
 ### 解析一个值
 
 ```ts

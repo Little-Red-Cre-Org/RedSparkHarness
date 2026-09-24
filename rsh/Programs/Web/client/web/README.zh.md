@@ -27,6 +27,8 @@ kind: "package-library"
 
 组装浏览器应用时使用它：`rsh/Programs/Web/application` 的 Vite 入口对挂载点运行 `new AppWebEntry(container).run()`，启动页会在激活过程中向用户展示进度。普通浏览器调用方不传任何选项。默认使用预注入的页面传输，除非提供 `seams` 覆盖：当 `globalThis.__DSH_TRANSPORT__` 携带 `loadBundle` 时，模块阶段将其采纳为 bundle 传输并跳过 `immediately` 层级的 HTTP 预取，而显式 `seams` 仍然优先（例如外部 `<script>` 执行无法到达页面上下文的 jsdom 测试）。
 
+独立的 `@deepseek-ai/dsh-client-web/native` 入口接收明确选中的原生 Client 行，经浏览器模块图导入其 `plugin` 导出，使用 `NativeHost` 解析服务，再挂载必需的 `clientRenderer` 服务。其发布的 JavaScript 内含原生运行时，公开声明不导入其他包，因此隔离消费者不安装 Cordis 也能导入并完成类型检查。调用方必须停止返回的 host，等待卸载和插件清理完成。当前应用入口仍使用 `AppWebEntry`；Host 下发的原生选择列表与原生渲染器接通前，这条路径不能替换生产启动。
+
 外壳基础样式会在支持的浏览器中为普通内容自动添加中西文间距。语义化代码以及终端、diff、读取和搜索输出容器会保留源码中的原始间距和列对齐；不支持 `text-autospace` 的浏览器会忽略这两项声明。
 
 ### 启动过程是怎样的
@@ -74,6 +76,7 @@ kind: "package-library"
 | [`src/index.ts`](src/index.ts) | 库入口：`AppWebEntry`、`getStaticModules`、平台表 |
 | [`src/boot.ts`](src/boot.ts) | `AppWebEntry`：模块阶段、启动页、immediately 层级预取，随后调用 `bootClient` + `mountClient` |
 | [`src/boot-client.ts`](src/boot-client.ts) | `bootClient` / `assertEntriesActive`：挂载 Loader、每个 manifest 行一个 entry、激活审计 |
+| [`src/native-boot.ts`](src/native-boot.ts) | 原生 Client 行安装、渲染器挂载与归属清理 |
 | [`src/mount.ts`](src/mount.ts) | `mountClient`：经 `uiRenderer` 依赖 fiber 完成渲染器交接 |
 | [`src/boot-page.ts`](src/boot-page.ts) | 无框架启动页：spinner、逐 entry 状态、失败渲染 |
 | [`src/platform.ts`](src/platform.ts) | `PLATFORM_MODULES` / `PRELOADED_CLIENT_EXTERNALS`：隐式 external 基座 |

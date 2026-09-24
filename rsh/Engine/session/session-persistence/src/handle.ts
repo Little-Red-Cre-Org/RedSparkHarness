@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-session-persistence/handle
  */
 
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@deepseek-ai/dsh-session/native'
 
 /**
  * Log access granted by an open. `write` is read-write: the session's single

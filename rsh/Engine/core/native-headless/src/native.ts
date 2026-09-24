@@ -1,34 +1,32 @@
 /** Native headless Agent authority over the existing Session and filesystem interfaces. */
 import { randomUUID } from 'node:crypto'
 import { isAbsolute, resolve } from 'node:path'
-import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type {} from '@deepseek-ai/dsh-native-agent/native'
+import type {} from '@deepseek-ai/dsh-native-approval/native'
+import type {} from '@deepseek-ai/dsh-native-code-runtime/native'
+import type {} from '@deepseek-ai/dsh-native-time-context/native'
+import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import type { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
+import type { NativeToolApproval, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
+import { NativeApprovalRequestId, type NativeApprovalOutcome, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
+import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
-  AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, createSystemMessage,
-  createToolResultMessage, createUserMessage,
-  type ContentBlock, type GenerateOptions, type StreamChunk, type ToolCallBlock, type ToolSchema,
-} from '@deepseek-ai/dsh-llm'
-import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
+  createSystemMessage, createToolResultMessage, createUserMessage,
+  type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
+} from '@deepseek-ai/dsh-llm/native'
+import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-
-/** One selected model route. The P2 fixture substitutes only this external capability. */
-export interface NativeModel {
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
-}
-
-declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices {
-    model: NativeModel
-  }
-}
 
 /** Explicit headless request and workspace policy. */
 export interface Config {
@@ -48,6 +46,12 @@ const TOOL_SCHEMAS: ToolSchema[] = [
     required: ['path', 'content'], additionalProperties: false,
   } },
 ]
+
+const CODE_TOOL_SCHEMA: ToolSchema = {
+  name: 'run_code', description: 'Run one TypeScript program in an isolated worker thread.', parameters: {
+    type: 'object', properties: { program: { type: 'string' } }, required: ['program'], additionalProperties: false,
+  },
+}
 
 function nonempty(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.length === 0) throw new Error(`native-headless: ${name} must be a nonempty string`)
@@ -90,6 +94,15 @@ function toolArguments(raw: string, name: string): { path: string; content?: str
   return { path }
 }
 
+function codeProgram(raw: string): string {
+  const value = object(JSON.parse(raw) as unknown)
+  for (const key of Object.keys(value)) {
+    if (key !== 'program') throw new Error(`unexpected run_code argument ${key}`)
+  }
+  if (typeof value.program !== 'string') throw new Error('native-headless: run_code program must be a string')
+  return value.program
+}
+
 function parseArgs(args: readonly string[]): { prompt: string; resume?: ReturnType<typeof SessionId> } {
   if (args[0] === '--resume') {
     if (args[1] === undefined || args[1].length === 0) throw new Error('native-headless: --resume needs a Session id')
@@ -98,17 +111,29 @@ function parseArgs(args: readonly string[]): { prompt: string; resume?: ReturnTy
   return { prompt: args.join(' ') }
 }
 
+/** Failure used only to project a closed approval outcome into one tool result. */
+class NativeApprovalRejection extends Error {
+  constructor(readonly outcome: Exclude<NativeApprovalOutcome, 'allowed-once'>, toolName: string) {
+    super(`native-headless: tool ${toolName} approval ${outcome}`)
+    this.name = 'NativeApprovalRejection'
+  }
+}
+
 /** One profile-owned application; the host cancels admitted work before releasing its Providers. */
 export class NativeHeadlessApplication implements NativeApplication {
   constructor(
     private readonly context: NativeContext,
     private readonly fs: import('@deepseek-ai/dsh-fs/native').FileSystemOperations,
     private readonly storage: JsonlSessionBackend,
-    private readonly model: NativeModel,
+    private readonly modelExecution: NativeModelExecution,
     private readonly config: Config,
+    private readonly agents: NativeAgentRegistry,
     private readonly tools: NativeToolRegistry | undefined,
     private readonly promptSections: NativePromptRegistry | undefined,
     private readonly sandboxPolicy: NativeSandboxPolicy | undefined,
+    private readonly approval: NativeApprovalService | undefined,
+    private readonly codeRuntime: NativeCodeRuntime | undefined,
+    private readonly timeContext: NativeTimeContext | undefined,
   ) {}
 
   private async target(path: string, root: FsTarget, signal: AbortSignal): Promise<FsTarget> {
@@ -139,20 +164,48 @@ export class NativeHeadlessApplication implements NativeApplication {
     return `${outcome.operation}: ${args.path}`
   }
 
+  /** Run code through the profile-selected Provider and convert a program failure into one tool failure. */
+  private async executeCode(call: ToolCallBlock, signal: AbortSignal): Promise<{ text: string; error?: { name: string; code: string } }> {
+    const runtime = this.codeRuntime
+    if (runtime === undefined) throw new Error('native-headless: run_code requires a code runtime')
+    const result = await runtime.run({ program: codeProgram(call.arguments), bindings: [], signal })
+    if (result.error === undefined) return { text: JSON.stringify(result) }
+    return {
+      text: JSON.stringify(result),
+      error: { name: 'NativeCodeRuntimeError', code: `CODE_RUNTIME_${result.error.kind.toUpperCase().replaceAll('-', '_')}` },
+    }
+  }
+
   /** Execute one turn, checkpoint its complete log, and close write ownership before return. */
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     const request = parseArgs(args)
     if (request.prompt.length === 0 && request.resume === undefined) throw new Error('native-headless: a prompt is required')
+    const id = request.resume ?? SessionId(randomUUID())
+    const agent: NativeAgent = { id: NativeAgentId(id), scope: new NativeScope(this.context.scope) }
+    const unregister = this.agents.register(agent)
+    try {
+      return await this.agents.withInitiator(agent, () => this.runTurn(request, id, agent, signal))
+    } finally {
+      await unregister()
+    }
+  }
+
+  /** Execute one turn after its native Agent lifecycle is visible. */
+  private async runTurn(
+    request: ReturnType<typeof parseArgs>,
+    id: ReturnType<typeof SessionId>,
+    agent: NativeAgent,
+    signal: AbortSignal,
+  ): Promise<number> {
     const additions = await this.promptSections?.render() ?? ''
     const systemPrompt = additions === '' ? this.config.systemPrompt : `${this.config.systemPrompt}\n\n${additions}`
-    const schemas = [...TOOL_SCHEMAS, ...(this.tools?.schemas() ?? [])]
+    const schemas = [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA]), ...(this.tools?.schemas() ?? [])]
     if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
       throw new Error('native-headless: duplicate tool schema')
     }
     const root = await this.fs.resolve(this.config.cwd, { signal })
     const rootInfo = await this.fs.stat(root, signal)
     if (rootInfo?.type !== 'directory') throw new Error('native-headless: cwd must be a directory')
-    const id = request.resume ?? SessionId(randomUUID())
     const fresh = request.resume === undefined ? Session.create(id, undefined, {
       version: SESSION_FORMAT_VERSION, id, createdAt: Date.now(), cwd: this.config.cwd, isSeeded: false, delegationDepth: 0,
     }) : undefined
@@ -166,6 +219,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     try {
       if (fresh !== undefined) {
         session = fresh
+        this.timeContext?.seed(session, [])
       } else {
         const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
         const closers = interruptedTurnClosers(stored.events)
@@ -175,6 +229,11 @@ export class NativeHeadlessApplication implements NativeApplication {
         turn = lastTurn?.type === 'turn/end' ? lastTurn.data.turn + 1 : 1
         session = Session.fromRestore(id, repaired, writer.header, writer.inheritedEventCount, stored.eventState,
           (event) => { pending.push(event) })
+        this.timeContext?.seed(session, repaired)
+      }
+      const track = (event: SessionEvent): void => {
+        pending.push(event)
+        this.timeContext?.record(session, event)
       }
       const persist = async (): Promise<void> => {
         if (pending.length > 0) {
@@ -193,83 +252,93 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (closersToAppend.length > 0) await writer.append(closersToAppend, { signal })
       }
       await persist()
-      pending.push(session.append('turn/start', { turn }))
+      track(session.append('turn/start', { turn }))
       let reason: import('@deepseek-ai/dsh-session').TurnEndReason = { kind: 'completed' }
       try {
         for (let step = 1; step <= this.config.maxSteps; step++) {
           signal.throwIfAborted()
-          pending.push(session.append('step/start', { turn, step }))
+          track(session.append('step/start', { turn, step }))
           if (step === 1) {
             if (session.deriveMessages().every(message => message.role !== 'system')) {
-              pending.push(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
+              track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
             }
             if (request.prompt.length > 0) {
-              pending.push(session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: request.prompt }] }), { surfaceOp: 'append' }))
+              track(session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: request.prompt }] }), { surfaceOp: 'append' }))
             }
+          }
+          const timeContext = this.timeContext?.prepare({ session, turn, step })
+          if (timeContext !== undefined) {
+            track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
           }
           const priorHeader = session.requestHeader()
           if (priorHeader === undefined || step === 1 && request.resume !== undefined) {
-            pending.push(session.append('request/header', {
+            track(session.append('request/header', {
               header: { config: { provider: this.config.provider, model: this.config.model }, tools: schemas },
               reason: priorHeader === undefined ? 'initial' : 'resume',
             }))
           }
           const priorContext = session.requestContext()
           if (priorContext?.provider !== this.config.provider || priorContext.model !== this.config.model) {
-            pending.push(session.append('request/context', { provider: this.config.provider, model: this.config.model }))
+            track(session.append('request/context', { provider: this.config.provider, model: this.config.model }))
           }
           await persist()
           const options: GenerateOptions = {
             provider: this.config.provider, model: this.config.model,
             messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
           }
-          const accumulator = new AssistantStreamAccumulator()
-          const assembler = new BlockAssembler()
-          let finished = false
-          try {
-            for await (const chunk of this.model.stream(options)) {
-              signal.throwIfAborted()
-              if (finished) throw new Error('native-headless: model emitted data after terminal finish')
-              if (chunk.type === 'finish') finished = true
-              assembler.push(accumulator.push({ time: Date.now(), chunk }).chunk)
-            }
-            signal.throwIfAborted()
-            if (!finished) throw new Error('native-headless: model ended without terminal finish')
-          } catch (error: unknown) {
-            pending.push(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
-            throw error
-          }
-          if (assembler.finish.kind === 'error' || assembler.finish.kind === 'aborted') {
-            pending.push(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
-            throw new Error(`native-headless: model ${assembler.finish.kind}: ${assembler.finish.failure.message}`)
-          }
-          const message = createAssistantMessage({ content: assembler.blocks(), source: {
-            provider: this.config.provider, model: this.config.model,
-          } })
-          pending.push(session.append('assistant/message', {
-            turn, step, message, stream: [...accumulator.snapshot()],
-            ...assembler.usage === undefined ? {} : { usage: assembler.usage },
-          }, { surfaceOp: 'append' }))
-          await persist()
+          const { message, finish } = await this.modelExecution.execute({
+            session, turn, step, options, append: track, persist,
+          })
           const calls = message.content.filter((block): block is ToolCallBlock => block.type === 'tool-call')
-          if (assembler.finish.kind === 'max-tokens') {
+          if (finish.kind === 'max-tokens') {
             if (calls.length > 0) throw new Error('native-headless: truncated tool call')
             reason = { kind: 'max-tokens' }
           }
-          const actor = { agent: { session } }
+          const actor = agent
           for (const call of calls) {
-            pending.push(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
+            track(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
+            const toolCallSeq = SessionSeq(session.seq - 1)
             await persist()
             let content: ContentBlock[]
             let isError = false
             let error: { name: string; code: string } | undefined
             try {
+              const authorize = async (requested: NativeToolApproval): Promise<void> => {
+                const service = this.approval
+                if (service === undefined) throw new Error(`native-headless: tool ${call.name} requires an approval authority`)
+                const id = NativeApprovalRequestId(randomUUID())
+                track(session.append('native-approval/asked', {
+                  id, toolName: call.name, callId: call.id,
+                  ...requested.reason === undefined ? {} : { reason: requested.reason },
+                }))
+                await persist()
+                await writer.flush()
+                const decision = await service.request({
+                  id, agent, toolName: call.name, callId: call.id,
+                  ...requested.reason === undefined ? {} : { reason: requested.reason }, signal,
+                })
+                track(session.append('native-approval/decided', decision))
+                await persist()
+                await writer.flush()
+                if (decision.outcome !== 'allowed-once') throw new NativeApprovalRejection(decision.outcome, call.name)
+              }
               if (call.name === 'read_file' || call.name === 'write_file') {
+                if (call.name === 'write_file' && this.approval !== undefined) {
+                  await authorize({ reason: 'Writing a file changes the selected workspace.' })
+                }
                 content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal) }]
+              } else if (call.name === 'run_code' && this.codeRuntime !== undefined) {
+                const outcome = await this.executeCode(call, signal)
+                content = [{ type: 'text', text: outcome.text }]
+                if (outcome.error !== undefined) {
+                  isError = true
+                  error = outcome.error
+                }
               } else {
                 if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
                 const result = await this.tools.execute({
-                  callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                  agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                  ...this.approval === undefined ? {} : { authorize },
                 })
                 content = [...result.content]
                 isError = result.isError
@@ -279,15 +348,20 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (signal.aborted) throw failure
               content = [{ type: 'text', text: failure instanceof Error ? failure.message : String(failure) }]
               isError = true
-              error = { name: failure instanceof Error ? failure.name : 'Error', code: failure instanceof FsError ? failure.code : 'UNKNOWN' }
+              error = {
+                name: failure instanceof Error ? failure.name : 'Error',
+                code: failure instanceof FsError ? failure.code
+                  : failure instanceof NativeApprovalRejection ? `APPROVAL_${failure.outcome.toUpperCase()}`
+                    : 'UNKNOWN',
+              }
             }
-            pending.push(session.append('tool/result', {
+            track(session.append('tool/result', {
               turn, step, message: createToolResultMessage({ callId: call.id, content, isError }),
               ...error === undefined ? {} : { error },
-            }, { surfaceOp: 'append', sourceEventSeqs: [SessionSeq(session.seq - 1)] }))
+            }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
             await persist()
           }
-          pending.push(session.append('step/end', { turn, step }))
+          track(session.append('step/end', { turn, step }))
           await persist()
           if (calls.length === 0) {
             process.stdout.write(`${message.content.filter(block => block.type === 'text').map(block => block.text).join('')}\n`)
@@ -303,7 +377,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         throw error
       } finally {
         if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {
-          pending.push(session.append('turn/end', { turn, reason }))
+          track(session.append('turn/end', { turn, reason }))
           await persist()
         } else {
           await persist()
@@ -325,13 +399,13 @@ export class NativeHeadlessApplication implements NativeApplication {
 /** Native application entry loaded only after all profile manifests are checked. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model'], optional: ['tools', 'promptSections', 'sandboxPolicy'], provides: ['application'],
+  requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'], optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext'], provides: ['application'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
       context.provide('application', new NativeHeadlessApplication(
-        context, context.require('fs'), context.require('sessionPersistence'), context.require('model'), config,
-        context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'),
+        context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), config, context.require('agents'),
+        context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'), context.optional('codeRuntime'), context.optional('timeContext'),
       ))
     }
   },

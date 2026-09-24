@@ -76,7 +76,7 @@ await ctx.sessionPersistence.flush()                           // backend-wide d
 
 ### 设计理念
 
-本包是 seam，而不是后端框架：它只导出抽象 `SessionPersistence` 服务、`SessionHandle` 约定、消费方捕获的稳定错误类、纯函数的存储记录校验辅助（`storage-contract`）以及带品牌类型的修订值——再无其他。每个提供方拥有自己完整的存储运行时（句柄类、修改排序、单写者记账、实时事件路由、拆卸），`tests/` 下的两套共享测试套件——`runPersistenceContract` 与 `runLiveWritePathContract`——固定所有提供方都必须一致的可观察行为。有意为之的后果：各提供方在存储恰好相似之处可以彼此相像，但没有任何实现机制跨越包边界。
+本包是 seam，而不是后端框架：包根入口导出抽象的 Cordis `SessionPersistence` 服务，`./native` 则导出相同的 `SessionHandle` 类型、稳定错误类、存储记录校验辅助函数和带品牌类型的修订值，且不加载该服务。每个提供方拥有自己完整的存储运行时（句柄类、修改排序、单写者记账、实时事件路由、拆卸），`tests/` 下的两套共享测试套件——`runPersistenceContract` 与 `runLiveWritePathContract`——固定所有提供方都必须一致的可观察行为。没有实现机制跨越包边界。
 
 ### 每个后端必须遵守的不变量
 
@@ -92,6 +92,8 @@ await ctx.sessionPersistence.flush()                           // backend-wide d
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：抽象 `SessionPersistence` 服务与重新导出的 seam 词汇 |
+| [`src/native.ts`](src/native.ts) | 提供方无关的存储约定入口 |
+| [`src/types.ts`](src/types.ts) | 两个入口共享的存储观察值与操作选项 |
 | [`src/handle.ts`](src/handle.ts) | `SessionHandle` 约定：read/append/flush/close 语义与新鲜度规则 |
 | [`src/storage-contract.ts`](src/storage-contract.ts) | 共享校验：版本门禁、未知事件词汇拒绝、批次实体化、连续性 |
 | [`src/errors.ts`](src/errors.ts) | 稳定的句柄/所有权失败与格式拒绝 |

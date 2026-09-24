@@ -155,6 +155,21 @@ describe('runtime-layer constraints', () => {
     ])
   })
 
+  it('rejects a renewed Codex dependency on the Program-owned SDK protocol', () => {
+    expect(collectRuntimeLayerViolations([{
+      dir: 'rsh/Programs/SDK/packages/protocol',
+      manifest: { name: '@deepseek-ai/dsh-sdk-protocol' },
+    }, {
+      dir: 'rsh/Engine/subagent/subagent-codex',
+      manifest: {
+        name: '@deepseek-ai/dsh-subagent-codex',
+        dependencies: { '@deepseek-ai/dsh-sdk-protocol': 'workspace:^' },
+      },
+    }])).toEqual([
+      '@deepseek-ai/dsh-subagent-codex: dependencies.@deepseek-ai/dsh-sdk-protocol violates runtime-layer policy: Engine packages may not consume Program packages',
+    ])
+  })
+
   it('rejects malformed runtime metadata', () => {
     expect(collectRuntimeLayerViolations([{
       dir: 'rsh/Modules/Official/fs/example',
@@ -229,6 +244,18 @@ describe('package payload constraints', () => {
     })).toEqual([
       'lib/index.js',
       'lib/runtime-definition.js',
+      'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it.each([
+    ['@deepseek-ai/dsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-launch-environment', ['lib/native.js']],
+  ] as const)('includes native entry dependencies for %s', (name, extras) => {
+    expect(expectedDshPackageFiles({ name })).toEqual([
+      'lib/index.js',
+      ...extras,
       'lib/types/**/*.d.ts',
     ])
   })

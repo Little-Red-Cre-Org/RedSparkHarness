@@ -22,6 +22,7 @@
     "@deepseek-ai/dsh-fs-observation-policy": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-compat-fs-sandbox": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^"

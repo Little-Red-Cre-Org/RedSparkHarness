@@ -26,6 +26,8 @@ Use `@deepseek-ai/dsh-launch-environment` to resolve launch-time environment val
 
 Resolve user-facing values through the snapshot instead of `process.env` whenever the layers are not equally trusted — for example a credential override a caller must never take from a project directory.
 
+Native Hosts and Clients import `./native` for the snapshot types, constructor, and SSH detection without loading Cordis. The root entry additionally supplies `launchEnvironmentOf(ctx)` for Cordis consumers. A native Host passes its launch snapshot directly to providers.
+
 ### Resolving a value
 
 ```ts

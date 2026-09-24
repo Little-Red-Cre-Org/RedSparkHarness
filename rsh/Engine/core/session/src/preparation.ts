@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-session/preparation
  */
 
-import type { Session } from './index.ts'
+import type { Session } from './session-core.ts'
 
 /** Options for a preparation whose provider retains unpublished state. */
 export interface SessionPreparationOptions {

@@ -62,6 +62,7 @@
  * leaves a FAILED fiber for the shell's status projection. Both log loudly.
  */
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-modules/client'
 import type { Entry, Loader } from '@deepseek-ai/cordis-plugin-loader'
 import type { PluginsEventFrame } from '../events.ts'
 import { EVENTS_ENDPOINT, parsePluginsEventFrame } from '../events.ts'

@@ -8,6 +8,7 @@
     "src"
   ],
   "references": [
+    { "path": "../../runtime-diagnostics/native-runtime" },
     {
       "path": "../../../Core/vendor/cordis"
     }

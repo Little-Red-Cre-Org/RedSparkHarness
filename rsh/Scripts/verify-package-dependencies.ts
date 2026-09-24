@@ -659,6 +659,17 @@ function describeSections(sections: readonly DependencySection[]): string {
   return sections.length === 0 ? 'no dependency section' : sections.join(' + ')
 }
 
+/** A mixed package may leave Cordis uninstalled when its separate native export is selected. */
+function optionalNativeCordisPeer(manifest: PackageDependencyManifest): boolean {
+  const exports = manifest.exports
+  const metadata = manifest.peerDependenciesMeta?.[CORDIS]
+  return exports !== null && typeof exports === 'object' && !Array.isArray(exports)
+    && Object.hasOwn(exports, './native')
+    && metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
+    && Object.keys(metadata).length === 1
+    && (metadata as { optional?: unknown }).optional === true
+}
+
 /** Return all manifest and policy violations in stable order. */
 export function collectPackageDependencyViolations(state: PackageDependencyState): string[] {
   const violations = [...state.policyViolations]
@@ -672,7 +683,8 @@ export function collectPackageDependencyViolations(state: PackageDependencyState
           && actual.includes('devDependencies')
           && section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE
           && section(facts.manifest, 'devDependencies')[name] === WORKSPACE_RANGE
-          && facts.manifest.peerDependenciesMeta?.[name] === undefined) continue
+          && (facts.manifest.peerDependenciesMeta?.[name] === undefined
+            || (name === CORDIS && optionalNativeCordisPeer(facts.manifest)))) continue
         violations.push(
           `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies at ${WORKSPACE_RANGE}; found ${describeSections(actual)}`,
         )
@@ -764,7 +776,7 @@ export function repairPackageDependencyManifest(facts: PackageDependencyFacts): 
       }
       mutableSection(facts.manifest, 'peerDependencies')[name] = WORKSPACE_RANGE
       mutableSection(facts.manifest, 'devDependencies')[name] = WORKSPACE_RANGE
-      deletePeerMeta(facts.manifest, name)
+      if (name !== CORDIS || !optionalNativeCordisPeer(facts.manifest)) deletePeerMeta(facts.manifest, name)
       continue
     }
     for (const sectionName of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const) {

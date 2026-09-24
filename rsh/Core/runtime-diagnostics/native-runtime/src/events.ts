@@ -1,5 +1,6 @@
 /** Typed, scope-filtered event delivery with explicit dispatch modes. */
 import { NativeScope } from './scope.ts'
+import type { NativeEvents } from './index.ts'
 
 /** A declaration fixes delivery mode, payload, and waterfall result independently of Cordis. */
 export interface EventDeclaration<Args extends unknown[] = unknown[], Result = void> {
@@ -7,9 +8,6 @@ export interface EventDeclaration<Args extends unknown[] = unknown[], Result = v
   args: Args
   result: Result
 }
-
-/** Extend in the event-owning package; each member has one EventDeclaration. */
-export interface NativeEvents {}
 
 /** Event names contributed by declaration merging. */
 export type EventKey = keyof NativeEvents

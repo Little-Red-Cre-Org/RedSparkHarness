@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-protocol` lets a DeepSeek Harness runtime and its SDK clients exchange JSON-RPC 2.0 messages over newline-delimited byte streams: one transport class plus the named request, result, and notification types both wire ends speak. The serving side is the [`dsh-sdk-jsonrpc-server`](../server/README.md) plugin; the clients are the TypeScript [`dsh-sdk-client`](../client/README.md) and the [Python SDK](../../python/README.md), which mirrors these shapes without importing them. Use this package when you implement or debug a wire end: framing rules, method names, payload types, and error semantics all live here. It is a pure library — no plugin, no configuration, no registrations.
+`dsh-sdk-protocol` defines the named request, result, and notification types spoken by the Harness runtime and SDK clients, and re-exports the shared JSON-RPC line transport from [Core](../../../../Core/util/json-rpc-line/README.md). The serving side is the [`dsh-sdk-jsonrpc-server`](../server/README.md) plugin; the clients are the TypeScript [`dsh-sdk-client`](../client/README.md) and the [Python SDK](../../python/README.md), which mirrors these types without importing them. Use this library when implementing or debugging an SDK wire end; it registers no plugin or configuration.
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ Use this package when you build or debug an SDK wire end — the serving plugin,
 
 ### Framing and transport
 
-Wire one JSON-RPC 2.0 message per `\n`-terminated line over byte streams you own. A frame with both `id` and `method` is a request, `id` alone is a response, and `method` alone is a notification; malformed lines are ignored. Requests with no registered handler answer `-32601`, handler failures answer `-32603`, and error responses reject the pending request with `JsonRpcResponseError`, which preserves the wire `code` and optional `data`. `start()` attaches stream listeners and `close()` detaches them and rejects pending requests without destroying the streams.
+The [Core transport](../../../../Core/util/json-rpc-line/README.md) owns newline framing, request correlation, error mapping, listener attachment, and closure. This package re-exports its classes so existing SDK clients and servers retain one transport identity.
 
 ### The SDK methods
 
@@ -69,14 +69,14 @@ The package is built on one separation: a single newline-delimited transport cla
 
 | File | Role |
 |---|---|
-| [`src/transport.ts`](src/transport.ts) | `JsonRpcLineTransport`: line framing, request/response/notification dispatch, error mapping, pending-request bookkeeping |
+| [`src/transport.ts`](src/transport.ts) | Re-exports the Core JSON-RPC line transport |
 | [`src/types.ts`](src/types.ts) | Named request/result and notification payload types, indexed by method |
 | [`src/index.ts`](src/index.ts) | Consumer interface: the transport and the named wire types |
-| — | No runtime invariant companion is published; a pure wire library (transport class + type declarations) with no event stream or mutable data relation of its own; both wire ends own their protocol behavior. |
+| — | No runtime invariant companion is published; SDK methods and payloads are type declarations, while the shared transport owns its own pending requests in Core. |
 
 ### Frame dispatch
 
-Incoming lines are parsed one at a time: a frame with `id` and `method` is answered through the request handler (or `-32601`), a frame with `id` alone resolves the matching pending request (an error frame rejects it with `JsonRpcResponseError`), and a frame with `method` alone is handed to the notification handler. `start()` attaches the input listeners; `close()` detaches them and fails every pending request without destroying the streams.
+Frame dispatch is owned and tested by the [Core transport](../../../../Core/util/json-rpc-line/README.md); the SDK protocol adds only its named method and payload types.
 
 </details>
 

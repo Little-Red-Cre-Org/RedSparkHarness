@@ -159,8 +159,13 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // unpublished, as everywhere else in the repository.
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
-  '@deepseek-ai/dsh-client-web': ['lib/**/*.css'],
+  '@deepseek-ai/dsh-client-web': ['lib/**/*.css', 'lib/native-boot.js'],
   '@deepseek-ai/dsh-client-ui-theme': ['lib/styles'],
+  '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
+  // Direct native credential entries share backend bundles where necessary.
+  '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-launch-environment': ['lib/native.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
@@ -179,6 +184,13 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/types-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-native-model-execution': ['lib/native.js'],
+  '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/native-*.js'],
+  '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
+  // Legacy Cordis entries and native values share their pure implementations.
+  '@deepseek-ai/dsh-session': ['lib/native.js'],
+  '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
   '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js'],
@@ -552,12 +564,6 @@ const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
     section: 'peerDependencies',
     dependency: '@deepseek-ai/dsh-settings',
     reason: 'Agent-loop configuration still reads the published settings capability during the adapter-first transition.',
-  },
-  {
-    consumer: '@deepseek-ai/dsh-subagent-codex',
-    section: 'dependencies',
-    dependency: '@deepseek-ai/dsh-sdk-protocol',
-    reason: 'The Codex subagent transport uses the published SDK protocol while its transport contract remains Program-owned.',
   },
   {
     consumer: '@deepseek-ai/dsh-subagent-dsh-sdk',

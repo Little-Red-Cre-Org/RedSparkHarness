@@ -5,8 +5,8 @@ import {
   Session,
   SessionId,
   SessionLogOffset,
-} from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
+} from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session/native'
 import type { SessionFormatArtifact, SessionFormatHeader } from '@deepseek-ai/dsh-session-format'
 
 /**

@@ -32,8 +32,8 @@ import { mkdir, open, stat } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tryLockExclusive } from '@deepseek-ai/node-addon-system/flock'
-import { SessionAlreadyOwnedError } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionAlreadyOwnedError } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
 import { acquireLockHandleWin32, releaseLockHandleWin32 } from './win32.ts'
 
 /** Base name of the kernel lock file inside a session's directory. */

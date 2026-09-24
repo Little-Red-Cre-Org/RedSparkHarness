@@ -44,6 +44,8 @@ Choose this backend when consumers benefit from one artifact per session — nav
 
 The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. The native host awaits open-handle closure when it removes the Provider.
 
+The built native entry loads without Cordis through the current Session, persistence, format, and model-value dependencies; the package root remains the Cordis plugin entry.
+
 | Field | Default | Meaning |
 |---|---|---|
 | `root` | required | Root directory for all session files |
@@ -95,7 +97,7 @@ This section explains the physical encoding and write path; the observable contr
 
 ### Design concept
 
-The backend owns its complete storage runtime (`src/storage.ts`): `JsonlSessionHandle` carries the per-handle mutation chain, the routed live-event buffer with its fixed batching window and single-flight drain, monotonic reads, and idempotent close; a tracker holds the in-process single-writer claims, the open-handle set teardown sweeps, and the created-but-unmaterialized pending sessions the backend's own session listeners route into. Historical body reads share one per-session Decode/Migrate preparation, and a bounded revision-keyed memo lets an immediate observe-to-resume handoff reuse that parse; the backend deep-freezes each event graph once before memoization, so later handle reads reuse it without copying or freezing. Only a write open publishes the prepared successor. The package deliberately exposes only its default plugin export plus configuration types — the concrete class is not a named export, so consumers couple to `ctx.sessionPersistence`, and the shared seam suites (`runPersistenceContract`/`runLiveWritePathContract`) pin its observable behavior. Its change token is a best-effort file revision: device, inode, size, and nanosecond timestamps identify one log for `stat`/`list`, for the stable-read loop that retries a read torn by a concurrent append, and for the pre-publication source check.
+The backend owns its complete storage runtime (`src/backend.ts` and `src/storage.ts`): `JsonlSessionHandle` carries the per-handle mutation chain, the routed live-event buffer with its fixed batching window and single-flight drain, monotonic reads, and idempotent close; a tracker holds the in-process single-writer claims, the open-handle set teardown sweeps, and the created-but-unmaterialized pending sessions. The Cordis adapter registers the legacy session listeners and routes their events to that same backend; the native entry installs it directly. Historical body reads share one per-session Decode/Migrate preparation, and a bounded revision-keyed memo lets an immediate observe-to-resume handoff reuse that parse; the backend deep-freezes each event graph once before memoization, so later handle reads reuse it without copying or freezing. Only a write open publishes the prepared successor. The concrete backend is a named export for native consumers, while the default export remains the legacy plugin; the shared seam suites (`runPersistenceContract`/`runLiveWritePathContract`) pin their observable storage behavior. Its change token is a best-effort file revision: device, inode, size, and nanosecond timestamps identify one log for `stat`/`list`, for the stable-read loop that retries a read torn by a concurrent append, and for the pre-publication source check.
 
 ### Physical encoding
 
@@ -105,8 +107,10 @@ The default artifact is a standard concatenation of independent [Zstandard frame
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, the backend service class, and file storage primitives |
-| [`src/storage.ts`](src/storage.ts) | The JSONL handle, routed live-event buffer, in-process writer bookkeeping, listeners, teardown |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry: config schema and legacy session event registration |
+| [`src/native.ts`](src/native.ts) | Native Provider entry and config validation |
+| [`src/backend.ts`](src/backend.ts) | Shared JSONL backend and file storage primitives |
+| [`src/storage.ts`](src/storage.ts) | JSONL handles, routed live-event buffer, in-process writer bookkeeping, teardown |
 | [`src/format.ts`](src/format.ts) | Log path derivation, header encoding, and current record scanning |
 | [`src/generation.ts`](src/generation.ts) | Single-pass historical restore, bounded stage encoding, source revision check, and exclusive successor publication |
 | [`src/migration-verifier.ts`](src/migration-verifier.ts) | Worker lifecycle for staged and competing-generation verification |

@@ -5,6 +5,7 @@
   "references": [
     { "path": "../../llm/llm" },
     { "path": "../session" },
+    { "path": "../native-agent" },
     { "path": "../../../Core/runtime-diagnostics/native-runtime" }
   ]
 }

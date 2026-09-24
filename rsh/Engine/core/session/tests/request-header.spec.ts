@@ -5,6 +5,8 @@ import { Session, SessionId, SessionSeq, canonicalHeader, foldRequestHeader, hea
 import type { EpochHeader, SessionEvent } from '@deepseek-ai/dsh-session'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { ToolSchema } from '@deepseek-ai/dsh-llm'
+import { callConfigEquals } from '@deepseek-ai/dsh-llm/native'
+import type { LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
 
 const CONFIG = { provider: 'mock', model: 'm' }
 
@@ -59,6 +61,29 @@ describe('headerEquals', () => {
     expect(headerEquals({ config: CONFIG }, { config: CONFIG, tools: [] })).toBe(true)
     expect(headerEquals({ config: CONFIG, tools: [] }, { config: CONFIG })).toBe(true)
     expect(headerEquals({ config: CONFIG }, { config: CONFIG })).toBe(true)
+  })
+
+  it('keeps request-header config equality aligned with LLM change detection', () => {
+    const config: LlmCallConfig = {
+      provider: 'mock', model: 'm', reasoningEffort: ReasoningEffortId('high'),
+      temperature: 0.5, maxTokens: 100, stop: ['a', 'b'],
+    }
+    const withoutStop = { ...config }
+    delete withoutStop.stop
+    const proposals: LlmCallConfig[] = [
+      { ...config },
+      { ...config, provider: 'other' },
+      { ...config, model: 'other' },
+      { ...config, reasoningEffort: ReasoningEffortId('low') },
+      { ...config, temperature: 0.6 },
+      { ...config, maxTokens: 200 },
+      { ...config, stop: ['a'] },
+      { ...config, stop: ['a', 'c'] },
+      withoutStop,
+    ]
+    for (const proposed of proposals) {
+      expect(headerEquals({ config }, { config: proposed })).toBe(callConfigEquals(config, proposed))
+    }
   })
 })
 

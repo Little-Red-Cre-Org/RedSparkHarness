@@ -35,6 +35,72 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "run_code",
+      "description": "Run one TypeScript program in an isolated worker thread.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "program": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "program"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_output",
+      "description": "Read a background job result and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
     }
   ],
   "changes": [
@@ -71,6 +137,72 @@
           "required": [
             "path",
             "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "run_code",
+        "description": "Run one TypeScript program in an isolated worker thread.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "program": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "program"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read a background job result and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
           ],
           "additionalProperties": false
         }

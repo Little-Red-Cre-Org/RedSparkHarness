@@ -33,6 +33,7 @@ Use the core packages to build or extend an agent that records durable session h
 | [`agent-default-model/`](agent-default-model/README.md) | The deployment default model selection entry points apply to fresh agents | `ctx.agentDefaultModel` |
 | [`agent-loop/`](agent-loop/README.md) | The default agent driver: creates agents and runs the turn and step lifecycle | `ctx.agentLoop` |
 | [`native-headless/`](native-headless/README.md) | One-shot native profile application with file tools and durable Session history | native `application` service |
+| [`native-model-execution/`](native-model-execution/README.md) | Records native model streams as Session assistant events | native `modelExecution` service |
 
 `scope` supplies the shared scoping primitive; `agent` owns the public `Agent` contract, while `agent-loop` is its default implementation, so extension plugins depend on `agent` and the driver stays swappable. `agent-default-model` owns the deployment selection an entry point applies when a session has none of its own. Runnable compositions live under [`rsh/Compatibility/DSH/bundle`](../../Compatibility/DSH/bundle/README.md); this group owns only the swappable spine pieces.
 

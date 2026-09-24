@@ -3,7 +3,7 @@
  * The direct imports make historical readability independent of mounted plugins.
  */
 
-import { KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'
+import { KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session/native'
 import { createSessionFormatCatalog } from '@deepseek-ai/dsh-session-format'
 import { validateInstalledCurrentSessionArtifact, validateInstalledCurrentSessionHeader } from './current.ts'
 import { releasedV0SessionFormatCodec, releasedV1SessionFormatCodec, sessionFormatV0ToV1 } from '@deepseek-ai/dsh-session-format-v0-to-v1'

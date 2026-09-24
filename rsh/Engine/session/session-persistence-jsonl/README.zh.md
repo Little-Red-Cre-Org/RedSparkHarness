@@ -44,6 +44,8 @@ kind: "package-reference"
 
 `./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。原生 Host 移除 Provider 时会等待已打开句柄关闭。
 
+构建后的原生入口沿当前 Session、持久化、格式与模型值依赖链加载时不会加载 Cordis；包根入口仍是 Cordis 插件入口。
+
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `root` | 必填 | 所有会话文件的根目录 |
@@ -95,7 +97,7 @@ kind: "package-reference"
 
 ### 设计理念
 
-该后端拥有自己完整的存储运行时（`src/storage.ts`）：`JsonlSessionHandle` 承载逐句柄修改链、带固定批处理窗口与 single-flight 排空的已路由实时事件缓冲、单调读取与幂等 close；一个 tracker 持有进程内单写者认领、teardown 清扫所遍历的打开句柄集合，以及后端自己的会话监听器所路由进的已创建但未实体化待定会话。历史正文读取共享每个 Session 唯一的一次 Decode/Migrate preparation，按 revision 为键的有界 memo 让紧接的观察到恢复交接复用该解析；backend 在 memo 化前只对每个 event graph 深度冻结一次，因此后续 handle read 无需复制或再次冻结。只有写 open 才发布准备好的后继。本包有意只暴露默认插件导出与配置类型——具体类不是具名导出，因此消费方只耦合 `ctx.sessionPersistence`，其可观察行为由共享 seam 测试套件（`runPersistenceContract`/`runLiveWritePathContract`）钉住。其变更令牌是尽力而为的文件修订值：device、inode、size 与纳秒时间戳标识一份日志，供 `stat`/`list`、在并发 append 撕裂读取时重试的稳定读取循环，以及发布前源检查使用。
+该后端拥有自己完整的存储运行时（`src/backend.ts` 和 `src/storage.ts`）：`JsonlSessionHandle` 承载逐句柄修改链、带固定批处理窗口与 single-flight 排空的已路由实时事件缓冲、单调读取与幂等 close；tracker 持有进程内单写者认领、teardown 清扫所遍历的打开句柄集合，以及已创建但未实体化的待定会话。Cordis 适配器注册旧会话监听器，并把事件路由到同一后端；原生入口直接安装该后端。历史正文读取共享每个 Session 唯一的一次 Decode/Migrate preparation，按 revision 为键的有界 memo 让紧接的观察到恢复交接复用该解析；backend 在 memo 化前只对每个 event graph 深度冻结一次，因此后续 handle read 无需复制或再次冻结。只有写 open 才发布准备好的后继。具体后端是面向原生消费方的具名导出，默认导出仍是旧插件；共享 seam 测试套件（`runPersistenceContract`/`runLiveWritePathContract`）钉住两条路径的存储行为。其变更令牌是尽力而为的文件修订值：device、inode、size 与纳秒时间戳标识一份日志，供 `stat`/`list`、在并发 append 撕裂读取时重试的稳定读取循环，以及发布前源检查使用。
 
 ### 物理编码
 
@@ -105,8 +107,10 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、后端服务类与文件存储原语 |
-| [`src/storage.ts`](src/storage.ts) | JSONL 句柄、已路由实时事件缓冲、进程内写入者记账、监听器、teardown |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口：配置 schema 和旧会话事件注册 |
+| [`src/native.ts`](src/native.ts) | 原生 Provider 入口与配置校验 |
+| [`src/backend.ts`](src/backend.ts) | 共享 JSONL 后端和文件存储原语 |
+| [`src/storage.ts`](src/storage.ts) | JSONL 句柄、已路由实时事件缓冲、进程内写入者记账、teardown |
 | [`src/format.ts`](src/format.ts) | 日志路径派生、header 编码与当前记录扫描 |
 | [`src/generation.ts`](src/generation.ts) | 单遍历史还原、有界 stage 编码、源 revision 检查与排他后继发布 |
 | [`src/migration-verifier.ts`](src/migration-verifier.ts) | stage 与竞争 generation 校验的 Worker 生命周期 |

@@ -9,9 +9,9 @@ import {
   adoptSessionEvent,
   KNOWN_SESSION_EVENT_TYPES,
   SESSION_FORMAT_VERSION,
-} from '@deepseek-ai/dsh-session'
+} from '@deepseek-ai/dsh-session/native'
 import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
 import {
   SessionFormatUnsupportedError,
   SessionPersistenceCorruptionError,

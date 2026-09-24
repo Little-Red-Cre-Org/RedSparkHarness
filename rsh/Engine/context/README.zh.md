@@ -28,7 +28,8 @@ context 组提供不定义任何工具、为每次请求添加模型可见上下
 | [`session-reference/`](session-reference/README.zh.md) | 引用其他会话：提及一个会话，其有界只读快照即成为上下文 | `ctx.sessionReferenceResolver` |
 | [`file-reference/`](file-reference/README.zh.md) | 发现 `@file` 提及，并提供由宿主支持的 UI 共用的提及语法 | `ctx.fileReferences` |
 | [`file-reference-local/`](file-reference-local/README.zh.md) | `@file` 提及的本地工作区补全提供方 | — |
-| [`time-context/`](time-context/README.zh.md) | 每个步骤的当前时间、浏览器时区与经过时长 | — |
+| [`time-context/`](time-context/README.zh.md) | Cordis Agent pre-step Provider：每个步骤的当前时间、浏览器时区与经过时长 | `ctx.sessionProjections` |
+| [`native-time-context/`](native-time-context/README.zh.md) | 原生 Provider：向应用 Consumer 返回持久的当前时间、浏览器时区与经过时长消息 | `timeContext` |
 | [`tmux-context/`](tmux-context/README.zh.md) | agent 所在的 tmux 会话、窗口与窗格位置 | — |
 
 -----

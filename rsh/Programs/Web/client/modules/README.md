@@ -29,6 +29,8 @@ Use [`DshClientManifest`](../../../../Core/util/package-manifest/README.md) for 
 
 Use it when you compose or build a browser client plugin: the package turns a package's `dsh.client` declaration into a loadable browser bundle with no per-plugin wiring. It activates with the web composition; the shell boots it before any plugin runs.
 
+The browser-only `@deepseek-ai/dsh-client-modules/native` export provides `ClientModuleSystem`, boot-manifest parsing, and their types without importing Cordis. Its JavaScript and public declarations have no workspace package imports; the Cordis peer is optional for this export. It does not activate a plugin tree or replace the current `./client` bootstrap; a native shell must supply its own plugin installation and renderer handoff.
+
 ### Declaring a client plugin
 
 A browser plugin package declares `dsh.client` in its `package.json` with `platform: 'web'`, exports a `./client` bundle, and lists any non-baseline module requests under `dsh.client.external`. The host half turns each declaration into a served bundle under `/plugins`, ordered so dynamic providers load before their consumers.
@@ -79,8 +81,10 @@ The host contributes structured index rows that inject, into `<head>`: the `wind
 |---|---|
 | [`src/index.ts`](src/index.ts) | Node half: `ClientModuleRegistry`, scan, artifact snapshots, optional combo route, structured index rows |
 | [`src/client/index.ts`](src/client/index.ts) | Browser half: bootstrap export, `ctx.modules` enrollment |
+| [`src/client/native.ts`](src/client/native.ts) | Cordis-free browser module-system export for native Client composition |
 | [`src/client/system.ts`](src/client/system.ts) | `ClientModuleSystem`: load/materialize/invalidate machinery |
-| [`src/client/manifest.ts`](src/client/manifest.ts) | Wire types, boot-manifest parsing, and the `dsh.client` declaration parser |
+| [`src/client/manifest.ts`](src/client/manifest.ts) | Wire types and boot-manifest parsing |
+| [`src/client/dsh-client.ts`](src/client/dsh-client.ts) | Legacy `dsh.client` package-declaration parser |
 
 </details>
 

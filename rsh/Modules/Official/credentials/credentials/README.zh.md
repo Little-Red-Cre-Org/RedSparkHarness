@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-credentials` 通过让 settings 与 `cordis.yml` 引用 `DEEPSEEK_API_KEY` 等密钥名称，使机密值留在配置之外。它还存储持久化的按插件组织的凭据记录，包括授权 grant 与提供方环境值。轮换后的已存储密钥会作用于下一次请求，无需重启或修改配置。配置界面可以报告密钥或记录是否已设置、来自哪里及能否写入，而不会暴露值。空密钥值视为不存在，而空记录仍表示一项有意存储的凭据。
+`dsh-credentials` 让 settings 与 `cordis.yml` 使用 `DEEPSEEK_API_KEY` 等引用，使机密值留在配置之外。它持久化授权 grant 与提供方值；轮换后的密钥作用于下一次请求。配置界面能报告是否存在、来源和可写性，而不暴露值。空密钥视为不存在，空记录则是有意存储的记录。原生 Host 和 Client 消费者从 `./native` 获取引用、记录类型、键构造函数和 `NativeCredentials` 接口；组合负责提供 Provider。根入口供 Cordis 消费者使用。
 
 ## 目录
 

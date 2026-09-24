@@ -44,7 +44,7 @@ const eventRecords = current.events.map(sessionFormatCatalog.encodeCurrentEvent)
 
 Production 历史读取使用 `{ recovery: 'recoverable', validation: 'transformed' }`。Worker 与 fixture 校验使用 `{ recovery: 'strict', validation: 'current' }`。Transformed validation 会在迁移后执行已发布 current 规则，但对已经是 current 的输入有意跳过已安装语义校验。
 
-该目录直接包含所有受支持的历史读取器。Profile 无法通过挂载功能插件来添加、移除或重新排列迁移边。它通过对 `dsh-session` 的对等依赖（peer dependency）获得已安装的当前事件词表与当前还原规则，而历史迁移边校验器保持冻结。
+该目录直接包含所有受支持的历史读取器。Profile 无法通过挂载功能插件来添加、移除或重新排列迁移边。它通过 `dsh-session/native` 获得已安装的当前事件词表与当前还原规则，而不加载 Cordis Session 服务；历史迁移边校验器保持冻结。
 
 -----
 

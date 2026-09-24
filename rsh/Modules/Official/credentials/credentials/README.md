@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-credentials` keeps secret values out of configuration by letting settings and `cordis.yml` refer to key names such as `DEEPSEEK_API_KEY`. It also stores durable per-plugin credential records, including authorization grants and provider environment values. A rotated stored key applies to the next request without a restart or configuration edit. Configuration UIs can report whether a key or record is set, its source, and whether it is writable without exposing values. Empty key values count as absent, while an empty record remains a deliberate stored credential.
+`dsh-credentials` keeps secrets out of settings and `cordis.yml` by using references such as `DEEPSEEK_API_KEY`. It stores durable authorization grants and provider values; rotated keys apply to the next request. Configuration UIs can report presence, source, and writability without exposing values. Empty keys are absent, while empty records are deliberate. Native Host and Client consumers use `./native` for references, record types, key constructors, and the `NativeCredentials` interface; a composition supplies the provider. The root export serves Cordis consumers.
 
 ## Table of Contents
 

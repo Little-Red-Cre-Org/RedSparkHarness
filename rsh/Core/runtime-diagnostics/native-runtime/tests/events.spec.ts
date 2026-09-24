@@ -2,7 +2,7 @@
 import { expect, it } from 'vitest'
 import { NativeScope, RuntimeEvents } from '../src/index.ts'
 
-declare module '../src/events.ts' {
+declare module '../src/index.ts' {
   interface NativeEvents {
     observed: { mode: 'sync'; args: [number]; result: undefined }
     flush: { mode: 'parallel'; args: []; result: undefined }

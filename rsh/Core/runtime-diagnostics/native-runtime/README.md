@@ -27,6 +27,8 @@ This library resolves explicit plugin selections and activates them without Cord
 
 `resolveInstallation(requests, target)` checks versions, targets, provider conflicts, missing dependencies and cycles before resolving configuration. A plugin's `resolve(config)` validates configuration without acquiring resources and returns its activation function. A consumer reads only declared services, selecting the nearest provider in its scope or ancestry; separate roots isolate realms. Providers become visible only after activation succeeds and all declared services exist.
 
+Service Definition packages extend `NativeServices`, and event Definition packages extend `NativeEvents`, from the `@deepseek-ai/dsh-native-runtime` package root. The Host and event bus use those same merged declarations.
+
 `NativeHost` owns each activation before calling it. Plugins register resource cleanup immediately through `context.own()` and subscribe through `context.on()`. Stop aborts owned signals, closes event admission, awaits callbacks and startup settlement, and disposes consumers before providers. Resource cleanup runs in reverse acquisition order, attempts every disposer and reports aggregate failures. Plugins must cooperate with cancellation and await their own in-flight work during disposal. Cleanup does not undo completed external writes.
 
 `context.optional()` reads only explicitly optional capabilities and returns undefined when no provider was selected. `host.remove(request)` accepts the original installation request object and stops that installation and its transitive consumers. Unrelated owners remain active; affected subscriptions close admission and drain their callbacks before resource disposal. Removal is idempotent and does not automatically select another provider.
@@ -41,7 +43,7 @@ This library resolves explicit plugin selections and activates them without Cord
 <a id="events"></a>
 ## Events
 
-Definitions extend `NativeEvents` with mode, arguments and result. Synchronous dispatch propagates exceptions; serial delivery stops on rejection; parallel delivery settles every listener before reporting failures. Waterfall requires explicit `next()` delegation, supports short-circuiting and rejects repeated delegation. Ancestor subscriptions receive descendant dispatches in registration order; other realms do not. Error isolation belongs to the event owner.
+Event Definition packages extend `NativeEvents` with mode, arguments and result from the package root. Synchronous dispatch propagates exceptions; serial delivery stops on rejection; parallel delivery settles every listener before reporting failures. Waterfall requires explicit `next()` delegation, supports short-circuiting and rejects repeated delegation. Ancestor subscriptions receive descendant dispatches in registration order; other realms do not. Error isolation belongs to the event owner.
 
 <a id="model-experience"></a>
 ## Model Experience

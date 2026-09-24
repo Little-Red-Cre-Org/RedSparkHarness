@@ -32,7 +32,9 @@ it('adapts legacy file tools through a shipped profile and writes one durable re
   copyFileSync(join(shippedProfile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   for (const [name, path] of [
+    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
     ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
     ['dsh-compat-fs-local', 'rsh/Compatibility/DSH/bridge/compat-fs-local'],
     ['dsh-compat-fs-policy', 'rsh/Compatibility/DSH/bridge/compat-fs-policy'],

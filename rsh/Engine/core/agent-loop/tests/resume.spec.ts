@@ -69,6 +69,24 @@ async function readStoredEvents(ctx: Context, sessionId: SessionId): Promise<rea
   }
 }
 
+function captureCreatedWriter(ctx: Context, sessionId: SessionId): () => SessionHandle {
+  const persistence = ctx.sessionPersistence
+  const create = persistence.create.bind(persistence)
+  let captured: SessionHandle | undefined
+  const createSpy = vi.spyOn(persistence, 'create').mockImplementation(async (header, options) => {
+    const handle = await create(header, options)
+    if (header.id === sessionId) {
+      captured = handle
+      createSpy.mockRestore()
+    }
+    return handle
+  })
+  return () => {
+    if (captured === undefined) throw new Error(`missing created writer for ${sessionId}`)
+    return captured
+  }
+}
+
 async function persistSession(sessionId: SessionId): Promise<string> {
   const { ctx, root } = await persistentHarness(new MockAdapter([]))
   // Persistence deliberately has no artifact for a truly empty session. A
@@ -185,13 +203,11 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
   it('a rejecting final writer close releases the registries, then rejects disposal', async () => {
     const { ctx } = await persistentHarness(new MockAdapter([textResponse('hi')]))
     const sessionId = SessionId('drain-close-fails')
+    const captureWriter = captureCreatedWriter(ctx, sessionId)
     const handle = await ctx.agents.create({ sessionId })
     const persisted = await ctx.sessionPersistence.open(sessionId, 'read')
     await persisted.close()
-    const stored = [...(ctx.sessionPersistence as unknown as {
-      tracker: { openHandles: Set<SessionHandle> }
-    }).tracker.openHandles].find(open => open.id === sessionId && open.access === 'write')
-    if (stored === undefined) throw new Error('missing owned write handle')
+    const stored = captureWriter()
     // The real close still runs (releasing write ownership); the injected
     // failure models a drain that reports a durability error at close.
     const realClose = stored.close.bind(stored)
@@ -213,11 +229,9 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
   it('combines a machine-teardown failure with a close failure into one rejection', async () => {
     const { ctx } = await persistentHarness(new MockAdapter([textResponse('hi')]))
     const sessionId = SessionId('drain-both-fail')
+    const captureWriter = captureCreatedWriter(ctx, sessionId)
     const handle = await ctx.agents.create({ sessionId })
-    const stored = [...(ctx.sessionPersistence as unknown as {
-      tracker: { openHandles: Set<SessionHandle> }
-    }).tracker.openHandles].find(open => open.id === sessionId && open.access === 'write')
-    if (stored === undefined) throw new Error('missing owned write handle')
+    const stored = captureWriter()
     const machine = handle.agent as Agent & { scope: { dispose: () => Promise<void> } }
     vi.spyOn(machine.scope, 'dispose').mockRejectedValue(new Error('scope exploded'))
     vi.spyOn(stored, 'close').mockRejectedValue(new Error('close exploded'))

@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/util/json-rpc-line"
+    },
+    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {

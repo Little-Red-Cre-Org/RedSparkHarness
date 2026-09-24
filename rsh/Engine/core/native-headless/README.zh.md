@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-headless` 为原生 `dsh --profile` 组合提供一个应用。它把用户提示词发送给选定模型，执行限定在工作目录内的 UTF-8 文件读写，将模型可见消息与工具结果写入已发布格式的 Session 日志，并在退出前关闭存储。原生 profile 还须安装文件系统、观察策略、Session 持久化及模型 Provider。
+`dsh-native-headless` 为原生 `dsh --profile` 组合提供一个应用。它把用户提示词发送给选定模型，执行限定在工作目录内的 UTF-8 文件读写，可选地在 profile 选择的 worker runtime 中运行 TypeScript，将模型可见消息与工具结果写入已发布格式的 Session 日志，并在退出前关闭存储。原生 profile 还须安装文件系统、观察策略、Session 持久化、模型、模型执行及原生 Agent Provider。
 
 ## 目录
 
@@ -21,9 +21,11 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本，而可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
+`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
 
-应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
+应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；非授权结果会变为 `APPROVAL_*` 工具结果错误。每个 turn 会注册一个由 Session 标识派生的子作用域原生 Agent，在该 Agent 的显式 initiator boundary 内运行模型和工具工作，并且只在 turn 结束后注销它。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
+
+[模型执行 Provider](../native-model-execution/README.zh.md)负责组装并记录每个助手流事件。应用继续拥有 turn 和工具执行。
 
 <a id="dev-note"></a>
 ## 开发备注
@@ -57,7 +59,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-模型收到固定 `read_file` 和 `write_file` schema，以及可选 `tools` 注册表中的每个 schema。下一次请求前，文件内容、固定工具错误和已注册工具结果会进入一条工具结果消息。
+模型收到固定 `read_file` 和 `write_file` schema，安装 `codeRuntime` 时还会收到 `run_code`，以及可选 `tools` 注册表中的每个 schema。下一次请求前，文件内容、有界代码结果、固定工具错误和已注册工具结果会进入一条工具结果消息。
 
 #### Token 影响
 
@@ -67,9 +69,23 @@ kind: "package-reference"
 
 添加、移除或改变操作 schema 会从首个不同 token 起改变请求前缀。
 
+### 时间上下文
+
+#### 模型看到的内容
+
+安装 `timeContext` 且刷新间隔到期时，应用会在发送请求前追加一条带来源的用户消息，包含当前时间、开放轮次的浏览器时区策略和经过时长。
+
+#### Token 影响
+
+该读数会保留在后续步骤及续接请求中，直到压缩将它遮蔽；正数刷新间隔会降低追加新读数的频率。
+
+#### KV Cache 影响
+
+读数追加在现有历史之后，不会改变其前可复用的前缀。
+
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-- 固定文件工具和已注册工具串行执行；审批、SDK 协议和 Web UI 仍然缺失。
+- 固定文件工具、`run_code` 和已注册工具串行执行；SDK 协议和 Web UI 仍然缺失。
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
 - Session 与持久化包仍携带 Cordis 依赖，但此组合不会创建 Cordis Context。

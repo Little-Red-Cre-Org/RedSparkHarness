@@ -9,9 +9,8 @@
  * @module
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { errorChain } from '@deepseek-ai/dsh-llm'
-import type { Session, SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import { errorChain } from '@deepseek-ai/dsh-llm/native'
+import type { Session, SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
 import {
   assertContiguous,
   SessionAlreadyExistsError,
@@ -21,7 +20,7 @@ import {
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
   SessionReadOnlyError,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@deepseek-ai/dsh-session-persistence/native'
 import type {
   SessionAccess,
   SessionHandle,
@@ -29,7 +28,7 @@ import type {
   SessionHandleFlushOptions,
   SessionHandleReadOptions,
   SessionHandleReadResult,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@deepseek-ai/dsh-session-persistence/native'
 import type { SessionWriteLease } from './lease.ts'
 
 /** Maximum intentional wait before a routed live session batch starts writing. */
@@ -536,35 +535,41 @@ export class JsonlBackendTracker {
   }
 
   /**
-   * Install the backend's live session routing and teardown. Persistence
-   * enforces one active write handle per id, so the listeners route published
-   * sessions' events by id; the teardown effect closes every open handle —
-   * close drains the routed buffer — and aggregates failures. This provider
-   * owns no separate storage connection, so closing handles is the complete
-   * teardown. Registrations are effects of the current fiber.
-   * @param ctx - the backend's context.
+   * Route a live event to its active writer, if one exists.
+   * @param session - The live session.
+   * @param event - The appended event.
+   * @param warn - Reports an asynchronous write failure.
    */
-  install(ctx: Context): void {
-    ctx.on('session/event', (session: Session, event) => {
-      this.writers.get(session.id)?.enqueueLive(event, (error) => {
-        ctx.logger.warn(`session-persistence: background write for session "${session.id}" failed (buffered events retained): ${String(error)}`)
-      })
+  onSessionEvent(session: Session, event: SessionEvent, warn: (message: string) => void): void {
+    this.writers.get(session.id)?.enqueueLive(event, (error) => {
+      warn(`session-persistence: background write for session "${session.id}" failed (buffered events retained): ${String(error)}`)
     })
-    ctx.on('session/flush', (session: Session) => {
-      const writer = this.writers.get(session.id)
-      if (writer === null || writer === undefined) return undefined
-      return (async () => {
-        await writer.drainLive()
-        await writer.flush()
-      })()
+  }
+
+  /**
+   * Drain and flush one active writer for a legacy session flush event.
+   * @param session - The live session.
+   * @returns The pending flush, if a writer exists.
+   */
+  flushSession(session: Session): Promise<void> | undefined {
+    const writer = this.writers.get(session.id)
+    if (writer === null || writer === undefined) return undefined
+    return (async () => {
+      await writer.drainLive()
+      await writer.flush()
+    })()
+  }
+
+  /**
+   * Close one active writer when its legacy session is disposed.
+   * @param session - The disposed session.
+   * @param warn - Reports an asynchronous close failure.
+   */
+  disposeSession(session: Session, warn: (message: string) => void): void {
+    const writer = this.writers.get(session.id)
+    if (writer === null || writer === undefined) return
+    writer.close().catch((error: unknown) => {
+      warn(`session-persistence: final drain for session "${session.id}" failed: ${String(error)}`)
     })
-    ctx.on('session/disposed', (session: Session) => {
-      const writer = this.writers.get(session.id)
-      if (writer === null || writer === undefined) return
-      writer.close().catch((error: unknown) => {
-        ctx.logger.warn(`session-persistence: final drain for session "${session.id}" failed: ${String(error)}`)
-      })
-    })
-    ctx.effect(() => () => this.closeAll(), `${this.name} open handles`)
   }
 }

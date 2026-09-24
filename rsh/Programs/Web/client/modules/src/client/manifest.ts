@@ -29,16 +29,7 @@
  * composes the wire.
  */
 
-import type {} from '@deepseek-ai/cordis'
-import type { DshClientManifest } from '@deepseek-ai/dsh-package-manifest'
 import type { ClientModuleSystem } from './system.ts'
-
-declare module '@deepseek-ai/cordis' {
-  interface Context {
-    /** The client module system the web shell builds at boot (provided by the `./client` wrapper plugin). */
-    modules: ClientModuleLoader
-  }
-}
 
 /**
  * One composed client entry pushed by the host (a graph row). Wire
@@ -143,37 +134,6 @@ export function optionalStringArray(subject: string, field: string, value: unkno
     throw new Error(`client-modules: ${subject} ${field} must be a string array`)
   }
   return value as string[]
-}
-
-/**
- * Narrow an unknown parsed JSON value to the `dsh.client` declaration. Shared
- * by the node half's Loader scan and the roster generator, so both read a
- * package's browser declaration through one validator.
- * @param pkgName - package name used as the diagnostic prefix.
- * @param value - the raw `dsh.client` field of the package manifest.
- * @returns the validated declaration, or undefined when the field is absent.
- * @throws {Error} when the field is present but any member is malformed.
- */
-export function parseDshClient(pkgName: string, value: unknown): DshClientManifest | undefined {
-  if (value === undefined) return undefined
-  if (typeof value !== 'object' || value === null) {
-    throw new Error(`client-modules: ${pkgName} has a non-object dsh.client declaration`)
-  }
-  const decl = value as Record<string, unknown>
-  if (typeof decl.platform !== 'string') {
-    throw new Error(`client-modules: ${pkgName} dsh.client.platform must be a string`)
-  }
-  const inject = optionalStringArray(pkgName, 'dsh.client.inject', decl.inject)
-  const external = optionalStringArray(pkgName, 'dsh.client.external', decl.external)
-  if (decl.immediately !== undefined && typeof decl.immediately !== 'boolean') {
-    throw new Error(`client-modules: ${pkgName} dsh.client.immediately must be a boolean`)
-  }
-  return {
-    platform: decl.platform,
-    ...(inject !== undefined ? { inject } : {}),
-    ...(external !== undefined ? { external } : {}),
-    ...(decl.immediately !== undefined ? { immediately: decl.immediately } : {}),
-  }
 }
 
 /**

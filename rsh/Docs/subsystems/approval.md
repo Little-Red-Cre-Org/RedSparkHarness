@@ -87,6 +87,14 @@ interface ApprovalRequest extends ApprovalRequestEvent {
 
 The audit events are log-only and do not enter the model transcript. Model-visible behavior is the caller's derived tool result plus the current runtime-context snapshot. Service disposal removes its context contribution; answerer listeners are independently effect-bound to their owning plugins.
 
+## Native profile approval
+
+`dsh-native-approval` supplies a separate native `approval` Provider for profiles that use `NativeAgentRegistry` instead of a Cordis Agent. `NativeApprovalService` accepts the same closed outcome vocabulary and an `ask`/`never` deployment policy, confirms the exact registered native Agent, and calls its ordered answerers under `ask`. An answerer may return `undefined` to delegate; absent or failed answerers resolve `unavailable`, and Provider disposal resolves unsettled requests `cancelled`.
+
+The native Provider owns neither a Session nor a Cordis event. Its consuming application records the `native-approval/asked` and `native-approval/decided` audit pair, then renders the tool outcome. Native headless applies this path to its fixed `write_file` tool and forwards it to a contributed tool that declares an approval reason. The distinct names keep native request ids and policy data separate from the user-approval audit payloads.
+
+Source: [`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../../Modules/Official/interaction/native-approval/src/index.ts)
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

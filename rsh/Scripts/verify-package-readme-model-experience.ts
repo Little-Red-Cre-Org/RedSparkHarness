@@ -37,6 +37,7 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
   'rsh/Core/util/launch-environment': 'The package only resolves host environment values; model-facing consumers own any rendered use.',
   'rsh/Core/util/workspace-path': 'The package only formats Workspace paths for browser UI; it never constructs model input.',
   'rsh/Core/util/values': 'The package only validates, snapshots, compares, freezes, or rejects caller-owned values; consumers own every model-facing use.',
+  'rsh/Core/util/json-rpc-line': 'The transport frames caller-owned bytes and registers nothing model-facing.',
 }
 
 /**
@@ -47,6 +48,11 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Core/util/errors': { kind: 'none', reason: 'Shared error representation does not create model requests.' },
   'rsh/Core/runtime-diagnostics/native-runtime': { kind: 'none', reason: 'The native lifecycle library owns no model request content or durable Session events.' },
+  'rsh/Engine/core/native-agent': { kind: 'none', reason: 'Native Agent identity and initiator attribution add no model request content.' },
+  'rsh/Engine/core/native-code-runtime': { kind: 'indirect', reason: 'The Provider delegates model-visible result rendering and durable Session logging to its consuming native application.' },
+  'rsh/Engine/context/native-time-context': { kind: 'indirect', reason: 'The Provider delegates Session append and model-request placement to its consuming native application.' },
+  'rsh/Engine/core/native-jobs': { kind: 'none', reason: 'Native background-job state and final output stay owned by the registry until an application chooses a model-facing projection.' },
+  'rsh/Modules/Official/interaction/native-approval': { kind: 'indirect', reason: 'The Provider delegates durable audit and tool-result rendering to its consuming native application.' },
   'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },
   'rsh/Engine/core/native-prompt': { kind: 'indirect', reason: 'The registry delegates rendered prompt placement and Session logging to its consuming native application.' },
   'rsh/Modules/Official/sandbox/native-sandbox-policy': { kind: 'indirect', reason: 'The policy delegates model-visible denial text and durable results to filesystem tools and their application.' },

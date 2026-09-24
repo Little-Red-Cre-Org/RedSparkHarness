@@ -29,6 +29,8 @@ kind: "package-reference"
 
 组合或构建浏览器客户端插件时使用它：本包把包的 `dsh.client` 声明变成可加载的浏览器 bundle，无需任何逐插件接线。它随 web 组合激活；外壳在任何插件运行前启动它。
 
+纯浏览器入口 `@deepseek-ai/dsh-client-modules/native` 导出 `ClientModuleSystem`、启动清单解析器及其类型，运行时不导入 Cordis。其 JavaScript 与公开声明均不导入其他工作区包；该入口的 Cordis peer 为可选。它不会激活插件树，也不会替换当前的 `./client` 引导入口；原生外壳需要自行提供插件安装与渲染器交接。
+
 ### 声明客户端插件
 
 浏览器插件包在其 `package.json` 中以 `platform: 'web'` 声明 `dsh.client`，导出 `./client` bundle，并在 `dsh.client.external` 下列出任何基座之外的模块请求。宿主半侧把每份声明变成 `/plugins` 下提供的 bundle，并让动态提供方先于其消费方加载。
@@ -79,8 +81,10 @@ Node 半侧会在发布前快照每个客户端 bundle 及其现有 source map�
 |---|---|
 | [`src/index.ts`](src/index.ts) | Node 半侧：`ClientModuleRegistry`、扫描、产物快照、可选 combo 路由、结构化 index 行 |
 | [`src/client/index.ts`](src/client/index.ts) | 浏览器半侧：bootstrap 导出、`ctx.modules` 登记 |
+| [`src/client/native.ts`](src/client/native.ts) | 供原生 Client 组合使用的无 Cordis 浏览器模块系统入口 |
 | [`src/client/system.ts`](src/client/system.ts) | `ClientModuleSystem`：加载／物化／失效机制 |
-| [`src/client/manifest.ts`](src/client/manifest.ts) | 协议类型、启动清单解析与 `dsh.client` 声明解析器 |
+| [`src/client/manifest.ts`](src/client/manifest.ts) | 协议类型与启动清单解析 |
+| [`src/client/dsh-client.ts`](src/client/dsh-client.ts) | 旧版 `dsh.client` 包声明解析器 |
 
 </details>
 

@@ -22,7 +22,7 @@ Host-only 包通过另一份显式列表加入同一策略。该列表包含 `@d
 
 ### 依赖区段
 
-每个受管包都把 `@deepseek-ai/cordis` 保持在范围一致的 `peerDependencies` 和 `devDependencies` 中。Cordis 是由应用控制身份的共享插件运行时。
+每个受管包都把 `@deepseek-ai/cordis` 保持在范围一致的 `peerDependencies` 和 `devDependencies` 中。Cordis 是由应用控制身份的共享插件运行时。混合包若有独立原生出口，仅能按照[原生浏览器入口决策](2026-09-23-native-browser-export-dependency-closure.zh.md)将该 peer 标为可选，并通过隔离打包消费者验证。
 
 Host 入口闭包中的运行期 value import 所到达的 workspace 包，只有在其完整运行时入口列入 `duplicateSafePackages`，或每个运行期导出都列入 `safeHostDependencyExports` 时才只属于 `dependencies`。包级列表包含 `@deepseek-ai/dsh-brand`、`@deepseek-ai/dsh-typert-protocol`、`@deepseek-ai/dsh-util-crypto` 与 `@deepseek-ai/dsh-util-values`：它们的值无状态、按结构识别，或通过带版本且可互操作的描述符存储。导出表负责处理其他导出无法提供同等保证的混合包中的已审查值。
 
@@ -92,6 +92,6 @@ pnpm run benchmark:npm-resolution:next -- --runs=1 --finalist-runs=5 --finalists
 
 发布依赖图按产物归属而不是源码目录耦合分类。Client bundle 与发布 profile 提供浏览器运行时身份，Host 模块安装自己加载的可重复实体，而 Cordis 和显式标为 peer-required 的 Host 导出继续共享包实例。
 
-把公开纯类型关系放进 `devDependencies`，意味着独立 TypeScript 消费者在使用该声明时必须自行安装被引用的类型包。发布 profile 会安装完整的受支持包族；若要支持独立组装的 TypeScript 消费者，需要另一套策略。
+把公开纯类型关系放进 `devDependencies`，意味着独立 TypeScript 消费者在使用该声明时必须自行安装被引用的类型包。发布 profile 会安装完整的受支持包族；原生浏览器入口则从公开声明闭包移除这类引用，并验证独立组装的消费者。
 
 显式 override、Host 列表、包分类与导出分类都是需要评审的决策。当 `instanceof` 使用的 class constructor、私有 symbol 和模块本地 registry 跨包传递 identity 或不可访问状态时，它们要求 peer。稳定的结构标记或带版本的 prototype 描述符可以让特定值互操作，但仅仅属于 value import 并不能做到这一点。修改分类会改变安装图，因此需要运行聚焦 verifier 测试、双版本布局检查并重新执行 next-package benchmark。仅 metadata benchmark 是诊断证据，不是发布时安装耗时承诺。
