@@ -108,7 +108,7 @@ describe('session format catalog generator', () => {
     expect(output).toContain('restoreTransformedCurrent(artifact)')
     expect(output).toContain('assertReleasedV2Header(header)')
     expect(output).toContain('validateInstalledCurrentSessionHeader(header)')
-    expect(output).toContain("from '@deepseek-ai/dsh-session'")
+    expect(output).toContain("from '@deepseek-ai/dsh-session/native'")
     expect(output).toContain("from './current.ts'")
     const imports = output.split('\n').filter(line => line.startsWith('import {'))
     expect(imports.filter(line => line.includes('releasedV1SessionFormatCodec'))).toHaveLength(1)

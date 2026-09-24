@@ -138,16 +138,7 @@ type SnapshotTask =
   | { kind: 'object-property'; source: Record<string, unknown>; key: string; target: Record<string, CodeJsonValue> }
   | { kind: 'leave'; source: object }
 
-/**
- * Validate and detach one worker-boundary value without loading another
- * workspace package at runtime. This mirrors the session-owned canonical
- * JSON boundary while remaining safe to import from the unbuilt worker.
- * Its iterative traversal adds no JavaScript call-stack depth limit.
- *
- * @param value - the candidate completion value.
- * @returns a detached lossless-JSON snapshot, or `undefined` when invalid.
- */
-export function snapshotCodeJsonValue(value: unknown): CodeJsonValue | undefined {
+function snapshotCodeJsonValueUnchecked(value: unknown): CodeJsonValue | undefined {
   const active = new IntrinsicSet<object>()
   let root: CodeJsonValue | undefined
   const assign = (destination: SnapshotDestination, item: CodeJsonValue): void => {
@@ -232,6 +223,23 @@ export function snapshotCodeJsonValue(value: unknown): CodeJsonValue | undefined
   return root
 }
 
+/**
+ * Validate and detach one worker-boundary value without loading another
+ * workspace package at runtime. This mirrors the session-owned canonical
+ * JSON boundary while remaining safe to import from the unbuilt worker.
+ * Its iterative traversal adds no JavaScript call-stack depth limit. Reflection
+ * or accessor failures return `undefined` with other invalid values.
+ *
+ * @param value - the candidate completion value.
+ * @returns a detached lossless-JSON snapshot, or `undefined` when invalid.
+ */
+export function snapshotCodeJsonValue(value: unknown): CodeJsonValue | undefined {
+  try {
+    return snapshotCodeJsonValueUnchecked(value)
+  } catch {
+    return undefined
+  }
+}
 interface ArrayWireToken {
   kind: 'array'
   length: number

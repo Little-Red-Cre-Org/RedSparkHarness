@@ -57,7 +57,7 @@ function resolveConfig(input: unknown): Required<Config> {
   for (const key of Object.keys(fields ?? {})) {
     if (key !== 'policy') throw new Error(`native-approval: unknown configuration field ${key}`)
   }
-  const policy = fields?.policy ?? 'ask'
+  const policy = fields?.policy === undefined ? 'ask' : fields.policy
   if (policy !== 'ask' && policy !== 'never') throw new Error('native-approval: policy must be ask or never')
   return { policy }
 }
@@ -121,10 +121,12 @@ export class NativeApprovalService {
     }
     const task = this.decide(answererRequest)
     this.active.add(task)
-    void task.then(() => this.active.delete(task), () => this.active.delete(task)).finally(() => {
+    const cleanup = (): void => {
+      this.active.delete(task)
       this.controller.signal.removeEventListener('abort', abortFromService)
       request.signal?.removeEventListener('abort', abortFromCaller)
-    })
+    }
+    void task.then(cleanup, cleanup)
     return task
   }
 

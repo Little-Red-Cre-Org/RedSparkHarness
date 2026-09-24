@@ -505,12 +505,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
         void (async () => {
           try {
             const resolved = await fn(args)
-            let value: CodeJsonValue | undefined
-            try {
-              value = snapshotCodeJsonValue(resolved)
-            } catch {
-              value = undefined
-            }
+            const value = snapshotCodeJsonValue(resolved)
             if (value === undefined) {
               reply({ type: 'reply', id: message.id, ok: false, message: 'binding resolution must be lossless JSON' })
             } else {

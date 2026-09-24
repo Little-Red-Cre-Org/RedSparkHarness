@@ -5,7 +5,7 @@ import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deep
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { NativeApprovalRequestId, NativeApprovalService, plugin as approvalPlugin } from '../src/index.ts'
 
-async function fixture(policy: 'ask' | 'never' = 'ask'): Promise<{
+async function fixture(policy?: 'ask' | 'never'): Promise<{
   host: NativeHost
   root: NativeScope
   agents: NativeAgentRegistry
@@ -23,7 +23,7 @@ async function fixture(policy: 'ask' | 'never' = 'ask'): Promise<{
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope: root, config: undefined },
-    { plugin: approvalPlugin, scope: root, config: { policy } },
+    { plugin: approvalPlugin, scope: root, config: policy === undefined ? undefined : { policy } },
     { plugin: agentPlugin, scope: root, config: undefined },
   ], 'host'))
   await host.start()
@@ -36,6 +36,15 @@ function agent(id: string, parent: NativeScope): NativeAgent {
 }
 
 describe('NativeApprovalService', () => {
+  it('validates policy configuration before installing the Provider', () => {
+    expect(() => approvalPlugin.resolve(null)).toThrow('configuration must be an object')
+    expect(() => approvalPlugin.resolve('ask')).toThrow('configuration must be an object')
+    expect(() => approvalPlugin.resolve([])).toThrow('configuration must be an object')
+    expect(() => approvalPlugin.resolve({ unexpected: true })).toThrow('unknown configuration field unexpected')
+    expect(() => approvalPlugin.resolve({ policy: null })).toThrow('policy must be ask or never')
+    expect(() => approvalPlugin.resolve({ policy: 'always' })).toThrow('policy must be ask or never')
+  })
+
   it('walks ordered answerers, fails closed when none claims a request, and requires the exact live Agent', async () => {
     const state = await fixture()
     const owner = agent('owner', state.root)
@@ -56,6 +65,8 @@ describe('NativeApprovalService', () => {
       })
       expect(answers).toEqual(['first:write_file', 'second:write_file'])
       removeFirst()
+      removeFirst()
+      removeSecond()
       removeSecond()
       await expect(state.approval.request({ id: NativeApprovalRequestId('approval-2'), agent: owner, toolName: 'write_file' })).resolves.toMatchObject({ outcome: 'unavailable' })
       const replacement: NativeAgent = { id: owner.id, scope: new NativeScope(state.root) }
@@ -130,6 +141,36 @@ describe('NativeApprovalService', () => {
         id: NativeApprovalRequestId('approval-already-cancelled'), agent: owner, toolName: 'write_file', signal: caller.signal,
       })).resolves.toMatchObject({ outcome: 'cancelled' })
       expect(called).toBe(false)
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('does not dispatch the next answerer when the caller cancels after delegation settles', async () => {
+    const state = await fixture()
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    const caller = new AbortController()
+    let nextCalled = false
+    try {
+      state.approval.registerAnswerer(() => {
+        queueMicrotask(() => {
+          queueMicrotask(() => { caller.abort() })
+        })
+        return undefined
+      })
+      state.approval.registerAnswerer(() => {
+        nextCalled = true
+        return 'allowed-once'
+      })
+      await expect(state.approval.request({
+        id: NativeApprovalRequestId('approval-cancel-between-answerers'),
+        agent: owner,
+        toolName: 'write_file',
+        signal: caller.signal,
+      })).resolves.toMatchObject({ outcome: 'cancelled' })
+      expect(nextCalled).toBe(false)
     } finally {
       await unregister()
       await state.host.stop()

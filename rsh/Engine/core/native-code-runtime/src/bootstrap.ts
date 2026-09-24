@@ -134,9 +134,6 @@ export function makeConsoleShim(logs: LogBuffer): Record<(typeof CONSOLE_LEVELS)
  *   worker never needs to).
  */
 export function captureStreamWrites(logs: LogBuffer, stream: PatchableStream): () => void {
-  // The slot's VALUE is stored for restore and reassigned — never invoked
-  // detached, so the unbound-method concern does not apply.
-  // oxlint-disable-next-line typescript/unbound-method
   const original = stream.write
   stream.write = (chunk: unknown, ...rest: unknown[]): boolean => {
     logs.push(typeof chunk === 'string' ? chunk : String(chunk))
@@ -171,12 +168,7 @@ export function prepareCompletion(
   maxOutputBytes: number = remainingOutputBytes,
 ): Omit<DoneMessage, 'type'> {
   if (value === undefined) return {}
-  let snapshot: ReturnType<typeof snapshotCodeJsonValue>
-  try {
-    snapshot = snapshotCodeJsonValue(value)
-  } catch {
-    snapshot = undefined
-  }
+  const snapshot = snapshotCodeJsonValue(value)
   if (snapshot === undefined) {
     return prepareFailure(
       'invalid-output',
@@ -328,12 +320,7 @@ export function makeNamespaces(
       Object.defineProperty(namespace, name, {
         enumerable: true,
         value: (args: unknown): Promise<unknown> => {
-          let detached: ReturnType<typeof snapshotCodeJsonValue>
-          try {
-            detached = snapshotCodeJsonValue(args)
-          } catch {
-            detached = undefined
-          }
+          const detached = snapshotCodeJsonValue(args)
           if (detached === undefined) {
             return Promise.reject(bindingFailure(errorClass, name, 'binding arguments must be lossless JSON'))
           }
