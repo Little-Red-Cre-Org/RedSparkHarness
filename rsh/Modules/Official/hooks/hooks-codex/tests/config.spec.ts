@@ -1,16 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { parseCodexConfig, CODEX_EVENTS } from '@deepseek-ai/dsh-hooks-codex/src/config.ts'
+import { parseCodexConfig, CODEX_EVENTS, CODEX_SUPPORTED_EVENTS } from '@deepseek-ai/dsh-hooks-codex/src/config.ts'
 
 describe('parseCodexConfig', () => {
-  it('honors only the five bridge-supported Codex events, dropping the rest', () => {
-    const { config } = parseCodexConfig({
+  it('tracks all current Codex events and warns about unmapped events without running them', () => {
+    const { config, skipped } = parseCodexConfig({
       PreToolUse: [{ hooks: [{ type: 'command', command: 'a.sh' }] }],
-      SubagentStop: [{ hooks: [{ type: 'command', command: 'b.sh' }] }], // current Codex event, unsupported by this bridge
-      Notification: [{ hooks: [{ type: 'command', command: 'c.sh' }] }], // unknown to current Codex
+      PermissionRequest: [{ hooks: [{ type: 'command', command: 'b.sh' }] }],
+      SubagentStop: [{ hooks: [{ type: 'command', command: 'c.sh' }] }],
+      Notification: [{ hooks: [{ type: 'command', command: 'd.sh' }] }],
     })
     expect(Object.keys(config)).toEqual(['PreToolUse'])
-    expect(CODEX_EVENTS).toContain('PreToolUse')
-    expect(CODEX_EVENTS).not.toContain('SubagentStop' as never)
+    expect(CODEX_EVENTS).toEqual([
+      'PreToolUse', 'PermissionRequest', 'PostToolUse', 'PreCompact', 'PostCompact',
+      'SessionStart', 'SessionEnd', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'Interrupt',
+    ])
+    expect(CODEX_SUPPORTED_EVENTS).toEqual(['PreToolUse', 'PostToolUse', 'SessionStart', 'UserPromptSubmit', 'Stop'])
+    expect(skipped).toEqual([
+      { event: 'PermissionRequest', reason: 'event unsupported by this bridge' },
+      { event: 'SubagentStop', reason: 'event unsupported by this bridge' },
+      { event: 'Notification', reason: 'unknown Codex hook event' },
+    ])
   })
 
   it('accepts both timeout and the timeoutSec alias, no substitution', () => {
@@ -21,6 +30,25 @@ describe('parseCodexConfig', () => {
     // The parser performs no config-time substitution; shell expansion happens later.
     expect(config.Stop).toEqual([{ hooks: [{ command: '${NOT_SUBSTITUTED}/s.sh', timeoutSec: 10 }] }])
     expect(config.UserPromptSubmit).toEqual([{ hooks: [{ command: 'u.sh', timeoutSec: 20 }] }])
+  })
+
+  it('selects commandWindows or its command_windows alias on Windows', () => {
+    const raw = {
+      Stop: [{ hooks: [{ type: 'command', command: 'stop.sh', commandWindows: 'stop.cmd', command_windows: 'stop.ps1' }] }],
+      PreToolUse: [{ hooks: [{ type: 'command', command: 'tool.sh', command_windows: 'tool.ps1' }] }],
+      PostToolUse: [{ hooks: [{ type: 'command', command: 'post.sh', commandWindows: 'post.cmd' }] }],
+    }
+
+    expect(parseCodexConfig(raw, 'windows').config).toEqual({
+      Stop: [{ hooks: [{ command: 'stop.cmd' }] }],
+      PreToolUse: [{ hooks: [{ command: 'tool.ps1' }] }],
+      PostToolUse: [{ hooks: [{ command: 'post.cmd' }] }],
+    })
+    expect(parseCodexConfig(raw, 'other').config).toEqual({
+      Stop: [{ hooks: [{ command: 'stop.sh' }] }],
+      PreToolUse: [{ hooks: [{ command: 'tool.sh' }] }],
+      PostToolUse: [{ hooks: [{ command: 'post.sh' }] }],
+    })
   })
 
   it('skips non-command and async:true hooks (recorded)', () => {

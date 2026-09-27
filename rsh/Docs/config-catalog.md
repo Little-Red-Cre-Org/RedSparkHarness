@@ -913,7 +913,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:43`](../Modules/Official/hooks/hooks-codex/src/index.ts)
+Source: [`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:44`](../Modules/Official/hooks/hooks-codex/src/index.ts)
 
 <a id="deepseek-aidsh-host-directory-picker-browse"></a>
 

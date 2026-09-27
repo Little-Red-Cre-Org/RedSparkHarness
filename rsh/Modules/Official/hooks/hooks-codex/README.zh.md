@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-hooks-codex` 在 agent（智能体）运行期间执行现有 Codex `hooks.json` 中的 command 钩子，让提示词与工具把关逻辑无需重写即可生效。它支持 5 个 Codex hook 点：会话开始、提示词提交、工具执行前后以及停止。钩子可以用模型可见的原因阻塞提示词或工具调用、添加对话上下文，或强制 agent 再执行一步。需要在 harness 中复用 Codex command 钩子时选择本包；超出这一受支持子集的行为应使用原生插件。
+`dsh-hooks-codex` 在 harness agent（智能体）运行期间执行现有 Codex `hooks.json` command 钩子。它识别 Codex[当前 hooks 参考](https://developers.openai.com/codex/hooks/)中的 12 个事件，并运行其中 5 个映射到 harness 拦截点的事件：会话开始、提示词提交、工具执行前后及停止。钩子可以阻塞提示词或工具、添加模型上下文，或强制 agent 再执行一步。未映射事件和未来未知事件会跳过并给出警告。需要复用受支持子集时使用本包；其他行为应实现为原生插件。
 
 ## 目录
 
@@ -63,7 +63,7 @@ kind: "package-reference"
 
 - 钩子在你的项目目录（agent 的会话工作区）中运行，因此钩子里的 `pwd` 与相对路径指向你的项目，而非服务器启动目录。
 - 一份配置应用于整个进程：启动时只读取一次，相对 `configPath` 从启动进程的目录解析。
-- 只运行同步 command 钩子；`async: true` 或非 command 钩子会被跳过并给出警告。
+- 只运行同步 command 钩子；`async: true` 或非 command 钩子会被跳过并给出警告。Windows 上优先使用 `commandWindows`；桥接也接受 TOML 拼写 `command_windows`。其他平台使用 `command`。
 - 同一事件上的钩子按配置顺序逐个运行。
 - 如果配置无法读取或解析，桥接会记录警告且不运行任何钩子——agent 仍会启动。
 - 运行失败的钩子（命令错误或崩溃）会被记录，agent 继续运行。
@@ -109,7 +109,7 @@ matcher subject 是工具名称（`PreToolUse`／`PostToolUse`）或会话源（
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：配置校验、监听器注册、逐事件 payload、决策映射 |
-| [`src/config.ts`](src/config.ts) | Codex 配置解析：五个受支持事件、matcher 校验、跳过原因 |
+| [`src/config.ts`](src/config.ts) | Codex 配置解析：当前事件清单、五个已映射事件、matcher 校验与跳过原因 |
 | — | 不发布运行时不变式伴生入口；本桥接发布 hook-protocol 会话事件，既有 companion 负责校验每个结果所引用的调用事件。 |
 
 </details>
@@ -167,14 +167,14 @@ hook 不返回上下文时没有成本。Hook 文本取决于数据，会被记�
 
 这些限制描述你的 Codex 钩子目前还无法通过本桥接做到的事情，以及行为与参考工具的差异。它们是当前包约束，而非任务积压。
 
-- **不支持的 hook 事件（Codex 当前 10 项中的 5 项）**——`PermissionRequest`、`PreCompact`、`PostCompact`、`SubagentStart` 与 `SubagentStop`。这些事件的配置会在解析期间静默丢弃。比较基线是 Codex [官方 hook 参考](https://learn.chatgpt.com/docs/hooks)。
+- **未映射的 hook 事件（Codex 0.157.1 的 12 项中有 7 项）**——`PermissionRequest`、`PreCompact`、`PostCompact`、`SessionEnd`、`SubagentStart`、`SubagentStop` 与 `Interrupt`。本桥接能识别这些事件名，但没有对应的 harness 拦截点；配置会跳过并给出警告。未来未知事件名同样会警告并跳过。事件清单以 [Codex 官方 hook 参考](https://developers.openai.com/codex/hooks/) 为行为基线，并与 [Codex 0.157.1 hook 事件声明](https://github.com/openai/codex/blob/rust-v0.157.1/codex-rs/hooks/src/lib.rs)交叉核对。
 - **`SessionStart` 只支持部分功能**——支持纯 stdout 与 JSON `additionalContext`，但 hook 脱离运行，因此上下文可能错过第一个请求。
 - **`UserPromptSubmit` 只支持部分功能**——支持阻塞加纯 stdout 或 JSON 上下文，但不会强制执行通用 `systemMessage` 与 `{"continue": false}` 控制。
 - **`PreToolUse` 只支持部分功能**——支持阻塞，但会忽略 `additionalContext`、`permissionDecision: "allow"` 与 `updatedInput`。每个工具都表示为 `tool_input: { command }`，因此非 shell 工具参数不会被如实公开给 hook。
 - **`PostToolUse` 只支持部分功能**——支持阻塞反馈与 JSON `additionalContext`，但不会强制执行 `{"continue": false}`，非 shell 工具参数会缩减为 `{ command }`，结构化工具输出会在 `tool_response` 中展平为文本。
 - **`Stop` 只支持部分功能**——阻塞会强制另一个模型轮次，但 `stop_hook_active` 始终为 `false`，`last_assistant_message` 始终为 `null`，且不会强制执行 `{"continue": false}`。因此，无条件阻塞 hook 会在每个步骤中强制 continuation，除非它自我限制。
 - **通用 payload 与输出字段只支持部分功能**——每个已映射事件都报告静态配置的 `model` 与 `permission_mode: "default"`，而非当前 Codex 运行时值，且 `transcript_path` 永不填充：它始终为 `null`，因为持久化 seam 不暴露产物路径，且默认 zstd 压缩的会话日志无法被 hook 脚本读取。`systemMessage` 会被记录 + 警告但不呈现，`{"continue": false}` 会被记录但不会应用 Codex 的事件特定停止行为。
-- **配置加载与执行只支持部分功能**——一个进程级 `configPath` 会在加载时解析；尚未实现 Codex 的活动用户层、项目层、会话层、系统／托管层与插件层、信任控制以及内联 `config.toml` hook 形态。只运行同步 `command` handler，`statusMessage` 与 `commandWindows` 等当前元数据会被忽略，匹配 handler 串行运行，而非使用 Codex 的并发启动语义。
+- **配置加载与执行只支持部分功能**——一个进程级 `configPath` 会在加载时解析；尚未实现 Codex 的活动用户层、项目层、会话层、系统／托管层与插件层、信任控制以及内联 `config.toml` hook 形态。只运行同步 `command` handler；`statusMessage` 会被忽略，Windows 上优先选择 `commandWindows`（同时接受 TOML 拼写 `command_windows`）。匹配 handler 串行运行，而非使用 Codex 的并发启动语义。
 
 <a id="dev-note"></a>
 ### 开发备注

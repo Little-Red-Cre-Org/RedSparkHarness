@@ -18,7 +18,7 @@ import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engi
 /**
  * Full-loop Codex bridge tests with a mock model, the real loop and bash
  * executor, and shell hooks from a temporary config. Covers regex matching,
- * block-only decisions, and the five-event subset.
+ * block-only decisions, and explicit handling of unsupported current Codex events.
  */
 
 const dirs: string[] = []
@@ -130,17 +130,22 @@ describe('hooks-codex bridge', () => {
       .toEqual(['turn/start', 'hook/invoked', 'hook/result', 'turn/end'])
   })
 
-  it('only the five bridge-supported Codex events are honored — a SubagentStop entry is ignored', async () => {
+  it('warns when a current Codex event has no harness mapping and does not run it', async () => {
     const dir = configDir()
     const s = script(dir, 'x.sh', '#!/usr/bin/env bash\nexit 2\n')
     writeHooks(dir, { SubagentStop: [{ hooks: [{ type: 'command', command: s }] }] })
 
     const adapter = new MockAdapter([textResponse('fine')])
-    const ctx = await harness(dir, adapter)
+    const warn = vi.fn()
+    const ctx = await harness(dir, adapter, (ctx) => { ctx.logger.warn = warn as never })
     const agent = await ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
     agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
     await waitForIdle(ctx, agent)
     expect(adapter.requests).toHaveLength(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(
+      'skipping event unsupported by this bridge on SubagentStop',
+    ))
+    expect(events(agent).some(event => event.type === 'hook/invoked')).toBe(false)
   })
 
   it('a missing config registers no hooks and does not crash', async () => {
