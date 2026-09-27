@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-hooks-codex` runs command hooks from an existing Codex `hooks.json` during agent runs, so prompt and tool gates work without being rewritten. It supports five Codex hook points: session start, prompt submission, before and after tool execution, and stop. Hooks can block prompts or tool calls with model-visible reasons, add conversation context, or force another agent step. Choose this package to reuse Codex command hooks in the harness; use a native plugin for behavior outside this supported subset.
+`dsh-hooks-codex` runs command hooks from an existing Codex `hooks.json` during harness agent runs. It recognizes the twelve event names in Codex's [current hooks reference](https://developers.openai.com/codex/hooks/) and runs five mapped to harness interception points: session start, prompt submission, pre/post tool execution, and stop. These hooks can block prompts or tools, add model context, or force another agent step. Unmapped configured events and unknown future names are skipped with warnings. Use this package for the supported subset; implement other behavior with a native plugin.
 
 ## Table of Contents
 
@@ -63,7 +63,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 - Hooks run in your project directory — the agent's session workspace — so `pwd` and relative paths in your hooks refer to your project, not the server's launch directory.
 - One config applies to the whole process: it is read once at startup, and a relative `configPath` resolves from the directory that launched the process.
-- Only synchronous command hooks run; an `async: true` or non-command hook is skipped with a warning.
+- Only synchronous command hooks run; an `async: true` or non-command hook is skipped with a warning. On Windows, `commandWindows` overrides `command`; the bridge also accepts `command_windows` as the TOML spelling. Other platforms use `command`.
 - Hooks on the same event run one after another, in config order.
 - If the config cannot be read or parsed, the bridge logs a warning and runs no hooks — the agent still starts.
 - A hook that fails to run (a bad command or a crash) is logged, and the agent continues.
@@ -109,7 +109,7 @@ The [hook-bridges Agent Note](../../../../../.agents/notes/archived/feature/2026
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: config validation, listener registration, per-event payloads, decision mapping |
-| [`src/config.ts`](src/config.ts) | Codex config parsing: the five supported events, matcher validation, skip reasons |
+| [`src/config.ts`](src/config.ts) | Codex config parsing: current event inventory, five mapped events, matcher validation, and skip reasons |
 | — | No runtime invariant companion is published; this bridge publishes hook-protocol session events, whose companion owns which invocation event each result cites. |
 
 </details>
@@ -167,14 +167,14 @@ A blocked prompt sends no request and invalidates nothing. Denial, feedback, and
 
 These limits describe what your Codex hooks cannot do through this bridge yet, and where behavior differs from the reference tool. They are current package constraints, not a task backlog.
 
-- **Unsupported hook events (5 of Codex's current 10)** — `PermissionRequest`, `PreCompact`, `PostCompact`, `SubagentStart`, and `SubagentStop`. Config for these events is silently dropped during parsing. The comparison baseline is Codex's [official hook reference](https://learn.chatgpt.com/docs/hooks).
+- **Unmapped hook events (7 of Codex 0.157.1's 12)** — `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionEnd`, `SubagentStart`, `SubagentStop`, and `Interrupt`. These event names are recognized, but this bridge has no matching harness interception point; configured entries are skipped with a warning. Unknown future event names also warn and are skipped. The event inventory is cross-checked against the [official hook reference](https://developers.openai.com/codex/hooks/) and [Codex 0.157.1 hook event declarations](https://github.com/openai/codex/blob/rust-v0.157.1/codex-rs/hooks/src/lib.rs).
 - **`SessionStart` is partial** — plain stdout and JSON `additionalContext` work, but the hook runs detached, so context can miss the first request.
 - **`UserPromptSubmit` is partial** — blocking plus plain-stdout or JSON context work, but the common `systemMessage` and `{"continue": false}` controls are not enforced.
 - **`PreToolUse` is partial** — blocking works, but `additionalContext`, `permissionDecision: "allow"`, and `updatedInput` are ignored. Every tool is represented as `tool_input: { command }`, so non-shell tool arguments are not faithfully exposed to the hook.
 - **`PostToolUse` is partial** — blocking feedback and JSON `additionalContext` work, but `{"continue": false}` is not enforced, non-shell tool arguments are reduced to `{ command }`, and structured tool output is flattened to text in `tool_response`.
 - **`Stop` is partial** — blocking forces another model turn, but `stop_hook_active` is always `false`, `last_assistant_message` is always `null`, and `{"continue": false}` is not enforced. An unconditionally blocking hook therefore force-continues every step unless it self-limits.
 - **Common payload and output fields are partial** — every mapped event reports the statically configured `model` and `permission_mode: "default"` instead of current Codex runtime values, and `transcript_path` is never populated: it is always `null`, because the persistence seam exposes no artifact paths and the default-zstd session log is not readable by hook scripts. `systemMessage` is logged + warned but not surfaced, and `{"continue": false}` is recorded but does not apply Codex's event-specific stop behavior.
-- **Config loading and execution are partial** — one process-level `configPath` is parsed at load; Codex's active user, project, session, system/managed, and plugin layers, trust controls, and inline `config.toml` hook form are not implemented. Only synchronous `command` handlers run, current metadata such as `statusMessage` and `commandWindows` is ignored, and matching handlers run serially rather than with Codex's concurrent launch semantics.
+- **Config loading and execution are partial** — one process-level `configPath` is parsed at load; Codex's active user, project, session, system/managed, and plugin layers, trust controls, and inline `config.toml` hook form are not implemented. Only synchronous `command` handlers run; `statusMessage` is ignored, while Windows selects `commandWindows` (also accepting the `command_windows` TOML spelling). Matching handlers run serially rather than with Codex's concurrent launch semantics.
 
 <a id="dev-note"></a>
 ### Dev Note

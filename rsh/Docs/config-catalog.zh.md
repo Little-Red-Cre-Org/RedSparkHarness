@@ -915,7 +915,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:43`](../Modules/Official/hooks/hooks-codex/src/index.ts)
+来源：[`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:44`](../Modules/Official/hooks/hooks-codex/src/index.ts)
 
 <a id="deepseek-aidsh-host-directory-picker-browse"></a>
 
