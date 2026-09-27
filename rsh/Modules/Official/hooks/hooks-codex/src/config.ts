@@ -1,8 +1,8 @@
 /**
  * Parse Codex's five-event hook subset into shared {@link MatcherGroup}s. Only synchronous command
  * hooks run; Windows selects `commandWindows` or its `command_windows` alias when present. Other
- * hook types and `async: true`
- * commands are recorded as skipped. Codex performs no command substitution.
+ * hook types and `async: true` commands are recorded as skipped. The bridge does not substitute
+ * values into command strings.
  * @module @deepseek-ai/dsh-hooks-codex/config
  */
 
@@ -42,7 +42,7 @@ const supportedEvents = new Set<string>(CODEX_SUPPORTED_EVENTS)
 /** A parsed Codex config: event name → its matcher groups (command hooks only). */
 export type CodexHookConfig = Record<string, MatcherGroup[]>
 
-/** A skipped non-command (or async) hook, surfaced so the bridge can warn. */
+/** An unrun configured event or hook, surfaced so the bridge can warn. */
 export interface SkippedHook {
   event: string
   reason: string
@@ -65,8 +65,8 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
  * in `skipped` so the bridge can report configuration that it cannot run; malformed entries are
  * ignored rather than failing boot. Unsupported event payloads are not interpreted. On Windows,
  * `commandWindows` takes precedence over the `command_windows` TOML alias; other platforms use
- * `command`. Matcher
- * fields on UserPromptSubmit and Stop are discarded because those events have no matcher subject. A
+ * `command`. Matcher fields on UserPromptSubmit and Stop are discarded because those events have no
+ * matcher subject. A
  * matcher-bearing runnable group with an invalid regex throws a `SyntaxError`, allowing the bridge
  * to reject the complete config before listener registration.
  * @param raw - the parsed JSON config: a `{ hooks: … }` wrapper or the bare event map.
