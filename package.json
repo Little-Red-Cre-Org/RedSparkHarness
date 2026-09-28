@@ -38,6 +38,7 @@
   ],
   "scripts": {
     "verify-native-dependencies": "tsx rsh/Scripts/verify-native-dependencies.ts",
+    "audit-source-import-graph": "tsx rsh/Scripts/verify-source-import-graph.ts",
     "build": "tsx rsh/Scripts/build.ts",
     "build:bench": "npm run build:native-system && npm run build:lib && tsdown --config rsh/Tests/benchmarks/tsdown.config.ts",
     "build:official": "tsx rsh/Scripts/build.ts --profile official",

@@ -14,12 +14,25 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
   const scope = new NativeScope()
   let runtime: CompatDshRuntime | undefined
   let disposeFirst: (() => Promise<void>) | undefined
+  let signalTeardownStarted: (() => void) | undefined
+  let finishTeardown: (() => void) | undefined
+  let markFirstDisposed: (() => void) | undefined
+  let firstCleanupCompleted = false
+  const teardownStarted = new Promise<void>((resolve) => { signalTeardownStarted = resolve })
+  const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
+  const firstDisposed = new Promise<void>((resolve) => { markFirstDisposed = resolve })
   const mountedPlugin: NativePlugin = {
     apiVersion: 1, name: 'compat-mount-consumer', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
     resolve: () => async (context) => {
       const compat = context.require('compatDshRuntime')
       const mount = compat.mount('@deepseek-ai/dsh-fs-local', (legacy) => {
         legacy.provide('compatTest', 'mounted')
+        legacy.fiber.effect(() => async () => {
+          signalTeardownStarted?.()
+          await teardownGate
+          firstCleanupCompleted = true
+          markFirstDisposed?.()
+        })
       })
       const second = compat.mount('@deepseek-ai/dsh-fs-sandbox', (legacy) => {
         legacy.provide('compatSecond', 'mounted')
@@ -45,7 +58,13 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
     expect(() => compat.mount('@third-party/unknown', () => {})).toThrow('unsupported plugin')
     const releaseFirst = disposeFirst
     if (releaseFirst === undefined) throw new Error('missing first mount disposer')
-    await releaseFirst()
+    const firstRelease = releaseFirst()
+    await teardownStarted
+    expect(firstCleanupCompleted).toBe(false)
+    finishTeardown?.()
+    await firstRelease
+    await firstDisposed
+    expect(firstCleanupCompleted).toBe(true)
     expect(compat.context.get('compatTest')).toBeUndefined()
     expect(compat.context.get('compatSecond')).toBe('mounted')
     await selected.remove(install)
@@ -54,6 +73,8 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
   } finally {
     await selected.stop()
   }
+  expect(runtime?.context.fiber.getEffects()).toEqual([])
+  expect(runtime?.context.get('compatSecond')).toBeUndefined()
 })
 
 it('rolls back a partially activated legacy plugin and releases its Cordis resources', async () => {

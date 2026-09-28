@@ -79,7 +79,9 @@ pnpm exec vitest run \
 
 当前检查并非空白：`verify-native-dependencies` 使用 TypeScript Host/Client compiler project，解析明确 Native roster 和混合包 native entry 的导入闭包，检查字面量 import/require、type import、import type、re-export、模块声明和字面量 dynamic import；`verify-package-dependencies` 另外从已分类包源码推导依赖；`verify-tsconfig-paths` 检查工作区 `./native` exports 到 `src/` 的别名映射。本分支均有通过记录。
 
-这些门禁还未覆盖手册要求的全仓所有者图：原生与迁移 roster 的覆盖面仍靠策略清单维护，普通旧包之间的跨包相对路径、全部别名/re-export 链及每条解析边对应的 manifest 声明，尚未统一纳入一个负例驱动的全仓门禁。下一步应先确定包 owner 分类和兼容白名单，再扩展审计；当前不能宣称 B3 完成。
+新增的 `pnpm run audit-source-import-graph` 会解析两套 TypeScript compiler face，并使用每个源码文件的有效 TS 配置解析导入边；覆盖普通导入、type import、re-export、module augmentation、import type 和字面量 loader。6 个测试覆盖跨包相对路径 re-export、TS alias、type/runtime 区分、通过 alias 导入 Cordis、计算式 loader，以及 Host/Client alias 实际解析不同目标。
+
+本分支首次全仓扫描覆盖 314 个 workspace package owner、25,028 条 Host/Client 源码引用；另记录了 33 条计算式 loader，但没有运行时策略时无法归属其具体目标。扫描发现 4,351 项已有的 manifest/解析问题：3,994 条外部依赖未声明、174 条 workspace 依赖未声明、183 条源码引用无法由 TypeScript 解析。无法解析项包含合法 CSS 与 Vite 虚拟资源导入；依赖问题也包含包测试、根目录统一管理的测试工具和旧 bundle，需要逐项审阅后才能定性为产品缺陷。扫描没有发现 alias 目标不匹配或 Native 越界导入 Cordis。该结果是完整发现，不是干净的依赖基线，也不是 CI 门禁：要逐项变成强制策略，还需评审源码/测试/资源分类，并由 Core、Engine、Modules、Programs、Compatibility 和应用负责人处理相应缺口。审计保留并报告现有基线；Native Cordis 边界仍由 `verify-native-dependencies` 强制检查。
 
 ### 接口需求与进入 B4 的判断
 
@@ -94,7 +96,7 @@ pnpm exec vitest run \
 | Cordis Loader 启动和组合 | `rsh/Tests/test-support/loader-smoke`；app-boot profile/config 测试；`Core/runtime-diagnostics/plugin-host` 启动失败测试；兼容运行时校验 Cordis v4 并挂载现有 plugin-host adapter | 原生兼容运行时不加载旧 Loader profile 或任意包。 |
 | 配置 HMR / 重载 | `app-boot/tests/hmr-config.spec.ts` 覆盖路径别名、add/change/unlink、父目录缺失、串行刷新/释放和 watcher 失败；`config-reload.spec.ts`、`CLI/tests/profile-hmr.spec.ts` 覆盖配置与 profile 策略 | 这是旧 Cordis HMR，不是原生插件热替换。原生路径目前没有热替换契约；原生所有者定义替换语义前，不应暴露该能力。 |
 | 描述符与 HMR 所有权 | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` 覆盖启动失败、重复所有者、等待清理、替换/启动期间取消、并发替换和重复释放 | Plugin host 是兼容适配器；不能据此推断每个原生桥都支持安全热替换。 |
-| 桥接加载/卸载 | 五组兼容 bridge 测试覆盖拒绝、共享 Context 中多插件挂载、独立卸载、部分激活回滚、文件系统策略、工具/prompt 注册和已接收工作排空 | 接入其他能力族时继续扩展这些断言。 |
+| 桥接加载/卸载 | 五组兼容 bridge 测试覆盖拒绝、共享 Context 中多插件挂载、独立卸载、部分激活回滚、等待异步清理、文件系统策略、工具/prompt 注册和已接收工作排空 | 接入其他能力族时继续扩展这些断言。 |
 | 原生生命周期 | Native Runtime Host 测试覆盖激活回滚、自有资源清理、事件和等待式移除 | 尚无通用 HMR 或外部 DSH 包发现；继续列为明确的后续能力。 |
 
 ## 源码依赖审计要求
@@ -110,11 +112,11 @@ pnpm exec vitest run \
 
 ## 本分支验证结果
 
-- 五个兼容 bridge 套件和两个 Native profile 套件通过：7 个测试文件、21 项测试。
+- 当前定向验证通过：源码图负例、兼容运行时、plugin-host replacement 与 Native Cordis 依赖门禁；3 个 Vitest 文件、29 项测试通过。
 - `tsc -b tsconfig.host.json` 和 Host `tsdown` workspace 构建通过。
 - `verify-native-dependencies` 的 Host/Client 原生依赖图通过；`verify-package-dependencies` 检查 62 个发布包；lockfile 离线 frozen 校验通过。
 - alias 与模块图重新生成后，`verify-tsconfig-paths` 和 `verify-module-graph` 通过。无 Cordis 原生 profile 和启用兼容模块的 profile 仍是两条独立路径；当前测试不证明 CLI/Web/Desktop 已完全脱离 Cordis。
-- 源码依赖门禁覆盖重要的 Host/Client 与发布包闭包，但尚未形成包含跨包相对导入和 re-export 链负例的全仓包归属依赖图。B3 在相关策略和门禁通过评审前仍未完成。
+- 源码图审计现在覆盖两套 face 和跨包解析；4,351 项已有问题仍待 owner 分类与治理。目前它作为信息审计运行，待基线评审后再决定强制门禁。B3 的发现工具已完成；全仓依赖清理和应用层 Cordis OFF/ON 验收仍未完成。
 
 在包清单完成前，不要全仓禁止 Cordis；否则门禁要么破坏仍受支持的 DSH 行为，要么堆积无界例外项。
 

@@ -79,7 +79,9 @@ Coverage boundary: Loader smoke and app-boot/profile suites cover legacy config,
 
 The existing checks are substantive but partial. `verify-native-dependencies` uses TypeScript Host/Client compiler projects to inspect import closures for the explicit Native roster and mixed-package native entries, checking literal imports/requires, type imports, re-exports, module declarations, and literal dynamic imports. `verify-package-dependencies` separately derives dependencies from source for its classified packages. `verify-tsconfig-paths` checks that workspace `./native` exports map to their own package `src/` aliases. This branch has passing results for all three.
 
-These gates do not yet cover the all-owner graph required by the handbook: Native and transitional roster coverage still depends on a maintained policy list, and cross-package relative imports, all alias/re-export chains, and manifest declarations for every resolved edge are not yet unified in one negative-fixture-driven repository gate. First agree on package-owner classification and the compatibility allowlist, then expand the audit; B3 is not complete yet.
+The new `pnpm run audit-source-import-graph` audit parses both TypeScript compiler faces, resolves each source reference with that file's effective TS options, and records package-owner edges for imports, type imports, re-exports, module augmentations, import types, and literal loaders. Its six fixture tests cover a cross-package relative re-export, a TS alias, type/runtime distinction, Cordis via an alias, a computed loader, and different Host/Client alias resolutions.
+
+The first full scan on this branch covered 25,028 Host/Client references across 314 workspace package owners; 33 computed loaders were cataloged but cannot be attributed to a concrete target without runtime policy. It found 4,351 existing manifest/resolution findings: 3,994 undeclared external edges, 174 undeclared workspace edges, and 183 unresolved source references. The unresolved set includes legitimate CSS and Vite virtual-resource imports. Dependency findings also include package tests, root-managed tooling, and legacy bundles; they must be reviewed before treating them as product defects. No alias-target mismatch or Native Cordis-boundary finding appeared in this scan. This is a complete discovery pass, not a clean dependency baseline or a CI gate: converting every finding into policy requires reviewed source/test/resource classification and fixes owned across Core, Engine, Modules, Programs, Compatibility, and app teams. The audit reports the baseline; `verify-native-dependencies` remains the enforced Native Cordis boundary.
 
 ### Interface requirements and B4 entry decision
 
@@ -94,7 +96,7 @@ The selected adapters use the CLI NativeHost in focused tests, but app-level nat
 | Cordis Loader startup and composition | `rsh/Tests/test-support/loader-smoke`; app-boot profile/config tests; `Core/runtime-diagnostics/plugin-host` startup-failure tests; compatibility runtime verifies Cordis v4 and mounts the existing plugin-host adapter | The native compatibility runtime does not load a legacy Loader profile or arbitrary package. |
 | Config HMR / reload | `app-boot/tests/hmr-config.spec.ts` covers path aliases, add/change/unlink, missing parent, serialized refresh/dispose, and watcher failure; `app-boot/tests/config-reload.spec.ts` and `CLI/tests/profile-hmr.spec.ts` cover config and profile policy | This is legacy Cordis HMR, not native plugin hot replacement. The native path has no hot-replacement contract yet; do not expose it until its owner specifies replacement semantics. |
 | Descriptor/HMR ownership | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` covers failed startup, duplicate owners, waiting for teardown, cancellation during replacement/start, concurrent replacements, and repeated disposal | The plugin-host is a compatibility adapter, not proof that every native bridge can be hot-replaced safely. |
-| Bridge load/unload | Five compatibility bridge suites cover refusal, mounting multiple plugins in one shared Context, independent removal, partial activation rollback, filesystem policy decisions, tool/prompt registration, and admitted-work drain | Extend these assertions when another capability family is admitted. |
+| Bridge load/unload | Five compatibility bridge suites cover refusal, mounting multiple plugins in one shared Context, independent removal, partial activation rollback, awaited asynchronous teardown, filesystem policy decisions, tool/prompt registration, and admitted-work drain | Extend these assertions when another capability family is admitted. |
 | Native lifecycle | Native Runtime host tests cover activation rollback, owned cleanup, events, and awaited removal | No generalized HMR or external DSH package discovery; these remain explicit deferred capabilities. |
 
 ## Source dependency audit requirements
@@ -116,11 +118,11 @@ The compatibility work should consume, not redefine, the existing API: `NativePl
 
 ## Validation recorded in this branch
 
-- Five compatibility bridge suites and two Native profile suites pass: 7 files and 21 tests.
+- Current targeted run passes: source-graph fixtures, compatibility runtime, plugin-host replacement, and Native Cordis dependency gate; 3 Vitest files / 29 tests pass.
 - `tsc -b tsconfig.host.json` and the Host `tsdown` workspace build pass.
 - `verify-native-dependencies` passes its Host/Client native graph; `verify-package-dependencies` validates 62 published packages; the lockfile passes frozen offline verification.
 - `verify-tsconfig-paths` and `verify-module-graph` pass after regeneration. A Cordis-free native profile and a compatibility-enabled profile remain distinct paths; current tests do not establish full Cordis-free CLI/Web/Desktop behavior.
-- The source import gates resolve important Host/Client and published-package closures, but they do not form one repository-wide package-owner graph audit with negative fixtures for every cross-package relative import and re-export chain. B3 remains open until that policy and gate are reviewed.
+- Source graph discovery now covers both faces and cross-owner resolution; its 4,351 existing findings remain open for ownership classification and cleanup. The audit is informational pending that baseline review; B3 discovery/tooling is complete, while repository-wide dependency cleanup and app-level Cordis OFF/ON acceptance are not.
 
 ## Acceptance criteria
 
