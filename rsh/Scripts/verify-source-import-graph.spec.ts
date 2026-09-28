@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import ts from 'typescript'
 import { afterEach, describe, expect, it } from 'vitest'
-import { collectSourceImportReferences, sourceImportViolations, type SourceImportOwner } from './verify-source-import-graph.ts'
+import {
+  collectCordisSourceUses,
+  collectSourceImportReferences,
+  sourceImportViolations,
+  type ResolvedSourceImportEdge,
+  type SourceImportOwner,
+} from './verify-source-import-graph.ts'
 
 const roots: string[] = []
 const owner = (name: string, directory: string, deps: Record<string, string> = {}): SourceImportOwner => ({
@@ -66,6 +72,19 @@ describe('verify-source-import-graph', () => {
       ['../target/src/index.ts', 'runtime', false],
       ['@test/target', 'type', false],
     ])
+    const cordis = ts.createSourceFile(
+      'cordis.ts',
+      "import { Context, type Fiber } from '@deepseek-ai/cordis'\n",
+      ts.ScriptTarget.Latest,
+      true,
+    )
+    expect(collectCordisSourceUses(cordis, '@test/owner', 'host')).toMatchObject([{
+      owner: '@test/owner',
+      face: 'host',
+      specifier: '@deepseek-ai/cordis',
+      kind: 'runtime',
+      symbols: ['value:Context', 'type:Fiber'],
+    }])
   })
 
   it('detects undeclared relative cross-package and re-export edges', () => {
@@ -80,8 +99,11 @@ describe('verify-source-import-graph', () => {
     const root = resolve(importerDir, '../..')
     f.options.paths = { '@test/*': ['packages/*/src/index.ts'] }
     f.options.baseUrl = root
-    expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'client'))
+    const edges: ResolvedSourceImportEdge[] = []
+    expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'client', new Set(), undefined, edges))
       .toEqual(expect.arrayContaining([expect.stringContaining('runtime edge @test/importer -> @test/target')]))
+    expect(edges).toEqual([expect.objectContaining({ targetOwner: '@test/target' })])
+    expect(edges[0]?.resolvedWorkspacePath).toContain('packages')
   })
 
   it('uses Host and Client resolution options independently', () => {
@@ -114,6 +136,23 @@ describe('verify-source-import-graph', () => {
   it('reports computed loaders for governance without inventing a package edge', () => {
     const f = fixture('import(`./${name}.js`)\n')
     expect(collectSourceImportReferences(f.source).some(ref => ref.computed)).toBe(true)
-    expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host')).toEqual([])
+    const edges: ResolvedSourceImportEdge[] = []
+    expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host', new Set(), undefined, edges)).toEqual([])
+    expect(edges).toEqual([expect.objectContaining({ computed: true })])
+    expect(edges[0]?.targetOwner).toBeUndefined()
+  })
+
+  it('allows declared dev dependencies and repository tooling only in test sources', () => {
+    const f = fixture("import { it } from 'vitest'\n")
+    const testSource = ts.createSourceFile(
+      join(f.importer.directory, 'tests', 'graph.spec.ts'),
+      "import { it } from 'vitest'\n",
+      ts.ScriptTarget.Latest,
+      true,
+    )
+    const tooling = owner('root-tools', resolve(f.importer.directory, '../..'), { vitest: 'workspace:^' })
+    expect(sourceImportViolations(testSource, f.importer, f.owners, f.options, 'host', new Set(), tooling)).toEqual([])
+    expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host', new Set(), tooling))
+      .toEqual(expect.arrayContaining([expect.stringContaining('runtime edge @test/importer -> vitest')]))
   })
 })

@@ -32,6 +32,31 @@ export interface SourceImportOwner {
   readonly devDependencies: Readonly<Record<string, string>>
 }
 
+/** Direct Cordis-family source edge for an auditable package/API inventory. */
+export interface CordisSourceUse {
+  readonly owner: string
+  readonly fileName: string
+  readonly face: CompilerFace
+  readonly line: number
+  readonly specifier: string
+  readonly kind: EdgeKind
+  readonly symbols: readonly string[]
+}
+
+/** Compiler-resolved source edge, also used for JSONL graph export. */
+export interface ResolvedSourceImportEdge {
+  readonly owner: string
+  readonly face: CompilerFace
+  readonly configPath: string
+  readonly fileName: string
+  readonly line: number
+  readonly kind: EdgeKind
+  readonly computed: boolean
+  readonly specifier?: string
+  readonly targetOwner?: string
+  readonly resolvedWorkspacePath?: string
+}
+
 /** One compiler-owned source file with its package and effective project options. */
 interface FaceSource {
   readonly fileName: string
@@ -124,9 +149,71 @@ export function collectSourceImportReferences(source: ts.SourceFile): SourceImpo
     || left.kind.localeCompare(right.kind))
 }
 
+/** Collect direct Cordis package imports with named APIs and source locations. */
+export function collectCordisSourceUses(
+  source: ts.SourceFile,
+  owner: string,
+  face: CompilerFace,
+): CordisSourceUse[] {
+  const uses: CordisSourceUse[] = []
+  const symbolsForImport = (clause: ts.ImportClause | undefined): string[] => {
+    if (clause === undefined) return ['side-effect']
+    const symbols: string[] = []
+    if (clause.name !== undefined) symbols.push(`default:${clause.name.text}`)
+    const bindings = clause.namedBindings
+    if (bindings !== undefined && ts.isNamespaceImport(bindings)) symbols.push(`namespace:${bindings.name.text}`)
+    if (bindings !== undefined && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        const imported = element.propertyName?.text ?? element.name.text
+        symbols.push(`${clause.isTypeOnly || element.isTypeOnly ? 'type:' : 'value:'}${imported}`)
+      }
+    }
+    return symbols
+  }
+  const record = (node: ts.Node, expression: ts.Expression | undefined, symbols: string[], kind: EdgeKind): void => {
+    if (expression === undefined || !ts.isStringLiteralLike(expression)) return
+    const specifier = expression.text
+    if (!(specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis-'))) return
+    const position = source.getLineAndCharacterOfPosition(node.getStart(source))
+    uses.push({ owner, fileName: source.fileName, face, line: position.line + 1, specifier, kind, symbols })
+  }
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node)) {
+      record(node, node.moduleSpecifier, symbolsForImport(node.importClause), runtimeImport(node) ? 'runtime' : 'type')
+    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) {
+      const symbols = node.exportClause !== undefined && ts.isNamedExports(node.exportClause)
+        ? node.exportClause.elements.map(element => `export:${element.propertyName?.text ?? element.name.text}`)
+        : ['export:*']
+      record(node, node.moduleSpecifier, symbols, runtimeReExport(node) ? 'runtime' : 'type')
+    } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
+      record(node, node.moduleReference.expression, [`require:${node.name.text}`], 'runtime')
+    } else if (ts.isImportTypeNode(node)) {
+      const argument = ts.isLiteralTypeNode(node.argument) && ts.isStringLiteralLike(node.argument.literal)
+        ? node.argument.literal
+        : undefined
+      record(node, argument, ['import-type'], 'type')
+    } else if (ts.isModuleDeclaration(node) && ts.isStringLiteral(node.name)) {
+      record(node, node.name, ['module-augmentation'], 'type')
+    } else if (ts.isCallExpression(node)
+      && (node.expression.kind === ts.SyntaxKind.ImportKeyword
+        || (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
+      record(node, node.arguments[0], [node.expression.kind === ts.SyntaxKind.ImportKeyword ? 'dynamic-import' : 'require'], 'runtime')
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return uses.sort((left, right) => left.line - right.line || left.specifier.localeCompare(right.specifier))
+}
+
 function dependencySections(owner: SourceImportOwner, name: string): DependencySection[] {
   return (['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies'] as const)
     .filter(section => Object.hasOwn(owner[section], name))
+}
+
+function isTestOrFixtureSource(fileName: string): boolean {
+  const path = pathKey(fileName)
+  return /(?:^|\/)(?:tests?|__tests__|fixtures?)(?:\/|$)/iu.test(path)
+    || /\.(?:spec|test|e2e|bench)\.[cm]?tsx?$/iu.test(path)
 }
 
 function ownerForPath(path: string, owners: readonly OwnedPackage[]): OwnedPackage | undefined {
@@ -142,13 +229,28 @@ export function sourceImportViolations(
   options: ts.CompilerOptions,
   face: CompilerFace,
   strictCordisOwners: ReadonlySet<string> = new Set(),
+  repositoryTooling?: SourceImportOwner,
+  sourceEdges?: ResolvedSourceImportEdge[],
+  configPath = '',
 ): string[] {
   const owned = owners as readonly OwnedPackage[]
   const byName = new Map(owners.map(owner => [owner.name, owner]))
   const ownerPaths = [...owned].sort((left, right) => right.directory.length - left.directory.length)
   const violations: string[] = []
+  const testSource = isTestOrFixtureSource(source.fileName)
   for (const reference of collectSourceImportReferences(source)) {
-    if (reference.computed) continue
+    if (reference.computed) {
+      sourceEdges?.push({
+        owner: importer.name,
+        face,
+        configPath,
+        fileName: source.fileName,
+        line: reference.line,
+        kind: reference.kind,
+        computed: true,
+      })
+      continue
+    }
     const specifier = reference.specifier
     if (specifier === undefined) continue
     const declaredPackageName = packageNameOf(specifier)
@@ -159,6 +261,22 @@ export function sourceImportViolations(
       ? expectedPackage
       : ownerForPath(resolvedPath, ownerPaths) ?? expectedPackage
     const location = `${source.fileName}:${String(reference.line)}`
+    sourceEdges?.push({
+      owner: importer.name,
+      face,
+      configPath,
+      fileName: source.fileName,
+      line: reference.line,
+      kind: reference.kind,
+      computed: false,
+      specifier,
+      ...(targetOwner === undefined
+        ? declaredPackageName === undefined ? {} : { targetOwner: declaredPackageName }
+        : { targetOwner: targetOwner.name }),
+      ...(resolvedPath === undefined || ownerForPath(resolvedPath, ownerPaths) === undefined
+        ? {}
+        : { resolvedWorkspacePath: resolve(resolvedPath) }),
+    })
 
     if (declaredPackageName === '@deepseek-ai/cordis' && strictCordisOwners.has(pathKey(importer.directory))) {
       violations.push(`${location}: ${face} native source owner ${importer.name} imports Cordis via ${JSON.stringify(specifier)}`)
@@ -171,9 +289,15 @@ export function sourceImportViolations(
     if (targetOwner === undefined) {
       if (declaredPackageName === undefined || declaredPackageName === importer.name) continue
       const sections = dependencySections(importer, declaredPackageName)
+      const toolingSections = testSource && repositoryTooling !== undefined
+        ? dependencySections(repositoryTooling, declaredPackageName)
+        : []
       const valid = reference.kind === 'runtime'
         ? sections.some(section => section !== 'devDependencies')
+          || (testSource && sections.includes('devDependencies'))
+          || toolingSections.length > 0
         : sections.length > 0
+          || toolingSections.length > 0
       if (!valid) {
         const requirement = reference.kind === 'runtime'
           ? 'runtime import requires dependencies, optionalDependencies, or peerDependencies'
@@ -197,6 +321,7 @@ export function sourceImportViolations(
     const sections = dependencySections(importer, targetOwner.name)
     const valid = reference.kind === 'runtime'
       ? sections.some(section => section !== 'devDependencies')
+        || (testSource && sections.includes('devDependencies'))
       : sections.length > 0
     if (!valid) {
       const requirement = reference.kind === 'runtime'
@@ -260,6 +385,18 @@ function readOwners(root: string): OwnedPackage[] {
   return owners.sort((left, right) => right.directory.length - left.directory.length)
 }
 
+function readRepositoryTooling(root: string): SourceImportOwner {
+  const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as PackageManifest
+  return {
+    name: typeof manifest.name === 'string' ? manifest.name : '<repository-root>',
+    directory: root,
+    dependencies: manifest.dependencies ?? {},
+    optionalDependencies: manifest.optionalDependencies ?? {},
+    peerDependencies: manifest.peerDependencies ?? {},
+    devDependencies: manifest.devDependencies ?? {},
+  }
+}
+
 /** Audit both compiler faces across every workspace package source in their referenced projects. */
 export function collectSourceImportGraphViolations(root: string): {
   violations: string[]
@@ -268,9 +405,12 @@ export function collectSourceImportGraphViolations(root: string): {
   sourceEntries: number
   ownersWithoutSource: string[]
   computed: number
+  cordisUses: CordisSourceUse[]
+  sourceEdges: ResolvedSourceImportEdge[]
 } {
   const owners = readOwners(root)
   const ownerPaths = owners
+  const repositoryTooling = readRepositoryTooling(root)
   const strictCordisOwners = new Set([...nativePackageDirectories, ...transitionalNativeSourceDirectories]
     .map(directory => pathKey(resolve(root, directory))))
   const seenEdges = new Set<string>()
@@ -278,6 +418,8 @@ export function collectSourceImportGraphViolations(root: string): {
   const violations = new Set<string>()
   let sourceEntries = 0
   let computed = 0
+  const cordisUses = new Map<string, CordisSourceUse>()
+  const sourceEdges = new Map<string, ResolvedSourceImportEdge>()
   for (const face of COMPILER_FACES) {
     for (const item of faceSources(root, face)) {
       const importer = ownerForPath(item.fileName, ownerPaths)
@@ -286,12 +428,22 @@ export function collectSourceImportGraphViolations(root: string): {
       seenOwners.add(importer.name)
       const source = ts.createSourceFile(item.fileName, readFileSync(item.fileName, 'utf8'), ts.ScriptTarget.Latest, true)
       const references = collectSourceImportReferences(source)
+      for (const use of collectCordisSourceUses(source, importer.name, face)) {
+        cordisUses.set(`${face}\0${item.fileName}\0${String(use.line)}\0${use.specifier}\0${use.kind}`, use)
+      }
       computed += references.filter(reference => reference.computed).length
       for (const reference of references) {
         seenEdges.add(`${face}\0${importer.name}\0${item.fileName}\0${String(reference.line)}\0${reference.specifier ?? '<computed>'}\0${reference.kind}`)
       }
-      for (const violation of sourceImportViolations(source, importer, owners, item.options, face, strictCordisOwners)) {
+      const currentEdges: ResolvedSourceImportEdge[] = []
+      for (const violation of sourceImportViolations(
+        source, importer, owners, item.options, face, strictCordisOwners, repositoryTooling, currentEdges, item.configPath,
+      )) {
         violations.add(violation)
+      }
+      for (const edge of currentEdges) {
+        const key = `${face}\0${item.configPath}\0${item.fileName}\0${String(edge.line)}\0${edge.specifier ?? '<computed>'}\0${edge.kind}`
+        sourceEdges.set(key, edge)
       }
     }
   }
@@ -302,12 +454,23 @@ export function collectSourceImportGraphViolations(root: string): {
     sourceEntries,
     ownersWithoutSource: owners.filter(owner => !seenOwners.has(owner.name)).map(owner => owner.name).sort(),
     computed,
+    cordisUses: [...cordisUses.values()].sort((left, right) => left.fileName.localeCompare(right.fileName)
+      || left.line - right.line || left.face.localeCompare(right.face)),
+    sourceEdges: [...sourceEdges.values()].sort((left, right) => left.fileName.localeCompare(right.fileName)
+      || left.line - right.line || left.face.localeCompare(right.face) || left.configPath.localeCompare(right.configPath)),
   }
 }
 
 function main(): void {
   const root = resolve(import.meta.dirname, '..', '..')
   const result = collectSourceImportGraphViolations(root)
+  const compatibilityRoot = `${pathKey(resolve(root, 'rsh/Compatibility/DSH'))}/`
+  const compatibilityFindings = result.violations.filter((violation) => {
+    const fileName = /^(.+?):\d+:/u.exec(violation)?.[1]
+    return fileName !== undefined && pathKey(fileName).startsWith(compatibilityRoot)
+  })
+  const graphMode = process.argv.includes('--graph')
+  const report = graphMode ? console.error : console.log
   const categories = new Map<string, string[]>()
   for (const violation of result.violations) {
     const category = violation.includes('cannot resolve workspace source')
@@ -323,17 +486,25 @@ function main(): void {
     entries.push(violation)
     categories.set(category, entries)
   }
-  console.log(
+  report(
     `${GATE}: audited ${String(result.edges)} Host/Client references across ${String(result.sourceEntries)} compiler source entries `
     + `and ${String(result.owners - result.ownersWithoutSource.length)}/${String(result.owners)} package owners; `
     + `${String(result.computed)} are computed loaders.`,
   )
   if (result.ownersWithoutSource.length > 0) {
-    console.log(`Owners absent from both compiler faces: ${result.ownersWithoutSource.join(', ')}`)
+    report(`Owners absent from both compiler faces: ${result.ownersWithoutSource.join(', ')}`)
   }
-  console.log(`Existing findings: ${String(result.violations.length)}. This command reports the full repository baseline; it is not a CI gate.`)
-  for (const [category, entries] of categories) console.log(`  ${category}: ${String(entries.length)}`)
-  if (process.argv.includes('--full')) for (const violation of result.violations) console.log(`  ${violation}`)
+  if (process.argv.includes('--cordis')) {
+    report(`Direct Cordis-family source edges: ${String(result.cordisUses.length)}`)
+    for (const use of result.cordisUses) {
+      report(`  ${use.face} ${use.kind} ${use.owner} ${use.fileName}:${String(use.line)} ${use.specifier} [${use.symbols.join(', ')}]`)
+    }
+  }
+  report(`Existing findings: ${String(result.violations.length)}. This command reports the full repository baseline; it is not a CI gate.`)
+  report(`Compatibility/DSH findings: ${String(compatibilityFindings.length)}`)
+  for (const [category, entries] of categories) report(`  ${category}: ${String(entries.length)}`)
+  if (process.argv.includes('--full')) for (const violation of result.violations) report(`  ${violation}`)
+  if (graphMode) for (const edge of result.sourceEdges) console.log(JSON.stringify(edge))
   const boundaryViolations = categories.get('native Cordis boundary violations') ?? []
   if (boundaryViolations.length > 0) {
     console.error(`Native Cordis boundary findings: ${String(boundaryViolations.length)}; run verify-native-dependencies for the enforced policy.`)

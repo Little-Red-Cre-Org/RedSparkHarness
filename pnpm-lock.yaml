@@ -243,6 +243,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs-local
 
   rsh/Compatibility/DSH/bridge/compat-fs-sandbox:
     dependencies:
@@ -308,6 +311,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-agent-loop':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/agent-loop
       '@deepseek-ai/dsh-compat-fs-sandbox':
         specifier: workspace:^
         version: link:../compat-fs-sandbox
@@ -320,12 +326,18 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-headless
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/sandbox/sandbox-policy
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -616,6 +628,12 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/loader
 
   rsh/Compatibility/DSH/bundle/headless:
     dependencies:
@@ -641,6 +659,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
       '@deepseek-ai/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../../../Core/vendor/loader
@@ -662,6 +683,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-session-projection':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-projection
 
   rsh/Compatibility/DSH/bundle/rsh:
     dependencies:
@@ -803,6 +827,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
 
   rsh/Compatibility/DSH/bundle/web-app:
     dependencies:
@@ -1059,6 +1086,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
       '@deepseek-ai/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../../../Core/vendor/loader
