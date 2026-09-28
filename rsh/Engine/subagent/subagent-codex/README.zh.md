@@ -188,7 +188,7 @@ Codex 子级会在一个全新的临时线程中，以单个轮次接收这些�
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为与限制以上文和包代码为准。
 
 - **载荷体积披露**——当前 darwin-arm64 平台载荷压缩后约 114 MB、解包后约 282 MB；这些是披露数字，不是安装阈值。
-- **版本锁定的协议**——运行时依赖锁定为 `@openai/codex@0.157.1`；`thread/start` 权限字段遵循 v2 [`ThreadStartParams` 定义](https://github.com/openai/codex/blob/rust-v0.157.1/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L59-L163)。无密钥真实产品测试会生成已安装包的 schema 并检查这些字段；带凭证的随机数测试会检查产品连接。
+- **版本锁定的协议**——运行时依赖锁定为 `@openai/codex@0.158.0`；`thread/start` 权限字段遵循 v2 [`ThreadStartParams` 定义](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L59-L163)。无密钥真实产品测试会生成已安装包的 schema 并检查这些字段；带凭证的随机数测试会检查产品连接。
 
 </details>
 

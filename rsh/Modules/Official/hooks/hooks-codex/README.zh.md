@@ -167,7 +167,7 @@ hook 不返回上下文时没有成本。Hook 文本取决于数据，会被记�
 
 这些限制描述你的 Codex 钩子目前还无法通过本桥接做到的事情，以及行为与参考工具的差异。它们是当前包约束，而非任务积压。
 
-- **未映射的 hook 事件（Codex 0.157.1 的 12 项中有 7 项）**——`PermissionRequest`、`PreCompact`、`PostCompact`、`SessionEnd`、`SubagentStart`、`SubagentStop` 与 `Interrupt`。本桥接能识别这些事件名，但没有对应的 harness 拦截点；配置会跳过并给出警告。未来未知事件名同样会警告并跳过。事件清单以 [Codex 官方 hook 参考](https://developers.openai.com/codex/hooks/) 为行为基线，并与 [Codex 0.157.1 hook 事件声明](https://github.com/openai/codex/blob/rust-v0.157.1/codex-rs/hooks/src/lib.rs)交叉核对。
+- **未映射的 hook 事件（Codex 0.158.0 的 12 项中有 7 项）**——`PermissionRequest`、`PreCompact`、`PostCompact`、`SessionEnd`、`SubagentStart`、`SubagentStop` 与 `Interrupt`。本桥接能识别这些事件名，但没有对应的 harness 拦截点；配置会跳过并给出警告。未来未知事件名同样会警告并跳过。事件清单以 [Codex 官方 hook 参考](https://developers.openai.com/codex/hooks/) 为行为基线，并与 [Codex 0.158.0 hook 事件声明](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/hooks/src/lib.rs)交叉核对。
 - **`SessionStart` 只支持部分功能**——支持纯 stdout 与 JSON `additionalContext`，但 hook 脱离运行，因此上下文可能错过第一个请求。
 - **`UserPromptSubmit` 只支持部分功能**——支持阻塞加纯 stdout 或 JSON 上下文，但不会强制执行通用 `systemMessage` 与 `{"continue": false}` 控制。
 - **`PreToolUse` 只支持部分功能**——支持阻塞，但会忽略 `additionalContext`、`permissionDecision: "allow"` 与 `updatedInput`。每个工具都表示为 `tool_input: { command }`，因此非 shell 工具参数不会被如实公开给 hook。
