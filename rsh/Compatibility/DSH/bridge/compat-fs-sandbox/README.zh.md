@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-fs-sandbox` 为原生 profile 选择现有 sandboxing 文件系统。它要求 `sandboxPolicy`，将该策略适配进隔离 Cordis Context，并提供唯一原生 `fs` 服务。被拒绝的变更仍然被拒绝，此 bridge 绝不回退到裸本地存储。
+`dsh-compat-fs-sandbox` 为原生 profile 选择现有 sandboxing 文件系统。它要求 `sandboxPolicy`，将该策略适配进共享 Cordis Context，并提供唯一原生 `fs` 服务。被拒绝的变更仍然被拒绝，此 bridge 绝不回退到裸本地存储。
 
 ## 目录
 

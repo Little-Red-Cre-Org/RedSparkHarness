@@ -10,9 +10,9 @@ Status: implemented
 
 ## Decision
 
-兼容包为每个选定的旧贡献创建一个受管理的 Cordis Context，并且只通过已声明的原生服务暴露它。`compat-fs-local` 和 `compat-fs-sandbox` 分别提供 `fs`；sandbox 变体要求选择原生策略。`compat-fs-policy` 将原生 filesystem 事件转发给旧 observation policy，并提供策略权威标记。`compat-tool-fs` 将选定旧工具和提示词 section 注册到原生注册表，而原生 headless 应用校验调用并且只追加一条 Session 结果。
+可选的 `compat-dsh-runtime` 创建一个 Cordis Context，并仅通过 `compatDshRuntime` 服务向选定兼容 bridge 暴露它。bridge 通过 `dsh-plugin-host` 挂载 allowlist 中的插件，由后者持有子 Fiber 和 descriptor 注册。`compat-fs-local` 和 `compat-fs-sandbox` 分别提供 `fs`；sandbox 变体要求选择原生策略。`compat-fs-policy` 将原生 filesystem 事件转发给旧 observation policy，并提供策略权威标记。`compat-tool-fs` 将选定旧工具和提示词 section 注册到原生注册表，而原生 headless 应用校验调用并且只追加一条 Session 结果。
 
-每个 bridge 都会在构造 Context 前读取并校验所选包元数据和配置。重复 Provider 和策略权威会在解析原生安装时失败。bridge 释放会等待已接收的旧工具执行、移除所属原生贡献并释放其 Context。兼容 profile 通过已发布的 `dsh` 命令运行旧 write 工具，验证 filesystem 变更、模型可见提示词和 schema，以及一条持久结果。
+每个 bridge 都会在挂载插件前读取并校验所选包元数据和配置。兼容运行时要求 Cordis 主版本 4，并拒绝 allowlist 以外的插件名。重复 Provider 和策略权威会在解析原生安装时失败。bridge 释放会等待已接收的旧工具执行、移除所属原生贡献并等待子 Fiber 结束；Host 关闭时再排空共享 Context。不含 `compat-dsh-runtime` 的原生安装不会通过此兼容路径加载 Cordis。兼容 profile 通过已发布的 `dsh` 命令运行旧 write 工具，验证 filesystem 变更、模型可见提示词和 schema，以及一条持久结果。
 
 ## Alternatives considered
 

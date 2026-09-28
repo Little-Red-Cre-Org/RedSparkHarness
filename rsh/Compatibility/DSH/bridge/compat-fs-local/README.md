@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-local` lets a native consumer use the maintained local filesystem backend. It validates the selected legacy package declaration and local-backend configuration before creating an isolated Cordis Context. The bridge provides one native `fs` service and awaits disposal of its Context during host shutdown.
+`dsh-compat-fs-local` lets a native consumer use the maintained local filesystem backend. It validates the selected legacy package declaration and local-backend configuration before mounting into the optional shared Cordis Context. The bridge provides one native `fs` service and awaits disposal of its plugin during host shutdown.
 
 ## Table of Contents
 

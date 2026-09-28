@@ -329,6 +329,7 @@
     { "path": "./rsh/Compatibility/DSH/boot/app-boot" },
     { "path": "./rsh/Compatibility/DSH/boot/cmdline" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-fs-local" },
+    { "path": "./rsh/Compatibility/DSH/bridge/compat-dsh-runtime" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-fs-sandbox" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-fs-policy" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-tool-fs" },

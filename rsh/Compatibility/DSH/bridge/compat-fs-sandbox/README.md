@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-sandbox` selects the existing sandboxing filesystem for a native profile. It requires `sandboxPolicy`, adapts that policy into the isolated Cordis Context, and provides the only native `fs` service. A denied mutation stays denied and this bridge never falls back to bare local storage.
+`dsh-compat-fs-sandbox` selects the existing sandboxing filesystem for a native profile. It requires `sandboxPolicy`, adapts that policy into the shared Cordis Context, and provides the only native `fs` service. A denied mutation stays denied and this bridge never falls back to bare local storage.
 
 ## Table of Contents
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as localPlugin } from '@deepseek-ai/dsh-fs-local/native'
@@ -16,10 +17,13 @@ it('rejects changed declarations, config, missing policy and duplicate filesyste
   expect(() => { validateLegacySandboxManifest({ dsh: { runtime: { apiVersion: 2, role: 'provider', capability: 'filesystem' } } }) }).toThrow('unsupported')
   const scope = new NativeScope()
   expect(() => plugin.resolve({ unknown: true })).toThrow('fs-local:')
-  expect(() => resolveInstallation([{ plugin, scope, config: {} }], 'host')).toThrow('missing sandboxPolicy')
+  expect(() => resolveInstallation([
+    { plugin, scope, config: {} }, { plugin: compatRuntimePlugin, scope, config: undefined },
+  ], 'host')).toThrow('missing sandboxPolicy')
   expect(() => resolveInstallation([
     { plugin, scope, config: {} }, { plugin: localPlugin, scope, config: {} },
     { plugin: policyPlugin, scope, config: { mode: 'read-only', workspaceRoot: tmpdir() } },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host')).toThrow('duplicate')
 })
 
@@ -38,6 +42,7 @@ it('denies read-only writes without changing files and allows workspace writes i
       { plugin: consumer, scope, config: undefined },
       { plugin, scope, config: { cwd: directory } },
       { plugin: policyPlugin, scope, config: { mode, workspaceRoot: directory } },
+      { plugin: compatRuntimePlugin, scope, config: undefined },
     ], 'host'))
     await host.start()
     return host

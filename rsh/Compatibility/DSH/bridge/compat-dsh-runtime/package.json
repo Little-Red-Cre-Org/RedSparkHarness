@@ -1,12 +1,12 @@
 {
-  "name": "@deepseek-ai/dsh-compat-fs-local",
-  "description": "Explicit Cordis filesystem Provider for native DeepSeek Harness profiles",
+  "name": "@deepseek-ai/dsh-compat-dsh-runtime",
+  "description": "Optional Cordis host for explicitly supported native DSH compatibility adapters",
   "version": "0.1.5-rc.2",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "rsh/Compatibility/DSH/bridge/compat-fs-local"
+    "directory": "rsh/Compatibility/DSH/bridge/compat-dsh-runtime"
   },
   "type": "module",
   "dsh": {
@@ -14,9 +14,9 @@
       "apiVersion": 1,
       "entry": "./native",
       "targets": ["host"],
-      "requires": ["compatDshRuntime"],
+      "requires": [],
       "optional": [],
-      "provides": ["fs"]
+      "provides": ["compatDshRuntime"]
     }
   },
   "main": "lib/index.js",
@@ -32,8 +32,6 @@
   "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-compat-dsh-runtime": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^"
+    "@deepseek-ai/dsh-plugin-host": "workspace:^"
   }
 }

@@ -10,13 +10,13 @@ The compatibility work needs an evidence-based map of Cordis/DSH ownership, exis
 
 ## Proposal
 
-Use this inventory and test matrix as the compatibility work baseline. Keep the filesystem bridge as the first completed capability slice, close source-alias gaps for native exports, then admit additional DSH plugins one package family at a time after validating its contracts. Leave Native Runtime public APIs and Engine/Agent/Session changes with their owner.
+Use this inventory and test matrix as the compatibility work baseline. Keep the filesystem bridge as the first completed capability slice, maintain the source-alias checks for native exports, then admit additional DSH plugins one package family at a time after validating its contracts. Leave Native Runtime public APIs and Engine/Agent/Session changes with their owner.
 
 ## Scope and baseline
 
 This inventory covers the compatibility owner's surface on `origin/main` at `142c9c925c7013087557676a86cad95e41b53dda`. It does not modify Native Runtime public APIs, Agent, Session, Engine, or vendored Cordis. The user's primary checkout has local changes; work is isolated in branch `refactor/cordis-compat-completion`.
 
-The native runtime foundation and native profile loader already exist. Four filesystem adapters already bridge selected legacy packages: `compat-fs-local`, `compat-fs-policy`, `compat-fs-sandbox`, and `compat-tool-fs`. This proves one bounded capability slice, not a generic Cordis plugin loader or a Cordis-free production application. Shipped `dsh` profiles still use the legacy composition.
+The native runtime foundation and native profile loader already exist. The four filesystem adapters (`compat-fs-local`, `compat-fs-policy`, `compat-fs-sandbox`, and `compat-tool-fs`) now mount through the optional `compat-dsh-runtime`, which owns one shared Cordis Context and permits only the first-party plugin allowlist. This proves one bounded capability slice, not a generic Cordis plugin loader or a Cordis-free production application. Shipped product profiles still use the legacy composition.
 
 ## Usage map and ownership
 
@@ -83,18 +83,18 @@ These gates do not yet cover the all-owner graph required by the handbook: Nativ
 
 ### Interface requirements and B4 entry decision
 
-The existing Native API already provides `NativePlugin.resolve(config)`, `NativeHost` installation planning/activation/removal, host/client targets, declared services/events, and `context.own()` disposers. Native Host tests also cover activation rollback and awaited removal. B7 therefore must map concrete legacy semantics onto these contracts rather than request another interface set; gaps should go to the Native Runtime owner.
+The existing Native API provides `NativePlugin.resolve(config)`, `NativeHost` installation planning/activation/removal, host/client targets, declared services/events, and `context.own()` disposers. The filesystem adapters map to those contracts without changing them. The compatibility runtime validates Cordis major version 4 and plugin identity through a first-party allowlist; `dsh-plugin-host` owns child Fiber and descriptor cleanup. Filesystem waterfall events preserve `next()` and actor arguments, and observation events forward once to the native scope. Unsupported config fields fail before mount. These checks establish the selected filesystem semantics only; they do not define a generic scope-to-actor mapping or replacement contract.
 
-Before B4, confirm: who validates plugin identity/version and legacy manifest versions; how Cordis scope maps to Native owner/actor/initiator; sync/parallel/serial/waterfall, cancellation, error, and short-circuit rules for each selected legacy event; how unsupported compatibility config is rejected when converted to `NativePlugin.resolve` input; and which real Native Host entry can load and disable Compatibility in an acceptance test. Until then, do not implement a generic Cordis Host or claim the product Cordis switch is complete.
+The selected adapters use the CLI NativeHost in focused tests, but app-level native/compatibility composition remains with the Native Runtime owner. Do not implement a generic Cordis Host or claim the product Cordis switch is complete from this slice.
 
 ## Loader, HMR, and unload evidence
 
 | Concern | Existing evidence | Remaining compatibility gap |
 |---|---|---|
-| Cordis Loader startup and composition | `rsh/Tests/test-support/loader-smoke`; app-boot profile/config tests; `Core/runtime-diagnostics/plugin-host` real Loader startup-failure test | Add a single bridge acceptance fixture that verifies selected package/config validation happens before activation and sees the shipped export shape. |
+| Cordis Loader startup and composition | `rsh/Tests/test-support/loader-smoke`; app-boot profile/config tests; `Core/runtime-diagnostics/plugin-host` startup-failure tests; compatibility runtime verifies Cordis v4 and mounts the existing plugin-host adapter | The native compatibility runtime does not load a legacy Loader profile or arbitrary package. |
 | Config HMR / reload | `app-boot/tests/hmr-config.spec.ts` covers path aliases, add/change/unlink, missing parent, serialized refresh/dispose, and watcher failure; `app-boot/tests/config-reload.spec.ts` and `CLI/tests/profile-hmr.spec.ts` cover config and profile policy | This is legacy Cordis HMR, not native plugin hot replacement. The native path has no hot-replacement contract yet; do not expose it until its owner specifies replacement semantics. |
 | Descriptor/HMR ownership | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` covers failed startup, duplicate owners, waiting for teardown, cancellation during replacement/start, concurrent replacements, and repeated disposal | The plugin-host is a compatibility adapter, not proof that every native bridge can be hot-replaced safely. |
-| Bridge load/unload | Four `Compatibility/DSH/bridge/*/tests/native.spec.ts` cover rejection before activation, native consumer behavior, selected policy and sandbox decisions, tool/prompt registration, one Session result, and bridge-owned disposal | Expand shared assertions across bridge packages for partial activation failure and prove service/event/tool registries return to the original state after each failure and unload. |
+| Bridge load/unload | Five compatibility bridge suites cover refusal, mounting multiple plugins in one shared Context, independent removal, partial activation rollback, filesystem policy decisions, tool/prompt registration, and admitted-work drain | Extend these assertions when another capability family is admitted. |
 | Native lifecycle | Native Runtime host tests cover activation rollback, owned cleanup, events, and awaited removal | No generalized HMR or external DSH package discovery; these remain explicit deferred capabilities. |
 
 ## Source dependency audit requirements
@@ -116,11 +116,11 @@ The compatibility work should consume, not redefine, the existing API: `NativePl
 
 ## Validation recorded in this branch
 
-- Loader/HMR/config reload, plugin-host replacement, and all four filesystem bridge suites: 8 files, 54 tests passed.
-- `gen-tsconfig-paths.spec.ts`: 8 tests passed, including native export source-alias coverage.
-- `build:lib:host` passed; the built CLI native-headless replay passed with a Cordis Context creation probe, and the compatibility-profile replay passed with a real workspace write plus exactly one durable tool call/result. These are the current native-only and compat-on headless paths, not full Web/Desktop proof.
-- `verify-tsconfig-paths`, `verify-native-dependencies`, and `verify-package-dependencies` passed; the latter classified 62 published packages.
-- These checks validate the listed owners and bridge slice. They do not establish full Cordis-free CLI/Web/Desktop behavior or repository-wide dependency closure.
+- Five compatibility bridge suites and two Native profile suites pass: 7 files and 21 tests.
+- `tsc -b tsconfig.host.json` and the Host `tsdown` workspace build pass.
+- `verify-native-dependencies` passes its Host/Client native graph; `verify-package-dependencies` validates 62 published packages; the lockfile passes frozen offline verification.
+- `verify-tsconfig-paths` and `verify-module-graph` pass after regeneration. A Cordis-free native profile and a compatibility-enabled profile remain distinct paths; current tests do not establish full Cordis-free CLI/Web/Desktop behavior.
+- The source import gates resolve important Host/Client and published-package closures, but they do not form one repository-wide package-owner graph audit with negative fixtures for every cross-package relative import and re-export chain. B3 remains open until that policy and gate are reviewed.
 
 ## Acceptance criteria
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
@@ -31,7 +32,9 @@ it('rejects unsupported declarations, config and missing native registries befor
     .toThrow('unsupported')
   const scope = new NativeScope()
   expect(() => plugin.resolve({ invented: true })).toThrow('unsupported configuration field invented')
-  expect(() => resolveInstallation([{ plugin, scope, config: undefined }], 'host')).toThrow('missing fs')
+  expect(() => resolveInstallation([
+    { plugin, scope, config: undefined }, { plugin: compatRuntimePlugin, scope, config: undefined },
+  ], 'host')).toThrow('missing fs')
 })
 
 it('passes per-session policy to a legacy write and preserves the denied file', async () => {
@@ -53,6 +56,7 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
     { plugin: sandboxFsPlugin, scope, config: { cwd: directory } },
     { plugin: sandboxPolicyPlugin, scope, config: { mode: 'read-only', workspaceRoot: directory } },
     { plugin, scope, config: undefined },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host'))
   try {
     await host.start()
@@ -127,6 +131,7 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: promptPlugin, scope, config: undefined },
     bridge,
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host'))
   try {
     await host.start()

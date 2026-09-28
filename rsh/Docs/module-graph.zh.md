@@ -142,6 +142,7 @@ flowchart TD
     pkg_cmdline["cmdline"]
   end
   subgraph group_bridge["group: bridge"]
+    pkg_compat_dsh_runtime["compat-dsh-runtime"]
     pkg_compat_fs_local["compat-fs-local"]
     pkg_compat_fs_policy["compat-fs-policy"]
     pkg_compat_fs_sandbox["compat-fs-sandbox"]
@@ -393,10 +394,12 @@ flowchart TD
   subgraph group_workspace["group: workspace"]
     pkg_workspace["workspace"]
   end
+  pkg_launch_environment --> pkg_native_runtime
   pkg_llm --> pkg_errors
   pkg_scope --> pkg_invariants
   pkg_attachment --> pkg_brand
   pkg_credentials --> pkg_invariants
+  pkg_credentials --> pkg_native_runtime
   pkg_e2b --> pkg_http_proxy
   pkg_host_directory_picker_auto --> pkg_client_ui_directory_picker_browse
   pkg_host_directory_picker_auto --> pkg_client_ui_directory_picker_native
@@ -431,6 +434,7 @@ flowchart TD
   pkg_credentials_local --> pkg_credentials
   pkg_credentials_local --> pkg_home_paths
   pkg_credentials_local --> pkg_launch_environment
+  pkg_credentials_local --> pkg_native_runtime
   pkg_subprocess_e2b --> pkg_e2b
   pkg_subprocess_e2b --> pkg_subprocess
   pkg_subprocess_e2b --> pkg_timeout
@@ -1194,7 +1198,6 @@ flowchart TD
 | [`home-paths`](../Core/util/home-paths) | `util` | — |
 | [`http-proxy`](../Core/util/http-proxy) | `util` | — |
 | [`json-rpc-line`](../Core/util/json-rpc-line) | `util` | — |
-| [`launch-environment`](../Core/util/launch-environment) | `util` | — |
 | [`native-command`](../Core/util/native-command) | `util` | — |
 | [`output-retention`](../Core/util/output-retention) | `util` | — |
 | [`package-manifest`](../Core/util/package-manifest) | `util` | — |
@@ -1214,6 +1217,7 @@ flowchart TD
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |
 | [`cmdline`](../Compatibility/DSH/boot/cmdline) | `boot` | — |
+| [`compat-dsh-runtime`](../Compatibility/DSH/bridge/compat-dsh-runtime) | `bridge` | — |
 | [`compat-fs-local`](../Compatibility/DSH/bridge/compat-fs-local) | `bridge` | — |
 | [`compat-fs-policy`](../Compatibility/DSH/bridge/compat-fs-policy) | `bridge` | — |
 | [`compat-fs-sandbox`](../Compatibility/DSH/bridge/compat-fs-sandbox) | `bridge` | — |
@@ -1301,10 +1305,11 @@ flowchart TD
 | [`typert-generator`](../Core/typert/generator) | `typert` | — |
 | [`typert-protocol`](../Core/typert/protocol) | `typert` | — |
 | [`typert-registry`](../Core/typert/registry) | `typert` | — |
+| [`launch-environment`](../Core/util/launch-environment) | `util` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors) |
 | [`scope`](../Engine/core/scope) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`attachment`](../Modules/Official/attachment/attachment) | `attachment` | [`brand`](../Core/util/brand) |
-| [`credentials`](../Modules/Official/credentials/credentials) | `credentials` | [`invariants`](../Core/runtime-diagnostics/invariants) |
+| [`credentials`](../Modules/Official/credentials/credentials) | `credentials` | [`invariants`](../Core/runtime-diagnostics/invariants), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`e2b`](../Modules/Official/e2b/e2b) | `e2b` | [`http-proxy`](../Core/util/http-proxy) |
 | [`host-directory-picker-auto`](../Programs/Web/host/directory-picker-auto) | `host` | [`client-ui-directory-picker-browse`](../Programs/Web/client/ui-directory-picker-browse), [`client-ui-directory-picker-native`](../Programs/Web/client/ui-directory-picker-native), [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse), [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
@@ -1322,7 +1327,7 @@ flowchart TD
 | [`attachment-local`](../Modules/Official/attachment/attachment-local) | `attachment` | [`attachment`](../Modules/Official/attachment/attachment), [`home-paths`](../Core/util/home-paths) |
 | [`client-file-upload`](../Programs/Web/client/file-upload) | `client` | [`scope`](../Engine/core/scope) |
 | [`authorization`](../Modules/Official/credentials/authorization) | `credentials` | [`credentials`](../Modules/Official/credentials/credentials), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm) |
-| [`credentials-local`](../Modules/Official/credentials/credentials-local) | `credentials` | [`atomic-write`](../Core/util/atomic-write), [`credentials`](../Modules/Official/credentials/credentials), [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment) |
+| [`credentials-local`](../Modules/Official/credentials/credentials-local) | `credentials` | [`atomic-write`](../Core/util/atomic-write), [`credentials`](../Modules/Official/credentials/credentials), [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |

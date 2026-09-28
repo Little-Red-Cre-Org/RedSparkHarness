@@ -1,7 +1,8 @@
 /** Selected legacy filesystem tools contributing to native registries. */
 import { createRequire } from 'node:module'
-import { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -22,7 +23,7 @@ interface LegacyManifest {
 }
 
 /**
- * Refuse changed legacy tool metadata before creating a Cordis Context.
+ * Refuse changed legacy tool metadata before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
 export function validateLegacyToolManifest(manifest: LegacyManifest): void {
@@ -55,33 +56,55 @@ function resolveConfig(input: unknown): Config {
 /** Bridge native filesystem, tool, prompt and observation slots to the supported legacy plugin. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-compat-tool-fs', targets: ['host'],
-  requires: ['fs', 'tools', 'promptSections'], optional: ['sandboxPolicy'], provides: ['compatToolFs'],
+  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy'], provides: ['compatToolFs'],
   resolve(input) {
     const config = resolveConfig(input)
     const require = createRequire(import.meta.url)
     validateLegacyToolManifest(require('@deepseek-ai/dsh-tool-fs/package.json') as LegacyManifest)
     return async (native) => {
-      const legacy = new Context()
+      const runtime = native.require('compatDshRuntime')
+      const legacy = runtime.context
       const active = new Set<Promise<unknown>>()
-      native.own(async () => {
-        await Promise.allSettled([...active])
-        await legacy.fiber.dispose()
-      })
-      legacy.provide('fs', native.require('fs') as import('@deepseek-ai/dsh-fs').FileSystem)
+      const nativeFs = native.require('fs') as import('@deepseek-ai/dsh-fs').FileSystem
+      const legacyFs = legacy.get('fs')
+      if (legacyFs === undefined) {
+        const fsMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/fs-adapter', (context) => {
+          context.provide('fs', nativeFs)
+        })
+        native.own(() => fsMount.dispose())
+        await fsMount.ready
+      }
       const sandboxPolicy = native.optional('sandboxPolicy')
-      if (sandboxPolicy !== undefined) {
-        // Cordis types this service as its concrete class; tool-fs uses only these two members.
-        legacy.provide('sandboxPolicy', {
+      if (sandboxPolicy !== undefined && legacy.get('sandboxPolicy') === undefined) {
+        const legacyPolicy = {
           defaultMode: sandboxPolicy.defaultMode,
           resolve: sandboxPolicy.resolve.bind(sandboxPolicy),
-        } as unknown as import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService)
+        } as unknown as import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService
+        const policyMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/sandbox-policy-adapter', (context) => {
+          context.provide('sandboxPolicy', legacyPolicy)
+        })
+        native.own(() => policyMount.dispose())
+        await policyMount.ready
       }
-      legacy.on('fs/write-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/write-intent', next, target, actor))
-      legacy.on('fs/edit-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/edit-intent', next, target, actor))
-      legacy.on('fs/observed', (target, observation, actor) => { native.events.emit(native.scope, 'fs/observed', target, observation, actor) })
-      await legacy.plugin(SystemPrompt, { includeHarnessIdentity: false, includeRuntimeContext: false })
-      await legacy.plugin(ToolRuntime, { mode: 'native' })
-      await legacy.plugin(LegacyToolFs, config)
+      const eventMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/fs-event-bridge', (context: Context) => {
+        context.on('fs/write-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/write-intent', next, target, actor))
+        context.on('fs/edit-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/edit-intent', next, target, actor))
+        context.on('fs/observed', (target, observation, actor) => { native.events.emit(native.scope, 'fs/observed', target, observation, actor) })
+      })
+      native.own(() => eventMount.dispose())
+      await eventMount.ready
+      const promptMount = runtime.mount('@deepseek-ai/dsh-system-prompt', SystemPrompt, { includeHarnessIdentity: false, includeRuntimeContext: false })
+      native.own(() => promptMount.dispose())
+      await promptMount.ready
+      const toolsMount = runtime.mount('@deepseek-ai/dsh-tools', ToolRuntime, { mode: 'native' })
+      native.own(() => toolsMount.dispose())
+      await toolsMount.ready
+      const toolMount = runtime.mount('@deepseek-ai/dsh-tool-fs', LegacyToolFs, config)
+      native.own(() => toolMount.dispose())
+      await toolMount.ready
+      native.own(async () => {
+        await Promise.allSettled([...active])
+      })
       const registry = native.require('tools')
       for (const schema of legacy.tools.schemas()) {
         const dispose = registry.register({

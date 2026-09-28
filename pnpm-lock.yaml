@@ -193,8 +193,24 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
 
+  rsh/Compatibility/DSH/bridge/compat-dsh-runtime:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-plugin-host':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/plugin-host
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+
   rsh/Compatibility/DSH/bridge/compat-fs-local:
     dependencies:
+      '@deepseek-ai/dsh-compat-dsh-runtime':
+        specifier: workspace:^
+        version: link:../compat-dsh-runtime
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -211,6 +227,9 @@ importers:
 
   rsh/Compatibility/DSH/bridge/compat-fs-policy:
     dependencies:
+      '@deepseek-ai/dsh-compat-dsh-runtime':
+        specifier: workspace:^
+        version: link:../compat-dsh-runtime
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -227,6 +246,9 @@ importers:
 
   rsh/Compatibility/DSH/bridge/compat-fs-sandbox:
     dependencies:
+      '@deepseek-ai/dsh-compat-dsh-runtime':
+        specifier: workspace:^
+        version: link:../compat-dsh-runtime
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -255,6 +277,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-compat-dsh-runtime':
+        specifier: workspace:^
+        version: link:../compat-dsh-runtime
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs

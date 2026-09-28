@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-fs-local` 让原生 Consumer 使用维护中的本地文件系统后端。它在创建隔离 Cordis Context 前校验所选旧包声明和本地后端配置。bridge 提供一个原生 `fs` 服务，并在 Host 关闭期间等待其 Context 释放。
+`dsh-compat-fs-local` 让原生 Consumer 使用维护中的本地文件系统后端。它在挂载到可选共享 Cordis Context 前校验所选旧包声明和本地后端配置。bridge 提供一个原生 `fs` 服务，并在 Host 关闭期间等待其插件释放。
 
 ## 目录
 

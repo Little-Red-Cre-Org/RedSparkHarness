@@ -14,7 +14,7 @@
       "apiVersion": 1,
       "entry": "./native",
       "targets": ["host"],
-      "requires": [],
+      "requires": ["compatDshRuntime"],
       "optional": [],
       "provides": ["fsObservationPolicy"]
     }
@@ -32,6 +32,7 @@
   "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-compat-dsh-runtime": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-fs-observation-policy": "workspace:^"
   }

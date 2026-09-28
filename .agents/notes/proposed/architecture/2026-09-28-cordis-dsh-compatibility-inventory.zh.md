@@ -10,13 +10,13 @@ Status: proposed
 
 ## Proposal
 
-以本清单和测试矩阵作为兼容工作的基线。先保留已完成的文件系统桥接切片，补齐 native 导出源码映射，再逐个包族验证契约并接入其他 DSH 插件。Native Runtime 公共接口和 Engine/Agent/Session 变更由对应负责人处理。
+以本清单和测试矩阵作为兼容工作的基线。保留已完成的文件系统桥接切片，并维护 native 导出源码映射检查；之后逐个包族验证契约并接入其他 DSH 插件。Native Runtime 公共接口和 Engine/Agent/Session 变更由对应负责人处理。
 
 ## 范围与基线
 
 本清单覆盖 `origin/main` `142c9c925c7013087557676a86cad95e41b53dda` 上兼容模块负责的部分。不修改 Native Runtime 公共接口、Agent、Session、Engine，也不修改 vendored Cordis。用户主 checkout 存在本地修改，本工作隔离在 `refactor/cordis-compat-completion` 分支。
 
-原生运行时基础和原生 profile loader 已存在。四个文件系统适配包也已存在：`compat-fs-local`、`compat-fs-policy`、`compat-fs-sandbox`、`compat-tool-fs`。这证明一个封闭能力切片，不代表通用 Cordis 插件加载器已经完成，也不代表生产应用不再依赖 Cordis。当前发布的 `dsh` profile 仍使用旧装配。
+原生运行时基础和原生 profile loader 已存在。四个文件系统适配包（`compat-fs-local`、`compat-fs-policy`、`compat-fs-sandbox`、`compat-tool-fs`）现在通过可选的 `compat-dsh-runtime` 挂载；该运行时持有一个共享 Cordis Context，且只允许挂载一方插件 allowlist 中的包。这证明一个封闭能力切片，不代表通用 Cordis 插件加载器已经完成，也不代表生产应用不再依赖 Cordis。当前发布的产品 profile 仍使用旧装配。
 
 ## 使用位置与归属
 
@@ -83,23 +83,23 @@ pnpm exec vitest run \
 
 ### 接口需求与进入 B4 的判断
 
-现有 Native API 已提供 `NativePlugin.resolve(config)`、`NativeHost` 安装计划/激活/移除、host/client target、声明式服务/事件和 `context.own()` disposer；Native Host 也已有失败回滚和等待式移除测试。因此 B7 的需求不是要求再造一套接口，而是要求兼容侧把具体旧语义逐项映射到这些现有契约，并把缺口交回 Native Runtime owner。
+现有 Native API 提供 `NativePlugin.resolve(config)`、`NativeHost` 安装计划/激活/移除、host/client target、声明式服务/事件和 `context.own()` disposer。文件系统适配包使用这些契约，没有修改公共接口。兼容运行时校验 Cordis 主版本 4 和一方插件 allowlist；`dsh-plugin-host` 管理子 Fiber 和 descriptor 清理。文件系统 waterfall 事件保留 `next()` 与 actor 参数，观察事件只转发一次到 native scope；不支持的配置在挂载前失败。这些检查只证明所选文件系统语义，不定义通用 scope-to-actor 映射或热替换契约。
 
-进入 B4 前仍需逐项确认：插件 identity/version 与旧 manifest 版本检查由谁执行；Cordis scope 到 Native owner/actor/initiator 的映射；各目标旧事件的 sync/parallel/serial/waterfall、取消、错误与短路规则；兼容配置到 `NativePlugin.resolve` 输入的拒绝策略；以及可通过真实 Native Host 加载/停用 Compatibility 的验收入口。未确认前不实现通用 Cordis Host，也不承诺整个 Cordis 开关已产品化。
+所选适配器已在 CLI NativeHost 中用定向测试覆盖，但应用级原生/兼容组合仍由原生运行时负责人集成。不能从这一个切片推出通用 Cordis Host 已完成，也不能宣称产品层面的 Cordis 开关已经完成。
 
 ## Loader、HMR 与卸载证据
 
 | 主题 | 已有证据 | 兼容侧仍需补齐 |
 |---|---|---|
-| Cordis Loader 启动和组合 | `rsh/Tests/test-support/loader-smoke`；app-boot profile/config 测试；`Core/runtime-diagnostics/plugin-host` 的真实 Loader 启动失败测试 | 增加一个桥接验收 fixture，验证选择的包和配置在激活前校验，并确认导出形状。 |
+| Cordis Loader 启动和组合 | `rsh/Tests/test-support/loader-smoke`；app-boot profile/config 测试；`Core/runtime-diagnostics/plugin-host` 启动失败测试；兼容运行时校验 Cordis v4 并挂载现有 plugin-host adapter | 原生兼容运行时不加载旧 Loader profile 或任意包。 |
 | 配置 HMR / 重载 | `app-boot/tests/hmr-config.spec.ts` 覆盖路径别名、add/change/unlink、父目录缺失、串行刷新/释放和 watcher 失败；`config-reload.spec.ts`、`CLI/tests/profile-hmr.spec.ts` 覆盖配置与 profile 策略 | 这是旧 Cordis HMR，不是原生插件热替换。原生路径目前没有热替换契约；原生所有者定义替换语义前，不应暴露该能力。 |
 | 描述符与 HMR 所有权 | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` 覆盖启动失败、重复所有者、等待清理、替换/启动期间取消、并发替换和重复释放 | Plugin host 是兼容适配器；不能据此推断每个原生桥都支持安全热替换。 |
-| 桥接加载/卸载 | 四个 `Compatibility/DSH/bridge/*/tests/native.spec.ts` 覆盖激活前拒绝、原生 consumer 行为、策略/沙箱决策、工具/prompt 注册、单条 Session 结果和 bridge 自有资源释放 | 在各桥间补齐一致的断言：部分激活失败后无残留，卸载后服务/事件/工具注册恢复到原状态。 |
+| 桥接加载/卸载 | 五组兼容 bridge 测试覆盖拒绝、共享 Context 中多插件挂载、独立卸载、部分激活回滚、文件系统策略、工具/prompt 注册和已接收工作排空 | 接入其他能力族时继续扩展这些断言。 |
 | 原生生命周期 | Native Runtime Host 测试覆盖激活回滚、自有资源清理、事件和等待式移除 | 尚无通用 HMR 或外部 DSH 包发现；继续列为明确的后续能力。 |
 
 ## 源码依赖审计要求
 
-`verify-native-dependencies` 会按实际解析结果检查明确列入名单的原生/过渡包，并在 Host 与 Client 编译面跟踪原生入口闭包；`verify-package-dependencies` 会按源码推导已分类发布包的依赖。两者覆盖了重要场景，但还不是全仓 Cordis 边界依赖图。本分支也扩展了 `verify-tsconfig-paths`：逐个检查工作区所有 `./native` 导出都映射到所属包的 `src/`；这次发现并补上了 native prompt、sandbox policy、凭据入口、Web Client 和四个兼容桥的映射缺口。后续全图门禁仍需：
+`verify-native-dependencies` 会按实际解析结果检查明确列入名单的原生/过渡包，并在 Host 与 Client 编译面跟踪原生入口闭包；`verify-package-dependencies` 会按源码推导已分类发布包的依赖。两者覆盖重要场景，但还不是全仓 Cordis 边界依赖图。本分支将 `verify-tsconfig-paths` 扩展为逐个检查工作区的 `./native` 导出映射到所属包 `src/`，并补齐 native prompt、sandbox policy、凭据入口、Web Client 和四个兼容桥的映射。后续全图门禁仍需：
 
 1. 构建两个 compiler face，并从导入方解析每条边，包含 TS paths、相对路径、package exports 和包自引用。
 2. 跨包跟踪 re-export 和可达源码边；分别记录 type-only 与 runtime 边。
@@ -110,11 +110,11 @@ pnpm exec vitest run \
 
 ## 本分支验证结果
 
-- Loader/HMR/配置重载、plugin-host 替换和四个文件系统兼容桥：8 个文件、54 项测试通过。
-- `gen-tsconfig-paths.spec.ts`：8 项测试通过，包含 native 导出源码映射检查。
-- `build:lib:host` 构建通过；构建后 CLI 的 native-headless 回放通过，并用探针确认没有创建 Cordis Context；兼容 profile 回放也通过，验证了真实工作区写入以及恰好一条持久工具调用/结果。这证明当前原生-only 与 compat-on headless 路径，不代表 Web/Desktop 已完成验证。
-- `verify-tsconfig-paths`、`verify-native-dependencies`、`verify-package-dependencies` 均通过；最后一项检查了 62 个分类发布包。
-- 这些检查覆盖当前明确列出的所有者和桥接切片；不能证明 CLI/Web/Desktop 已完整脱离 Cordis，也不等于全仓依赖闭包验证。
+- 五个兼容 bridge 套件和两个 Native profile 套件通过：7 个测试文件、21 项测试。
+- `tsc -b tsconfig.host.json` 和 Host `tsdown` workspace 构建通过。
+- `verify-native-dependencies` 的 Host/Client 原生依赖图通过；`verify-package-dependencies` 检查 62 个发布包；lockfile 离线 frozen 校验通过。
+- alias 与模块图重新生成后，`verify-tsconfig-paths` 和 `verify-module-graph` 通过。无 Cordis 原生 profile 和启用兼容模块的 profile 仍是两条独立路径；当前测试不证明 CLI/Web/Desktop 已完全脱离 Cordis。
+- 源码依赖门禁覆盖重要的 Host/Client 与发布包闭包，但尚未形成包含跨包相对导入和 re-export 链负例的全仓包归属依赖图。B3 在相关策略和门禁通过评审前仍未完成。
 
 在包清单完成前，不要全仓禁止 Cordis；否则门禁要么破坏仍受支持的 DSH 行为，要么堆积无界例外项。
 

@@ -5,7 +5,7 @@
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Compatibility/DSH/bridge/compat-tool-fs" },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["fs", "tools", "promptSections"], "optional": ["sandboxPolicy"], "provides": ["compatToolFs"] } },
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["fs", "tools", "promptSections", "compatDshRuntime"], "optional": ["sandboxPolicy"], "provides": ["compatToolFs"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-compat-dsh-runtime": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-native-prompt": "workspace:^",

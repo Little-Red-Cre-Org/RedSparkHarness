@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
@@ -15,7 +16,7 @@ it('checks the selected legacy declaration and configuration before activation',
   expect(() => { validateLegacyFilesystemManifest(manifest) }).not.toThrow()
   expect(() => { validateLegacyFilesystemManifest({ dsh: { runtime: { apiVersion: 2, role: 'provider', capability: 'filesystem' } } }) })
     .toThrow('unsupported')
-  expect(() => resolveInstallation([{ plugin, scope: new NativeScope(), config: { unknown: true } }], 'host')).toThrow('fs-local:')
+  expect(() => plugin.resolve({ unknown: true })).toThrow('fs-local:')
 })
 
 it('serves an unchanged native Consumer and rejects a duplicate Provider', async () => {
@@ -27,9 +28,10 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
     resolve: () => (context) => { filesystem = context.require('fs') },
   }
   const legacy = { plugin, scope, config: { cwd: directory } }
-  const host = new NativeHost(resolveInstallation([{ plugin: consumer, scope, config: undefined }, legacy], 'host'))
+  const compatRuntime = { plugin: compatRuntimePlugin, scope, config: undefined }
+  const host = new NativeHost(resolveInstallation([{ plugin: consumer, scope, config: undefined }, legacy, compatRuntime], 'host'))
   try {
-    expect(() => resolveInstallation([legacy, { plugin: localFilesystemPlugin, scope, config: { cwd: directory } }], 'host'))
+    expect(() => resolveInstallation([legacy, { plugin: localFilesystemPlugin, scope, config: { cwd: directory } }, compatRuntime], 'host'))
       .toThrow('duplicate')
     await host.start()
     if (!(filesystem instanceof LocalFileSystem)) throw new Error('legacy Provider did not reach Consumer')
@@ -52,6 +54,7 @@ it('awaits legacy filesystem disposal when an admitted write is cancelled', asyn
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: consumer, scope, config: undefined }, { plugin, scope, config: { cwd: directory } },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host'))
   const entered = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
