@@ -47,7 +47,7 @@ get(packageName: string): RshPluginDescriptor | undefined
 entries(): readonly RshPluginDescriptor[]
 ```
 
-Source: [`rsh/Core/runtime-diagnostics/plugin-host/src/index.ts`](../../Core/runtime-diagnostics/plugin-host/src/index.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-plugin-host/src/index.ts`](../../Compatibility/DSH/bridge/compat-plugin-host/src/index.ts)
 <!-- END GENERATED cordis-surface -->
 
 ## 模型体验
@@ -56,6 +56,6 @@ Source: [`rsh/Core/runtime-diagnostics/plugin-host/src/index.ts`](../../Core/run
 
 ## 相关文档
 
-- [插件宿主包](../../Core/runtime-diagnostics/plugin-host/README.zh.md)——包配置和 adapter 用法。
+- [插件宿主包](../../Compatibility/DSH/bridge/compat-plugin-host/README.zh.md)——包配置和 adapter 用法。
 - [能力接缝](../capability-seams.zh.md)——Definition、Provider、Consumer、policy 和 projection 角色。
 - [架构](../architecture.zh.md#cordis)——Cordis runtime 和 profile 组合。

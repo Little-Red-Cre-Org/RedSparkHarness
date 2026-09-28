@@ -47,7 +47,7 @@ get(packageName: string): RshPluginDescriptor | undefined
 entries(): readonly RshPluginDescriptor[]
 ```
 
-Source: [`rsh/Core/runtime-diagnostics/plugin-host/src/index.ts`](../../Core/runtime-diagnostics/plugin-host/src/index.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-plugin-host/src/index.ts`](../../Compatibility/DSH/bridge/compat-plugin-host/src/index.ts)
 <!-- END GENERATED cordis-surface -->
 
 ## Model Experience
@@ -56,6 +56,6 @@ None. The registry neither changes model requests nor writes Session events.
 
 ## Related documentation
 
-- [Plugin host package](../../Core/runtime-diagnostics/plugin-host/README.md) — package configuration and adapter use.
+- [Plugin host package](../../Compatibility/DSH/bridge/compat-plugin-host/README.md) — package configuration and adapter use.
 - [Capability seams](../capability-seams.md) — Definition, Provider, Consumer, policy, and projection roles.
 - [Architecture](../architecture.md#cordis) — Cordis runtime and profile composition.

@@ -77,7 +77,7 @@ Status: proposed
 
 ### B2 定向测试基线
 
-在当前 worktree 快照运行下列定向套件，11 个测试文件、69 项测试全部通过；本次未跳过测试。该命令在原有九组 DSH 基线上加入了可选兼容 Host 和源码依赖图测试。该结果不代表整仓测试通过，也不代表 Native Runtime HMR 已实现。
+在当前 worktree 快照运行下列定向套件，13 个测试文件、73 项测试全部通过；本次未跳过测试。该套件在 DSH/HMR 基础上加入可选兼容 Host、真实旧版 Loader/bundle 组合和源码依赖图测试。该结果不代表整仓测试通过，也不代表 Native Runtime HMR 已实现。
 
 ```text
 pnpm exec vitest run \
@@ -85,16 +85,18 @@ pnpm exec vitest run \
   rsh/Compatibility/DSH/boot/app-boot/tests/hmr-config.spec.ts \
   rsh/Compatibility/DSH/boot/app-boot/tests/config-reload.spec.ts \
   rsh/Programs/CLI/tests/profile-hmr.spec.ts \
-  rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-local/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-policy/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-sandbox/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-tool-fs/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-dsh-runtime/tests/native.spec.ts \
+  rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts \
+  rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts \
   rsh/Scripts/verify-source-import-graph.spec.ts
 ```
 
-观察边界：Loader smoke 和 app-boot/profile 套件覆盖旧配置、配置重载及 Cordis 组合；plugin-host 覆盖 owner 约束、等待 dispose 和 replacement 的局部语义；四个 filesystem bridge 套件覆盖该切片的 Native Host 行为。该集合不是手册中所有历史 DSH 插件测试的全集，也没有验证 Client HMR 与 Native plugin replacement 等价。
+观察边界：Loader smoke、app-boot/profile、旧 filesystem Loader 组合和 base bundle 套件覆盖旧配置与 Cordis 组合；compat-plugin-host 覆盖 owner 约束、等待 dispose 和 replacement 的局部语义；四个 filesystem bridge 套件覆盖该切片的 Native Host 行为。该集合不是手册中所有历史 DSH 插件测试的全集，也没有验证 Client HMR 与 Native plugin replacement 等价。
 
 ### B3 源码依赖审计状态
 
@@ -102,7 +104,7 @@ pnpm exec vitest run \
 
 新增的 `pnpm run audit-source-import-graph` 会解析两套 TypeScript compiler face，并使用每个源码文件的有效 TS 配置解析导入边；覆盖普通导入、type import、re-export、module augmentation、import type 和字面量 loader。6 个测试覆盖跨包相对路径 re-export、TS alias、type/runtime 区分、通过 alias 导入 Cordis、计算式 loader，以及 Host/Client alias 实际解析不同目标。加 `--graph` 会将编译面、配置、源码位置、type/runtime、计算式标志和解析到的包目标以 JSONL 输出，摘要写到 stderr；计算式导入只记录位置，不猜测目标。
 
-本分支全仓扫描覆盖 4,146 个 compiler source entry、25,028 条 Host/Client 引用，涉及 314 个 workspace package owner 中的 308 个。未出现在两套 TS face 的 6 个 owner 是平台专用 native addon 包和 Python runtime closure。另记录了 33 条计算式 loader，但没有运行时策略时无法归属其具体目标。修正测试/runtime 依赖分类并补齐 Compatibility manifest 后，仓库仍有 1,177 项发现：822 条外部依赖未声明、172 条 workspace 依赖未声明、183 条源码引用无法由 TypeScript 解析。Compatibility/DSH 目录自身现在没有源码依赖图发现。无法解析项包含合法 CSS 与 Vite 虚拟资源导入。其他 owner 的依赖发现仍需审阅；其中有测试、根目录统一管理的工具和旧 bundle，未经分类不应直接定性为产品缺陷。扫描没有发现 alias 目标不匹配或 Native 越界导入 Cordis。这是完整的 TS 源码发现，不覆盖其他语言，也不是干净的全仓依赖基线或 CI 门禁。Native Cordis 边界仍由 `verify-native-dependencies` 强制检查。
+本分支全仓扫描覆盖 4,146 个 compiler source entry、25,028 条 Host/Client 引用，涉及 314 个 workspace package owner 中的 308 个。未出现在两套 TS face 的 6 个 owner 是平台专用 native addon 包和 Python runtime closure。另记录了 33 条计算式 loader，但没有运行时策略时无法归属其具体目标。修正测试/runtime 依赖分类并补齐 Compatibility manifest 后，仓库仍有 1,175 项发现：820 条外部依赖未声明、172 条 workspace 依赖未声明、183 条源码引用无法由 TypeScript 解析。Compatibility/DSH 目录自身现在没有源码依赖图发现。无法解析项包含合法 CSS 与 Vite 虚拟资源导入。其他 owner 的依赖发现仍需审阅；其中有测试、根目录统一管理的工具和旧 bundle，未经分类不应直接定性为产品缺陷。扫描没有发现 alias 目标不匹配或 Native 越界导入 Cordis。这是完整的 TS 源码发现，不覆盖其他语言，也不是干净的全仓依赖基线或 CI 门禁。Native Cordis 边界仍由 `verify-native-dependencies` 强制检查。
 
 ### 接口需求与进入 B4 的判断
 
@@ -114,15 +116,15 @@ pnpm exec vitest run \
 
 | 主题 | 已有证据 | 兼容侧仍需补齐 |
 |---|---|---|
-| Cordis Loader 启动和组合 | `rsh/Tests/test-support/loader-smoke`；app-boot profile/config 测试；`Core/runtime-diagnostics/plugin-host` 启动失败测试；兼容运行时校验 Cordis v4 并挂载现有 plugin-host adapter | 原生兼容运行时不加载旧 Loader profile 或任意包。 |
+| Cordis Loader 启动和组合 | `rsh/Tests/test-support/loader-smoke`；app-boot profile/config 测试；`Compatibility/DSH/bridge/compat-plugin-host` 启动失败测试；兼容运行时校验 Cordis v4 并挂载 plugin-host adapter | 原生兼容运行时不加载旧 Loader profile 或任意包。 |
 | 配置 HMR / 重载 | `app-boot/tests/hmr-config.spec.ts` 覆盖路径别名、add/change/unlink、父目录缺失、串行刷新/释放和 watcher 失败；`config-reload.spec.ts`、`CLI/tests/profile-hmr.spec.ts` 覆盖配置与 profile 策略 | 这是旧 Cordis HMR，不是原生插件热替换。原生路径目前没有热替换契约；原生所有者定义替换语义前，不应暴露该能力。 |
-| 描述符与 HMR 所有权 | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` 覆盖启动失败、重复所有者、等待清理、替换/启动期间取消、并发替换和重复释放 | Plugin host 是兼容适配器；不能据此推断每个原生桥都支持安全热替换。 |
+| 描述符与 HMR 所有权 | `Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts` 覆盖启动失败、重复所有者、等待清理、替换/启动期间取消、并发替换和重复释放 | Plugin host 是兼容适配器；不能据此推断每个原生桥都支持安全热替换。 |
 | 桥接加载/卸载 | 五组兼容 bridge 测试覆盖拒绝、共享 Context 中多插件挂载、独立卸载、部分激活回滚、等待异步清理、文件系统策略、工具/prompt 注册和已接收工作排空 | 接入其他能力族时继续扩展这些断言。 |
 | 原生生命周期 | Native Runtime Host 测试覆盖激活回滚、自有资源清理、事件和等待式移除 | 尚无通用 HMR 或外部 DSH 包发现；继续列为明确的后续能力。 |
 
 ## 源码依赖审计范围与后续门禁
 
-`verify-native-dependencies` 会按实际解析结果检查明确列入名单的原生/过渡包，并在 Host 与 Client 编译面跟踪原生入口闭包；`verify-package-dependencies` 会按源码推导已分类发布包的依赖。新增的全仓源码图发现工具已覆盖两套编译面，并提供 JSONL 导出供进一步分类；它暂不作为门禁，因为其他目录仍有 1,177 项待分类发现。本分支也将 `verify-tsconfig-paths` 扩展为逐个检查工作区的 `./native` 导出映射到所属包 `src/`，并补齐 native prompt、sandbox policy、凭据入口、Web Client 和四个兼容桥的映射。后续若要把全仓审计升级为强制门禁，仍需：
+`verify-native-dependencies` 会按实际解析结果检查明确列入名单的原生/过渡包，并在 Host 与 Client 编译面跟踪原生入口闭包；`verify-package-dependencies` 会按源码推导已分类发布包的依赖。新增的全仓源码图发现工具已覆盖两套编译面，并提供 JSONL 导出供进一步分类；它暂不作为门禁，因为其他目录仍有 1,175 项待分类发现。本分支也将 `verify-tsconfig-paths` 扩展为逐个检查工作区的 `./native` 导出映射到所属包 `src/`，并补齐 native prompt、sandbox policy、凭据入口、Web Client 和四个兼容桥的映射。后续若要把全仓审计升级为强制门禁，仍需：
 
 1. 构建两个 compiler face，并从导入方解析每条边，包含 TS paths、相对路径、package exports 和包自引用。
 2. 跨包跟踪 re-export 和可达源码边；分别记录 type-only 与 runtime 边。
@@ -137,7 +139,7 @@ pnpm exec vitest run \
 - `tsc -b tsconfig.host.json` 和 Host `tsdown` workspace 构建通过。
 - `verify-native-dependencies` 的 Host/Client 原生依赖图通过；`verify-package-dependencies` 检查 62 个发布包；lockfile 离线 frozen 校验通过。
 - alias 与模块图重新生成后，`verify-tsconfig-paths` 和 `verify-module-graph` 通过。无 Cordis 原生 profile 和启用兼容模块的 profile 仍是两条独立路径；当前测试不证明 CLI/Web/Desktop 已完全脱离 Cordis。
-- 源码图审计现在覆盖两套 compiler face 和跨包解析；全仓仍有 1,177 项发现待 owner 分类与治理（822 外部依赖未声明、172 workspace 依赖未声明、183 未解析引用）。Compatibility/DSH 自身为零发现。审计目前是信息报告，不是门禁。B3 的发现工具已完成；全仓依赖清理和应用层 Cordis OFF/ON 验收仍未完成。
+- 源码图审计现在覆盖两套 compiler face 和跨包解析；全仓仍有 1,175 项发现待 owner 分类与治理（822 外部依赖未声明、172 workspace 依赖未声明、183 未解析引用）。Compatibility/DSH 自身为零发现。审计目前是信息报告，不是门禁。B3 的发现工具已完成；全仓依赖清理和应用层 Cordis OFF/ON 验收仍未完成。
 
 在包清单完成前，不要全仓禁止 Cordis；否则门禁要么破坏仍受支持的 DSH 行为，要么堆积无界例外项。
 

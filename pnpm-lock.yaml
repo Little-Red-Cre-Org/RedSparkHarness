@@ -200,7 +200,7 @@ importers:
         version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../compat-plugin-host
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -274,6 +274,22 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+
+  rsh/Compatibility/DSH/bridge/compat-plugin-host:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/loader
 
   rsh/Compatibility/DSH/bridge/compat-tool-fs:
     dependencies:
@@ -458,7 +474,7 @@ importers:
         version: link:../../../../Modules/Official/plan/plan-mode
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../bridge/compat-plugin-host
       '@deepseek-ai/dsh-plugin-package-inventory-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/plugin-package-inventory-deepseek
@@ -1164,16 +1180,6 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../util/brand
-
-  rsh/Core/runtime-diagnostics/plugin-host:
-    dependencies:
-      '@deepseek-ai/schemastery':
-        specifier: link:../../vendor/schemastery
-        version: link:../../vendor/schemastery
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
 
   rsh/Core/storage/storage:
     devDependencies:
@@ -5568,7 +5574,7 @@ importers:
         version: link:../../../../Core/runtime-diagnostics/invariants
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -5580,7 +5586,7 @@ importers:
         version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -5605,7 +5611,7 @@ importers:
         version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5630,7 +5636,7 @@ importers:
         version: link:../fs-local
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -5645,7 +5651,7 @@ importers:
     dependencies:
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -8392,7 +8398,7 @@ importers:
         version: link:../../../../Modules/Official/plan/plan-mode
       '@deepseek-ai/dsh-plugin-host':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/plugin-host
+        version: link:../../../../Compatibility/DSH/bridge/compat-plugin-host
       '@deepseek-ai/dsh-plugin-package-inventory-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/plugin-package-inventory-deepseek

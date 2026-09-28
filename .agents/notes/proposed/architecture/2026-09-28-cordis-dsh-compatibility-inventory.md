@@ -77,7 +77,7 @@ The table below is based on `Compatibility/DSH/bundle/*/cordis.patch.yml`, defau
 
 ### B2 targeted test baseline
 
-On the current worktree snapshot, the following targeted suites pass: 11 test files and 69 tests, with no skips. The list extends the original nine-suite DSH baseline with the optional compatibility Host and source-graph fixtures. This is not a full repository test run or evidence that Native Runtime HMR exists.
+On the current worktree snapshot, the following targeted suites pass: 13 test files and 73 tests, with no skips. The list extends the DSH/HMR baseline with the optional compatibility Host, real legacy Loader/bundle composition, and source-graph fixtures. This is not a full repository test run or evidence that Native Runtime HMR exists.
 
 ```text
 pnpm exec vitest run \
@@ -85,16 +85,18 @@ pnpm exec vitest run \
   rsh/Compatibility/DSH/boot/app-boot/tests/hmr-config.spec.ts \
   rsh/Compatibility/DSH/boot/app-boot/tests/config-reload.spec.ts \
   rsh/Programs/CLI/tests/profile-hmr.spec.ts \
-  rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-local/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-policy/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-fs-sandbox/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-tool-fs/tests/native.spec.ts \
   rsh/Compatibility/DSH/bridge/compat-dsh-runtime/tests/native.spec.ts \
+  rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts \
+  rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts \
   rsh/Scripts/verify-source-import-graph.spec.ts
 ```
 
-Coverage boundary: Loader smoke and app-boot/profile suites cover legacy config, config reload, and Cordis composition; plugin-host covers local owner constraints, awaited disposal, and replacement semantics; the four filesystem bridge suites cover this Native Host slice. This set is not the complete suite for all historical DSH plugins, and it does not establish that Client HMR and Native plugin replacement are equivalent.
+Coverage boundary: Loader smoke, app-boot/profile, the legacy filesystem Loader composition, and base-bundle suites cover legacy config and Cordis composition; compat-plugin-host covers local owner constraints, awaited disposal, and replacement semantics; the four filesystem bridge suites cover this Native Host slice. This set is not the complete suite for all historical DSH plugins, and it does not establish that Client HMR and Native plugin replacement are equivalent.
 
 ### B3 source dependency audit status
 
@@ -102,7 +104,7 @@ The existing checks are substantive but partial. `verify-native-dependencies` us
 
 The new `pnpm run audit-source-import-graph` audit parses both TypeScript compiler faces, resolves each source reference with that file's effective TS options, and records package-owner edges for imports, type imports, re-exports, module augmentations, import types, and literal loaders. Its six fixture tests cover a cross-package relative re-export, a TS alias, type/runtime distinction, Cordis via an alias, a computed loader, and different Host/Client alias resolutions. Add `--graph` to emit JSONL containing compiler face, config, source location, type/runtime kind, computed status, and resolved package target; summary output goes to stderr. Computed imports record location without guessing their destination.
 
-The full scan on this branch covered 25,028 Host/Client references from 4,146 compiler source entries, across 308 of 314 workspace owners. The six owners absent from both TS faces are platform-specific native addon packages and the Python runtime closure. Thirty-three computed loaders were cataloged but cannot be attributed to a concrete target without runtime policy. After correcting the test/runtime dependency classification and the Compatibility manifests, 1,177 repository findings remain: 822 undeclared external edges, 172 undeclared workspace edges, and 183 unresolved source references. Compatibility/DSH itself now has zero source-graph findings. The unresolved set includes legitimate CSS and Vite virtual-resource imports. Remaining dependency findings still need review across the other owners; they include tests, root-managed tooling, and legacy bundles and should not be treated as product defects without classification. No alias-target mismatch or Native Cordis-boundary finding appeared. This is a complete TS-source discovery pass, not a cross-language or clean repository baseline and not a CI gate. `verify-native-dependencies` remains the enforced Native Cordis boundary.
+The full scan on this branch covered 25,028 Host/Client references from 4,146 compiler source entries, across 308 of 314 workspace owners. The six owners absent from both TS faces are platform-specific native addon packages and the Python runtime closure. Thirty-three computed loaders were cataloged but cannot be attributed to a concrete target without runtime policy. After correcting the test/runtime dependency classification and the Compatibility manifests, 1,175 repository findings remain: 820 undeclared external edges, 172 undeclared workspace edges, and 183 unresolved source references. Compatibility/DSH itself now has zero source-graph findings. The unresolved set includes legitimate CSS and Vite virtual-resource imports. Remaining dependency findings still need review across the other owners; they include tests, root-managed tooling, and legacy bundles and should not be treated as product defects without classification. No alias-target mismatch or Native Cordis-boundary finding appeared. This is a complete TS-source discovery pass, not a cross-language or clean repository baseline and not a CI gate. `verify-native-dependencies` remains the enforced Native Cordis boundary.
 
 ### Interface requirements and B4 entry decision
 
@@ -114,15 +116,15 @@ The selected adapters use the CLI NativeHost in focused tests, but app-level nat
 
 | Concern | Existing evidence | Remaining compatibility gap |
 |---|---|---|
-| Cordis Loader startup and composition | `rsh/Tests/test-support/loader-smoke`; app-boot profile/config tests; `Core/runtime-diagnostics/plugin-host` startup-failure tests; compatibility runtime verifies Cordis v4 and mounts the existing plugin-host adapter | The native compatibility runtime does not load a legacy Loader profile or arbitrary package. |
+| Cordis Loader startup and composition | `rsh/Tests/test-support/loader-smoke`; app-boot profile/config tests; `Compatibility/DSH/bridge/compat-plugin-host` startup-failure tests; compatibility runtime verifies Cordis v4 and mounts the plugin-host adapter | The native compatibility runtime does not load a legacy Loader profile or arbitrary package. |
 | Config HMR / reload | `app-boot/tests/hmr-config.spec.ts` covers path aliases, add/change/unlink, missing parent, serialized refresh/dispose, and watcher failure; `app-boot/tests/config-reload.spec.ts` and `CLI/tests/profile-hmr.spec.ts` cover config and profile policy | This is legacy Cordis HMR, not native plugin hot replacement. The native path has no hot-replacement contract yet; do not expose it until its owner specifies replacement semantics. |
-| Descriptor/HMR ownership | `Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts` covers failed startup, duplicate owners, waiting for teardown, cancellation during replacement/start, concurrent replacements, and repeated disposal | The plugin-host is a compatibility adapter, not proof that every native bridge can be hot-replaced safely. |
+| Descriptor/HMR ownership | `Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts` covers failed startup, duplicate owners, waiting for teardown, cancellation during replacement/start, concurrent replacements, and repeated disposal | The plugin-host is a compatibility adapter, not proof that every native bridge can be hot-replaced safely. |
 | Bridge load/unload | Five compatibility bridge suites cover refusal, mounting multiple plugins in one shared Context, independent removal, partial activation rollback, awaited asynchronous teardown, filesystem policy decisions, tool/prompt registration, and admitted-work drain | Extend these assertions when another capability family is admitted. |
 | Native lifecycle | Native Runtime host tests cover activation rollback, owned cleanup, events, and awaited removal | No generalized HMR or external DSH package discovery; these remain explicit deferred capabilities. |
 
 ## Source dependency audit scope and future gate
 
-`verify-native-dependencies` resolves imports and follows native-entry source closures for its explicit native/transitional roster in Host and Client compiler projects. `verify-package-dependencies` derives published package dependencies from source for its classified package set. The new whole-repository source graph discovery tool now covers both compiler faces and offers JSONL export for classification; it is not yet a gate because 1,177 findings remain to be classified in other directories. This branch also makes `verify-tsconfig-paths` check every workspace `./native` export has an alias into that package's own `src/` tree; that caught missing aliases for native prompts, sandbox policy, credential entries, Web Client, and all four compatibility bridges. Promoting whole-graph discovery to a gate still requires:
+`verify-native-dependencies` resolves imports and follows native-entry source closures for its explicit native/transitional roster in Host and Client compiler projects. `verify-package-dependencies` derives published package dependencies from source for its classified package set. The new whole-repository source graph discovery tool now covers both compiler faces and offers JSONL export for classification; it is not yet a gate because 1,175 findings remain to be classified in other directories. This branch also makes `verify-tsconfig-paths` check every workspace `./native` export has an alias into that package's own `src/` tree; that caught missing aliases for native prompts, sandbox policy, credential entries, Web Client, and all four compatibility bridges. Promoting whole-graph discovery to a gate still requires:
 
 1. Build both compiler faces and resolve each import from its importing file, including TS paths, relative paths, package exports, and package self-references.
 2. Follow re-exports and reachable source edges across package boundaries; retain type-only and runtime edges separately.
@@ -143,7 +145,7 @@ The compatibility work should consume, not redefine, the existing API: `NativePl
 - `tsc -b tsconfig.host.json` and the Host `tsdown` workspace build pass.
 - `verify-native-dependencies` passes its Host/Client native graph; `verify-package-dependencies` validates 62 published packages; the lockfile passes frozen offline verification.
 - `verify-tsconfig-paths` and `verify-module-graph` pass after regeneration. A Cordis-free native profile and a compatibility-enabled profile remain distinct paths; current tests do not establish full Cordis-free CLI/Web/Desktop behavior.
-- Source graph discovery now covers both faces and cross-owner resolution; its 1,177 repository findings remain open for ownership classification (822 external dependencies, 172 workspace dependencies, 183 unresolved references). Compatibility/DSH itself has zero findings. The audit is informational pending baseline review; B3 discovery/tooling is complete, while repository-wide dependency cleanup and app-level Cordis OFF/ON acceptance are not.
+- Source graph discovery now covers both faces and cross-owner resolution; its 1,175 repository findings remain open for ownership classification (820 external dependencies, 172 workspace dependencies, 183 unresolved references). Compatibility/DSH itself has zero findings. The audit is informational pending baseline review; B3 discovery/tooling is complete, while repository-wide dependency cleanup and app-level Cordis OFF/ON acceptance are not.
 
 ## Acceptance criteria
 

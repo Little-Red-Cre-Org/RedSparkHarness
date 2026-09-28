@@ -94,7 +94,7 @@ B1/B2 是已分派的交付物，不是暂停已授权路线的前置条件。�
 P0 回归基线使用下列已有插件宿主所有权测试、真实 filesystem Loader 装配与 base bundle 装配。它证明起始版本具备的兼容行为，不证明原生执行。Provider、策略与数据专用测试会在修改其所有者的阶段重新选择；基线通过不能证明后续迁移。
 
 ```sh
-pnpm exec vitest run rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts
+pnpm exec vitest run rsh/Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts
 ```
 
 P1 向 P2/P3 交付公开计划、服务、作用域/发起者、事件、配置、诊断和可等待释放接口，以及确定性生命周期夹具。P2 增加具有文件系统与持久化 Session 断言的真实 profile 夹具。P3 增加受支持桥接矩阵及拒绝用例。测试使用可观察的就绪条件和受控 barrier；经过一段时间、发出 abort 或启动进程都不足以证明完成。

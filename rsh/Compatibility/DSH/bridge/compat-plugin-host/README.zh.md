@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-plugin-host` 记录已挂载包的 RSH 角色和能力域，同时将插件执行、服务、事件、配置和释放保留给 Cordis。`adaptCordisPlugin()` 为 Loader 行包装旧式 Cordis 入口；该包装器要求 `ctx.pluginHost`，保留描述符，在子 Fiber 中挂载原入口，并在包装器 Fiber 卸载时释放描述符。`mountCordisPlugin()` 为集成代码提供等价的直接挂载帮助器。
+`dsh-plugin-host` 是由 `Compatibility/DSH` 管理的可选 Cordis 生命周期适配器。它记录已挂载包的 adapter 角色，同时将插件执行、服务、事件、配置和释放保留给 Cordis。`adaptCordisPlugin()` 为 Loader 行包装选定的旧 Cordis 入口；该包装器要求 `ctx.pluginHost`，保留描述符，在子 Fiber 中挂载原入口，并在包装器 Fiber 卸载时释放描述符。`mountCordisPlugin()` 为集成代码提供等价的直接挂载帮助器。RSH 原生代码必须消费 Native Runtime 契约，不能导入此包。
 
 不发布 invariant companion：描述符保留与移除由同一个 Cordis Fiber 生命周期拥有；包测试通过注册表与 disposer 观察这两个事实。
 

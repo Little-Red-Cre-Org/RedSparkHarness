@@ -568,7 +568,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'plugin-host',
     title: 'RSH plugin-role registry',
     mode: 'core',
-    note: 'Records native package roles and mounts legacy Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container.',
+    note: 'The optional DSH compatibility bridge records adapter roles and mounts allowlisted Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container.',
   },
   {
     key: 'fs',

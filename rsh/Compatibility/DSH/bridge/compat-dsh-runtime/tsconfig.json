@@ -5,6 +5,6 @@
   "references": [
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
-    { "path": "../../../../Core/runtime-diagnostics/plugin-host" }
+    { "path": "../compat-plugin-host" }
   ]
 }

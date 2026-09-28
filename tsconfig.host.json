@@ -314,7 +314,7 @@
     { "path": "./rsh/Modules/Official/spill/spill-policy" },
     { "path": "./rsh/Modules/Official/guard/timeout-policy" },
     { "path": "./rsh/Core/runtime-diagnostics/invariants" },
-    { "path": "./rsh/Core/runtime-diagnostics/plugin-host" },
+    { "path": "./rsh/Compatibility/DSH/bridge/compat-plugin-host" },
     { "path": "./rsh/Core/util/errors" },
     { "path": "./rsh/Core/runtime-diagnostics/native-runtime" },
     { "path": "./rsh/Tests/test-support/agent-loop-testkit" },

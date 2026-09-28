@@ -40,7 +40,7 @@
       "@deepseek-ai/node-addon-system/landlock-run": ["./rsh/Core/native/system/packages/entry/src/index.ts"],
       "@deepseek-ai/node-addon-system/flock": ["./rsh/Core/native/system/packages/entry/src/flock.ts"],
       "@deepseek-ai/dsh-invariants": ["./rsh/Core/runtime-diagnostics/invariants/src/index.ts"],
-      "@deepseek-ai/dsh-plugin-host": ["./rsh/Core/runtime-diagnostics/plugin-host/src/index.ts"],
+      "@deepseek-ai/dsh-plugin-host": ["./rsh/Compatibility/DSH/bridge/compat-plugin-host/src/index.ts"],
       "@deepseek-ai/dsh-errors": ["./rsh/Core/util/errors/src/index.ts"],
       "@deepseek-ai/dsh-json-rpc-line": ["./rsh/Core/util/json-rpc-line/src/index.ts"],
       "@deepseek-ai/dsh-native-runtime": ["./rsh/Core/runtime-diagnostics/native-runtime/src/index.ts"],

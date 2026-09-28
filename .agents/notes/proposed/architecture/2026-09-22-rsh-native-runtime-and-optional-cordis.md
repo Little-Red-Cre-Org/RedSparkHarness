@@ -94,7 +94,7 @@ Before a profile switch, provide configuration migration preview and backup, and
 The P0 regression baseline uses the existing plugin-host ownership tests, real filesystem Loader composition and base-bundle composition below. It demonstrates the compatibility behavior available at the starting revision, not native execution. Provider, policy and data-specific tests are selected again in the phase that changes their owner; a passing baseline does not prove future migration.
 
 ```sh
-pnpm exec vitest run rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts
+pnpm exec vitest run rsh/Compatibility/DSH/bridge/compat-plugin-host/tests/plugin-host.spec.ts rsh/Modules/Official/fs/tool-fs/tests/runtime-loader-composition.spec.ts rsh/Compatibility/DSH/bundle/base/tests/base.spec.ts
 ```
 
 P1 hands P2/P3 the public planning, service, scope/initiator, event, configuration, diagnostics and awaited-disposal interfaces together with deterministic lifecycle fixtures. P2 adds the real profile fixture with filesystem and durable Session assertions. P3 adds the supported bridge matrix and refusal cases. Tests use observable readiness and controlled barriers; elapsed time, an issued abort or a launched process is insufficient completion evidence.
