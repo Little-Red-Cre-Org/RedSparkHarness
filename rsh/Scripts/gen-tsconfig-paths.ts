@@ -152,6 +152,27 @@ export function collectPackageNames(): string[] {
     .sort((left, right) => left.localeCompare(right))
 }
 
+/** Collect every native export and the package source root its alias must target. */
+export function collectNativeExportAliases(root = ROOT): Map<string, string> {
+  const aliases = new Map<string, string>()
+  for (const manifestPath of globSync('rsh/**/package.json', { cwd: root }).sort()) {
+    const manifest = JSON.parse(readFileSync(resolve(root, manifestPath), 'utf8')) as {
+      name?: unknown
+      exports?: Record<string, unknown>
+    }
+    if (typeof manifest.name !== 'string' || !manifest.name.startsWith(PREFIX)) continue
+    const nativeExport = manifest.exports?.['./native']
+    if (nativeExport === undefined) continue
+    if (nativeExport === null || typeof nativeExport !== 'object' || Array.isArray(nativeExport)) {
+      throw new Error(`gen-tsconfig-paths: ${manifestPath} ./native export must declare a source-backed entry`)
+    }
+    const sourceRoot = `./${manifestPath.replaceAll('\\', '/').replace(/\/package\.json$/, '')}/src`
+    if (!existsSync(resolve(root, sourceRoot))) throw new Error(`gen-tsconfig-paths: ${manifestPath} has no src directory`)
+    aliases.set(`${manifest.name}/native`, sourceRoot)
+  }
+  return aliases
+}
+
 /**
  * Read the bare package specifiers a config maps, generated region included.
  * @param text - `tsconfig.base.json` contents.
@@ -164,6 +185,30 @@ export function mappedSpecifiers(text: string): Set<string> {
     if (key !== undefined) keys.add(key)
   }
   return keys
+}
+
+/** Read exact path targets from all explicit dsh paths aliases. */
+export function mappedPathAliases(text: string): Map<string, string> {
+  const aliases = new Map<string, string>()
+  for (const match of text.matchAll(/^\s*"(@deepseek-ai\/[^\"]+)":\s*\[\s*"([^\"]+)"\s*\]/gm)) {
+    const specifier = match[1]
+    const target = match[2]
+    if (specifier !== undefined && target !== undefined) aliases.set(specifier, target)
+  }
+  return aliases
+}
+
+/** Return native exports that are missing a source alias or point at the wrong source. */
+export function uncoveredNativeAliases(
+  expected: ReadonlyMap<string, string>,
+  mapped: ReadonlyMap<string, string>,
+  root = ROOT,
+): string[] {
+  return [...expected].flatMap(([specifier, sourceRoot]) => {
+    const target = mapped.get(specifier)
+    return target !== undefined && target.startsWith(`${sourceRoot}/`) && existsSync(resolve(root, target))
+      ? [] : [`${specifier} -> source under ${sourceRoot}${target === undefined ? '' : ` (found ${target})`}`]
+  })
 }
 
 /**
@@ -244,11 +289,19 @@ if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   const current = readFileSync(CONFIG, 'utf8')
   const next = writeRegion(current, renderAliases(collectPackageAliases(), handWrittenSpecifiers(current)))
   const uncovered = uncoveredPackages(collectPackageNames(), mappedSpecifiers(next))
-  if (uncovered.length > 0) {
+  const uncoveredNative = uncoveredNativeAliases(collectNativeExportAliases(), mappedPathAliases(next))
+  if (uncovered.length > 0 || uncoveredNative.length > 0) {
     console.error(
-      'gen-tsconfig-paths: no alias maps '
-      + `${uncovered.join(', ')}; add a hand-written entry, because a package named after `
-      + 'something other than its directory cannot be generated.',
+      [
+        uncovered.length > 0
+          ? 'gen-tsconfig-paths: no alias maps '
+            + `${uncovered.join(', ')}; add a hand-written entry, because a package named after `
+            + 'something other than its directory cannot be generated.'
+          : undefined,
+        uncoveredNative.length > 0
+          ? `gen-tsconfig-paths: native exports lack exact source aliases: ${uncoveredNative.join(', ')}`
+          : undefined,
+      ].filter(Boolean).join('\n'),
     )
     process.exitCode = 1
   } else if (current === next) {

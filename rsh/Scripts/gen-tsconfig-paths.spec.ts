@@ -4,9 +4,12 @@ import { describe, expect, it } from 'vitest'
 import {
   collectPackageAliases,
   collectPackageNames,
+  collectNativeExportAliases,
+  mappedPathAliases,
   mappedSpecifiers,
   renderAliases,
   uncoveredPackages,
+  uncoveredNativeAliases,
   writeRegion,
 } from './gen-tsconfig-paths.ts'
 
@@ -85,6 +88,19 @@ describe('generated tsconfig package aliases', () => {
     const names = collectPackageNames()
     expect(names).toContain('@deepseek-ai/dsh-typert-protocol')
     expect(uncoveredPackages(names, mappedSpecifiers(config))).toEqual([])
+  })
+
+  it('maps every native package export to its source in the shared resolution config', () => {
+    const config = readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8')
+    const nativeAliases = collectNativeExportAliases(root)
+    expect(nativeAliases.size).toBeGreaterThan(20)
+    expect(uncoveredNativeAliases(nativeAliases, mappedPathAliases(config))).toEqual([])
+    expect(uncoveredNativeAliases(
+      new Map([['@deepseek-ai/dsh-native-probe/native', './rsh/Engine/probe/src']]),
+      new Map([['@deepseek-ai/dsh-native-probe/native', './rsh/Engine/probe/lib/native.js']]),
+    )).toEqual([
+      '@deepseek-ai/dsh-native-probe/native -> source under ./rsh/Engine/probe/src (found ./rsh/Engine/probe/lib/native.js)',
+    ])
   })
 
   it('leaves no wildcard that probes every package group', () => {
