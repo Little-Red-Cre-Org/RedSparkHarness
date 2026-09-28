@@ -42,6 +42,51 @@ Status: proposed
 
 该批次表是优先级建议，并不表示 shell/MCP 适配已经实现。
 
+### DSH 插件矩阵与当前支持范围
+
+下表以 `Compatibility/DSH/bundle/*/cordis.patch.yml`、profile 默认组合及现有 bridge manifest 为证据。它记录的是能力族边界；不能推导出同族所有配置、入口和第三方插件均已兼容。
+
+| 插件/能力族 | 当前旧入口 | Host / Client | Cordis 语义与资源 | 状态与处理 |
+|---|---|---|---|---|
+| 文件系统 Provider 与策略 | `dsh-fs-local`、`dsh-fs-observation-policy`、`dsh-fs-sandbox`、`dsh-tool-fs`；Native bridge 包分别位于 `bridge/compat-fs-*` | Host；工具桥消费原生 Agent、Tools、Prompt、Session 能力 | Provider、策略/沙箱判断、工具和 prompt 注册；Session 结果持久化由原生服务负责 | **已支持一个受限 filesystem v1 切片**。四个 bridge 有真实 Native Host 测试；manifest/config 拒绝边界以各包 README 和测试为准。不能扩展为任意旧文件系统插件兼容。 |
+| Shell / Terminal | `dsh-subprocess-local`、`dsh-bash-sandbox`、`dsh-pwsh-sandbox`、`dsh-tool-bash`、`dsh-tool-pwsh`；`sdk-minimal` 还组合 `dsh-terminal` 与 `dsh-terminal-bash` | Host | 进程/PTY 所有权、审批与 sandbox policy、超时和取消、异步结束清理 | **候选，未桥接**。先拆分进程 capability、策略决策和工具贡献；不能绕过原生审批/沙箱，也不能把 `abort` 视为进程已退出。 |
+| LLM Provider 与凭据 | `dsh-llm-deepseek`、`dsh-llm-pi-ai`、`dsh-credentials-local`、`dsh-llm-retry` | Host；部分设置由 Web Client 操作 | Provider 路由/注册、按请求解析凭据、设置重载、请求取消与 provider 生命周期 | **待评估**。保留兼容需原生 Provider 注册和凭据 capability 契约；不得把密钥复制进通用 Cordis Context 或 Browser bundle。 |
+| Agent / Session / Tools 核心 | `dsh-agent`、`dsh-agent-loop`、`dsh-session`、`dsh-session-persistence-jsonl`、`dsh-tools` 及各 `dsh-tool-*` | Host；结果通过 Web/ACP/SDK 暴露 | Agent 创建、Session 读写、Tool 执行与结果落盘 | **旧 DSH 中存在；不纳入整体兼容桥**。RSH Native 必须是唯一业务权威。只允许像 filesystem tool 这样的逐项贡献映射到原生扩展点；完整 loop/store/executor 暂不支持。 |
+| Web Host / API / Client | `dsh-web-app`、`dsh-host-webserver`、`dsh-api-*`、`dsh-client-*`、`dsh-cordis-client-runner` | Host + Client | Host 服务注册、RPC/事件桥、浏览器模块表和客户端插件生命周期 | **旧产品路径继续使用；尚未原生化**。Host 的 Cordis 可选化不证明 Client bundle 可脱离 Cordis；必须分开制定支持矩阵与产物依赖验收。 |
+| ACP / SDK / RSH bundle | `dsh-acp-app`、`dsh-sdk-app`、`dsh-sdk-minimal`、`dsh-rsh` | Host | 启动参数、Loader 组合、Agent/Session/Tool 组装；部分 bundle 自带旧 loop | **旧入口保留；不得整体塞入 Native Engine**。逐包识别是否复用 Native Agent/Session/Tools，冲突核心权威的旧组合排除。 |
+| 调度、MCP、外部 Provider、任意第三方插件 | 需按用户 profile 和已安装清单枚举；当前默认 bundle 未形成统一 Native bridge roster | Host，按插件可能另含 Client | 外部进程/网络、凭据、事件回调、并发任务与卸载 | **未纳入首批，配置必须明确拒绝或留在旧 DSH 路径**。需要逐插件确定身份、能力、取消、失败回滚和清理契约后再选批次。 |
+
+### B2 定向测试基线
+
+在本分支当前提交 `8b0b3f00e97184c8f1a2a563ab8126f5d2dc5c9a` 上运行下列定向套件，9 个测试文件、59 项测试全部通过；本次未跳过测试。该结果只表示这些已选套件通过，不代表整仓测试通过，也不代表原生 HMR 已实现。
+
+```text
+pnpm exec vitest run \
+  rsh/Tests/test-support/loader-smoke/tests/loader-smoke.spec.ts \
+  rsh/Compatibility/DSH/boot/app-boot/tests/hmr-config.spec.ts \
+  rsh/Compatibility/DSH/boot/app-boot/tests/config-reload.spec.ts \
+  rsh/Programs/CLI/tests/profile-hmr.spec.ts \
+  rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-local/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-policy/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-sandbox/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-tool-fs/tests/native.spec.ts
+```
+
+观察边界：Loader smoke 和 app-boot/profile 套件覆盖旧配置、配置重载及 Cordis 组合；plugin-host 覆盖 owner 约束、等待 dispose 和 replacement 的局部语义；四个 filesystem bridge 套件覆盖该切片的 Native Host 行为。该集合不是手册中所有历史 DSH 插件测试的全集，也没有验证 Client HMR 与 Native plugin replacement 等价。
+
+### B3 源码依赖审计状态
+
+当前检查并非空白：`verify-native-dependencies` 使用 TypeScript Host/Client compiler project，解析明确 Native roster 和混合包 native entry 的导入闭包，检查字面量 import/require、type import、import type、re-export、模块声明和字面量 dynamic import；`verify-package-dependencies` 另外从已分类包源码推导依赖；`verify-tsconfig-paths` 检查工作区 `./native` exports 到 `src/` 的别名映射。本分支均有通过记录。
+
+这些门禁还未覆盖手册要求的全仓所有者图：原生与迁移 roster 的覆盖面仍靠策略清单维护，普通旧包之间的跨包相对路径、全部别名/re-export 链及每条解析边对应的 manifest 声明，尚未统一纳入一个负例驱动的全仓门禁。下一步应先确定包 owner 分类和兼容白名单，再扩展审计；当前不能宣称 B3 完成。
+
+### 接口需求与进入 B4 的判断
+
+现有 Native API 已提供 `NativePlugin.resolve(config)`、`NativeHost` 安装计划/激活/移除、host/client target、声明式服务/事件和 `context.own()` disposer；Native Host 也已有失败回滚和等待式移除测试。因此 B7 的需求不是要求再造一套接口，而是要求兼容侧把具体旧语义逐项映射到这些现有契约，并把缺口交回 Native Runtime owner。
+
+进入 B4 前仍需逐项确认：插件 identity/version 与旧 manifest 版本检查由谁执行；Cordis scope 到 Native owner/actor/initiator 的映射；各目标旧事件的 sync/parallel/serial/waterfall、取消、错误与短路规则；兼容配置到 `NativePlugin.resolve` 输入的拒绝策略；以及可通过真实 Native Host 加载/停用 Compatibility 的验收入口。未确认前不实现通用 Cordis Host，也不承诺整个 Cordis 开关已产品化。
+
 ## Loader、HMR 与卸载证据
 
 | 主题 | 已有证据 | 兼容侧仍需补齐 |

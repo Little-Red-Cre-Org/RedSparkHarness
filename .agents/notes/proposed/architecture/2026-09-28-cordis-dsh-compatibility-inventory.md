@@ -42,6 +42,51 @@ The raw text scan finds Cordis references across many packages; this is intentio
 
 The cohort table is a prioritization proposal, not a claim that shell/MCP adapters are implemented.
 
+### DSH plugin matrix and current support
+
+The table below is based on `Compatibility/DSH/bundle/*/cordis.patch.yml`, default profile composition, and existing bridge manifests. It records capability-family boundaries; it does not imply that every config, entry point, or third-party plugin in a family is supported.
+
+| Plugin/capability family | Current legacy entry | Host / Client | Cordis semantics and resources | Status and disposition |
+|---|---|---|---|---|
+| Filesystem providers and policy | `dsh-fs-local`, `dsh-fs-observation-policy`, `dsh-fs-sandbox`, `dsh-tool-fs`; Native bridges live in `bridge/compat-fs-*` | Host; the tool bridge consumes native Agent, Tools, Prompt, and Session capabilities | Provider, policy/sandbox decisions, tool and prompt registration; durable Session results remain owned by native services | **One bounded filesystem v1 slice is supported.** Four bridges have real Native Host tests; manifest/config rejection boundaries are defined by each package README and tests. This does not imply arbitrary legacy filesystem plugin support. |
+| Shell / Terminal | `dsh-subprocess-local`, `dsh-bash-sandbox`, `dsh-pwsh-sandbox`, `dsh-tool-bash`, `dsh-tool-pwsh`; `sdk-minimal` also composes `dsh-terminal` and `dsh-terminal-bash` | Host | Process/PTY ownership, approval and sandbox policy, timeout/cancellation, asynchronous completion cleanup | **Candidate, not bridged.** First split process capability, policy decision, and tool contribution; do not bypass native approval/sandbox checks or treat `abort` as process exit. |
+| LLM providers and credentials | `dsh-llm-deepseek`, `dsh-llm-pi-ai`, `dsh-credentials-local`, `dsh-llm-retry` | Host; some settings are controlled by the Web Client | Provider route/registration, per-request credential resolution, settings reload, request cancellation and provider lifecycle | **Needs evaluation.** Compatibility requires native provider registration and credential capability contracts; never copy keys into general Cordis Context or a browser bundle. |
+| Agent / Session / Tools core | `dsh-agent`, `dsh-agent-loop`, `dsh-session`, `dsh-session-persistence-jsonl`, `dsh-tools`, and `dsh-tool-*` | Host; results are exposed through Web/ACP/SDK | Agent creation, Session read/write, Tool execution and result persistence | **Exists in legacy DSH; excluded as a whole from the compatibility bridge.** RSH Native must remain the sole business authority. Only individual contributions such as the filesystem tool may map to native extension points; the complete loop/store/executor is unsupported. |
+| Web Host / API / Client | `dsh-web-app`, `dsh-host-webserver`, `dsh-api-*`, `dsh-client-*`, `dsh-cordis-client-runner` | Host + Client | Host service registration, RPC/event bridge, browser module table and client plugin lifecycle | **Legacy product path remains active; not nativeized.** Making Host Cordis optional does not prove the Client bundle can run without Cordis; support and artifact dependency checks must be separate. |
+| ACP / SDK / RSH bundles | `dsh-acp-app`, `dsh-sdk-app`, `dsh-sdk-minimal`, `dsh-rsh` | Host | Startup arguments, Loader composition, Agent/Session/Tool assembly; some bundles include the legacy loop | **Legacy entry points remain; do not load them wholesale into Native Engine.** Determine per package whether it reuses Native Agent/Session/Tools; exclude compositions that conflict with the single native authority. |
+| Scheduling, MCP, external providers, arbitrary third-party plugins | Enumerate per user profile and installed-plugin inventory; current default bundles do not form a unified Native bridge roster | Host; some plugins may also include Client faces | External process/network, credentials, callbacks, concurrent work and unload | **Not in the first cohort; config must be explicitly rejected or remain on the legacy DSH path.** Select a cohort only after identity, capability, cancellation, rollback and cleanup contracts are known per plugin. |
+
+### B2 targeted test baseline
+
+On current branch commit `8b0b3f00e97184c8f1a2a563ab8126f5d2dc5c9a`, the following targeted suites pass: 9 test files and 59 tests, with no skips. This only reports the selected suites; it is not a full repository test run or evidence that native HMR exists.
+
+```text
+pnpm exec vitest run \
+  rsh/Tests/test-support/loader-smoke/tests/loader-smoke.spec.ts \
+  rsh/Compatibility/DSH/boot/app-boot/tests/hmr-config.spec.ts \
+  rsh/Compatibility/DSH/boot/app-boot/tests/config-reload.spec.ts \
+  rsh/Programs/CLI/tests/profile-hmr.spec.ts \
+  rsh/Core/runtime-diagnostics/plugin-host/tests/plugin-host.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-local/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-policy/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-fs-sandbox/tests/native.spec.ts \
+  rsh/Compatibility/DSH/bridge/compat-tool-fs/tests/native.spec.ts
+```
+
+Coverage boundary: Loader smoke and app-boot/profile suites cover legacy config, config reload, and Cordis composition; plugin-host covers local owner constraints, awaited disposal, and replacement semantics; the four filesystem bridge suites cover this Native Host slice. This set is not the complete suite for all historical DSH plugins, and it does not establish that Client HMR and Native plugin replacement are equivalent.
+
+### B3 source dependency audit status
+
+The existing checks are substantive but partial. `verify-native-dependencies` uses TypeScript Host/Client compiler projects to inspect import closures for the explicit Native roster and mixed-package native entries, checking literal imports/requires, type imports, re-exports, module declarations, and literal dynamic imports. `verify-package-dependencies` separately derives dependencies from source for its classified packages. `verify-tsconfig-paths` checks that workspace `./native` exports map to their own package `src/` aliases. This branch has passing results for all three.
+
+These gates do not yet cover the all-owner graph required by the handbook: Native and transitional roster coverage still depends on a maintained policy list, and cross-package relative imports, all alias/re-export chains, and manifest declarations for every resolved edge are not yet unified in one negative-fixture-driven repository gate. First agree on package-owner classification and the compatibility allowlist, then expand the audit; B3 is not complete yet.
+
+### Interface requirements and B4 entry decision
+
+The existing Native API already provides `NativePlugin.resolve(config)`, `NativeHost` installation planning/activation/removal, host/client targets, declared services/events, and `context.own()` disposers. Native Host tests also cover activation rollback and awaited removal. B7 therefore must map concrete legacy semantics onto these contracts rather than request another interface set; gaps should go to the Native Runtime owner.
+
+Before B4, confirm: who validates plugin identity/version and legacy manifest versions; how Cordis scope maps to Native owner/actor/initiator; sync/parallel/serial/waterfall, cancellation, error, and short-circuit rules for each selected legacy event; how unsupported compatibility config is rejected when converted to `NativePlugin.resolve` input; and which real Native Host entry can load and disable Compatibility in an acceptance test. Until then, do not implement a generic Cordis Host or claim the product Cordis switch is complete.
+
 ## Loader, HMR, and unload evidence
 
 | Concern | Existing evidence | Remaining compatibility gap |
