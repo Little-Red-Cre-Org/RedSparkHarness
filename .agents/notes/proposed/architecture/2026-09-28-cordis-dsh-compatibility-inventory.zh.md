@@ -81,7 +81,7 @@ pnpm exec vitest run \
 
 新增的 `pnpm run audit-source-import-graph` 会解析两套 TypeScript compiler face，并使用每个源码文件的有效 TS 配置解析导入边；覆盖普通导入、type import、re-export、module augmentation、import type 和字面量 loader。6 个测试覆盖跨包相对路径 re-export、TS alias、type/runtime 区分、通过 alias 导入 Cordis、计算式 loader，以及 Host/Client alias 实际解析不同目标。
 
-本分支首次全仓扫描覆盖 314 个 workspace package owner、25,028 条 Host/Client 源码引用；另记录了 33 条计算式 loader，但没有运行时策略时无法归属其具体目标。扫描发现 4,351 项已有的 manifest/解析问题：3,994 条外部依赖未声明、174 条 workspace 依赖未声明、183 条源码引用无法由 TypeScript 解析。无法解析项包含合法 CSS 与 Vite 虚拟资源导入；依赖问题也包含包测试、根目录统一管理的测试工具和旧 bundle，需要逐项审阅后才能定性为产品缺陷。扫描没有发现 alias 目标不匹配或 Native 越界导入 Cordis。该结果是完整发现，不是干净的依赖基线，也不是 CI 门禁：要逐项变成强制策略，还需评审源码/测试/资源分类，并由 Core、Engine、Modules、Programs、Compatibility 和应用负责人处理相应缺口。审计保留并报告现有基线；Native Cordis 边界仍由 `verify-native-dependencies` 强制检查。
+本分支首次全仓扫描覆盖 4,146 个 compiler source entry、25,028 条 Host/Client 引用，涉及 314 个 workspace package owner 中的 308 个。未出现在两套 TS face 的 6 个 owner 是平台专用 native addon 包和 Python runtime closure。另记录了 33 条计算式 loader，但没有运行时策略时无法归属其具体目标。扫描发现 4,351 项已有的 manifest/解析问题：3,994 条外部依赖未声明、174 条 workspace 依赖未声明、183 条源码引用无法由 TypeScript 解析。无法解析项包含合法 CSS 与 Vite 虚拟资源导入；依赖问题也包含包测试、根目录统一管理的测试工具和旧 bundle，需要逐项审阅后才能定性为产品缺陷。扫描没有发现 alias 目标不匹配或 Native 越界导入 Cordis。该结果是完整的 TS 源码发现，不覆盖其他语言，也不是干净的依赖基线或 CI 门禁：要逐项变成强制策略，还需评审源码/测试/资源分类，并由 Core、Engine、Modules、Programs、Compatibility 和应用负责人处理相应缺口。审计保留并报告现有基线；Native Cordis 边界仍由 `verify-native-dependencies` 强制检查。
 
 ### 接口需求与进入 B4 的判断
 

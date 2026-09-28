@@ -265,6 +265,8 @@ export function collectSourceImportGraphViolations(root: string): {
   violations: string[]
   edges: number
   owners: number
+  sourceEntries: number
+  ownersWithoutSource: string[]
   computed: number
 } {
   const owners = readOwners(root)
@@ -272,12 +274,16 @@ export function collectSourceImportGraphViolations(root: string): {
   const strictCordisOwners = new Set([...nativePackageDirectories, ...transitionalNativeSourceDirectories]
     .map(directory => pathKey(resolve(root, directory))))
   const seenEdges = new Set<string>()
+  const seenOwners = new Set<string>()
   const violations = new Set<string>()
+  let sourceEntries = 0
   let computed = 0
   for (const face of COMPILER_FACES) {
     for (const item of faceSources(root, face)) {
       const importer = ownerForPath(item.fileName, ownerPaths)
       if (importer === undefined) continue
+      sourceEntries += 1
+      seenOwners.add(importer.name)
       const source = ts.createSourceFile(item.fileName, readFileSync(item.fileName, 'utf8'), ts.ScriptTarget.Latest, true)
       const references = collectSourceImportReferences(source)
       computed += references.filter(reference => reference.computed).length
@@ -289,7 +295,14 @@ export function collectSourceImportGraphViolations(root: string): {
       }
     }
   }
-  return { violations: [...violations].sort(), edges: seenEdges.size, owners: owners.length, computed }
+  return {
+    violations: [...violations].sort(),
+    edges: seenEdges.size,
+    owners: owners.length,
+    sourceEntries,
+    ownersWithoutSource: owners.filter(owner => !seenOwners.has(owner.name)).map(owner => owner.name).sort(),
+    computed,
+  }
 }
 
 function main(): void {
@@ -310,7 +323,14 @@ function main(): void {
     entries.push(violation)
     categories.set(category, entries)
   }
-  console.log(`${GATE}: audited ${String(result.edges)} Host/Client references across ${String(result.owners)} package owners; ${String(result.computed)} are computed loaders.`)
+  console.log(
+    `${GATE}: audited ${String(result.edges)} Host/Client references across ${String(result.sourceEntries)} compiler source entries `
+    + `and ${String(result.owners - result.ownersWithoutSource.length)}/${String(result.owners)} package owners; `
+    + `${String(result.computed)} are computed loaders.`,
+  )
+  if (result.ownersWithoutSource.length > 0) {
+    console.log(`Owners absent from both compiler faces: ${result.ownersWithoutSource.join(', ')}`)
+  }
   console.log(`Existing findings: ${String(result.violations.length)}. This command reports the full repository baseline; it is not a CI gate.`)
   for (const [category, entries] of categories) console.log(`  ${category}: ${String(entries.length)}`)
   if (process.argv.includes('--full')) for (const violation of result.violations) console.log(`  ${violation}`)
