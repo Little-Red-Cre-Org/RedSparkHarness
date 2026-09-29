@@ -99,7 +99,7 @@ pnpm dsh web
 
 ## 许可证
 
-请参阅 [LICENSING.md](LICENSING.md) 的分层许可说明。DeepSeek Harness 上游内容继续遵循 MIT；RedSpark 原创内容在正式报告/论文发布并明确标记 MIT 版本前，仅用于研究和非商业用途。
+请参阅 [LICENSING.md](LICENSING.md) 的分层许可说明。DeepSeek Harness 上游内容继续遵循 MIT；RedSpark 原创内容在正式报告/论文发布并明确标记 MIT 版本前，禁止用于毕设、论文、期刊、会议、技术报告、学术项目、公开 benchmark 和商业用途。
 
 第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 # RedSpark Harness
