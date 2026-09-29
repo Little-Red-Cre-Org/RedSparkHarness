@@ -81,3 +81,6 @@ For agents, follow [AGENTS.md](AGENTS.md).
 [MIT](LICENSE)
 
 Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+# RedSpark Harness
+
+This project is publicly readable for academic and non-commercial research. Licensing is intentionally layered: upstream DeepSeek Harness material remains MIT, while original RedSpark material is research-only until the related technical report or formal paper is published and a release is explicitly marked MIT. See [LICENSING.md](LICENSING.md).

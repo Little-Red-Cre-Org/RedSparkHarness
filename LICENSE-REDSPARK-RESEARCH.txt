@@ -1,0 +1,26 @@
+RedSpark Research and Non-Commercial License
+Version 1.0 — 2026-09-29
+
+Copyright (c) 2026 Little Red Cre / ZhaoZining
+
+This license applies only to original RedSpark Harness material identified as RedSpark-licensed in LICENSING.md or by an accompanying copyright notice. It does not replace or restrict the licenses of upstream or third-party material.
+
+1. Permission
+
+You may view, copy, modify, and use the covered material for personal study, education, academic research, public-interest research, experimentation, testing, and other non-commercial purposes. You may publish research findings, benchmarks, and papers about your use of the material, provided that you preserve this license and attribution notices.
+
+2. Conditions
+
+You must keep this license, the copyright notice, and the applicable attribution notices with any copy or substantial portion of the covered material. You may not imply endorsement by Little Red Cre, ZhaoZining, or RedSpark. This license grants no trademark rights in RedSpark names, logos, artwork, or other brand identifiers.
+
+3. Commercial restriction
+
+You may not use, sell, sublicense, offer as a paid service, include in a commercial product, or commercially redistribute the covered material without a separate written license from the copyright holder. Use by a commercial organization for a commercial purpose is commercial use even when the software is publicly available or the source is unmodified.
+
+4. Research outputs
+
+Publishing a technical report, thesis, paper, or other research result does not itself grant commercial rights or change this license. After the maintainers publish the related technical report or formal paper, they may designate a release or commit as MIT-licensed in an explicit release notice. Only that designated release and later material covered by the notice receive the MIT license.
+
+5. No warranty
+
+THE COVERED MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE MATERIAL OR ITS USE.
