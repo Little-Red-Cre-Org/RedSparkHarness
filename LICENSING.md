@@ -8,7 +8,7 @@ Code copied from or retained from the DeepSeek Harness upstream project remains 
 
 ## RedSpark original material
 
-Original RedSpark Harness source, documentation, artwork, branding, and modifications authored by Little Red Cre / ZhaoZining are licensed under the **RedSpark Restricted Evaluation License** in [LICENSE-REDSPARK-RESEARCH.txt](LICENSE-REDSPARK-RESEARCH.txt), unless a file or release states a different license.
+Original RedSpark Harness source, documentation, artwork, branding, and modifications authored by Little Red Cre are licensed under the **RedSpark Restricted Evaluation License** in [LICENSE-REDSPARK-RESEARCH.txt](LICENSE-REDSPARK-RESEARCH.txt), unless a file or release states a different license.
 
 Where a file combines upstream and RedSpark material, each copyright notice and the corresponding license apply to the material identified by that notice. The RedSpark license does not relicense upstream code.
 

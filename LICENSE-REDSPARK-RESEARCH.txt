@@ -1,7 +1,7 @@
 RedSpark Restricted Evaluation License
 Version 1.0 — 2026-09-29
 
-Copyright (c) 2026 Little Red Cre / ZhaoZining
+Copyright (c) 2026 Little Red Cre
 
 This license applies only to original RedSpark Harness material identified as RedSpark-licensed in LICENSING.md or by an accompanying copyright notice. It does not replace or restrict the licenses of upstream or third-party material.
 
@@ -11,7 +11,7 @@ You may view the covered material and run it for private, internal evaluation of
 
 2. Conditions
 
-You must keep this license, the copyright notice, and the applicable attribution notices with any copy or substantial portion of the covered material. You may not imply endorsement by Little Red Cre, ZhaoZining, or RedSpark. This license grants no trademark rights in RedSpark names, logos, artwork, or other brand identifiers.
+You must keep this license, the copyright notice, and the applicable attribution notices with any copy or substantial portion of the covered material. You may not imply endorsement by Little Red Cre or RedSpark. This license grants no trademark rights in RedSpark names, logos, artwork, or other brand identifiers.
 
 3. Prohibited academic and commercial use
 
