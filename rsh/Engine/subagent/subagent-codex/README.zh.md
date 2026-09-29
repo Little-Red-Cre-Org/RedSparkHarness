@@ -187,8 +187,8 @@ Codex 子级会在一个全新的临时线程中，以单个轮次接收这些�
 
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为与限制以上文和包代码为准。
 
-- **包体积披露**——npm 元数据报告 `@openai/codex@0.158.0-darwin-arm64` 解包后为 331,047,086 字节（约 316 MiB）；这是披露数据，不是安装阈值。
-- **版本锁定的协议**——运行时依赖锁定为 `@openai/codex@0.158.0`；`thread/start` 权限字段遵循 v2 [`ThreadStartParams` 定义](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L59-L163)。无密钥真实产品测试会生成已安装包的 schema 并检查这些字段；带凭证的随机数测试会检查产品连接。
+- **包体积披露**——npm 元数据报告 `@openai/codex@0.159.0-darwin-arm64` 解包后为 331,552,702 字节（约 316 MiB）；这是披露数据，不是安装阈值。
+- **版本锁定的协议**——运行时依赖锁定为 `@openai/codex@0.159.0`；`thread/start` 权限字段遵循 v2 [`ThreadStartParams` 定义](https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L62-L166)。无密钥真实产品测试会生成已安装包的 schema 并检查这些字段；带凭证的随机数测试会检查产品连接。
 
 </details>
 

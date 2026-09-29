@@ -10,9 +10,9 @@ Codex 子进程和 hook 桥接分别使用持续演进的 Codex 接口。固定�
 
 ## Decision
 
-Codex Provider 固定使用稳定版 `@openai/codex@0.158.0`，仅向 v2 `thread/start` 发送所选模型和非交互权限字段。无密钥测试启动该确切产品、生成其已安装协议 schema、检查可选权限字段，并通过真实 app-server 验证现有权限模式。
+Codex Provider 固定使用稳定版 `@openai/codex@0.159.0`，仅向 v2 `thread/start` 发送所选模型和非交互权限字段。无密钥测试启动该确切产品、生成其已安装协议 schema、检查可选权限字段，并通过真实 app-server 验证现有权限模式。
 
-hook 桥接识别 Codex 0.158.0 的十二个事件名，执行其中五个有对应关系的命令 hook 点。对于已配置但未映射或未知的事件，桥接报告跳过，不虚构 Harness 事件。Windows 优先选择 `commandWindows`，其次选择 `command_windows` 别名，然后才使用 `command`；其他平台使用 `command`。hook 类型、异步执行与 matcher 限制仍以桥接文档为准。
+hook 桥接识别 Codex 0.159.0 的十二个事件名，执行其中五个有对应关系的命令 hook 点。对于已配置但未映射或未知的事件，桥接报告跳过，不虚构 Harness 事件。Windows 优先选择 `commandWindows`，其次选择 `command_windows` 别名，然后才使用 `command`；其他平台使用 `command`。hook 类型、异步执行与 matcher 限制仍以桥接文档为准。
 
 ## Alternatives considered
 

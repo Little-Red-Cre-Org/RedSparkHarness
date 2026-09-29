@@ -34,7 +34,7 @@ configured tool -> dsh-tool-subagent -> ctx.subagents -> product provider -> pro
 
 ## Codex 提供方
 
-`@deepseek-ai/dsh-subagent-codex` 注册由 Profile 选择、默认值为 `codex` 的提供方名称，解析锁定的 `@openai/codex@0.158.0` 包所声明的 `codex` bin，并使用当前 Node 可执行文件加 `app-server --stdio` 启动该 wrapper。Wrapper 会选择私有原生平台载荷；提供方既不解析也不回退宿主 `codex`。其公开配置包含非空的 `providerName`、可选的非空 `model`、显式的 `env` 覆盖项、须为正有限值且不得大于仓库共享 `MAX_TIMER_DELAY_MS` 的 `disposeGraceMs`，以及默认使用 `never` 的三值原生 `permissionMode`。每个命名实例会为自己的运行保留这些已解析值。显式模型会原样传给每个临时 `thread/start`；省略时仍以 Codex 原生设置为权威。安装、登录、`CODEX_HOME`、模型发现或 fallback、基础 URL 和产品会话设置仍由 Codex 原生机制或部署环境负责；所选模式只拥有非交互权限决策中描述的线程 approval／reviewer／sandbox 字段。
+`@deepseek-ai/dsh-subagent-codex` 注册由 Profile 选择、默认值为 `codex` 的提供方名称，解析锁定的 `@openai/codex@0.159.0` 包所声明的 `codex` bin，并使用当前 Node 可执行文件加 `app-server --stdio` 启动该 wrapper。Wrapper 会选择私有原生平台载荷；提供方既不解析也不回退宿主 `codex`。其公开配置包含非空的 `providerName`、可选的非空 `model`、显式的 `env` 覆盖项、须为正有限值且不得大于仓库共享 `MAX_TIMER_DELAY_MS` 的 `disposeGraceMs`，以及默认使用 `never` 的三值原生 `permissionMode`。每个命名实例会为自己的运行保留这些已解析值。显式模型会原样传给每个临时 `thread/start`；省略时仍以 Codex 原生设置为权威。安装、登录、`CODEX_HOME`、模型发现或 fallback、基础 URL 和产品会话设置仍由 Codex 原生机制或部署环境负责；所选模式只拥有非交互权限决策中描述的线程 approval／reviewer／sandbox 字段。
 
 发布前，提供方会验证非空的纯文本任务，在父级工作区中启动受管的 app-server，完成 `initialize` → `initialized` 握手，把可选模型与已解析模式映射为官方 `thread/start` 字段，并创建一个 `ephemeral: true` 线程。固定 app-server argv 不包含模型、模式或任务文本。已发布的运行只拥有一次 `turn/start`；其线程 ID 与轮次 ID 保持私有，绝不会持久化到父会话。
 
@@ -44,7 +44,7 @@ configured tool -> dsh-tool-subagent -> ctx.subagents -> product provider -> pro
 
 若启动在发布前失败，提供方会关闭协议连接、终止已获取的进程树、等待其退出、移除 stderr observer，然后用固定操作阶段拒绝 `start()`。对已发布的运行执行资源释放时，提供方会尽力中断已知轮次、关闭协议连接、结束标准输入、调用共享的逐级终止机制，等待整棵进程树退出，并移除 observer。独立清理失败会报告 `teardown`；启动与回滚同时失败时，聚合的顶层消息会保留两条安全阶段说明，而底层 cause 仍只在内部可见。
 
-Codex 0.158.0 使用 Responses 协议，而 DeepSeek 的公开 OpenAI 兼容端点使用 Chat Completions。因此，带密钥 Codex e2e 会采用一个仅限回环、仅供测试内部使用的桥接层来处理一次不使用工具的随机数请求：真实 Codex 将 Responses 发送到桥接层，桥接层把收到的 Bearer 凭据与提取出的任务转发到固定的 DeepSeek 官方端点，再将真实文本包装进最小化的 Responses SSE（Server-Sent Events）生命周期。该桥接层既不是生产代理，也不能作为 Codex 原生连接 DeepSeek Chat Completions 的证据。
+Codex 0.159.0 使用 Responses 协议，而 DeepSeek 的公开 OpenAI 兼容端点使用 Chat Completions。因此，带密钥 Codex e2e 会采用一个仅限回环、仅供测试内部使用的桥接层来处理一次不使用工具的随机数请求：真实 Codex 将 Responses 发送到桥接层，桥接层把收到的 Bearer 凭据与提取出的任务转发到固定的 DeepSeek 官方端点，再将真实文本包装进最小化的 Responses SSE（Server-Sent Events）生命周期。该桥接层既不是生产代理，也不能作为 Codex 原生连接 DeepSeek Chat Completions 的证据。
 
 ## Claude Code 提供方
 
@@ -62,7 +62,7 @@ Codex 0.158.0 使用 Responses 协议，而 DeepSeek 的公开 OpenAI 兼容端�
 
 每个产品都负责覆盖所有分支的包测试、一项必跑的无密钥真实产品测试、一项 Loader 组合 e2e 和一项带密钥 DeepSeek e2e。无密钥产品层级使用被测的确切官方发行版、非空的伪产品密钥、隔离的临时工作区与产品主目录，以及能返回固定答案的回环模型。产品请求缺失、身份验证错误、任务文本被改动、答案不完全一致、真实产品被跳过或受管句柄仍存活，都会使这项必跑测试失败。Codex Loader fixture 会公开两个命名 Codex 实例与工具；Claude Code Loader fixture 会公开默认 Codex 工具以及两个命名 Claude Code 实例与工具。两个 fixture 都包含通用 Job 控制工具，而且不会启动任何产品进程。带密钥层级会使用仅在运行时提供的密钥启动同一生产提供方与真实产品，要求从固定的 DeepSeek 官方服务取得唯一随机数，并再次证明完全停稳；仅当本地操作者未提供密钥时才会自行跳过，而受信任的 CI 会预检该 secret。
 
-Codex 证据会锁定 `@openai/codex@0.158.0`、`codex-cli 0.158.0` 与六个平台 alias。生成 schema 会证明可选的 `ThreadStartParams.model`；真实产品测试会观测省略模型继承、两个显式实例模型、包内 wrapper argv、确切的 Bearer 密钥、原始任务、逐字节完全一致的最终回答、原生权限模式、测试拥有临时存储中的显式危险绕过写入，以及 wrapper／原生整棵进程树退出。独立 wrapper fixture 会证明载荷缺失时不回退宿主命令，命名实例会保留彼此独立的模型、环境与模式，生产环境也不会从 `PATH` 解析宿主 `codex`。[最小诊断决策](../../archived/simplification/2026-08-21-product-subagent-minimal-diagnostics.md)负责失败、进程结果与最终呈现证据。
+Codex 证据会锁定 `@openai/codex@0.159.0`、`codex-cli 0.159.0` 与六个平台 alias。生成 schema 会证明可选的 `ThreadStartParams.model`；真实产品测试会观测省略模型继承、两个显式实例模型、包内 wrapper argv、确切的 Bearer 密钥、原始任务、逐字节完全一致的最终回答、原生权限模式、测试拥有临时存储中的显式危险绕过写入，以及 wrapper／原生整棵进程树退出。独立 wrapper fixture 会证明载荷缺失时不回退宿主命令，命名实例会保留彼此独立的模型、环境与模式，生产环境也不会从 `PATH` 解析宿主 `codex`。[最小诊断决策](../../archived/simplification/2026-08-21-product-subagent-minimal-diagnostics.md)负责失败、进程结果与最终呈现证据。
 
 带密钥 Codex e2e 会注册生产提供方，启动同样的真实 app-server，并通过上述测试专用桥接层请求一个随机数。该测试固定外部端点与模型，不存储任何凭据或请求载荷，要求上游恰好完成一次响应，将去除首尾空白后的产品答案与该随机数逐字节比较，并等待所有受管句柄退出。
 

@@ -187,8 +187,8 @@ These limits define when this provider is a poor fit or needs special operationa
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior and limits live in the sections above and in the package code.
 
-- **Package size disclosure** — npm metadata reports 331,047,086 unpacked bytes (about 316 MiB) for `@openai/codex@0.158.0-darwin-arm64`; this is a disclosure figure, not an installation threshold.
-- **Version-pinned protocol** — the runtime dependency is pinned to `@openai/codex@0.158.0`; its `thread/start` permission fields follow the v2 [`ThreadStartParams` definition](https://github.com/openai/codex/blob/rust-v0.158.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L59-L163). The keyless real-product test generates the installed package schema and checks these fields; the credentialed nonce test checks the product connection.
+- **Package size disclosure** — npm metadata reports 331,552,702 unpacked bytes (about 316 MiB) for `@openai/codex@0.159.0-darwin-arm64`; this is a disclosure figure, not an installation threshold.
+- **Version-pinned protocol** — the runtime dependency is pinned to `@openai/codex@0.159.0`; its `thread/start` permission fields follow the v2 [`ThreadStartParams` definition](https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L62-L166). The keyless real-product test generates the installed package schema and checks these fields; the credentialed nonce test checks the product connection.
 
 </details>
 
