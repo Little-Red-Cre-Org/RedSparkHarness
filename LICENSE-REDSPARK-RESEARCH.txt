@@ -1,4 +1,4 @@
-RedSpark Research and Non-Commercial License
+RedSpark Restricted Evaluation License
 Version 1.0 — 2026-09-29
 
 Copyright (c) 2026 Little Red Cre / ZhaoZining
@@ -7,19 +7,19 @@ This license applies only to original RedSpark Harness material identified as Re
 
 1. Permission
 
-You may view, copy, modify, and use the covered material for personal study, education, academic research, public-interest research, experimentation, testing, and other non-commercial purposes. You may publish research findings, benchmarks, and papers about your use of the material, provided that you preserve this license and attribution notices.
+You may view the covered material and run it for private, internal evaluation of the repository. You may make temporary local copies needed for that evaluation. This permission does not authorize publication, distribution, or creation of derivative works.
 
 2. Conditions
 
 You must keep this license, the copyright notice, and the applicable attribution notices with any copy or substantial portion of the covered material. You may not imply endorsement by Little Red Cre, ZhaoZining, or RedSpark. This license grants no trademark rights in RedSpark names, logos, artwork, or other brand identifiers.
 
-3. Commercial restriction
+3. Prohibited academic and commercial use
 
-You may not use, sell, sublicense, offer as a paid service, include in a commercial product, or commercially redistribute the covered material without a separate written license from the copyright holder. Use by a commercial organization for a commercial purpose is commercial use even when the software is publicly available or the source is unmodified.
+You may not use the covered material for a thesis, dissertation, journal article, conference paper, technical report, academic project, grant-funded research, public benchmark, commercial product, paid service, resale, or commercial redistribution without a separate written license from the copyright holder. Use by a commercial organization for a commercial purpose is prohibited even when the software is publicly available or the source is unmodified.
 
-4. Research outputs
+4. Research outputs and future MIT release
 
-Publishing a technical report, thesis, paper, or other research result does not itself grant commercial rights or change this license. After the maintainers publish the related technical report or formal paper, they may designate a release or commit as MIT-licensed in an explicit release notice. Only that designated release and later material covered by the notice receive the MIT license.
+Publishing a technical report, thesis, paper, or other research result does not itself grant any rights or change this license. After the maintainers publish the related technical report or formal paper, they may designate a release or commit as MIT-licensed in an explicit release notice. Only that designated release and later material covered by the notice receive the MIT license.
 
 5. No warranty
 

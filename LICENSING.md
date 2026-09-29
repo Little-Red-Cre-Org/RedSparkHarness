@@ -8,7 +8,7 @@ Code copied from or retained from the DeepSeek Harness upstream project remains 
 
 ## RedSpark original material
 
-Original RedSpark Harness source, documentation, artwork, branding, and modifications authored by Little Red Cre / ZhaoZining are licensed under the **RedSpark Research and Non-Commercial License** in [LICENSE-REDSPARK-RESEARCH.txt](LICENSE-REDSPARK-RESEARCH.txt), unless a file or release states a different license.
+Original RedSpark Harness source, documentation, artwork, branding, and modifications authored by Little Red Cre / ZhaoZining are licensed under the **RedSpark Restricted Evaluation License** in [LICENSE-REDSPARK-RESEARCH.txt](LICENSE-REDSPARK-RESEARCH.txt), unless a file or release states a different license.
 
 Where a file combines upstream and RedSpark material, each copyright notice and the corresponding license apply to the material identified by that notice. The RedSpark license does not relicense upstream code.
 
@@ -16,6 +16,6 @@ Where a file combines upstream and RedSpark material, each copyright notice and 
 
 The RedSpark original material will remain under the research license until the maintainers publish the related technical report or formal paper and explicitly mark a release or commit as MIT-licensed. Publication alone does not silently change the license of earlier versions. The explicit release notice is the authority for the transition.
 
-This repository is source-available for review and reproducible research. Commercial use, paid services, resale, and commercial redistribution of RedSpark-licensed material require a separate written license from the copyright holder.
+This repository is publicly viewable for software evaluation. RedSpark-licensed material may not be used for a thesis, dissertation, journal article, conference paper, technical report, academic project, grant-funded research, public benchmark, commercial product, paid service, resale, or commercial redistribution without a separate written license from the copyright holder.
 
 This document is a project licensing notice, not legal advice. Preserve all upstream and third-party notices when copying or redistributing any part of the repository.

@@ -104,4 +104,4 @@ pnpm dsh web
 第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 # RedSpark Harness
 
-本项目公开源码，当前用于学术、教育和非商业研究。许可按来源分层：DeepSeek Harness 上游内容继续遵循 MIT；RedSpark 原创内容在相关技术报告或正式论文发布、并由维护者明确标记版本前，采用研究期许可。详见 [LICENSING.md](LICENSING.md)。
+本项目公开源码供软件评估和归属审查。当前禁止将 RedSpark 原创内容用于毕设、论文、期刊、会议、技术报告、学术项目、公开 benchmark 或商业用途。DeepSeek Harness 上游内容继续遵循 MIT；RedSpark 原创内容只有在相关技术报告或正式论文发布、并由维护者明确标记版本后才切换 MIT。详见 [LICENSING.md](LICENSING.md)。
