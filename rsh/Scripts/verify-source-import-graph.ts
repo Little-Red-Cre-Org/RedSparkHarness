@@ -4,7 +4,7 @@ import { isBuiltin } from 'node:module'
 import { dirname, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
-import { nativePackageDirectories, transitionalNativeSourceDirectories } from './native-package-policy.ts'
+import { nativePackageDirectories } from './native-package-policy.ts'
 import { repositoryConfigHost } from './ts-project.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
@@ -411,7 +411,7 @@ export function collectSourceImportGraphViolations(root: string): {
   const owners = readOwners(root)
   const ownerPaths = owners
   const repositoryTooling = readRepositoryTooling(root)
-  const strictCordisOwners = new Set([...nativePackageDirectories, ...transitionalNativeSourceDirectories]
+  const strictCordisOwners = new Set([...nativePackageDirectories]
     .map(directory => pathKey(resolve(root, directory))))
   const seenEdges = new Set<string>()
   const seenOwners = new Set<string>()
