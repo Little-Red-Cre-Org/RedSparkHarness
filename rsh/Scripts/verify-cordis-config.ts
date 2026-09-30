@@ -233,6 +233,7 @@ function validateAppResolution(): string[] {
   const appManifest = readManifest('rsh/Programs/CLI/package.json')
   const appDependencies = {
     ...appManifest.dependencies,
+    ...appManifest.optionalDependencies,
     // The fallback also links every in-box bundle's own dependencies
     // (healProfilesModuleFallback). Optional Profile bundles stay outside the
     // app installation until that Profile installs them.
@@ -245,14 +246,10 @@ function validateAppResolution(): string[] {
   violations.push(...missingPluginDependencies(
     appReferences,
     appDependencies,
-    'rsh/Programs/CLI/package.json dependencies or a bundle manifest',
+    'rsh/Programs/CLI/package.json dependencies or optionalDependencies, or a bundle manifest',
   ))
   const appTestReferences = pluginReferences.filter(reference => reference.file.startsWith('rsh/Programs/CLI/tests/'))
-  violations.push(...missingPluginDependencies(
-    appTestReferences,
-    { ...appManifest.dependencies, ...appManifest.devDependencies },
-    'rsh/Programs/CLI/package.json dependencies or devDependencies',
-  ))
+  violations.push(...cliPluginDependencyErrors(appTestReferences, appManifest, true))
   // Each bundle's patch rows must resolve from that bundle's own dependencies:
   // per-layer resolution anchors on the bundle package directory.
   for (const manifestPath of bundleManifests) {
@@ -301,8 +298,8 @@ export function packageTestPluginDependencyErrors(
 ): string[] {
   return missingPluginDependencies(
     references.filter(reference => packageNameFromSpecifier(reference.name) !== manifest.name),
-    { ...manifest.dependencies, ...manifest.devDependencies },
-    `${manifestPath} dependencies or devDependencies`,
+    { ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.devDependencies },
+    `${manifestPath} dependencies, optionalDependencies or devDependencies`,
   )
 }
 
@@ -386,6 +383,30 @@ export function bundlePluginDependencyErrors(
     manifest.dependencies ?? {},
     `${manifestPath} dependencies`,
   )
+}
+
+/**
+ * Validate CLI-owned Cordis rows against production or test dependencies.
+ * Optional dependencies are valid owners because the CLI preflights its legacy path.
+ * @param references - Plugin packages named by CLI-owned configs or fixtures.
+ * @param manifest - The CLI package manifest.
+ * @param includeDev - Whether the config is test-only and may use dev dependencies.
+ * @returns Missing dependency diagnostics.
+ */
+export function cliPluginDependencyErrors(
+  references: readonly PluginReference[],
+  manifest: PackageManifest,
+  includeDev = false,
+): string[] {
+  const dependencies = {
+    ...manifest.dependencies,
+    ...manifest.optionalDependencies,
+    ...(includeDev ? manifest.devDependencies : {}),
+  }
+  const owner = includeDev
+    ? 'rsh/Programs/CLI/package.json dependencies, optionalDependencies or devDependencies'
+    : 'rsh/Programs/CLI/package.json dependencies or optionalDependencies'
+  return missingPluginDependencies(references, dependencies, owner)
 }
 
 /**

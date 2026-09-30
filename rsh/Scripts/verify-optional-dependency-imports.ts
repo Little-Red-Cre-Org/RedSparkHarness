@@ -12,8 +12,9 @@
  * that declaration merging needs; or restructure so nothing at module scope
  * needs the package. A dynamic `import()` only moves the failure to first use,
  * so it belongs to a caller that genuinely requires the package and handles its
- * absence — it is a last resort, not the default answer, and reaching for it is
- * a sign the dependency is not optional.
+ * absence. The public `dsh` binary is checked from its static startup closure;
+ * on-demand compatibility branches must check availability before importing
+ * optional packages and have a built-entry acceptance test.
  *
  * Value-vs-type is decided against a bound Program rather than the import
  * syntax, because `verbatimModuleSyntax` is off: a named import used only in
@@ -23,20 +24,24 @@
  * reported, and the fix it asks for (`import type`, or dropping the binding) is
  * what the published package wants regardless. Both compiler faces are scanned,
  * and only files that ship — a published package's `src` — are subject. A
- * package with a separate native export may make its Cordis peer optional:
- * legacy entries may still load Cordis, while the native entry's static source
+ * package with Cordis-free exports may make its Cordis peer optional: legacy
+ * entries may still load Cordis, while each declared safe export's static source
  * closure may not. The packed-consumer test checks the emitted artifact too.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, isAbsolute, relative, resolve } from 'node:path'
+import { isAbsolute, relative, resolve } from 'node:path'
 import ts from 'typescript'
+import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
 import { TypeScriptProject, type CompilerFace } from './ts-project.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 
 /** Directories whose `src` ships as a published package. */
 const PUBLISHED_SOURCE = /^rsh\/.+\/src\//
+
+/** The only binary whose declared legacy branches are preflighted at runtime. */
+const OPTIONAL_BINARY_PACKAGE = '@deepseek-ai/dsh'
 
 /** How a manifest marked a dependency optional, for the violation message. */
 type OptionalKind = 'optionalDependencies' | 'peerDependenciesMeta'
@@ -87,7 +92,8 @@ function optionalDependencies(manifest: Record<string, unknown>): Map<string, Op
 /** One package directory's optional dependencies, resolved once per directory. */
 interface PackageOptionalImports {
   readonly optional: Map<string, OptionalKind>
-  readonly nativeTypes: string | undefined
+  readonly exports: Record<string, unknown>
+  readonly binSources: readonly string[] | undefined
 }
 
 const optionalByDirectory = new Map<string, PackageOptionalImports>()
@@ -108,36 +114,45 @@ function optionalFor(projectRoot: string, relativePath: string): PackageOptional
     ? parsed as Record<string, unknown>
     : {}
   const optional = optionalDependencies(manifest)
-  const native = record(manifest, 'exports')['./native']
-  const nativeTypes = native !== null && typeof native === 'object' && !Array.isArray(native)
-    ? (native as Record<string, unknown>).types
+  const exports = record(manifest, 'exports')
+  const bin = manifest.bin
+  const binTargets = typeof bin === 'string'
+    ? [bin]
+    : bin !== null && typeof bin === 'object' && !Array.isArray(bin)
+      ? Object.values(bin).filter((target): target is string => typeof target === 'string')
+      : undefined
+  const binSources = manifest.name === OPTIONAL_BINARY_PACKAGE
+    && binTargets !== undefined && binTargets.length > 0
+    && binTargets.every(target => target.startsWith('lib/') && target.endsWith('.js'))
+    ? binTargets.map(target => resolve(directory, 'src', target.slice('lib/'.length, -'.js'.length) + '.ts'))
     : undefined
   const result = {
     optional,
-    nativeTypes: typeof nativeTypes === 'string' ? nativeTypes : undefined,
+    exports,
+    binSources,
   }
   optionalByDirectory.set(directory, result)
   return result
 }
 
 /**
- * Source files evaluated from a native export, including relative value imports.
+ * Source files evaluated from a Cordis-free export, including relative value imports.
  * @param project - the bound compiler face.
- * @param nativeTypes - declaration path from the package export map.
+ * @param typesPath - declaration path from the package export map.
  * @param directory - owning package directory.
  * @returns The source closure; throws when the export cannot be checked.
  */
-function nativeSourceClosure(
+function cordisFreeSourceClosure(
   project: TypeScriptProject,
-  nativeTypes: string,
+  typesPath: string,
   directory: string,
 ): Set<string> {
-  if (!nativeTypes.startsWith('./lib/types/') || !nativeTypes.endsWith('.d.ts')) {
-    throw new Error(`optional Cordis peer has an unsupported native types path: ${nativeTypes}`)
+  if (!typesPath.startsWith('./lib/types/') || !typesPath.endsWith('.d.ts')) {
+    throw new Error(`optional Cordis peer has an unsupported safe-entry types path: ${typesPath}`)
   }
-  const sourcePath = resolve(directory, 'src', nativeTypes.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
+  const sourcePath = resolve(directory, 'src', typesPath.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
   const entry = project.program.getSourceFile(sourcePath)
-  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded native source: ${sourcePath}`)
+  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded safe-entry source: ${sourcePath}`)
   const visited = new Set<string>()
   const pending = [entry]
   while (pending.length > 0) {
@@ -160,7 +175,7 @@ function nativeSourceClosure(
         ts.sys,
       ).resolvedModule?.resolvedFileName
       if (resolved === undefined && specifier.text.startsWith('.')) {
-        throw new Error(`native source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
+        throw new Error(`safe source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
       }
       if (resolved === undefined) continue
       const fromSource = relative(resolve(directory, 'src'), resolved)
@@ -173,6 +188,81 @@ function nativeSourceClosure(
     }
   }
   return visited
+}
+
+/**
+ * Source modules statically evaluated from a package's declared binary entry.
+ * @param project - the bound compiler face.
+ * @param entryPaths - source files named by the package's `bin` manifest field.
+ * @returns The static import closure; dynamic imports remain outside startup.
+ */
+function binarySourceClosure(project: TypeScriptProject, entryPaths: readonly string[]): Set<string> {
+  const entries = entryPaths.map((path) => {
+    const source = project.program.getSourceFile(path)
+    if (source === undefined) throw new Error(`optional-dependency bin has no loaded source: ${path}`)
+    return source
+  })
+  const visited = new Set<string>()
+  const pending = entries
+  while (pending.length > 0) {
+    const source = pending.pop() as ts.SourceFile
+    if (visited.has(source.fileName)) continue
+    visited.add(source.fileName)
+    for (const statement of source.statements) {
+      const isImport = ts.isImportDeclaration(statement)
+      if (!isImport && !ts.isExportDeclaration(statement)) continue
+      const specifier = statement.moduleSpecifier
+      if (specifier === undefined || !ts.isStringLiteral(specifier) || !specifier.text.startsWith('.')) continue
+      const loads = isImport
+        ? importLoadsModule(statement, project.checker)
+        : exportLoadsModule(statement, project.checker)
+      if (!loads) continue
+      const resolved = ts.resolveModuleName(
+        specifier.text,
+        source.fileName,
+        project.program.getCompilerOptions(),
+        ts.sys,
+      ).resolvedModule?.resolvedFileName
+      if (resolved === undefined) {
+        throw new Error(`binary source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
+      }
+      const target = project.program.getSourceFile(resolved)
+      if (target === undefined) throw new Error(`binary source import is absent from the compiler face: ${resolved}`)
+      pending.push(target)
+    }
+  }
+  return visited
+}
+
+/**
+ * Cordis-free declarations exposed by a mixed Cordis/native package.
+ * @param packageImports - manifest metadata for the owning package.
+ * @param packageDirectory - absolute package directory.
+ * @param projectRoot - TypeScript project root.
+ * @param safeSubpaths - package directories and Cordis-free export names.
+ * @returns Types entry paths whose runtime source closures must not load Cordis.
+ */
+function cordisFreeTypesEntries(
+  packageImports: PackageOptionalImports,
+  packageDirectory: string,
+  projectRoot: string,
+  safeSubpaths: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  const directoryName = relative(projectRoot, packageDirectory).replaceAll('\\', '/')
+  const subpaths = [...(safeSubpaths.get(directoryName) ?? [])]
+  if ('./native' in packageImports.exports) subpaths.push('./native')
+  const types: string[] = []
+  for (const subpath of subpaths) {
+    const entry = packageImports.exports[subpath]
+    const typesPath = entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+      ? (entry as Record<string, unknown>).types
+      : undefined
+    if (typeof typesPath !== 'string') {
+      throw new Error(`optional Cordis peer safe export has no types entry: ${directoryName} ${subpath}`)
+    }
+    types.push(typesPath)
+  }
+  return types
 }
 
 /**
@@ -224,14 +314,18 @@ function exportLoadsModule(declaration: ts.ExportDeclaration, checker: ts.TypeCh
 }
 
 /**
- * Collect every static value import of an optional dependency in one face.
+ * Collect disallowed static value imports of optional dependencies in one face.
  * @param project - a bound repository project.
  * @returns One message per violation, sorted by location.
  */
-export function collectOptionalImportViolations(project: TypeScriptProject): string[] {
+export function collectOptionalImportViolations(
+  project: TypeScriptProject,
+  safeSubpaths: ReadonlyMap<string, readonly string[]> = nativeSafeSourceSubpaths,
+): string[] {
   const checker = project.checker
   const violations: string[] = []
-  const nativeClosureByDirectory = new Map<string, Set<string>>()
+  const cordisFreeClosureByDirectory = new Map<string, Set<string>>()
+  const binaryClosureByDirectory = new Map<string, Set<string>>()
   for (const sourceFile of project.sourceFiles()) {
     if (sourceFile.isDeclarationFile) continue
     const relativePath = project.relativePath(sourceFile)
@@ -239,6 +333,15 @@ export function collectOptionalImportViolations(project: TypeScriptProject): str
     const packageImports = optionalFor(project.projectRoot, relativePath)
     const optional = packageImports.optional
     if (optional.size === 0) continue
+    const directory = resolve(project.projectRoot, relativePath.slice(0, relativePath.indexOf('/src/')))
+    if (packageImports.binSources !== undefined) {
+      let closure = binaryClosureByDirectory.get(directory)
+      if (closure === undefined) {
+        closure = binarySourceClosure(project, packageImports.binSources)
+        binaryClosureByDirectory.set(directory, closure)
+      }
+      if (!closure.has(sourceFile.fileName)) continue
+    }
 
     for (const statement of sourceFile.statements) {
       const isImport = ts.isImportDeclaration(statement)
@@ -249,12 +352,14 @@ export function collectOptionalImportViolations(project: TypeScriptProject): str
       if (kind === undefined) continue
       if (packageOf(specifierNode.text) === '@deepseek-ai/cordis'
         && kind === 'peerDependenciesMeta'
-        && packageImports.nativeTypes !== undefined) {
-        const directory = dirname(resolve(project.projectRoot, relativePath.slice(0, relativePath.indexOf('/src/')), 'package.json'))
-        let closure = nativeClosureByDirectory.get(directory)
+        && cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths).length > 0) {
+        let closure = cordisFreeClosureByDirectory.get(directory)
         if (closure === undefined) {
-          closure = nativeSourceClosure(project, packageImports.nativeTypes, directory)
-          nativeClosureByDirectory.set(directory, closure)
+          closure = new Set<string>()
+          for (const typesPath of cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths)) {
+            for (const source of cordisFreeSourceClosure(project, typesPath, directory)) closure.add(source)
+          }
+          cordisFreeClosureByDirectory.set(directory, closure)
         }
         if (!closure.has(sourceFile.fileName)) continue
       }

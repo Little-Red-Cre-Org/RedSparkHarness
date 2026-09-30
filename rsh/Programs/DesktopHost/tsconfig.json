@@ -8,11 +8,13 @@
   "references": [
     { "path": "../../Core/vendor/cordis" },
     { "path": "../../Core/vendor/include" },
+    { "path": "../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../Web/api/gateway/tsconfig.host.json" },
     { "path": "../../Compatibility/DSH/boot/app-boot" },
     { "path": "../../Compatibility/DSH/boot/cmdline" },
     { "path": "../Web/client/connection/tsconfig.host.json" },
     { "path": "../Web/client/modules" },
+    { "path": "../Web/client/web" },
     { "path": "../Web/host/webserver" },
     { "path": "../../Core/util/launch-environment" }
   ]

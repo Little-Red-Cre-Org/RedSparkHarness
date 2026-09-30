@@ -36,7 +36,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
     try {
       const modulesDir = join(root, 'rsh/Programs/Web/client/modules')
       const webDir = join(root, 'rsh/Programs/Web/client/web')
-      const archives = [modulesDir, webDir].map((dir) => {
+      const storeDir = join(root, 'rsh/Programs/Web/client/store')
+      const archives = [modulesDir, webDir, storeDir].map((dir) => {
         const packed = JSON.parse(pnpm(['pack', '--json', '--pack-destination', output], dir, task.timeout)) as {
           filename: string
         }
@@ -58,21 +59,31 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
           }
           return nextResolve(specifier, context)
         } })
-        const [modules, web] = await Promise.all([
+        const [modules, web, store] = await Promise.all([
           import('@deepseek-ai/dsh-client-modules/native'),
           import('@deepseek-ai/dsh-client-web/native'),
+          import('@deepseek-ai/dsh-client-store'),
         ])
-        if (typeof modules.ClientModuleSystem !== 'function' || typeof web.bootNativeClient !== 'function') {
+        if (
+          typeof modules.ClientModuleSystem !== 'function' ||
+          typeof web.bootNativeClient !== 'function' ||
+          typeof store.createSnapshotStore !== 'function'
+        ) {
           throw Error('native browser exports missing')
         }
+        const snapshot = store.createSnapshotStore({ count: 0 })
+        snapshot.update(draft => { draft.count += 1 })
+        if (snapshot.getSnapshot().count !== 1) throw Error('client-store runtime dependencies missing')
       `
       run(process.execPath, ['--input-type=module', '-e', source], output, task.timeout)
       writeFileSync(join(output, 'consumer.mts'), `
         import { ClientModuleSystem } from '@deepseek-ai/dsh-client-modules/native'
         import { bootNativeClient, type NativeClientBootOptions } from '@deepseek-ai/dsh-client-web/native'
+        import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
         declare const options: NativeClientBootOptions
         void ClientModuleSystem
         void bootNativeClient(options)
+        void createSnapshotStore({ count: 0 }).getSnapshot().count
       `)
       writeFileSync(join(output, 'tsconfig.json'), JSON.stringify({
         compilerOptions: {

@@ -958,6 +958,11 @@
     },
     {
       "doc": "rsh/Docs/subsystems/attachment.md",
+      "symbol": "AttachmentHostPathProvider",
+      "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/attachment.md",
       "symbol": "ImageMediaType",
       "source": "rsh/Modules/Official/attachment/attachment/src/types.ts"
     },
@@ -1104,27 +1109,27 @@
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "SandboxMode",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "ConfinedSandboxMode",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "SandboxExecutionPolicy",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "SandboxEnforcement",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "SandboxPolicy",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
@@ -1134,12 +1139,12 @@
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "RunnerFailureRule",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
       "symbol": "ConfinedArgv",
-      "source": "rsh/Modules/Official/sandbox/sandbox/src/index.ts"
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",

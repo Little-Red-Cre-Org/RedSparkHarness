@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-23-jsonl-native-backend-entry.md
-2026-09-23-jsonl-native-backend-entry.md: bfbc32cf39959eb32caeec00ca85de11386b3b86
-2026-09-23-jsonl-native-backend-entry.zh.md: 08f2162a7ab57720ade61f8db619ce5d89838bc8
+2026-09-23-jsonl-native-backend-entry.md: 84e4c34b9d729cf61d9491e3edb0587c8a93798a
+2026-09-23-jsonl-native-backend-entry.zh.md: b61b4fb80d7544788a88474d7c97b6a31c3347a8

@@ -22,13 +22,9 @@
     "./package.json": "./package.json"
   },
   "license": "MIT",
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
-  },
-  "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "zustand": "~4.4.7",
-    "immer": "^10.1.1"
+  "dependencies": {
+    "immer": "^10.1.1",
+    "zustand": "~4.4.7"
   },
   "files": [
     "lib/index.js",

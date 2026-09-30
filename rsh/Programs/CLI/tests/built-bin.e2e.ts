@@ -34,8 +34,14 @@ async function runBuiltBin(
   env: Readonly<Record<string, string | undefined>> = {},
   cwd?: string,
 ): Promise<{ stdout: string; code: number; stderr: string }> {
+  // Node 24 reports the experimental node:sqlite import used by the compatibility
+  // bundle on stderr. The built-entry assertions cover CLI diagnostics, so keep this
+  // runtime notice out of their stderr channel while preserving caller-supplied flags.
+  const nodeOptions = [env.NODE_OPTIONS ?? process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning']
+    .filter((value): value is string => value !== undefined && value.length > 0)
+    .join(' ')
   const childEnv = Object.fromEntries(
-    Object.entries({ ...process.env, ...env })
+    Object.entries({ ...process.env, ...env, NODE_OPTIONS: nodeOptions })
       .filter((entry): entry is [string, string] => entry[1] !== undefined),
   )
   const result = await execa(process.execPath, [dshBin, ...args], {
@@ -144,6 +150,43 @@ function createProfileLifecycleFixture(): ProfileLifecycleFixture {
     writeFileSync(join(linkTarget, file), readFileSync(join(bundleDir, file)))
   }
   return { home, ready, settled, disposed, interrupt }
+}
+
+/** Native package fixture for the built CLI's Cordis-free launch path. */
+function createNativeCliFixture(): { home: string; marker: string } {
+  const home = mkdtempSync(join(tmpdir(), 'dsh-native-cli-'))
+  const profile = join(home, 'profiles', 'native-smoke')
+  const packageDir = join(profile, 'node_modules', 'native-smoke-app')
+  const marker = join(home, 'native-result.json')
+  mkdirSync(packageDir, { recursive: true })
+  writeFileSync(join(profile, 'package.json'), JSON.stringify({
+    name: 'native-smoke-profile',
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
+  }))
+  writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({
+    formatVersion: 1,
+    scopes: [{ id: 'root' }],
+    installations: [{ id: 'app', plugin: 'native-smoke-app', scope: 'root' }],
+  }))
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify({
+    name: 'native-smoke-app',
+    type: 'module',
+    exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: {
+      apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['application'],
+    } },
+  }))
+  writeFileSync(join(packageDir, 'native.mjs'), [
+    "import { writeFileSync } from 'node:fs'",
+    'export const plugin = {',
+    "  apiVersion: 1, name: 'native-smoke-app', targets: ['host'], requires: [], provides: ['application'],",
+    '  resolve: () => context => context.provide(\'application\', {',
+    '    run: async args => { writeFileSync(process.env.NATIVE_PROFILE_MARKER, JSON.stringify(args)); return 0 },',
+    '  }),',
+    '}',
+    '',
+  ].join('\n'))
+  return { home, marker }
 }
 
 function startProfileLifecycle(fixture: ProfileLifecycleFixture, args: readonly string[] = []) {
@@ -342,6 +385,23 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(result.code).toBe(1)
     }
   }, SPAWN_TIMEOUT_MS * 3 + 30_000)
+
+  it('boots a native profile without resolving Cordis', async () => {
+    const fixture = createNativeCliFixture()
+    const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
+    try {
+      const result = await runBuiltBin(['--profile', 'native-smoke', 'native', 'launch'], {
+        DSH_HOME: fixture.home,
+        NATIVE_PROFILE_MARKER: fixture.marker,
+        NODE_OPTIONS: `--import=${noCordisHook}`,
+      })
+      expect(result.code, result.stderr).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(readFileSync(fixture.marker, 'utf8')).toBe(JSON.stringify(['native', 'launch']))
+    } finally {
+      rmSync(fixture.home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS)
 
   it('routes help and usage errors without activating startup-dependent rows', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-app-help-'))

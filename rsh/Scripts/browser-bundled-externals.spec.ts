@@ -78,11 +78,12 @@ describe('browser dependency discovery', () => {
     await expect(browserBundledExternals(root)).rejects.toThrow('has no browser build config')
   })
 
-  it('follows shell workspace aliases, CSS assets and lazy imports without writing output', async () => {
+  it('follows both shell pages, workspace aliases, CSS assets and lazy imports without writing output', async () => {
     const root = fixture()
     library(root, 'shell-lib')
     library(root, 'lazy-lib')
     library(root, 'asset-lib')
+    library(root, 'native-only-lib')
     write(root, 'node_modules/asset-lib/package.json', JSON.stringify({
       name: 'asset-lib', exports: { './theme.css': './theme.css' },
     }))
@@ -98,15 +99,22 @@ describe('browser dependency discovery', () => {
     write(root, 'rsh/Programs/Web/application/package.json', '{"name":"@fixture/web","type":"module","exports":{"./dist/*":"./dist/*"}}')
     symlinkSync(resolve(repositoryRoot, 'rsh/Programs/Web/application/node_modules'), join(app, 'node_modules'), 'junction')
     write(root, 'rsh/Programs/Web/application/index.html', '<script type="module" src="./main.ts"></script>')
+    write(root, 'rsh/Programs/Web/application/native.html', '<script type="module" src="./native.ts"></script>')
     write(root, 'rsh/Programs/Web/application/main.ts', 'import { output, lazy } from "@fixture/static"; console.log(output); void lazy()')
+    write(root, 'rsh/Programs/Web/application/native.ts', 'import { value } from "native-only-lib"; console.log(value)')
     write(root, 'rsh/Programs/Web/application/vite.config.ts', `export default {
-      build: { rollupOptions: { input: { index: ${JSON.stringify(join(app, 'index.html'))}, preview: "missing-preview.ts" } } }
+      build: { rollupOptions: { input: {
+        index: ${JSON.stringify(join(app, 'index.html'))},
+        native: ${JSON.stringify(join(app, 'native.html'))},
+        preview: "missing-preview.ts",
+      } } }
     }`)
     write(root, 'rsh/Programs/Web/application/dist/sentinel.txt', 'untouched')
 
-    expect(await browserBundledExternals(root)).toEqual(new Set(['shell-lib', 'lazy-lib', 'asset-lib']))
+    expect(await browserBundledExternals(root)).toEqual(new Set(['shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib']))
     expect(readFileSync(join(app, 'dist/sentinel.txt'), 'utf8')).toBe('untouched')
     expect(existsSync(join(app, 'dist/index.html'))).toBe(false)
+    expect(existsSync(join(app, 'dist/native.html'))).toBe(false)
     expect(existsSync(join(root, 'rsh/Programs/Web/client/static/lib'))).toBe(false)
   })
 

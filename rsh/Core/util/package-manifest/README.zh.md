@@ -45,6 +45,8 @@ const manifest: DshPackageManifest = {
 
 `DshPackageManifest` 描述 DSH 使用的 package.json 字段，其中 `name` 和 `version` 必填；它不是完整的 npm schema（模式）。本地 profile 读取方使用 `Partial<DshPackageManifest>`，因为 profile 无需发布版本。`DshManifest` 仅描述 `dsh` 下的公共作者字段。TypeScript 检查示例并删除 `import type`；这些接口不解析 JSON，也不写入文件。
 
+`dependencies`、`optionalDependencies` 和 `peerDependencies` 均为包名到版本范围的映射。本包不会检查这些包是否已安装；各 profile 加载器负责决定如何解析它们。
+
 以下元数据字段均可选。省略时，格式版本或兼容的宿主版本保持未声明状态；读取方不推断默认值。
 
 | 字段 | 含义 |

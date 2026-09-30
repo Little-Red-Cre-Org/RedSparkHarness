@@ -1,7 +1,7 @@
 /** Reversible native tool contributions consumed by a selected application. */
-import type { ContentBlock, ToolCallId, ToolSchema } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, ToolCallId, ToolSchema } from '@deepseek-ai/dsh-llm/native'
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { Session } from '@deepseek-ai/dsh-session/native'
 
 /** One model-requested tool invocation with its Session and cancellation. */
 export interface NativeToolExecution {

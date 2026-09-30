@@ -3,8 +3,8 @@
 import type { ContentBlock } from './types.ts'
 import type { Message } from './message.ts'
 import type {
-  AttachmentStore, FileAttachmentRef, ImageAttachmentRef, ImageMediaType, RequestImageAttachment,
-} from '@deepseek-ai/dsh-attachment'
+  AttachmentHostPathProvider, FileAttachmentRef, ImageAttachmentRef, ImageMediaType, RequestImageAttachment,
+} from '@deepseek-ai/dsh-attachment/types'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 
 /** Execution-world path that model tools can use to read one normalized attachment. */
@@ -31,7 +31,7 @@ export type ImageAttachmentAccessResolver = (ref: ImageAttachmentRef) => ImageAt
  * @throws an attachment error when the durable reference is invalid.
  */
 export function resolveImageAttachmentAccess(
-  attachments: AttachmentStore,
+  attachments: AttachmentHostPathProvider,
   mapHostPath: (hostPath: string) => string | undefined,
   ref: ImageAttachmentRef,
 ): ImageAttachmentAccess | undefined {

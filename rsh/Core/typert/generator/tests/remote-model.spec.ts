@@ -168,6 +168,26 @@ describe('Remote model generation', { timeout: 60_000 }, () => {
     assertRemoteConsumerTypechecks(artifact?.remote?.dts, artifact?.remote?.dtsMap)
   })
 
+  it('keeps the authored public type subpath when another export re-exports the same symbol', () => {
+    const root = copyFixture()
+    editFile(root, 'packages/domain/package.json', (source) => {
+      const manifest = JSON.parse(source) as {
+        exports: Record<string, string>
+      }
+      manifest.exports['./native'] = './src/native.ts'
+      return `${JSON.stringify(manifest, null, 2)}\n`
+    })
+    writeFileSync(
+      join(root, 'packages/domain/src/native.ts'),
+      "export type { AgentId } from './types.ts'\n",
+    )
+
+    const model = remotePackage(root)
+    expect(model.invocations[0]?.parameters[0]?.boundary).toMatchObject({
+      typeSymbol: '@fixture/domain/types#AgentId',
+    })
+  })
+
   it('projects authored optionality and absence onto consumers and codecs', async () => {
     const root = copyFixture()
     editFile(root, 'packages/remote/src/index.ts', source => source.replace(

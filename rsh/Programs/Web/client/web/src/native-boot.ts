@@ -15,6 +15,13 @@ export interface NativeClientRenderer {
   mount(container: HTMLElement, signal: AbortSignal): void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>
 }
 
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices {
+    /** Browser application renderer selected by the native Client composition. */
+    clientRenderer: NativeClientRenderer
+  }
+}
+
 /** Browser graph operations consumed by native installation. */
 export interface NativeClientModuleSource {
   readonly manifest: { readonly modules: readonly { readonly id: string }[] }
@@ -36,11 +43,25 @@ export interface NativeClientSelection {
   readonly config: unknown
 }
 
+/** Host-injected browser module graph and selections for one Client composition. */
+export interface NativeClientBootWire {
+  readonly formatVersion: 1
+  /** One ESM bundle containing every selected Client entry. */
+  readonly bundle: string
+  /** Stylesheets emitted while the Host bundled the selected entries. */
+  readonly styles: readonly string[]
+  /** Installation ids exported by `bundle.plugins`. */
+  readonly modules: readonly { readonly id: string }[]
+  readonly selections: readonly NativeClientSelection[]
+}
+
 /** Inputs for a browser composition; every selected id must be in the served graph. */
 export interface NativeClientBootOptions {
   readonly modules: NativeClientModuleSource
   readonly selections: readonly NativeClientSelection[]
   readonly container: HTMLElement
+  /** Skip activation after pending imports settle or stop the composition after it starts. */
+  readonly signal?: AbortSignal
 }
 
 function nativePlugin(value: unknown, id: string): NativePlugin {
@@ -68,7 +89,8 @@ function nativePlugin(value: unknown, id: string): NativePlugin {
  * @returns the active host; callers own and await `stop()` on navigation or shutdown.
  */
 export async function bootNativeClient(options: NativeClientBootOptions): Promise<NativeClientHost> {
-  const { modules, selections, container } = options
+  const { modules, selections, container, signal } = options
+  signal?.throwIfAborted()
   const graphIds = new Set(modules.manifest.modules.map(row => row.id))
   const seen = new Set<string>()
   for (const selection of selections) {
@@ -79,9 +101,12 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
   const scope = new NativeScope()
   const requests: InstallationRequest[] = []
   for (const selection of selections) {
+    signal?.throwIfAborted()
     const exports = await modules.import(selection.id, '', {})
+    signal?.throwIfAborted()
     requests.push({ plugin: nativePlugin(exports, selection.id), scope, config: selection.config })
   }
+  signal?.throwIfAborted()
   const mountPlugin: NativePlugin = {
     apiVersion: 1, name: 'native-client-mount', targets: ['client'],
     requires: ['clientRenderer'], provides: [],
@@ -91,7 +116,26 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
     },
   }
   requests.push({ plugin: mountPlugin, scope, config: undefined })
-  const host = new NativeHost(resolveInstallation(requests, 'client'))
-  await host.start()
-  return host
+  const runtime = new NativeHost(resolveInstallation(requests, 'client'))
+  let stopping: Promise<void> | undefined
+  const stop = (): Promise<void> => {
+    signal?.removeEventListener('abort', stopOnAbort)
+    return stopping ??= runtime.stop()
+  }
+  const stopOnAbort = (): void => { void stop().catch(() => undefined) }
+  const startup = runtime.start()
+  signal?.addEventListener('abort', stopOnAbort, { once: true })
+  if (signal?.aborted) stopOnAbort()
+  try {
+    await startup
+    if (signal?.aborted) {
+      await stop()
+      signal.throwIfAborted()
+    }
+  } catch (error) {
+    signal?.removeEventListener('abort', stopOnAbort)
+    await stopping?.catch(() => undefined)
+    throw error
+  }
+  return { stop, diagnostics: () => runtime.diagnostics() }
 }

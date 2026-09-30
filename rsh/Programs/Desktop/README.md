@@ -31,6 +31,12 @@ The local startup page exposes startup status and available recovery actions; th
 
 Electron chooses typed English or Chinese shell copy from its application locale and falls back to English. Menus, native dialogs, the startup page, and the plugin-management renderer use the same locale payload; the repository Client UI i18n gate checks these desktop sources.
 
+### Native Client preview
+
+The private Desktop Host can serve a separately selected native Client page at `/native.html`. An optional `rsh.client.json` in the desktop project root uses `formatVersion: 1` and an `installations` array; each row has a unique `id`, an installed package name in `plugin`, and optional JSON `config`. The Host resolves packages only from the project or bundled runtime, validates each exported `package.json.dsh.native` entry for the `client` target, and rejects browser graphs containing Cordis. It bundles the selected entries together and serves the JavaScript, styles, and emitted assets under `/.dsh/native-client/`.
+
+This preview does not select or replace the Host composition. Without `rsh.client.json`, `/native.html` returns 404 and `/` keeps the existing application. A configured profile that fails validation prevents Host startup; the default page will switch only after a production native renderer covers the supported UI and passes the profile acceptance checks.
+
 ### Runtime and plugin activation
 
 The signed `resources/dsh/desktop-runtime.json` binds the shell version, bundled Node version, platform, architecture, shared package versions, and final file inventory. Startup reads the metadata and checks shared package records. Release schema, shell version, target compatibility, and file integrity are verified during packaging. Core packages are never copied into profile storage or installed by pnpm at first launch.

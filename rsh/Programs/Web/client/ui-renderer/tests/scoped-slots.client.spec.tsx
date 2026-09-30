@@ -217,7 +217,7 @@ function makeHost() {
       const session = observable<unknown>(initial)
       const binding: ScopedStandardSourceBinding = {
         key: id,
-        ctx: scopeCtx,
+        lifetime: { identity: scopeCtx, onDispose: () => {} },
         hooks: { session },
         keyedHooks: {},
         props: { sessionId: id },
@@ -1134,7 +1134,7 @@ describe('session-maybe adoption identity', () => {
     expect(view.container.textContent).toBe('blank#1')
     const binding: ScopedStandardSourceBinding = {
       key: 'replacement',
-      ctx: new Context(),
+      lifetime: { identity: new Context(), onDispose: () => {} },
       hooks: { session: observable({ sid: 'replacement' }) },
       keyedHooks: {},
       props: { sessionId: 'replacement' },

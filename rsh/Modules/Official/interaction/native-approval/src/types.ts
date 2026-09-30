@@ -1,7 +1,7 @@
 /** Native approval identifiers, closed outcomes, and Session audit event data. */
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-session'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import type {} from '@deepseek-ai/dsh-session/native'
 
 /** Opaque identifier pairing one native approval request with its decision audit. */
 export type NativeApprovalRequestId = Branded<'NativeApprovalRequestId'>

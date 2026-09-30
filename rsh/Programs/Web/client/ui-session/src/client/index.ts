@@ -16,6 +16,7 @@ import type {
   MaybeSnapshotSelectorHook,
   RootStandardSourceContribution,
   ScopedStandardSourceBinding,
+  SlotScopeLifetime,
   SlotScopeAdapter,
   SnapshotSelectorHook,
   StandardSourceBinding,
@@ -416,7 +417,7 @@ export class UiSession extends Service {
     }
     const value: ScopedStandardSourceBinding = {
       key: binding.sessionId,
-      ctx: binding.ctx,
+      lifetime: cordisScopeLifetime(binding.ctx),
       hooks,
       keyedHooks,
       props,
@@ -436,6 +437,15 @@ export class UiSession extends Service {
       declareAbsent('prop', props, descriptor.props, finalProps)
     }
     return { key: undefined, hooks, keyedHooks, props }
+  }
+}
+
+function cordisScopeLifetime(ctx: Context): SlotScopeLifetime {
+  return {
+    identity: ctx,
+    onDispose: (dispose) => {
+      ctx.effect(() => () => { dispose() }, 'ui-session: slot scope lifetime')
+    },
   }
 }
 

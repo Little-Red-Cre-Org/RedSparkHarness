@@ -70,6 +70,9 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-errors": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "dependencies": {
     "@deepseek-ai/dsh-util-crypto": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",

@@ -45,6 +45,8 @@ const manifest: DshPackageManifest = {
 
 `DshPackageManifest` describes the package.json fields used by DSH, with required `name` and `version`; it is not an exhaustive npm schema. Local profile readers use `Partial<DshPackageManifest>` because profiles need no published version. `DshManifest` describes only public author fields under `dsh`. TypeScript checks the example and erases `import type`; these interfaces do not parse JSON or write a file.
 
+`dependencies`, `optionalDependencies`, and `peerDependencies` are package-name/version maps. This package does not check whether those packages are installed; each profile loader decides how to resolve them.
+
 The following metadata fields are optional. Omitting them leaves the format version or compatible host versions undeclared; readers do not infer defaults.
 
 | Field | Meaning |

@@ -26,7 +26,7 @@ Native headless now requires `agents`. It creates one child-scope Agent from eac
 
 ## Consequences
 
-Native profile rows install `@deepseek-ai/dsh-native-agent` before native headless. Its Host-only native entry does not import Cordis; the package retains the workspace's standard Cordis peer metadata for published-package compatibility. The registry does not replace the legacy Agent loop, durable Session, tool authorization, workflow, or client projections; those capabilities continue their explicit migration paths.
+Native profile rows install `@deepseek-ai/dsh-native-agent` before native headless. Its Host-only native entry does not import Cordis, and the package manifest omits a Cordis peer. The registry does not replace the legacy Agent loop, durable Session, tool authorization, workflow, or client projections; those capabilities continue their explicit migration paths.
 
 ## Verification
 

@@ -49,6 +49,9 @@
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "devDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",

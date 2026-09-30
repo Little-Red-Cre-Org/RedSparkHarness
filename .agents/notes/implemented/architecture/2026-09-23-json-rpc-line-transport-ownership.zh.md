@@ -24,7 +24,7 @@ Core 中的 `@deepseek-ai/dsh-json-rpc-line` 拥有既有传输实现及其行�
 
 ## Consequences
 
-SDK 客户端和服务端保留原有公开导入，并共用同一个传输类。Codex 适配器不再依赖 SDK 协议包。按照仓库现行规则，Core 包仍声明 Cordis peer 元数据，直到 P5 调整原生依赖策略；本次 P4 调整解决一条分层依赖，但不能证明已安装产物的无 Cordis 闭包。
+SDK 客户端和服务端保留原有公开导入，并共用同一个传输类。Codex 适配器不再依赖 SDK 协议包。按照 P5 原生包策略，Core `dsh-json-rpc-line` 包现在不声明 Cordis peer 元数据。本次 P4 调整解决一条分层依赖，但单个包的变化不能证明完整已安装产品闭包无 Cordis。
 
 ## Verification
 

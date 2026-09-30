@@ -102,7 +102,7 @@ function makeHost(
       // Bare source per binding (identity-stable): the machinery binds useSession from it.
       const binding: SessionBinding = {
         key: id,
-        ctx: scopeCtx,
+        lifetime: { identity: scopeCtx, onDispose: () => {} },
         hooks: { session: { getSnapshot: () => ({ sid: id }), subscribe: () => () => {} } },
         keyedHooks: {},
         props: { sessionId: id },

@@ -152,7 +152,7 @@ const POSTCONDITIONS: readonly PostCondition[] = [
   { file: 'rsh/Scripts/cordis-walk.ts', text: '!== \'@deepseek-ai/cordis\'', count: 1 },
   { file: 'rsh/Scripts/gen-scoped-events.ts', text: '=== \'@deepseek-ai/cordis\'', count: 1 },
   { file: 'rsh/Core/typert/generator/src/analyzer.ts', text: '!== \'@deepseek-ai/cordis\'', count: 2 },
-  { file: 'rsh/Scripts/check-workspace-constraints.ts', text: '?.[\'@deepseek-ai/cordis\']', count: 2 },
+  { file: 'rsh/Scripts/check-workspace-constraints.ts', text: '?.[\'@deepseek-ai/cordis\']', count: 5 },
   { file: 'rsh/Compatibility/DSH/boot/app-boot/tsdown.config.ts', text: '[\'@deepseek-ai/cordis-plugin-include\']', count: 1 },
   { file: 'tsconfig.base.json', text: '"@deepseek-ai/cordis-plugin-loader": ["./rsh/Core/vendor/loader/src"]', count: 1 },
   // The vendored README owns this required entry; reject its deletion or duplication.
@@ -188,15 +188,7 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     if (!dev) errors.push(\`\${label}: cordis must also be a devDependency\`)
     if (peer && dev && peer !== dev) {
       errors.push(\`\${label}: cordis peer (\${peer}) and dev (\${dev}) ranges must match\`)`,
-    replace: `    const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
-    const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
-
-    const native = nativePackageDirectories.has(dir)
-    if (native && (peer || dev)) errors.push(\`\${label}: native runtime must not depend on Cordis\`)
-    if (!native && !peer) errors.push(\`\${label}: @deepseek-ai/cordis must be a peerDependency\`)
-    if (!native && !dev) errors.push(\`\${label}: @deepseek-ai/cordis must also be a devDependency\`)
-    if (peer && dev && peer !== dev) {
-      errors.push(\`\${label}: @deepseek-ai/cordis peer (\${peer}) and dev (\${dev}) ranges must match\`)`,
+    replace: '    errors.push(...checkCordisPeerPolicy({ dir, manifest }))',
     expect: 1,
   },
   {
@@ -247,7 +239,7 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     id: 'root-agents-vendored-name-contract',
     file: 'AGENTS.md',
     find: 'vendored packages keep upstream names and are `private: true`. `cordis` is a peerDependency (+ dev) of every harness package.',
-    replace: 'vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. Harness packages carry `@deepseek-ai/cordis` as peerDependency (+ dev), except the explicit [native package roster](rsh/Scripts/native-package-policy.ts), whose source and manifest dependencies are checked by `verify-native-dependencies`.',
+    replace: 'vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. Cordis-free packages, mixed native/compatibility packages, and compatibility-only packages follow the explicit [native package policy](rsh/Scripts/native-package-policy.ts); `check-workspace-constraints` and `verify-native-dependencies` enforce their peer and source rules.',
     expect: 1,
   },
   {

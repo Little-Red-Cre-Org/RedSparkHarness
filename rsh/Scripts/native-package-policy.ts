@@ -1,16 +1,23 @@
-/** Explicit packages admitted to the Cordis-free native production graph. */
+/** Explicit Cordis-free source owners in the native production graph. */
 
-/** Source owners validated from both compiler faces by verify-native-dependencies. */
+/** Package sources validated from both compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Core/util/atomic-write',
   'rsh/Core/runtime-diagnostics/native-runtime',
   'rsh/Core/util/brand',
+  'rsh/Core/util/crypto',
   'rsh/Core/util/errors',
-])
-
-/** P4 native source owners checked before their P5 peer and artifact migration. */
-export const transitionalNativeSourceDirectories: ReadonlySet<string> = new Set([
+  'rsh/Core/util/home-paths',
   'rsh/Core/util/json-rpc-line',
   'rsh/Core/util/native-command',
+  'rsh/Core/util/output-retention',
+  'rsh/Core/util/timeout',
+  'rsh/Core/util/values',
+  'rsh/Engine/session/session-format',
+  'rsh/Engine/session/session-format-catalog',
+  'rsh/Engine/session/session-format-v0-to-v1',
+  'rsh/Engine/session/session-format-v1-to-v2',
+  'rsh/Engine/session/session-format-v2-to-v3',
   'rsh/Engine/context/native-time-context',
   'rsh/Engine/core/native-agent',
   'rsh/Engine/core/native-code-runtime',
@@ -22,9 +29,11 @@ export const transitionalNativeSourceDirectories: ReadonlySet<string> = new Set(
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
+  'rsh/Programs/Web/client/store',
+  'rsh/Programs/Web/client/ui-slots',
 ])
 
-/** Mixed legacy packages whose ./native source closure is checked by the P4 gate. */
+/** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
@@ -34,6 +43,20 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/fs/fs', ['host', 'client']],
+  ['rsh/Engine/llm/llm', ['host', 'client']],
+  ['rsh/Engine/core/session', ['host', 'client']],
+  ['rsh/Engine/session/session-persistence', ['host', 'client']],
+  ['rsh/Programs/Web/client/modules', ['client']],
+  ['rsh/Programs/Web/client/web', ['client']],
   ['rsh/Core/util/launch-environment', ['host', 'client']],
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
+])
+
+/** Additional Cordis-free exports shared by mixed packages' native entries. */
+export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/attachment/attachment', ['./types']],
+  ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
+  ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
+  ['rsh/Engine/core/session', ['./types']],
 ])

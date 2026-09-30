@@ -66,6 +66,10 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
 
   for (const file of workspaceManifestPaths(root)) {
     const manifest = readManifest(root, file)
+    // The private root manifest describes the repository's research license,
+    // not a published DSH package. Published workspace packages keep the MIT
+    // declaration enforced below.
+    if (file === 'package.json') continue
     const name = manifest.name
     if (typeof name !== 'string' || !DSH_PACKAGE_NAME.test(name)) continue
 

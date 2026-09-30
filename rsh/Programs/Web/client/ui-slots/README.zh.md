@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-client-ui-slots` 让 Web 客户端插件定义并组合带类型检查的 UI 区域。调用方可以通过一个在编译期检查的 API 添加组件、声明嵌套区域、附加作用域状态并提供业务 props。它支持单项、有序列表、键控和自行选择的 chain 组合，并会在插件加载期间报告冲突组合。需要与框架无关的 slot 组合时选择本包；客户端需要 React 渲染时与 `ui-renderer` 配合使用。
+`dsh-client-ui-slots` 让 Web 客户端插件定义并组合带类型检查的 UI 区域。调用方可以通过一个在编译期检查的 API 添加组件、声明嵌套区域、附加作用域状态并提供业务 props。它支持单项、有序列表、键控和自行选择的 chain 组合，并会在插件加载期间报告冲突组合。Slot 约定和作用域代际清理与运行时框架无关；客户端需要 React 渲染时与 `ui-renderer` 配合使用。
 
 ## 目录
 
@@ -55,7 +55,7 @@ register 调用可以用 `store: defineStore(...)` 声明 store 席位：`init` 
 
 ### 渲染器约定
 
-`renderer.ts` 携带安装约定（`SlotRenderer`、`SlotRendererHost`）以及 `StaleAuthorizationError`/`SlotOwnershipError`；ui-renderer 负责实现，并在其插件生命周期中完成安装。引擎产物与渲染器宿主约定携带裸快照 source（`getSnapshot`/`subscribe`），绝不携带 React 钩子——钩子绑定属于渲染机制。
+`renderer.ts` 携带安装约定（`SlotRenderer`、`SlotRendererHost`）、宿主中立的 `SlotScopeLifetime` 清理约定，以及 `StaleAuthorizationError`/`SlotOwnershipError`；ui-renderer 负责实现渲染器，并在其插件生命周期中完成安装。引擎产物与渲染器宿主约定携带裸快照 source（`getSnapshot`/`subscribe`），绝不携带 React 钩子——钩子绑定属于渲染机制。
 
 </details>
 
@@ -101,4 +101,4 @@ register 调用可以用 `store: defineStore(...)` 声明 store 席位：`init` 
 
 </details>
 
-**运行时不变式：** 不发布伴生入口。这是零依赖的纯注册表核心，本身不发出 Cordis 事件；`ui-renderer` SlotRegistry 负责事件桥及其不变式。本包的行为规范直接断言 define/register/dispose 的执行顺序。
+**运行时不变式：** 不发布伴生入口。这是无运行时依赖的纯注册表核心，本身不发出 Cordis 事件；`ui-renderer` SlotRegistry 负责事件桥及其不变式。本包的行为规范直接断言 define/register/dispose 的执行顺序。

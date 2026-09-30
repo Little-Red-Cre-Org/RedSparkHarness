@@ -3,6 +3,8 @@ import { isAbsolute, resolve } from 'node:path'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { JsonlSessionBackend, type Config } from './backend.ts'
 
+export { JsonlSessionBackend }
+
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     sessionPersistence: JsonlSessionBackend

@@ -16,7 +16,5 @@
     "./package.json": "./package.json"
   },
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
-  "license": "MIT",
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/cordis": "workspace:^" }
+  "license": "MIT"
 }

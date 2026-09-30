@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
 import ts from 'typescript'
-import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, transitionalNativeSourceDirectories } from './native-package-policy.ts'
+import {
+  mixedNativeEntryDirectories,
+  mixedNativeLibraryDirectories,
+  nativePackageDirectories,
+  nativeSafeSourceSubpaths,
+} from './native-package-policy.ts'
 import { collectNativeDependencyViolations, nativeSourceViolations } from './verify-native-dependencies.ts'
 
 const roots: string[] = []
@@ -19,7 +24,7 @@ function fixture(content: string, dependency?: string): string {
     writeFileSync(target, value)
   }
   const dir = 'rsh/Core/runtime-diagnostics/native-runtime'
-  for (const owner of new Set([...nativePackageDirectories, ...transitionalNativeSourceDirectories])) {
+  for (const owner of nativePackageDirectories) {
     if (owner === dir) continue
     write(`${owner}/package.json`, JSON.stringify({ name: `@deepseek-ai/dsh-${owner.split('/').at(-1)}` }))
     write(`${owner}/src/index.ts`, 'export {}')
@@ -43,16 +48,21 @@ function fixture(content: string, dependency?: string): string {
     },
     include: [...new Set([
       ...nativePackageDirectories,
-      ...transitionalNativeSourceDirectories,
       ...mixedNativeEntryDirectories.keys(),
       ...mixedNativeLibraryDirectories.keys(),
+      ...nativeSafeSourceSubpaths.keys(),
     ])]
       .map(owner => `${owner}/src/**/*.ts`),
   }))
   write('client.ts', 'export {}')
   write('tsconfig.client.json', JSON.stringify({
     compilerOptions: { noLib: true },
-    include: ['client.ts', ...[...mixedNativeLibraryDirectories.keys()].map(owner => `${owner}/src/**/*.ts`)],
+    include: ['client.ts', ...[...nativePackageDirectories]
+      .filter(owner => owner.startsWith('rsh/Programs/Web/client/'))
+      .map(owner => `${owner}/src/**/*.ts`), ...[
+      ...mixedNativeLibraryDirectories.keys(),
+      ...nativeSafeSourceSubpaths.keys(),
+    ].map(owner => `${owner}/src/**/*.ts`)],
   }))
   return root
 }
@@ -108,18 +118,46 @@ it.each([
   ['rsh/Engine/core/native-agent', 'const code = import(target)'],
   ['rsh/Engine/core/native-agent', 'import type { Missing } from "@deepseek-ai/dsh-missing"'],
   ['rsh/Core/util/json-rpc-line', 'import type { Agent } from "hidden-engine"'],
-])('rejects a transitional native source edge from %s: %s', (owner, content) => {
+])('rejects a strict native source edge from %s: %s', (owner, content) => {
   const root = fixture('export {}')
   writeFileSync(join(root, owner, 'src/index.ts'), content)
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('native source cannot'))
 })
 
-it('admits a transitional native local and Node built-in edge', () => {
+it('admits a strict native local and Node built-in edge', () => {
   const root = fixture('export {}')
   const owner = 'rsh/Engine/core/native-agent'
   writeFileSync(join(root, owner, 'src/index.ts'), 'import type { Local } from "./local.ts"\nimport type { Stats } from "node:fs"')
   writeFileSync(join(root, owner, 'src/local.ts'), 'export interface Local {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
+})
+
+it('accepts Client bundle inputs from devDependencies but rejects them from Host runtime sources', () => {
+  const root = fixture('export {}')
+  const storeDir = 'rsh/Programs/Web/client/store'
+  const hostDir = 'rsh/Engine/core/native-agent'
+  const packageRoot = join(root, 'node_modules', 'external')
+  mkdirSync(packageRoot, { recursive: true })
+  writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({ name: 'external', types: './index.d.ts' }))
+  writeFileSync(join(packageRoot, 'index.d.ts'), 'export interface Value {}')
+  writeFileSync(join(root, storeDir, 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh-client-store', devDependencies: { external: '*' },
+  }))
+  writeFileSync(join(root, storeDir, 'src/index.ts'), 'import type { Value } from "external"\nexport type StoreValue = Value')
+  writeFileSync(join(root, hostDir, 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh-native-agent', devDependencies: { external: '*' },
+  }))
+  writeFileSync(join(root, hostDir, 'src/index.ts'), 'import type { Value } from "external"\nexport type AgentValue = Value')
+  writeFileSync(join(root, 'tsconfig.client.json'), JSON.stringify({
+    compilerOptions: { noLib: true, moduleResolution: 'bundler', module: 'esnext' },
+    include: ['client.ts', `${storeDir}/src/**/*.ts`, `${storeDir.replace('/store', '/ui-slots')}/src/**/*.ts`],
+  }))
+
+  const violations = collectNativeDependencyViolations(root)
+  expect(violations.some(error => error.includes(
+    `${hostDir}/src/index.ts:0: native source cannot reference external`,
+  ))).toBe(true)
+  expect(violations.some(error => error.includes(`${storeDir}/src/index.ts`))).toBe(false)
 })
 
 it('requires each new Engine native entry to have a source-owner classification', () => {
@@ -160,6 +198,21 @@ it('checks a mixed native library export without an installer manifest', () => {
   writeFileSync(join(dir, 'src/native-types.ts'), 'export interface Credential {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/native-types.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Credential {}')
+  expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
+})
+
+it('checks a declared Cordis-free subpath in a mixed package', () => {
+  const root = fixture('export {}')
+  const dir = join(root, 'rsh/Modules/Official/attachment/attachment')
+  mkdirSync(join(dir, 'src'), { recursive: true })
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh-attachment',
+    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types.js' } },
+  }))
+  writeFileSync(join(dir, 'src/types.ts'), 'export type { Attachment } from "./safe.ts"')
+  writeFileSync(join(dir, 'src/safe.ts'), 'export interface Attachment {}')
+  expect(collectNativeDependencyViolations(root)).toEqual([])
+  writeFileSync(join(dir, 'src/safe.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Attachment {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
 })
 

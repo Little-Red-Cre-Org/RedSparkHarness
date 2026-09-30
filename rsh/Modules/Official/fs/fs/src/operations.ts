@@ -1,5 +1,5 @@
 /** Runtime-independent filesystem operations; adapters own service registration. */
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
+import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
 import type {
   FsDirEntry,
   FsEditOutcome,

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bundleManifestPaths,
   bundlePluginDependencyErrors,
+  cliPluginDependencyErrors,
   metadataExpressionErrors,
   packageTestFixtureDependencyErrors,
   packageTestPluginDependencyErrors,
@@ -89,6 +90,36 @@ describe('workspace Bundle discovery and product dependency closures', () => {
   })
 })
 
+describe('CLI optional compatibility dependencies', () => {
+  it('accepts configured plugins from optional dependencies and rejects absent ones', () => {
+    const file = 'rsh/Programs/CLI/config/default/cordis.yml'
+    const manifest = {
+      dependencies: { '@deepseek-ai/dsh-native-runtime': 'workspace:^' },
+      optionalDependencies: { '@deepseek-ai/dsh-hooks-codex': 'workspace:^' },
+    }
+    expect(cliPluginDependencyErrors([
+      { file, name: '@deepseek-ai/dsh-hooks-codex' },
+    ], manifest)).toEqual([])
+    expect(cliPluginDependencyErrors([
+      { file, name: '@deepseek-ai/dsh-missing' },
+    ], manifest)).toEqual([
+      `${file}: @deepseek-ai/dsh-missing must be declared in `
+      + 'rsh/Programs/CLI/package.json dependencies or optionalDependencies',
+    ])
+  })
+
+  it('accepts optional and development plugins in test-only compatibility fixtures', () => {
+    const file = 'rsh/Programs/CLI/tests/fixtures/cordis.yml'
+    expect(cliPluginDependencyErrors([
+      { file, name: '@deepseek-ai/dsh-hooks-codex' },
+      { file, name: '@deepseek-ai/dsh-test-plugin' },
+    ], {
+      optionalDependencies: { '@deepseek-ai/dsh-hooks-codex': 'workspace:^' },
+      devDependencies: { '@deepseek-ai/dsh-test-plugin': 'workspace:^' },
+    }, true)).toEqual([])
+  })
+})
+
 describe('package-owned Loader test dependency closures', () => {
   it('requires package test configs to declare each named plugin they load', () => {
     const manifestPath = 'rsh/example/owner/package.json'
@@ -105,7 +136,7 @@ describe('package-owned Loader test dependency closures', () => {
       { file, name: '@deepseek-ai/dsh-declared' },
       { file, name: '@deepseek-ai/dsh-missing' },
     ])).toEqual([
-      `${file}: @deepseek-ai/dsh-missing must be declared in ${manifestPath} dependencies or devDependencies`,
+      `${file}: @deepseek-ai/dsh-missing must be declared in ${manifestPath} dependencies, optionalDependencies or devDependencies`,
     ])
   })
 
@@ -135,7 +166,7 @@ describe('package-owned Loader test dependency closures', () => {
       expect(packageTestFixtureDependencyErrors(fixture)).toEqual([
         'rsh/example/owner/tests/fixtures/loader/driver.ts: '
         + '@deepseek-ai/dsh-missing must be declared in '
-        + 'rsh/example/owner/package.json dependencies or devDependencies',
+        + 'rsh/example/owner/package.json dependencies, optionalDependencies or devDependencies',
       ])
     } finally {
       rmSync(fixture, { recursive: true, force: true })

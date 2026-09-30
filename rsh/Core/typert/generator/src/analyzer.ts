@@ -1889,7 +1889,14 @@ class FaceAnalyzer {
     if (declaration === undefined) this.fail(site, `type ${symbol.name} has no declaration`)
     const registration = this.registrationForFile(declaration.getSourceFile().fileName)
     if (registration === undefined) this.fail(site, `type ${symbol.name} is not owned by a workspace package`)
-    const candidates: RemoteTypeImportModel[] = []
+    const candidates: { readonly model: RemoteTypeImportModel; readonly sourceFile: string }[] = []
+    const authoredSpecifier = ts.isTypeReferenceNode(site) || ts.isImportTypeNode(site)
+      ? moduleSpecifierOf(site)
+      : undefined
+    const authoredModule = authoredSpecifier === undefined ? undefined : moduleIdentity(authoredSpecifier)
+    const authoredSourceFile = authoredSpecifier === undefined || authoredModule !== undefined
+      ? undefined
+      : this.resolveImport(authoredSpecifier, site.getSourceFile().fileName)
     for (const [subpath, target] of packageExportTargets(registration.manifest)) {
       if ((subpath === '.' && !PUBLIC_REMOTE_TYPE_ROOTS.has(registration.name))
         || subpath === './package.json' || subpath === './typert'
@@ -1901,14 +1908,23 @@ class FaceAnalyzer {
       for (const exported of this.checker.getExportsOfModule(moduleSymbol)) {
         if (this.resolveSymbol(exported) !== symbol) continue
         candidates.push({
-          symbol: this.symbolId(symbol),
-          specifier: packageExportSpecifier(registration.name, subpath),
-          name: exported.name,
+          model: {
+            symbol: this.symbolId(symbol),
+            specifier: packageExportSpecifier(registration.name, subpath),
+            name: exported.name,
+          },
+          sourceFile: realPath(sourceFile.fileName),
         })
       }
     }
-    const selected = candidates.sort((left, right) =>
-      left.specifier.localeCompare(right.specifier) || left.name.localeCompare(right.name))[0]
+    // Preserve the authored public path so aliases of one declaration keep the same wire identity.
+    const authoredCandidate = candidates.find(candidate => authoredModule?.package === registration.name
+      && candidate.model.specifier === packageExportSpecifier(registration.name, authoredModule.subpath))
+      ?? candidates.find(candidate => authoredSourceFile !== undefined
+        && candidate.sourceFile === authoredSourceFile)
+    const selected = (authoredCandidate ?? candidates.sort((left, right) =>
+      left.model.specifier.localeCompare(right.model.specifier)
+      || left.model.name.localeCompare(right.model.name))[0])?.model
     if (selected === undefined) {
       this.fail(site, `Remote boundary type ${symbol.name} must be exported from a public non-root type subpath`)
     }

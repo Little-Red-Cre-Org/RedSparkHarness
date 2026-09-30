@@ -1,6 +1,6 @@
 /** Native tool-approval policy, answerer dispatch, and durable audit vocabulary. */
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import * as approvalTypes from './types.ts'
 
