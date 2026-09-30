@@ -8,9 +8,23 @@
 
 来源：[`rsh/Modules/Official/attachment/attachment/src/types.ts`](../../Modules/Official/attachment/attachment/src/types.ts)
 
+`./types` 导出不依赖 Cordis。原生消费方只需要提供方拥有的图片路径时使用 `AttachmentHostPathProvider`；包根导出仍是 Cordis `AttachmentStore` 服务。
+
 ## 标识与经过校验的元数据
 
 `AttachmentId` 是带类型标记的不透明字符串。本地后端目前生成 `sha256:<digest>`，但消费方既不能解析这种表示，也不能据此派生文件系统路径。消费方可以通过 `imageHostPath()` 询问附件提供方所持对象的位置，然后必须由当前执行文件系统判断模型工具能否读取该宿主路径。
+
+```ts type-equiv
+/** Provider-owned image-path lookup shared by native and Cordis consumers. */
+interface AttachmentHostPathProvider {
+  /**
+   * Resolve one durable image reference to its implementation-owned host path.
+   * @param ref - immutable stored image reference.
+   * @returns the host path, or undefined when the provider cannot expose it.
+   */
+  imageHostPath(ref: ImageAttachmentRef): string | undefined
+}
+```
 
 ```ts type-equiv
 /** Raster image formats accepted by the version-one attachment path. */

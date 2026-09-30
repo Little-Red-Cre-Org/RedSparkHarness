@@ -24,7 +24,7 @@ The transport continues to own line framing, request correlation, error response
 
 ## Consequences
 
-The SDK client and server keep their public import and one shared transport class. The Codex adapter no longer depends on the SDK protocol package. The Core package still declares the repository's required Cordis peer metadata until the P5 native dependency policy changes; this P4 move resolves a layering edge but does not prove an installed Cordis-free closure.
+The SDK client and server keep their public import and one shared transport class. The Codex adapter no longer depends on the SDK protocol package. The Core `dsh-json-rpc-line` package now omits Cordis peer metadata under the P5 native package policy. This P4 move resolves a layering edge, but the package-level change alone does not prove a complete installed product closure.
 
 ## Verification
 

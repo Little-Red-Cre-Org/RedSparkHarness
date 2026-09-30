@@ -462,7 +462,11 @@ function readModuleFallbackManifest(anchor: string): ProfileManifest {
 
 /** Return dependency names that may be imported by a loader-visible plugin. */
 function profileDependencyNames(manifest: ProfileManifest): string[] {
-  return [...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]
+  return [
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+  ]
 }
 
 /** Resolve the installation generation that every profile must find through the fallback directory. */

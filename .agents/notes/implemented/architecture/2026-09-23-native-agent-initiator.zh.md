@@ -26,7 +26,7 @@ Status: implemented
 
 ## Consequences
 
-原生 profile 行会在原生 headless 前安装 `@deepseek-ai/dsh-native-agent`。它的仅 Host 原生入口不导入 Cordis；该包保留工作区标准的 Cordis peer 元数据，以兼容已发布包。注册表不替代旧 Agent loop、持久化 Session、工具授权、workflow 或 Client projection；这些能力继续沿各自显式迁移路径推进。
+原生 profile 行会在原生 headless 前安装 `@deepseek-ai/dsh-native-agent`。它的仅 Host 原生入口不导入 Cordis，manifest 也不声明 Cordis peer。注册表不替代旧 Agent loop、持久化 Session、工具授权、workflow 或 Client projection；这些能力继续沿各自显式迁移路径推进。
 
 ## Verification
 

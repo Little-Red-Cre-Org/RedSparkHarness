@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-22-native-headless-profile-composition.md
-2026-09-22-native-headless-profile-composition.md: e0a89793b786f948c72c6de354a159c74da56826
-2026-09-22-native-headless-profile-composition.zh.md: 5edb08670dc68bae2f48390586f0ad88eb3cbcff
+2026-09-22-native-headless-profile-composition.md: 2de513350034bc22b48b5162fe9adfe44cc0fa22
+2026-09-22-native-headless-profile-composition.zh.md: 4b71adc5f95f31f7876972f87e7203c1298e4a98

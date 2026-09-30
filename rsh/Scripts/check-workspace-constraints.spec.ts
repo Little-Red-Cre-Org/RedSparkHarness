@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   checkDshFamilyVersion,
+  checkCordisPeerPolicy,
   collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
@@ -215,6 +216,71 @@ describe('dsh family version coherence', () => {
   })
 })
 
+describe('Cordis peer classification', () => {
+  it('requires Cordis for compatibility-only packages', () => {
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Engine/core/agent-loop',
+      manifest: {
+        name: '@deepseek-ai/dsh-agent-loop',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Engine/core/agent-loop',
+      manifest: {
+        name: '@deepseek-ai/dsh-agent-loop',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toContain('@deepseek-ai/dsh-agent-loop: compatibility package must keep the Cordis peer required')
+  })
+
+  it('permits Cordis-free strict native packages', () => {
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Engine/core/native-agent',
+      manifest: { name: '@deepseek-ai/dsh-native-agent' },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Engine/core/native-agent',
+      manifest: {
+        name: '@deepseek-ai/dsh-native-agent',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toContain('@deepseek-ai/dsh-native-agent: native runtime must not declare Cordis dependencies')
+  })
+
+  it('requires optional Cordis peers for mixed native packages', () => {
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Modules/Official/fs/fs-local',
+      manifest: {
+        name: '@deepseek-ai/dsh-fs-local',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Programs/Web/client/web',
+      manifest: {
+        name: '@deepseek-ai/dsh-client-web',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Modules/Official/fs/fs-local',
+      manifest: {
+        name: '@deepseek-ai/dsh-fs-local',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toContain('@deepseek-ai/dsh-fs-local: mixed native package must mark the Cordis peer as optional')
+  })
+})
+
 describe('package payload constraints', () => {
   it('includes a runtime adapter exported as a separate bundle', () => {
     expect(expectedDshPackageFiles({
@@ -257,6 +323,12 @@ describe('package payload constraints', () => {
       'lib/index.js',
       ...extras,
       'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('includes the Cordis-free sandbox policy type entry in the package', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
+      'lib/index.js', 'lib/native-types.js', 'lib/types/**/*.d.ts',
     ])
   })
 })

@@ -48,6 +48,9 @@
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "dependencies": {
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session-format": "workspace:^",

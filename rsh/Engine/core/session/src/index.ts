@@ -65,6 +65,11 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertLookupMap {
     session: TypertLookup<Session, SessionId>
   }
+
+  interface RemoteErrorDetailsMap {
+    /** The named Session does not exist; produced by every layer that resolves a SessionId. */
+    'session/not-found': { readonly sessionId: SessionId }
+  }
 }
 
 type SessionCallback = (...args: unknown[]) => unknown

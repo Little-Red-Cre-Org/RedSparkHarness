@@ -507,7 +507,18 @@
       "@deepseek-ai/dsh-workflow/invariant": ["./rsh/Engine/workflow/workflow/src/invariant.ts"],
       "@deepseek-ai/dsh-workflow-worker-thread": ["./rsh/Engine/workflow/workflow-worker-thread/src"],
       "@deepseek-ai/dsh-workspace": ["./rsh/Modules/Official/workspace/workspace/src"],
-      "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"]
+      "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
+      "@deepseek-ai/dsh-client-web/native": ["./rsh/Programs/Web/client/web/src/native-boot.ts"],
+      "@deepseek-ai/dsh-compat-fs-local/native": ["./rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts"],
+      "@deepseek-ai/dsh-compat-fs-policy/native": ["./rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts"],
+      "@deepseek-ai/dsh-compat-fs-sandbox/native": ["./rsh/Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts"],
+      "@deepseek-ai/dsh-compat-tool-fs/native": ["./rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts"],
+      "@deepseek-ai/dsh-credentials-local/native": ["./rsh/Modules/Official/credentials/credentials-local/src/native.ts"],
+      "@deepseek-ai/dsh-credentials/native": ["./rsh/Modules/Official/credentials/credentials/src/native.ts"],
+      "@deepseek-ai/dsh-launch-environment/native": ["./rsh/Core/util/launch-environment/src/native.ts"],
+      "@deepseek-ai/dsh-native-prompt/native": ["./rsh/Engine/core/native-prompt/src/index.ts"],
+      "@deepseek-ai/dsh-native-sandbox-policy/native": ["./rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts"],
+      "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"]
       // END generated package aliases
     }
   }

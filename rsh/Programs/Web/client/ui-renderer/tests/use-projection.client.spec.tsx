@@ -56,7 +56,7 @@ function makeHost() {
     if (cached !== undefined) return cached
     const value: SessionBinding = {
       key: id,
-      ctx: scopeCtx,
+      lifetime: { identity: scopeCtx, onDispose: () => {} },
       hooks: { session: { getSnapshot: () => ({ sid: id }), subscribe: () => () => {} } },
       keyedHooks: { projection: key => cells.get(key) ?? absent },
       props: { sessionId: id },

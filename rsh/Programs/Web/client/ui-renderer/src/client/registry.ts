@@ -97,7 +97,7 @@ export class SlotRegistry extends Service {
   /** Store-instance axis: handle -> mounted scope, refcount, resolved instances. */
   private readonly _stores = new Map<EngineStoreHandle, StoreAxisRecord>()
   /** Latest live Context generation for each scoped store key. */
-  private readonly _storeScopeOwners = new Map<string, Context>()
+  private readonly _storeScopeOwners = new Map<string, object>()
   private _renderer: SlotRenderer | undefined
   private _locale: LocaleFace | undefined
   private _host: SlotRendererHost | undefined
@@ -323,15 +323,15 @@ export class SlotRegistry extends Service {
    *
    * @param binding - materialized scope identity and its owning Context.
    */
-  bindStoreScope(binding: Pick<ScopedStandardSourceBinding, 'key' | 'ctx'>): void {
+  bindStoreScope(binding: Pick<ScopedStandardSourceBinding, 'key' | 'lifetime'>): void {
     const current = this._storeScopeOwners.get(binding.key)
-    if (current === binding.ctx) return
-    this._storeScopeOwners.set(binding.key, binding.ctx)
-    binding.ctx.effect(() => () => {
-      if (this._storeScopeOwners.get(binding.key) !== binding.ctx) return
+    if (current === binding.lifetime.identity) return
+    this._storeScopeOwners.set(binding.key, binding.lifetime.identity)
+    binding.lifetime.onDispose(() => {
+      if (this._storeScopeOwners.get(binding.key) !== binding.lifetime.identity) return
       this._storeScopeOwners.delete(binding.key)
       this.clearStoreScope(binding.key)
-    }, `slots: store scope ${binding.key}`)
+    })
   }
 
   /**

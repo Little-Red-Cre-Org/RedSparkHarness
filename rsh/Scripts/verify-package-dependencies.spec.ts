@@ -8,6 +8,7 @@ import {
 } from './package-dependency-policy.ts'
 import {
   collectHostDependencyExportPolicyViolations,
+  collectClientRuntimeDependencyPolicyViolations,
   collectPackageDependencyViolations,
   collectRuntimeSourceExportUses,
   discoverPackageDependencyScope,
@@ -46,10 +47,12 @@ function pkg(
 
 function policy(fields: Partial<PackageDependencyPolicy> = {}): PackageDependencyPolicy {
   return {
+    cordisFreePackageDirectories: new Set(),
     clientFaceInclude: [],
     clientFaceExclude: [],
     hostPackages: [],
     configurationOnlyDevDependencies: {},
+    clientRuntimeDependencies: {},
     safeHostDependencyExports: {},
     peerRequiredHostExports: {},
     ...fields,
@@ -60,6 +63,7 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
   return {
     manifestPath: 'rsh/Engine/core/probe/package.json',
     role: 'configured-host',
+    cordisPeerRequired: true,
     manifest,
     workspaceNames: new Set([
       CORDIS,
@@ -86,6 +90,7 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
     }],
     peerRequiredHostDependencies: new Set(),
     configurationOnlyDevDependencies: new Set(),
+    clientRuntimeDependencies: new Set(),
     clientInject: new Set(),
   }
 }
@@ -94,6 +99,7 @@ function sourceFacts(
   files: Readonly<Record<string, string>>,
   manifest: Partial<PackageDependencyManifest> = {},
   role: PackageDependencyRole = 'client-host',
+  dependencyPolicy: PackageDependencyPolicy = policy(),
 ): PackageDependencyFacts {
   const root = mkdtempSync(join(tmpdir(), 'dsh-dependency-source-'))
   roots.push(root)
@@ -103,7 +109,7 @@ function sourceFacts(
     mkdirSync(dirname(absolute), { recursive: true })
     writeFileSync(absolute, source)
   }
-  return readPackageDependencyFacts(root, subject, role, new Set([CORDIS, subject.name]), policy())
+  return readPackageDependencyFacts(root, subject, role, new Set([CORDIS, subject.name]), dependencyPolicy)
 }
 
 function generatedHostFixture(mode: 'schema' | 'object'): { root: string; manifestPath: string; source: string } {
@@ -160,6 +166,7 @@ function hostRuntimeFixture(): {
   const consumerFacts: PackageDependencyFacts = {
     manifestPath: consumer.manifestPath,
     role: 'configured-host',
+    cordisPeerRequired: true,
     manifest: consumer.manifest,
     workspaceNames,
     allSourceUses: new Map(),
@@ -175,6 +182,7 @@ function hostRuntimeFixture(): {
     }],
     peerRequiredHostDependencies: new Set(),
     configurationOnlyDevDependencies: new Set(),
+    clientRuntimeDependencies: new Set(),
     clientInject: new Set(),
   }
   return { provider, workspaceNames, consumerFacts }
@@ -201,6 +209,9 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-subagent': ['@deepseek-ai/dsh-client-ui-input-trigger'],
       '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-api-remotes'],
       '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
+    })
+    expect(PACKAGE_DEPENDENCY_POLICY.clientRuntimeDependencies).toEqual({
+      '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
@@ -441,6 +452,44 @@ describe('face-aware source classification', () => {
     expect(expected.get('shared-runtime')?.section).toBe('dependencies')
   })
 
+  it('omits Cordis from the native Client foundations and removes stale Cordis declarations', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cordis-free-client-'))
+    roots.push(root)
+    const packages = [
+      ['@deepseek-ai/dsh-client-store', 'rsh/Programs/Web/client/store'],
+      ['@deepseek-ai/dsh-client-ui-slots', 'rsh/Programs/Web/client/ui-slots'],
+    ] as const
+
+    for (const [name, directory] of packages) {
+      expect(PACKAGE_DEPENDENCY_POLICY.cordisFreePackageDirectories.has(directory)).toBe(true)
+      const manifest: PackageDependencyManifest = {
+        name,
+        devDependencies: { [CORDIS]: 'workspace:^' },
+        peerDependencies: { [CORDIS]: 'workspace:^' },
+      }
+      const subject = pkg(name, `${directory}/package.json`, manifest)
+      const sourcePath = join(root, directory, 'src', 'index.ts')
+      mkdirSync(dirname(sourcePath), { recursive: true })
+      writeFileSync(sourcePath, 'export {}\n')
+      const found = readPackageDependencyFacts(
+        root, subject, 'client-only', new Set([CORDIS, name]), PACKAGE_DEPENDENCY_POLICY,
+      )
+      const state = {
+        facts: [found], packages: [], policyViolations: [], workspaceNames: found.workspaceNames,
+      }
+
+      expect(found.cordisPeerRequired).toBe(false)
+      expect(expectedPackageDependencies(found).has(CORDIS)).toBe(false)
+      expect(collectPackageDependencyViolations(state)).toContain(
+        `${directory}/package.json: ${CORDIS} is forbidden for a Cordis-free package`,
+      )
+      repairPackageDependencyManifest(found)
+      expect(found.manifest.devDependencies).toBeUndefined()
+      expect(found.manifest.peerDependencies).toBeUndefined()
+      expect(collectPackageDependencyViolations(state)).toEqual([])
+    }
+  })
+
   it('uses declared DefinitelyTyped providers only for erased source references', () => {
     const subject = sourceFacts({
       'src/index.ts': "import type { ReactNode } from 'react'",
@@ -637,6 +686,34 @@ describe('face-aware source classification', () => {
 })
 
 describe('dependency sections', () => {
+  it('keeps reviewed third-party Client library imports as production dependencies', () => {
+    const runtimePolicy = policy({ clientRuntimeDependencies: { '@f/probe': ['immer', 'zustand'] } })
+    const subject = sourceFacts({
+      'src/index.ts': "import 'immer'\nimport 'zustand/vanilla'",
+    }, {
+      dependencies: { immer: '^10.1.1', zustand: '~4.4.7' },
+      devDependencies: { [CORDIS]: 'workspace:^' },
+      peerDependencies: { [CORDIS]: 'workspace:^' },
+    }, 'client-only', runtimePolicy)
+    const state = {
+      facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames,
+    }
+
+    const expected = expectedPackageDependencies(subject)
+    expect(expected.get('immer')?.section).toBe('dependencies')
+    expect(expected.get('zustand')?.section).toBe('dependencies')
+    expect(collectClientRuntimeDependencyPolicyViolations(
+      [subject], subject.workspaceNames, runtimePolicy,
+    )).toEqual([])
+    expect(collectPackageDependencyViolations(state)).toEqual([])
+    repairPackageDependencyManifest(subject)
+    expect(subject.manifest.dependencies).toEqual({ immer: '^10.1.1', zustand: '~4.4.7' })
+
+    expect(collectClientRuntimeDependencyPolicyViolations(
+      [subject], subject.workspaceNames, policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
+    )).toEqual(['clientRuntimeDependencies lists unused @f/probe dependency missing'])
+  })
+
   it.each(['client-only', 'client-host'] as const)('moves unused third-party and CSS inputs to development dependencies for %s', (role) => {
     const subject = sourceFacts({
       'src/index.ts': "import 'host-runtime'",

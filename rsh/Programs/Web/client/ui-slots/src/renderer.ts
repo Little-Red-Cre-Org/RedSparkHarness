@@ -1,5 +1,4 @@
 /** React-free contracts between the slot host and an installed renderer. */
-import type { Context } from '@deepseek-ai/cordis'
 import type { ReactNode } from 'react'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {
@@ -83,7 +82,15 @@ export interface StandardSourceBinding {
 /** Materialized binding for one live non-root scope. */
 export interface ScopedStandardSourceBinding extends StandardSourceBinding {
   readonly key: string
-  readonly ctx: Context
+  readonly lifetime: SlotScopeLifetime
+}
+
+/** Scope-generation cleanup supplied by the active Client runtime. */
+export interface SlotScopeLifetime {
+  /** Stable identity for this active scope generation. */
+  readonly identity: object
+  /** Register cleanup that runs when this scope generation ends. */
+  onDispose(dispose: () => void): void
 }
 
 /** One installed source of bindings for a non-root Slot scope. */

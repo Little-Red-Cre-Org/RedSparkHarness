@@ -24,7 +24,7 @@ The native headless application owns a minimal one-turn agent over native filesy
 
 ## Consequences
 
-The public CLI can run a native profile with real file effects and released Session data while keeping Cordis profile behavior intact. The application remains narrower than the Cordis headless composition: its approval, code-runtime, prompt, time-context, sandbox-policy, and general tool-registry integrations are optional native services, and SDK and Web surfaces remain outside this composition. The native headless application, model-execution, time-context, Session, and JSONL entries load without Cordis; their packages still publish legacy root entries and mandatory Cordis peers. The [migration proposal](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md) tracks the remaining dependency work.
+The public CLI can run a native profile with real file effects and released Session data while keeping Cordis profile behavior intact. The application remains narrower than the Cordis headless composition: its approval, code-runtime, prompt, time-context, sandbox-policy, and general tool-registry integrations are optional native services, and SDK and Web surfaces remain outside this composition. The native headless application, model-execution, and time-context packages omit Cordis peers; the mixed Session and JSONL packages retain optional Cordis peers for their legacy root entries while their native exports load without Cordis. The [migration proposal](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md) tracks the remaining dependency work.
 
 ## Verification
 

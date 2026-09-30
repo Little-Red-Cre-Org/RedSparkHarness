@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-22-native-runtime-foundation.md
-2026-09-22-native-runtime-foundation.md: a7498abb0c93faaa75a50c70f72006f774707c70
-2026-09-22-native-runtime-foundation.zh.md: eed0431f504634e7b36dcfebe7ef151c5f96ed19
+2026-09-22-native-runtime-foundation.md: 5015b36e923a19ff7c83c2b8b9f54e64ae0a3667
+2026-09-22-native-runtime-foundation.zh.md: d8da73c149ef5da1fd23221e5c27c07ac2691c3e

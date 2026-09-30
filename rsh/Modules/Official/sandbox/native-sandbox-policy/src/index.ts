@@ -1,7 +1,7 @@
 /** Native filesystem policy resolved for the calling Session. */
 import { isAbsolute, resolve } from 'node:path'
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
+import type { Session } from '@deepseek-ai/dsh-session/native'
 
 /** Required deployment choices; the bridge never falls back to bare local storage. */
 export interface Config {

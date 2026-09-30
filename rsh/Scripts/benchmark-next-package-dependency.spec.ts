@@ -56,6 +56,7 @@ describe('next package benchmark graph', () => {
     const facts: PackageDependencyFacts = {
       manifestPath: 'rsh/g/probe/package.json',
       role: 'configured-host',
+      cordisPeerRequired: true,
       manifest,
       workspaceNames: new Set(['@deepseek-ai/cordis', '@f/probe', '@f/runtime', '@f/types']),
       allSourceUses: new Map([
@@ -74,6 +75,7 @@ describe('next package benchmark graph', () => {
       }],
       peerRequiredHostDependencies: new Set(),
       configurationOnlyDevDependencies: new Set(),
+      clientRuntimeDependencies: new Set(),
       clientInject: new Set(),
     }
     const index = new Map<string, Map<string, MutableRegistryManifest>>([

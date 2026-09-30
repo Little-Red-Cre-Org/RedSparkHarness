@@ -26,7 +26,7 @@ import {
   type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
 } from '@deepseek-ai/dsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import type { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 
 /** Explicit headless request and workspace policy. */
 export interface Config {
@@ -253,7 +253,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       }
       await persist()
       track(session.append('turn/start', { turn }))
-      let reason: import('@deepseek-ai/dsh-session').TurnEndReason = { kind: 'completed' }
+      let reason: import('@deepseek-ai/dsh-session/native').TurnEndReason = { kind: 'completed' }
       try {
         for (let step = 1; step <= this.config.maxSteps; step++) {
           signal.throwIfAborted()

@@ -8,9 +8,23 @@ Unsent browser drafts may stay in memory and native clients may stage them in op
 
 Source: [`rsh/Modules/Official/attachment/attachment/src/types.ts`](../../Modules/Official/attachment/attachment/src/types.ts)
 
+The `./types` export is Cordis-free. Native consumers use `AttachmentHostPathProvider` when they need only the provider-owned image path; the root export remains the Cordis `AttachmentStore` service.
+
 ## Identity and verified metadata
 
 `AttachmentId` is a branded opaque string. The local backend currently emits `sha256:<digest>`, but consumers must neither parse that representation nor derive a filesystem path from it. A consumer may ask the attachment provider for its object location through `imageHostPath()`, then must use the current execution filesystem to decide whether model tools can read that host path.
+
+```ts type-equiv
+/** Provider-owned image-path lookup shared by native and Cordis consumers. */
+interface AttachmentHostPathProvider {
+  /**
+   * Resolve one durable image reference to its implementation-owned host path.
+   * @param ref - immutable stored image reference.
+   * @returns the host path, or undefined when the provider cannot expose it.
+   */
+  imageHostPath(ref: ImageAttachmentRef): string | undefined
+}
+```
 
 ```ts type-equiv
 /** Raster image formats accepted by the version-one attachment path. */

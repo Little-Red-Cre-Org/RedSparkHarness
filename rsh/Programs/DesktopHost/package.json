@@ -19,10 +19,15 @@
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-client-modules": "workspace:^",
     "@deepseek-ai/dsh-client-ui-directory-picker-native": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-cmdline": "workspace:^",
     "@deepseek-ai/dsh-host-directory-picker-native": "workspace:^",
     "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-web-frontend": "workspace:^"
+    "@deepseek-ai/dsh-web-frontend": "workspace:^",
+    "esbuild": "^0.28.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-client-web": "workspace:^"
   }
 }

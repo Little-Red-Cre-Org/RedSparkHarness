@@ -105,7 +105,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.effect(() => () => detached.drain(), 'hooks-codex: drain detached hook runs')
 
   /**
-   * Run and fold one configured Codex hook point.
+ * Run and fold one configured Codex hook point.
    *
    * A supplied turn records the hook invocation/result pair inside that open turn.
    * Detached lifecycle points omit it.

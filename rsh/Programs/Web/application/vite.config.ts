@@ -156,6 +156,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: src('./index.html'),
+        native: src('./native.html'),
         // Standalone entry, not an index.html script tag: Vite folds every
         // module tag of one page into a single synthetic entry, and only a
         // separate input keeps the shared page chunks bootstrap-free.

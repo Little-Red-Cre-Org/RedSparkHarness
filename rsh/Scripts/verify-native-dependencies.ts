@@ -4,7 +4,12 @@ import { isAbsolute, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
-import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, transitionalNativeSourceDirectories } from './native-package-policy.ts'
+import {
+  mixedNativeEntryDirectories,
+  mixedNativeLibraryDirectories,
+  nativePackageDirectories,
+  nativeSafeSourceSubpaths,
+} from './native-package-policy.ts'
 import { TypeScriptProject } from './ts-project.ts'
 
 /**
@@ -116,17 +121,6 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const path = relative(root, file).replaceAll('\\', '/')
     return [...directories].find(dir => path.startsWith(`${dir}/src/`))
   }
-  const transitionAllows = (sourceOwner: string, sourceFile: string, specifier: string, options: ts.CompilerOptions): boolean => {
-    if (specifier.startsWith('node:')) return true
-    if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
-    const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
-    if (resolved === undefined) return false
-    const target = relative(root, resolved.resolvedFileName).replaceAll('\\', '/')
-    if (target.startsWith('rsh/Core/vendor/cordis/') || target.startsWith('rsh/Compatibility/')
-      || target.startsWith('rsh/Programs/')) return false
-    if (sourceOwner.startsWith('rsh/Core/') && target.startsWith('rsh/') && !target.startsWith('rsh/Core/')) return false
-    return true
-  }
   const names = new Set<string>()
   for (const file of globSync('rsh/**/package.json', { cwd: root })) {
     const dir = file.replaceAll('\\', '/').replace(/\/package\.json$/, '')
@@ -134,8 +128,9 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const dsh = manifest.dsh
     if (dsh === null || typeof dsh !== 'object' || Array.isArray(dsh) || !Object.hasOwn(dsh, 'native')) continue
     if ((dir.startsWith('rsh/Core/') || dir.startsWith('rsh/Engine/') || dir.startsWith('rsh/Modules/'))
-      && !nativePackageDirectories.has(dir) && !transitionalNativeSourceDirectories.has(dir)
-      && !mixedNativeEntryDirectories.has(dir) && !mixedNativeLibraryDirectories.has(dir)) {
+      && !nativePackageDirectories.has(dir)
+      && !mixedNativeEntryDirectories.has(dir) && !mixedNativeLibraryDirectories.has(dir)
+      && !nativeSafeSourceSubpaths.has(dir)) {
       errors.add(`${dir}: native entry source owner is not classified`)
     }
     try {
@@ -160,7 +155,24 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const exports = manifest.exports as Record<string, unknown> | undefined
     if (exports === undefined || exportSource(resolve(root, dir), './native', exports) === undefined) {
       errors.add(`${dir}: classified mixed library has no valid native export`)
+    } else if (typeof manifest.name === 'string') {
+      names.add(manifest.name)
     }
+  }
+  for (const [dir, entries] of nativeSafeSourceSubpaths) {
+    if (!existsSync(resolve(root, dir, 'package.json'))) continue
+    const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
+    const exports = manifest.exports as Record<string, unknown> | undefined
+    for (const entry of entries) {
+      if (exports === undefined || exportSource(resolve(root, dir), entry, exports) === undefined) {
+        errors.add(`${dir}: classified safe subpath ${entry} has no valid source export`)
+      } else if (typeof manifest.name === 'string') {
+        names.add(manifest.name)
+      }
+    }
+  }
+  for (const [, mixed] of mixedEntries) {
+    if (typeof mixed.manifest.name === 'string') names.add(mixed.manifest.name)
   }
   for (const dir of nativePackageDirectories) {
     const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as { name: string }
@@ -170,43 +182,142 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
     for (const field of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
       for (const name of Object.keys(manifest[field] as Record<string, unknown> | undefined ?? {})) {
-        if (!names.has(name)) errors.add(`${dir}: ${field}.${name} is outside the admitted native graph`)
+        if (name === '@deepseek-ai/cordis' || name.startsWith('@deepseek-ai/cordis-')
+          || (name.startsWith('@deepseek-ai/dsh-') && !names.has(name))) {
+          errors.add(`${dir}: ${field}.${name} is outside the admitted native graph`)
+        }
       }
     }
   }
   for (const face of ['host', 'client'] as const) {
     const project = new TypeScriptProject(root, face)
     const options = project.program.getCompilerOptions()
+    const nativeOwner = (file: string): string | undefined => {
+      const owner = ownerOf(file, nativePackageDirectories)
+      return face === 'host' && owner?.startsWith('rsh/Programs/Web/client/') ? undefined : owner
+    }
+    const mixedOwner = (file: string): string | undefined => {
+      const path = relative(root, file).replaceAll('\\', '/')
+      return [...mixedNativeEntryDirectories.keys(), ...mixedNativeLibraryDirectories.keys(), ...nativeSafeSourceSubpaths.keys()]
+        .find(dir => path.startsWith(`${dir}/src/`))
+    }
+    const mixedNativeExportSpecifiers = new Map<string, string>()
+    for (const [dir, mixed] of mixedEntries) {
+      const name = mixed.manifest.name
+      if (typeof name === 'string') mixedNativeExportSpecifiers.set(`${name}${mixed.entry.slice(1)}`, dir)
+    }
+    for (const dir of mixedNativeLibraryDirectories.keys()) {
+      if (!existsSync(resolve(root, dir, 'package.json'))) continue
+      const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
+      if (typeof manifest.name === 'string') mixedNativeExportSpecifiers.set(`${manifest.name}/native`, dir)
+    }
+    for (const [dir, entries] of nativeSafeSourceSubpaths) {
+      if (!existsSync(resolve(root, dir, 'package.json'))) continue
+      const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
+      if (typeof manifest.name !== 'string') continue
+      for (const entry of entries) mixedNativeExportSpecifiers.set(`${manifest.name}${entry.slice(1)}`, dir)
+    }
+    const declaredDependencies = new Map<string, ReadonlySet<string>>()
+    const packageDependencies = (dir: string): ReadonlySet<string> => {
+      const known = declaredDependencies.get(dir)
+      if (known !== undefined) return known
+      const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
+      const names = new Set<string>()
+      const fields = face === 'client'
+        ? ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']
+        : ['dependencies', 'optionalDependencies', 'peerDependencies']
+      for (const field of fields) {
+        for (const name of Object.keys(manifest[field] as Record<string, unknown> | undefined ?? {})) names.add(name)
+      }
+      declaredDependencies.set(dir, names)
+      return names
+    }
+    const packageName = (specifier: string): string => {
+      const parts = specifier.split('/')
+      return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0] ?? specifier
+    }
+    const nativeReferenceAllowed = (
+      sourceOwner: string,
+      sourceFile: string,
+      specifier: string,
+      options: ts.CompilerOptions,
+    ): boolean => {
+      if (specifier.startsWith('node:')) return true
+      if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
+      if (specifier.startsWith('@deepseek-ai/cordis-plugin-')) return false
+      const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
+      if (resolved === undefined) return false
+      const targetOwner = nativeOwner(resolved.resolvedFileName)
+      if (targetOwner !== undefined) {
+        return !sourceOwner.startsWith('rsh/Core/') || targetOwner.startsWith('rsh/Core/')
+      }
+      const mixedTargetOwner = mixedOwner(resolved.resolvedFileName)
+      if (mixedTargetOwner !== undefined) {
+        return mixedNativeExportSpecifiers.get(specifier) === mixedTargetOwner
+      }
+      const target = relative(root, resolved.resolvedFileName).replaceAll('\\', '/')
+      const declared = packageDependencies(sourceOwner).has(packageName(specifier))
+      if (!declared) return false
+      if (target.startsWith('rsh/Core/vendor/cordis/')) return false
+      if (target.startsWith('rsh/Core/vendor/') || target.startsWith('rsh/Core/native/system/packages/')) return true
+      return !target.startsWith('rsh/')
+    }
     for (const [dir, mixed] of mixedEntries) {
       if (!mixed.targets.includes(face)) continue
       const directory = resolve(root, dir)
       for (const error of mixedNativeSourceViolations(project, directory, mixed.manifest, mixed.entry,
-        (sourceFile, specifier) => transitionAllows(dir, sourceFile, specifier, options))) errors.add(error)
+        (sourceFile, specifier) => {
+          if (specifier.startsWith('node:')) return true
+          const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
+          if (resolved === undefined) return false
+          const target = relative(directory, resolved.resolvedFileName).replaceAll('\\', '/')
+          if (target.startsWith('src/') && (specifier.startsWith('.')
+            || (typeof mixed.manifest.name === 'string' && specifier === `${mixed.manifest.name}${mixed.entry.slice(1)}`))) {
+            return true
+          }
+          return nativeReferenceAllowed(dir, sourceFile, specifier, options)
+        })) errors.add(error)
     }
     for (const [dir, targets] of mixedNativeLibraryDirectories) {
       if (!targets.includes(face) || !existsSync(resolve(root, dir, 'package.json'))) continue
       const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
       for (const error of mixedNativeSourceViolations(project, resolve(root, dir), manifest, './native',
-        (sourceFile, specifier) => transitionAllows(dir, sourceFile, specifier, options))) errors.add(error)
+        (sourceFile, specifier) => {
+          if (specifier.startsWith('node:')) return true
+          const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
+          if (resolved === undefined) return false
+          const target = relative(resolve(root, dir), resolved.resolvedFileName).replaceAll('\\', '/')
+          if (target.startsWith('src/') && (specifier.startsWith('.')
+            || (typeof manifest.name === 'string' && specifier === `${manifest.name}/native`))) return true
+          return nativeReferenceAllowed(dir, sourceFile, specifier, options)
+        })) errors.add(error)
+    }
+    for (const [dir, entries] of nativeSafeSourceSubpaths) {
+      if (!existsSync(resolve(root, dir, 'package.json'))) continue
+      const packageDir = resolve(root, dir)
+      const manifest = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8')) as Record<string, unknown>
+      for (const entry of entries) {
+        for (const error of mixedNativeSourceViolations(project, packageDir, manifest, entry,
+          (sourceFile, specifier) => {
+            if (specifier.startsWith('node:')) return true
+            const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
+            if (resolved === undefined) return false
+            const target = relative(packageDir, resolved.resolvedFileName).replaceAll('\\', '/')
+            if (target.startsWith('src/') && (specifier.startsWith('.')
+              || (typeof manifest.name === 'string' && specifier === `${manifest.name}${entry.slice(1)}`))) return true
+            return nativeReferenceAllowed(dir, sourceFile, specifier, options)
+          })) errors.add(error)
+      }
     }
     for (const source of project.sourceFiles()) {
-      const strictOwner = ownerOf(source.fileName, nativePackageDirectories)
-      const transitionOwner = ownerOf(source.fileName, transitionalNativeSourceDirectories)
-      if (strictOwner === undefined && transitionOwner === undefined) continue
+      const strictOwner = nativeOwner(source.fileName)
+      if (strictOwner === undefined) continue
       seen.add(resolve(source.fileName))
-      if (strictOwner !== undefined) {
-        for (const error of nativeSourceViolations(source, (specifier) => {
-          const resolved = ts.resolveModuleName(specifier, source.fileName, options, ts.sys).resolvedModule
-          return resolved !== undefined && ownerOf(resolved.resolvedFileName, nativePackageDirectories) !== undefined
-        })) errors.add(error)
-      }
-      if (transitionOwner !== undefined) {
-        for (const error of nativeSourceViolations(source,
-          specifier => transitionAllows(transitionOwner, source.fileName, specifier, options))) errors.add(error)
-      }
+      for (const error of nativeSourceViolations(source,
+        specifier => nativeReferenceAllowed(strictOwner, source.fileName, specifier, options))) errors.add(error)
     }
   }
-  for (const dir of new Set([...nativePackageDirectories, ...transitionalNativeSourceDirectories])) {
+  for (const dir of nativePackageDirectories) {
     const files = globSync(`${dir}/src/**/*.ts`, { cwd: root }).filter(file => !file.endsWith('.d.ts'))
     if (files.length === 0) errors.add(`${dir}: native source scan is empty`)
     for (const file of files) {
@@ -222,5 +333,5 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
   if (errors.length > 0) {
     console.error(errors.join('\n'))
     process.exitCode = 1
-  } else console.log('verify-native-dependencies: strict native graph and P4 native source edges pass')
+  } else console.log('verify-native-dependencies: strict native graph and mixed native exports pass')
 }

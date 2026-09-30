@@ -10,7 +10,7 @@
 
 ## 决策
 
-`@deepseek-ai/dsh-native-time-context` 提供原生 `timeContext` 服务，源码不直接导入 Cordis。其 `prepare` 方法接收 Session、准确的 turn/step，以及尚未记录的候选用户消息。到期时，它返回一条来源为 `native-time-context` snapshot 的 `user/message`。应用拥有追加顺序，并且必须在派生模型请求前追加返回消息。当前 manifest 与 Session 依赖仍按仓库过渡策略声明 Cordis peer；从已安装生产依赖闭包移除 Cordis 属于 P5。
+`@deepseek-ai/dsh-native-time-context` 提供原生 `timeContext` 服务，源码不直接导入 Cordis，manifest 也不声明 Cordis peer。其 `prepare` 方法接收 Session、准确的 turn/step，以及尚未记录的候选用户消息。到期时，它返回一条来源为 `native-time-context` snapshot 的 `user/message`。应用拥有追加顺序，并且必须在派生模型请求前追加返回消息。混合 Session 包为旧根入口保留可选 Cordis peer；原生导出按无 Cordis 源码闭包检查，完整产品依赖闭包仍是单独的迁移验收项。
 
 服务用 Session 拥有者已经加载的事件初始化每个 Session 的时间投影，并在每次事件追加后推进投影；它不会同步读取任意 Session 历史。它只识别开放轮次内、来自经 Host 校验且带规范浏览器时区的 user-RPC 来源。存在唯一时区时，该时区用于显示并向模型提供指引；时区缺失或混杂时，只用配置时区或进程时区格式化时间戳，同时告知模型需要询问用户。第 1 步从最近一条用户消息、助手消息或工具结果开始计算经过时长；后续步骤从当前轮次最新的 time-context 注入开始计算。
 
