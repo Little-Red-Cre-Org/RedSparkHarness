@@ -56,6 +56,54 @@ const FIXTURE: Record<string, string> = {
   'rsh/f/native-consumer/src/native.ts': "export { native } from './native-dependency.ts'\n",
   'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@deepseek-ai/cordis'\nexport const native = context\n",
 
+  'rsh/f/native-types-consumer/package.json': JSON.stringify({
+    name: '@f/native-types-consumer',
+    version: '0.0.1',
+    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types/types.js' } },
+    peerDependencies: { '@deepseek-ai/cordis': '*' },
+    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+  }),
+  'rsh/f/native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+  'rsh/f/native-types-consumer/src/types.ts': 'export interface NativeTypes { value: string }\n',
+
+  'rsh/f/unsafe-native-types-consumer/package.json': JSON.stringify({
+    name: '@f/unsafe-native-types-consumer',
+    version: '0.0.1',
+    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types/types.js' } },
+    peerDependencies: { '@deepseek-ai/cordis': '*' },
+    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+  }),
+  'rsh/f/unsafe-native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+  'rsh/f/unsafe-native-types-consumer/src/types.ts': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
+
+  'rsh/f/cli/package.json': JSON.stringify({
+    name: '@deepseek-ai/dsh',
+    version: '0.0.1',
+    bin: { f: 'lib/bin.js' },
+    optionalDependencies: { '@f/opt': '*' },
+  }),
+  'rsh/f/cli/src/bin.ts': "import './startup.ts'\nvoid import('./compatibility.ts')\n",
+  'rsh/f/cli/src/startup.ts': 'export const startup = true\n',
+  'rsh/f/cli/src/compatibility.ts': "import { runtimeValue } from '@f/opt'\nexport const compatibility = runtimeValue\n",
+
+  'rsh/f/cli-static-violation/package.json': JSON.stringify({
+    name: '@deepseek-ai/dsh',
+    version: '0.0.1',
+    bin: { f: 'lib/bin.js' },
+    optionalDependencies: { '@f/opt': '*' },
+  }),
+  'rsh/f/cli-static-violation/src/bin.ts': "import './startup.ts'\n",
+  'rsh/f/cli-static-violation/src/startup.ts': "import { runtimeValue } from '@f/opt'\nexport const startup = runtimeValue\n",
+
+  'rsh/f/cli-unrelated/package.json': JSON.stringify({
+    name: '@f/cli-unrelated',
+    version: '0.0.1',
+    bin: { f: 'lib/bin.js' },
+    optionalDependencies: { '@f/opt': '*' },
+  }),
+  'rsh/f/cli-unrelated/src/bin.ts': "void import('./compatibility.ts')\n",
+  'rsh/f/cli-unrelated/src/compatibility.ts': "import { runtimeValue } from '@f/opt'\nexport const compatibility = runtimeValue\n",
+
   // The consumer allows @f/opt to be absent and requires @f/hard.
   'rsh/f/consumer/package.json': JSON.stringify({
     name: '@f/consumer',
@@ -120,6 +168,13 @@ for (const [rel, content] of Object.entries(FIXTURE)) {
   writeFileSync(join(root, rel), content)
 }
 const violations = collectOptionalImportViolations(new TypeScriptProject(root))
+const safeExportViolations = collectOptionalImportViolations(
+  new TypeScriptProject(root),
+  new Map([
+    ['rsh/f/native-types-consumer', ['./types']],
+    ['rsh/f/unsafe-native-types-consumer', ['./types']],
+  ]),
+)
 
 afterAll(() => {
   rmSync(root, { recursive: true, force: true })
@@ -128,18 +183,44 @@ afterAll(() => {
 describe('optional dependency loads', () => {
   it('reports every form the compiler keeps, and nothing else', () => {
     expect(violations.map(violation => violation.split(' loads ')[0])).toEqual([
+      'rsh/f/cli-static-violation/src/startup.ts:1',
+      'rsh/f/cli-unrelated/src/compatibility.ts:1',
       'rsh/f/consumer/src/rejected-bare.ts:1',
       'rsh/f/consumer/src/rejected-star-reexport.ts:1',
       'rsh/f/consumer/src/rejected-value.ts:1',
       'rsh/f/native-consumer/src/native-dependency.ts:1',
+      'rsh/f/native-types-consumer/src/index.ts:1',
+      'rsh/f/unsafe-native-types-consumer/src/index.ts:1',
+      'rsh/f/unsafe-native-types-consumer/src/types.ts:1',
     ])
   })
 
   it('names the package, the declaration that made it optional, and the way out', () => {
-    expect(violations[0]).toBe(
+    expect(violations.find(violation => violation.startsWith('rsh/f/consumer/src/rejected-bare.ts:1'))).toBe(
       'rsh/f/consumer/src/rejected-bare.ts:1 loads @f/opt at module scope,'
       + ' declared optional in peerDependenciesMeta; import it as a type,'
       + ' or restructure so module scope does not need it',
+    )
+  })
+
+  it('checks Cordis-free type exports while allowing legacy-only Cordis imports', () => {
+    expect(safeExportViolations).toContain(
+      'rsh/f/unsafe-native-types-consumer/src/types.ts:1 loads @deepseek-ai/cordis at module scope,'
+      + ' declared optional in peerDependenciesMeta; import it as a type, or restructure so module scope does not need it',
+    )
+    expect(safeExportViolations.some(violation => violation.startsWith('rsh/f/native-types-consumer/src/index.ts:1'))).toBe(false)
+  })
+
+  it('checks optional loads from a binary startup closure but leaves dynamic compatibility branches on demand', () => {
+    const cliViolations = violations.filter(violation => violation.startsWith('rsh/f/cli/src/'))
+    expect(cliViolations).toEqual([])
+    expect(violations).toContain(
+      'rsh/f/cli-static-violation/src/startup.ts:1 loads @f/opt at module scope,'
+      + ' declared optional in optionalDependencies; import it as a type, or restructure so module scope does not need it',
+    )
+    expect(violations).toContain(
+      'rsh/f/cli-unrelated/src/compatibility.ts:1 loads @f/opt at module scope,'
+      + ' declared optional in optionalDependencies; import it as a type, or restructure so module scope does not need it',
     )
   })
 })

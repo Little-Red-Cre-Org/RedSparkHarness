@@ -8,8 +8,8 @@
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { loadLayeredEnv } from '@deepseek-ai/dsh-app-boot'
 import { parseDshArgs } from './args.ts'
+import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
 // Both the source tree (rsh/Programs/CLI/src) and the bundled bin (rsh/Programs/CLI/lib) sit
 // one directory under rsh/Programs/CLI, so the checked-in manifest resolves with the
@@ -37,7 +37,9 @@ export async function runCli(): Promise<void> {
         await runNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches, args: invocation.args })
         break
       }
+      requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
+      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-app-boot')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,
@@ -48,6 +50,7 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'plugin': {
+      requireCompatibilityRuntime()
       const { runPlugin } = await import('./plugin.ts')
       process.exit(runPlugin(invocation.profile, invocation.args))
       break
@@ -61,6 +64,7 @@ export async function runCli(): Promise<void> {
         process.stdout.write(`${JSON.stringify(readNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches }), null, 2)}\n`)
         break
       }
+      requireCompatibilityRuntime()
       const { runDumpConfig } = await import('./dump-config.ts')
       runDumpConfig(
         invocation.profile,

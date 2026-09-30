@@ -94,7 +94,7 @@ function responseObject(text: string): Record<string, unknown> {
 }
 
 /**
- * Build the minimal Responses SSE event sequence consumed by Codex 0.157.1.
+ * Build the minimal Responses SSE event sequence consumed by Codex 0.159.0.
  * @param text - exact assistant answer.
  * @returns ordered response lifecycle events.
  */

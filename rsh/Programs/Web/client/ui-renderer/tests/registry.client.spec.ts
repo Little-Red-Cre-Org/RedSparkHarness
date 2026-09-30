@@ -95,7 +95,10 @@ function scopedBinding(_ctx: Context, key: string) {
   const ctx = new Context()
   const binding: ScopedStandardSourceBinding = {
     key,
-    ctx,
+    lifetime: {
+      identity: ctx,
+      onDispose: (dispose) => { ctx.effect(() => () => { dispose() }) },
+    },
     hooks: {},
     keyedHooks: {},
     props: {},

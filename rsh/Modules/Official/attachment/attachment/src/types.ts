@@ -4,6 +4,16 @@ import type { AttachmentId, ImageVariantId } from './brand.ts'
 
 export type { AttachmentId } from './brand.ts'
 
+/** Provider-owned image-path lookup shared by native and Cordis consumers. */
+export interface AttachmentHostPathProvider {
+  /**
+   * Resolve one durable image reference to its implementation-owned host path.
+   * @param ref - immutable stored image reference.
+   * @returns the host path, or undefined when the provider cannot expose it.
+   */
+  imageHostPath(ref: ImageAttachmentRef): string | undefined
+}
+
 /** Raster image formats accepted by the version-one attachment path. */
 export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
 

@@ -5,6 +5,7 @@ import { admitEncodedFile as admitFileInput, admitEncodedImages } from './admiss
 import { AttachmentError, isAttachmentError as matchesAttachmentError } from './error.ts'
 import type {
   AdmittedPromptContentPart,
+  AttachmentHostPathProvider,
   AttachmentAdmissionPart,
   EncodedFileAttachment,
   FileAttachmentRef,
@@ -25,6 +26,7 @@ export { admitEncodedFile, admitEncodedImages } from './admission.ts'
 export { requestImageDimensions } from './request-projection.ts'
 export type {
   AttachmentId as AttachmentIdType,
+  AttachmentHostPathProvider,
   AdmittedPromptContentPart,
   AttachmentAdmissionPart,
   EncodedFileAttachment,
@@ -49,7 +51,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 /** Immutable binary attachment service. Implementations validate bytes before publishing a reference. */
-export abstract class AttachmentStore extends Service {
+export abstract class AttachmentStore extends Service implements AttachmentHostPathProvider {
   constructor(ctx: Context) {
     super(ctx, 'attachments')
   }

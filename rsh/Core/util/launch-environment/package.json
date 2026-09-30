@@ -35,6 +35,9 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"

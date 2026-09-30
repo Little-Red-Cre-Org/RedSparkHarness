@@ -28,7 +28,7 @@ function createWorkspace(): string {
 }
 
 describe('DSH package license gate', () => {
-  it('checks root, unhyphenated CLI, and dsh-prefixed package names while ignoring other families', () => {
+  it('checks unhyphenated CLI and dsh-prefixed package names while ignoring private root and other families', () => {
     const root = createWorkspace()
     writeManifest(root, 'rsh/Programs/CLI/package.json', { name: '@deepseek-ai/dsh', license: 'MIT' })
     writeManifest(root, 'rsh/Engine/core/agent/package.json', {
@@ -41,7 +41,7 @@ describe('DSH package license gate', () => {
     })
 
     expect(inspectDshPackageLicenses(root)).toEqual({
-      packageCount: 3,
+      packageCount: 2,
       failures: [
         'rsh/Engine/core/agent/package.json: @deepseek-ai/dsh-agent must declare "license": "MIT"; found "BSD-3-Clause".',
       ],

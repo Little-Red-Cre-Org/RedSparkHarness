@@ -36,7 +36,17 @@ import { normalizeApiKey } from './api-key.ts'
 import {
   contentHasFile, contentHasImage, fileHandleText, projectFilesToText, projectImagesForTextModel,
 } from './content.ts'
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+
+declare module '@deepseek-ai/dsh-typert-protocol' {
+  interface RemoteErrorDetailsMap {
+    /** A draft provider interrogation refused or failed. */
+    'llm/model-discovery-rejected': {
+      readonly settingsNs: string
+      readonly baseURL?: string
+    }
+  }
+}
 
 export * from './attribution.ts'
 export * from './brand.ts'
@@ -57,6 +67,17 @@ declare module '@deepseek-ai/cordis' {
   }
 
   interface Events {
+    /**
+     * The provider topology changed: an adapter registered or unregistered
+     * routes, or the configurable-provider directory gained or lost entries.
+     * This payload-free registry notification fires at each commit point
+     * (including registration disposal); consumers re-read `listProviders()`,
+     * `listModels()`, or `listConfigurableProviders()` for the new state.
+     * Observer failures are contained and cannot veto the registry mutation.
+     * @mode emit
+     */
+    'llm/adapters-updated'(): void
+
     /**
      * Waterfall around every streaming model call (retry, replay, routing).
      * Bound to the {@link LlmRuntime}; call `next()` to reach the resolved
@@ -990,7 +1011,12 @@ export class LlmRuntime extends TypertRemoteService {
   private fileReadPath(ref: FileAttachmentRef): string | undefined {
     let hostPath: string | undefined
     try {
-      hostPath = this.ctx.get('attachments')?.fileHostPath(ref)
+      // Structural face: dsh-llm cannot depend on the attachment package's
+      // Cordis service entry, and it consumes only this path-mapping method.
+      const attachments = this.ctx.get('attachments') as {
+        fileHostPath(ref: FileAttachmentRef): string | undefined
+      } | undefined
+      hostPath = attachments?.fileHostPath(ref)
     } catch {
       // A malformed durable reference degrades this occurrence to the no-path
       // handle instead of failing every later request over the same log.

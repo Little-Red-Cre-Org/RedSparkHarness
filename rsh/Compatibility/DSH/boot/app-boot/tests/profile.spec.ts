@@ -40,15 +40,23 @@ const tmp = (): string => {
 
 /** Stage a fake installed app: package.json with deps and a node_modules holding bundles. */
 function stageInstallation(
-  bundles: Record<string, { patch?: string; deps?: Record<string, string> }>,
+  bundles: Record<string, {
+    patch?: string
+    deps?: Record<string, string>
+    optionalDeps?: Record<string, string>
+    appDependency?: 'required' | 'optional' | 'none'
+  }>,
   appName = 'dsh-app',
 ): string {
   const root = tmp()
   const appDir = join(root, 'app')
   mkdirSync(join(appDir, 'node_modules'), { recursive: true })
   const appDeps: Record<string, string> = {}
+  const appOptionalDeps: Record<string, string> = {}
   for (const [name, spec] of Object.entries(bundles)) {
-    appDeps[name] = '0.0.0'
+    const appDependency = spec.appDependency ?? 'required'
+    if (appDependency === 'required') appDeps[name] = '0.0.0'
+    if (appDependency === 'optional') appOptionalDeps[name] = '0.0.0'
     const dir = join(appDir, 'node_modules', name)
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'package.json'), JSON.stringify({
@@ -57,13 +65,19 @@ function stageInstallation(
       type: 'module',
       main: './index.js',
       dependencies: spec.deps ?? {},
+      optionalDependencies: spec.optionalDeps ?? {},
       ...spec.patch === undefined ? {} : { dsh: { bundle: { patch: './cordis.patch.yml' } } },
     }))
     writeFileSync(join(dir, 'index.js'), `export const packageName = ${JSON.stringify(name)}\n`)
     if (spec.patch !== undefined) writeFileSync(join(dir, 'cordis.patch.yml'), spec.patch)
   }
   writeFileSync(join(appDir, 'package.json'), JSON.stringify({
-    name: appName, version: '0.0.0', type: 'module', main: './index.js', dependencies: appDeps,
+    name: appName,
+    version: '0.0.0',
+    type: 'module',
+    main: './index.js',
+    dependencies: appDeps,
+    optionalDependencies: appOptionalDeps,
   }))
   writeFileSync(join(appDir, 'index.js'), `export const packageName = ${JSON.stringify(appName)}\n`)
   return join(appDir, 'package.json')
@@ -356,6 +370,23 @@ describe('healProfilesModuleFallback', () => {
     await healProfilesModuleFallback({ installAnchor: anchor, home })
     const before = readlinkSync(join(fallback, 'dep-of-a'))
     expect(before).toContain('dep-of-a')
+  })
+
+  it('links installed optional dependencies and their optional closure', async () => {
+    const anchor = stageInstallation({
+      'optional-bundle': {
+        appDependency: 'optional',
+        optionalDeps: { 'optional-transitive': '0.0.0' },
+      },
+      'optional-transitive': { appDependency: 'none' },
+    })
+    const home = tmp()
+    await healProfilesModuleFallback({ installAnchor: anchor, home })
+    const fallback = join(home, 'profiles', 'node_modules')
+
+    for (const name of ['optional-bundle', 'optional-transitive']) {
+      expect(lstatSync(join(fallback, name)).isSymbolicLink(), name).toBe(true)
+    }
   })
 
   it('throws when a fallback entry is a foreign file or directory', async () => {

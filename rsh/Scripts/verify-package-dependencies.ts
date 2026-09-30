@@ -51,6 +51,7 @@ export interface WorkspacePackageManifest {
 export interface PackageDependencyFacts {
   readonly manifestPath: string
   readonly role: PackageDependencyRole
+  readonly cordisPeerRequired: boolean
   readonly manifest: PackageDependencyManifest
   readonly workspaceNames: ReadonlySet<string>
   readonly allSourceUses: ReadonlyMap<string, readonly string[]>
@@ -58,6 +59,7 @@ export interface PackageDependencyFacts {
   readonly hostRuntimeExportUses: readonly HostRuntimeExportUse[]
   readonly peerRequiredHostDependencies: ReadonlySet<string>
   readonly configurationOnlyDevDependencies: ReadonlySet<string>
+  readonly clientRuntimeDependencies: ReadonlySet<string>
   readonly clientInject: ReadonlySet<string>
 }
 
@@ -442,6 +444,7 @@ export function readPackageDependencyFacts(
   return {
     manifestPath: pkg.manifestPath,
     role,
+    cordisPeerRequired: !policy.cordisFreePackageDirectories.has(normalizePath(pkg.dir)),
     manifest: pkg.manifest,
     workspaceNames,
     allSourceUses: readAllSourceUses(root, pkg),
@@ -453,8 +456,41 @@ export function readPackageDependencyFacts(
     configurationOnlyDevDependencies: new Set(
       policy.configurationOnlyDevDependencies[pkg.manifest.name ?? ''] ?? [],
     ),
+    clientRuntimeDependencies: new Set(policy.clientRuntimeDependencies[pkg.manifest.name ?? ''] ?? []),
     clientInject: new Set(inject.map(packageNameOf).filter(name => name !== undefined)),
   }
+}
+
+/** Validate third-party dependencies retained by published Client library entries. */
+export function collectClientRuntimeDependencyPolicyViolations(
+  facts: readonly PackageDependencyFacts[],
+  workspaceNames: ReadonlySet<string>,
+  policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies'>,
+): string[] {
+  const violations: string[] = []
+  const selectedByName = new Map(facts.map(fact => [fact.manifest.name, fact]))
+  for (const [packageName, dependencies] of Object.entries(policy.clientRuntimeDependencies)) {
+    const fact = selectedByName.get(packageName)
+    if (fact === undefined) {
+      violations.push(`clientRuntimeDependencies names unmanaged package ${packageName}`)
+      continue
+    }
+    if (fact.role === 'configured-host') {
+      violations.push(`clientRuntimeDependencies package ${packageName} is not Client-faced`)
+    }
+    for (const dependency of duplicates(dependencies)) {
+      violations.push(`clientRuntimeDependencies lists ${packageName} dependency ${dependency} more than once`)
+    }
+    for (const dependency of dependencies) {
+      if (packageNameOf(dependency) !== dependency || workspaceNames.has(dependency)) {
+        violations.push(`clientRuntimeDependencies ${packageName} entry ${dependency} must name a third-party package`)
+      }
+      if (!fact.allSourceUses.has(dependency)) {
+        violations.push(`clientRuntimeDependencies lists unused ${packageName} dependency ${dependency}`)
+      }
+    }
+  }
+  return violations.sort()
 }
 
 /** Validate reviewed Host export classifications against current source facts. */
@@ -542,6 +578,7 @@ export function readPackageDependencyState(
     policyViolations: [
       ...discovered.violations,
       ...collectHostDependencyExportPolicyViolations(facts, workspaceNames, policy),
+      ...collectClientRuntimeDependencyPolicyViolations(facts, workspaceNames, policy),
       ...Object.keys(policy.configurationOnlyDevDependencies)
         .filter(name => !selectedNames.has(name))
         .map(name => `configurationOnlyDevDependencies names unmanaged package ${name}`),
@@ -566,14 +603,20 @@ export function expectedPackageDependencies(
     expected.set(name, { section, origins: new Set([...(current?.origins ?? []), origin]) })
   }
 
-  expected.set(CORDIS, { section: 'peer-dev', origins: new Set(['shared Cordis runtime']) })
+  if (facts.cordisPeerRequired) {
+    expected.set(CORDIS, { section: 'peer-dev', origins: new Set(['shared Cordis runtime']) })
+  }
   for (const [name, paths] of facts.allSourceUses) {
-    for (const path of paths) add(name, 'devDependencies', path)
+    const section = facts.clientRuntimeDependencies.has(name) ? 'dependencies' : 'devDependencies'
+    for (const path of paths) add(name, section, path)
   }
   if (facts.role !== 'configured-host') {
     for (const sectionName of ['dependencies', 'optionalDependencies'] as const) {
       for (const name of Object.keys(facts.manifest[sectionName] ?? {})) {
-        if (!facts.workspaceNames.has(name)) add(name, 'devDependencies', 'declared browser build input')
+        if (!facts.workspaceNames.has(name)) {
+          const section = facts.clientRuntimeDependencies.has(name) ? 'dependencies' : 'devDependencies'
+          add(name, section, 'declared browser build input')
+        }
       }
     }
   }
@@ -675,6 +718,9 @@ export function collectPackageDependencyViolations(state: PackageDependencyState
   const violations = [...state.policyViolations]
   if (violations.length > 0) return [...new Set(violations)].sort()
   for (const facts of state.facts) {
+    if (!facts.cordisPeerRequired && declaredSections(facts.manifest, CORDIS).length > 0) {
+      violations.push(`${facts.manifestPath}: ${CORDIS} is forbidden for a Cordis-free package`)
+    }
     for (const [name, rule] of expectedPackageDependencies(facts)) {
       const actual = declaredSections(facts.manifest, name)
       if (rule.section === 'peer-dev') {
@@ -784,6 +830,12 @@ export function repairPackageDependencyManifest(facts: PackageDependencyFacts): 
     }
     mutableSection(facts.manifest, rule.section)[name] = range
     deletePeerMeta(facts.manifest, name)
+  }
+  if (!facts.cordisPeerRequired) {
+    for (const sectionName of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const) {
+      deleteDependency(facts.manifest, sectionName, CORDIS)
+    }
+    deletePeerMeta(facts.manifest, CORDIS)
   }
   for (const name of Object.keys(facts.manifest.peerDependenciesMeta ?? {})) {
     if (facts.manifest.peerDependencies?.[name] === undefined) deletePeerMeta(facts.manifest, name)

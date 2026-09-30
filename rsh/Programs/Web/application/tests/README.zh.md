@@ -8,6 +8,8 @@
 
 依赖状态的用例使用 Workspace、接纳、附件和模型流屏障，区分可见中间状态与已完成操作。详情关闭等待框架过渡结束；归档验证为 seed Session 设置显式标题，并跨重载跟踪该身份。参见 [CI fixture 同步决策](../../../../../.agents/notes/implemented/testing/2026-09-08-ci-completion-observations.zh.md)。
 
+原生页面测试覆盖 Host 注入缺失、启动取消、pagehide 清理以及构建后的 `native.html` 入口。Desktop Host 单元测试验证 profile 校验、已安装包解析、单图打包、Cordis 拒绝、启动数据注入和原生资源路由。生产浏览器冒烟仍使用合成的 Host 路由 renderer bundle，因此它验证浏览器启动和生命周期，不启动 Desktop Host 进程本身。
+
 ## 这些是 Host 面的测试
 
 它们在根 `tsconfig.host.json` 中做类型检查，而不在 Client aggregate 中，因为它们直接读取 Host 服务：`ctx.connection`、Host 侧 `SessionStore` 与 `ctx.sessionProjectionCache`。运行时驱动浏览器并不使一个文件成为 Client 程序的一部分——两个 face 在相同的键上以不同服务合并 Cordis `Context`，因此单个程序无法同时看见两者。把这些文件挪进 Client aggregate 会让每一处 Host 服务访问都无法编译。

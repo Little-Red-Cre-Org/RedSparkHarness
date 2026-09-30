@@ -83,7 +83,7 @@ Host and Client are independent TypeScript programs. Direct project references e
 
 ### Emission and publication contract
 
-`FaceModelEmitter` emits executable JavaScript containing supported Zod schemas and the `TYPERT` contribution, plus a declaration file whose schemas are typed `z.ZodType<SourceType>` through the package's public export; unsupported Zod projections fail. The Host face with Remote methods additionally emits `typert.remote-client.*` projections of Host Remote contracts for the Client. `WorkspaceTypertGenerator` validates each contributor's `package.json`: `./typert` and `./client/typert` (and `./remote` when Remote methods exist) must point at the exact generated files, and the `files` list must include them.
+`FaceModelEmitter` emits executable JavaScript containing supported Zod schemas and the `TYPERT` contribution, plus a declaration file whose schemas are typed `z.ZodType<SourceType>` through the package's public export; unsupported Zod projections fail. The Host face with Remote methods additionally emits `typert.remote-client.*` projections of Host Remote contracts for the Client. Remote boundary type identities retain the public export path used by the source reference when multiple exports expose the same declaration. `WorkspaceTypertGenerator` validates each contributor's `package.json`: `./typert` and `./client/typert` (and `./remote` when Remote methods exist) must point at the exact generated files, and the `files` list must include them.
 
 ### Catalog projection
 

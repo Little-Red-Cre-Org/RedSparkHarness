@@ -24,7 +24,7 @@ Status: implemented
 
 ## Consequences
 
-公开 CLI 能运行具备真实文件效果及已发布 Session 数据的原生 profile，同时保留 Cordis profile 行为。该应用仍窄于 Cordis headless 组合：approval、code-runtime、prompt、time-context、sandbox-policy 和通用工具注册表都是可选原生服务；SDK 与 Web 面仍不属于此组合。原生 headless 应用、model-execution、time-context、Session 与 JSONL 入口加载时不需要 Cordis，但这些包仍发布旧包根入口并声明必需的 Cordis peer。[迁移提案](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md)跟踪剩余依赖工作。
+公开 CLI 能运行具备真实文件效果及已发布 Session 数据的原生 profile，同时保留 Cordis profile 行为。该应用仍窄于 Cordis headless 组合：approval、code-runtime、prompt、time-context、sandbox-policy 和通用工具注册表都是可选原生服务；SDK 与 Web 面仍不属于此组合。原生 headless、model-execution 与 time-context 包不声明 Cordis peer；混合 Session 与 JSONL 包为旧根入口保留可选 Cordis peer，其原生导出加载时不需要 Cordis。[迁移提案](../../proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md)跟踪剩余依赖工作。
 
 ## Verification
 

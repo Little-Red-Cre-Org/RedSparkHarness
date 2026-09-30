@@ -18,11 +18,16 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native-types": {
+      "types": "./lib/types/native-types.d.ts",
+      "default": "./lib/native-types.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native-types.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -30,6 +35,9 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

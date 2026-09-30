@@ -24,7 +24,7 @@ The Session object accepts a store-owned publication hook. The legacy store reso
 
 ## Consequences
 
-The built JSONL native entry loads without Cordis through its current transitive JavaScript dependency graph. The packages still declare mandatory Cordis peers for their legacy root entries, so P5 must classify native subentry manifests and declarations before a strict independent-consumer claim.
+The built JSONL native entry loads without Cordis through its current transitive JavaScript dependency graph. The mixed persistence packages retain Cordis as an optional peer for their legacy root entries; the native subpath declaration and source closure are checked separately. This package-level evidence does not replace the P5 installed-closure and independent-consumer checks.
 
 ## Verification
 

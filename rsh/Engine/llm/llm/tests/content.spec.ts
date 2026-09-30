@@ -244,7 +244,7 @@ describe('model-facing image access', () => {
       attachment,
     )).toBeUndefined()
     expect(resolveImageAttachmentAccess(
-      { imageHostPath: () => undefined } as unknown as AttachmentStore,
+      { imageHostPath: () => undefined },
       mapped,
       attachment,
     )).toBeUndefined()

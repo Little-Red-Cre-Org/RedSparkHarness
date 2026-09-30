@@ -20,8 +20,9 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, globSync } from 'node:fs'
-import { basename, dirname, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const CONFIG = join(ROOT, 'tsconfig.base.json')
@@ -44,6 +45,11 @@ const ALIAS_ROOTS = [
 ] as const
 
 /** One workspace package the generated region maps. */
+interface NativeEntryAlias {
+  readonly specifier: string
+  readonly source: string
+}
+
 interface PackageAlias {
   /** Bare specifier, e.g. `@deepseek-ai/dsh-session`. */
   readonly specifier: string
@@ -99,6 +105,45 @@ function workspacePackages(): WorkspacePackage[] {
     }
   }
   return found
+}
+
+/**
+ * Collect native export subpaths and map each declaration to its TypeScript source.
+ * @returns Native entry specifiers mapped to declaration source files.
+ */
+export function collectNativeEntryAliases(): NativeEntryAlias[] {
+  const aliases: NativeEntryAlias[] = []
+  for (const { relativePath, packageDir, name } of workspacePackages()) {
+    const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as {
+      dsh?: { native?: { entry?: unknown } }
+      exports?: Record<string, unknown>
+    }
+    const entries = new Set<string>(['./native'])
+    const declaredEntry = manifest.dsh?.native?.entry
+    if (typeof declaredEntry === 'string') entries.add(declaredEntry)
+    for (const subpath of nativeSafeSourceSubpaths.get(relativePath) ?? []) entries.add(subpath)
+    for (const entryName of entries) {
+      const exported = manifest.exports?.[entryName]
+      if (exported === null || typeof exported !== 'object' || Array.isArray(exported)) continue
+      const types = (exported as { types?: unknown }).types
+      if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) continue
+      const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts'
+      const sourceRoot = resolve(packageDir, 'src')
+      const sourcePath = resolve(sourceRoot, sourceRelative)
+      const within = relative(sourceRoot, sourcePath)
+      if (within.startsWith('..') || isAbsolute(within)) {
+        throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' escapes its source directory')
+      }
+      if (!existsSync(sourcePath)) {
+        throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' has no source ' + sourcePath)
+      }
+      aliases.push({
+        specifier: name + entryName.slice(1),
+        source: './' + relativePath + '/src/' + sourceRelative.replaceAll('\\', '/'),
+      })
+    }
+  }
+  return aliases.sort((left, right) => left.specifier.localeCompare(right.specifier))
 }
 
 /**
@@ -174,13 +219,13 @@ export function collectNativeExportAliases(root = ROOT): Map<string, string> {
 }
 
 /**
- * Read the bare package specifiers a config maps, generated region included.
+ * Read the package and native subpath specifiers a config maps, generated region included.
  * @param text - `tsconfig.base.json` contents.
  * @returns Specifiers mapped without a subpath.
  */
 export function mappedSpecifiers(text: string): Set<string> {
   const keys = new Set<string>()
-  for (const match of text.matchAll(/^\s*"(@deepseek-ai\/dsh-[^"/]+)":/gm)) {
+  for (const match of text.matchAll(/^\s*"(@deepseek-ai\/dsh-[^"]+)":/gm)) {
     const key = match[1]
     if (key !== undefined) keys.add(key)
   }
@@ -236,7 +281,11 @@ export function uncoveredPackages(
  * @param handWritten - specifiers already mapped outside the region; a duplicate key would shadow one silently.
  * @returns The region body, one JSON member per line.
  */
-export function renderAliases(aliases: readonly PackageAlias[], handWritten: ReadonlySet<string>): string {
+export function renderAliases(
+  aliases: readonly PackageAlias[],
+  handWritten: ReadonlySet<string>,
+  nativeEntries: readonly NativeEntryAlias[] = [],
+): string {
   const lines: string[] = []
   for (const alias of aliases) {
     if (!handWritten.has(alias.specifier)) {
@@ -248,6 +297,11 @@ export function renderAliases(aliases: readonly PackageAlias[], handWritten: Rea
     }
   }
   // The region closes `paths`, so the last member carries no trailing comma.
+  for (const alias of nativeEntries) {
+    if (!handWritten.has(alias.specifier)) {
+      lines.push('      ' + JSON.stringify(alias.specifier) + ': [' + JSON.stringify(alias.source) + ']')
+    }
+  }
   return lines.join(',\n')
 }
 
@@ -287,7 +341,11 @@ function handWrittenSpecifiers(text: string): Set<string> {
 if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   const check = process.argv.includes('--check')
   const current = readFileSync(CONFIG, 'utf8')
-  const next = writeRegion(current, renderAliases(collectPackageAliases(), handWrittenSpecifiers(current)))
+  const next = writeRegion(current, renderAliases(
+    collectPackageAliases(),
+    handWrittenSpecifiers(current),
+    collectNativeEntryAliases(),
+  ))
   const uncovered = uncoveredPackages(collectPackageNames(), mappedSpecifiers(next))
   const uncoveredNative = uncoveredNativeAliases(collectNativeExportAliases(), mappedPathAliases(next))
   if (uncovered.length > 0 || uncoveredNative.length > 0) {

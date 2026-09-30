@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url'
 import { isPublicExperimentalPackageDirectory } from './experimental-package-policy.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
-import { nativePackageDirectories } from './native-package-policy.ts'
+import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, nativeSafeSourceSubpaths } from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 /** pnpm workspace manifests after the physical RSH migration. */
@@ -105,6 +105,7 @@ export interface PackageManifest {
   publishConfig?: { access?: string }
   repository?: { type?: string; url?: string; directory?: string }
   peerDependencies?: Record<string, string>
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>
   devDependencies?: Record<string, string>
   dependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
@@ -181,6 +182,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/native.js', 'lib/backend.js', 'lib/shared-*.js',
   ],
   '@deepseek-ai/dsh-fs-sandbox': ['lib/types-*.js'],
+  '@deepseek-ai/dsh-sandbox': ['lib/native-types.js'],
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/types-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
@@ -343,6 +345,45 @@ function isDshLibraryDirectory(dir: string): boolean {
     && !dir.startsWith('rsh/Core/native/')
 }
 
+/** Require Cordis according to whether a DSH library is native, mixed, or compatibility-only. */
+export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): string[] {
+  if (!isDshLibraryDirectory(dir) || manifest.name?.startsWith('@deepseek-ai/dsh-') !== true) return []
+  const label = manifest.name
+  const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
+  const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
+  const optionalPeer = manifest.peerDependenciesMeta?.['@deepseek-ai/cordis']?.optional
+  const direct = manifest.dependencies?.['@deepseek-ai/cordis']
+    ?? manifest.optionalDependencies?.['@deepseek-ai/cordis']
+  const native = nativePackageDirectories.has(dir)
+  const mixed = mixedNativeEntryDirectories.has(dir)
+    || mixedNativeLibraryDirectories.has(dir)
+    || nativeSafeSourceSubpaths.has(dir)
+  const errors: string[] = []
+
+  if (native) {
+    if (peer !== undefined || dev !== undefined || optionalPeer !== undefined || direct !== undefined) {
+      errors.push(`${label}: native runtime must not declare Cordis dependencies`)
+    }
+    return errors
+  }
+
+  if (mixed) {
+    if (peer === undefined) errors.push(`${label}: mixed native package must declare Cordis as a peerDependency`)
+    if (dev === undefined) errors.push(`${label}: mixed native package must also declare Cordis as a devDependency`)
+    if (optionalPeer !== true) errors.push(`${label}: mixed native package must mark the Cordis peer as optional`)
+  } else {
+    if (peer === undefined) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
+    if (dev === undefined) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
+    if (optionalPeer === true) errors.push(`${label}: compatibility package must keep the Cordis peer required`)
+  }
+
+  if (direct !== undefined) errors.push(`${label}: @deepseek-ai/cordis must not be a direct dependency`)
+  if (peer !== undefined && dev !== undefined && peer !== dev) {
+    errors.push(`${label}: @deepseek-ai/cordis peer (${peer}) and dev (${dev}) ranges must match`)
+  }
+  return errors
+}
+
 /**
  * Require a dsh-family manifest to carry the workspace version.
  *
@@ -450,16 +491,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
   }
 
   if (isDshLibraryDirectory(dir) && manifest.name?.startsWith('@deepseek-ai/dsh-')) {
-    const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
-    const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
-
-    const native = nativePackageDirectories.has(dir)
-    if (native && (peer || dev)) errors.push(`${label}: native runtime must not depend on Cordis`)
-    if (!native && !peer) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
-    if (!native && !dev) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
-    if (peer && dev && peer !== dev) {
-      errors.push(`${label}: @deepseek-ai/cordis peer (${peer}) and dev (${dev}) ranges must match`)
-    }
+    errors.push(...checkCordisPeerPolicy({ dir, manifest }))
     if (manifest.type !== 'module') {
       errors.push(`${label}: package.json must set "type": "module"`)
     }

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  collectNativeEntryAliases,
   collectPackageAliases,
   collectPackageNames,
   collectNativeExportAliases,
@@ -32,6 +33,26 @@ describe('generated tsconfig package aliases', () => {
     expect(aliases.some(alias => alias.specifier === '@deepseek-ai/dsh-typert-protocol')).toBe(false)
   })
 
+  it('maps declared native exports to declaration source files', () => {
+    const aliases = collectNativeEntryAliases()
+    expect(aliases).toContainEqual({
+      specifier: '@deepseek-ai/dsh-credentials/native',
+      source: './rsh/Modules/Official/credentials/credentials/src/native.ts',
+    })
+    expect(aliases).toContainEqual({
+      specifier: '@deepseek-ai/dsh-launch-environment/native',
+      source: './rsh/Core/util/launch-environment/src/native.ts',
+    })
+    expect(aliases).toContainEqual({
+      specifier: '@deepseek-ai/dsh-native-prompt/native',
+      source: './rsh/Engine/core/native-prompt/src/index.ts',
+    })
+    expect(aliases).toContainEqual({
+      specifier: '@deepseek-ai/dsh-native-sandbox-policy/native',
+      source: './rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts',
+    })
+  })
+
   it('yields to a hand-written alias and closes without a trailing comma', () => {
     const aliases = [
       { specifier: '@deepseek-ai/dsh-a', source: './packages/g/a/src', hasInvariant: true },
@@ -45,6 +66,15 @@ describe('generated tsconfig package aliases', () => {
       '      "@deepseek-ai/dsh-b": ["./packages/g/b/src"]',
     ].join(',\n'))
     expect(body.endsWith(',')).toBe(false)
+  })
+
+  it('renders native aliases into the generated region', () => {
+    const body = renderAliases([], new Set(), [
+      { specifier: '@deepseek-ai/dsh-example/native', source: './rsh/Engine/example/src/native.ts' },
+    ])
+    expect(body).toBe(
+      '      "@deepseek-ai/dsh-example/native": ["./rsh/Engine/example/src/native.ts"]',
+    )
   })
 
   it('replaces only the marked region', () => {

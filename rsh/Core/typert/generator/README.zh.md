@@ -83,7 +83,7 @@ Host 与 Client 是两个独立的 TypeScript 程序。直接项目引用确定�
 
 ### 生成与发布约定
 
-`FaceModelEmitter` 输出包含受支持 Zod schema 与 `TYPERT` 贡献的可执行 JavaScript，以及把 schema 通过包的公开导出标注为 `z.ZodType<SourceType>` 的声明文件；不支持的 Zod 投影会失败。含 Remote 方法的 Host face 还会额外为 Client 生成 Host Remote 约定的 `typert.remote-client.*` 投影。`WorkspaceTypertGenerator` 校验每个贡献方的 `package.json`：`./typert` 与 `./client/typert`（存在 Remote 方法时还有 `./remote`）必须指向精确的生成文件，且 `files` 清单必须包含它们。
+`FaceModelEmitter` 输出包含受支持 Zod schema 与 `TYPERT` 贡献的可执行 JavaScript，以及把 schema 通过包的公开导出标注为 `z.ZodType<SourceType>` 的声明文件；不支持的 Zod 投影会失败。含 Remote 方法的 Host face 还会额外为 Client 生成 Host Remote 约定的 `typert.remote-client.*` 投影。多个导出路径公开同一声明时，Remote 边界类型标识会保留源代码类型引用所用的公开导出路径。`WorkspaceTypertGenerator` 校验每个贡献方的 `package.json`：`./typert` 与 `./client/typert`（存在 Remote 方法时还有 `./remote`）必须指向精确的生成文件，且 `files` 清单必须包含它们。
 
 ### 目录投影
 

@@ -1,5 +1,7 @@
 /** Explicit exceptions and Host packages for the published dependency policy. */
 
+import { nativePackageDirectories } from './native-package-policy.ts'
+
 /** Packages treated as Client/Host packages without declaring `dsh.client`. */
 const CLIENT_FACE_INCLUDE: readonly string[] = []
 
@@ -27,6 +29,11 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-subagent': ['@deepseek-ai/dsh-client-ui-input-trigger'],
   '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-api-remotes'],
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
+} as const satisfies Readonly<Record<string, readonly string[]>>
+
+/** Third-party imports retained by published Client library ESM at runtime. */
+const CLIENT_RUNTIME_DEPENDENCIES = {
+  '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
@@ -66,10 +73,13 @@ type HostDependencyExports = Readonly<Record<string, readonly string[]>>
 
 /** Complete configurable input to package dependency classification. */
 export interface PackageDependencyPolicy {
+  /** Package sources whose selected native entry does not require Cordis. */
+  readonly cordisFreePackageDirectories: ReadonlySet<string>
   readonly clientFaceInclude: readonly string[]
   readonly clientFaceExclude: readonly string[]
   readonly hostPackages: readonly string[]
   readonly configurationOnlyDevDependencies: Readonly<Record<string, readonly string[]>>
+  readonly clientRuntimeDependencies: Readonly<Record<string, readonly string[]>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
   readonly peerRequiredHostExports: HostDependencyExports
@@ -77,10 +87,12 @@ export interface PackageDependencyPolicy {
 
 /** Repository dependency policy consumed by verification and benchmarking. */
 export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
+  cordisFreePackageDirectories: nativePackageDirectories,
   clientFaceInclude: CLIENT_FACE_INCLUDE,
   clientFaceExclude: CLIENT_FACE_EXCLUDE,
   hostPackages: HOST_DEPENDENCY_PACKAGES,
   configurationOnlyDevDependencies: CONFIGURATION_ONLY_DEV_DEPENDENCIES,
+  clientRuntimeDependencies: CLIENT_RUNTIME_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,
   peerRequiredHostExports: PEER_REQUIRED_HOST_EXPORTS,

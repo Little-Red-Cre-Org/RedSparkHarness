@@ -31,6 +31,12 @@ Electron 拥有 `$DSH_HOME/profiles/desktop`。其 `dependencies` 只包含已�
 
 Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，并以英文作为 fallback。菜单、原生对话框、启动页与插件管理渲染进程使用同一 locale 数据；仓库的 Client UI i18n gate 会检查这些桌面源文件。
 
+### 原生 Client 预览
+
+私有 Desktop Host 可以在 `/native.html` 提供单独选择的原生 Client 页面。桌面项目根目录可选的 `rsh.client.json` 使用 `formatVersion: 1` 和 `installations` 数组；每项包含唯一 `id`、已安装包名 `plugin` 和可选 JSON `config`。Host 只从项目或内置运行时解析包，校验每个已导出 `package.json.dsh.native` 入口是否支持 `client`，并拒绝包含 Cordis 的浏览器依赖图。它会将所选入口合并打包，并通过 `/.dsh/native-client/` 提供 JavaScript、样式和生成的资源。
+
+此预览不会选择或替换 Host 组合。没有 `rsh.client.json` 时，`/native.html` 返回 404，`/` 继续使用现有应用。profile 配置校验失败会阻止 Host 启动；只有生产原生 renderer 覆盖受支持的 UI 并通过 profile 验收后，才会切换默认页面。
+
 ### 运行时与插件激活
 
 签名资源中的 `resources/dsh/desktop-runtime.json` 绑定 shell 版本、内置 Node 版本、平台、架构、共享包版本和最终文件清单。启动读取元数据，并检查共享包记录。发布 schema、shell 版本、目标兼容性和文件完整性在打包时验证。首次启动不会把核心包复制到 profile 存储或通过 pnpm 安装核心包。

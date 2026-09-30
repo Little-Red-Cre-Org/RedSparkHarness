@@ -115,6 +115,7 @@ P1 hands P2/P3 the public planning, service, scope/initiator, event, configurati
 - Native Core, Engine and migrated Modules exclude Cordis/bridge source imports, type references and required production dependencies; checks resolve aliases, subpaths, dynamic loads and module augmentations and reject invalid fixtures.
 - Real native filesystem and headless profiles execute, log, cancel, restore and shut down using one Engine authority, unchanged approval/sandbox decisions and preserved Session generations.
 - Compatibility is explicitly selected, bounded by the supported matrix, refuses unsupported inputs and releases its own contributions without duplicate execution or durable records.
+- The installed CLI binary has no static load of optional packages; compatibility modes check their direct optional dependencies before dynamic import, and native profile launch succeeds from a production install without optional dependencies.
 - CLI, Web, Desktop/renderer, TUI, ACP and both SDKs retain their supported behavior, including applicable configuration reload and plugin replacement.
 - Packed native-only consumers compile and run without Cordis or the bridge; final documentation distinguishes verified Windows results from platform coverage not run locally.
 

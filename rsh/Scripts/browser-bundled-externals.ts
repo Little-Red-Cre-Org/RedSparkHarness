@@ -113,8 +113,15 @@ async function collectClientBundles(
   }
 }
 
+interface AliasEntry {
+  find: string | RegExp
+  replacement: string
+}
+
 interface ShellConfig {
   build: { rollupOptions?: { input?: string | string[] | Record<string, string> } }
+  define?: Record<string, unknown>
+  resolve?: { alias?: readonly AliasEntry[] }
 }
 
 interface ViteApi {
@@ -135,21 +142,27 @@ async function collectShell(
     const vite = await import(pathToFileURL(vitePath).href) as ViteApi
     const config = await vite.resolveConfig({ root: dir, logLevel: 'error' }, 'build')
     const input = config.build.rollupOptions?.input
-    const entries = typeof input === 'string' ? [input] : Object.values(input ?? {})
-    const pages = entries.filter(entry => entry.endsWith('.html'))
-    if (pages.length === 0) throw new Error(`browser notices: ${manifest.name} has no HTML build entry`)
+    const entries = typeof input === 'string' ? { index: input }
+      : Array.isArray(input) ? Object.fromEntries(input.map((entry, index) => [String(index), entry]))
+        : input ?? {}
+    const pages = Object.fromEntries(Object.entries(entries).filter(([, entry]) => entry.endsWith('.html')))
+    if (Object.keys(pages).length === 0) throw new Error(`browser notices: ${manifest.name} has no HTML build entry`)
+    const pageInput = Object.keys(pages).length === 1 ? Object.values(pages)[0] : pages
+    const configuredAliases = config.resolve?.alias ?? []
     await vite.build({
+      configFile: false,
       root: dir,
+      define: config.define,
       logLevel: 'error',
       plugins: [recorder(seen, workspaceNames, true)],
-      resolve: { alias: browserSourceAliases(root) },
+      resolve: { alias: [...browserSourceAliases(root), ...configuredAliases] },
       build: {
         write: false,
         minify: false,
         sourcemap: false,
         reportCompressedSize: false,
         rollupOptions: {
-          input: pages.length === 1 ? pages[0] : pages,
+          input: pageInput,
           // Chunk coloring expects full third-party bodies; the disclosure walk stops at their imports.
           output: { manualChunks: () => undefined },
         },
