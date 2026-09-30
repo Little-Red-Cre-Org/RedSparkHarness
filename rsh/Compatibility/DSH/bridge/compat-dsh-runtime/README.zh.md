@@ -65,11 +65,19 @@ Provider 创建一个 Cordis Context，安装 `RshPluginHost`，并按包名跟�
 <a id="model-experience"></a>
 ## 模型体验
 
-无。此包提供兼容服务，不增加模型请求内容或 Session event。
+### Cordis 兼容 bridge
+
+#### 模型看到的内容
+
+此 bridge 不直接贡献模型可见内容；选定的旧式工具仍由各自 Consumer 负责提供 schema 与结果。
+
+#### Token 影响
+
+此包不增加提示词 token 或工具 schema。已挂载的 adapter 仍可能暴露其 Consumer 所拥有的 schema。
 
 #### KV Cache 影响
 
-此包不改变模型可见输入，因此不影响提供方缓存复用。
+此包不改变请求前缀，因此选择 `dsh-compat-dsh-runtime` 不会影响提供方缓存复用。
 
 ## 已知限制与后续工作
 

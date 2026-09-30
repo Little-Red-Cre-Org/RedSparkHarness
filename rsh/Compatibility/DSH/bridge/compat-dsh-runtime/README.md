@@ -65,11 +65,19 @@ The provider creates one Cordis Context, installs `RshPluginHost`, and tracks ev
 <a id="model-experience"></a>
 ## Model Experience
 
-None. This package provides compatibility services and does not add model request content or Session events.
+### Cordis compatibility bridge
+
+#### What the model sees
+
+The bridge contributes no direct model-visible content; selected legacy tools remain the owners of their schemas and results.
+
+#### Token effect
+
+The package adds no prompt tokens or tool schemas. A mounted adapter can still expose the schemas owned by its consumer.
 
 #### KV Cache effect
 
-The package does not change model-visible input, so provider cache reuse is unaffected.
+The package does not change the request prefix, so provider cache reuse is unaffected by selecting `dsh-compat-dsh-runtime`.
 
 ## Known Limitations and Deferred Work
 
