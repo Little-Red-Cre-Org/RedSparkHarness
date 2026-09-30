@@ -69,7 +69,7 @@ Provider 创建一个 Cordis Context，安装 `RshPluginHost`，并按包名跟�
 
 #### 模型看到的内容
 
-此 bridge 不直接贡献模型可见内容；选定的旧式工具仍由各自 Consumer 负责提供 schema 与结果。
+`dsh-compat-dsh-runtime` bridge 不直接贡献模型可见内容；选定的旧式工具仍由各自 Consumer 负责提供 schema 与结果。
 
 #### Token 影响
 

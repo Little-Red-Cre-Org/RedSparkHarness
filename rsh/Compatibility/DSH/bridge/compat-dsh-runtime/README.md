@@ -69,7 +69,7 @@ The provider creates one Cordis Context, installs `RshPluginHost`, and tracks ev
 
 #### What the model sees
 
-The bridge contributes no direct model-visible content; selected legacy tools remain the owners of their schemas and results.
+The `dsh-compat-dsh-runtime` bridge contributes no direct model-visible content; selected legacy tools remain the owners of their schemas and results.
 
 #### Token effect
 
