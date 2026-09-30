@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-27-codex-protocol-and-hook-inventory.md
-2026-09-27-codex-protocol-and-hook-inventory.md: 2db4cfaea8c529355d6c5680cf17be20dfa0f728
-2026-09-27-codex-protocol-and-hook-inventory.zh.md: 0833502419e9419f1485d48aedee78136898c91d
+2026-09-27-codex-protocol-and-hook-inventory.md: f1feacad0d94dea1ee32230780c2f272b35fd4d7
+2026-09-27-codex-protocol-and-hook-inventory.zh.md: 92c2e44809bbb6cf979c359a73f4074e850f4e8b
