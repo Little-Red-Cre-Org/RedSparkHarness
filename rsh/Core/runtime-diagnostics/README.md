@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The runtime-diagnostics group provides runtime self-checking and plugin ownership support for DeepSeek Harness compositions: `invariants` runs package-owned checks that verify durable event and data relationships while a composition is live, and `plugin-host` records RSH role metadata while delegating legacy plugin lifecycle to Cordis. A violation surfaces as an error attributed to the package that owns the relationship; a global switch and package-name filters control which invariant checks run.
+The runtime-diagnostics group provides runtime self-checking and plugin ownership support for DeepSeek Harness compositions: `invariants` runs package-owned checks that verify durable event and data relationships while a composition is live, and `compat-plugin-host` records RSH role metadata while delegating legacy plugin lifecycle to Cordis. A violation surfaces as an error attributed to the package that owns the relationship; a global switch and package-name filters control which invariant checks run.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ The runtime-diagnostics group provides runtime self-checking and plugin ownershi
 | Package | Role | ctx key |
 |---|---|---|
 | [`invariants`](invariants/README.md) | Runs package-owned runtime checks and reports each failure by owning package | registers on `ctx.invariants` |
-| [`plugin-host`](plugin-host/README.md) | Records RSH plugin roles and adapts legacy Cordis plugin lifecycles | registers on `ctx.pluginHost` |
+| [`compat-plugin-host`](../../Compatibility/DSH/bridge/compat-plugin-host/README.md) | Records RSH plugin roles and adapts legacy Cordis plugin lifecycles | registers on `ctx.pluginHost` |
 | [`native-runtime`](native-runtime/README.md) | Resolves and activates native plugin plans with scoped services and owned cleanup | no Cordis context |
 
 -----

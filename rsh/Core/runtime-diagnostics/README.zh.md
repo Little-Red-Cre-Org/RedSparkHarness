@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-runtime-diagnostics 组为 DeepSeek Harness 组合提供运行时自检与插件所有权支持：`invariants` 在组合运行期间运行包自有检查，验证持久化事件与数据关系；`plugin-host` 记录 RSH 角色元数据，同时将旧式插件生命周期交给 Cordis。违规会以归因到拥有该关系的包的错误呈现；全局开关与包名过滤器控制运行哪些 invariant 检查。
+runtime-diagnostics 组为 DeepSeek Harness 组合提供运行时自检与插件所有权支持：`invariants` 在组合运行期间运行包自有检查，验证持久化事件与数据关系；`compat-plugin-host` 记录 RSH 角色元数据，同时将旧式插件生命周期交给 Cordis。违规会以归因到拥有该关系的包的错误呈现；全局开关与包名过滤器控制运行哪些 invariant 检查。
 
 ## 目录
 
@@ -25,7 +25,7 @@ runtime-diagnostics 组为 DeepSeek Harness 组合提供运行时自检与插件
 | 包 | 职责 | ctx 键 |
 |---|---|---|
 | [`invariants`](invariants/README.zh.md) | 运行包自有运行时检查，并按所属包报告每次失败 | 注册到 `ctx.invariants` |
-| [`plugin-host`](plugin-host/README.zh.md) | 记录 RSH 插件角色并适配旧式 Cordis 插件生命周期 | 注册到 `ctx.pluginHost` |
+| [`compat-plugin-host`](../../Compatibility/DSH/bridge/compat-plugin-host/README.zh.md) | 记录 RSH 插件角色并适配旧式 Cordis 插件生命周期 | 注册到 `ctx.pluginHost` |
 | [`native-runtime`](native-runtime/README.zh.md) | 解析并激活原生插件计划，提供作用域服务和所属资源清理 | 无 Cordis context |
 
 -----
