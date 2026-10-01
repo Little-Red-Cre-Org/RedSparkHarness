@@ -47,6 +47,12 @@ export interface NativeContext {
    * @returns idempotent early release with the same completion as host cleanup.
    */
   own(dispose: Disposer): () => Promise<void>
+  /**
+   * Own a registration whose cancellation closes admission and drains callbacks before resource disposal.
+   * @param dispose - remove this registration and await its admitted work.
+   * @returns an idempotent registration drain.
+   */
+  effect(dispose: Disposer): () => Promise<void>
 }
 
 /** Native execution protocol revision 1; independent of dsh.runtime role metadata. */
@@ -110,7 +116,7 @@ const planEntries = Symbol('native installation plan')
 /** Opaque, single-composition activation plan; only the resolver can create one. */
 export class InstallationPlan {
   readonly [planEntries]: readonly PlannedInstallation[]
-  private constructor(entries: readonly PlannedInstallation[]) {
+  private constructor(entries: readonly PlannedInstallation[], readonly target: 'host' | 'client') {
     this[planEntries] = entries
   }
 
@@ -173,7 +179,7 @@ export class InstallationPlan {
     }
     entries.forEach(visit)
     entries.forEach((entry) => { entry.activate = entry.plugin.resolve(entry.config) })
-    return new InstallationPlan(ordered)
+    return new InstallationPlan(ordered, target)
   }
 }
 
@@ -193,6 +199,11 @@ interface Activation {
   services: Map<ServiceKey, unknown>
 }
 
+interface AdmittedInvocation {
+  readonly controller: AbortController
+  readonly entry: PlannedInstallation | undefined
+}
+
 /** Starts one resolved composition and awaits owned resource cleanup on failure or stop. */
 export class NativeHost {
   /** Host-owned event dispatch; plugin subscriptions are owned through NativeContext.on. */
@@ -201,25 +212,31 @@ export class NativeHost {
   private readonly ready = new Map<PlannedInstallation, Activation>()
   private readonly diagnosticState = new Map<PlannedInstallation, Pick<InstallationDiagnostic, 'state' | 'failure' | 'cleanup'>>()
   private readonly controller = new AbortController()
-  private readonly invocations = new Set<Promise<unknown>>()
+  private readonly invocations = new Map<Promise<unknown>, AdmittedInvocation>()
+  private entries: readonly PlannedInstallation[]
   private started = false
   private startup: Promise<void> | undefined
   private shutdown: Promise<void> | undefined
   private mutation: Promise<void> = Promise.resolve()
+  private pendingMutations = 0
 
   /** @param plan - validated composition; the host has no implicit providers. */
   constructor(private readonly plan: InstallationPlan) {
+    this.entries = plan[planEntries]
     for (const entry of plan[planEntries]) {
       this.diagnosticState.set(entry, { state: 'planned', failure: undefined, cleanup: 'pending' })
     }
   }
+
+  /** Whole-Host cancellation, including failed startup or replacement and explicit stop. */
+  get signal(): AbortSignal { return this.controller.signal }
 
   /**
    * Snapshot installation state without configuration values or failure messages.
    * @returns detached observations in dependency order.
    */
   diagnostics(): readonly InstallationDiagnostic[] {
-    return this.plan[planEntries].map((entry) => {
+    return [...this.diagnosticState.keys()].map((entry) => {
       const current = this.diagnosticState.get(entry)
       if (current === undefined) throw new Error('native-runtime: missing installation diagnostic')
       return {
@@ -239,15 +256,45 @@ export class NativeHost {
   run<Actor extends object, Result>(
     scope: NativeScope, initiator: Actor, work: (invocation: NativeInvocation<Actor>) => Result | Promise<Result>,
   ): Promise<Result> {
+    return this.admit(scope, initiator, work)
+  }
+
+  /**
+   * Bind an operation to a ready installation and cancel it when that owner is replaced or removed.
+   * @param request - original request object for the selected installation.
+   * @param initiator - execution actor retained by this operation.
+   * @param work - operation cooperating with its installation and host cancellation.
+   * @returns the caller-owned result; unavailable installations and mutation-time admission reject.
+   */
+  runOwned<Actor extends object, Result>(
+    request: InstallationRequest, initiator: Actor, work: (invocation: NativeInvocation<Actor>) => Result | Promise<Result>,
+  ): Promise<Result> {
+    const entry = this.entries.find(candidate => candidate.request === request)
+    if (entry === undefined || !this.ready.has(entry)) {
+      return Promise.reject(new Error('native-runtime: installation is not ready'))
+    }
+    return this.admit(entry.scope, initiator, work, entry)
+  }
+
+  private admit<Actor extends object, Result>(
+    scope: NativeScope, initiator: Actor,
+    work: (invocation: NativeInvocation<Actor>) => Result | Promise<Result>, entry?: PlannedInstallation,
+  ): Promise<Result> {
     if (this.startup === undefined) return Promise.reject(new Error('native-runtime: host has not started'))
     if (this.controller.signal.aborted) return Promise.reject(new Error('native-runtime: host stopped'))
-    const invocation = { scope, initiator, signal: this.controller.signal }
+    if (this.pendingMutations > 0) return Promise.reject(new Error('native-runtime: host is changing installations'))
+    const controller = new AbortController()
+    const owner = entry === undefined ? undefined : this.ready.get(entry)
+    const signal = AbortSignal.any([
+      this.controller.signal, controller.signal, ...owner === undefined ? [] : [owner.owner.controller.signal],
+    ])
+    const invocation = { scope, initiator, signal }
     const task = Promise.resolve().then(() => {
       invocation.signal.throwIfAborted()
       if (!this.started) throw new Error('native-runtime: host is not ready')
       return work(invocation)
     })
-    this.invocations.add(task)
+    this.invocations.set(task, { controller, entry })
     void task.then(() => this.invocations.delete(task), () => this.invocations.delete(task))
     return task
   }
@@ -260,77 +307,86 @@ export class NativeHost {
     if (this.controller.signal.aborted) return Promise.reject(new Error('native-runtime: host stopped'))
     return this.startup ??= Promise.resolve().then(async () => {
       try {
-        for (const entry of this.plan[planEntries]) {
-          this.controller.signal.throwIfAborted()
-          const owner = new ResourceOwner()
-          const services = new Map<ServiceKey, unknown>()
-          const activation = { entry, owner, services }
-          this.activations.push(activation)
-          this.diagnosticState.set(entry, { state: 'activating', failure: undefined, cleanup: 'pending' })
-          const context: NativeContext = {
-            scope: entry.scope, signal: owner.controller.signal, events: this.events,
-            own: dispose => owner.own(dispose),
-            on: (key, listener) => {
-              owner.controller.signal.throwIfAborted()
-              const off = this.events.on(entry.scope, key, listener)
-              const cancel = () => { owner.waitFor(off()) }
-              owner.controller.signal.addEventListener('abort', cancel, { once: true })
-              return owner.own(() => {
-                owner.controller.signal.removeEventListener('abort', cancel)
-                return off()
-              })
-            },
-            require: <K extends ServiceKey>(key: K): NativeServices[K] => {
-              owner.controller.signal.throwIfAborted()
-              const dependency = entry.dependencies.get(key)
-              const provider = dependency === undefined ? undefined : this.ready.get(dependency)
-              if (!entry.requires.includes(key) || provider === undefined || !provider.services.has(key)) {
-                throw new Error(`native-runtime: ${entry.name} cannot read undeclared or unavailable ${key}`)
-              }
-              return provider.services.get(key) as NativeServices[K]
-            },
-            optional: <K extends ServiceKey>(key: K): NativeServices[K] | undefined => {
-              owner.controller.signal.throwIfAborted()
-              if (!entry.optional.includes(key)) {
-                throw new Error(`native-runtime: ${entry.name} did not declare optional ${key}`)
-              }
-              const dependency = entry.dependencies.get(key)
-              if (dependency === undefined) return undefined
-              const provider = this.ready.get(dependency)
-              if (provider === undefined) throw new Error(`native-runtime: selected optional ${key} is unavailable`)
-              return provider.services.get(key) as NativeServices[K]
-            },
-            provide: (key, service) => {
-              owner.controller.signal.throwIfAborted()
-              if (this.ready.has(entry) || !entry.provides.includes(key) || services.has(key)) {
-                throw new Error(`native-runtime: ${entry.name} cannot publish ${key}`)
-              }
-              services.set(key, service)
-            },
-          }
-          await entry.activate(context)
-          this.controller.signal.throwIfAborted()
-          for (const key of entry.provides) {
-            if (!services.has(key)) throw new Error(`native-runtime: ${entry.name} did not provide ${key}`)
-          }
-          this.ready.set(entry, activation)
-          this.diagnosticState.set(entry, { state: 'ready', failure: undefined, cleanup: 'pending' })
-        }
+        await this.activate(this.entries)
         this.started = true
       } catch (error) {
-        for (const activation of this.activations) {
-          const current = this.diagnosticState.get(activation.entry)
-          if (current?.state === 'activating') {
-            this.diagnosticState.set(activation.entry, { ...current, state: 'failed', failure: 'activation' })
-          }
-        }
-        this.controller.abort(error)
-        try { await this.release() } catch (cleanup) {
-          throw new AggregateError([error, cleanup], 'native-runtime: activation and rollback failed')
-        }
-        throw error
+        return this.rollback(error)
       }
     })
+  }
+
+  private async activate(entries: readonly PlannedInstallation[]): Promise<void> {
+    for (const entry of entries) {
+      if (this.ready.has(entry)) continue
+      this.controller.signal.throwIfAborted()
+      const owner = new ResourceOwner()
+      const services = new Map<ServiceKey, unknown>()
+      const activation = { entry, owner, services }
+      this.activations.push(activation)
+      this.diagnosticState.set(entry, { state: 'activating', failure: undefined, cleanup: 'pending' })
+      const context: NativeContext = {
+        scope: entry.scope, signal: owner.controller.signal, events: this.events,
+        own: dispose => owner.own(dispose),
+        effect: dispose => owner.effect(dispose),
+        on: (key, listener) => {
+          owner.controller.signal.throwIfAborted()
+          const off = this.events.on(entry.scope, key, listener)
+          return owner.effect(off)
+        },
+        require: <K extends ServiceKey>(key: K): NativeServices[K] => {
+          owner.controller.signal.throwIfAborted()
+          const dependency = entry.dependencies.get(key)
+          const provider = dependency === undefined ? undefined : this.ready.get(dependency)
+          if (!entry.requires.includes(key) || provider === undefined || !provider.services.has(key)) {
+            throw new Error(`native-runtime: ${entry.name} cannot read undeclared or unavailable ${key}`)
+          }
+          return provider.services.get(key) as NativeServices[K]
+        },
+        optional: <K extends ServiceKey>(key: K): NativeServices[K] | undefined => {
+          owner.controller.signal.throwIfAborted()
+          if (!entry.optional.includes(key)) {
+            throw new Error(`native-runtime: ${entry.name} did not declare optional ${key}`)
+          }
+          const dependency = entry.dependencies.get(key)
+          if (dependency === undefined) return undefined
+          const provider = this.ready.get(dependency)
+          if (provider === undefined) throw new Error(`native-runtime: selected optional ${key} is unavailable`)
+          return provider.services.get(key) as NativeServices[K]
+        },
+        provide: (key, service) => {
+          owner.controller.signal.throwIfAborted()
+          if (this.ready.has(entry) || !entry.provides.includes(key) || services.has(key)) {
+            throw new Error(`native-runtime: ${entry.name} cannot publish ${key}`)
+          }
+          services.set(key, service)
+        },
+      }
+      await entry.activate(context)
+      this.controller.signal.throwIfAborted()
+      for (const key of entry.provides) {
+        if (!services.has(key)) throw new Error(`native-runtime: ${entry.name} did not provide ${key}`)
+      }
+      this.ready.set(entry, activation)
+      this.diagnosticState.set(entry, { state: 'ready', failure: undefined, cleanup: 'pending' })
+    }
+  }
+
+  private async rollback(error: unknown): Promise<never> {
+    for (const activation of this.activations) {
+      const current = this.diagnosticState.get(activation.entry)
+      if (current?.state === 'activating') {
+        this.diagnosticState.set(activation.entry, { ...current, state: 'failed', failure: 'activation' })
+      }
+    }
+    this.controller.abort(error)
+    for (const activation of this.activations) activation.owner.controller.abort()
+    const draining = this.events.close()
+    await Promise.allSettled(this.invocations.keys())
+    await draining
+    try { await this.release() } catch (cleanup) {
+      throw new AggregateError([error, cleanup], 'native-runtime: activation and rollback failed')
+    }
+    throw error
   }
 
   private async release(activations = [...this.activations], closeEvents = true): Promise<void> {
@@ -364,10 +420,10 @@ export class NativeHost {
    * @returns completion after affected callbacks and resources settle; unknown requests reject.
    */
   remove(request: InstallationRequest): Promise<void> {
-    const operation = this.mutation.then(async () => {
+    return this.mutate(async () => {
       await this.startup
       this.controller.signal.throwIfAborted()
-      const entry = this.plan[planEntries].find(candidate => candidate.request === request)
+      const entry = this.entries.find(candidate => candidate.request === request)
       if (entry === undefined) throw new Error('native-runtime: installation request does not belong to this host')
       if (this.startup === undefined) throw new Error('native-runtime: host has not started')
       const removed = new Set([entry])
@@ -376,8 +432,76 @@ export class NativeHost {
           removed.add(activation.entry)
         }
       }
-      await this.release(this.activations.filter(activation => removed.has(activation.entry)), false)
+      const affected = this.activations.filter(activation => removed.has(activation.entry))
+      if (affected.length === 0) return
+      await this.drain(affected)
+      await this.release(affected, false)
     })
+  }
+
+  /**
+   * Replace a validated composition after affected calls, callbacks and resource cleanup settle.
+   * Reuse request objects to preserve ready owners with unchanged dependency selections; new requests replace installations.
+   * Call from outside admitted work. Invalid plans must be rejected by the resolver before calling this operation.
+   * @param plan - complete successor composition for the same runtime target.
+   * @returns replacement completion; cleanup or activation failure stops the host without restoring disposed owners.
+   */
+  replace(plan: InstallationPlan): Promise<void> {
+    if (plan.target !== this.plan.target) return Promise.reject(new Error('native-runtime: replacement target differs from host'))
+    return this.mutate(async () => {
+      await this.startup
+      this.controller.signal.throwIfAborted()
+      if (this.startup === undefined) throw new Error('native-runtime: host has not started')
+      const mapped = new Map<PlannedInstallation, PlannedInstallation>()
+      const successor = plan[planEntries].map((candidate) => {
+        const dependencies = new Map<ServiceKey, PlannedInstallation>()
+        for (const [key, provider] of candidate.dependencies) {
+          const selected = mapped.get(provider)
+          if (selected === undefined) throw new Error('native-runtime: replacement dependencies are not ordered')
+          dependencies.set(key, selected)
+        }
+        const previous = this.entries.find(entry => entry.request === candidate.request && this.ready.has(entry))
+        const retained = previous !== undefined && previous.dependencies.size === dependencies.size
+          && [...dependencies].every(([key, provider]) => previous.dependencies.get(key) === provider)
+        const entry = retained ? previous : { ...candidate, dependencies }
+        mapped.set(candidate, entry)
+        return entry
+      })
+      const retained = new Set(successor)
+      const affected = this.activations.filter(activation => !retained.has(activation.entry))
+      if (affected.length === 0 && successor.every(entry => this.ready.has(entry))) return
+      for (const entry of successor) {
+        if (!this.diagnosticState.has(entry)) this.diagnosticState.set(entry, { state: 'planned', failure: undefined, cleanup: 'pending' })
+      }
+      try {
+        await this.drain(affected)
+        await this.release(affected, false)
+        this.controller.signal.throwIfAborted()
+        this.entries = successor
+        await this.activate(successor)
+        this.activations.sort((left, right) => successor.indexOf(left.entry) - successor.indexOf(right.entry))
+      } catch (error) {
+        return this.rollback(error)
+      }
+    })
+  }
+
+  private async drain(activations: readonly Activation[]): Promise<void> {
+    const affected = new Set(activations.map(activation => activation.entry))
+    for (const activation of activations) activation.owner.controller.abort()
+    const pending: Promise<unknown>[] = []
+    for (const [completion, invocation] of this.invocations) {
+      if (invocation.entry === undefined || affected.has(invocation.entry)) {
+        invocation.controller.abort()
+        pending.push(completion)
+      }
+    }
+    await Promise.allSettled(pending)
+  }
+
+  private mutate(work: () => Promise<void>): Promise<void> {
+    this.pendingMutations++
+    const operation = this.mutation.then(work).finally(() => { this.pendingMutations-- })
     // The caller owns this operation's error; later mutations still need to reach remaining owners.
     this.mutation = operation.catch(() => undefined)
     return operation
@@ -396,7 +520,7 @@ export class NativeHost {
       await draining
       await this.startup
       await this.mutation
-      await Promise.allSettled(this.invocations)
+      await Promise.allSettled(this.invocations.keys())
       await this.release()
       for (const [entry, current] of this.diagnosticState) {
         if (current.state === 'planned') {

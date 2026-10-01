@@ -58,6 +58,28 @@ export class ResourceOwner {
   }
 
   /**
+   * Own a registration whose cancellation closes admission before acquired resources are released.
+   * @param dispose - registration removal and completion of its admitted callbacks.
+   * @returns the shared, idempotent registration drain.
+   */
+  effect(dispose: Disposer): () => Promise<void> {
+    let completion: Promise<void> | undefined
+    const release = () => {
+      if (completion !== undefined) return completion
+      const drain = Promise.withResolvers<void>()
+      completion = drain.promise
+      try { drain.resolve(dispose()) } catch (error) { drain.reject(error) }
+      return completion
+    }
+    this.own(release)
+    const cancel = () => { this.waitFor(release()) }
+    this.controller.signal.addEventListener('abort', cancel, { once: true })
+    this.own(() => { this.controller.signal.removeEventListener('abort', cancel) })
+    if (this.controller.signal.aborted) cancel()
+    return release
+  }
+
+  /**
    * Release resources in reverse acquisition order after activation settles.
    * @returns the shared completion, rejecting with all cleanup failures.
    */

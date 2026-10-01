@@ -12,6 +12,9 @@
       "path": "../../../../Core/vendor/cordis"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../ui-slots"
     },
     {

@@ -42,6 +42,7 @@ export {
   serverResponseSchema,
 } from './rpc-schema.ts'
 export { HostConnectionService } from './rpc-host.ts'
+export { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 
 export { API_PATH } from './api-path.ts'
 

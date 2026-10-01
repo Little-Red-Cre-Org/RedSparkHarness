@@ -9019,6 +9019,9 @@ importers:
 
   rsh/Programs/Web/client/connection:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
@@ -9038,9 +9041,6 @@ importers:
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../../../Modules/Official/attachment/attachment
-      '@deepseek-ai/dsh-brand':
-        specifier: workspace:^
-        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/commands
@@ -9053,6 +9053,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -10520,6 +10523,10 @@ importers:
         version: link:../../../../Core/util/workspace-path
 
   rsh/Programs/Web/client/ui-renderer:
+    dependencies:
+      use-sync-external-store:
+        specifier: 1.2.0
+        version: 1.2.0(react@18.3.1)
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -10533,6 +10540,9 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -10548,9 +10558,6 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
-      use-sync-external-store:
-        specifier: 1.2.0
-        version: 1.2.0(react@18.3.1)
 
   rsh/Programs/Web/client/ui-schedule:
     devDependencies:
@@ -11614,6 +11621,16 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/web:
+    dependencies:
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../ui-renderer
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      dequal:
+        specifier: 2.0.3
+        version: 2.0.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -11633,15 +11650,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
-      '@deepseek-ai/dsh-client-ui-renderer':
-        specifier: workspace:^
-        version: link:../ui-renderer
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
-      '@deepseek-ai/dsh-native-runtime':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
