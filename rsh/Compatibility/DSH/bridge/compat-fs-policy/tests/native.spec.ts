@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
 import { plugin as nativePolicy } from '@deepseek-ai/dsh-fs-observation-policy/native'
@@ -16,9 +17,10 @@ it('rejects changed legacy declarations, configuration and duplicate policy auth
   expect(() => { validateLegacyPolicyManifest({ dsh: { runtime: { apiVersion: 2, role: 'policy', capability: 'filesystem' } } }) })
     .toThrow('unsupported')
   const scope = new NativeScope()
-  expect(() => resolveInstallation([{ plugin, scope, config: { ignored: true } }], 'host')).toThrow('configuration must be empty')
+  expect(() => plugin.resolve({ ignored: true })).toThrow('configuration must be empty')
   expect(() => resolveInstallation([
     { plugin, scope, config: undefined }, { plugin: nativePolicy, scope, config: undefined },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host')).toThrow('duplicate')
 })
 
@@ -35,6 +37,7 @@ it('preserves per-session observations and releases only its own listeners on un
     { plugin: consumer, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: directory } },
     selectedPolicy,
+    { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host'))
   try {
     await host.start()

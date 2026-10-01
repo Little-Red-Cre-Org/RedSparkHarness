@@ -1,7 +1,7 @@
 /** Explicit Cordis observation policy forwarding one native event direction. */
 import { createRequire } from 'node:module'
-import { Context } from '@deepseek-ai/cordis'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import * as LegacyPolicy from '@deepseek-ai/dsh-fs-observation-policy'
@@ -11,7 +11,7 @@ interface LegacyManifest {
 }
 
 /**
- * Reject a changed policy declaration before creating its Cordis Context.
+ * Reject a changed policy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
 export function validateLegacyPolicyManifest(manifest: LegacyManifest): void {
@@ -26,7 +26,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@deepseek-ai/dsh-compat-fs-policy',
   targets: ['host'],
-  requires: [],
+  requires: ['compatDshRuntime'],
   provides: ['fsObservationPolicy'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
@@ -35,9 +35,11 @@ export const plugin: NativePlugin = {
     const require = createRequire(import.meta.url)
     validateLegacyPolicyManifest(require('@deepseek-ai/dsh-fs-observation-policy/package.json') as LegacyManifest)
     return async (native) => {
-      const legacy = new Context()
-      native.own(() => legacy.fiber.dispose())
-      await legacy.plugin(LegacyPolicy)
+      const runtime = native.require('compatDshRuntime')
+      const mount = runtime.mount('@deepseek-ai/dsh-fs-observation-policy', LegacyPolicy)
+      native.own(() => mount.dispose())
+      await mount.ready
+      const legacy = runtime.context
       native.on('fs/write-intent', (target, actor) => legacy.waterfall('fs/write-intent', target, actor, () => undefined))
       native.on('fs/edit-intent', (target, actor) => legacy.waterfall('fs/edit-intent', target, actor, () => undefined))
       native.on('fs/observed', (target, observation, actor) => { legacy.emit('fs/observed', target, observation, actor) })

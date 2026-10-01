@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-fs-policy` 将旧文件系统观察策略应用于原生 `fs/*` 事件。它把决策和观察从原生代码转发到一个隔离 Cordis Context，保留逐 Session 的已见状态和陈旧版本防护。移除 bridge 只会移除它自己的监听器和状态。
+`dsh-compat-fs-policy` 将旧文件系统观察策略应用于原生 `fs/*` 事件。它把决策和观察从原生代码转发到共享 Cordis Context，保留逐 Session 的已见状态和陈旧版本防护。移除 bridge 只会移除它自己的监听器和状态。
 
 ## 目录
 

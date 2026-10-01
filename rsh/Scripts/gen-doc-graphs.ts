@@ -568,7 +568,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'plugin-host',
     title: 'RSH plugin-role registry',
     mode: 'core',
-    note: 'Records native package roles and mounts legacy Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container.',
+    note: 'The optional DSH compatibility bridge records adapter roles and mounts allowlisted Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container.',
   },
   {
     key: 'fs',
@@ -1294,6 +1294,10 @@ function listenerPackages(listeners: Set<string>, pkgsByShort: Map<string, Pkg>)
 function renderEventRelations(pkgs: Pkg[], events: readonly EventEntry[]): string {
   const relations = collectEventRelations()
   const pkgsByShort = new Map(pkgs.map(pkg => [pkg.short, pkg]))
+  for (const pkg of pkgs) {
+    const directoryName = pkg.rel.split('/').at(-1)
+    if (directoryName !== undefined) pkgsByShort.set(directoryName, pkg)
+  }
   const maintenance = 'generated: Cordis event declarations and producer/listener edges are resolved from the repository TypeScript Program'
   const lines = generatedHeader('Event Producer And Consumer Matrix')
   lines.push(

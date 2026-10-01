@@ -1,7 +1,7 @@
 /** Explicit Cordis filesystem Provider inside one native installation. */
 import { createRequire } from 'node:module'
-import { Context } from '@deepseek-ai/cordis'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import LegacyLocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import { resolveLocalFilesystemConfig } from '@deepseek-ai/dsh-fs-local/backend'
@@ -11,7 +11,7 @@ interface LegacyManifest {
 }
 
 /**
- * Refuse a changed legacy declaration before constructing its Cordis Context.
+ * Refuse a changed legacy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
 export function validateLegacyFilesystemManifest(manifest: LegacyManifest): void {
@@ -26,16 +26,18 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@deepseek-ai/dsh-compat-fs-local',
   targets: ['host'],
-  requires: [],
+  requires: ['compatDshRuntime'],
   provides: ['fs'],
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
     validateLegacyFilesystemManifest(require('@deepseek-ai/dsh-fs-local/package.json') as LegacyManifest)
     return async (native) => {
-      const legacy = new Context()
-      native.own(() => legacy.fiber.dispose())
-      await legacy.plugin(LegacyLocalFileSystem, config)
+      const runtime = native.require('compatDshRuntime')
+      const mount = runtime.mount('@deepseek-ai/dsh-fs-local', LegacyLocalFileSystem, config)
+      native.own(() => mount.dispose())
+      await mount.ready
+      const legacy = runtime.context
       const filesystem = legacy.get('fs')
       if (filesystem === undefined) throw new Error('compat-fs-local: legacy Provider did not publish fs')
       native.provide('fs', filesystem)

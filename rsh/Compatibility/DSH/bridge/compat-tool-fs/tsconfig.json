@@ -5,6 +5,7 @@
   "references": [
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../compat-dsh-runtime" },
     { "path": "../../../../Modules/Official/fs/fs" },
     { "path": "../../../../Modules/Official/fs/tool-fs" },
     { "path": "../../../../Engine/core/tools" },

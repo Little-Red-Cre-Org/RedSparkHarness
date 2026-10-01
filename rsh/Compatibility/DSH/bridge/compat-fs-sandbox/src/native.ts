@@ -1,7 +1,7 @@
-/** Sandbox filesystem Provider mounted in one isolated Cordis Context. */
+/** Sandbox filesystem Provider mounted in the shared Cordis Context. */
 import { createRequire } from 'node:module'
-import { Context } from '@deepseek-ai/cordis'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
@@ -13,7 +13,7 @@ interface LegacyManifest {
 }
 
 /**
- * Refuse a changed legacy declaration before constructing its Cordis Context.
+ * Refuse a changed legacy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
 export function validateLegacySandboxManifest(manifest: LegacyManifest): void {
@@ -26,21 +26,29 @@ export function validateLegacySandboxManifest(manifest: LegacyManifest): void {
 /** Provide a confining filesystem only when a native policy was selected. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-compat-fs-sandbox', targets: ['host'],
-  requires: ['sandboxPolicy'], provides: ['fs'],
+  requires: ['sandboxPolicy', 'compatDshRuntime'], provides: ['fs'],
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
     validateLegacySandboxManifest(require('@deepseek-ai/dsh-fs-sandbox/package.json') as LegacyManifest)
     return async (native) => {
-      const legacy = new Context()
-      native.own(() => legacy.fiber.dispose())
+      const runtime = native.require('compatDshRuntime')
+      const legacy = runtime.context
       const policy = native.require('sandboxPolicy')
-      // The legacy class uses defaultMode and resolve; Cordis types the slot as its concrete service class.
-      legacy.provide('sandboxPolicy', {
+      const legacyPolicy = {
         defaultMode: policy.defaultMode,
         resolve: policy.resolve.bind(policy),
-      } as unknown as import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService)
-      await legacy.plugin(SandboxedFileSystem, config)
+      } as unknown as import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService
+      if (legacy.get('sandboxPolicy') === undefined) {
+        const policyMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/sandbox-policy-adapter', (context) => {
+          context.provide('sandboxPolicy', legacyPolicy)
+        })
+        native.own(() => policyMount.dispose())
+        await policyMount.ready
+      }
+      const mount = runtime.mount('@deepseek-ai/dsh-fs-sandbox', SandboxedFileSystem, config)
+      native.own(() => mount.dispose())
+      await mount.ready
       const filesystem = legacy.get('fs')
       if (filesystem === undefined) throw new Error('compat-fs-sandbox: legacy Provider did not publish fs')
       native.provide('fs', filesystem)

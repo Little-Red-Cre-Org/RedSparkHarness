@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-policy` applies the legacy filesystem observation policy to native `fs/*` events. It forwards decisions and observations from native code into one isolated Cordis Context, retaining per-session seen-state and stale-version guards. Removing the bridge removes only its own listeners and state.
+`dsh-compat-fs-policy` applies the legacy filesystem observation policy to native `fs/*` events. It forwards decisions and observations from native code into the shared Cordis Context, retaining per-session seen-state and stale-version guards. Removing the bridge removes only its own listeners and state.
 
 ## Table of Contents
 

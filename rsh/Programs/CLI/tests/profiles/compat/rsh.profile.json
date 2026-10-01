@@ -2,6 +2,7 @@
   "formatVersion": 1,
   "scopes": [{ "id": "root" }],
   "installations": [
+    { "id": "compat-runtime", "plugin": "@deepseek-ai/dsh-compat-dsh-runtime", "scope": "root" },
     { "id": "app", "plugin": "@deepseek-ai/dsh-native-headless", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED", "provider": "mock", "model": "fixture", "systemPrompt": "Use the filesystem tool.", "maxSteps": 3 } },
     { "id": "agents", "plugin": "@deepseek-ai/dsh-native-agent", "scope": "root" },
     { "id": "model-execution", "plugin": "@deepseek-ai/dsh-native-model-execution", "scope": "root" },

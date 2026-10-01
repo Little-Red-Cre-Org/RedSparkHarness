@@ -10,7 +10,7 @@ We recommend using an agent to explore the codebase and understand its architect
 
 [Cordis](cordis-primer.md) is the framework under dsh: plugins contribute services, typed events, and reversible effects to a shared context. Every part of the product is a plugin, including the model adapter, the tool registry, the session log, and the agent loop itself, so each is replaceable from configuration.
 
-There is no privileged core to patch: plugins mount beside each other, and registrations unwind with their plugin. RSH records native package roles as Definition, Provider, Consumer, policy, projection, or adapter; `dsh-plugin-host` uses the same Cordis Fiber lifecycle.
+No privileged core needs patching: plugins mount beside each other, and registrations unwind with their plugin. RSH records native package roles as Definition, Provider, Consumer, policy, projection, or adapter; optional DSH compatibility bridge `dsh-plugin-host` uses Cordis Fiber lifecycle inside `Compatibility/DSH`.
 
 [native library](../Core/runtime-diagnostics/native-runtime/README.md) owns lifecycle; profiles select installations; [native Agent](../Engine/core/native-agent/README.md) owns identity; [native model execution](../Engine/core/native-model-execution/README.md) records streams; [native headless](../Engine/core/native-headless/README.md) runs turns. Cordis profiles: [migration proposal](../../.agents/notes/proposed/architecture/2026-09-22-rsh-native-runtime-and-optional-cordis.md).
 

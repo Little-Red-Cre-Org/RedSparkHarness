@@ -189,7 +189,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Tests/test-support/session-snapshot': { kind: 'none', reason: 'The test harness observes and normalizes transcripts without changing live requests.' },
   'rsh/Tests/test-support/agent-loop-testkit': { kind: 'none', reason: 'The test helper mounts services but neither drives nor modifies model requests.' },
   'rsh/Core/runtime-diagnostics/invariants': { kind: 'none', reason: 'The observer validates requests but never rewrites their context.' },
-  'rsh/Core/runtime-diagnostics/plugin-host': { kind: 'none', reason: 'The adapter records package ownership while Cordis retains every model-facing registration.' },
+  'rsh/Compatibility/DSH/bridge/compat-plugin-host': { kind: 'none', reason: 'The adapter records package ownership while Cordis retains every model-facing registration.' },
   'rsh/Tests/test-support/loader-smoke': { kind: 'none', reason: 'The test harness submits an ordinary user task but delegates prompt and tool composition to the loaded tree.' },
   'rsh/Tests/test-support/llm-mock-server': { kind: 'none', reason: 'The test server substitutes provider wire behavior without invoking a real model.' },
   'rsh/Tests/test-support/llm-replay': { kind: 'none', reason: 'The keyless adapter invokes no provider model.' },

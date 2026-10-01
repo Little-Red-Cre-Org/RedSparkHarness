@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "rsh/Core/runtime-diagnostics/plugin-host"
+    "directory": "rsh/Compatibility/DSH/bridge/compat-plugin-host"
   },
   "type": "module",
   "main": "lib/index.js",
@@ -34,6 +34,8 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/cordis-plugin-include": "workspace:^",
+    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^"
   }
 }

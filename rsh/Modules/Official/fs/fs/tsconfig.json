@@ -21,7 +21,7 @@
       "path": "../../../../Core/runtime-diagnostics/invariants"
     },
     {
-      "path": "../../../../Core/runtime-diagnostics/plugin-host"
+      "path": "../../../../Compatibility/DSH/bridge/compat-plugin-host"
     },
     {
       "path": "../../sandbox/sandbox"
