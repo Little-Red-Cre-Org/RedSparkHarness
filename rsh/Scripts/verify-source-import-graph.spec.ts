@@ -97,8 +97,7 @@ describe('verify-source-import-graph', () => {
     const f = fixture("import { value } from '@test/target'\n")
     const importerDir = f.importer.directory
     const root = resolve(importerDir, '../..')
-    f.options.paths = { '@test/*': ['packages/*/src/index.ts'] }
-    f.options.baseUrl = root
+    f.options.paths = { '@test/*': [join(root, 'packages/*/src/index.ts')] }
     const edges: ResolvedSourceImportEdge[] = []
     expect(sourceImportViolations(f.source, f.importer, f.owners, f.options, 'client', new Set(), undefined, edges))
       .toEqual(expect.arrayContaining([expect.stringContaining('runtime edge @test/importer -> @test/target')]))
@@ -115,8 +114,8 @@ describe('verify-source-import-graph', () => {
     const importer = { ...f.importer, dependencies: { '@test/target': 'workspace:^' } }
     const owners = [importer, f.target, other]
     const root = resolve(f.importer.directory, '../..')
-    const hostOptions = { ...f.options, baseUrl: root, paths: { '@test/target': ['packages/target/src/index.ts'] } }
-    const clientOptions = { ...f.options, baseUrl: root, paths: { '@test/target': ['packages/other/src/index.ts'] } }
+    const hostOptions = { ...f.options, paths: { '@test/target': [join(root, 'packages/target/src/index.ts')] } }
+    const clientOptions = { ...f.options, paths: { '@test/target': [join(root, 'packages/other/src/index.ts')] } }
     expect(sourceImportViolations(f.source, importer, owners, hostOptions, 'host')).toEqual([])
     expect(sourceImportViolations(f.source, importer, owners, clientOptions, 'client'))
       .toEqual(expect.arrayContaining([expect.stringContaining('client alias "@test/target" resolves to @test/other')]))
@@ -126,7 +125,7 @@ describe('verify-source-import-graph', () => {
     const f = fixture("import type { T } from '@deepseek-ai/cordis'\n", {
       paths: { '@deepseek-ai/cordis': ['packages/target/src/index.ts'] },
     })
-    f.options.baseUrl = resolve(f.importer.directory, '../..')
+    f.options.paths = { '@deepseek-ai/cordis': [join(f.target.directory, 'src/index.ts')] }
     const strict = new Set([f.importer.directory.replaceAll('\\', '/').toLowerCase()])
     const problems = sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host', strict)
     expect(problems.some(problem => problem.includes('native source owner @test/importer imports Cordis'))).toBe(true)

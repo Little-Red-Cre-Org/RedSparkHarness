@@ -92,7 +92,7 @@ function packageNameOf(specifier: string): string | undefined {
 function runtimeImport(node: ts.ImportDeclaration): boolean {
   const clause = node.importClause
   if (clause === undefined) return true
-  if (clause.isTypeOnly) return false
+  if (clause.phaseModifier === ts.SyntaxKind.TypeKeyword) return false
   if (clause.name !== undefined) return true
   const bindings = clause.namedBindings
   if (bindings === undefined || ts.isNamespaceImport(bindings)) return true
@@ -113,7 +113,7 @@ export function collectSourceImportReferences(source: ts.SourceFile): SourceImpo
     const position = source.getLineAndCharacterOfPosition(node.getStart(source))
     const literal = argument !== undefined && (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument))
     const reference: SourceImportReference = {
-      ...(literal ? { specifier: (argument as ts.StringLiteralLike).text } : {}),
+      ...(literal ? { specifier: argument.text } : {}),
       kind,
       line: position.line + 1,
       computed: !literal,
@@ -165,7 +165,7 @@ export function collectCordisSourceUses(
     if (bindings !== undefined && ts.isNamedImports(bindings)) {
       for (const element of bindings.elements) {
         const imported = element.propertyName?.text ?? element.name.text
-        symbols.push(`${clause.isTypeOnly || element.isTypeOnly ? 'type:' : 'value:'}${imported}`)
+        symbols.push(`${clause.phaseModifier === ts.SyntaxKind.TypeKeyword || element.isTypeOnly ? 'type:' : 'value:'}${imported}`)
       }
     }
     return symbols
