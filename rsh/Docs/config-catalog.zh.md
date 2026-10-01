@@ -409,7 +409,7 @@ export interface ConnectionRecoveryConfig {
 }
 ```
 
-来源： [`rsh/Programs/Web/client/connection/src/index.ts:72`](../Programs/Web/client/connection/src/index.ts)
+来源： [`rsh/Programs/Web/client/connection/src/index.ts:73`](../Programs/Web/client/connection/src/index.ts)
 
 <a id="deepseek-aidsh-client-hmr"></a>
 
@@ -3654,6 +3654,8 @@ export interface Config {
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
+- @deepseek-ai/dsh-native-web-assets（[sh/Programs/Web/host/native-web-assets/src/index.ts](../Programs/Web/host/native-web-assets/src/index.ts)）
+- @deepseek-ai/dsh-native-web-host（[sh/Programs/Web/host/native-web-host/src/index.ts](../Programs/Web/host/native-web-host/src/index.ts)）
 - `@deepseek-ai/dsh-output-retention`（[`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts)）
 - `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))
 - `@deepseek-ai/dsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))

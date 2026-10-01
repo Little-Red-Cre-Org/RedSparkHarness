@@ -395,6 +395,8 @@
       "@deepseek-ai/dsh-native-prompt": ["./rsh/Engine/core/native-prompt/src"],
       "@deepseek-ai/dsh-native-sandbox-policy": ["./rsh/Modules/Official/sandbox/native-sandbox-policy/src"],
       "@deepseek-ai/dsh-native-tools": ["./rsh/Engine/core/native-tools/src"],
+      "@deepseek-ai/dsh-native-web-assets": ["./rsh/Programs/Web/host/native-web-assets/src"],
+      "@deepseek-ai/dsh-native-web-host": ["./rsh/Programs/Web/host/native-web-host/src"],
       "@deepseek-ai/dsh-output-retention": ["./rsh/Core/util/output-retention/src"],
       "@deepseek-ai/dsh-package-manifest": ["./rsh/Core/util/package-manifest/src"],
       "@deepseek-ai/dsh-permission-presets": ["./rsh/Modules/Official/interaction/permission-presets/src"],
