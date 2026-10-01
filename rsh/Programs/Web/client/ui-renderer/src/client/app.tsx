@@ -3,12 +3,12 @@
  * `root` slot, which is the only ctx-level slot render in the application.
  */
 import type { ReactNode } from 'react'
-import type { Context } from '@deepseek-ai/cordis'
+import type { SlotRuntime } from '../slot-runtime.ts'
 
 /** Inputs available after the UI renderer's inject set activates. */
 export interface AssemblyDeps {
-  /** Client context carrying the renderer-owned Slot registry. */
-  ctx: Context
+  /** Slot runtime used to render the application's root entry. */
+  slots: Pick<SlotRuntime, 'renderSlot'>
 }
 
 /**
@@ -17,6 +17,6 @@ export interface AssemblyDeps {
  * @returns Factory producing the application React tree.
  */
 export function buildRenderApp(deps: AssemblyDeps): () => ReactNode {
-  const { ctx } = deps
-  return () => ctx.slots.renderSlot('root', {})
+  const { slots } = deps
+  return () => slots.renderSlot('root', {})
 }

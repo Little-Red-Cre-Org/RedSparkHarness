@@ -1557,7 +1557,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'root\', () => ctx.slots.register(\n      { name: \'root\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'rsh/Programs/Web/client/ui-renderer/src/client/registry.ts:43',
+    source: 'rsh/Programs/Web/client/ui-renderer/src/slot-runtime.ts:36',
   },
   {
     key: 'settings.action',

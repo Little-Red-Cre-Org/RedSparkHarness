@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-client-ui-renderer` mounts the assembled dsh web client GUI: after the complete client plugin roster settles, the boot kernel calls `ctx.uiRenderer.mount(container)`, which hydrates the framework-free boot page and switches to the full React application before the next paint. Business plugins stay plain React components that receive session and workspace data through typed props and never wire subscriptions themselves — the renderer binds the runtime's bare observable sources into selector hooks at the slot outlets. The web shell and the boot kernel are its only direct consumers, so a composition needs it exactly when it wants a React-rendered GUI.
+`dsh-client-ui-renderer` mounts the assembled dsh web client GUI after the complete client plugin roster settles. Its `./native` entry supplies a shared framework-independent slot runtime and React renderer to native Client plugins that register an application root. Business plugins stay plain React components that receive session and workspace data through typed props and never wire subscriptions themselves — the Cordis renderer binds the runtime's bare observable sources into selector hooks at the slot outlets. Existing product Client plugins remain Cordis compositions until each is migrated.
 
 ## Table of Contents
 
@@ -34,6 +34,12 @@ This package is infrastructure: the web shell and the boot kernel are its only d
 ### For business plugins
 
 A business plugin registers a component through the slot system; the renderer binds the runtime's session and workspace observable sources into selector hooks at the outlet. The plugin receives the standard session props (session id, conversation snapshot hooks) through its composed props — it never imports the renderer or touches React internals.
+
+### For native Client profiles
+
+Select `@deepseek-ai/dsh-client-ui-renderer/native` for a Cordis-free Client composition that uses React slots. Its plugin provides `clientSlots` and `clientRenderer`; selected native UI plugins register the `root` slot and provide `clientApplication`. The Web native boot package mounts that application, and the native host owns slot registrations, the renderer, and React unmount cleanup. A failed initial render releases its React root before the mounting error reaches the host, so a corrected composition can use the same container. The existing product Client roster still needs native providers before it can use this path.
+
+The native entry's declarations expose the shared slot API, so the renderer requires `dsh-client-ui-slots` as a peer; applications provide that package and the React peers.
 
 -----
 

@@ -17,6 +17,7 @@ const invalidInputs: readonly { label: string; value: unknown; message: string; 
   { label: 'malformed base URL', value: { formatVersion: 1, bundle: MODULE_URL, styles: [], modules: [], selections: [] }, baseUrl: 'not a URL', message: 'invalid base URL for bundle' },
   { label: 'foreign origin', value: { formatVersion: 1, bundle: 'https://elsewhere.example/.dsh/native-client/profile.js', styles: [], modules: [], selections: [] }, message: 'bundle is outside the native module route' },
   { label: 'foreign route', value: { formatVersion: 1, bundle: '/plugins/profile.js', styles: [], modules: [], selections: [] }, message: 'bundle is outside the native module route' },
+  { label: 'foreign reload route', value: { formatVersion: 1, bundle: MODULE_URL, styles: [], modules: [], selections: [], reload: { endpoint: '/plugins/reload', revision: 'r1' } }, message: 'reload endpoint is outside the authenticated API route' },
   { label: 'bundle username', value: { formatVersion: 1, bundle: 'https://user@dsh.example/.dsh/native-client/profile.js', styles: [], modules: [], selections: [] }, message: 'bundle is outside the native module route' },
   { label: 'bundle password', value: { formatVersion: 1, bundle: 'https://user:secret@dsh.example/.dsh/native-client/profile.js', styles: [], modules: [], selections: [] }, message: 'bundle is outside the native module route' },
   { label: 'bundle fragment', value: { formatVersion: 1, bundle: '/.dsh/native-client/profile.js#fragment', styles: [], modules: [], selections: [] }, message: 'bundle is outside the native module route' },
@@ -49,8 +50,9 @@ function clientRenderer(unmount: () => void): NativePlugin {
     name: 'renderer',
     targets: ['client'],
     requires: [],
-    provides: ['clientRenderer'],
+    provides: ['clientApplication', 'clientRenderer'],
     resolve: () => (context) => {
+      context.provide('clientApplication', { render: () => null })
       context.provide('clientRenderer', {
         mount: (root: HTMLElement) => {
           root.textContent = 'native-ui'
@@ -64,6 +66,39 @@ function clientRenderer(unmount: () => void): NativePlugin {
 afterEach(() => { document.head.replaceChildren() })
 
 describe('native Web entry', () => {
+  it('forwards replacement and cancellation while retaining the injected stylesheet until stop', async () => {
+    const container = document.createElement('div')
+    const cleanup: string[] = []
+    const renderer: NativePlugin = {
+      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientApplication', 'clientRenderer'],
+      resolve: config => (context) => {
+        const label = (config as { label: string }).label
+        context.provide('clientApplication', { render: () => null })
+        context.provide('clientRenderer', { mount: () => {
+          container.textContent = label
+          return () => { cleanup.push(label); container.replaceChildren() }
+        } })
+      },
+    }
+    const wire = { formatVersion: 1, bundle: MODULE_URL, styles: ['/.dsh/native-client/theme.css'],
+      modules: [{ id: 'renderer' }], selections: [{ id: 'renderer', config: { label: 'first' } }] }
+    const starting = bootNativeClientEntry(container, wire, 'https://dsh.example/', async () => ({ plugins: { renderer: { plugin: renderer } } }))
+    const link = document.head.querySelector('link[rel="stylesheet"]')!
+    link.dispatchEvent(new Event('load'))
+    const host = await starting
+    try {
+      await host.replace({ modules: { manifest: { modules: wire.modules }, import: async () => ({ plugin: renderer }) },
+        selections: [{ id: 'renderer', config: { label: 'second' } }] })
+      expect(container.textContent).toBe('second')
+      expect(cleanup).toEqual(['first'])
+      expect(host.signal.aborted).toBe(false)
+      expect(document.head.querySelector('link[rel="stylesheet"]')).toBe(link)
+    } finally { await host.stop() }
+    expect(host.signal.aborted).toBe(true)
+    expect(cleanup).toEqual(['first', 'second'])
+    expect(document.head.querySelector('link[rel="stylesheet"]')).toBeNull()
+  })
+
   it('loads the Host bundle and awaits renderer and stylesheet cleanup', async () => {
     const container = document.createElement('div')
     const unmount = vi.fn(() => { container.replaceChildren() })
@@ -126,7 +161,7 @@ describe('native Web entry', () => {
       provides: ['clientRenderer'],
       resolve: () => (context) => {
         activated = true
-        context.provide('clientRenderer', { mount: () => undefined })
+        context.provide('clientRenderer', { mount: () => () => {} })
       },
     }
     const importModule = vi.fn(() => new Promise<unknown>((resolve) => { resolveImport = resolve }))

@@ -232,20 +232,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'slots',
-    summary: 'cordis Service layer of the slot system; see the module doc for the split with SlotCore.',
-    description: 'cordis Service layer of the slot system; see the module doc for the split with SlotCore.',
+    summary: 'Cordis service that owns SlotRuntime registrations by plugin fiber.',
+    description: 'Cordis service that owns SlotRuntime registrations by plugin fiber.',
     methods: [
       {
         signature: 'declare readonly register: SlotCore[\'register\']',
-        description: 'The single registration API. The typed face IS the core\'s register (both overloads reused verbatim — one authority, no structural copy; see SlotCore.register for children declaration, store seat, inject face, load-time validation, and the unload cascade). This layer adds: disposal through the caller\'s ctx.effect (fiber unload = cascade), exclusive-factory minting (`store: createXxxStore` becomes a per-entry handle), the registrant diagnostics stamp, and store-instance lifecycle on the entry axis.\n\nDeclared here, implemented by prototype assignment below the class: it MUST stay a prototype method (never an instance arrow) — the cordis service proxy binds `this.ctx` to the CALLER\'s context at call time, which is what routes the effect (and the unload cascade) into the caller\'s fiber. An arrow property would freeze `this` to the service\'s own root ctx and silently break per-plugin disposal.',
+        description: 'The typed registration face is the SlotCore API; Cordis owns its disposer.',
         parameters: [],
       },
       {
         signature: 'inject(key: keyof SlotMap & string, callback: () => SlotInjectionEffect): () => void',
-        description: 'Install an effect for each declaration lifetime of a slot. The callback runs synchronously when the declaration already exists; otherwise it runs inside the declaring `register()` call after the declaration is committed. Collapse disposes the effect and a later declaration runs it again. Callback effects are synchronous disposers; iterable effects install transactionally and dispose in reverse order. The controller belongs to the caller\'s fiber, so plugin unload cancels a pending wait and removes any active contribution.',
+        description: 'Run setup for each live declaration and bind the controller to the caller\'s fiber.',
         parameters: [{ name: 'key', description: 'declared SlotMap key to depend on.' }, { name: 'callback', description: 'creates one disposer or an iterable of disposers.' }],
         returns: 'idempotent disposer for the wait and active effect.',
-        throws: ['callback setup failures synchronously when the slot is already declared.'],
       },
     ],
   },
@@ -825,6 +824,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SlotInjectFace',
     declaration: 'export type SlotInjectFace<I extends object> = I extends {\n    hooks: infer HS extends object;\n} ? Omit<I, \'hooks\'> & PropsSlotHooks<HS> : I;',
+  },
+  {
+    name: 'SlotInjectionEffect',
+    declaration: 'export type SlotInjectionEffect = (() => void) | Iterable<() => void, void, void>;',
   },
   {
     name: 'SlotInjectOf',

@@ -22,6 +22,22 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./native-host": {
+      "types": "./lib/types/native-host.d.ts",
+      "default": "./lib/native-host.js"
+    },
+    "./http-bridge": {
+      "types": "./lib/types/http-bridge.d.ts",
+      "default": "./lib/http-bridge.js"
+    },
+    "./native-http-bridge": {
+      "types": "./lib/types/native-http-bridge.d.ts",
+      "default": "./lib/native-http-bridge.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -30,10 +46,19 @@
       "inject": [],
       "platform": "web",
       "immediately": true
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["client"],
+      "requires": [],
+      "optional": [],
+      "provides": ["clientConnection"]
     }
   },
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "zod": "^4.4.3"
@@ -41,20 +66,31 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
+    "lib/native-host.js",
+    "lib/http-bridge.js",
+    "lib/native-http-bridge.js",
+    "lib/host-core-*.js",
+    "lib/rpc-*.js",
+    "lib/recovery-config-*.js",
     "lib/types/**/*.d.ts"
   ],
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
     "@deepseek-ai/dsh-host-directory-picker": "workspace:^",
     "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^",

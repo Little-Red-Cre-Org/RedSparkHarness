@@ -27,13 +27,16 @@ function modulesOf(entries: Record<string, unknown>): ClientModuleSystem {
 describe('native browser composition', () => {
   it('mounts through a native renderer service and awaits unmount on stop', async () => {
     const events: string[] = []
+    const application = { render: () => null }
     const renderer: NativePlugin = {
-      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientRenderer'],
+      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientApplication', 'clientRenderer'],
       resolve: () => (context) => {
         events.push('activate')
+        context.provide('clientApplication', application)
         context.provide('clientRenderer', {
-          mount: (container: HTMLElement, signal: AbortSignal) => {
+          mount: (container: HTMLElement, selected: typeof application, signal: AbortSignal) => {
             expect(container.id).toBe('app')
+            expect(selected).toBe(application)
             expect(signal.aborted).toBe(false)
             events.push('mount')
             return () => { events.push('unmount') }
@@ -71,8 +74,8 @@ describe('native browser composition', () => {
   it('rejects a composition without a renderer before activating any plugin', async () => {
     let activated = false
     const plugin: NativePlugin = {
-      apiVersion: 1, name: 'unrelated', targets: ['client'], requires: [], provides: [],
-      resolve: () => () => { activated = true },
+      apiVersion: 1, name: 'unrelated', targets: ['client'], requires: [], provides: ['clientApplication'],
+      resolve: () => (context) => { context.provide('clientApplication', { render: () => null }); activated = true },
     }
     await expect(bootNativeClient({
       modules: modulesOf({ unrelated: { plugin } }),

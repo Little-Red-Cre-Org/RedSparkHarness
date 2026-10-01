@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-client-ui-renderer` 挂载组装完成的 dsh Web 客户端 GUI：完整客户端插件名册稳定后，启动内核调用 `ctx.uiRenderer.mount(container)`，它会 hydrate 不依赖框架的启动页，并在下一次绘制前切换到完整的 React 应用。业务插件仍是接收类型化 props 的普通 React 组件，通过 props 获取会话与 Workspace 数据，永远不需要自行接线订阅——渲染器在 slot outlet 处把运行时的裸 observable source 绑定为 selector 钩子。Web 外壳与启动内核是它仅有的直接消费方，因此只要组合需要 React 渲染的 GUI，就需要它。
+`dsh-client-ui-renderer` 会在完整客户端插件名册稳定后挂载组装好的 dsh Web 客户端 GUI。它的 `./native` 入口向原生 Client 插件提供共享的框架无关 slot runtime 与 React renderer，由这些插件注册应用根节点。业务插件仍是接收类型化 props 的普通 React 组件，通过 props 获取会话与 Workspace 数据，永远不需要自行接线订阅——Cordis renderer 在 slot outlet 处把运行时的裸 observable source 绑定为 selector 钩子。现有产品 Client 插件仍属于 Cordis 组合，需逐项迁移后才能接入原生路径。
 
 ## 目录
 
@@ -34,6 +34,12 @@ kind: "package-reference"
 ### 对业务插件
 
 业务插件通过 slot 系统注册组件；渲染器在 outlet 处把运行时的会话与 Workspace observable source 绑定为 selector 钩子。插件通过其组合 props 收到标准会话 props（session id、对话快照钩子）——它绝不导入渲染器，也不触碰 React 内部机制。
+
+### 原生 Client profile
+
+Cordis-free Client 组合使用 React slot 时，选择 `@deepseek-ai/dsh-client-ui-renderer/native`。它的插件提供 `clientSlots` 与 `clientRenderer`；选中的原生 UI 插件注册 `root` slot 并提供 `clientApplication`。Web 原生启动包负责挂载应用；原生 host 负责释放 slot 注册、renderer 与 React root。首次渲染失败时，renderer 会在向 host 传递挂载错误前释放 React root，使修正后的组合可以复用同一个容器。现有产品 Client 名册仍需补齐原生 Provider 才能走这条路径。
+
+原生入口的声明会暴露共享 slot API，因此 renderer 将 `dsh-client-ui-slots` 声明为 peer；应用需提供该包和 React peers。
 
 -----
 

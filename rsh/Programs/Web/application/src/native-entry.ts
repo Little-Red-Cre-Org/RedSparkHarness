@@ -40,7 +40,7 @@ function bootUrl(value: unknown, label: string, baseUrl: string): string {
 /** Read and validate data injected across the Host/browser boundary. */
 function parseNativeClientBootWire(value: unknown, baseUrl: string): NativeClientBootWire {
   if (!isRecord(value)) throw new Error('native web: injected boot data must be an object')
-  if (Object.keys(value).some(key => !['formatVersion', 'bundle', 'styles', 'modules', 'selections'].includes(key))) {
+  if (Object.keys(value).some(key => !['formatVersion', 'bundle', 'styles', 'modules', 'selections', 'reload'].includes(key))) {
     throw new Error('native web: injected boot data has unknown fields')
   }
   if (value.formatVersion !== 1) throw new Error('native web: unsupported injected boot format')
@@ -51,6 +51,22 @@ function parseNativeClientBootWire(value: unknown, baseUrl: string): NativeClien
   const bundle = bootUrl(value.bundle, 'bundle', baseUrl)
   const styles = value.styles.map(style => bootUrl(style, 'stylesheet', baseUrl))
   if (new Set(styles).size !== styles.length) throw new Error('native web: stylesheets must be unique')
+  let reload: NativeClientBootWire['reload']
+  if (value.reload !== undefined) {
+    if (!isRecord(value.reload) || Object.keys(value.reload).some(key => !['endpoint', 'revision'].includes(key))
+      || typeof value.reload.endpoint !== 'string' || typeof value.reload.revision !== 'string' || value.reload.revision.length === 0) {
+      throw new Error('native web: reload must contain an endpoint and revision')
+    }
+    let endpoint: URL
+    try { endpoint = new URL(value.reload.endpoint, baseUrl) } catch (error) {
+      throw new Error('native web: invalid URL for reload endpoint', { cause: error })
+    }
+    if (endpoint.origin !== new URL(baseUrl).origin || !endpoint.pathname.startsWith('/api/')
+      || endpoint.username !== '' || endpoint.password !== '' || endpoint.hash !== '') {
+      throw new Error('native web: reload endpoint is outside the authenticated API route')
+    }
+    reload = { endpoint: endpoint.href, revision: value.reload.revision }
+  }
   const modules = value.modules.map((value): { readonly id: string } => {
     if (!isRecord(value)) throw new Error('native web: module row must be an object')
     if (Object.keys(value).some(key => key !== 'id')) throw new Error('native web: module row has unknown fields')
@@ -75,7 +91,7 @@ function parseNativeClientBootWire(value: unknown, baseUrl: string): NativeClien
   if (new Set(selections.map(row => row.id)).size !== selections.length) {
     throw new Error('native web: selection ids must be unique')
   }
-  return { formatVersion: 1, bundle, styles, modules, selections }
+  return { formatVersion: 1, bundle, styles, modules, selections, ...(reload === undefined ? {} : { reload }) }
 }
 
 function bundlePlugins(value: unknown): Readonly<Record<string, unknown>> {
@@ -88,6 +104,55 @@ function bundlePlugins(value: unknown): Readonly<Record<string, unknown>> {
 interface InstalledStyles {
   readonly ready: Promise<void>
   dispose(): void
+}
+
+async function pollNativeClient(
+  host: NativeClientHost,
+  initial: NativeClientBootWire,
+  signal: AbortSignal,
+  replaceStyles: (styles: InstalledStyles) => void,
+): Promise<void> {
+  if (initial.reload === undefined) return
+  let revision = initial.reload.revision
+  while (!signal.aborted) {
+    await new Promise<void>((resolve) => {
+      const timer = window.setTimeout(resolve, 500)
+      signal.addEventListener('abort', () => { window.clearTimeout(timer); resolve() }, { once: true })
+    })
+    const response = await fetch(initial.reload.endpoint, { headers: { accept: 'application/json' }, signal })
+    if (!response.ok) continue
+    const payload = await response.json() as unknown
+    if (!isRecord(payload) || !isRecord(payload.wire) || typeof payload.wire.reload !== 'object' || payload.wire.reload === null) continue
+    try {
+      const candidate = parseNativeClientBootWire(payload.wire, document.baseURI)
+      if (candidate.reload?.revision === revision) continue
+      const styles = await replaceNativeClientEntry(host, candidate, signal)
+      replaceStyles(styles)
+      revision = candidate.reload?.revision ?? revision
+    } catch (error: unknown) {
+      console.error('native web: Client live replacement rejected', error)
+    }
+  }
+}
+
+async function replaceNativeClientEntry(host: NativeClientHost, wire: NativeClientBootWire, signal: AbortSignal): Promise<InstalledStyles> {
+  const styles = installStyles(wire.styles)
+  try {
+    await waitForStyles(styles.ready, signal)
+    const bundle = bundlePlugins(await importNativeBundle(wire.bundle))
+    await host.replace({
+      modules: { manifest: { modules: wire.modules }, import: (specifier) => {
+        const entry = bundle[specifier]
+        if (entry === undefined) throw new Error(`native web: Host bundle omitted module ${specifier}`)
+        return Promise.resolve(entry)
+      } },
+      selections: wire.selections,
+    })
+    return styles
+  } catch (error) {
+    styles.dispose()
+    throw error
+  }
 }
 
 function installStyles(urls: readonly string[]): InstalledStyles {
@@ -133,7 +198,7 @@ function importNativeBundle(url: string): Promise<unknown> {
  * @param baseUrl - document URL used to constrain module imports to the Host route.
  * @param importModule - test seam replacing browser ESM loading.
  * @param signal - skips activation after pending imports settle and owns the active composition lifetime.
- * @returns the active native host; its caller must await {@link NativeClientHost.stop}.
+ * @returns active host with replacement of module selections; injected styles remain owned until stop.
  */
 export async function bootNativeClientEntry(
   container: HTMLElement,
@@ -144,9 +209,9 @@ export async function bootNativeClientEntry(
 ): Promise<NativeClientHost> {
   signal?.throwIfAborted()
   const wire = parseNativeClientBootWire(value, baseUrl)
-  const styles = installStyles(wire.styles)
+  let activeStyles = installStyles(wire.styles)
   try {
-    if (wire.styles.length > 0) await waitForStyles(styles.ready, signal)
+    if (wire.styles.length > 0) await waitForStyles(activeStyles.ready, signal)
     signal?.throwIfAborted()
     const bundle = bundlePlugins(await importModule(wire.bundle))
     const modules: NativeClientModuleSource = {
@@ -162,15 +227,27 @@ export async function bootNativeClientEntry(
       ...(signal === undefined ? {} : { signal }),
     }
     const host = await bootNativeClient(options)
-    return {
+    const result: NativeClientHost = {
+      signal: host.signal,
+      replace: composition => host.replace(composition),
       diagnostics: () => host.diagnostics(),
       stop: async () => {
         try { await host.stop() }
-        finally { styles.dispose() }
+        finally { activeStyles.dispose() }
       },
     }
+    if (wire.reload !== undefined && signal !== undefined) {
+      void pollNativeClient(result, wire, signal, (nextStyles) => {
+        const previousStyles = activeStyles
+        activeStyles = nextStyles
+        previousStyles.dispose()
+      }).catch((error: unknown) => {
+        if (!signal.aborted) console.error('native web: Client live replacement failed', error)
+      })
+    }
+    return result
   } catch (error) {
-    styles.dispose()
+    activeStyles.dispose()
     throw error
   }
 }
