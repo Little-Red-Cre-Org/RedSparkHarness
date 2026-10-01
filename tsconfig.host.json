@@ -382,6 +382,8 @@
     { "path": "./rsh/Programs/Web/host/directory-picker-browse" },
     { "path": "./rsh/Programs/Web/host/directory-picker-native" },
     { "path": "./rsh/Programs/Web/host/frontend-static" },
+    { "path": "./rsh/Programs/Web/host/native-web-assets" },
+    { "path": "./rsh/Programs/Web/host/native-web-host" },
     { "path": "./rsh/Programs/Web/host/open-in-app" },
     { "path": "./rsh/Programs/Web/host/plugin-inventory" },
     { "path": "./rsh/Engine/llm/plugin-package-inventory-deepseek" },

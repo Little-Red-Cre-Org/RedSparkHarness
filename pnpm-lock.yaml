@@ -11752,6 +11752,32 @@ importers:
         specifier: workspace:^
         version: link:../webserver
 
+  rsh/Programs/Web/host/native-web-assets:
+    dependencies:
+      '@deepseek-ai/dsh-client-web':
+        specifier: workspace:^
+        version: link:../../client/web
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
+
+  rsh/Programs/Web/host/native-web-host:
+    dependencies:
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-web-assets':
+        specifier: workspace:^
+        version: link:../native-web-assets
   rsh/Programs/Web/host/open-in-app:
     dependencies:
       '@deepseek-ai/dsh-launch-environment':

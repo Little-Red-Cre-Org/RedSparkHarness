@@ -1,0 +1,11 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Modules/Official/credentials/credentials" },
+    { "path": "../../client/connection/tsconfig.host.json" },
+    { "path": "../native-web-assets" }
+  ]
+}

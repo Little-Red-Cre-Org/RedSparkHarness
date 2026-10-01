@@ -49,6 +49,7 @@
       "@deepseek-ai/dsh-native-model-execution": ["./rsh/Engine/core/native-model-execution/src/index.ts"],
       "@deepseek-ai/dsh-native-model-execution/native": ["./rsh/Engine/core/native-model-execution/src/native.ts"],
       "@deepseek-ai/dsh-native-prompt/native": ["./rsh/Engine/core/native-prompt/src/index.ts"],
+      "@deepseek-ai/dsh-native-web-host/native": ["./rsh/Programs/Web/host/native-web-host/src/native.ts"],
       "@deepseek-ai/dsh-native-sandbox-policy/native": ["./rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts"],
       "@deepseek-ai/dsh-compat-fs-local/native": ["./rsh/Compatibility/DSH/bridge/compat-fs-local/src/native.ts"],
       "@deepseek-ai/dsh-compat-fs-policy/native": ["./rsh/Compatibility/DSH/bridge/compat-fs-policy/src/native.ts"],
