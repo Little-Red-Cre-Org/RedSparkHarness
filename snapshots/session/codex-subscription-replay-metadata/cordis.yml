@@ -1,0 +1,18 @@
+# The metadata-only scenario omits platform-specific shell and skill inputs.
+- id: tool-skill
+  disabled: true
+
+- id: tool-bash
+  disabled: true
+
+- id: tool-pwsh
+  disabled: true
+
+- id: llm-deepseek
+  disabled: true
+
+- id: llm-pi-ai
+  name: '@deepseek-ai/dsh-llm-pi-ai'
+  config:
+    providers:
+      openai-codex: {}
