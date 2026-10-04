@@ -125,6 +125,8 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+`./native` owns `NativeSessionPersistenceOperations` and the native `sessionPersistence` service. Its five operations retain the existing handle, freshness, cancellation and single-writer obligations. The compatibility Service implements that Definition and inherits its method documentation. Provider teardown stays with the selected Provider; Consumers do not receive service-wide close ownership.
+
 ## Model Experience
 
 ### Resumed conversation history

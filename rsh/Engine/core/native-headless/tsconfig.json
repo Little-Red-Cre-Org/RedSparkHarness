@@ -14,7 +14,7 @@
     { "path": "../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../../Modules/Official/fs/fs" },
     { "path": "../session" },
-    { "path": "../../session/session-persistence-jsonl" },
+    { "path": "../../session/session-persistence" },
     { "path": "../../llm/llm" }
   ]
 }

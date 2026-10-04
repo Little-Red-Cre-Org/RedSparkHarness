@@ -136,6 +136,8 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+The native Provider publishes the existing `JsonlSessionBackend` through the provider-neutral `NativeSessionPersistenceOperations` Definition. The same backend serves compatibility and native callers; its owning Provider closes it after accepted handle work drains. Selecting this Provider does not mount the compatibility Service or create another storage implementation.
+
 ## Model Experience
 
 ### Resumed conversation history

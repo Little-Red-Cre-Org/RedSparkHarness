@@ -107,6 +107,8 @@ Host 与 Client 是两个独立的 TypeScript 程序。直接项目引用确定�
 -----
 
 <a id="model-experience"></a>
+显式标记 `@inheritdoc` 的服务成员使用其声明的 `extends` 或 `implements` 接口中的文档，并保留原有签名。目录仍拒绝所有者声明中缺失的参数或返回值文档。兼容 Service 和原生 Definition 共用可观察义务，不重复方法文档。
+
 ## 模型体验
 
 无，因为构建时生成器在任何 agent 运行时之外运行，不触及任何模型请求。

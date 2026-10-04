@@ -30,6 +30,8 @@ The [model-execution Provider](../native-model-execution/README.md) assembles an
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.
 
+The application consumes `NativeSessionPersistenceOperations` from `dsh-session-persistence/native`; JSONL is one replaceable Provider. Each turn owns only its selected Session handle and awaits its durability and close. The application does not close or instantiate the persistence service. Changing Provider type ownership does not change model input or logged events.
+
 ## Model Experience
 
 ### System prompt

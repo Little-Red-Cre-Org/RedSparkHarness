@@ -125,6 +125,8 @@ seam 的共享辅助函数校验由 `SESSION_FORMAT_VERSION` 标识的当前逻�
 -----
 
 <a id="model-experience"></a>
+`./native` 拥有 `NativeSessionPersistenceOperations` 和原生 `sessionPersistence` 服务。五个操作保留现有句柄、新鲜度、取消及单 writer 义务。兼容 Service 实现该 Definition 并继承其方法文档。Provider 释放仍归选定 Provider；Consumer 不获得服务级 close 所有权。
+
 ## 模型体验
 
 ### 恢复的对话历史

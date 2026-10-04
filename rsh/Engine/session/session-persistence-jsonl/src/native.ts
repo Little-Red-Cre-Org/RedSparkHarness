@@ -5,11 +5,7 @@ import { JsonlSessionBackend, type Config } from './backend.ts'
 
 export { JsonlSessionBackend }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices {
-    sessionPersistence: JsonlSessionBackend
-  }
-}
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -41,7 +37,7 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
-      const backend = new JsonlSessionBackend(config)
+      const backend = new JsonlSessionBackend(config) satisfies NativeSessionPersistenceOperations
       context.own(() => backend.close())
       context.provide('sessionPersistence', backend)
     }

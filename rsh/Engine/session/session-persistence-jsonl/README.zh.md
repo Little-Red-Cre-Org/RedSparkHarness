@@ -136,6 +136,8 @@ kind: "package-reference"
 -----
 
 <a id="model-experience"></a>
+原生 Provider 通过与 Provider 无关的 `NativeSessionPersistenceOperations` Definition 发布现有 `JsonlSessionBackend`。同一后端服务兼容及原生调用方；其所有者 Provider 在已接纳句柄工作排空后关闭它。选择该 Provider 不会挂载兼容 Service 或创建另一存储实现。
+
 ## 模型体验
 
 ### 恢复的对话历史

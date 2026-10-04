@@ -107,6 +107,8 @@ Read these pages when the package-level contract is not enough; they move from t
 -----
 
 <a id="model-experience"></a>
+A service member explicitly marked `@inheritdoc` uses documentation from its declared `extends` or `implements` interface while retaining its authored signature. The catalog still rejects missing parameter or return documentation in that owning declaration. Compatibility Services and native Definitions share observable obligations without duplicating method documentation.
+
 ## Model Experience
 
 None, as the build-time generator runs outside any agent runtime and touches no model request.
