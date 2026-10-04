@@ -53,6 +53,13 @@ export interface NativeContext {
    * @returns an idempotent registration drain.
    */
   effect(dispose: Disposer): () => Promise<void>
+  /**
+   * Restart this scope's installations and descendants together when any member changes.
+   * Removal cancels and drains the whole group; replacement rebuilds dependent consumers.
+   * The registration lasts until this owner releases it. Register during activation.
+   * @returns idempotent early removal of the grouping registration.
+   */
+  groupInstallations(): () => Promise<void>
 }
 
 /** Native execution protocol revision 1; independent of dsh.runtime role metadata. */
@@ -213,6 +220,7 @@ export class NativeHost {
   private readonly diagnosticState = new Map<PlannedInstallation, Pick<InstallationDiagnostic, 'state' | 'failure' | 'cleanup'>>()
   private readonly controller = new AbortController()
   private readonly invocations = new Map<Promise<unknown>, AdmittedInvocation>()
+  private readonly installationGroups = new Map<object, NativeScope>()
   private entries: readonly PlannedInstallation[]
   private started = false
   private startup: Promise<void> | undefined
@@ -328,6 +336,12 @@ export class NativeHost {
         scope: entry.scope, signal: owner.controller.signal, events: this.events,
         own: dispose => owner.own(dispose),
         effect: dispose => owner.effect(dispose),
+        groupInstallations: () => {
+          owner.controller.signal.throwIfAborted()
+          const registration = {}
+          this.installationGroups.set(registration, entry.scope)
+          return owner.effect(() => { this.installationGroups.delete(registration) })
+        },
         on: (key, listener) => {
           owner.controller.signal.throwIfAborted()
           const off = this.events.on(entry.scope, key, listener)
@@ -396,6 +410,7 @@ export class NativeHost {
       if (current?.state !== 'failed') this.diagnosticState.set(activation.entry, { ...current, state: 'draining', failure: current?.failure, cleanup: 'pending' })
       activation.owner.controller.abort()
     }
+    await Promise.all(activations.map(activation => activation.owner.drainRegistrations()))
     if (closeEvents) await this.events.close()
     for (const activation of [...activations].reverse()) {
       this.ready.delete(activation.entry)
@@ -427,9 +442,22 @@ export class NativeHost {
       if (entry === undefined) throw new Error('native-runtime: installation request does not belong to this host')
       if (this.startup === undefined) throw new Error('native-runtime: host has not started')
       const removed = new Set([entry])
-      for (const activation of this.activations) {
-        if ([...activation.entry.dependencies.values()].some(dependency => removed.has(dependency))) {
+      let expanded = true
+      while (expanded) {
+        expanded = false
+        for (const scope of this.installationGroups.values()) {
+          if (![...removed].some(member => scope.contains(member.scope))) continue
+          for (const activation of this.activations) {
+            if (!scope.contains(activation.entry.scope) || removed.has(activation.entry)) continue
+            removed.add(activation.entry)
+            expanded = true
+          }
+        }
+        for (const activation of this.activations) {
+          if (removed.has(activation.entry)
+            || ![...activation.entry.dependencies.values()].some(dependency => removed.has(dependency))) continue
           removed.add(activation.entry)
+          expanded = true
         }
       }
       const affected = this.activations.filter(activation => removed.has(activation.entry))
@@ -452,21 +480,40 @@ export class NativeHost {
       await this.startup
       this.controller.signal.throwIfAborted()
       if (this.startup === undefined) throw new Error('native-runtime: host has not started')
-      const mapped = new Map<PlannedInstallation, PlannedInstallation>()
-      const successor = plan[planEntries].map((candidate) => {
-        const dependencies = new Map<ServiceKey, PlannedInstallation>()
-        for (const [key, provider] of candidate.dependencies) {
-          const selected = mapped.get(provider)
-          if (selected === undefined) throw new Error('native-runtime: replacement dependencies are not ordered')
-          dependencies.set(key, selected)
+      const forced = new Set<PlannedInstallation>()
+      const mapSuccessor = (): PlannedInstallation[] => {
+        const mapped = new Map<PlannedInstallation, PlannedInstallation>()
+        return plan[planEntries].map((candidate) => {
+          const dependencies = new Map<ServiceKey, PlannedInstallation>()
+          for (const [key, provider] of candidate.dependencies) {
+            const selected = mapped.get(provider)
+            if (selected === undefined) throw new Error('native-runtime: replacement dependencies are not ordered')
+            dependencies.set(key, selected)
+          }
+          const previous = this.entries.find(entry => entry.request === candidate.request && this.ready.has(entry))
+          const retained = previous !== undefined && !forced.has(previous) && previous.dependencies.size === dependencies.size
+            && [...dependencies].every(([key, provider]) => previous.dependencies.get(key) === provider)
+          const entry = retained ? previous : { ...candidate, dependencies }
+          mapped.set(candidate, entry)
+          return entry
+        })
+      }
+      let successor = mapSuccessor()
+      let expanded = true
+      while (expanded) {
+        expanded = false
+        for (const scope of this.installationGroups.values()) {
+          const previous = this.activations.filter(activation => scope.contains(activation.entry.scope)).map(activation => activation.entry)
+          const next = successor.filter(entry => scope.contains(entry.scope))
+          if (previous.length === next.length && previous.every(entry => next.includes(entry))) continue
+          for (const entry of previous) {
+            if (forced.has(entry)) continue
+            forced.add(entry)
+            expanded = true
+          }
         }
-        const previous = this.entries.find(entry => entry.request === candidate.request && this.ready.has(entry))
-        const retained = previous !== undefined && previous.dependencies.size === dependencies.size
-          && [...dependencies].every(([key, provider]) => previous.dependencies.get(key) === provider)
-        const entry = retained ? previous : { ...candidate, dependencies }
-        mapped.set(candidate, entry)
-        return entry
-      })
+        if (expanded) successor = mapSuccessor()
+      }
       const retained = new Set(successor)
       const affected = this.activations.filter(activation => !retained.has(activation.entry))
       if (affected.length === 0 && successor.every(entry => this.ready.has(entry))) return
@@ -496,7 +543,7 @@ export class NativeHost {
         pending.push(completion)
       }
     }
-    await Promise.allSettled(pending)
+    await Promise.allSettled([...pending, ...activations.map(activation => activation.owner.drainRegistrations())])
   }
 
   private mutate(work: () => Promise<void>): Promise<void> {

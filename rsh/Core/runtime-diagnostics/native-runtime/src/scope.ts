@@ -80,13 +80,23 @@ export class ResourceOwner {
   }
 
   /**
+   * Cancel registrations and await their admitted callbacks without releasing resources.
+   * Cleanup failures remain reported by disposal after every resource has been attempted.
+   * @returns completion after owned registration drains settle.
+   */
+  async drainRegistrations(): Promise<void> {
+    this.controller.abort()
+    while (this.pending.size > 0) await Promise.allSettled([...this.pending])
+  }
+
+  /**
    * Release resources in reverse acquisition order after activation settles.
    * @returns the shared completion, rejecting with all cleanup failures.
    */
   dispose(): Promise<void> {
     this.controller.abort()
     return this.disposal ??= Promise.resolve().then(async () => {
-      await Promise.allSettled(this.pending)
+      await this.drainRegistrations()
       const errors: unknown[] = []
       for (const dispose of this.resources.reverse()) {
         try { await dispose() } catch (error) { errors.push(error) }

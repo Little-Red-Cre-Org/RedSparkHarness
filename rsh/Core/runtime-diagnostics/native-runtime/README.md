@@ -39,6 +39,10 @@ Service Definition packages extend `NativeServices`, and event Definition packag
 
 `host.replace(plan)` accepts a complete resolved plan for the same Host/Client target. Reusing a request preserves its ready owner only when its selected dependencies also remain unchanged. Changed dependencies reactivate transitive consumers, including optional and nearer-scope Providers. Queued mutations reject new Host invocation admission; affected calls and subscriptions drain before reverse dependency cleanup, and cleanup completes before successor activation. Unbound `run()` calls are conservatively cancelled during any effective mutation; unaffected `runOwned()` calls retain their lifetime. Resolution failures leave the old composition active. Cleanup or activation failure stops the Host and releases every remaining owner without restoring disposed services.
 
+The public `ResourceOwner` retains resources acquired during a nested execution. Its awaitable disposal releases every contribution in reverse acquisition order and reports cleanup failures after all releases settle. Callers finish admitted work before disposing its resources.
+
+`context.groupInstallations()` groups the installing scope and its descendants for removal and replacement. Changing a member request or selected dependency restarts every member, even when another member's request is unchanged. Unrelated scopes retain their owners. Every affected owner's registrations drain before any affected resource is released; `ResourceOwner.drainRegistrations()` exposes that cancellation barrier without disposing resources. The grouping registration belongs to its installation and supports idempotent early removal.
+
 <a id="entry-metadata"></a>
 ## Entry metadata
 
