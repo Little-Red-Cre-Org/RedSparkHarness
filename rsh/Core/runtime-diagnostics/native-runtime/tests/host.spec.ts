@@ -22,6 +22,106 @@ function plugin(name: string, overrides: Partial<NativePlugin> = {}): NativePlug
 const deferred = () => Promise.withResolvers<undefined>()
 
 describe('native installation', () => {
+  it('drains a grouped scope before replacing a sibling and preserves an unrelated scope', async () => {
+    const scope = new NativeScope()
+    const descendant = new NativeScope(scope)
+    const unrelatedScope = new NativeScope()
+    const entered = deferred()
+    const finish = deferred()
+    const cancelled = deferred()
+    const trace: string[] = []
+    let generation = 0
+    const group: InstallationRequest = { scope, config: {}, plugin: plugin('group', { resolve: () => (ctx) => {
+      const current = ++generation
+      ctx.groupInstallations()
+      ctx.signal.addEventListener('abort', () => { cancelled.resolve(undefined) }, { once: true })
+      ctx.on('hold', async () => { entered.resolve(undefined); await finish.promise; trace.push(`settled ${current}`) })
+      ctx.own(() => { trace.push(`released ${current}`) })
+      trace.push(`activated ${current}`)
+    } }) }
+    const member: InstallationRequest = { scope: descendant, config: {}, plugin: plugin('member', {
+      resolve: () => (ctx) => { ctx.own(() => { trace.push('member released') }) },
+    }) }
+    let unrelatedActivations = 0
+    const unrelated: InstallationRequest = { scope: unrelatedScope, config: {}, plugin: plugin('unrelated', {
+      resolve: () => () => { unrelatedActivations++ },
+    }) }
+    const host = new NativeHost(resolveInstallation([group, member, unrelated], 'host'))
+    try {
+      await host.start()
+      await host.replace(resolveInstallation([group, member, unrelated], 'host'))
+      expect(generation).toBe(1)
+      const delivery = host.events.serial(scope, 'hold')
+      await entered.promise
+      const replacement = host.replace(resolveInstallation([group, { ...member }, unrelated], 'host'))
+      await cancelled.promise
+      expect(trace).toEqual(['activated 1'])
+      finish.resolve(undefined)
+      await Promise.all([delivery, replacement])
+      expect(trace).toEqual(['activated 1', 'settled 1', 'member released', 'released 1', 'activated 2'])
+      expect(unrelatedActivations).toBe(1)
+    } finally { finish.resolve(undefined); await host.stop() }
+  })
+
+  it('removes every grouped installation and retains independent owners', async () => {
+    const scope = new NativeScope()
+    const group = { scope, config: {}, plugin: plugin('group', { resolve: () => (ctx) => { ctx.groupInstallations() } }) }
+    const member = { scope: new NativeScope(scope), config: {}, plugin: plugin('member') }
+    const unrelated = { scope: new NativeScope(), config: {}, plugin: plugin('unrelated') }
+    const host = new NativeHost(resolveInstallation([group, member, unrelated], 'host'))
+    try {
+      await host.start()
+      await host.remove(member)
+      expect(host.diagnostics().filter(entry => entry.state === 'ready').map(entry => entry.name)).toEqual(['unrelated'])
+    } finally { await host.stop() }
+  })
+
+  it('restarts unchanged group members after an ancestor provider changes or a new member is added', async () => {
+    const root = new NativeScope()
+    const scope = new NativeScope(root)
+    const provider = { scope: root, config: {}, plugin: plugin('provider', {
+      provides: ['value'], resolve: () => (ctx) => { ctx.provide('value', { read: () => 1 }) },
+    }) }
+    let groupActivations = 0
+    let memberActivations = 0
+    const group = { scope, config: {}, plugin: plugin('group', { requires: ['value'], resolve: () => (ctx) => {
+      ctx.require('value')
+      ctx.groupInstallations()
+      groupActivations++
+    } }) }
+    const member = { scope, config: {}, plugin: plugin('member', { resolve: () => () => { memberActivations++ } }) }
+    const host = new NativeHost(resolveInstallation([provider, group, member], 'host'))
+    try {
+      await host.start()
+      const changed = { ...provider }
+      await host.replace(resolveInstallation([changed, group, member], 'host'))
+      expect([groupActivations, memberActivations]).toEqual([2, 2])
+      const added = { scope: new NativeScope(scope), config: {}, plugin: plugin('added') }
+      await host.replace(resolveInstallation([changed, group, member, added], 'host'))
+      expect([groupActivations, memberActivations]).toEqual([3, 3])
+    } finally { await host.stop() }
+  })
+
+  it('releases a grouping registration early without grouping a later replacement', async () => {
+    const scope = new NativeScope()
+    let release: (() => Promise<void>) | undefined
+    let activations = 0
+    const group = { scope, config: {}, plugin: plugin('group', { resolve: () => (ctx) => {
+      activations++
+      release = ctx.groupInstallations()
+    } }) }
+    const member = { scope, config: {}, plugin: plugin('member') }
+    const host = new NativeHost(resolveInstallation([group, member], 'host'))
+    try {
+      await host.start()
+      expect(release).toBeDefined()
+      await release!()
+      await release!()
+      await host.replace(resolveInstallation([group, { ...member }], 'host'))
+      expect(activations).toBe(1)
+    } finally { await host.stop() }
+  })
+
   it('reports dependency selection and cleanup without exposing configuration', async () => {
     const scope = new NativeScope()
     const secret = 'private-config-value'
