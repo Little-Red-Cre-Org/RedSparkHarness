@@ -12,6 +12,10 @@ PTC returns non-string values as JSON text. A Windows path contains escaped sepa
 
 Canonical comparison validates the complete embedded JSON object or array and scans complete string tokens. Only an immediate `path` value whose decoded path matches a known cwd spelling is tokenized, normalized and re-encoded. The comparison preserves the remaining JSON bytes, including formatting and unrelated values. Native mode retains its existing separator representation.
 
+## Alternatives considered
+
+Changing the PTC renderer would alter the model-visible JSON result. Collapsing separator runs would hide actual path differences. Re-recording committed Session generations would replace the comparison evidence. The normalizer instead decodes only the recognized JSON path value.
+
 ## Consequences
 
 The model receives the unchanged JSON result, and committed Session generations need no rewrite. Actual repeated decoded separators remain repeated. Malformed JSON and quoted pseudo-fields receive no additional JSON-path handling. The normalizer recognizes serialization rather than treating distinct filesystem paths as equivalent.
