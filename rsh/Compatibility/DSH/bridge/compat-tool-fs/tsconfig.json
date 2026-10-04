@@ -11,7 +11,7 @@
     { "path": "../../../../Engine/core/tools" },
     { "path": "../../../../Engine/core/system-prompt" },
     { "path": "../../../../Engine/core/agent" },
-    { "path": "../../../../Engine/core/native-tools" },
+    { "path": "../../../../Engine/core/native-tools/tsconfig.host.json" },
     { "path": "../../../../Engine/core/native-prompt" },
     { "path": "../../../../Modules/Official/sandbox/native-sandbox-policy" }
   ]

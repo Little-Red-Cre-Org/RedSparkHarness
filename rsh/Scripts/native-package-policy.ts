@@ -37,6 +37,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Engine/core/native-tools', ['host']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])
@@ -68,6 +69,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/core/native-tools', ['./types', './presentation']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
@@ -79,6 +81,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Engine/core/native-tools/types', ['host', 'client']],
+  ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
   ['rsh/Programs/Web/client/connection/native-host', ['host']],
   ['rsh/Programs/Web/client/connection/native-http-bridge', ['host']],
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],

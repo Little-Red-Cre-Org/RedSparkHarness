@@ -6,6 +6,9 @@
  */
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import type { FileDiff } from '@deepseek-ai/dsh-native-tools/presentation'
+
+export type { FileDiff } from '@deepseek-ai/dsh-native-tools/presentation'
 
 /**
  * Category of a tool call, used by a UI to pick an icon or treatment. The
@@ -23,20 +26,6 @@ export type ToolCallKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'exe
 export interface FileLocation {
   path: string
   line?: number
-}
-
-/**
- * A single-file change a tool is about to make, for a UI that renders inline
- * diffs. `oldText` is `null` for a new-file create (nothing to diff against);
- * an overwrite also uses `null`, because a call-time presenter has no access to
- * the file's prior content.
- */
-export interface FileDiff {
-  path: string
-  /** Prior content, or `null` for a new file / an overwrite (no prior content available at call time). */
-  oldText: string | null
-  /** Content after the change. */
-  newText: string
 }
 
 /**
