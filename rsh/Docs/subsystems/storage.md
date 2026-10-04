@@ -190,7 +190,7 @@ Source: [`rsh/Core/storage/storage/src/index.ts`](../../Core/storage/storage/src
 
 ### `ctx.storageDomain` — `DomainFacility`
 
-The mounted domain facility. Opens declared domains over routed backends; one facility instance owns the open-domain table and enforces single-open per domain name.
+Compatibility adapter over the single shared domain facility.
 
 ```ts cordis-catalog
 /**
@@ -227,9 +227,9 @@ get(name: string): DomainImpl | undefined
  * Close every domain still open on this facility. The unmount path for
  * consumers that never called `Domain.close()` themselves; closing is
  * idempotent, so double-closing an already-closed domain is harmless.
- * @returns resolution after every unit is released.
+ * @returns resolution after every unit cleanup is attempted; rejects with actual cleanup failures, including failed opens.
  */
-async closeAll(): Promise<void>
+closeAll(): Promise<void>
 ```
 
 Source: [`rsh/Core/storage/storage-domain/src/index.ts`](../../Core/storage/storage-domain/src/index.ts)

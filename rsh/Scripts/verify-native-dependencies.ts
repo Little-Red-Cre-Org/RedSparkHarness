@@ -9,6 +9,7 @@ import {
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
   nativeSafeSourceSubpaths,
+  nativeSafeSourceEntryTargets,
 } from './native-package-policy.ts'
 import { TypeScriptProject } from './ts-project.ts'
 
@@ -297,6 +298,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
       const packageDir = resolve(root, dir)
       const manifest = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8')) as Record<string, unknown>
       for (const entry of entries) {
+        const targets = nativeSafeSourceEntryTargets.get(`${dir}${entry.slice(1)}`) ?? ['host', 'client']
+        if (!targets.includes(face)) continue
         for (const error of mixedNativeSourceViolations(project, packageDir, manifest, entry,
           (sourceFile, specifier) => {
             if (specifier.startsWith('node:')) return true

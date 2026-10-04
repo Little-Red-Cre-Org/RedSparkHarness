@@ -11,8 +11,8 @@
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { StorageError } from '@deepseek-ai/dsh-storage'
-import type { KvUnit, KvUnitDescriptor } from '@deepseek-ai/dsh-storage'
+import { StorageError } from '@deepseek-ai/dsh-storage/backend'
+import type { KvUnit, KvUnitDescriptor } from '@deepseek-ai/dsh-storage/backend'
 import { writeAtomic } from './atomic.ts'
 import { parse, serialize } from './format.ts'
 import type { UnitState } from './format.ts'

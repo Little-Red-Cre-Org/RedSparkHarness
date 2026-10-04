@@ -11,6 +11,15 @@ kind: "package-reference"
 
 使用本包声明经过 schema 校验的键值领域，并通过 `ctx.storageDomain` 在已配置的存储后端上打开它们。读取同步返回经过校验的内存状态；每次写入在完成前都已达到持久状态，并按顺序发出 `domain/changed`。产品包使用领域句柄，而不直接访问存储后端。这些宿主侧状态不会添加工具、提示词或会话事件，因此模型与 agent loop（智能体循环）无法看到它们。
 
+<a id="native-provider"></a>
+## 原生 Provider
+
+仅供 Host 使用的 `./native` 入口通过兼容适配器同样使用的 `DomainFacilityCore` 和 `DomainImpl` 发布 `storageDomain`。它解析必填后端及可选路由覆盖，等待通用 `storageBackendsReady`，拒绝其他注册表的就绪状态，并在激活时校验全部配置后端引用。解析不依赖 JSON 专属服务，也不包含隐式后端后备选择。
+
+持久写入保留现有单一 domain 队列：后端确认之后才发布内存状态及有作用域的原生 `domain/changed` 通知。共享纯事件载荷不包含 Cordis 声明。同步观察者失败在提交之后报告，不回滚已写值。原生诊断使用 Host console；兼容适配器保留其 context logger 及分发器。
+
+facility 关闭会停止新打开，并在释放 unit 前排空已接纳快照加载及 domain 写入。关闭接纳之后完成的打开会释放 unit 并拒绝。回滚保留打开及清理两种错误；最终关闭会尝试全部 domain，并报告保留的失败打开 unit 清理错误。原生生命周期取消拒绝进一步接纳，底层后端清理仍是已拥有且不可取消的排空。不引入第二 domain 实现、路径或记录 schema。
+
 ## 目录
 
 - [使用本包](#use-this-package)

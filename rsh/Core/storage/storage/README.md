@@ -11,6 +11,13 @@ English | [中文](README.zh.md)
 
 Use `dsh-storage` to keep typed application data durable without adding it to session history. Mount it with a supported storage medium and domain configuration, then callers can access records through the public `ctx.storageDomain` API. Choose it for workspace records, session sidecars, or other application state that must survive restarts without becoming session events. It is available only to host code and has no model-visible effect; compositions that do not need such data can omit it.
 
+<a id="native-provider"></a>
+## Native Provider
+
+The Host-only `./native` entry publishes `storage` with the existing named `BackendRegistry`; it performs no IO and mounts no parallel data store. The pure `./backend` leaf exports shared backend vocabulary, errors and the same registry class without framework declarations. Compatibility form mounting remains on the Cordis entry.
+
+`NativeStorageBackendsReady` identifies the exact registry on which a selected backend Provider has completed registration. That Provider publishes `storageBackendsReady` only after registration succeeds. A domain Provider requires this generic readiness service, so replacing JSON with another native backend does not change its Consumer. A composition with several backend Providers needs one explicit readiness publisher covering their completed registrations; several competing publishers are not an implicit aggregator.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

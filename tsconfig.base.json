@@ -527,7 +527,11 @@
       "@deepseek-ai/dsh-workflow-worker-thread": ["./rsh/Engine/workflow/workflow-worker-thread/src"],
       "@deepseek-ai/dsh-workspace": ["./rsh/Modules/Official/workspace/workspace/src"],
       "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
-      "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"]
+      "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
+      "@deepseek-ai/dsh-storage-domain/native": ["./rsh/Core/storage/storage-domain/src/native.ts"],
+      "@deepseek-ai/dsh-storage-json/native": ["./rsh/Core/storage/storage-json/src/native.ts"],
+      "@deepseek-ai/dsh-storage/backend": ["./rsh/Core/storage/storage/src/backend.ts"],
+      "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"]
       // END generated package aliases
     }
   }

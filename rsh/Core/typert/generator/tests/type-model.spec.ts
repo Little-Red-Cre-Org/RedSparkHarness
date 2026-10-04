@@ -221,6 +221,35 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
     expect(service).toMatchObject({ key: 'detached', export: { name: 'DetachedService' } })
   })
 
+  it('includes inherited public methods without overrides or Typert binding metadata', () => {
+    const root = copyFixture('inherited-service-')
+    addExplicitServicePackage(root, 'service detached')
+    const sourcePath = join(root, 'packages/explicit-service/src/index.ts')
+    const source = readFileSync(sourcePath, 'utf8')
+      .replace("import { Service } from '@deepseek-ai/cordis'\n", '')
+      .replace('/**\n * Service implementation discovered independently of its protocol package.', [
+        'class ServiceBase {',
+        '  readonly typertRemote: unknown = undefined',
+        '  /** Report base health. */',
+        '  health(): boolean { return true }',
+        '  /** Report base readiness. */',
+        '  ready(): boolean { return false }',
+        '}',
+        '/**',
+        ' * Service implementation discovered independently of its protocol package.',
+      ].join('\n'))
+      .replace('export class DetachedService extends Service {', 'export class DetachedService extends ServiceBase {')
+    writeFileSync(sourcePath, source)
+
+    const model = new WorkspaceAnalyzer({ root, packages: ['@fixture/explicit-service'] }).analyze()
+    const face = model.faces[0]
+    const service = face?.packages[0]?.services[0]
+    const members = new Map(face?.graph.declarations.flatMap(declaration => declaration.members)
+      .map(member => [member.id, member.name]))
+
+    expect(service?.members.map(id => members.get(id))).toEqual(['ready', 'health'])
+  })
+
   it('prefers an explicitly keyed implementation over its protocol Context merge', () => {
     const root = copyFixture('explicit-service-protocol-')
     addExplicitServicePackage(root, 'service detached', true)

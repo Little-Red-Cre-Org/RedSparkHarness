@@ -13,6 +13,9 @@
     },
     {
       "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../runtime-diagnostics/native-runtime"
     }
   ]
 }

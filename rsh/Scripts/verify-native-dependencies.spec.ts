@@ -279,3 +279,29 @@ it('rejects a native manifest whose entry is not a published export', () => {
   writeFileSync(path, JSON.stringify(manifest))
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('published package export'))
 })
+
+it.each([
+  ['export interface Backend {}', false],
+  ['import type { Context } from "@deepseek-ai/cordis"\nexport interface Backend {}', true],
+])('checks the Host-only storage backend source without requiring a Client owner: %s', (source, forbidden) => {
+  const root = fixture('export {}')
+  const owner = 'rsh/Core/storage/storage'
+  mkdirSync(join(root, owner, 'src'), { recursive: true })
+  writeFileSync(join(root, owner, 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh-storage',
+    exports: {
+      './native': { types: './lib/types/native.d.ts', default: './lib/native.js' },
+      './backend': { types: './lib/types/backend.d.ts', default: './lib/types/backend.js' },
+    },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['storage'] } },
+  }))
+  writeFileSync(join(root, owner, 'src/native.ts'), 'export {}')
+  writeFileSync(join(root, owner, 'src/backend.ts'), source)
+  const clientPath = join(root, 'tsconfig.client.json')
+  const client = JSON.parse(readFileSync(clientPath, 'utf8')) as { include: string[] }
+  client.include = client.include.filter(path => !path.startsWith(owner + '/'))
+  writeFileSync(clientPath, JSON.stringify(client))
+  const errors = collectNativeDependencyViolations(root)
+  if (forbidden) expect(errors).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
+  else expect(errors).toEqual([])
+})

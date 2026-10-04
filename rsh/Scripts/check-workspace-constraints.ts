@@ -166,6 +166,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-launch-environment': ['lib/native.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],

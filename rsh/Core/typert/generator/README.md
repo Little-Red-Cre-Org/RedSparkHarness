@@ -63,7 +63,7 @@ This section explains how the generator reaches a compiler-independent model and
 
 ### Design concept
 
-The generator is built on one separation: extraction and emission are decoupled through the compiler-independent model. `WorkspaceAnalyzer` reads TypeScript programs seeded from the face aggregate tsconfigs and produces `FaceModel` and `TypeGraph` data; `FaceModelEmitter` consumes only that model and never receives compiler nodes. The model retains declaration identity, generic parameters and applications, explicit inheritance, conditional and mapped types, import attributes, abstract modifiers, and source JSDoc, and excludes constructors, static members, and non-public members.
+The generator is built on one separation: extraction and emission are decoupled through the compiler-independent model. `WorkspaceAnalyzer` reads TypeScript programs seeded from the face aggregate tsconfigs and produces `FaceModel` and `TypeGraph` data; `FaceModelEmitter` consumes only that model and never receives compiler nodes. The model retains declaration identity, generic parameters and applications, explicit inheritance, conditional and mapped types, import attributes, abstract modifiers, and source JSDoc, and excludes constructors, static members, and non-public members. Service extraction includes inherited public members, keeps declared overrides and omits Typert binding metadata.
 
 ### Source map
 

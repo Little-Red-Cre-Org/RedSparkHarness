@@ -983,9 +983,7 @@ class FaceAnalyzer {
       if (memberOwner?.name !== declarationOwner?.name) continue
       const symbolId = this.symbolId(symbol)
       const model = this.ensureDeclaration(symbol, declaration)
-      const exposed = model.members
-        .filter(exposableMember)
-        .map(publicMember => publicMember.id)
+      const exposed = this.serviceMembers(model)
       result.push({
         ...documentationOf(declaration),
         key: memberName(member.name),
@@ -1021,10 +1019,33 @@ class FaceAnalyzer {
         key: words[1] as string,
         symbol: symbolId,
         export: record.model,
-        members: model.members.filter(exposableMember).map(member => member.id),
+        members: this.serviceMembers(model),
         location: this.location(record.declaration),
       })
     }
+    return result
+  }
+
+  private serviceMembers(model: TypeDeclarationModel): string[] {
+    const result: string[] = []
+    const names = new Set<string>()
+    const declarations = new Set<SymbolId>()
+    const visit = (declaration: TypeDeclarationModel): void => {
+      if (declarations.has(declaration.id)) return
+      declarations.add(declaration.id)
+      const own = declaration.members.filter(member => exposableMember(member) && member.name !== 'typertRemote')
+      for (const member of own) {
+        if (!names.has(member.name)) result.push(member.id)
+      }
+      for (const member of own) names.add(member.name)
+      for (const baseId of declaration.extends) {
+        const base = this.nodes.get(baseId)
+        if (base?.kind !== 'reference' || base.target.kind !== 'declaration') continue
+        const inherited = this.declarations.get(base.target.symbol)
+        if (inherited !== undefined) visit(inherited)
+      }
+    }
+    visit(model)
     return result
   }
 

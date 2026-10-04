@@ -2313,7 +2313,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Core/storage/storage-domain/src/index.ts:52`](../Core/storage/storage-domain/src/index.ts)
+Source: [`rsh/Core/storage/storage-domain/src/index.ts:48`](../Core/storage/storage-domain/src/index.ts)
 
 <a id="deepseek-aidsh-storage-json"></a>
 
@@ -2334,7 +2334,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Core/storage/storage-json/src/index.ts:28`](../Core/storage/storage-json/src/index.ts)
+Source: [`rsh/Core/storage/storage-json/src/index.ts:26`](../Core/storage/storage-json/src/index.ts)
 
 <a id="deepseek-aidsh-storage-sqlite"></a>
 

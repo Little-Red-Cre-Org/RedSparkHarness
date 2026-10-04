@@ -9,8 +9,8 @@
  * @module @deepseek-ai/dsh-storage-json/src/format
  */
 
-import { StorageError } from '@deepseek-ai/dsh-storage'
-import type { KvUnitDescriptor } from '@deepseek-ai/dsh-storage'
+import { StorageError } from '@deepseek-ai/dsh-storage/backend'
+import type { KvUnitDescriptor } from '@deepseek-ai/dsh-storage/backend'
 
 /** In-memory authoritative state of one unit; the file is its projection. `global` is `null` until first written. */
 export interface UnitState {
