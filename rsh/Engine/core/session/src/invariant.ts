@@ -11,6 +11,7 @@ import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-inva
 import type { Session, SessionEvent, SessionSeqCursor } from '@deepseek-ai/dsh-session'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { TOOL_NOT_STARTED } from './repair.ts'
+import { SessionSeq } from './types.ts'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-session'
 
@@ -197,6 +198,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     trace: SessionTrace
     transition: SessionTraceTransition
   }>()
+  const candidateTraces = new WeakMap<Session, { baseSeq: number; nextSeq: number; trace: SessionTrace }>()
 
   const freshTrace = (): SessionTrace => ({
     lastSeq: -1,
@@ -238,10 +240,20 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     if (eventName !== 'session/event') return
     const [session, event] = args as [Session, SessionEvent]
     const trace = traceFor(session)
-    const transition = validateEvent(trace, event, fail)
+    const previous = candidateTraces.get(session)
+    const candidate = event.seq === SessionSeq(session.seq)
+      ? { ...trace, pendingCalls: new Set(trace.pendingCalls) }
+      : previous?.baseSeq === session.seq && previous.nextSeq === event.seq
+        ? previous.trace
+        : trace
+    const transition = validateEvent(candidate, event, fail)
     // A later dispatch listener may veto. Validation is pure, so abandoning
     // this weakly keyed transition does not advance or retain the session.
     stagedTransitions.set(event, { session, trace, transition })
+    if (candidate !== trace) {
+      applyTransition(candidate, transition)
+      candidateTraces.set(session, { baseSeq: session.seq, nextSeq: event.seq + 1, trace: candidate })
+    }
   }, { global: true })
 }, { inject: ['sessions'] })
 

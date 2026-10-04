@@ -513,6 +513,20 @@ declare class Session {
   /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
   get seq(): SessionLogOffset;
   /**
+   * Check whether this exact immutable event was accepted by this Session.
+   * @param event - candidate event supplied to a synchronous policy projection.
+   * @returns whether the log holds the same object at its assigned sequence.
+   */
+  hasAcceptedEvent(event: SessionEvent): boolean;
+  /**
+   * Register a synchronous veto before an event changes this Session's log.
+   * Guards receive the validated immutable event and must not append recursively.
+   * Historical restore events are not dispatched to guards.
+   * @param guard - check that throws to reject an event without changing the log.
+   * @returns exact registration disposer; removal is idempotent.
+   */
+  onBeforeAppend(guard: (event: SessionEvent) => void): () => void;
+  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
@@ -554,6 +568,16 @@ declare class Session {
     data: SessionEventMap[T],
     ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
   ): SessionEvent<T>;
+  /**
+   * Admit related facts together after every payload, guard, surface transition and
+   * publication callback has been validated. Guards observe the pre-batch log;
+   * publication observers see the complete accepted batch in sequence order.
+   * Persistence remains the selected writer's asynchronous durability barrier.
+   * @param inputs - ordered typed facts and any required surface metadata.
+   * @returns immutable accepted events with contiguous sequences.
+   * @throws before changing the log if any input or synchronous acceptance check fails.
+   */
+  appendBatch(inputs: readonly SessionAppendInput[]): readonly SessionEvent[];
   /**
    * The {@link EpochHeader} in force after the log's last header event — the
    * header the NEXT request will be compared against — or undefined before
