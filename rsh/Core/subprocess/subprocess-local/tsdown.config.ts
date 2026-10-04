@@ -1,15 +1,9 @@
 import { defineConfig } from 'tsdown'
 
+// Both registration paths share one process controller and platform helpers.
 export default defineConfig({
-  entry: {
-    index: 'lib/types/index.js',
-    runner: 'lib/types/bin.js',
-  },
-  outDir: 'lib',
-  format: ['esm'],
-  platform: 'node',
-  target: 'es2024',
-  fixedExtension: false,
-  dts: false,
-  clean: false,
+  entry: { index: 'lib/types/index.js', native: 'lib/types/native.js', runner: 'lib/types/bin.js' },
+  outDir: 'lib', format: ['esm'], platform: 'node', target: 'es2024',
+  fixedExtension: false, dts: false, clean: false,
+  outputOptions: { chunkFileNames: 'shared-[hash].js', entryFileNames: '[name].js' },
 })

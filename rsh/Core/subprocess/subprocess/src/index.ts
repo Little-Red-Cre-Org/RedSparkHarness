@@ -9,12 +9,11 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import { proxyEnvironmentForChild } from '@deepseek-ai/dsh-http-proxy'
-import { DSH_ENV_PREFIX } from './types.ts'
-import type { SubprocessHandle, SubprocessSpawnSpec } from './types.ts'
+import type { SubprocessHandle, SubprocessOperations, SubprocessSpawnSpec } from './types.ts'
 import type { SubprocessTerminalHandle, SubprocessTerminalSpawnSpec } from './types.ts'
 
 export { DSH_ENV_PREFIX } from './types.ts'
+export { scrubbedParentEnv, SENSITIVE_ENV_PATTERN } from './environment.ts'
 export type {
   CollectedOutput,
   DshEnvironment,
@@ -23,6 +22,7 @@ export type {
   SubprocessCollectedOutputs,
   SubprocessHandle,
   SubprocessOutcome,
+  SubprocessOperations,
   SubprocessOutputMode,
   SubprocessOutputRead,
   SubprocessOutputReader,
@@ -34,48 +34,6 @@ export type {
   SubprocessTerminalSignal,
   SubprocessTerminalSpawnSpec,
 } from './types.ts'
-
-/**
- * Credential-shaped environment names are NOT forwarded to children (the
- * harness's own `DEEPSEEK_API_KEY`/secrets must not leak into a spawned
- * process implicitly). One heuristic for every in-repo spawner; a
- * deliberately supplied entry survives because explicit env layers merge
- * after the scrub.
- */
-export const SENSITIVE_ENV_PATTERN = /KEY|PASSWORD|SECRET|TOKEN/i
-
-/**
- * The ambient parent environment minus credential-shaped names and minus all
- * `DSH_*` names — the canonical base every harness child starts from. `PATH`,
- * `HOME`, locale, and proxy variables survive, so child CLIs run normally;
- * harness identity never leaks implicitly (a deliberately forwarded
- * credential or current `DSH_*` fact goes through the spec's explicit `env`,
- * which merges after this scrub). Both scrubs match case-insensitively:
- * Windows environment names are case-insensitive, so a parent `dsh_*` entry
- * would otherwise survive and read back as `$env:DSH_*` in the child;
- * deliberate lowercase `dsh_*` names on POSIX are implausible. Exported as a plain function so spawners
- * that cannot route through the service (node-pty backends, SDK-managed
- * transports) share the one scrub definition.
- *
- * When a proxy is active the result also carries the resolved proxy names and the flag a child Node
- * needs to honor them, so a child inherits the same routing as its parent.
- * @returns a fresh environment object safe to hand to a child spawn.
- */
-export function scrubbedParentEnv(): Record<string, string> {
-  const env: Record<string, string> = {}
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined && !SENSITIVE_ENV_PATTERN.test(key) && !key.toUpperCase().startsWith(DSH_ENV_PREFIX)) env[key] = value
-  }
-  // A child Node ignores the inherited proxy variables unless the flag this adds is set, so an MCP
-  // stdio server or subagent CLI would connect directly while its parent proxies. The same overlay
-  // restores each proxy name to what the user exported, undoing this process's own normalization —
-  // `undefined` removes a name the user never set.
-  for (const [name, value] of Object.entries(proxyEnvironmentForChild())) {
-    if (value === undefined) Reflect.deleteProperty(env, name)
-    else env[name] = value
-  }
-  return env
-}
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -112,7 +70,7 @@ declare module '@deepseek-ai/cordis' {
  *   in the PTY consumer. Its output stream ends after queued terminal output
  *   when the top-level process exits.
  */
-export abstract class SubprocessRuntime extends Service {
+export abstract class SubprocessRuntime extends Service implements SubprocessOperations {
   constructor(ctx: Context) {
     super(ctx, 'subprocess')
   }

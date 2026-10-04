@@ -414,6 +414,7 @@ flowchart TD
   pkg_storage_domain --> pkg_invariants
   pkg_storage_sqlite --> pkg_storage
   pkg_subprocess --> pkg_http_proxy
+  pkg_subprocess --> pkg_native_runtime
   pkg_typert_loader --> pkg_typert_registry
   pkg_session --> pkg_scope
   pkg_system_prompt --> pkg_invariants
@@ -441,6 +442,7 @@ flowchart TD
   pkg_host_frontend_static --> pkg_host_webserver
   pkg_lsp --> pkg_brand
   pkg_lsp --> pkg_llm
+  pkg_subprocess_local --> pkg_native_runtime
   pkg_subprocess_local --> pkg_subprocess
   pkg_subprocess_local --> pkg_timeout
   pkg_skill_badge --> pkg_skill
@@ -1319,7 +1321,7 @@ flowchart TD
 | [`anonymous-user-id`](../Core/identity/anonymous-user-id) | `identity` | [`brand`](../Core/util/brand), [`home-paths`](../Core/util/home-paths) |
 | [`storage-domain`](../Core/storage/storage-domain) | `storage` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`storage-sqlite`](../Core/storage/storage-sqlite) | `storage` | [`storage`](../Core/storage/storage) |
-| [`subprocess`](../Core/subprocess/subprocess) | `subprocess` | [`http-proxy`](../Core/util/http-proxy) |
+| [`subprocess`](../Core/subprocess/subprocess) | `subprocess` | [`http-proxy`](../Core/util/http-proxy), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`typert-loader`](../Core/typert/loader) | `typert` | [`typert-registry`](../Core/typert/registry) |
 | [`session`](../Engine/core/session) | `core` | [`scope`](../Engine/core/scope) |
 | [`system-prompt`](../Engine/core/system-prompt) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope) |
@@ -1333,7 +1335,7 @@ flowchart TD
 | [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
-| [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
+| [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |
 | [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
 | [`web-search-exa`](../Modules/Official/web/web-search-exa) | `web` | [`launch-environment`](../Core/util/launch-environment), [`web`](../Modules/Official/web/web) |
