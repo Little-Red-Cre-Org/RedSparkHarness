@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-10-04-embedded-json-path-normalization.md
+2026-10-04-embedded-json-path-normalization.md: 8ae64ef4e91ac5746c6d78ca435efba86bfcce8c
+2026-10-04-embedded-json-path-normalization.zh.md: 393c3762db547009daf5daf9cfa0cd85bcbcf7aa

@@ -158,6 +158,36 @@ function replaceCwd(value: string, ctx: NormalizeContext, replacement: string): 
   return out
 }
 
+/** Normalize serialized cwd-rooted path values without changing other JSON text. */
+function canonicalizeEmbeddedJsonPaths(value: string, ctx: NormalizeContext): string {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    // Invalid embedded JSON retains the existing plain-text separator handling.
+    return value
+  }
+  if (parsed === null || typeof parsed !== 'object') return value
+
+  let pathValueOffset = -1
+  return value.replace(/"(?:\\.|[^"\\])*"/g, (token: string, offset: number) => {
+    const decoded = JSON.parse(token) as string
+    if (offset === pathValueOffset) {
+      pathValueOffset = -1
+      const path = replaceCwd(decoded, ctx, CWD)
+      if (path.startsWith(CWD + '/') || path.startsWith(CWD + '\\')) {
+        return JSON.stringify(path.replaceAll('\\', '/'))
+      }
+    }
+    // A complete string token followed by a colon is a key in validated JSON.
+    if (decoded === 'path') {
+      const separator = /^\s*:\s*/.exec(value.slice(offset + token.length))
+      if (separator !== null) pathValueOffset = offset + token.length + separator[0].length
+    }
+    return token
+  })
+}
+
 /** Replace cwd, session ids, and any stray UUID with stable tokens in a string. */
 function scrubString(
   value: string,
@@ -177,6 +207,7 @@ function scrubString(
   if (cwdPathMode === 'canonical') {
     // Restrict separator conversion to paths rooted at the cwd token. A global
     // backslash rewrite would corrupt regexes, commands, and model-authored text.
+    out = canonicalizeEmbeddedJsonPaths(out, ctx)
     out = out.replace(CWD_ROOTED_PATH_RE, path => path.replaceAll('\\', '/'))
     out = canonicalizeEmbeddedPaths(out)
   }

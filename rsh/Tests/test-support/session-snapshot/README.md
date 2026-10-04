@@ -92,6 +92,8 @@ A scenario requiring a non-Windows host declares `posixOnly`, which skips its ru
 
 The ACP harness supplies the generated workspace's native, resolved, and JSON-escaped path spellings as comparison aliases. This includes Windows paths embedded in JSON-quoted runtime-context text; unrelated paths and message content remain comparison evidence. A recorded Bash composition explicitly enables its Bash backend and tool and disables the PowerShell counterparts on every replay host.
 
+Canonical comparison decodes cwd-rooted `path` values in valid embedded JSON objects or arrays before converting separators, then re-encodes only those values. It preserves actual repeated separators, other JSON text, and native-mode spelling. Committed Session generations remain unchanged; [the decision](../../../../.agents/notes/implemented/testing/2026-10-04-embedded-json-path-normalization.md) owns the comparison rule.
+
 ### What can go wrong
 
 - **A child turn wait fails** — `waitForSubagentTurnEnd` identifies the child, requested turn, and deadline even when the first log harvest exceeds that deadline, and retains the underlying failure as the error cause.

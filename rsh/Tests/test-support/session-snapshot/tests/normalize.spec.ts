@@ -174,6 +174,38 @@ Additional instructions from: nested\AGENTS.md`,
     })
   })
 
+  it('decodes only valid embedded JSON path values before canonical separator conversion', () => {
+    const windowsCtx: NormalizeContext = { sessionIds: [], cwd: String.raw`C:\work\snapshot` }
+    const normalizeText = (text: string, cwdPathMode: 'canonical' | 'native' = 'canonical'): string => {
+      const frame = JSON.parse(normalizeStdout(
+        JSON.stringify({ text }),
+        windowsCtx,
+        { cwdPathMode },
+      )) as { text: string }
+      return frame.text
+    }
+    const input = JSON.stringify({
+      path: `${windowsCtx.cwd}\\nested\\proof.txt`,
+      regex: String.raw`\d+\w+`,
+    }, null, 2)
+    expect(normalizeText(input)).toBe(JSON.stringify({
+      path: '{{cwd}}/nested/proof.txt',
+      regex: String.raw`\d+\w+`,
+    }, null, 2))
+    expect(normalizeText(input, 'native')).toBe(input)
+    expect(normalizeText(JSON.stringify([{ path: String.raw`{{cwd}}\nested\proof.txt` }]))).toBe(
+      '[{"path":"{{cwd}}/nested/proof.txt"}]',
+    )
+    expect(normalizeText(JSON.stringify({ path: String.raw`{{cwd}}\\nested\\proof.txt` }))).toBe(
+      '{"path":"{{cwd}}//nested//proof.txt"}',
+    )
+    // Quoted pseudo-fields and malformed JSON retain their existing text handling.
+    expect(normalizeText('{"note":"{\\"path\\":\\"{{cwd}}\\\\\\\\nested\\\\\\\\proof.txt\\"}"}')).toBe('{"note":"{\\"path\\":\\"{{cwd}}////nested////proof.txt/"}"}')
+    expect(normalizeText(String.raw`{"path":"{{cwd}}\\nested\\proof.txt",}`)).toBe(
+      '{"path":"{{cwd}}//nested//proof.txt",}',
+    )
+  })
+
   it('can preserve native cwd-rooted separators for a platform golden', () => {
     const windowsCtx: NormalizeContext = { sessionIds: [], cwd: String.raw`C:\work\snapshot` }
     const raw = JSON.stringify({ path: `${windowsCtx.cwd}\\nested\\proof.txt` })

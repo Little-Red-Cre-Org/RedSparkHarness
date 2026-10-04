@@ -92,6 +92,8 @@ spill 场景通过真实本地提供方保存到私有临时根目录。fixture 
 
 ACP harness 将生成 workspace 的原生路径、解析后路径及 JSON 转义写法作为比较别名。这包括运行时上下文文本中经 JSON 引号包裹的 Windows 路径；无关路径与消息内容仍作为比较证据。录制的 Bash 组合在每个回放主机上显式启用 Bash 后端与工具，并禁用对应的 PowerShell 后端与工具。
 
+规范比较先解码有效内嵌 JSON 对象或数组中以 cwd 为根的 `path` 值，再转换分隔符，并仅重新编码这些值。真实的重复分隔符、其他 JSON 文本及原生模式写法保持不变。已提交的 Session 代际保持不变；[该决策](../../../../.agents/notes/implemented/testing/2026-10-04-embedded-json-path-normalization.zh.md)拥有这项比较规则。
+
 ### 可能出什么问题
 
 - **子会话轮次等待失败**——即使首次日志收集就超过期限，`waitForSubagentTurnEnd` 也会指出子会话、目标轮次与等待期限，并通过错误的 cause 保留底层失败。
