@@ -260,3 +260,27 @@ export interface SubprocessTerminalHandle {
    */
   terminate(): Promise<void>
 }
+
+/** Managed process operations shared by Cordis and native Providers. */
+export interface SubprocessOperations {
+  /**
+   * Resolve an absolute executable or a bare PATH name in this Provider's execution world.
+   * @param command - executable path or bare name; relative paths with separators are rejected.
+   * @param env - explicit environment entries used during lookup.
+   * @param signal - cancellation of the lookup.
+   * @returns a verified executable path.
+   */
+  resolveExecutable(command: string, env?: Readonly<Record<string, string>>, signal?: AbortSignal): Promise<string>
+  /**
+   * Start a managed process with explicit environment, stdio, directory, and cancellation.
+   * @param spec - complete spawn request; this service applies no defaults.
+   * @returns a live handle whose waitForExit observes the owned process range.
+   */
+  spawn(spec: SubprocessSpawnSpec): SubprocessHandle
+  /**
+   * Allocate a terminal and start one owned process session.
+   * @param spec - complete terminal spawn request.
+   * @returns a live terminal handle after allocation succeeds.
+   */
+  spawnTerminal(spec: SubprocessTerminalSpawnSpec): Promise<SubprocessTerminalHandle>
+}

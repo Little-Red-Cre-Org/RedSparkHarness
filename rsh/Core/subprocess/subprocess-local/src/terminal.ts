@@ -9,7 +9,7 @@ import type {
   SubprocessTerminalForeground,
   SubprocessTerminalHandle,
   SubprocessTerminalSignal,
-} from '@deepseek-ai/dsh-subprocess'
+} from '@deepseek-ai/dsh-subprocess/native'
 import type { BoundProcessOwner } from './managed-owner.ts'
 import type { ProcessIdentity, ProcessInspector, ProcessSnapshot } from './process-inspector.ts'
 
@@ -55,7 +55,7 @@ function signalName(number: number | undefined): NodeJS.Signals | null {
  * the tracking a remote provider needs.
  */
 export class LocalTerminalHandle implements SubprocessTerminalHandle {
-  readonly pid: number
+  private processId = 0
   readonly output = new PassThrough()
   readonly done: Promise<SubprocessOutcome>
 
@@ -67,7 +67,8 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
   private exited = false
   private trackedDescendants: ProcessIdentity[] = []
   /** The spawned shell's start identity; scans stop adopting members once the root pid no longer carries it. */
-  private readonly rootIdentity: ProcessIdentity | undefined
+  private rootIdentity: ProcessIdentity | undefined
+  private awaitingProcessId = false
 
   /**
    * @param terminal - allocated node-pty process.
@@ -83,8 +84,9 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
     private readonly managedOwner?: BoundProcessOwner,
     private readonly resolveManagedOutcome?: (outcome: SubprocessOutcome) => SubprocessOutcome,
   ) {
-    this.pid = terminal.pid
-    this.rootIdentity = inspector.snapshot().tree(this.pid).find(member => member.pid === this.pid)
+    const pid = this.pid
+    this.awaitingProcessId = pid === 0
+    if (pid > 0) this.rootIdentity = inspector.snapshot().tree(pid).find(member => member.pid === pid)
     this.done = this.outcome.promise
     this.dataDisposable = terminal.onData((data) => { this.output.write(Buffer.from(data, 'utf8')) })
     this.exitDisposable = terminal.onExit(({ exitCode, signal: exitSignal }) => {
@@ -103,6 +105,12 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
     })
   }
 
+  /** The shell PID becomes available after asynchronous Windows PTY startup and remains stable after exit. */
+  get pid(): number {
+    if (this.processId === 0 && this.terminal.pid > 0) this.processId = this.terminal.pid
+    return this.processId
+  }
+
   /** Whether node-pty has not yet published the top-level exit event. */
   get running(): boolean {
     return !this.exited
@@ -118,6 +126,7 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
   // Local inspection is synchronous; the seam returns a promise for remote transports.
   // oxlint-disable-next-line typescript/require-await -- Preserve promise rejection semantics at the async provider contract.
   async inspectForeground(): Promise<SubprocessTerminalForeground | undefined> {
+    if (this.pid === 0) return undefined
     this.descendants(this.inspector.snapshot())
     const processGroupId = this.inspector.foregroundPgid(this.pid)
     if (processGroupId === undefined) return undefined
@@ -193,6 +202,7 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
   }
 
   private descendants(observed: ProcessSnapshot): ProcessIdentity[] {
+    if (this.pid === 0) return this.survivors(this.trackedDescendants, observed)
     // Adopt newly scanned members only while the numeric root pid provably
     // still carries the spawned shell's start identity: after the shell dies,
     // a recycled pid's tree and session must not donate an unrelated
@@ -200,6 +210,10 @@ export class LocalTerminalHandle implements SubprocessTerminalHandle {
     // members keep their own start identities, which every signal rechecks.
     const tree = observed.tree(this.pid)
     const root = tree.find(member => member.pid === this.pid)
+    if (this.awaitingProcessId) {
+      if (!this.exited) this.rootIdentity = root
+      this.awaitingProcessId = false
+    }
     const rootVerified = this.rootIdentity !== undefined
       && root !== undefined
       && root.started === this.rootIdentity.started

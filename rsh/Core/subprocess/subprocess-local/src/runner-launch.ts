@@ -5,7 +5,7 @@ import { accessSync, constants as fsConstants } from 'node:fs'
 import { extname, isAbsolute } from 'node:path'
 import { inspect } from 'node:util'
 import { fileURLToPath } from 'node:url'
-import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
 import { childEnv } from './spawn.ts'
 
 /** The one private environment variable consumed before target state is restored. */

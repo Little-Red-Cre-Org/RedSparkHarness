@@ -9,9 +9,12 @@ kind: "package-reference"
 
 ## 概述
 
-在任何于宿主机上运行子进程的组合中挂载 `dsh-subprocess-local`。它解析本地可执行文件，为普通 Linux 与 Windows 命令以及受支持的 Linux 终端会话提供由 OS 所有的受管范围，并通过 `node-pty` 提供真实终端会话；不受支持的宿主使用明确披露的较弱 fallback。它没有任何配置，因此每项处置方式、限制、终端尺寸与宽限期都随 spawn 请求来自调用方能力 seam。输出收集在内存中保留一段有界尾部，并可选地用 spill 文件恢复完整流；子进程从清理后的环境起步；dispose（资源释放）会终止并等待每个选定范围或会话完全停稳。
+挂载 `dsh-subprocess-local` 可在宿主机上运行子进程。它解析可执行文件、管理 Linux 和 Windows 进程范围，并通过 `node-pty` 提供终端会话；不受支持的宿主使用已说明的较弱 fallback。spawn 请求提供全部 stdio 处置方式、限制、终端尺寸和宽限期。输出保留有界尾部，并可选地通过 spill 文件恢复完整流；子进程从清理后的环境起步，停止时会等待拥有的进程范围和会话退出。
+
+使用 `./native` 可将该进程所有者安装到原生 Host；包根入口仍是其 Cordis 适配器。两个入口均不接受配置。
 
 ## 目录
+
 
 - [使用本包](#use-this-package)
 - [理解实现](#understand-the-implementation)
@@ -62,6 +65,8 @@ Linux 普通进程和终端进程即使在 bootstrap 消费启动请求前被取
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
+
+Windows PTY 启动可能在 shell 就绪前返回 PID 0。句柄在首次正 shell PID 可用后公开并保留该 PID，包括退出之后；首次进程表观察捕获 shell 的启动身份。前台检查和后代收集不会使用 PID 0。
 
 <details>
 <summary>实现细节——点击展开</summary>

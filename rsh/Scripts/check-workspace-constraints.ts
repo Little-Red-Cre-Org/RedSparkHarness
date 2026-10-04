@@ -166,6 +166,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
@@ -210,6 +211,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Ordinary native containment ships a path-loaded runner and its shared
   // runner chunk beside the existing node-pty permission repair.
   '@deepseek-ai/dsh-subprocess-local': [
+    'lib/native.js',
+    'lib/shared-*.js',
     'lib/runner.js',
     'lib/runner-*.js',
     'scripts/ensure-spawn-helper.mjs',

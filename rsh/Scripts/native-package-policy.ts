@@ -2,6 +2,8 @@
 
 /** Package sources validated from both compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Core/subprocess/win32-process',
+  'rsh/Core/util/http-proxy',
   'rsh/Core/util/atomic-write',
   'rsh/Core/runtime-diagnostics/native-runtime',
   'rsh/Core/util/brand',
@@ -35,6 +37,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Core/storage/storage', 'Cordis and native storage hubs share the backend registry'],
   ['rsh/Core/storage/storage-json', 'Cordis and native JSON Providers share atomic storage operations'],
   ['rsh/Core/storage/storage-domain', 'Cordis and native domain Providers share schemas and durability'],
@@ -46,6 +49,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
   ['rsh/Engine/llm/llm', ['host', 'client']],
   ['rsh/Engine/core/session', ['host', 'client']],

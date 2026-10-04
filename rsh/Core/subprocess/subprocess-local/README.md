@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `dsh-subprocess-local` in any composition that runs child processes on the host. It resolves local executables, gives ordinary Linux and Windows commands plus supported Linux terminal sessions an OS-owned managed range, and provides real terminal sessions through `node-pty`; unsupported hosts use an explicit weaker fallback. It has no configuration, so every disposition, limit, terminal size, and grace arrives on the spawn request from the calling capability seam. Output collection keeps a bounded in-memory tail with optional spill files for full-stream recovery, children start from a scrubbed environment, and disposal terminates and joins every selected range or session.
+Mount `dsh-subprocess-local` to run child processes on the host. It resolves executables, manages Linux and Windows process ranges, and provides terminal sessions through `node-pty`; unsupported hosts use a documented weaker fallback. Spawn requests supply every stdio disposition, limit, terminal size, and grace period. Output keeps a bounded tail with optional full-stream spill recovery, children start from a scrubbed environment, and shutdown joins owned ranges and sessions.
+
+Use `./native` to install this owner in a native Host; the root entry remains its Cordis adapter. Neither entry accepts configuration.
 
 ## Table of Contents
 
@@ -62,6 +64,8 @@ An executable that cannot be resolved fails loud with a stable error. `done` rej
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
+
+Windows PTY startup can publish PID 0 before the shell starts. The handle exposes the first positive shell PID when it becomes available and retains it after exit; its first process-table observation captures the shell's start identity. PID 0 is never used for foreground inspection or descendant adoption.
 
 <details>
 <summary>Implementation internals — click to expand</summary>
