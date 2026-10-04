@@ -3,6 +3,7 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
   "include": ["src"],
   "references": [
+    { "path": "../../../Core/util/values" },
     { "path": "../native-agent" },
     { "path": "../native-model-execution" },
     { "path": "../native-code-runtime" },

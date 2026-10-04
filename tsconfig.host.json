@@ -108,6 +108,7 @@
     "rsh/Programs/CLI/tests/**/*.ts",
     "rsh/Programs/DesktopHost/tests/**/*.ts",
     "snapshots/native-headless/native-headless.snapshot.ts",
+    "snapshots/native-headless/tool-results.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",
     "rsh/Programs/Desktop/tests/**/*.ts",
     "rsh/Tests/benchmarks/**/*.ts",

@@ -374,7 +374,7 @@ it('durably records the approval question before dispatch and its grant before t
     expect(executed).toBe(true)
   } finally {
     removeAnswerer()
-    removeTool()
+    await removeTool()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
@@ -416,7 +416,7 @@ it('runs registered native tools under the exact live Agent initiator', async ()
     await state.host.run(state.scope, { kind: 'identity' }, invocation => state.app.run(['confirm', 'identity'], invocation.signal))
     expect(state.agents.list()).toEqual([])
   } finally {
-    dispose()
+    await dispose()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
@@ -453,7 +453,7 @@ it('stops a protected contribution before its executor under the selected approv
       } finally { await reader.close() }
     } finally { await storage.close() }
   } finally {
-    dispose()
+    await dispose()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

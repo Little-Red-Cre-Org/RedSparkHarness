@@ -2,22 +2,87 @@
   "name": "@deepseek-ai/dsh-native-tools",
   "description": "Scoped native tool contribution registry",
   "version": "0.1.5-rc.2",
-  "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/core/native-tools" },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/core/native-tools"
+  },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["agents"], "optional": [], "provides": ["tools"] } },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "agents"
+      ],
+      "optional": [],
+      "provides": [
+        "tools"
+      ]
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./native": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
-    "./presentation": { "types": "./lib/types/presentation.d.ts", "default": "./lib/presentation.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./json-schema": {
+      "types": "./lib/types/json-schema.d.ts",
+      "default": "./lib/json-schema.js"
+    },
+    "./code-output": {
+      "types": "./lib/types/code-output.d.ts",
+      "default": "./lib/code-output.js"
+    },
+    "./sdk-typescript": {
+      "types": "./lib/types/ts-types.d.ts",
+      "default": "./lib/ts-types.js"
+    },
+    "./sdk-python": {
+      "types": "./lib/types/py-types.d.ts",
+      "default": "./lib/py-types.js"
+    },
+    "./ordered-dispatch": {
+      "types": "./lib/types/ordered-dispatch.d.ts",
+      "default": "./lib/ordered-dispatch.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types.js"
+    },
+    "./presentation": {
+      "types": "./lib/types/presentation.d.ts",
+      "default": "./lib/presentation.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/types.js", "lib/presentation.js", "lib/types/**/*.d.ts"],
+  "files": [
+    "lib/index.js",
+    "lib/json-schema.js",
+    "lib/code-output.js",
+    "lib/ts-types.js",
+    "lib/py-types.js",
+    "lib/ordered-dispatch.js",
+    "lib/types.js",
+    "lib/presentation.js",
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
+  ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-agent": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",

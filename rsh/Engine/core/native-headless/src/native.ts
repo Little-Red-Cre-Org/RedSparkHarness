@@ -13,7 +13,7 @@ import type {} from '@deepseek-ai/dsh-native-code-runtime/native'
 import type {} from '@deepseek-ai/dsh-native-time-context/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
-import type { NativeToolApproval, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativeToolApproval, NativeToolApprovalRequest, NativeToolExecution, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
@@ -22,10 +22,11 @@ import { NativeApprovalRequestId, type NativeApprovalOutcome, type NativeApprova
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
-  createSystemMessage, createToolResultMessage, createUserMessage,
-  type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
+  HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
+  type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
 } from '@deepseek-ai/dsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 
 /** Explicit headless request and workspace policy. */
@@ -199,7 +200,9 @@ export class NativeHeadlessApplication implements NativeApplication {
   ): Promise<number> {
     const additions = await this.promptSections?.render() ?? ''
     const systemPrompt = additions === '' ? this.config.systemPrompt : `${this.config.systemPrompt}\n\n${additions}`
-    const schemas = [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA]), ...(this.tools?.schemas() ?? [])]
+    const schemas = [
+      ...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA]), ...(this.tools?.modelSchemas(agent.scope) ?? []),
+    ]
     if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
       throw new Error('native-headless: duplicate tool schema')
     }
@@ -235,11 +238,15 @@ export class NativeHeadlessApplication implements NativeApplication {
         pending.push(event)
         this.timeContext?.record(session, event)
       }
-      const persist = async (): Promise<void> => {
-        if (pending.length > 0) {
-          await writer.append(pending)
-          pending.length = 0
-        }
+      let persistence: Promise<void> = Promise.resolve()
+      const persist = (): Promise<void> => {
+        persistence = persistence.then(async () => {
+          if (pending.length === 0) return
+          const accepted = [...pending]
+          await writer.append(accepted)
+          pending.splice(0, accepted.length)
+        })
+        return persistence
       }
       if (request.resume !== undefined) {
         if (session.header.cwd !== this.config.cwd) {
@@ -294,6 +301,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             if (calls.length > 0) throw new Error('native-headless: truncated tool call')
             reason = { kind: 'max-tokens' }
           }
+          let concludedByTool = false
           const actor = agent
           for (const call of calls) {
             track(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
@@ -302,25 +310,36 @@ export class NativeHeadlessApplication implements NativeApplication {
             let content: ContentBlock[]
             let isError = false
             let error: { name: string; code: string } | undefined
+            let meta: JsonValue | undefined
+            let additionalContexts: readonly UserMessage[] = []
+            let execution: NativeToolExecution | undefined
             try {
-              const authorize = async (requested: NativeToolApproval): Promise<void> => {
+              const requestApproval = async (requested: NativeToolApprovalRequest): Promise<NativeApprovalOutcome> => {
+                if (requested.agent !== agent || requested.session !== session) {
+                  throw new Error('native-headless: approval invocation belongs to a different Agent or Session')
+                }
                 const service = this.approval
-                if (service === undefined) throw new Error(`native-headless: tool ${call.name} requires an approval authority`)
-                const id = NativeApprovalRequestId(randomUUID())
+                if (service === undefined) throw new Error('native-headless: no approval authority')
+                const approvalId = NativeApprovalRequestId(randomUUID())
                 track(session.append('native-approval/asked', {
-                  id, toolName: call.name, callId: call.id,
+                  id: approvalId, toolName: requested.toolName, callId: requested.callId,
                   ...requested.reason === undefined ? {} : { reason: requested.reason },
                 }))
                 await persist()
                 await writer.flush()
                 const decision = await service.request({
-                  id, agent, toolName: call.name, callId: call.id,
-                  ...requested.reason === undefined ? {} : { reason: requested.reason }, signal,
+                  id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
+                  ...requested.reason === undefined ? {} : { reason: requested.reason },
+                  signal: AbortSignal.any([signal, requested.signal]),
                 })
                 track(session.append('native-approval/decided', decision))
                 await persist()
                 await writer.flush()
-                if (decision.outcome !== 'allowed-once') throw new NativeApprovalRejection(decision.outcome, call.name)
+                return decision.outcome
+              }
+              const authorize = async (requested: NativeToolApproval): Promise<void> => {
+                const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal, ...requested })
+                if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
               }
               if (call.name === 'read_file' || call.name === 'write_file') {
                 if (call.name === 'write_file' && this.approval !== undefined) {
@@ -336,12 +355,29 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
               } else {
                 if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
-                const result = await this.tools.execute({
+                execution = {
                   agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
-                  ...this.approval === undefined ? {} : { authorize },
-                })
+                  appendEvent: async (type, data, ...opts) => {
+                    signal.throwIfAborted()
+                    const event = session.append(type, data, ...opts)
+                    track(event as SessionEvent)
+                    await persist()
+                    return event
+                  },
+                  ...this.approval === undefined ? {} : { approvalAuthority: {
+                    request: requestApproval,
+                    authorize: async (requested: NativeToolApprovalRequest): Promise<void> => {
+                      const outcome = await requestApproval(requested)
+                      if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, requested.toolName)
+                    },
+                  } },
+                }
+                const result = await this.tools.executeModelCall(execution)
                 content = [...result.content]
                 isError = result.isError
+                meta = result.meta
+                additionalContexts = structuredClone(result.additionalContexts ?? [])
+                if (!result.isError && result.concludesTurn === true) concludedByTool = true
                 error = result.error === undefined ? undefined : { ...result.error }
               }
             } catch (failure: unknown) {
@@ -352,18 +388,26 @@ export class NativeHeadlessApplication implements NativeApplication {
                 name: failure instanceof Error ? failure.name : 'Error',
                 code: failure instanceof FsError ? failure.code
                   : failure instanceof NativeApprovalRejection ? `APPROVAL_${failure.outcome.toUpperCase()}`
-                    : 'UNKNOWN',
+                    : failure instanceof HarnessError ? failure.code : 'UNKNOWN',
               }
             }
             track(session.append('tool/result', {
               turn, step, message: createToolResultMessage({ callId: call.id, content, isError }),
               ...error === undefined ? {} : { error },
+              ...meta === undefined ? {} : { meta },
             }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
             await persist()
+            if (execution !== undefined) this.tools?.acceptResult(execution, {
+              content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta },
+            })
+            for (const context of additionalContexts) {
+              track(session.append('user/message', context, { surfaceOp: 'append' }))
+              await persist()
+            }
           }
           track(session.append('step/end', { turn, step }))
           await persist()
-          if (calls.length === 0) {
+          if (calls.length === 0 || concludedByTool) {
             process.stdout.write(`${message.content.filter(block => block.type === 'text').map(block => block.text).join('')}\n`)
             return 0
           }

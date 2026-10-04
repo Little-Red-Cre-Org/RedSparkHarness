@@ -191,7 +191,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-fs': ['lib/types-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js'],
-  '@deepseek-ai/dsh-native-tools': ['lib/types.js', 'lib/presentation.js'],
+  '@deepseek-ai/dsh-native-tools': [
+    'lib/json-schema.js', 'lib/code-output.js', 'lib/ts-types.js', 'lib/py-types.js',
+    'lib/ordered-dispatch.js', 'lib/types.js', 'lib/presentation.js', 'lib/shared-*.js',
+  ],
   '@deepseek-ai/dsh-client-ui-renderer': ['lib/native.js'],
   '@deepseek-ai/dsh-client-connection': [
     'lib/native.js', 'lib/native-host.js', 'lib/http-bridge.js', 'lib/native-http-bridge.js',

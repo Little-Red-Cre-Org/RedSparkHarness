@@ -2179,6 +2179,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../session/session-persistence
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
     devDependencies:
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
@@ -2228,6 +2231,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../session
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
 
   rsh/Engine/core/scope:
     devDependencies:

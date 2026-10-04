@@ -28,6 +28,8 @@ The [model-execution Provider](../native-model-execution/README.md) assembles an
 
 The application consumes `NativeSessionPersistenceOperations` from `dsh-session-persistence/native`; JSONL is one replaceable Provider. Each turn owns only its selected Session handle and awaits its durability and close. The application does not close or instantiate the persistence service. Changing Provider type ownership does not change model input or logged events.
 
+Registered tools use the registry's model transport selection and exact Agent scope. Tool-owned events append through the same Session writer; concurrent append callbacks serialize persistence. The application accepts the final result, including presentation metadata, before notifying result observers, then appends sourced additional messages before another model request. A successful tool conclusion ends the turn only after every call in the current batch settles. Cancellation prevents a removed contribution's late successful result from being accepted.
+
 ## Dev Note
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.
@@ -58,7 +60,7 @@ An unchanged prompt prefix can reuse a provider cache; a changed configuration o
 
 #### What the model sees
 
-The model receives fixed `read_file` and `write_file` schemas, `run_code` when `codeRuntime` is installed, plus every schema in the optional `tools` registry. File content, bounded code results, fixed-tool errors, and registered-tool results become one tool-result message before the next request.
+The model receives fixed `read_file` and `write_file` schemas, `run_code` when `codeRuntime` is installed, plus the mode-selected schemas in the optional `tools` registry. File content, bounded code results, fixed-tool errors, and registered-tool results become one tool-result message before the next request.
 
 #### Token effect
 
