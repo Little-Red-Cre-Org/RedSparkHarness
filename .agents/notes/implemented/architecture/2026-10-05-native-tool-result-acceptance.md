@@ -14,6 +14,8 @@ The [tool registry](../../../../rsh/Engine/core/native-tools/README.md) shares r
 
 The [Headless application](../../../../rsh/Engine/core/native-headless/README.md) retains its existing Session writer. Tool-owned append callbacks serialize that writer's pending batches. A final tool result is persisted before its acceptance observers run; sourced extra inputs are separately logged before the next model request. A successful conclusion waits for the current batch to settle. Existing built-in filesystem and worker execution remain separate paths.
 
+Legacy JSON Schema exports forward the same native implementation. Schema types retain one declaration, so the compatibility API referenced-type closure does not omit them as ambiguous duplicates.
+
 ## Alternatives considered
 
 A value-only interface without a consuming application would not enforce durable ordering. A second writer inside the registry would compete with the application. Returning immediately after cancellation would release resources before an accepted executor settles. Reusing model rendering as canonical program JSON would make presentation changes alter binding values.

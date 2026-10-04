@@ -14,6 +14,8 @@ Status: implemented
 
 [Headless 应用](../../../../rsh/Engine/core/native-headless/README.zh.md) 保留现有 Session writer。工具拥有的追加回调串行提交该 writer 的待写批次。最终工具结果先持久化，再运行接受观察者；带来源的额外输入在下一次模型请求前独立记录。成功的结束标记等待当前批次结算。现有内置文件系统和 worker 执行仍是独立路径。
 
+旧工具包的 JSON Schema 出口转发同一原生实现。Schema 类型保持唯一声明，兼容 API 的引用类型闭包不会因重复定义而遗漏它们。
+
 ## 考虑过的替代方案
 
 只有 value 接口而没有消费应用无法执行持久化顺序。注册表内的第二 writer 会与应用竞争。取消后立即返回会在已接受 executor 结算前释放资源。把模型呈现结果作为规范程序 JSON，会使呈现变更改变绑定值。

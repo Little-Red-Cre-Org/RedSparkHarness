@@ -230,6 +230,8 @@ Program-only SDK bindings:
 
 `./types` 的 PTC 事件 payload 与 `./presentation` 的 `FileDiff` 转发 `dsh-native-tools` 拥有的纯声明。导入这些兼容出口会保留 Session 事件扩展，不安装原生注册表。
 
+旧工具包的 JSON Schema 出口转发原生校验器与 schema 类型，使模型 API 目录为每个 schema 类型保留唯一声明。
+
 <a id="dev-note"></a>
 ### 开发备注
 

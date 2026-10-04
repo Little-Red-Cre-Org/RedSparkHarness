@@ -405,6 +405,8 @@ type PostToolDecision =
 
 ## 已强制执行的原始 JSON Schema 子集
 
+Schema 声明与校验由 [NativeTools](../../Engine/core/native-tools/README.zh.md) 拥有，旧工具出口转发同一实现。
+
 subagent、工作流、MCP 和动态注册提供的原始 schema 使用作者侧 DSL 在协议层的对应表示。`assertSupportedJsonSchema()` 接受任意 JSON 根，`validateJsonSchemaValue()` 强制执行该 schema，`JsonSchemaError` 则报告每条不受支持或格式错误的 schema 路径。仅含注解的空节点表示不受约束的无损 JSON。`oneOf` 至少要求两个分支，且一个值必须恰好匹配其中一个。仍要求对象根的消费方调用 `assertObjectJsonSchema()` 并携带 `ObjectJsonSchema`；这样，subagent/工作流中由调用方定义的结构化输出可以继续以对象为根，而不会限制共享词汇。
 
 ```ts type-equiv

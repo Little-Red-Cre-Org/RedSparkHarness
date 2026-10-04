@@ -405,6 +405,8 @@ Post-policy may replace either content or value, never both. Content replacement
 
 ## The enforced raw JSON Schema subset
 
+Schema declarations and validation are owned by [NativeTools](../../Engine/core/native-tools/README.md); the legacy tool exports forward them.
+
 Raw schemas from subagents, workflows, MCP, and dynamic registrations use the wire-level counterpart of the author DSL. `assertSupportedJsonSchema()` accepts any JSON root, `validateJsonSchemaValue()` enforces it, and `JsonSchemaError` reports every unsupported or malformed schema path. The empty annotation-only node means unconstrained lossless JSON. `oneOf` requires at least two branches and a value must match exactly one. Consumers that still require an object root call `assertObjectJsonSchema()` and carry `ObjectJsonSchema`; this is how subagent/workflow caller-defined structured output remains object-rooted without restricting the shared vocabulary.
 
 ```ts type-equiv
