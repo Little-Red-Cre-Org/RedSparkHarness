@@ -23,6 +23,8 @@ English | [中文](README.zh.md)
 
 The `./native` entry accepts only an empty configuration object. It requires `agents` and provides `tools`; consumers must declare that service before registering contributions. A contribution can declare `approval` with a reason. Its consuming application supplies the matching `authorize()` callback; the registry invokes it before the executor, and fails when a protected contribution has no approval authority. Duplicate schema names fail during activation, calls with an unregistered Agent fail before execution, and teardown clears remaining registrations.
 
+The pure `./types` and `./presentation` exports share durable PTC event payloads and file diffs with Host and Client consumers. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
+
 <a id="model-experience"></a>
 ## Model Experience
 

@@ -7,7 +7,7 @@
     { "path": "../native-model-execution" },
     { "path": "../native-code-runtime" },
     { "path": "../../context/native-time-context" },
-    { "path": "../native-tools" },
+    { "path": "../native-tools/tsconfig.host.json" },
     { "path": "../native-prompt" },
     { "path": "../../../Modules/Official/sandbox/native-sandbox-policy" },
     { "path": "../../../Modules/Official/interaction/native-approval" },

@@ -23,6 +23,8 @@ kind: "package-reference"
 
 `./native` 入口只接受空配置对象。它要求 `agents` 并提供 `tools`；Consumer 必须在注册贡献前声明该服务。贡献可声明带有 reason 的 `approval`。其消费应用提供对应的 `authorize()` 回调；注册表会在 executor 前调用它，受保护贡献没有审批 authority 时会失败。重复 schema 名称会在激活期间失败，携带未注册 Agent 的调用会在执行前失败，释放时会清除其余注册项。
 
+纯 `./types` 和 `./presentation` 出口与 Host、Client Consumer 共享持久 PTC 事件 payload 和文件 diff。注册表入口仅属于 Host。这些声明不安装 PTC executor，也不改变 Session 事件名或 payload 字段。
+
 <a id="model-experience"></a>
 ## 模型体验
 

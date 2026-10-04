@@ -228,6 +228,8 @@ These limits define when the registry needs special care. They are current packa
 - **PTC mode intermediate values are execution-local and unbounded by bytes** — they cannot be reconstructed from session replay and may exhaust process or worker memory; only the outer `run_code` output has the worker's configurable hard cap.
 - **`run_code` state is fresh per run** — a persistent REPL-style kernel is rejected for the MVP, because cross-call state would be invisible to the log.
 
+The `./types` PTC event payloads and `FileDiff` in `./presentation` forward the pure declarations owned by `dsh-native-tools`. Importing these compatibility exports preserves Session event augmentation without installing the native registry.
+
 <a id="dev-note"></a>
 ### Dev Note
 
