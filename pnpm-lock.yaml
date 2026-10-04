@@ -1259,6 +1259,9 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
 
   rsh/Core/subprocess/subprocess-local:
     dependencies:
@@ -1278,6 +1281,9 @@ importers:
       '@deepseek-ai/dsh-loader-smoke':
         specifier: workspace:^
         version: link:../../../Tests/test-support/loader-smoke
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-subprocess':
         specifier: workspace:^
         version: link:../subprocess
@@ -1290,10 +1296,6 @@ importers:
       koffi:
         specifier: ^3.1.0
         version: 3.1.1
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
 
   rsh/Core/typert/generator:
     dependencies:
@@ -1386,13 +1388,6 @@ importers:
       undici:
         specifier: ^8.10.0
         version: 8.10.0
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
-      '@deepseek-ai/dsh-invariants':
-        specifier: workspace:^
-        version: link:../../runtime-diagnostics/invariants
 
   rsh/Core/util/json-rpc-line: {}
 
@@ -7577,6 +7572,9 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
+      '@deepseek-ai/dsh-subprocess-local':
+        specifier: workspace:^
+        version: link:../../Core/subprocess/subprocess-local
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
@@ -7719,9 +7717,6 @@ importers:
       '@deepseek-ai/dsh-subagent-spawn-in-process':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent-spawn-in-process
-      '@deepseek-ai/dsh-subprocess-local':
-        specifier: workspace:^
-        version: link:../../Core/subprocess/subprocess-local
       '@deepseek-ai/dsh-system-prompt':
         specifier: workspace:^
         version: link:../../Engine/core/system-prompt

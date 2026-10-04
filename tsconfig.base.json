@@ -28,6 +28,8 @@
     // not declaration path aliases, keep each package/vendor source compiled
     // under its own tsconfig boundary.
     "paths": {
+      "@deepseek-ai/dsh-subprocess/native": ["./rsh/Core/subprocess/subprocess/src/native.ts"],
+      "@deepseek-ai/dsh-subprocess-local/native": ["./rsh/Core/subprocess/subprocess-local/src/native.ts"],
       "@deepseek-ai/cordis": ["./rsh/Core/vendor/cordis/src"],
       "@deepseek-ai/cosmokit": ["./rsh/Core/vendor/cosmokit/src"],
       "@deepseek-ai/schemastery": ["./rsh/Core/vendor/schemastery/src"],

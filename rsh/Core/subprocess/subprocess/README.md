@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`ctx.subprocess` resolves executables, starts explicitly specified child processes or real terminal sessions, streams or collects bounded output, and terminates the full managed process range. Configure one subprocess implementation for each composition, choosing local or remote execution according to where commands must run. Each request sets argv, working directory, stdio, environment overrides, termination grace, and cancellation, with no shell interpretation or hidden execution defaults. Child environments remove ambient credentials and `DSH_*` values before applying explicit overrides; callers own deadlines, teardown policy, and model-facing rendering, while collected output remains readable after exit.
+`ctx.subprocess` resolves executables, starts managed child processes and terminal sessions, captures bounded output, and terminates their owned ranges. Each request supplies argv, working directory, stdio, environment, grace, and cancellation; callers own deadlines, teardown policy, and model-facing rendering. Child environments scrub ambient credentials and `DSH_*` values before explicit overrides.
+
+Use `./native` for the Cordis-free `SubprocessOperations` definition and environment helper. The package root remains the Cordis service for existing compositions.
 
 ## Table of Contents
 

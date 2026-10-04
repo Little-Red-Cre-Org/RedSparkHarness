@@ -15,7 +15,7 @@ import { closeSync, mkdtempSync, openSync, rmdirSync, unlinkSync, writeSync } fr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleepMs } from 'node:timers/promises'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
+import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import type {
   CollectedOutput,
@@ -24,7 +24,7 @@ import type {
   SubprocessOutcome,
   SubprocessOutputMode,
   SubprocessSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess'
+} from '@deepseek-ai/dsh-subprocess/native'
 import type { BoundProcessOwner, ManagedProcessLaunch } from './managed-owner.ts'
 import { waitWithAbort } from './managed-owner.ts'
 import { linuxProcessGroupHasLiveMembers } from './process-inspector.ts'
