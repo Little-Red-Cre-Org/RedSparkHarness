@@ -73,12 +73,14 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
       agent,
       callId: ToolCallId('read-1'), name: 'read', arguments: { file_path: 'sample.txt' }, session,
       signal: new AbortController().signal,
+      appendEvent: async (type, data, ...opts) => session.append(type, data, ...opts),
     })
     expect(read.isError).toBe(false)
     const result = await tools.execute({
       agent,
       callId: ToolCallId('write-1'), name: 'write', arguments: { file_path: 'sample.txt', content: 'after' }, session,
       signal: new AbortController().signal,
+      appendEvent: async (type, data, ...opts) => session.append(type, data, ...opts),
     })
     expect(result.isError).toBe(true)
     const denial = result.content[0]
