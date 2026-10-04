@@ -27,14 +27,14 @@ kind: "package-reference"
 
 [模型执行 Provider](../native-model-execution/README.zh.md)负责组装并记录每个助手流事件。应用继续拥有 turn 和工具执行。
 
+应用使用 `dsh-session-persistence/native` 的 `NativeSessionPersistenceOperations`；JSONL 是一个可替换 Provider。每轮只拥有其选定 Session 句柄，并等待其持久化和关闭。应用不关闭或实例化持久化服务。改变 Provider 类型所有权不会改变模型输入或已记录事件。
+
 <a id="dev-note"></a>
 ## 开发备注
 
 不发布 invariant companion：应用没有能够独立核对其自身状态的进程内观测。Session 持久化与文件系统 Provider 保留各自的校验。
 
 <a id="model-experience"></a>
-应用使用 `dsh-session-persistence/native` 的 `NativeSessionPersistenceOperations`；JSONL 是一个可替换 Provider。每轮只拥有其选定 Session 句柄，并等待其持久化和关闭。应用不关闭或实例化持久化服务。改变 Provider 类型所有权不会改变模型输入或已记录事件。
-
 ## 模型体验
 
 ### 系统提示词

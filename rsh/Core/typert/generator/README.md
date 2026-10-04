@@ -104,11 +104,11 @@ Read these pages when the package-level contract is not enough; they move from t
 - [API Gateway reference](../../../Docs/api-gateway.md) — how generated Remote descriptors are invoked end to end.
 - [Compiler-independent model Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-27-compiler-independent-typert-model.md) — the model design, alternatives, and consequences.
 
+A service member explicitly marked `@inheritdoc` uses documentation from its declared `extends` or `implements` interface while retaining its authored signature. The catalog still rejects missing parameter or return documentation in that owning declaration. Compatibility Services and native Definitions share observable obligations without duplicating method documentation.
+
 -----
 
 <a id="model-experience"></a>
-A service member explicitly marked `@inheritdoc` uses documentation from its declared `extends` or `implements` interface while retaining its authored signature. The catalog still rejects missing parameter or return documentation in that owning declaration. Compatibility Services and native Definitions share observable obligations without duplicating method documentation.
-
 ## Model Experience
 
 None, as the build-time generator runs outside any agent runtime and touches no model request.
