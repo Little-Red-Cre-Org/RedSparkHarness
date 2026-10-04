@@ -8,6 +8,7 @@ import {
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
+  nativePackageTargets,
   nativeSafeSourceSubpaths,
   nativeSafeSourceEntryTargets,
 } from './native-package-policy.ts'
@@ -57,8 +58,8 @@ export function nativeSourceViolations(
 }
 
 /** Locate the source corresponding to one package export's declaration path. */
-function exportSource(directory: string, exportName: string, exports: Record<string, unknown>): string | undefined {
-  const entry = exports[exportName]
+function exportSource(directory: string, exportName: string, exports: Record<string, unknown> | undefined): string | undefined {
+  const entry = exports?.[exportName]
   if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return undefined
   const types = (entry as Record<string, unknown>).types
   if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) return undefined
@@ -195,7 +196,10 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const options = project.program.getCompilerOptions()
     const nativeOwner = (file: string): string | undefined => {
       const owner = ownerOf(file, nativePackageDirectories)
-      return face === 'host' && owner?.startsWith('rsh/Programs/Web/client/') ? undefined : owner
+      if (owner === undefined) return undefined
+      const targets = nativePackageTargets.get(owner)
+        ?? (owner.startsWith('rsh/Programs/Web/client/') ? ['client'] : ['host', 'client'])
+      return targets.includes(face) ? owner : undefined
     }
     const mixedOwner = (file: string): string | undefined => {
       const path = relative(root, file).replaceAll('\\', '/')
