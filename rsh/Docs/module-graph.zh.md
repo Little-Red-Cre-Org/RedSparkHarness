@@ -264,6 +264,8 @@ flowchart TD
     pkg_host_open_in_app["host-open-in-app"]
     pkg_host_plugin_inventory["host-plugin-inventory"]
     pkg_host_webserver["host-webserver"]
+    pkg_native_web_assets["native-web-assets"]
+    pkg_native_web_host["native-web-host"]
   end
   subgraph group_identity["group: identity"]
     pkg_anonymous_user_id["anonymous-user-id"]
@@ -398,6 +400,9 @@ flowchart TD
   pkg_llm --> pkg_errors
   pkg_scope --> pkg_invariants
   pkg_attachment --> pkg_brand
+  pkg_client_connection --> pkg_native_runtime
+  pkg_client_ui_renderer --> pkg_client_ui_slots
+  pkg_client_ui_renderer --> pkg_native_runtime
   pkg_credentials --> pkg_invariants
   pkg_credentials --> pkg_native_runtime
   pkg_e2b --> pkg_http_proxy
@@ -406,13 +411,9 @@ flowchart TD
   pkg_host_directory_picker_auto --> pkg_host_directory_picker_browse
   pkg_host_directory_picker_auto --> pkg_host_directory_picker_native
   pkg_host_directory_picker_auto --> pkg_host_webserver
-  pkg_host_frontend_static --> pkg_client_connection
-  pkg_host_frontend_static --> pkg_host_webserver
   pkg_anonymous_user_id --> pkg_brand
   pkg_anonymous_user_id --> pkg_home_paths
   pkg_storage_domain --> pkg_invariants
-  pkg_storage_domain --> pkg_storage
-  pkg_storage_json --> pkg_storage
   pkg_storage_sqlite --> pkg_storage
   pkg_subprocess --> pkg_http_proxy
   pkg_typert_loader --> pkg_typert_registry
@@ -438,6 +439,8 @@ flowchart TD
   pkg_subprocess_e2b --> pkg_e2b
   pkg_subprocess_e2b --> pkg_subprocess
   pkg_subprocess_e2b --> pkg_timeout
+  pkg_host_frontend_static --> pkg_client_connection
+  pkg_host_frontend_static --> pkg_host_webserver
   pkg_lsp --> pkg_brand
   pkg_lsp --> pkg_llm
   pkg_subprocess_local --> pkg_subprocess
@@ -1228,7 +1231,6 @@ flowchart TD
 | [`rsh`](../Compatibility/DSH/bundle/rsh) | `bundle` | — |
 | [`sdk-app`](../Compatibility/DSH/bundle/sdk-app) | `bundle` | — |
 | [`sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal) | `bundle` | — |
-| [`client-connection`](../Programs/Web/client/connection) | `client` | — |
 | [`client-hmr`](../Programs/Web/client/hmr) | `client` | — |
 | [`client-locale`](../Programs/Web/client/locale) | `client` | — |
 | [`client-modules`](../Programs/Web/client/modules) | `client` | — |
@@ -1257,7 +1259,6 @@ flowchart TD
 | [`client-ui-plan`](../Programs/Web/client/ui-plan) | `client` | — |
 | [`client-ui-primitives`](../Programs/Web/client/ui-primitives) | `client` | — |
 | [`client-ui-reference`](../Programs/Web/client/ui-reference) | `client` | — |
-| [`client-ui-renderer`](../Programs/Web/client/ui-renderer) | `client` | — |
 | [`client-ui-schedule`](../Programs/Web/client/ui-schedule) | `client` | — |
 | [`client-ui-session`](../Programs/Web/client/ui-session) | `client` | — |
 | [`client-ui-settings`](../Programs/Web/client/ui-settings) | `client` | — |
@@ -1288,6 +1289,8 @@ flowchart TD
 | [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native) | `host` | — |
 | [`host-open-in-app`](../Programs/Web/host/open-in-app) | `host` | — |
 | [`host-webserver`](../Programs/Web/host/webserver) | `host` | — |
+| [`native-web-assets`](../Programs/Web/host/native-web-assets) | `host` | — |
+| [`native-web-host`](../Programs/Web/host/native-web-host) | `host` | — |
 | [`native-approval`](../Modules/Official/interaction/native-approval) | `interaction` | — |
 | [`native-tool-jobs`](../Engine/jobs/native-tool-jobs) | `jobs` | — |
 | [`invariants`](../Core/runtime-diagnostics/invariants) | `runtime-diagnostics` | — |
@@ -1299,6 +1302,7 @@ flowchart TD
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
 | [`session-format-v2-to-v3`](../Engine/session/session-format-v2-to-v3) | `session` | — |
 | [`storage`](../Core/storage/storage) | `storage` | — |
+| [`storage-json`](../Core/storage/storage-json) | `storage` | — |
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |
 | [`llm-mock-server`](../Tests/test-support/llm-mock-server) | `test-support` | — |
 | [`remote-mock`](../Tests/test-support/remote-mock) | `test-support` | — |
@@ -1309,13 +1313,13 @@ flowchart TD
 | [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors) |
 | [`scope`](../Engine/core/scope) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`attachment`](../Modules/Official/attachment/attachment) | `attachment` | [`brand`](../Core/util/brand) |
+| [`client-connection`](../Programs/Web/client/connection) | `client` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
+| [`client-ui-renderer`](../Programs/Web/client/ui-renderer) | `client` | [`client-ui-slots`](../Programs/Web/client/ui-slots), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`credentials`](../Modules/Official/credentials/credentials) | `credentials` | [`invariants`](../Core/runtime-diagnostics/invariants), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`e2b`](../Modules/Official/e2b/e2b) | `e2b` | [`http-proxy`](../Core/util/http-proxy) |
 | [`host-directory-picker-auto`](../Programs/Web/host/directory-picker-auto) | `host` | [`client-ui-directory-picker-browse`](../Programs/Web/client/ui-directory-picker-browse), [`client-ui-directory-picker-native`](../Programs/Web/client/ui-directory-picker-native), [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse), [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native), [`host-webserver`](../Programs/Web/host/webserver) |
-| [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`anonymous-user-id`](../Core/identity/anonymous-user-id) | `identity` | [`brand`](../Core/util/brand), [`home-paths`](../Core/util/home-paths) |
-| [`storage-domain`](../Core/storage/storage-domain) | `storage` | [`invariants`](../Core/runtime-diagnostics/invariants), [`storage`](../Core/storage/storage) |
-| [`storage-json`](../Core/storage/storage-json) | `storage` | [`storage`](../Core/storage/storage) |
+| [`storage-domain`](../Core/storage/storage-domain) | `storage` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`storage-sqlite`](../Core/storage/storage-sqlite) | `storage` | [`storage`](../Core/storage/storage) |
 | [`subprocess`](../Core/subprocess/subprocess) | `subprocess` | [`http-proxy`](../Core/util/http-proxy) |
 | [`typert-loader`](../Core/typert/loader) | `typert` | [`typert-registry`](../Core/typert/registry) |
@@ -1329,6 +1333,7 @@ flowchart TD
 | [`authorization`](../Modules/Official/credentials/authorization) | `credentials` | [`credentials`](../Modules/Official/credentials/credentials), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm) |
 | [`credentials-local`](../Modules/Official/credentials/credentials-local) | `credentials` | [`atomic-write`](../Core/util/atomic-write), [`credentials`](../Modules/Official/credentials/credentials), [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
+| [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |

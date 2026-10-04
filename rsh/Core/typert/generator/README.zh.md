@@ -63,7 +63,7 @@ files:
 
 ### 设计理念
 
-生成器遵循一项核心分离原则：提取与生成通过与编译器无关的模型解耦。`WorkspaceAnalyzer` 读取以 face aggregate tsconfig 为种子的 TypeScript 程序，产出 `FaceModel` 与 `TypeGraph` 数据；`FaceModelEmitter` 只消费该模型，绝不接收编译器节点。模型保留声明标识、泛型参数及应用、显式继承、条件类型与映射类型、导入属性、abstract 修饰符与源码 JSDoc，并排除构造函数、静态成员与非公共成员。
+生成器遵循一项核心分离原则：提取与生成通过与编译器无关的模型解耦。`WorkspaceAnalyzer` 读取以 face aggregate tsconfig 为种子的 TypeScript 程序，产出 `FaceModel` 与 `TypeGraph` 数据；`FaceModelEmitter` 只消费该模型，绝不接收编译器节点。模型保留声明标识、泛型参数及应用、显式继承、条件类型与映射类型、导入属性、abstract 修饰符与源码 JSDoc，并排除构造函数、静态成员与非公共成员。Service 提取包含继承的公共成员，保留派生类声明的覆盖，并排除 Typert 绑定元数据。
 
 ### 源码地图
 

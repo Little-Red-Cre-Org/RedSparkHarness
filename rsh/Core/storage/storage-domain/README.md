@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 Use this package to declare schema-validated key-value domains and open them through `ctx.storageDomain` over a configured storage backend. Reads return synchronously from validated in-memory state, while each write becomes durable before it resolves and emits `domain/changed` in order. Product packages use domain handles instead of accessing storage backends directly. This host-side state does not add tools, prompts, or session events, so it remains invisible to the model and agent loop.
 
+<a id="native-provider"></a>
+## Native Provider
+
+The Host-only `./native` entry publishes `storageDomain` from the same `DomainFacilityCore` and `DomainImpl` used by the compatibility adapter. It resolves the required backend and optional route overrides, waits for generic `storageBackendsReady`, refuses readiness from another registry and validates every configured backend reference during activation. No JSON-specific service or implicit backend fallback participates in resolution.
+
+Durable writes keep the existing single domain queue: backend acknowledgement precedes memory publication and scoped native `domain/changed` notification. Shared pure event payloads contain no Cordis declarations. Synchronous observer failures are reported after commit without rolling back the written value. Native diagnostics use the Host console; the compatibility adapter retains its context logger and dispatcher.
+
+Facility close stops new opens and drains accepted snapshot loads and domain writes before releasing units. Opens finishing after close admission release their units and reject. Rollback preserves both open and cleanup failures; final close attempts every domain and reports retained failed-open unit cleanup failures. Native lifetime cancellation rejects further admission, while underlying backend cleanup remains an owned uncancellable drain. No separate domain implementation, path or record schema is introduced.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

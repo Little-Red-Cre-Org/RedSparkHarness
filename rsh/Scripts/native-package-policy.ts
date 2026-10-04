@@ -35,6 +35,9 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Core/storage/storage', 'Cordis and native storage hubs share the backend registry'],
+  ['rsh/Core/storage/storage-json', 'Cordis and native JSON Providers share atomic storage operations'],
+  ['rsh/Core/storage/storage-domain', 'Cordis and native domain Providers share schemas and durability'],
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
@@ -55,8 +58,14 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/attachment/attachment', ['./types']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
   ['rsh/Engine/core/session', ['./types']],
+])
+
+/** Safe storage backend exports compiled only for the Host. */
+export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/storage/storage/backend', ['host']],
 ])

@@ -6,6 +6,10 @@
  * @module @deepseek-ai/dsh-storage/src/backend
  */
 
+export { StorageError } from './error.ts'
+export type { StorageErrorCode } from './error.ts'
+export { BackendRegistry } from './registry.ts'
+
 /** Allowed format for unit and table names: safe as a file name and as a SQL identifier segment without escaping. */
 export const UNIT_NAME_RE = /^[a-z][a-z0-9_]*$/
 

@@ -2294,8 +2294,8 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'storageDomain',
-    summary: 'The mounted domain facility.',
-    description: 'The mounted domain facility. Opens declared domains over routed backends; one facility instance owns the open-domain table and enforces single-open per domain name.',
+    summary: 'Compatibility adapter over the single shared domain facility.',
+    description: 'Compatibility adapter over the single shared domain facility.',
     methods: [
       {
         signature: 'async open<S extends DomainSpec>(spec: S): Promise<Domain<S>>',
@@ -2310,10 +2310,10 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the open domain runtime, or `undefined` when not open.',
       },
       {
-        signature: 'async closeAll(): Promise<void>',
+        signature: 'closeAll(): Promise<void>',
         description: 'Close every domain still open on this facility. The unmount path for consumers that never called `Domain.close()` themselves; closing is idempotent, so double-closing an already-closed domain is harmless.',
         parameters: [],
-        returns: 'resolution after every unit is released.',
+        returns: 'resolution after every unit cleanup is attempted; rejects with actual cleanup failures, including failed opens.',
       },
     ],
   },
@@ -4271,7 +4271,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DomainImpl',
-    declaration: 'export class DomainImpl {\n    readonly name: string;\n    constructor(private readonly ctx: Context, spec: DomainSpec, private readonly unit: KvUnit, records: Map<string, Map<string, unknown>>, globalValue: unknown, private readonly onClosed: () => void);\n    get global(): DomainGlobal<unknown>;\n    table(name: string): KvTable<string, unknown>;\n    close(): Promise<void>;\n}',
+    declaration: 'export class DomainImpl {\n    readonly name: string;\n    constructor(private readonly effects: DomainRuntimeEffects, spec: DomainSpec, private readonly unit: KvUnit, records: Map<string, Map<string, unknown>>, globalValue: unknown, private readonly onClosed: () => void);\n    get global(): DomainGlobal<unknown>;\n    table(name: string): KvTable<string, unknown>;\n    close(): Promise<void>;\n}',
+  },
+  {
+    name: 'DomainRuntimeEffects',
+    declaration: 'export interface DomainRuntimeEffects {\n    changed(change: DomainChanged): void;\n    warning(message: string): void;\n}',
   },
   {
     name: 'DomainSpec',

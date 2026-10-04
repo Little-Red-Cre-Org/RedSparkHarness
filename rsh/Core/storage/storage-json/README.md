@@ -11,6 +11,13 @@ English | [中文](README.zh.md)
 
 `dsh-storage-json` stores domain data as readable JSON under a configured root and registers as backend `json`. Its default `single` layout keeps one complete `<unit>.json` file per unit; its `per-record` layout keeps one version-stamped document per record. Both layouts publish each changed file atomically, while the domain layer orders calls. Choose it when operators need inspectable files and the selected layout fits the write volume; choose SQLite for larger or highly concurrent data. The backend is host-side only and contributes no prompt, tool, or schema.
 
+<a id="native-provider"></a>
+## Native Provider
+
+The Host-only `./native` entry validates a required `root`, registers the shared `JsonStorageBackend` as `json` on the selected native hub, and publishes generic `storageBackendsReady`. It owns registration as an effect and backend close as a resource. Compatibility and native entries export the same backend class; layouts, paths, version stamps and atomic publication are identical.
+
+Close rejects new unit opens, waits for accepted opens, and attempts every remaining unit close before reporting aggregate cleanup failures. An accepted open finishing during close releases its unit rather than returning a live handle. Native activation does not import Cordis, and its configured root has no fallback. The [extraction decision](../../../../.agents/notes/implemented/architecture/2026-10-04-native-storage-domain-adapters.md) records shared runtime ownership.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

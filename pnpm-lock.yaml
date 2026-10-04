@@ -1182,6 +1182,10 @@ importers:
         version: link:../../util/brand
 
   rsh/Core/storage/storage:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -1189,6 +1193,12 @@ importers:
 
   rsh/Core/storage/storage-domain:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-storage':
+        specifier: workspace:^
+        version: link:../storage
       '@deepseek-ai/schemastery':
         specifier: link:../../vendor/schemastery
         version: link:../../vendor/schemastery
@@ -1202,22 +1212,28 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-storage':
+      '@deepseek-ai/dsh-storage-json':
         specifier: workspace:^
-        version: link:../storage
+        version: link:../storage-json
 
   rsh/Core/storage/storage-json:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-storage':
+        specifier: workspace:^
+        version: link:../storage
       '@deepseek-ai/schemastery':
         specifier: link:../../vendor/schemastery
         version: link:../../vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
-      '@deepseek-ai/dsh-storage':
-        specifier: workspace:^
-        version: link:../storage
 
   rsh/Core/storage/storage-sqlite:
     dependencies:

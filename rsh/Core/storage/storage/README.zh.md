@@ -11,6 +11,13 @@ kind: "package-reference"
 
 使用 `dsh-storage` 持久保存类型化应用数据，而不将其加入会话历史。将它与受支持的存储介质和领域配置一同挂载后，调用方即可通过公共 `ctx.storageDomain` API 访问记录。工作区记录、会话伴随数据或其他必须在重启后保留且不应成为会话事件的应用状态适合使用它。它仅供宿主代码使用，对模型没有可见影响；无需此类数据的组合可以省略它。
 
+<a id="native-provider"></a>
+## 原生 Provider
+
+仅供 Host 使用的 `./native` 入口通过现有命名 `BackendRegistry` 发布 `storage`，不执行 IO，也不建立并行数据仓库。纯 `./backend` 叶入口导出共享后端词汇、错误及同一个注册表类，不包含框架声明。兼容 form 挂载仍由 Cordis 入口拥有。
+
+`NativeStorageBackendsReady` 标识选定后端 Provider 已完成注册的精确注册表。该 Provider 仅在注册成功后发布 `storageBackendsReady`。domain Provider 要求此通用就绪服务，因此把 JSON 替换为其他原生后端不会改变 Consumer。组合多个后端 Provider 时，需要一个显式就绪发布者覆盖已完成注册；多个竞争发布者不构成隐式聚合器。
+
 ## 目录
 
 - [使用本包](#use-this-package)
