@@ -24,7 +24,7 @@ it('persists, closes, and restores the same Session log without constructing a C
   let storage: JsonlSessionBackend | undefined
   const consumer: NativePlugin = {
     apiVersion: 1, name: 'native-session-consumer', targets: ['host'], requires: ['sessionPersistence'], provides: [],
-    resolve: () => (context) => { storage = context.require('sessionPersistence') },
+    resolve: () => (context) => { const selected = context.require('sessionPersistence'); if (!(selected instanceof JsonlSessionBackend)) throw new Error('Expected selected JSONL backend'); storage = selected },
   }
   const request = { plugin, scope, config: { root, compression: 'none' } }
   const host = new NativeHost(resolveInstallation([request, { plugin: consumer, scope, config: undefined }], 'host'))

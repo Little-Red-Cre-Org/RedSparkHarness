@@ -133,6 +133,8 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Zstandard JSONL session logs](../../../../.agents/notes/implemented/architecture/2026-07-19-zstandard-jsonl-session-logs.md) — the checksummed-frame encoding rationale.
 - [Released Session format migrations](../../../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md) — immutable generations, adjacent migration edges, and publication rules.
 
+The native Provider publishes the existing `JsonlSessionBackend` through the provider-neutral `NativeSessionPersistenceOperations` Definition. The same backend serves compatibility and native callers; its owning Provider closes it after accepted handle work drains. Selecting this Provider does not mount the compatibility Service or create another storage implementation.
+
 -----
 
 <a id="model-experience"></a>

@@ -122,6 +122,8 @@ seam 的共享辅助函数校验由 `SESSION_FORMAT_VERSION` 标识的当前逻�
 - [会话检查点策略](../session-checkpoint-policy/README.zh.md)——在语义边界上经由 `session/flush` 刷新的插件。
 - [会话包映射](../README.zh.md)——相邻的持久化、投影、标题与遥测包。
 
+`./native` 拥有 `NativeSessionPersistenceOperations` 和原生 `sessionPersistence` 服务。五个操作保留现有句柄、新鲜度、取消及单 writer 义务。兼容 Service 实现该 Definition 并继承其方法文档。Provider 释放仍归选定 Provider；Consumer 不获得服务级 close 所有权。
+
 -----
 
 <a id="model-experience"></a>

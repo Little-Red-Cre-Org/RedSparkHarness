@@ -2181,6 +2181,10 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../session/session-persistence
+    devDependencies:
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
@@ -3368,6 +3372,9 @@ importers:
 
   rsh/Engine/session/session-persistence:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values

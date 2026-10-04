@@ -4,7 +4,7 @@ import { isAbsolute, resolve } from 'node:path'
 import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -26,7 +26,7 @@ import {
   type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
 } from '@deepseek-ai/dsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 
 /** Explicit headless request and workspace policy. */
 export interface Config {
@@ -124,7 +124,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   constructor(
     private readonly context: NativeContext,
     private readonly fs: import('@deepseek-ai/dsh-fs/native').FileSystemOperations,
-    private readonly storage: JsonlSessionBackend,
+    private readonly storage: NativeSessionPersistenceOperations,
     private readonly modelExecution: NativeModelExecution,
     private readonly config: Config,
     private readonly agents: NativeAgentRegistry,

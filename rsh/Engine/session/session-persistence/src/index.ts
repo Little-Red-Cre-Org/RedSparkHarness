@@ -3,6 +3,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
 import type { SessionHandle, SessionAccess } from './handle.ts'
 import type { SessionPersistenceCreateOptions, SessionPersistenceListOptions, SessionPersistenceOpenOptions, SessionPersistenceSnapshot, SessionPersistenceStatOptions } from './types.ts'
+import type { NativeSessionPersistenceOperations } from './native.ts'
 export * from './native.ts'
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -30,69 +31,24 @@ declare module '@deepseek-ai/cordis' {
  * Freshness: once an `append` or `flush` resolves, reads started afterwards
  * on this backend instance observe at least that prefix.
  */
-export abstract class SessionPersistence extends Service {
+export abstract class SessionPersistence extends Service implements NativeSessionPersistenceOperations {
   constructor(ctx: Context) {
     super(ctx, 'sessionPersistence')
   }
 
-  /**
-   * Create a new stored session and take its write ownership.
-   * @param header - the immutable header (id, version, cwd, lineage) to store.
-   * @param options - optional cancellation.
-   * @returns a `write` handle owned by the caller; close it to release ownership.
-   * @throws {SessionAlreadyExistsError} when the id already exists.
-   */
+  /** @inheritdoc */
   abstract create(header: SessionHeader, options?: SessionPersistenceCreateOptions): Promise<SessionHandle>
 
-  /**
-   * Open an existing stored session.
-   *
-   * `read` never takes ownership and works while another handle (or process)
-   * holds write ownership. `write` atomically claims single-writer ownership;
-   * an existing active owner rejects.
-   * @param id - the stored session to open.
-   * @param access - `read` or `write`.
-   * @param options - optional cancellation.
-   * @returns the open handle.
-   * @throws {SessionPersistenceNotFoundError} when the session does not exist.
-   * @throws {SessionAlreadyOwnedError} for `write` when ownership is taken.
-   */
+  /** @inheritdoc */
   abstract open(id: SessionId, access: SessionAccess, options?: SessionPersistenceOpenOptions): Promise<SessionHandle>
 
-  /**
-   * Flush every active write handle owned by this service instance in one
-   * durability barrier: each handle's routed live events drain durably and
-   * its session materializes, exactly as that handle's own
-   * `SessionHandle.flush` would. Read handles buffer nothing and are
-   * untouched. A handle closed concurrently counts as flushed — close itself
-   * drains durably.
-   * @returns resolution once every write handle active at the call has flushed.
-   * @throws {AggregateError} naming each session whose flush failed; the
-   *   remaining handles still flush.
-   */
+  /** @inheritdoc */
   abstract flush(): Promise<void>
 
-  /**
-   * Observe one stored session without reading its event log or taking
-   * ownership.
-   *
-   * The snapshot's `revision` is an opaque change token comparable only
-   * against revisions from the same service instance and session id: equal
-   * revisions may be treated as an unchanged log; unequal revisions promise
-   * nothing. Write-ownership churn does not change a revision. It exists for
-   * derived read-model caches keyed off `stat`/`list`; it plays no part in
-   * open, read, or resume.
-   * @param id - the stored session to observe.
-   * @param options - optional cancellation.
-   * @returns the snapshot, or `undefined` when the session does not exist.
-   */
+  /** @inheritdoc */
   abstract stat(id: SessionId, options?: SessionPersistenceStatOptions): Promise<SessionPersistenceSnapshot | undefined>
 
-  /**
-   * List every stored session visible to this process, in no promised order.
-   * @param options - optional cancellation.
-   * @returns one snapshot per stored session.
-   */
+  /** @inheritdoc */
   abstract list(options?: SessionPersistenceListOptions): Promise<readonly SessionPersistenceSnapshot[]>
 }
 

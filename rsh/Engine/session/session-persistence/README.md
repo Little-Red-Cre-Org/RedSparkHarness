@@ -122,6 +122,8 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Session checkpoint policy](../session-checkpoint-policy/README.md) — the plugin that flushes through `session/flush` at semantic boundaries.
 - [Session package map](../README.md) — adjacent persistence, projection, title, and telemetry packages.
 
+`./native` owns `NativeSessionPersistenceOperations` and the native `sessionPersistence` service. Its five operations retain the existing handle, freshness, cancellation and single-writer obligations. The compatibility Service implements that Definition and inherits its method documentation. Provider teardown stays with the selected Provider; Consumers do not receive service-wide close ownership.
+
 -----
 
 <a id="model-experience"></a>

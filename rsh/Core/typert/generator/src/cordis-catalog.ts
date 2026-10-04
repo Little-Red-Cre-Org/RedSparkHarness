@@ -16,6 +16,8 @@ import type {
   SignatureModel,
   SourceDeclarationModel,
   SourceLocation,
+  SymbolId,
+  TypeDeclarationModel,
   TypertFace,
   TypeNodeId,
 } from './model.ts'
@@ -291,11 +293,14 @@ export class CordisCatalogProjector {
       for (const memberId of service.members) {
         const member = this.renderer.member(memberId)
         if (member.name.startsWith('[')) continue
-        const parsed = parseJsDoc(member.jsDoc ?? '')
+        const inherited = /@inheritdoc\b/u.test(member.jsDoc ?? '')
+          ? this.inheritedServiceMember(declaration, member, new Set()) : undefined
+        const jsDoc = inherited?.jsDoc ?? member.jsDoc
+        const parsed = parseJsDoc(jsDoc ?? '')
         if (parsed.deprecated) continue
         if (member.kind === 'property') {
-          if (member.jsDoc === undefined) continue
-          methods.push({ kind: 'property', signature: member.text, jsDoc: member.jsDoc })
+          if (jsDoc === undefined) continue
+          methods.push({ kind: 'property', signature: member.text, jsDoc })
           continue
         }
         if (member.kind !== 'method') continue
@@ -303,8 +308,8 @@ export class CordisCatalogProjector {
         if (this.face.face === 'host') {
           checkTypeLinks(where, signatureTypeNames(this.renderer, member.signature), this.policy, typeLinkViolations)
         }
-        methods.push({ kind: 'method', signature: member.text, jsDoc: member.jsDoc ?? '' })
-        if (member.jsDoc === undefined) {
+        methods.push({ kind: 'method', signature: member.text, jsDoc: jsDoc ?? '' })
+        if (jsDoc === undefined) {
           violations.push(`${where} has no JSDoc.`)
           continue
         }
@@ -325,6 +330,22 @@ export class CordisCatalogProjector {
     reportViolations('gen-cordis-catalog', violations)
     reportTypeLinkViolations('gen-cordis-catalog', typeLinkViolations)
     return entries.sort((left, right) => left.key.localeCompare(right.key))
+  }
+
+  private inheritedServiceMember(owner: TypeDeclarationModel, member: MemberModel,
+    visited: Set<SymbolId>): MemberModel | undefined {
+    if (visited.has(owner.id)) return undefined
+    visited.add(owner.id)
+    for (const baseId of [...owner.extends, ...owner.implements]) {
+      const base = this.renderer.node(baseId)
+      if (base.kind !== 'reference' || base.target.kind !== 'declaration') continue
+      const declaration = this.renderer.declaration(base.target.symbol)
+      const inherited = declaration.members.find(value => value.name === member.name && value.kind === member.kind)
+      if (inherited !== undefined && !/@inheritdoc\b/u.test(inherited.jsDoc ?? '')) return inherited
+      const ancestor = this.inheritedServiceMember(declaration, member, visited)
+      if (ancestor !== undefined) return ancestor
+    }
+    return undefined
   }
 
   private runtimeTypes(

@@ -133,6 +133,8 @@ kind: "package-reference"
 - [Zstandard JSONL 会话日志](../../../../.agents/notes/implemented/architecture/2026-07-19-zstandard-jsonl-session-logs.zh.md)——带校验和帧编码的理由。
 - [已发布 Session 格式迁移](../../../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.zh.md)——不可变 generation、相邻迁移边与发布规则。
 
+原生 Provider 通过与 Provider 无关的 `NativeSessionPersistenceOperations` Definition 发布现有 `JsonlSessionBackend`。同一后端服务兼容及原生调用方；其所有者 Provider 在已接纳句柄工作排空后关闭它。选择该 Provider 不会挂载兼容 Service 或创建另一存储实现。
+
 -----
 
 <a id="model-experience"></a>
