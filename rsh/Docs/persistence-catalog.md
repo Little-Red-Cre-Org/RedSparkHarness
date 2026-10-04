@@ -1001,7 +1001,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:341`](../Engine/core/session/src/
 'tool/ptc-dispatch': PtcDispatchEventData
 ```
 
-Source: [`rsh/Engine/core/tools/src/types.ts:56`](../Engine/core/tools/src/types.ts)
+Source: [`rsh/Engine/core/native-tools/src/types.ts:56`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolptc-dispatch-start--log-only"></a>
 
@@ -1024,7 +1024,7 @@ Source: [`rsh/Engine/core/tools/src/types.ts:56`](../Engine/core/tools/src/types
 'tool/ptc-dispatch-start': PtcDispatchStartEventData
 ```
 
-Source: [`rsh/Engine/core/tools/src/types.ts:40`](../Engine/core/tools/src/types.ts)
+Source: [`rsh/Engine/core/native-tools/src/types.ts:40`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolresult--surface"></a>
 

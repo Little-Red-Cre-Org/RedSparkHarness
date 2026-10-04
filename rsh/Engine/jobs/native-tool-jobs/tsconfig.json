@@ -5,7 +5,7 @@
   "references": [
     { "path": "../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../core/native-jobs" },
-    { "path": "../../core/native-tools" },
+    { "path": "../../core/native-tools/tsconfig.host.json" },
     { "path": "../../../Core/util/output-retention" }
   ]
 }

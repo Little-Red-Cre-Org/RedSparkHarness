@@ -1,0 +1,25 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../native-agent"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    }
+  ]
+}

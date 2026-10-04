@@ -82,6 +82,7 @@
     "rsh/Programs/Web/client/*/tests/**/*.host.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Engine/core/native-tools/tsconfig.client.json" },
     {"path":"./rsh/Modules/Official/automation/task-scheduler/tsconfig.client.json"},
     // Producer-to-UI spill tests execute the real nested dispatch worker.
     { "path": "./rsh/Modules/Official/code-runtime/code-runtime-worker-thread" },

@@ -37,6 +37,9 @@
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../native-tools/tsconfig.host.json"
     }
   ]
 }
