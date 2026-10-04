@@ -1794,12 +1794,12 @@
     {
       "doc": "rsh/Docs/subsystems/storage.md",
       "symbol": "DomainChangedBase",
-      "source": "rsh/Core/storage/storage-domain/src/events.ts"
+      "source": "rsh/Core/storage/storage-domain/src/event-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/storage.md",
       "symbol": "DomainChanged",
-      "source": "rsh/Core/storage/storage-domain/src/events.ts"
+      "source": "rsh/Core/storage/storage-domain/src/event-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/workspace.md",

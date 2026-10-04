@@ -4,7 +4,7 @@
 
 存储子系统持久保存一切不属于会话事件日志的数据（会话日志有自己的 seam——见 [persistence.md](persistence.zh.md)）。它是一项可选能力，不属于 agent loop（智能体循环）主干，并按[能力 seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md) 拆分：枢纽（hub）与 Service Definition（[dsh-storage](../../Core/storage/storage)，`ctx.storage`）、Service Provider（注册为 `json` 的 [dsh-storage-json](../../Core/storage/storage-json) 与注册为 `sqlite` 的 [dsh-storage-sqlite](../../Core/storage/storage-sqlite)），以及 Consumer 数据形式（[dsh-storage-domain](../../Core/storage/storage-domain)，`ctx.storageDomain`，也可经 `ctx.storage.domain` 访问）——它是后端约定的唯一 Consumer，也是其他一切所使用的类型化 API。枢纽自身不做任何 IO：后端拥有介质，数据形式拥有语义，产品包绝不直接触碰后端。设计记录：[领域 KV 存储 Agent Note](../../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.zh.md)。
 
-源码：[`rsh/Core/storage/storage/src/backend.ts`](../../Core/storage/storage/src/backend.ts) · [`rsh/Core/storage/storage-domain/src/spec.ts`](../../Core/storage/storage-domain/src/spec.ts) · [`rsh/Core/storage/storage-domain/src/events.ts`](../../Core/storage/storage-domain/src/events.ts)
+源码：[`rsh/Core/storage/storage/src/backend.ts`](../../Core/storage/storage/src/backend.ts) · [`rsh/Core/storage/storage-domain/src/spec.ts`](../../Core/storage/storage-domain/src/spec.ts) · [`rsh/Core/storage/storage-domain/src/event-types.ts`](../../Core/storage/storage-domain/src/event-types.ts)
 
 ## 枢纽：`ctx.storage`
 

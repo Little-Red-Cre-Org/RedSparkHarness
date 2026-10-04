@@ -4,7 +4,7 @@ English | [中文](storage.zh.md)
 
 The storage subsystem persists everything that is not a session event log (session logs have their own seam — [persistence.md](persistence.md)). It is one optional capability, not part of the agent-loop spine, split as a [capability seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md): the hub and Service Definition ([dsh-storage](../../Core/storage/storage), `ctx.storage`), the Service Providers ([dsh-storage-json](../../Core/storage/storage-json), registered as `json`, and [dsh-storage-sqlite](../../Core/storage/storage-sqlite), registered as `sqlite`), and the Consumer data form ([dsh-storage-domain](../../Core/storage/storage-domain), `ctx.storageDomain`, also reachable as `ctx.storage.domain`) — the backend contract's only Consumer and the typed API everything else uses. The hub performs no IO itself: backends own media, data forms own semantics, and product packages never touch backends directly. Design record: [domain KV storage Agent Note](../../../.agents/notes/proposed/architecture/2026-07-24-domain-kv-storage-and-workspace.md).
 
-Source: [`rsh/Core/storage/storage/src/backend.ts`](../../Core/storage/storage/src/backend.ts) · [`rsh/Core/storage/storage-domain/src/spec.ts`](../../Core/storage/storage-domain/src/spec.ts) · [`rsh/Core/storage/storage-domain/src/events.ts`](../../Core/storage/storage-domain/src/events.ts)
+Source: [`rsh/Core/storage/storage/src/backend.ts`](../../Core/storage/storage/src/backend.ts) · [`rsh/Core/storage/storage-domain/src/spec.ts`](../../Core/storage/storage-domain/src/spec.ts) · [`rsh/Core/storage/storage-domain/src/event-types.ts`](../../Core/storage/storage-domain/src/event-types.ts)
 
 ## The hub: `ctx.storage`
 
