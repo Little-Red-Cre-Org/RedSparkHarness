@@ -26,7 +26,12 @@ function fixture(content: string, dependency?: string): string {
   const dir = 'rsh/Core/runtime-diagnostics/native-runtime'
   for (const owner of nativePackageDirectories) {
     if (owner === dir) continue
-    write(`${owner}/package.json`, JSON.stringify({ name: `@deepseek-ai/dsh-${owner.split('/').at(-1)}` }))
+    const entries = nativeSafeSourceSubpaths.get(owner) ?? []
+    const exports = Object.fromEntries(entries.map(entry => [entry, {
+      types: `./lib/types/${entry.slice(2)}.d.ts`, default: `./lib/${entry.slice(2)}.js`,
+    }]))
+    write(`${owner}/package.json`, JSON.stringify({ name: `@deepseek-ai/dsh-${owner.split('/').at(-1)}`, exports }))
+    for (const entry of entries) write(`${owner}/src/${entry.slice(2)}.ts`, 'export {}')
     write(`${owner}/src/index.ts`, 'export {}')
   }
   write(`${dir}/package.json`, JSON.stringify({
