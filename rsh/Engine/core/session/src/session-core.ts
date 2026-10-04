@@ -24,6 +24,12 @@ export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSur
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
 
+/** Typed input admitted with all other inputs before any batch event is published. */
+export type SessionAppendInput = {
+  [T in SessionEventType]: { readonly type: T; readonly data: SessionEventMap[T] }
+    & (T extends SurfaceEventType ? { readonly opts: SurfaceIntent<T> } : { readonly opts?: never })
+}[SessionEventType]
+
 /** Validate and freeze one detached creation header in place. */
 function validateSessionHeader(id: SessionId, input: unknown): SessionHeader {
   if (input === null || typeof input !== 'object' || Array.isArray(input)) {
@@ -374,6 +380,8 @@ export function hasSessionPublication(session: Session): boolean {
  */
 export class Session {
   private log: SessionEvent[] = []
+  private readonly appendGuards = new Set<(event: SessionEvent) => void>()
+  private checkingAppendGuards = false
   /** Single incremental owner of surface acceptance and projection state. */
   private readonly surfaceManager = new SurfaceManager(this.log)
 
@@ -606,6 +614,26 @@ export class Session {
   }
 
   /**
+   * Check whether this exact immutable event was accepted by this Session.
+   * @param event - candidate event supplied to a synchronous policy projection.
+   * @returns whether the log holds the same object at its assigned sequence.
+   */
+  hasAcceptedEvent(event: SessionEvent): boolean { return this.log[event.seq] === event }
+
+  /**
+   * Register a synchronous veto before an event changes this Session's log.
+   * Guards receive the validated immutable event and must not append recursively.
+   * Historical restore events are not dispatched to guards.
+   * @param guard - check that throws to reject an event without changing the log.
+   * @returns exact registration disposer; removal is idempotent.
+   */
+  onBeforeAppend(guard: (event: SessionEvent) => void): () => void {
+    const contribution = (event: SessionEvent) => { guard(event) }
+    this.appendGuards.add(contribution)
+    return () => { this.appendGuards.delete(contribution) }
+  }
+
+  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
@@ -647,6 +675,7 @@ export class Session {
     data: SessionEventMap[T],
     ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
   ): SessionEvent<T> {
+    if (this.checkingAppendGuards) throw new Error('session append cannot reenter an append guard')
     const surfaceOpts: SurfaceIntent | undefined = opts[0]
     const surfaceMetadata = {
       ...surfaceOpts?.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
@@ -672,6 +701,10 @@ export class Session {
       ...(surfaceMetadataSnapshot as { surfaceOp?: unknown; sourceEventSeqs?: unknown }),
     } as unknown as SessionEvent<T>)
     validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`)
+    this.checkingAppendGuards = true
+    try {
+      for (const guard of [...this.appendGuards]) guard(event as SessionEvent)
+    } finally { this.checkingAppendGuards = false }
     this.surfaceManager.validateNext(event as SessionEvent)
 
     if (entry !== undefined) entry.appending = true
@@ -687,6 +720,53 @@ export class Session {
         if (entry.detachRequested && !entry.announcing) entry.detach()
       }
     }
+  }
+
+  /**
+   * Admit related facts together after every payload, guard, surface transition and
+   * publication callback has been validated. Guards observe the pre-batch log;
+   * publication observers see the complete accepted batch in sequence order.
+   * Persistence remains the selected writer's asynchronous durability barrier.
+   * @param inputs - ordered typed facts and any required surface metadata.
+   * @returns immutable accepted events with contiguous sequences.
+   * @throws before changing the log if any input or synchronous acceptance check fails.
+   */
+  appendBatch(inputs: readonly SessionAppendInput[]): readonly SessionEvent[] {
+    if (this.checkingAppendGuards) throw new Error('session append cannot reenter an append guard')
+    const entry = attachments.get(this)
+    if (entry?.appending) throw new Error('session append cannot reenter while another append is being published')
+    this.checkingAppendGuards = true
+    try {
+      const candidates: SessionEvent[] = []
+      const candidateLog = [...this.log]
+      const surface = new SurfaceManager(candidateLog)
+      const guards = [...this.appendGuards]
+      for (const input of inputs) {
+        const snapshot = snapshotJsonValue({ type: input.type, data: input.data,
+          ...input.opts?.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: input.opts.sourceEventSeqs },
+          ...input.opts?.surfaceOp === undefined ? {} : { surfaceOp: input.opts.surfaceOp } })
+        if (snapshot === undefined) throw new Error(`session event "${input.type}" carries non-JSON-serializable data or surface metadata`)
+        const event = deepFreeze({ ...snapshot, seq: SessionSeq(candidateLog.length), time: Date.now() } as unknown as SessionEvent)
+        validateSessionEventData(event, `session event "${event.type}" at seq ${event.seq}`)
+        for (const guard of guards) guard(event)
+        surface.validateNext(event)
+        candidateLog.push(event)
+        candidates.push(event)
+      }
+      if (entry !== undefined) entry.appending = true
+      try {
+        const publications = candidates.map(event => entry?.capture(event))
+        for (const event of candidates) this.log.push(event)
+        if (candidates.length > 0) this.eventsSnapshot = undefined
+        for (const publish of publications) publish?.()
+        return Object.freeze(candidates)
+      } finally {
+        if (entry !== undefined) {
+          entry.appending = false
+          if (entry.detachRequested && !entry.announcing) entry.detach()
+        }
+      }
+    } finally { this.checkingAppendGuards = false }
   }
 
   /** Cached fold of the request-header events — see {@link requestHeader}. */
