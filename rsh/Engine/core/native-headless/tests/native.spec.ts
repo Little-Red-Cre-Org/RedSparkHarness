@@ -507,7 +507,7 @@ it.each([false, true])('projects nested instruction discovery and removal after 
     const registerRead = (remove: boolean): void => {
       state.tools.registerValueTool({
         schema: { name: 'read', description: 'Read fixture.', parameters: { type: 'object', properties: { file_path: { type: 'string' } }, required: ['file_path'], additionalProperties: false } },
-        output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: String(value) }], isError: false }) },
+        output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: value as string }], isError: false }) },
         execute: async () => {
           if (remove) await fs.unlink(join(state.workspace, 'nested', 'AGENTS.md'))
           return 'file contents'

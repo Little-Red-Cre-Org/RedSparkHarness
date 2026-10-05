@@ -58,7 +58,6 @@ export class NativeAgentInstructions {
         if (path !== undefined) owner.nested.push(path)
       } else if (event.type === 'tool/result') {
         for (const block of event.data.message.content) {
-          if (block.type !== 'tool-result') continue
           for (const seq of event.sourceEventSeqs ?? []) {
             const owner = calls.get(seq)
             if (owner === undefined || owner.call.data.callId !== block.toolCallId
@@ -128,7 +127,7 @@ export const plugin: NativePlugin = {
     return (context) => {
       const instructions = new NativeAgentInstructions(new InstructionComposer(config, context.require('fs')), context.signal)
       const tools = context.optional('tools')
-      if (tools !== undefined) context.own(tools.onResult((call, result) => instructions.acceptResult(call, result), context.scope))
+      if (tools !== undefined) context.own(tools.onResult((call, result) => { instructions.acceptResult(call, result) }, context.scope))
       context.provide('agentInstructions', instructions)
     }
   },
