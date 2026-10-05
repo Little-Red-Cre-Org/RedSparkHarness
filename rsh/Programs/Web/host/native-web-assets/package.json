@@ -16,7 +16,7 @@
     "./native-client": { "types": "./lib/types/native-client.d.ts", "default": "./lib/native-client.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/native-client.js", "lib/types/**/*.d.ts"],
+  "files": ["lib/index.js", "lib/native-client.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-client-web": "workspace:^",
