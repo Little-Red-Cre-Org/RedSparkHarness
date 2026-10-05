@@ -3,8 +3,10 @@
  * client plugin fails because React arrives only with the UI renderer.
  * @module @deepseek-ai/dsh-client-web/src/boot-page
  */
-import type { LoaderEntryState } from './loader-status.ts'
 import css from './boot-page.module.css'
+
+/** Progress state displayed by either the native or compatibility Client shell. */
+export type BootEntryState = 'pending' | 'loading' | 'active' | 'failed' | 'disposed' | 'unloading'
 
 /** Create a div with one module class and optional text. */
 function div(className: string | undefined, text?: string): HTMLDivElement {
@@ -16,12 +18,13 @@ function div(className: string | undefined, text?: string): HTMLDivElement {
 
 /** Kernel-owned page mounted below the application's root element. */
 export class BootPage {
+  private readonly container: HTMLElement
   private readonly root: HTMLDivElement
   private readonly card: HTMLDivElement
   private readonly wordmark: HTMLDivElement
   private readonly spinner: HTMLDivElement
   private readonly hint: HTMLDivElement
-  private readonly states = new Map<string, LoaderEntryState>()
+  private readonly states = new Map<string, BootEntryState>()
   private readonly active = new Set<string>()
   private total = 0
   private failure: string | undefined
@@ -31,6 +34,7 @@ export class BootPage {
    * @param container - Application mount point.
    */
   constructor(container: HTMLElement) {
+    this.container = container
     this.root = div(css.boot)
     this.root.dataset.dshBoot = ''
     this.card = div(css.card)
@@ -58,7 +62,7 @@ export class BootPage {
    * @param id - Loader entry name.
    * @param state - Projected fiber state.
    */
-  setState(id: string, state: LoaderEntryState): void {
+  setState(id: string, state: BootEntryState): void {
     this.states.set(id, state)
     if (state === 'active') this.active.add(id)
     this.updateProgress()
@@ -66,11 +70,12 @@ export class BootPage {
   }
 
   /**
-   * Display the boot failure report.
+   * Display the boot failure report, reclaiming the mount point after a failed renderer handoff.
    * @param message - Failure report text.
    */
   fail(message: string): void {
     this.failure = message
+    if (this.root.parentElement !== this.container) this.container.replaceChildren(this.root)
     this.render()
   }
 
@@ -89,6 +94,7 @@ export class BootPage {
       return
     }
     const report = div(css.failed)
+    report.setAttribute('role', 'alert')
     report.append(div(css.failedTitle, 'Failed to load plugins'))
     for (const id of failed) report.append(div(css.failedItem, id))
     if (this.failure !== undefined) report.append(div(css.failedItem, this.failure))

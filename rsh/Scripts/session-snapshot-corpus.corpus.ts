@@ -21,7 +21,7 @@ import { assertSnapshotCorpusPolicy } from './session-snapshot-corpus-policy.ts'
 
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const corpusRoot = join(repoRoot, 'snapshots')
-const profiles = ['acp', 'compat', 'native-headless', 'sdk', 'session', 'web'] as const
+const profiles = ['acp', 'compat', 'native-headless', 'native-sdk', 'sdk', 'session', 'web'] as const
 const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/message-feedback-protocol.snapshot.ts',
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
@@ -35,6 +35,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/read-image-native.snapshot.ts',
   'snapshots/native-headless/search-native.snapshot.ts',
   'snapshots/native-headless/tool-results.snapshot.ts',
+  'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',
 ] as const

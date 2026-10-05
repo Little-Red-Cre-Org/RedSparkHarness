@@ -315,6 +315,7 @@ flowchart TD
     pkg_schedule["schedule"]
   end
   subgraph group_sdk["group: sdk"]
+    pkg_native_sdk_server["native-sdk-server"]
     pkg_sdk_client["sdk-client"]
     pkg_sdk_jsonrpc_server["sdk-jsonrpc-server"]
     pkg_sdk_protocol["sdk-protocol"]
@@ -1316,6 +1317,7 @@ flowchart TD
 | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) | `runtime-diagnostics` | — |
 | [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy) | `sandbox` | — |
 | [`sandbox-windows-acl`](../Modules/Official/sandbox/sandbox-windows-acl) | `sandbox` | — |
+| [`native-sdk-server`](../Programs/SDK/packages/native-server) | `sdk` | — |
 | [`session-format`](../Engine/session/session-format) | `session` | — |
 | [`session-format-v0-to-v1`](../Engine/session/session-format-v0-to-v1) | `session` | — |
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
