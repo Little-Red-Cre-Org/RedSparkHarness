@@ -49,6 +49,8 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 The native `./native` entry selects `tools` and `activeSessions` from the profile and requires the same explicit parallelism setting. A successful call awaits durable `todo/write` acceptance before returning its counts. `readTodos(owner, signal)` reconstructs the standing list from the retained writer, including restored and fork-inherited events; the next `turn/start` clears it. The native registry owns Agent attribution, cancellation and registration disposal.
 
+The Cordis-free ./client-native entry exports foldTodos(events) and TodoItem for native Client presentation. It shares the native Host reader's durable validation and turn reset rules; it registers no services and accepts complete ordered history, including fork-inherited events.
+
 ### What each call does
 
 The agent sends the ENTIRE list on every update; the new list replaces the previous one, so there are no partial updates or per-item edits. Each item is a short task description plus a status of `pending`, `in_progress`, or `completed`. A successful update returns the new counts — `Updated todo list: <pending> pending, <inProgress> in progress, <completed> completed.` — and the UI shows the new plan. Updates fail visibly when a task description is empty or duplicated, when an item carries fields beyond the description and status, or — when parallel work is disabled — when more than one task is marked in progress.

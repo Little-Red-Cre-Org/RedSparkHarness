@@ -1,5 +1,103 @@
 [
   {
+    "sessionUpdate": "config_option_update",
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "[\"fixture\",\"fixture-model-next\"]",
+        "options": [
+          {
+            "group": "fixture",
+            "name": "fixture",
+            "options": [
+              {
+                "value": "[\"fixture\",\"fixture-model\"]",
+                "name": "fixture-model"
+              },
+              {
+                "value": "[\"fixture\",\"fixture-model-next\"]",
+                "name": "fixture-model-next"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "reasoning_effort",
+        "name": "Reasoning effort",
+        "category": "thought_level",
+        "type": "select",
+        "currentValue": "",
+        "options": [
+          {
+            "value": "",
+            "name": "Provider default"
+          },
+          {
+            "value": "off",
+            "name": "Off"
+          },
+          {
+            "value": "high",
+            "name": "High"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "sessionUpdate": "config_option_update",
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "[\"fixture\",\"fixture-model-next\"]",
+        "options": [
+          {
+            "group": "fixture",
+            "name": "fixture",
+            "options": [
+              {
+                "value": "[\"fixture\",\"fixture-model\"]",
+                "name": "fixture-model"
+              },
+              {
+                "value": "[\"fixture\",\"fixture-model-next\"]",
+                "name": "fixture-model-next"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "reasoning_effort",
+        "name": "Reasoning effort",
+        "category": "thought_level",
+        "type": "select",
+        "currentValue": "high",
+        "options": [
+          {
+            "value": "",
+            "name": "Provider default"
+          },
+          {
+            "value": "off",
+            "name": "Off"
+          },
+          {
+            "value": "high",
+            "name": "High"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "sessionUpdate": "agent_message_chunk",
     "content": {
       "type": "text",

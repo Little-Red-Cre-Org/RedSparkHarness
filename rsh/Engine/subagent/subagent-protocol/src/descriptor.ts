@@ -3,7 +3,8 @@
  * `subagent/descriptor` session event that identifies every session-backed
  * subagent and records whether it is one-shot or continuable. Continuable
  * descriptors additionally preserve the declared composition required for
- * cold resume. Providers append it turn-enclosed in the child's initial turn.
+ * cold resume. Providers persist it during fresh materialization, before the
+ * child's first model request.
  *
  * The descriptor deliberately snapshots explicit fields rather than the
  * merge-extensible `AgentOptions` object: an unrelated extension value cannot
@@ -31,8 +32,8 @@ declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /**
      * Durable identity and lifecycle mode of a session-backed subagent child,
-     * appended once by the establishing provider inside the child's initial
-     * turn, before its first request. Continuable records also carry their
+     * appended once by the establishing provider during fresh materialization,
+     * before its first request. Continuable records also carry their
      * resumable composition. Log-only: it carries no `surfaceOp`, never enters
      * model history, and survives compaction.
      */

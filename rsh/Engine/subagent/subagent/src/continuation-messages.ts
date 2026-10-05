@@ -4,21 +4,15 @@
  * @module @deepseek-ai/dsh-subagent/continuation-messages
  */
 
+import { createAdjacentAgentMessage } from '@deepseek-ai/dsh-subagent-protocol'
+export { withContinuableReturnGuidance } from '@deepseek-ai/dsh-subagent-protocol'
+export type { AgentMessageSource } from '@deepseek-ai/dsh-subagent-protocol'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { boundContextSummary, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { ActivationTerminal } from './lifecycle.ts'
 import type { SubagentResult } from './types.ts'
-
-/** Durable attribution for one model-authored message between adjacent Agents. */
-export interface AgentMessageSource {
-  readonly kind: 'agent-message'
-  /** A message another agent addressed to this one (`relay` context form). */
-  readonly form: 'relay'
-  /** Session id of the Agent whose tool call produced the message. */
-  readonly senderSessionId: SessionId
-}
 
 /**
  * Durable attribution for the runtime's own account of a continuable child
@@ -39,17 +33,7 @@ export interface SubagentSettledMessageSource {
 
 declare module '@deepseek-ai/dsh-llm/message' {
   interface MessageSourceMap {
-    'agent-message': AgentMessageSource
     'subagent-settled': SubagentSettledMessageSource
-  }
-}
-
-/** Build durable attribution for one adjacent-Agent message. */
-function agentMessageSource(sender: Agent): AgentMessageSource {
-  return {
-    kind: 'agent-message',
-    form: 'relay',
-    senderSessionId: sender.id,
   }
 }
 
@@ -63,37 +47,7 @@ export function createAgentMessage(
   sender: Agent,
   content: ContentBlock[],
 ): ReturnType<typeof createUserMessage> {
-  return createUserMessage({
-    content: [
-      { type: 'text' as const, text: `Agent ${sender.id} sent a message: ` },
-      ...content,
-    ],
-    source: agentMessageSource(sender),
-  })
-}
-
-/**
- * Append adjacent-Agent return guidance to a continuable child's initial task.
- * @param parentId - durable parent session id named in the guidance.
- * @param prompt - initial model-visible task blocks.
- * @returns task blocks followed by the continuable return guidance.
- */
-export function withContinuableReturnGuidance(
-  parentId: SessionId,
-  prompt: ContentBlock[],
-): ContentBlock[] {
-  const encodedParentId = JSON.stringify(parentId)
-  return [
-    ...prompt,
-    {
-      type: 'text',
-      text: `Your parent agent id is ${encodedParentId}. Before you finish, send your result to that agent with `
-        + `send_message({ agent_id: ${encodedParentId}, message: "<self-contained result>" }). The parent shares `
-        + 'your workspace but does not automatically receive your transcript, tool output, or reasoning. Send '
-        + 'earlier messages as well when a finding changes what the parent should do next; sending a message '
-        + 'does not end your turn.',
-    },
-  ]
+  return createAdjacentAgentMessage(sender.id, content)
 }
 
 /**

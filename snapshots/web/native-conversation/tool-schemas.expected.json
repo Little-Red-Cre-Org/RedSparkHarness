@@ -46,6 +46,46 @@
       }
     },
     {
+      "name": "todo_write",
+      "description": "Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished).",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "todos"
+        ],
+        "properties": {
+          "todos": {
+            "type": "array",
+            "description": "The COMPLETE task list, replacing any previous list.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "content",
+                "status"
+              ],
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "What the task is — a short imperative line."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "in_progress",
+                    "completed"
+                  ],
+                  "description": "pending (not started) | in_progress (now) | completed (done)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "ask_user_question",
       "parameters": {
         "type": "object",
@@ -110,5 +150,157 @@
       "description": "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer."
     }
   ],
-  "changes": []
+  "changes": [
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "guarded",
+        "description": "Guarded fixture.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "todo_write",
+        "description": "Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished).",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "todos"
+          ],
+          "properties": {
+            "todos": {
+              "type": "array",
+              "description": "The COMPLETE task list, replacing any previous list.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "content",
+                  "status"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "What the task is — a short imperative line."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ],
+                    "description": "pending (not started) | in_progress (now) | completed (done)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "ask_user_question",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "questions"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "questions": {
+              "type": "array",
+              "description": "Questions to ask the user before continuing.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "question"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Stable id for this question; echoed in the answer."
+                  },
+                  "question": {
+                    "type": "string",
+                    "description": "The specific question to ask the user."
+                  },
+                  "header": {
+                    "type": "string",
+                    "description": "Optional short heading for the question, such as \"Confirm\" or \"Choose Mode\"."
+                  },
+                  "options": {
+                    "type": "array",
+                    "description": "Optional choices to show the user. If you recommend one, put it first and append \"(Recommended)\" to that label.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "label"
+                      ],
+                      "additionalProperties": true,
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "description": "Short user-facing option label."
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "One sentence explaining the tradeoff or impact."
+                        }
+                      }
+                    }
+                  },
+                  "multi_select": {
+                    "type": "boolean",
+                    "description": "Whether the user may select more than one option. Defaults to false."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer."
+      }
+    ]
+  ]
 }
