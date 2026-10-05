@@ -12,24 +12,36 @@ import { terminalFixture } from './pty-profile.ts'
 /** Replay a committed terminal scene through dsh, optionally selecting a model before cold resume.
  * @param scenario - owning committed Session scenario directory.
  * @param modelControls - exercise actual Provider selection and reasoning menus.
+ * @param presets - exercise installed choices, first-turn locking and cold restoration.
  * @returns completion after both real terminal processes and persistence handles close.
  */
-export async function terminalScene(scenario: string, modelControls = false): Promise<void> {
+export async function terminalScene(scenario: string, modelControls = false, presets = false): Promise<void> {
   const scene = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
   const recorded = parseSessionLog(readFileSync(scene, 'utf8'))
   const tasks = recorded.filter(event => event.type === 'user/message' && event.data.source.kind === 'user')
     .map(event => event.type === 'user/message' ? event.data.content.filter(block => block.type === 'text').map(block => block.text).join('') : '')
   expect(tasks).toHaveLength(3)
   const script = deriveReplayScript(recorded)
-  const fixture = terminalFixture(false, script, false, modelControls)
+  const fixture = terminalFixture(false, script, false, modelControls, false, presets)
   try {
     const terminal = fixture.launch()
     await terminal.waitFor('Ready')
+    if (presets) {
+      await terminal.submit('/sessions')
+      await terminal.waitFor('Select Session')
+      await terminal.submit('/mode')
+      await terminal.waitFor('Enter a displayed number.')
+      terminal.write('\x1b')
+      await terminal.submit('/mode')
+      await terminal.waitFor('2. alternate (alternate)')
+      await terminal.submit('2')
+      await terminal.waitFor('Agent preset saved.')
+    }
     await terminal.submit(tasks[0]!)
     await vi.waitFor(() => { expect(existsSync(join(fixture.home, 'started'))).toBe(true) }, { timeout: 30000 })
     await terminal.submit(tasks[1]!)
     await terminal.waitFor('1 queued')
-    if (!modelControls) {
+    if (!modelControls && !presets) {
       await terminal.submit('/sessions')
       await terminal.waitFor('Terminal controls require an idle terminal')
     }
@@ -38,6 +50,10 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     await terminal.waitFor('visible file contents')
     await terminal.waitFor('Terminal answer 2.')
     await vi.waitFor(() => { expect(terminal.output().lastIndexOf('Ready')).toBeGreaterThan(terminal.output().lastIndexOf('Working')) }, { timeout: 30000 })
+    if (presets) {
+      await terminal.submit('/mode')
+      await terminal.waitFor('An Agent preset can only be selected before the first turn.')
+    }
     if (modelControls) {
       await terminal.submit('/model')
       await terminal.waitFor('2. Fixture Provider / fixture-alt')
@@ -51,7 +67,7 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
       await terminal.waitFor('Model choice saved for the next turn.', accepted)
       await terminal.waitFor('fixture/fixture-alt · high')
     }
-    if (!modelControls) {
+    if (!modelControls && !presets) {
       const start = terminal.output().length
       terminal.write('\x1b[5~')
       await terminal.waitFor('Page Up / Page Down to scroll', start)
@@ -65,8 +81,8 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     let id
     try { id = (await storage.list())[0]?.header.id } finally { await storage.close() }
     if (id === undefined) throw new Error('native-tui: terminal did not persist a Session')
-    const resumed = fixture.launch(modelControls ? ['--resume', id] : [])
-    if (!modelControls) {
+    const resumed = fixture.launch(modelControls || presets ? ['--resume', id] : [])
+    if (!modelControls && !presets) {
       await resumed.waitFor('Ready')
       await resumed.submit('/sessions')
       await resumed.waitFor('Select Session')
@@ -81,6 +97,10 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     }
     await resumed.waitFor('Terminal answer 1.')
     await resumed.waitFor('Terminal answer 2.')
+    if (presets) {
+      await resumed.submit('/mode')
+      await resumed.waitFor('An Agent preset can only be selected before the first turn.')
+    }
     if (modelControls) {
       await resumed.waitFor('fixture/fixture-alt · high')
       await resumed.waitFor('Input: text; Context: 4096')
@@ -96,8 +116,8 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     const backend = new JsonlSessionBackend({ root: fixture.storage, compression: 'none' })
     try {
       const stored = await backend.list()
-      expect(stored).toHaveLength(modelControls ? 1 : 2)
-      if (!modelControls) {
+      expect(stored).toHaveLength(modelControls || presets ? 1 : 2)
+      if (!modelControls && !presets) {
         const fresh = stored.find(row => row.header.id !== id)
         if (fresh === undefined) throw new Error('terminal browser fixture did not create its fresh Session')
         const untouched = await backend.open(fresh.header.id, 'read')
@@ -112,6 +132,10 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
         expect(events.filter(event => event.type === 'tool/result')).toHaveLength(1)
         expect(events.filter(event => event.type === 'turn/end')).toHaveLength(3)
         expect(events.filter(event => event.type === 'model/selection')).toHaveLength(modelControls ? 2 : 0)
+        if (presets) {
+          expect(events.filter(event => event.type === 'agent-preset/selected')).toHaveLength(1)
+          expect(JSON.stringify(events)).toContain('alternate')
+        }
       } finally { await reader.close() }
     } finally { await backend.close() }
     verifyTerminalSession(fixture, scenario, id)

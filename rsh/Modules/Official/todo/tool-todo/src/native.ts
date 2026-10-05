@@ -5,7 +5,7 @@ import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
 import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import { describe, toTodoList, validateTodos } from './todo-core.ts'
+import { describe, toTodoList, foldTodos } from './todo-core.ts'
 import type { TodoItem } from './todo-types.ts'
 export type { TodoItem } from './todo-types.ts'
 
@@ -27,17 +27,7 @@ const itemSchema: JsonSchemaNode = {
  */
 export async function readTodos(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<readonly TodoItem[] | null> {
   signal.throwIfAborted()
-  let todos: readonly TodoItem[] | null = null
-  let open = false
-  for (const event of await owner.readEvents({ signal })) {
-    if (event.type === 'turn/start') { todos = null; open = true }
-    if (event.type === 'turn/end') open = false
-    if (event.type === 'todo/write') {
-      if (!open) throw new Error('todo/write appended outside any open turn')
-      validateTodos(event.data.todos, (message) => { throw new Error(message) })
-      todos = event.data.todos
-    }
-  }
+  const todos = foldTodos(await owner.readEvents({ signal }))
   signal.throwIfAborted()
   return todos
 }

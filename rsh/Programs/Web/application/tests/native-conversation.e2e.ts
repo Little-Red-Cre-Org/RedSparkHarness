@@ -69,10 +69,12 @@ it('creates, submits and restores the built native conversation through the ship
       context.provide('model', { async *stream(request) {
       const { writeFileSync } = await import('node:fs');
       writeFileSync(${JSON.stringify(join(home, 'image-request.json'))}, JSON.stringify(request.messages));
-      if (step < 4) {
+      if (step < 5) {
         const current = step++;
-        const name = current < 2 ? 'guarded' : current === 2 ? 'ask_user_question' : 'read';
-        const args = current < 2 ? {} : current === 2 ? { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] } : { file_path: 'tool-card.txt' };
+        const name = current < 2 ? 'guarded' : current === 2 ? 'ask_user_question' : current === 3 ? 'todo_write' : 'read';
+        const args = current < 2 ? {} : current === 2 ? { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }
+          : current === 3 ? { todos: [{ content: 'Inspect the workspace', status: 'completed' }, { content: 'Report progress', status: 'in_progress' }] }
+          : { file_path: 'tool-card.txt' };
         const id = 'human-' + current;
         yield { type: 'block-start', index: 0, blockType: 'tool-call' };
         yield { type: 'tool-call-delta', index: 0, id, name, argumentsDelta: JSON.stringify(args) };
@@ -96,7 +98,7 @@ it('creates, submits and restores the built native conversation through the ship
   const rows = [
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
-      maxSteps: 5, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
+      maxSteps: 6, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2 }],
     ['tools', 'native-tools'], ['approval', 'native-approval'],
     ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
@@ -106,7 +108,7 @@ it('creates, submits and restores the built native conversation through the ship
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
@@ -172,6 +174,14 @@ it('creates, submits and restores the built native conversation through the ship
     else expect(humanText).toBe(readFileSync(humanPath, 'utf8'))
     const live = page.getByRole('article', { name: 'Live assistant output', exact: true })
     await live.getByText('Native browser answer.', { exact: true }).waitFor()
+    const todoPanel = page.getByRole('complementary', { name: 'Task list', exact: true })
+    expect(await todoPanel.locator('[data-todo-status]').allTextContents()).toEqual([
+      'Completed: Inspect the workspace', 'In progress: Report progress',
+    ])
+    const todoText = (await todoPanel.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
+    const todoPath = join(scenario, 'todos.expected.md')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(todoPath, todoText)
+    else expect(todoText).toBe(readFileSync(todoPath, 'utf8'))
     expect(await page.getByRole('status').innerText()).toBe('Running…')
     const liveText = (await live.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const livePath = join(scenario, 'live.expected.md')
@@ -216,6 +226,11 @@ it('creates, submits and restores the built native conversation through the ship
     await readCard.getByRole('button').click()
     expect((await readCard.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(cardText)
     expect(await page.locator('[data-tool="guarded"][data-state="error"]').count()).toBe(1)
+    expect((await todoPanel.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(todoText)
+    await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Continue without tasks.')
+    await page.getByRole('button', { name: 'Send', exact: true }).click()
+    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    expect(await todoPanel.count()).toBe(0)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     {
       const entries = await storage.list()

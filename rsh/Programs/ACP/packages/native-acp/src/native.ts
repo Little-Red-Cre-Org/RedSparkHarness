@@ -4,19 +4,21 @@ import { isAbsolute, resolve } from 'node:path'
 import { Readable, Writable } from 'node:stream'
 import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type AgentConnection, type NewSessionRequest, type PromptRequest, type PromptResponse,
-  type SessionUpdate, type SessionNotification } from '@agentclientprotocol/sdk'
+  type SessionUpdate, type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-native-approval'
+import { NativeAcpModelControls } from './model-controls.ts'
 
 /** Profile-owned model route and turn policy. */
 export interface Config {
@@ -28,18 +30,26 @@ export interface Config {
   readonly systemPrompt: string
   /** Positive maximum model steps per turn. */
   readonly maxSteps: number
+  /** Maximum unsettled permission wire requests; defaults to 32. */
+  readonly maxPendingPermissions?: number
 }
+
+type ResolvedConfig = Config & { readonly maxPendingPermissions: number }
 
 interface OwnedSession {
   readonly executor: NativeHeadlessApplication
+  readonly lifetime: AbortController
+  controlTail: Promise<void>
+  controls: number
+  notifications: Promise<void>
   current?: { readonly abort: AbortController; readonly done: Promise<PromptResponse> }
 }
 
-function resolveConfig(input: unknown): Config {
+function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('native ACP: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['provider', 'model', 'systemPrompt', 'maxSteps'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
+    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxPendingPermissions'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
   }
   for (const key of ['provider', 'model', 'systemPrompt']) {
     if (typeof fields[key] !== 'string' || fields[key].length === 0) throw new TypeError(`native ACP: ${key} must be a nonempty string`)
@@ -47,8 +57,12 @@ function resolveConfig(input: unknown): Config {
   if (typeof fields.maxSteps !== 'number' || !Number.isSafeInteger(fields.maxSteps) || fields.maxSteps <= 0) {
     throw new TypeError('native ACP: maxSteps must be a positive integer')
   }
+  const maxPendingPermissions = fields.maxPendingPermissions === undefined ? 32 : fields.maxPendingPermissions
+  if (typeof maxPendingPermissions !== 'number' || !Number.isSafeInteger(maxPendingPermissions) || maxPendingPermissions <= 0) {
+    throw new TypeError('native ACP: maxPendingPermissions must be a positive integer')
+  }
   return { provider: fields.provider as string, model: fields.model as string,
-    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps }
+    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps, maxPendingPermissions }
 }
 
 /** Standard protocol updates reconstructed solely from committed Session facts. */
@@ -87,9 +101,45 @@ export class NativeAcpApplication implements NativeApplication {
   private closing = false
   private connection: AgentConnection | undefined
   private readonly pending = new Set<Promise<unknown>>()
+  private readonly permissions = new Map<SessionId, Promise<NativeApprovalOutcome>>()
 
-  constructor(private readonly context: NativeContext, private readonly config: Config,
-    private readonly input: Readable = process.stdin, private readonly output: Writable = process.stdout) {}
+  constructor(private readonly context: NativeContext, private readonly config: ResolvedConfig,
+    private readonly input: Readable = process.stdin, private readonly output: Writable = process.stdout) {
+    const approval = context.optional('approval')
+    if (approval !== undefined) context.own(approval.registerAnswerer(request => this.permission(request)))
+  }
+
+  private permission(request: NativeApprovalAnswererRequest): Promise<NativeApprovalOutcome> | undefined {
+    const callId = request.callId
+    if (callId === undefined) return undefined
+    for (const [id, record] of this.sessions) {
+      const owner = record.executor.interactionOwner(request.agent)
+      if (owner === undefined || owner.agent !== owner.displayRootAgent || owner.session.id !== id) continue
+      if (this.permissions.has(owner.session.id) || this.permissions.size >= this.config.maxPendingPermissions) return Promise.resolve('unavailable')
+      const connection = this.connection
+      if (connection === undefined) return Promise.resolve('unavailable')
+      const signal = AbortSignal.any([request.signal, record.lifetime.signal, this.lifetime.signal])
+      const task = (async (): Promise<NativeApprovalOutcome> => {
+        await record.notifications
+        signal.throwIfAborted()
+        const { outcome } = await connection.client.request(methods.client.session.requestPermission, {
+          sessionId: id, toolCall: { toolCallId: callId }, options: [
+            { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' },
+            { optionId: 'reject-once', name: 'Reject', kind: 'reject_once' },
+          ],
+        }, { cancellationSignal: signal })
+        signal.throwIfAborted()
+        const current = record.executor.interactionOwner(request.agent)
+        if (this.sessions.get(id) !== record || current?.session !== owner.session || current.displayRootAgent !== owner.displayRootAgent) return 'cancelled'
+        return outcome.outcome === 'cancelled' ? 'cancelled' : outcome.optionId === 'allow-once' ? 'allowed-once' : 'rejected'
+      })()
+      this.permissions.set(owner.session.id, task)
+      const release = (): void => { this.permissions.delete(owner.session.id) }
+      void task.then(release, release)
+      return task
+    }
+    return undefined
+  }
 
   /**
    * Serve ACP until transport EOF or Host cancellation, then drain owned work.
@@ -131,10 +181,11 @@ export class NativeAcpApplication implements NativeApplication {
             for (const event of events.events) {
               for (const update of updates(event)) await this.notify({ sessionId: params.sessionId, update })
             }
-            this.assertOpen()
-            this.sessions.set(params.sessionId, this.createExecutor(params.sessionId, cwd))
-            return {}
           } finally { await handle.close() }
+          const record = this.createExecutor(params.sessionId, cwd)
+          const configOptions = await this.activate(record, params.sessionId, requestSignal)
+          this.sessions.set(params.sessionId, record)
+          return { configOptions }
         } finally { this.activating.delete(params.sessionId) }
       })()))
       .onRequest(methods.agent.session.list, ({ params, signal: requestSignal }) => this.track((async () => {
@@ -147,6 +198,27 @@ export class NativeAcpApplication implements NativeApplication {
           ? [] : [{ sessionId: String(header.id), cwd: header.cwd, updatedAt: new Date(header.createdAt).toISOString() }]) }
       })()))
       .onRequest(methods.agent.session.prompt, ({ params, signal: requestSignal }) => this.track(this.prompt(params, requestSignal)))
+      .onRequest(methods.agent.session.setConfigOption, ({ params, signal: requestSignal }) => this.track((async () => {
+        this.ready()
+        const record = this.sessions.get(params.sessionId)
+        if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
+        const selection = this.context.optional('modelSelection')
+        const directory = this.context.optional('modelDirectory')
+        if (selection === undefined || directory === undefined) throw RequestError.invalidParams(undefined, 'model configuration is unavailable')
+        const signal = AbortSignal.any([requestSignal, record.lifetime.signal, this.lifetime.signal])
+        // The preceding prompt's protocol request reports its own execution failure.
+        const previous = Promise.all([record.controlTail, record.current?.done.catch(() => undefined)]).then(() => undefined)
+        record.controls += 1
+        const operation = (async () => {
+          await this.waitControl(previous, signal)
+          const configOptions = await this.modelOperation(record, params.sessionId, signal,
+            (control, owner, admitted) => control.set(owner, params.configId, params.value, admitted))
+          await this.notify({ sessionId: params.sessionId, update: { sessionUpdate: 'config_option_update', configOptions } })
+          return { configOptions }
+        })()
+        record.controlTail = Promise.allSettled([previous, operation]).then(() => undefined)
+        try { return await operation } finally { record.controls -= 1 }
+      })()))
       .onRequest(methods.agent.session.close, ({ params }) => this.track(this.closeSession(params.sessionId)))
       .onNotification(methods.agent.session.cancel, ({ params }) => {
         this.sessions.get(params.sessionId)?.current?.abort.abort(new Error('ACP client cancelled'))
@@ -165,8 +237,10 @@ export class NativeAcpApplication implements NativeApplication {
     } finally {
       this.closing = true
       this.lifetime.abort(new Error('ACP transport closed'))
+      connection.close(this.lifetime.signal.reason)
       for (const record of this.sessions.values()) record.current?.abort.abort(this.lifetime.signal.reason)
       await Promise.allSettled([...this.pending])
+      await Promise.allSettled([...this.permissions.values()])
       const results = await Promise.allSettled([...this.sessions.values()].map(record => record.executor.dispose()))
       this.sessions.clear()
       signal.removeEventListener('abort', cancel)
@@ -199,11 +273,54 @@ export class NativeAcpApplication implements NativeApplication {
   }
 
   private createExecutor(id: string, cwd: string): OwnedSession {
-    return { executor: createNativeHeadlessApplication(this.context, { ...this.config, cwd,
-      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }) }
+    const { maxPendingPermissions: _permissionCapacity, ...turn } = this.config
+    return { executor: createNativeHeadlessApplication(this.context, { ...turn, cwd,
+      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }), lifetime: new AbortController(), controlTail: Promise.resolve(), controls: 0,
+    notifications: Promise.resolve() }
   }
 
-  private async newSession(params: NewSessionRequest, signal: AbortSignal): Promise<{ sessionId: string }> {
+  private async activate(record: OwnedSession, id: string, signal: AbortSignal): Promise<SessionConfigOption[]> {
+    try {
+      const options = await this.modelOperation(record, id, AbortSignal.any([signal, this.lifetime.signal]),
+        (control, owner, admitted) => control.options(owner, admitted))
+      this.assertOpen()
+      return options
+    } catch (error: unknown) {
+      try { await record.executor.dispose() }
+      catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native ACP model activation cleanup failed') }
+      throw error
+    }
+  }
+
+  private modelOperation(record: OwnedSession, id: string, signal: AbortSignal,
+    operation: (control: NativeAcpModelControls, owner: NativeActiveSessionOwner,
+      signal: AbortSignal) => Promise<SessionConfigOption[]>): Promise<SessionConfigOption[]> {
+    const selection = this.context.optional('modelSelection')
+    const directory = this.context.optional('modelDirectory')
+    if (selection === undefined || directory === undefined) return Promise.resolve([])
+    const control = new NativeAcpModelControls(selection, directory, this.config)
+    return record.executor.executeSessionOperation({ id: SessionId(id), resume: true }, (owner, admitted) => {
+      const execution = this.context.require('agents').execution(owner.agent)
+      return execution.status === 'maintenance' ? operation(control, owner, admitted)
+        : execution.runMaintenance(agentSignal => operation(control, owner, AbortSignal.any([agentSignal, admitted])))
+    }, signal)
+  }
+
+  private async waitControl(previous: Promise<void>, signal: AbortSignal): Promise<void> {
+    signal.throwIfAborted()
+    let abort: (() => void) | undefined
+    try {
+      await Promise.race([previous, new Promise<never>((_resolve, reject) => {
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
+        abort = () => { reject(signal.reason) }
+        signal.addEventListener('abort', abort, { once: true })
+      })])
+      signal.throwIfAborted()
+    } finally { if (abort !== undefined) signal.removeEventListener('abort', abort) }
+  }
+
+  private async newSession(params: NewSessionRequest, signal: AbortSignal):
+  Promise<{ sessionId: string; configOptions: SessionConfigOption[] }> {
     this.ready()
     const cwd = this.workspace(params.cwd, params.mcpServers)
     const fs = this.context.require('fs')
@@ -213,9 +330,10 @@ export class NativeAcpApplication implements NativeApplication {
     const handle = await this.context.require('sessionPersistence').create({ version: SESSION_FORMAT_VERSION,
       id, cwd, createdAt: Date.now(), isSeeded: false }, { signal })
     try { await handle.flush({ signal }) } finally { await handle.close() }
-    this.assertOpen()
-    this.sessions.set(id, this.createExecutor(id, cwd))
-    return { sessionId: id }
+    const record = this.createExecutor(id, cwd)
+    const configOptions = await this.activate(record, id, signal)
+    this.sessions.set(id, record)
+    return { sessionId: id, configOptions }
   }
 
   private async notify(notification: SessionNotification): Promise<void> {
@@ -229,6 +347,7 @@ export class NativeAcpApplication implements NativeApplication {
     const record = this.sessions.get(params.sessionId)
     if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
     if (record.current !== undefined) throw RequestError.invalidRequest(undefined, 'session prompt is already running')
+    if (record.controls !== 0) throw RequestError.invalidRequest(undefined, 'session configuration is in progress')
     if (params.prompt.length === 0) throw RequestError.invalidParams(undefined, 'native ACP prompt must be nonempty')
     const attachments = this.context.optional('attachments')
     const parts = params.prompt.map((block): AttachmentAdmissionPart => {
@@ -243,7 +362,7 @@ export class NativeAcpApplication implements NativeApplication {
     const signal = AbortSignal.any([requestSignal, abort.signal, this.lifetime.signal])
     const done = Promise.resolve().then(async (): Promise<PromptResponse> => {
       let stopReason: PromptResponse['stopReason'] = 'end_turn'
-      let notifications = Promise.resolve()
+      record.notifications = Promise.resolve()
       let exitCode: number
       try {
         const hasImage = parts.some(part => part.type === 'image')
@@ -273,8 +392,8 @@ export class NativeAcpApplication implements NativeApplication {
         const result = await record.executor.executeRootTurn({ id: SessionId(params.sessionId), resume: true,
           ...input, onEvent: (event) => {
             for (const update of updates(event)) {
-              notifications = notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
-              void notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
+              record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
+              void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
             }
             if (event.type === 'turn/end') {
               if (event.data.reason.kind === 'max-tokens') stopReason = 'max_tokens'
@@ -287,7 +406,7 @@ export class NativeAcpApplication implements NativeApplication {
         if (!signal.aborted || error !== signal.reason) throw error
         exitCode = 1
       }
-      await notifications
+      await record.notifications
       if (abort.signal.aborted || requestSignal.aborted) return { stopReason: 'cancelled' }
       if (exitCode !== 0) throw RequestError.internalError(undefined, 'native ACP turn failed; inspect Session log')
       return { stopReason }
@@ -304,7 +423,9 @@ export class NativeAcpApplication implements NativeApplication {
     this.activating.add(id)
     try {
       record.current?.abort.abort(new Error('ACP Session closed'))
+      record.lifetime.abort(new Error('ACP Session closed'))
       await record.current?.done.catch(() => {}) // Prompt failure is returned by its own protocol request.
+      await record.controlTail
       await record.executor.dispose()
     } finally { this.activating.delete(id) }
     return {}

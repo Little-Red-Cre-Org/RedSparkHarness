@@ -39,6 +39,8 @@ Pending tool approvals offer allow-once and reject actions. Question cards prese
 
 Image uploads use the advertised attachment limits and the selected Session's next model. The renderer displays only durable image references and owns each fetch, Blob URL and unmount cleanup. Reload fetches images again from the recorded Session. Upload errors retain the input for correction.
 
+The task-list panel reads canonical todo/write snapshots, including accepted live and restored history. It replaces the entire list and clears it only on turn/start; turn/end retains the last plan. Status copy is locale-owned and the panel offers no task mutation.
+
 ## Invariants
 
 The view reads the selected Host Consumer and owns no independent execution observations, so it publishes no invariant installer.

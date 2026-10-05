@@ -31,6 +31,10 @@
     "./native": {
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
+    },
+    "./client-native": {
+      "types": "./lib/types/client-native.d.ts",
+      "default": "./lib/client-native.js"
     }
   },
   "files": [
@@ -39,7 +43,8 @@
     "lib/native.js",
     "lib/shared-*.js",
     "lib/types/**/*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "lib/client-native.js"
   ],
   "license": "MIT",
   "dependencies": {

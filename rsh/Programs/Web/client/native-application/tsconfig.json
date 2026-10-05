@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Modules/Official/todo/tool-todo"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {

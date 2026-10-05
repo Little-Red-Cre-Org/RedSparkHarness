@@ -22,7 +22,7 @@ Pure shared Subagent descriptors, assistant-output folding and delegation permis
 <a id="configuration"></a>
 ## Configuration
 
-The root export and descriptor and assistant-output leaves require no runtime installation. Native and Cordis Consumers use the same descriptor payload and output folding.
+The root export and descriptor and assistant-output leaves require no runtime installation. Native and Cordis Consumers use the same descriptor payload, output folding, adjacent-Agent attribution and initial continuation guidance.
 
 <a id="ownership"></a>
 ## Ownership

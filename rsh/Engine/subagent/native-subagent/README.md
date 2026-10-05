@@ -1,5 +1,5 @@
 ---
-description: "The native one-shot Subagent Definition and selected in-process spawn Provider delegate through the active Program executor."
+description: "The native Subagent Definition and selected in-process spawn Provider delegate through the active Program executor."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The native one-shot Subagent Definition and selected in-process spawn Provider delegate through the active Program executor.
+The native Subagent Definition and selected in-process spawn Provider delegate through the active Program executor.
 
 ## Table of Contents
 
@@ -29,7 +29,9 @@ The native entry requires sessionExecution and promptSections, optionally consum
 
 Resolve captures the exact parent owner, latest logged provider/model/effort, workspace and budgets. Child route overrides clear inherited effort unless explicitly selected. Each fresh child has its own durable Session and descriptor. The existing executor enforces depth, owns the sole writer, and releases child-scoped prompt and tool restrictions. Children disable builtin tools, inherit selected sandbox policy, and cannot request permission expansion. Foreground cancellation and unload drain accepted execution; cleanup failures reject. A child’s recorded model error returns its actual partial output and error stop reason; an unrecorded failure still rejects.
 
-Background execution copies the same resolved child permissions and budgets. The Provider exposes its selected registry as backgroundJobs. Jobs owns bounded live text and final output; job_kill requests cancellation and job_output with wait waits for terminal cleanup. Caller cancellation owns startup until actual child readiness; after publication, the parent Agent, Jobs cancellation and Provider unload own the child independently of ordinary parent turns.
+Background execution copies the same resolved child permissions and budgets. The Provider exposes its selected registry as backgroundJobs. continuationTools identifies the selected registry for child permission restrictions; continuation controls must select that same registry. Jobs owns bounded live text and final output; job_kill requests cancellation and job_output with wait waits for terminal cleanup. Caller cancellation owns startup until actual child readiness; after publication, the parent Agent, Jobs cancellation and Provider unload own the child independently of ordinary parent turns.
+
+Continuable starts commit the descriptor and initial inbox acceptance through the Program before returning. sendMessage permits direct-parent/child adjacency, restores closed direct children from their durable descriptor, and returns the accepted message id independently of an answer. Cold resume preserves route, persona, tool restrictions and workspace; activation budgets use the selected deployment defaults. interrupt stops current work and parks unclaimed input until another message wakes it. Parent disposal and Provider unload drain resident children; execution and cleanup failures reject.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -53,7 +55,7 @@ The child starts a fresh conversation; its request does not reuse the parent con
 <a id="known-limitations-and-deferred-work"></a>
 
 - Persona is literal scoped text; template-variable interpolation is unsupported.
-- Continuable children, external backends, catalogs and subagent.finished result notifications are not provided by this entry.
+- External backends, catalogs and subagent.finished result notifications are not provided by this entry.
 - No invariant companion is published: the Program retains Agent, Session and writer authority; the Provider owns only its accepted calls and scoped setup.
 
 <a id="dev-note"></a>
@@ -62,3 +64,5 @@ The child starts a fresh conversation; its request does not reuse the parent con
 [Native spawn ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-spawn.md).
 
 [Background ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-background.md).
+
+[Continuation ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-continuation.md).

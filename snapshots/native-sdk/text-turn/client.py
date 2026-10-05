@@ -125,5 +125,39 @@ with DeepSeekHarness(config) as recovered:
     resumed = recovered.start_session("sdk-recorded-fork").run("recover after child cancellation")
     assert resumed.events[-1]["data"]["reason"]["kind"] == "completed"
     assert resumed.final_response == result.final_response
+    session = recovered.start_session("sdk-recorded-fork")
+    with recovered.client.subscribe_session_notifications(session.id) as tree:
+        started = session.run("start a continuable child")
+        start = next(event for event in started.events if event["type"] == "tool/result")["data"]["message"]["content"][0]
+        assert start["isError"] is False
+        continuation_id = start["content"][0]["text"].removeprefix("started subagent ")
+        while True:
+            notification = tree.next()
+            if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \
+                and notification.payload["event"]["type"] == "tool/call":
+                break
+        controlled = session.run("message and interrupt the continuable child")
+        assert all(event["data"]["message"]["content"][0]["isError"] is False
+            for event in controlled.events if event["type"] == "tool/result")
+        while True:
+            notification = tree.next()
+            if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \
+                and notification.payload["event"]["type"] == "turn/end":
+                assert notification.payload["event"]["data"]["reason"]["kind"] == "aborted"
+                break
+with DeepSeekHarness(config) as cold:
+    session = cold.start_session("sdk-recorded-fork")
+    with cold.client.subscribe_session_notifications(session.id) as tree:
+        refused = session.run("refuse invalid continuation recipients")
+        refused_results = [event for event in refused.events if event["type"] == "tool/result"]
+        assert len(refused_results) == 2 and all(event["data"]["message"]["content"][0]["isError"] is True for event in refused_results)
+        sent = session.run("cold resume the continuable child")
+        assert next(event for event in sent.events if event["type"] == "tool/result")["data"]["message"]["content"][0]["isError"] is False
+        while True:
+            notification = tree.next()
+            if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \
+                and notification.payload["event"]["type"] == "turn/end":
+                assert notification.payload["event"]["data"]["reason"]["kind"] == "completed"
+                break
 print(json.dumps({"finalResponse": result.final_response, "events": result.events,
     "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}))

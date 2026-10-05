@@ -91,6 +91,7 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],
   '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
   '@deepseek-ai/dsh-client-ui-tool/tool-renderer': ['NativeToolCard'],
+  '@deepseek-ai/dsh-tool-todo/client-native': ['foldTodos'],
   '@deepseek-ai/dsh-native-model-selection/types': ['foldNativeModelSelectionState'],
   '@deepseek-ai/dsh-agent-presets/selection': ['foldNativeAgentPresetFacts'],
   '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],

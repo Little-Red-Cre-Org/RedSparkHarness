@@ -1,8 +1,9 @@
 {
-  "model": "fixture-model",
+  "model": "fixture-model-next",
+  "reasoning_effort": "high",
   "messages": [
     {
-      "role": "system",
+      "role": "developer",
       "content": "You are a native ACP fixture."
     },
     {

@@ -154,6 +154,48 @@
     {
       "type": "function",
       "function": {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "subagent",
         "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
         "parameters": {
@@ -210,6 +252,32 @@
           "type": "object",
           "properties": {},
           "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "continuable_subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default start a durable continuable child and return after its initial input is accepted. Use send_message for follow-ups and interrupt_agent to stop current work; run_in_background:false waits for a one-shot result.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
         }
       }
     }
