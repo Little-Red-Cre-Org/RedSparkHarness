@@ -22,7 +22,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-根导出、descriptor 和 assistant-output 叶子无需运行时安装。原生与 Cordis 消费者使用相同描述符载荷与输出归并。
+根导出、descriptor 和 assistant-output 叶子无需运行时安装。原生与 Cordis 消费者使用相同描述符载荷、输出归并、相邻 Agent 归属与初始可持续引导。
 
 <a id="ownership"></a>
 ## 所有权

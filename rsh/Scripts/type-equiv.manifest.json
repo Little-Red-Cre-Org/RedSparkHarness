@@ -1379,7 +1379,7 @@
     {
       "doc": "rsh/Docs/subsystems/subagent.md",
       "symbol": "AgentMessageSource",
-      "source": "rsh/Engine/subagent/subagent/src/continuation-messages.ts"
+      "source": "rsh/Engine/subagent/subagent-protocol/src/continuation-messages.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/subagent.md",

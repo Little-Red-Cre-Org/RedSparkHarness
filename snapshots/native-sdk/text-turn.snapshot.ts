@@ -38,6 +38,31 @@ it('replays a native SDK turn with exact model input, output and durable Session
         return
       }
       const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
+      const continuationCommand = last?.role === 'user' ? String(last.content) : ''
+      if (continuationCommand === 'refuse invalid continuation recipients') {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: [
+            { index: 0, id: 'foreign-continuation', type: 'function', function: { name: 'send_message', arguments: JSON.stringify({ agent_id: 'sdk-foreign-child', message: 'refused follow-up' }) } },
+            { index: 1, id: 'empty-continuation', type: 'function', function: { name: 'send_message', arguments: JSON.stringify({ agent_id: '', message: '' }) } },
+          ] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
+      if (['start a continuable child', 'message and interrupt the continuable child', 'cold resume the continuable child'].includes(continuationCommand)) {
+        const prior = JSON.stringify(modelRequest.messages).match(/started subagent ([a-f0-9-]{36})/)
+        const calls = continuationCommand === 'start a continuable child'
+          ? [{ name: 'continuable_subagent', arguments: JSON.stringify({ description: 'continuable child', prompt: 'continuable child task' }) }]
+          : [{ name: 'send_message', arguments: JSON.stringify({ agent_id: prior?.[1],
+              message: continuationCommand.startsWith('cold') ? 'cold continuation follow-up' : 'parked continuation follow-up' }) },
+            ...continuationCommand.startsWith('cold') ? [] : [{ name: 'interrupt_agent', arguments: JSON.stringify({ agent_id: prior?.[1] }) }]]
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: calls.map((call, index) => ({ index,
+            id: `continuation-call-${index}`, type: 'function', function: call })) } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (last?.role === 'user' && last.content === 'fail production child') {
         response.end([
           { choices: [{ delta: { role: 'assistant', content: 'partial failed child output' } }] },
@@ -45,7 +70,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
         ].map(event => `data: ${JSON.stringify(event)}\n\n`).join(''))
         return
       }
-      if (last?.role === 'user' && ['hold production child', 'hold background child'].includes(String(last.content))) {
+      if (last?.role === 'user' && (['hold production child', 'hold background child'].includes(String(last.content)) || String(last.content).startsWith('continuable child task'))) {
         response.end([
           ...last.content === 'hold background child' ? [{ choices: [{ delta: { role: 'assistant', content: 'background child live output' } }] }] : [],
           { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'child-wait', type: 'function',
@@ -125,6 +150,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
     ...composition.installations,
     { id: 'fixture-approval', plugin: '@deepseek-ai/dsh-native-approval', scope: 'root', config: { policy: 'ask' } },
     { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants' },
+    { id: 'continuable-tool', scope: 'root', plugin: '@deepseek-ai/dsh-tool-subagent', config: {
+      toolName: 'continuable_subagent', backgroundMode: 'continuable', maxDepth: 1, maxSteps: 2, maxTokens: 128,
+      persona: 'Only the continuable child receives this persona.', toolFilter: { deny: ['fixture_delegate_child'] },
+    } },
   ] }))
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
     { id: 'app', config: { systemPrompt: 'You are a native SDK fixture.', maxSteps: 2 } },
@@ -245,17 +274,67 @@ it('replays a native SDK turn with exact model input, output and durable Session
         result = production
       }
       finally { await restored.close() }
+      let continuationId: string | undefined
       const recovered = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         const resumed = await recovered.session('sdk-recorded-fork').run('recover after child cancellation')
         expect(resumed.finalResponse).toBe(reply)
         expect(resumed.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+        const session = recovered.session('sdk-recorded-fork')
+        const tree = recovered.client.subscribeSessionTree(session.id)
+        try {
+          const started = await session.run('start a continuable child')
+          const start = started.events.find(event => event.type === 'tool/result')?.data.message.content[0]
+          expect(start).toMatchObject({ type: 'tool-result', isError: false })
+          continuationId = JSON.stringify(start).match(/started subagent ([a-f0-9-]{36})/)?.[1]
+          expect(continuationId).toBeDefined()
+          for (;;) {
+            const notification = await tree.next()
+            if (notification.method === 'session.event' && notification.params.sessionId === continuationId
+              && (notification.params.event as { type?: string }).type === 'tool/call') break
+          }
+          const controlled = await session.run('message and interrupt the continuable child')
+          expect(controlled.events.filter(event => event.type === 'tool/result').every(event =>
+            event.data.message.content[0]?.type === 'tool-result' && !event.data.message.content[0].isError)).toBe(true)
+          for (;;) {
+            const notification = await tree.next()
+            if (notification.method === 'session.event' && notification.params.sessionId === continuationId
+              && (notification.params.event as { type?: string }).type === 'turn/end') {
+              expect(notification.params.event).toMatchObject({ data: { reason: { kind: 'aborted' } } })
+              break
+            }
+          }
+        } finally { tree.close() }
+
       }
       finally { await recovered.close() }
+      const cold = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try {
+        const session = cold.session('sdk-recorded-fork')
+        const tree = cold.client.subscribeSessionTree(session.id)
+        try {
+          const refused = await session.run('refuse invalid continuation recipients')
+          expect(refused.events.filter(event => event.type === 'tool/result')).toHaveLength(2)
+          expect(refused.events.filter(event => event.type === 'tool/result').every(event =>
+            event.data.message.content[0]?.type === 'tool-result' && event.data.message.content[0].isError)).toBe(true)
+          const sent = await session.run('cold resume the continuable child')
+          expect(sent.events.find(event => event.type === 'tool/result')?.data.message.content[0])
+            .toMatchObject({ type: 'tool-result', isError: false })
+          for (;;) {
+            const notification = await tree.next()
+            if (notification.method === 'session.event' && notification.params.sessionId === continuationId
+              && (notification.params.event as { type?: string }).type === 'turn/end') {
+              expect(notification.params.event).toMatchObject({ data: { reason: { kind: 'completed' } } })
+              break
+            }
+          }
+        } finally { tree.close() }
+      } finally { await cold.close() }
+
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(25)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(35)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
       .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
         { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])
@@ -280,9 +359,31 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     const raw = findLog('sdk-recorded-turn')
     const forkRaw = findLog('sdk-recorded-fork')
-    expect(logs).toHaveLength(9)
+    expect(logs).toHaveLength(10)
     const childTask = (log: string, task: string): boolean => (JSON.parse(log.split('\n')[0] ?? '{}') as { origin?: string }).origin === 'subagent'
       && parseSessionLog(log).some(event => event.type === 'user/message' && event.data.content.some(block => block.type === 'text' && block.text === task))
+    const continuationLog = logs.find(log => childTask(log, 'continuable child task'))
+    if (continuationLog === undefined) throw new Error('native-sdk snapshot: continuable child missing')
+    const continuationEvents = parseSessionLog(continuationLog)
+    expect(continuationEvents.filter(event => event.type === 'subagent/descriptor')).toHaveLength(1)
+    expect(continuationEvents.find(event => event.type === 'subagent/descriptor')?.data)
+      .toMatchObject({ mode: 'continuable', provider: 'spawn', persona: 'Only the continuable child receives this persona.',
+        toolFilter: { deny: ['fixture_delegate_child'] } })
+    expect(continuationEvents.some(event => event.type === 'turn/end' && event.data.reason.kind === 'aborted')).toBe(true)
+    expect(continuationEvents.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    expect(continuationEvents.some(event => event.type === 'user/message' && event.data.source.kind === 'agent-message'
+      && event.data.content.some(block => block.type === 'text' && block.text === 'cold continuation follow-up'))).toBe(true)
+    const coldRequest = requests.find(request => JSON.stringify(request.messages).includes('cold continuation follow-up')
+      && JSON.stringify(request.messages).includes('Only the continuable child receives this persona.'))
+    expect(coldRequest).toBeDefined()
+    expect(JSON.stringify(coldRequest?.tools)).not.toContain('fixture_delegate_child')
+    expect(JSON.stringify(coldRequest?.tools)).not.toContain('read_file')
+    expect(coldRequest?.max_completion_tokens).not.toBe(128)
+    const continuationFixture = join(scene, 'session.6.v3.jsonl')
+    const normalizedContinuation = normalizeSessionSnapshot(redactSessionSnapshotIds([continuationLog])[0] ?? continuationLog,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(continuationFixture, normalizedContinuation)
+    else expect(normalizedContinuation).toBe(readFileSync(continuationFixture, 'utf8'))
     const failedChildLog = logs.find(log => childTask(log, 'fail production child'))
     if (failedChildLog === undefined) throw new Error('native-sdk snapshot: failed child missing')
     expect(parseSessionLog(failedChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'error' } } })
