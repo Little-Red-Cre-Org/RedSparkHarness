@@ -1,0 +1,9 @@
+[
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "content": {
+      "type": "text",
+      "text": "native ACP snapshot reply"
+    }
+  }
+]

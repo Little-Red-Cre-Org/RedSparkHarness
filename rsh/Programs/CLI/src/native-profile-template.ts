@@ -37,12 +37,13 @@ export function shippedNativeProfileComposition(
   profile: (typeof SHIPPED_NATIVE_PROFILES)[number],
   platform: NodeJS.Platform = process.platform,
 ): NativeProfileConfig {
-  if (profile === 'native-sdk') return {
+  if (profile === 'native-sdk' || profile === 'native-acp') return {
     formatVersion: 1,
     scopes: [{ id: ROOT }],
     installations: [
-      { id: 'app', plugin: '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
-        config: { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
+      { id: 'app', plugin: profile === 'native-acp' ? '@deepseek-ai/dsh-native-acp' : '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
+        config: { ...(profile === 'native-acp' ? { provider: 'deepseek-official', model: 'deepseek-v4-flash' } : {}),
+          systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
@@ -66,9 +67,7 @@ export function shippedNativeProfileComposition(
         id: 'app',
         plugin: profile === 'native-web'
           ? '@deepseek-ai/dsh-native-web-host'
-          : profile === 'native-acp'
-            ? '@deepseek-ai/dsh-native-acp'
-            : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
+          : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
         scope: ROOT,
         config: profile === 'native-web'
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }

@@ -1,0 +1,72 @@
+{
+  "model": "fixture-model",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a native ACP fixture."
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "say hello through native ACP"
+        },
+        {
+          "type": "text",
+          "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+          }
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
