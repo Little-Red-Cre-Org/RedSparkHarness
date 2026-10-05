@@ -439,10 +439,12 @@ export class E2BSubprocessHandle implements SubprocessHandle {
     try {
       if (stream === 'stdout') {
         this.stdoutReader?.push(bytes)
+        if (typeof this.spec.stdio.stdout === 'object') this.spec.stdio.stdout.onData?.(bytes)
         await this.writeOutput(this.stdout, this.spec.stdio.stdout === 'inherit' ? process.stdout : undefined, bytes)
         return
       }
       this.stderrReader?.push(bytes)
+      if (typeof this.spec.stdio.stderr === 'object') this.spec.stdio.stderr.onData?.(bytes)
       await this.writeOutput(this.stderr, this.spec.stdio.stderr === 'inherit' ? process.stderr : undefined, bytes)
     } catch (error: unknown) {
       const target = stream === 'stdout' ? this.stdout : this.stderr

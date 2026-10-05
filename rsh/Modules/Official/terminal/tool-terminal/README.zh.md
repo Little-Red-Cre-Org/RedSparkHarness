@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 `./native` 入口要求配置与选定后端匹配的 `type`，并注册六个终端工具。`maxResultBytes` 限制渲染输出；`enableRunInBackground` 默认 true，并在安装时要求原生 Jobs Provider。仅需前台执行的组合将其设为 false。前台取消会中断发送，后台工作仍由确切 Agent 持有，并通过 NativeJobs 结算。原生任务输出在结算后可用；运行中保留输出通过 `terminal_read` 读取。NativeJobs 的增量任务输出收集仍属于单独工作。返回文本及发送展示元数据进入应用持有的 Session 结果。
+原生 `./native` 入口要求配置与选定后端匹配的 `type`，并注册六个终端工具。`maxResultBytes` 限制渲染输出；`enableRunInBackground` 默认 true，并在安装时要求原生 Jobs Provider。仅需前台执行的组合将其设为 false。前台取消会中断发送，后台工作仍由确切 Agent 持有，并通过 NativeJobs 结算。NativeJobs 直接接收清理后的 send 输出；`job_output` 读取保留的实时文本，不消费 send viewport。最终格式化输出替换实时文本并保留截断元数据。返回文本及发送展示元数据进入应用持有的 Session 结果。
 
 当组合挂载了终端后端、且模型应当能跨调用使用终端状态时启用这些工具——使用调试器单步调试、在 REPL 中探索，或中断前台命令后回到 shell。指引章节会引导模型对有界操作使用单次 bash、read、write 与 edit 工具。
 

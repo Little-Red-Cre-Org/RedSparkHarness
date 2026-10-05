@@ -66,7 +66,7 @@ it('records a native browser Session turn through dsh native-web', async () => {
   const rows = [
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
-      maxSteps: 1, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100 }],
+      maxSteps: 1, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 }],
     ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
     ['fs', 'fs-local', { cwd: workspace }], ['storage', 'session-persistence-jsonl', { root: sessionRoot, compression: 'none' }],
     ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],

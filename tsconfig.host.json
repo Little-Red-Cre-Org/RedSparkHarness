@@ -9,6 +9,7 @@
   },
   "include": [
     "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
+    "rsh/Programs/Web/application/tests/native-conversation.e2e.ts",
     "rsh/Programs/Web/application/tests/scaffold.ts",
     "rsh/Programs/Web/application/tests/scaffold-generation.spec.ts",
     "rsh/Programs/Web/application/tests/default-model.e2e.ts",
@@ -115,6 +116,7 @@
     "snapshots/native-headless/mcp-image-native.snapshot.ts",
     "snapshots/native-headless/ptc-jobs.snapshot.ts",
     "snapshots/native-headless/read-image-native.snapshot.ts",
+    "snapshots/native-headless/model-choice-native.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",
     "rsh/Programs/Desktop/tests/**/*.ts",
     "rsh/Tests/benchmarks/**/*.ts",
@@ -152,6 +154,7 @@
     "rsh/Scripts/client-bundle-purity.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Programs/Web/client/native-application/tsconfig.json" },
     { "path": "./rsh/Modules/Official/code-runtime/tool-code-runtime" },
     { "path": "./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox" },
     { "path": "./rsh/Programs/Web/client/ui-deliverables/tsconfig.host.json" },
@@ -266,7 +269,8 @@
     { "path": "./rsh/Engine/core/native-session-execution/tsconfig.host.json" },
     { "path": "./rsh/Engine/workspace/workspace-definition" },
     { "path": "./rsh/Engine/core/native-agent/tsconfig.host.json" },
-    { "path": "./rsh/Engine/core/native-model-execution" },
+    { "path": "./rsh/Engine/core/native-model-execution/tsconfig.host.json" },
+    { "path": "./rsh/Engine/llm/native-model-selection/tsconfig.host.json" },
     { "path": "./rsh/Engine/core/native-jobs" },
     { "path": "./rsh/Engine/core/native-code-runtime" },
     { "path": "./rsh/Engine/context/native-time-context" },

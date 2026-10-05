@@ -95,7 +95,7 @@ function description(escalationModes: readonly SandboxMode[], backgroundEnabled:
     + 'Nonzero exits are results, while process failures are errors. '
     + 'A file sandbox may deny access; inspect the denial marker and do not work around it.'
   const background = backgroundEnabled
-    ? ' Set run_in_background for longer work; use job_output to read its final output and job_kill to stop it.'
+    ? ' Set run_in_background for longer work; use job_output to read its live output and job_kill to stop it.'
     : ''
   if (escalationModes.length === 0) return base + background
   return base + background + ' On Windows, restricted execution uses ConstrainedLanguageMode and blocks unsafe named-pipe access. '
@@ -167,15 +167,18 @@ function contribution(
       if (args.run_in_background === true) {
         if (jobs === undefined) throw new Error('tool-pwsh: background jobs are unavailable in this composition')
         call.signal.throwIfAborted()
-        const id = jobs.start({ agent: call.agent, kind: 'pwsh', label: args.command, async run(signal) {
-          const proc = shell.start(shell.resolve({ ...request, signal }))
+        const id = jobs.start({ agent: call.agent, kind: 'pwsh', label: args.command, async run(signal, publishOutput) {
+          const proc = shell.start(shell.resolve({ ...request, signal,
+            onOutput: (stream, text): void => { publishOutput(stream === 'stderr' ? `[stderr]\n${text}` : text) },
+          }))
           await proc.done
-          const output = renderProcessRead(proc.readOutput(), proc.sandbox, escalationModes)
+          const read = proc.readOutput()
+          const output = renderProcessRead(read, proc.sandbox, escalationModes)
           const outcome = processOutcome(proc)
           return {
             status: proc.sandbox?.runnerFailed === true ? 'failed'
               : proc.status === 'killed' ? signal.aborted ? 'cancelled' : 'failed' : 'completed',
-            detail: outcome.detail, output,
+            detail: outcome.detail, output, outputTruncated: read.lossy,
           }
         } })
         return { kind: 'background', jobId: id }

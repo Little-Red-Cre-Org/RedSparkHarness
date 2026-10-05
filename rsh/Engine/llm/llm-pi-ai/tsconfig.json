@@ -48,7 +48,7 @@
       "path": "../../../Core/util/http-proxy"
     },
     {
-      "path": "../../core/native-model-execution"
+      "path": "../../core/native-model-execution/tsconfig.host.json"
     },
     {
       "path": "../../../Core/runtime-diagnostics/native-runtime"

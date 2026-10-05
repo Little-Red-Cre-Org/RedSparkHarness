@@ -61,11 +61,11 @@ function status(job: NativeJobSnapshot): string {
   return `[status: ${job.status}]`
 }
 
-function bounded(text: string, maxBytes: number, suffix = ''): string {
+function bounded(text: string, maxBytes: number, suffix = '', kind: 'head' | 'tail' = 'head'): string {
   if (Buffer.byteLength(`${text}${suffix}`, 'utf8') <= maxBytes) return `${text}${suffix}`
   const marker = '\n[output truncated]'
   const fixedBytes = Buffer.byteLength(`${marker}${suffix}`, 'utf8')
-  const retainer = new TextRetainer({ kind: 'head', maxBytes: Math.max(0, maxBytes - fixedBytes) })
+  const retainer = new TextRetainer({ kind, maxBytes: Math.max(0, maxBytes - fixedBytes) })
   retainer.push(text)
   const result = retainer.finish()
   return result.truncated ? `${result.text}${marker}${suffix}` : `${result.text}${suffix}`
@@ -82,6 +82,7 @@ const output: NativeValueToolContribution['output'] = {
   schema: {
     type: 'object', properties: {
       text: { type: 'string' },
+      truncated: { type: 'boolean' },
       jobs: { type: 'array', items: { type: 'object', properties: {
         id: { type: 'string' }, kind: { type: 'string' }, label: { type: 'string' },
         status: { type: 'string', enum: ['running', 'stopping', 'completed', 'failed', 'cancelled'] },
@@ -92,8 +93,9 @@ const output: NativeValueToolContribution['output'] = {
   },
   render(_call, value) {
     // The registry validates this schema before rendering its text field.
-    const result = value as { text: string }
-    return { content: [{ type: 'text', text: result.text }], isError: false }
+    const result = value as { text: string; truncated?: boolean }
+    return { content: [{ type: 'text', text: result.text }], isError: false,
+      ...result.truncated === undefined ? {} : { meta: { truncated: result.truncated } } }
   },
 }
 
@@ -109,7 +111,7 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
     output,
     schema: {
       name: 'job_output',
-      description: 'Read a background job result and status; optionally wait for completion.',
+      description: 'Read retained live or final background job output and status; optionally wait for completion.',
       parameters: { type: 'object', properties: {
         job_id: { type: 'string' }, wait: { type: 'boolean' }, timeout_ms: { type: 'number' },
       }, required: ['job_id'], additionalProperties: false },
@@ -127,7 +129,10 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
       }
       const result = jobs.read(id, call.agent)
       const body = result.output.length > 0 ? result.output : '(no output yet)'
-      return { text: bounded(body, config.maxOutputBytes, `\n${status(result.snapshot)}`), jobs: [jobValue(result.snapshot)] }
+      const suffix = `${result.truncated ? '\n[older output truncated]' : ''}\n${status(result.snapshot)}`
+      return { text: bounded(body, config.maxOutputBytes, suffix, 'tail'), truncated: result.truncated
+        || Buffer.byteLength(`${body}${suffix}`, 'utf8') > config.maxOutputBytes,
+      jobs: [jobValue(result.snapshot)] }
     },
   }, {
     output,

@@ -28,6 +28,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 `session/prompt` accepts ordered text blocks and encoded raster images (`{ type: "image", data, mimeType }`). The required attachment Provider validates canonical base64, declared media type, decoded bytes and deployment limits before the durable inbox receipt. The Session stores immutable references; the selected model adapter reads verified request variants, including after restart or fork. Caller-supplied durable attachment references are refused. The selected model must support image input.
 
+The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
+
 ## Dev Note
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.

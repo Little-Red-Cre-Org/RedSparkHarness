@@ -26,6 +26,8 @@ An optional `onChunk` observer receives accepted stream chunks from this same di
 
 Selected Model Providers can expose `resolveModel` for exact route metadata; an image tool refuses when that capability is absent. `NativeAdapterModel` forwards an actual LLM adapter with installation cancellation, retains accepted metadata and stream operations, and closes paused iterators during removal. A failed or cancelled next call closes and drains its iterator before rejecting with the original request error; iterator cleanup failures remain recorded for the shared close promise. This helper supplies no model catalog or settings authority.
 
+The `./model-directory` Definition and `NativeAdapterModelDirectory` expose advisory catalogs from the same selected adapter, without a default store. `prepareStep` binds resolved controls and dispatch to one Provider generation. Consumers persist that exact configuration before `execute`; a foreign prepared identity or different dispatch controls reject. The pure `./model-selection` leaf owns durable selection vocabulary and its history projection.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.

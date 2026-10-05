@@ -1,4 +1,5 @@
 /** Shared local shell process lifecycle over the managed subprocess capability. */
+import { StringDecoder } from 'node:string_decoder'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead, ShellRunResult, CollectedOutput, ShellOperations } from '@deepseek-ai/dsh-shell/native'
 import type { SubprocessCollect, SubprocessHandle, SubprocessOperations, SubprocessOutputReader, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
 import { clampTimeout, deadline, MAX_TIMER_DELAY_MS, timeoutOf } from '@deepseek-ai/dsh-timeout'
@@ -96,6 +97,30 @@ function finalOutput(reader: SubprocessOutputReader): CollectedOutput {
   }
 }
 
+function observeOutput(spec: ShellExecSpec, signal: AbortSignal | undefined) {
+  const observer = spec.onOutput
+  if (observer === undefined) return undefined
+  const decoders = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') }
+  let finished = false
+  const publish = (stream: 'stdout' | 'stderr', text: string): void => {
+    if (text.length > 0 && signal?.aborted !== true) observer(stream, text)
+  }
+  const write = (stream: 'stdout' | 'stderr', chunk: Uint8Array): void => {
+    if (!finished) publish(stream, decoders[stream].write(Buffer.from(chunk)))
+  }
+  return {
+    stdout: (chunk: Uint8Array): void => { write('stdout', chunk) },
+    stderr: (chunk: Uint8Array): void => { write('stderr', chunk) },
+    stop() { finished = true },
+    finish() {
+      if (finished) return
+      finished = true
+      publish('stdout', decoders.stdout.end())
+      publish('stderr', decoders.stderr.end())
+    },
+  }
+}
+
 /** Shell-specific invocation and environment chosen by the owning Provider. */
 export interface ShellDialect {
   /** Error prefix for invalid requests and process-provider failures. */
@@ -141,21 +166,24 @@ export class LocalShellController implements ShellOperations {
       ...request.env !== undefined ? { env: request.env } : {},
       ...request.dshEnv !== undefined ? { dshEnv: request.dshEnv } : {},
       sandboxPolicy: request.sandboxPolicy,
+      ...request.onOutput === undefined ? {} : { onOutput: request.onOutput },
     }
   }
 
   private spawnSpec(
     spec: ShellExecSpec, argv: readonly string[], stdoutMaxBytes: number, signal: AbortSignal | undefined,
+    observation?: ReturnType<typeof observeOutput>,
   ): SubprocessSpawnSpec {
-    const collect = (maxBytes: number): SubprocessCollect =>
-      ({ maxBytes, spill: { maxBytes: this.config.maxSpillBytes } })
+    const collect = (maxBytes: number, stream: 'stdout' | 'stderr'): SubprocessCollect =>
+      ({ maxBytes, spill: { maxBytes: this.config.maxSpillBytes },
+        ...observation === undefined ? {} : { onData: observation[stream] } })
     return {
       argv,
       cwd: spec.workdir,
       stdio: {
         stdin: spec.stdin !== undefined ? { data: spec.stdin } : 'ignore',
-        stdout: collect(stdoutMaxBytes),
-        stderr: collect(this.config.maxOutputBytes),
+        stdout: collect(stdoutMaxBytes, 'stdout'),
+        stderr: collect(this.config.maxOutputBytes, 'stderr'),
       },
       graceMs: this.config.graceMs,
       signal,
@@ -185,8 +213,9 @@ export class LocalShellController implements ShellOperations {
    */
   async runArgv(spec: ShellExecSpec, argv: readonly string[]): Promise<ShellRunResult> {
     using d = deadline(spec.signal, spec.timeoutMs, this.dialect.timeoutCode)
-    const handle = this.subprocess.spawn(this.spawnSpec(spec, argv, spec.stdoutMaxBytes, d.signal))
-    const outcome = await handle.done
+    const observation = observeOutput(spec, d.signal)
+    const handle = this.subprocess.spawn(this.spawnSpec(spec, argv, spec.stdoutMaxBytes, d.signal, observation))
+    const outcome = await handle.done.finally(() => observation?.finish())
     const collected = this.collected(handle)
     const timedOut = timeoutOf(d.signal, this.dialect.timeoutCode) !== undefined
     return {
@@ -210,7 +239,8 @@ export class LocalShellController implements ShellOperations {
    * @returns live handle with consuming incremental output reads.
    */
   startArgv(spec: ShellExecSpec, argv: readonly string[]): ShellProcess {
-    const running = this.subprocess.spawn(this.spawnSpec(spec, argv, this.config.maxOutputBytes, spec.signal))
+    const observation = observeOutput(spec, spec.signal)
+    const running = this.subprocess.spawn(this.spawnSpec(spec, argv, this.config.maxOutputBytes, spec.signal, observation))
     const collected = this.collected(running)
     let providerFailureNote: string | undefined
     let stdoutOffset = 0
@@ -219,14 +249,16 @@ export class LocalShellController implements ShellOperations {
       status: 'running',
       exitCode: null,
       signal: null,
-      done: running.done.then((outcome) => {
+      done: running.done.then(async (outcome) => {
+        if (spec.signal?.aborted === true || proc.status === 'killed' || outcome.signal !== null) await running.waitForExit()
         if (proc.status === 'running') {
           proc.status = spec.signal?.aborted === true || outcome.signal !== null ? 'killed' : 'completed'
         }
         proc.exitCode = outcome.exitCode
         proc.signal = outcome.signal
         this.onProcessDone(proc, collected.stderr.readFrom(0).text, false)
-      }, (error: unknown) => {
+      }, async (error: unknown) => {
+        await running.waitForExit()
         proc.status = 'killed'
         let detail = 'unprintable provider failure'
         try {
@@ -236,7 +268,7 @@ export class LocalShellController implements ShellOperations {
         }
         providerFailureNote = `subprocess failed before reporting an outcome: ${detail}`
         this.onProcessDone(proc, providerFailureNote, true, error)
-      }),
+      }).finally(() => observation?.finish()),
       readOutput: (): ShellProcessRead => {
         const out = collected.stdout.readFrom(stdoutOffset)
         const err = collected.stderr.readFrom(stderrOffset)
@@ -257,6 +289,7 @@ export class LocalShellController implements ShellOperations {
       kill: (): boolean => {
         if (proc.status !== 'running') return false
         proc.status = 'killed'
+        observation?.stop()
         running.terminate()
         return true
       },

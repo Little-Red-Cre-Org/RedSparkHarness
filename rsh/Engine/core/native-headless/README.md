@@ -40,6 +40,8 @@ The validated `builtinTools` boolean defaults to `true`. Setting it to `false` r
 
 One-shot teardown attempts writer closure even when an active-owner observer rejects, preserving execution and cleanup failures together. Agent admission owns borrowed preset leases before lifecycle announcement; failed or cancelled announcement releases them. Resident children persist that selected preset in their creation header and validate restored facts before module preparation.
 
+With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
+
 Root cancellation closes and drains an already retained epoch even when the initial turn fails or the settlement signal is already aborted. Execution and epoch-cleanup failures are reported together; the original execution failure remains observable.
 
 ## Dev Note

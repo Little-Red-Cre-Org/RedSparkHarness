@@ -22,11 +22,13 @@ This Host Program contributes authenticated Session operations to the shared Con
 <a id="reference"></a>
 ## Reference
 
-Configuration includes the native headless workspace, model, prompt and budgets plus required positive integer limits: maxPendingRequests, maxHistoryEvents and maxPromptChars. History rejects overflow instead of truncating it. Ordinary requests and cancellation/status requests have separate bounded admission so a full prompt queue does not prevent cancellation.
+Configuration includes the native headless workspace, model, prompt and budgets plus required positive integer limits: maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes and maxFollowers. History rejects overflow instead of truncating it. Ordinary requests and cancellation/status requests have separate bounded admission so a full prompt queue does not prevent cancellation.
 
 The Client Consumer owns list, blank creation, history, explicit fresh/resumed prompts, cancellation and status. Prompt success follows durable settlement; exact execution cancellation returns exitCode 130 after draining. A Session accepts one pending browser turn. Busy submissions reject instead of silently entering another queue. Live history uses the exact active writer; cold history closes its read handle before responding. Installation teardown withdraws routes, cancels requests and drains the executor.
 
-Attachments, incremental following, questions, approvals, directory policies, title and fork controls are separate Consumers. This package does not provide those operations.
+Attachments, questions, approvals, directory policies, title and fork controls are separate Consumers. This package does not provide those operations.
+
+Optional following delivers accepted durable events and transient assistant text through authenticated POST `/api/native-session/follow`. Each admission permits one follower with its exact Session and admission identity. The unread SSE queue is byte-bounded; overflow cancels execution and fails settlement without masking an execution or cleanup failure. Disconnect releases the follower and its queue; turn ownership remains with the executor until settlement. Installation shutdown closes followers before draining execution.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 
@@ -40,7 +42,7 @@ The CLI carries the native Web Host, Session controller and frontend static arti
 <a id="dev-note"></a>
 ## Dev Note
 
-The native Session executor owns persistence and Agents; this package owns transport operations only.
+The native Session executor owns persistence and Agents; this package owns transport operations only. Its optional modelSelection service preserves the selected Session model when installed.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -63,4 +65,4 @@ This package does not alter the history prefix; a new user message extends the r
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Incremental event following, full product UI, attachments, approvals and question interactions are not provided by this package.
+- Full product UI, attachments, approvals and question interactions are not provided by this package.
