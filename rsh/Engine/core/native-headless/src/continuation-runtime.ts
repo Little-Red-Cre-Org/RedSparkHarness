@@ -1,13 +1,13 @@
 /** Program continuation factory retaining the selected Agent execution and Session writer. */
 import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentExecution, type NativeAgentRegistry, type InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import { SESSION_FORMAT_VERSION, SessionId, type Session } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION, SessionId, type Session, type SessionHeader } from '@deepseek-ai/dsh-session/native'
 import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type { NativeSessionConfiguration, NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContinuationRequest, NativeSessionContinuation, NativeSessionContinuations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeContinuationInspection } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeContinuationCandidate, NativeContinuationInspection } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import { SessionPersistenceCorruptionError, SessionFormatUnsupportedError, SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence/native'
 import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
@@ -124,23 +124,31 @@ export class NativeContinuationRuntime {
             AbortSignal.any([signal, this.shutdown.signal, this.program.lifetime]))
         } finally { release() }
       },
+      catalog: (scope, signal) => this.catalog(agent, session, scope, signal),
       inspect: async (path, signal) => {
         this.assertParent(agent)
         const visited = new Set<SessionId>([session.id])
         let parent = session.id
+        let parentDepth = session.header.delegationDepth ?? 0
         let observation: NativeContinuationObservation | undefined
         for (const id of path) {
           signal.throwIfAborted()
-          if (visited.has(id)) return { kind: 'diagnostic', id, reason: 'corrupt' }
+          if (visited.has(id)) return { kind: 'diagnostic', id: path.at(-1) ?? id, reason: 'corrupt' }
           visited.add(id)
           const inspected = await this.inspect(id, signal, this.program.configuration(agent))
-          if (inspected.kind === 'diagnostic') return inspected
+          if (inspected.kind === 'diagnostic') {
+            return { kind: 'diagnostic', id: path.at(-1) ?? id, reason: inspected.reason }
+          }
           observation = inspected.observation
-          if (observation.header.parentSession !== parent || observation.header.origin !== 'subagent'
-            || observation.header.cwd !== session.header.cwd) throw new Error('native-continuation: catalog inspection path is not authorized')
+          if (observation.header.parentSession !== parent
+            || observation.header.cwd !== session.header.cwd
+            || (observation.header.origin === 'subagent' && observation.header.delegationDepth !== parentDepth + 1)) {
+            throw new Error('native-continuation: catalog inspection path is not authorized')
+          }
           parent = id
+          parentDepth = observation.header.delegationDepth ?? 0
         }
-        if (observation === undefined) throw new Error('native-continuation: inspection path is empty')
+        if (observation === undefined || observation.header.origin !== 'subagent') throw new Error('native-continuation: inspection requires a subagent endpoint')
         return { kind: 'child', observation }
       },
       observe: (id, signal) => { this.assertParent(agent); return this.observe(id, session.id, signal, this.program.configuration(agent)) },
@@ -160,6 +168,50 @@ export class NativeContinuationRuntime {
         return this.program.deliver(agent, session, id, message, target, wake, signal)
       },
     }
+  }
+
+  private async catalog(agent: NativeAgent, session: Session, scope: 'children' | 'descendants',
+    signal: AbortSignal): Promise<readonly NativeContinuationCandidate[]> {
+    this.assertParent(agent)
+    const effective = AbortSignal.any([signal, this.shutdown.signal, this.program.lifetime])
+    effective.throwIfAborted()
+    const cwd = this.program.configuration(agent).cwd
+    if (cwd !== session.header.cwd) throw new Error('native-continuation: catalog workspace differs from its parent')
+    const corpus = await this.program.storage.list({ signal: effective })
+    effective.throwIfAborted()
+    const children = new Map<SessionId, SessionHeader[]>()
+    for (const { header } of corpus) {
+      if (header.cwd !== cwd || header.parentSession === undefined) continue
+      const siblings = children.get(header.parentSession) ?? []
+      siblings.push(header)
+      children.set(header.parentSession, siblings)
+    }
+    for (const siblings of children.values()) siblings.sort((a, b) =>
+      a.createdAt - b.createdAt || a.id.localeCompare(b.id))
+    const result: NativeContinuationCandidate[] = []
+    const seen = new Set<SessionId>([session.id])
+    const pending = (children.get(session.id) ?? []).map(header => ({ header, parentDepth: session.header.delegationDepth ?? 0,
+      path: [header.id] as [SessionId, ...SessionId[]] })).reverse()
+    for (;;) {
+      effective.throwIfAborted()
+      const candidate = pending.pop()
+      if (candidate === undefined) break
+      if (seen.has(candidate.header.id)) throw new Error('native-continuation: catalog lineage contains a cycle')
+      seen.add(candidate.header.id)
+      if (candidate.header.origin === 'subagent' && candidate.header.delegationDepth !== candidate.parentDepth + 1) continue
+      if (candidate.header.origin === 'subagent') {
+        const live = this.program.agents.get(NativeAgentId(candidate.header.id))
+        result.push({ path: candidate.path, status: live === undefined ? 'ready'
+          : this.program.agents.execution(live).status === 'running' ? 'running' : 'idle' })
+      }
+      if (scope === 'descendants') {
+        for (const header of [...children.get(candidate.header.id) ?? []].reverse()) {
+          pending.push({ header, parentDepth: candidate.header.delegationDepth ?? 0,
+            path: [...candidate.path, header.id] })
+        }
+      }
+    }
+    return result
   }
 
   private async observe(
