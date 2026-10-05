@@ -559,6 +559,8 @@
       "@deepseek-ai/dsh-workspace": ["./rsh/Modules/Official/workspace/workspace/src"],
       "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
       "@deepseek-ai/dsh-code-runtime-process-sandbox/native": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/native.ts"],
+      "@deepseek-ai/dsh-mcp-client/native": ["./rsh/Modules/Official/mcp/mcp-client/src/native.ts"],
+      "@deepseek-ai/dsh-mcp-client/types": ["./rsh/Modules/Official/mcp/mcp-client/src/types.ts"],
       "@deepseek-ai/dsh-native-tools/code-output": ["./rsh/Engine/core/native-tools/src/code-output.ts"],
       "@deepseek-ai/dsh-native-tools/json-schema": ["./rsh/Engine/core/native-tools/src/json-schema.ts"],
       "@deepseek-ai/dsh-native-tools/ordered-dispatch": ["./rsh/Engine/core/native-tools/src/ordered-dispatch.ts"],

@@ -493,7 +493,7 @@ describe('resolveReconnectPolicy', () => {
   })
 
   it('rejects unknown keys', () => {
-    expect(() => resolveReconnectPolicy({ jitterRatio: 0.5 } as never, path))
+    expect(() => resolveReconnectPolicy({ jitterRatio: 0.5 }, path))
       .toThrow(/reconnect\.jitterRatio is not a reconnect option/)
   })
 

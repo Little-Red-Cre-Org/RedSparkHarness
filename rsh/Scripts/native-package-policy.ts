@@ -58,6 +58,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/mcp/mcp-client', 'Cordis and native MCP Consumers share connection supervision and protocol tool projection'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
@@ -102,6 +103,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
   ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/preset/agent-presets', [
     '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
     '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
@@ -115,6 +117,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['./types']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
   ['rsh/Engine/core/native-agent', ['./inbox']],
@@ -142,6 +145,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/attachment/attachment/brand', ['host', 'client']],
   ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
+  ['rsh/Modules/Official/mcp/mcp-client/types', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],
