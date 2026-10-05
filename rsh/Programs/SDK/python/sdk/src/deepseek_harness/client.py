@@ -40,6 +40,10 @@ class _SessionCancelResponse(BaseModel):
     cancelled: StrictBool
 
 
+class _SessionSteerResponse(BaseModel):
+    messageId: StrictStr
+
+
 class _SessionForkResponse(BaseModel):
     sessionId: StrictStr
 
@@ -195,6 +199,17 @@ class HarnessClient:
             notification_subscription=notification_subscription,
         )
         return response.messageId
+
+    def session_steer(self, session_id: str, content_blocks: list[JsonObject]) -> str:
+        """Durably queue the active native SDK root's next-step input without interrupting dispatch.
+
+        Idle or unknown Sessions and unsupported profiles reject the request.
+        """
+        result = self.request("session/steer", {"sessionId": session_id, "contentBlocks": content_blocks},
+            response_model=_SessionSteerResponse)
+        if not result.messageId:
+            raise SdkProtocolError("session/steer returned no message id")
+        return result.messageId
 
     def session_cancel(self, session_id: str) -> bool:
         """Cancel an admitted native-sdk turn and await cleanup; other Sessions remain running.
