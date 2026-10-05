@@ -45,6 +45,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
   'rsh/Programs/Web/client/native-session',
+  'rsh/Programs/Web/client/native-application',
   'rsh/Programs/Web/host/native-web-host',
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
@@ -70,6 +71,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
   ['rsh/Programs/Web/api/native-web-session-controller', ['host']],
   ['rsh/Programs/Web/client/native-session', ['client']],
+  ['rsh/Programs/Web/client/native-application', ['client']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
@@ -150,6 +152,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],

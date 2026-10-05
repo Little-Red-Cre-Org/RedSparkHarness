@@ -34,6 +34,9 @@
     },
     {
       "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../client/native-session"
     }
   ]
 }

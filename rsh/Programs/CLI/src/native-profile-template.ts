@@ -11,16 +11,10 @@ const ROOT = 'root'
 export const SHIPPED_NATIVE_PROFILES = ['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const
 
 const NATIVE_WEB_CLIENT_INSTALLATIONS = [
-  { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application' },
+  { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application', config: { maxLiveTextChars: 100000, maxLiveEvents: 100000 } },
   { id: 'renderer', plugin: '@deepseek-ai/dsh-client-ui-renderer' },
-  { id: 'layout', plugin: '@deepseek-ai/dsh-client-ui-layout' },
-  { id: 'sidebar', plugin: '@deepseek-ai/dsh-client-ui-sidebar' },
-  { id: 'brand', plugin: '@deepseek-ai/dsh-client-ui-brand-official' },
-  { id: 'theme', plugin: '@deepseek-ai/dsh-client-ui-theme' },
-  { id: 'locale', plugin: '@deepseek-ai/dsh-client-locale' },
   { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
-  { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session' },
-  { id: 'resources', plugin: '@deepseek-ai/dsh-client-resources' },
+  { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session', config: { maxFollowBufferChars: 1000000 } },
 ] as const
 
 function cliRuntimeRoot(): string {
@@ -49,6 +43,7 @@ export function shippedNativeProfileComposition(
     installations: [
       { id: 'app', plugin: '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
         config: { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
+      { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
@@ -81,7 +76,7 @@ export function shippedNativeProfileComposition(
         id: 'session-controller',
         plugin: '@deepseek-ai/dsh-native-web-session-controller',
         scope: ROOT,
-        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000 },
+        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32 },
       }] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? [{ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT }] : []),
       ...(profile === 'native-tui' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),

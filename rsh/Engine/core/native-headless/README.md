@@ -42,6 +42,8 @@ One-shot teardown attempts writer closure even when an active-owner observer rej
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
 
+Root cancellation closes and drains an already retained epoch even when the initial turn fails or the settlement signal is already aborted. Execution and epoch-cleanup failures are reported together; the original execution failure remains observable.
+
 ## Dev Note
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.

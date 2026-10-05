@@ -8070,6 +8070,18 @@ importers:
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../Modules/Official/attachment/attachment-local
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../Web/client/connection
+      '@deepseek-ai/dsh-client-native-application':
+        specifier: workspace:^
+        version: link:../Web/client/native-application
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../Web/client/native-session
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../Web/client/ui-renderer
       '@deepseek-ai/dsh-code-runtime-process-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/code-runtime-process-sandbox
@@ -8160,6 +8172,12 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
     devDependencies:
       '@agentclientprotocol/sdk':
         specifier: 1.4.0
@@ -8651,6 +8669,9 @@ importers:
 
   rsh/Programs/SDK/packages/native-server:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -8672,6 +8693,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -9284,6 +9308,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-client-native-application':
+        specifier: workspace:^
+        version: link:../../client/native-application
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session
@@ -9912,7 +9939,32 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/util/package-manifest
 
+  rsh/Programs/Web/client/native-application:
+    devDependencies:
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../ui-renderer
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+
   rsh/Programs/Web/client/native-session:
+    dependencies:
+      eventsource-parser:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^

@@ -28,6 +28,8 @@ New conversations accept no positional arguments; `--resume <session-id>` opens 
 
 The shipped profile installs `modelSelection`; its adapter provides `modelDirectory`. `/model` reads advertised models and isolated Provider failures; `/reasoning` reads the selected model's actual efforts. Enter a displayed number to commit the complete choice, or Esc to dismiss. Both require an idle terminal without queued input. Selections compare the observed durable revision under the shared executor's exclusive Session maintenance and persist before affecting the next turn. Cold restore retains the choice. The header shows the selected route and effective effort; input modalities and context capacity come from the actual Provider, with unknown metadata marked explicitly. Custom compositions without both Providers report unavailable controls.
 
+The application declares the shared executor’s optional `modelSelection` service; a configured Provider applies durable selections to subsequent turns.
+
 <a id="implementation"></a>
 ## Implementation
 
@@ -56,6 +58,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 
 <a id="dev-note"></a>
+
 ### Dev Note
 
 <details>

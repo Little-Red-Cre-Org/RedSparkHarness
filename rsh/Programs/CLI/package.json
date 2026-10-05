@@ -60,7 +60,12 @@
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
     "@deepseek-ai/dsh-native-tui": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@deepseek-ai/dsh-client-native-application": "workspace:^",
+    "@deepseek-ai/dsh-client-native-session": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

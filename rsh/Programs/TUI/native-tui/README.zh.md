@@ -28,6 +28,8 @@ kind: "package-reference"
 
 内置 Profile 安装 `modelSelection`，由模型适配器提供 `modelDirectory`。`/model` 读取已公布模型及隔离的 Provider 错误；`/reasoning` 读取当前模型的实际推理强度。输入展示的编号提交完整选择，Esc 关闭菜单。两者均要求终端空闲且没有排队输入。选择通过共享执行器的独占 Session 维护比较已观察的持久 revision，并先持久化，再影响下一轮；冷恢复保留选择。标题显示选定路由和实际推理强度；输入模态与上下文容量来自实际 Provider，未知元数据明确标记。自定义装配缺少任一 Provider 时明确报告控制不可用。
 
+应用声明共享执行器的可选 `modelSelection` 服务；配置的 Provider 会将持久化选择用于后续轮次。
+
 <a id="implementation"></a>
 ## 实现
 

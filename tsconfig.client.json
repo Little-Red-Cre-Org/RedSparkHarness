@@ -82,6 +82,7 @@
     "rsh/Programs/Web/client/*/tests/**/*.host.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Programs/Web/client/native-application" },
     { "path": "./rsh/Modules/Official/interaction/user-questions/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-agent/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-model-execution/tsconfig.client.json" },
