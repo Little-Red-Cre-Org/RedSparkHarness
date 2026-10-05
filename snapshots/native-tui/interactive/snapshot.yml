@@ -1,0 +1,8 @@
+version: 1
+scenario: interactive
+profile: native-tui
+composition: native-terminal-interactive
+recording: authored
+header:
+  class: native-terminal-interactive
+  pin: true

@@ -2,6 +2,8 @@
 
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Programs/TUI/native-tui',
+  'rsh/Programs/TUI/terminal-ui',
   'rsh/Core/identity/anonymous-user-id',
   'rsh/Modules/Official/shell/shell-process-local',
   'rsh/Modules/Official/shell/shell-sandbox-core',
@@ -53,6 +55,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/TUI/native-tui', ['host']],
+  ['rsh/Programs/TUI/terminal-ui', ['host']],
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Modules/Official/shell/shell-process-local', ['host']],
   ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
