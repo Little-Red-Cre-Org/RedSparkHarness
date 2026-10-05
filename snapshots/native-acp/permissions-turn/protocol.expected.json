@@ -1,0 +1,34 @@
+[
+  {
+    "sessionUpdate": "tool_call",
+    "toolCallId": "permission-proof-call",
+    "title": "write_file",
+    "kind": "other",
+    "status": "in_progress",
+    "rawInput": {
+      "path": "permission-proof.txt",
+      "content": "approved\n"
+    }
+  },
+  {
+    "sessionUpdate": "tool_call_update",
+    "toolCallId": "permission-proof-call",
+    "status": "completed",
+    "content": [
+      {
+        "type": "content",
+        "content": {
+          "type": "text",
+          "text": "create: permission-proof.txt"
+        }
+      }
+    ]
+  },
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "content": {
+      "type": "text",
+      "text": "native ACP snapshot reply"
+    }
+  }
+]

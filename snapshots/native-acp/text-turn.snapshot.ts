@@ -15,6 +15,7 @@ import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystem
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-acp/text-turn')
+const permissionScene = join(root, 'snapshots/native-acp/permissions-turn')
 const fixture = join(scene, 'session.v3.jsonl')
 
 it('replays a native ACP turn with exact model input, output and durable Session events', async () => {
@@ -38,7 +39,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
       const messages = payload.messages as readonly { role: string }[]
       const events = permissionTurn && messages.at(-1)?.role !== 'tool'
         ? [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-proof-call', type: 'function',
-          function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved' }) } }] } }] },
+          function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved\n' }) } }] } }] },
           { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
         : [
         { choices: [{ delta: { role: 'assistant', content: reply } }] },
@@ -152,14 +153,19 @@ it('replays a native ACP turn with exact model input, output and durable Session
     }
     const beforePermission = output.length
     permissionTurn = true
+    const permissionFixture = join(permissionScene, 'session.v3.jsonl')
+    const permissionInput = existsSync(permissionFixture) ? parseSessionLog(readFileSync(permissionFixture, 'utf8'))
+      .filter(event => event.type === 'user/message' && event.data.source.kind === 'user').at(-1) : undefined
+    const permissionTask = permissionInput?.type === 'user/message' && permissionInput.data.content[0]?.type === 'text'
+      ? permissionInput.data.content[0].text : 'write permission-proof.txt after one-shot approval'
     expect(await transport.request('session/prompt', { sessionId: created.sessionId,
-      prompt: [{ type: 'text', text: 'write permission-proof.txt after one-shot approval' }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
-    expect(readFileSync(join(workspace, 'permission-proof.txt'), 'utf8')).toBe('approved')
+      prompt: [{ type: 'text', text: permissionTask }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(readFileSync(join(workspace, 'permission-proof.txt'), 'utf8')).toBe(readFileSync(join(permissionScene,
+      'workspace.expected/permission-proof.txt'), 'utf8'))
     expect(requests).toHaveLength(3)
     const permissionLog = readFileSync(join(sessions, String(physical)), 'utf8')
     const decisions = parseSessionLog(permissionLog).filter(event => event.type === 'native-approval/decided')
     expect(decisions).toMatchObject([{ data: { outcome: 'allowed-once' } }])
-    const permissionScene = join(root, 'snapshots/native-acp/permissions-turn')
     const expectations = {
       'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([permissionLog])[0] ?? permissionLog, context, { identityMode: 'preserve' }),
       'protocol.expected.json': JSON.stringify(output.slice(beforePermission).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
