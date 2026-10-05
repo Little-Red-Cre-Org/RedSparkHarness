@@ -38,6 +38,8 @@ dsh --help                          # the launcher's own help
 
 profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。`patchReload: live` 监视 profile 与 home 级 patch 文件，`startup` 则只应用一次。
 
+选择内置 `native-*` profile 会在首次使用时创建原生 profile 文件；已有 profile 保留其配置。
+
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。启动器在导入入口前校验所有选中包的 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。
 
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。

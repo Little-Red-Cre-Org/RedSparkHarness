@@ -827,6 +827,8 @@ flowchart TD
   pkg_agent_instructions --> pkg_fs
   pkg_agent_instructions --> pkg_home_paths
   pkg_agent_instructions --> pkg_llm
+  pkg_agent_instructions --> pkg_native_runtime
+  pkg_agent_instructions --> pkg_native_tools
   pkg_agent_instructions --> pkg_session
   pkg_agent_instructions --> pkg_session_projection
   pkg_agent_instructions --> pkg_tools
@@ -1435,7 +1437,7 @@ flowchart TD
 | [`hooks-codex`](../Modules/Official/hooks/hooks-codex) | `hooks` | [`agent`](../Engine/core/agent), [`hook-protocol`](../Modules/Official/hooks/hook-protocol), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`task-scheduler`](../Modules/Official/automation/task-scheduler) | `automation` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools) |
 | [`command-compact`](../Engine/compaction/command-compact) | `compaction` | [`commands`](../Modules/Official/interaction/commands), [`compaction`](../Engine/compaction/compaction) |
-| [`agent-instructions`](../Engine/context/agent-instructions) | `context` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`home-paths`](../Core/util/home-paths), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
+| [`agent-instructions`](../Engine/context/agent-instructions) | `context` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`home-paths`](../Core/util/home-paths), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`file-reference-local`](../Engine/context/file-reference-local) | `context` | [`agent`](../Engine/core/agent), [`file-reference`](../Engine/context/file-reference), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | `extensions` | [`agent`](../Engine/core/agent), [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools), [`typert-protocol`](../Core/typert/protocol) |
 | [`message-feedback`](../Modules/Official/feedback/message-feedback) | `feedback` | [`brand`](../Core/util/brand), [`command-feedback`](../Modules/Official/feedback/command-feedback), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`typert-protocol`](../Core/typert/protocol) |
