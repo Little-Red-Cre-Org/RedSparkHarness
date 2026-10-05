@@ -58,7 +58,7 @@ const standardReleaseMemberDirectory = new RegExp('^(?:' + [
   'rsh/Modules/Official/[^/]+/[^/]+',
   'rsh/Modules/Community/(?!experimental/)[^/]+/[^/]+',
   'rsh/Compatibility/DSH/[^/]+/[^/]+',
-  'rsh/Programs/(?:ACP/packages|SDK/packages|Web/(?:api|client|host))/[^/]+',
+  'rsh/Programs/(?:TUI|ACP/packages|SDK/packages|Web/(?:api|client|host))/[^/]+',
   'rsh/Programs/(?:CLI|Web/application)',
   'rsh/Tests/test-support/[^/]+',
 ].join('|') + ')$')
@@ -182,6 +182,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
+  '@deepseek-ai/dsh-native-tui': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-terminal-ui': ['lib/presentation.js', 'lib/utilities.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-rsh': ['lib/runtime.js', 'lib/runtime-*.js'],
   // Native filesystem entries share their storage and error implementations
   // across the legacy root and direct native package exports.
@@ -385,6 +387,7 @@ function isDshLibraryDirectory(dir: string): boolean {
     'rsh/Modules/Official/',
     'rsh/Modules/Community/',
     'rsh/Compatibility/DSH/',
+    'rsh/Programs/TUI/',
     'rsh/Programs/ACP/packages/',
     'rsh/Programs/SDK/packages/',
     'rsh/Programs/Web/api/',

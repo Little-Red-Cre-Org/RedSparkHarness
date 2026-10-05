@@ -388,6 +388,10 @@ flowchart TD
     pkg_remote_mock["remote-mock"]
     pkg_session_snapshot["session-snapshot"]
   end
+  subgraph group_TUI["group: TUI"]
+    pkg_native_tui["native-tui"]
+    pkg_terminal_ui["terminal-ui"]
+  end
   subgraph group_typert["group: typert"]
     pkg_typert_generator["typert-generator"]
     pkg_typert_loader["typert-loader"]
@@ -463,6 +467,7 @@ flowchart TD
   pkg_subprocess_local --> pkg_native_runtime
   pkg_subprocess_local --> pkg_subprocess
   pkg_subprocess_local --> pkg_timeout
+  pkg_terminal_ui --> pkg_llm
   pkg_native_agent --> pkg_llm
   pkg_native_agent --> pkg_session
   pkg_skill_badge --> pkg_skill
@@ -1337,6 +1342,7 @@ flowchart TD
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |
 | [`llm-mock-server`](../Tests/test-support/llm-mock-server) | `test-support` | — |
 | [`remote-mock`](../Tests/test-support/remote-mock) | `test-support` | — |
+| [`native-tui`](../Programs/TUI/native-tui) | `TUI` | — |
 | [`typert-generator`](../Core/typert/generator) | `typert` | — |
 | [`typert-protocol`](../Core/typert/protocol) | `typert` | — |
 | [`typert-registry`](../Core/typert/registry) | `typert` | — |
@@ -1369,6 +1375,7 @@ flowchart TD
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
 | [`sandbox-local`](../Modules/Official/sandbox/sandbox-local) | `sandbox` | [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
+| [`terminal-ui`](../Programs/TUI/terminal-ui) | `TUI` | [`llm`](../Engine/llm/llm) |
 | [`native-agent`](../Engine/core/native-agent) | `core` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |
 | [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
