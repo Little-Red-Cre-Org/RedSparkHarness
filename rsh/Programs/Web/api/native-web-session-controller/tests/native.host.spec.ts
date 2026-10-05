@@ -9,6 +9,9 @@ import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/na
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
+import { plugin as modelSelection } from '@deepseek-ai/dsh-native-model-selection/native'
+import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
 import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
@@ -33,29 +36,37 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
   const cleanup = new Promise<void>((resolve) => { releaseCleanup = resolve })
   const model: NativePlugin = {
-    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: [], provides: ['model'],
-    resolve: () => (context) => { context.provide('model', {
-      async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
-        requests.push(request)
-        if (requests.length > 2) {
-          const signal = request.signal
-          if (signal === undefined) throw new Error('missing model cancellation')
-          await new Promise<void>((resolve) => {
-            if (signal.aborted) resolve()
-            else signal.addEventListener('abort', () => { resolve() }, { once: true })
-          })
-          modelAborted()
-          await cleanup
-          throw signal.reason
-        }
-        const text = requests.length === 1 ? 'first answer' : 'resumed answer'
-        yield { type: 'block-start', index: 0, blockType: 'text' }
-        yield { type: 'text-delta', index: 0, text }
-        if (requests.length === 1) await firstContinue.promise
-        yield { type: 'block-end', index: 0, block: { type: 'text', text } }
-        yield { type: 'finish', reason: { kind: 'stop' } }
-      },
-    }) },
+    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets'], provides: ['model', 'modelDirectory'],
+    resolve: () => (context) => {
+      for (const id of ['standard', 'alternate']) context.own(context.require('agentPresets').register({ id, name: id, scope }))
+      const reasoning = { efforts: [{ id: ReasoningEffortId('high'), name: 'High' }] }
+      context.provide('modelDirectory', { providers: () => [{ id: 'fixture', name: 'Fixture' }],
+        resolve: async (provider, id) => ({ provider, id, name: id, reasoning }),
+        catalog: async defaults => ({ default: defaults, routableProviders: ['fixture'], failures: [], groups: [{
+          id: 'fixture', name: 'Fixture', models: [{ id: 'chosen', name: 'Chosen', reasoning }],
+        }] }) })
+      context.provide('model', {
+        async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
+          requests.push(request)
+          if (requests.length > 2) {
+            const signal = request.signal
+            if (signal === undefined) throw new Error('missing model cancellation')
+            await new Promise<void>((resolve) => {
+              if (signal.aborted) resolve()
+              else signal.addEventListener('abort', () => { resolve() }, { once: true })
+            })
+            modelAborted()
+            await cleanup
+            throw signal.reason
+          }
+          const text = requests.length === 1 ? 'first answer' : 'resumed answer'
+          yield { type: 'block-start', index: 0, blockType: 'text' }
+          yield { type: 'text-delta', index: 0, text }
+          if (requests.length === 1) await firstContinue.promise
+          yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        },
+      }) },
   }
   const carrier: NativePlugin = {
     apiVersion: 1, name: 'fixture-carrier', targets: ['host'], requires: [], provides: ['hostConnection'],
@@ -73,7 +84,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 } },
-    ...[agents, execution, modelExecution, model, carrier].map(plugin => ({ plugin, scope, config: undefined })),
+    ...[agents, execution, modelExecution, modelSelection, model, carrier].map(plugin => ({ plugin, scope, config: undefined })),
+    { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
   ], 'host'))
@@ -99,6 +111,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
     expect((await client.list()).map(header => header.id)).toEqual([sessionId])
+    expect((await client.modelControls()).catalog?.groups[0]?.models[0]?.id).toBe('chosen')
+    await conversation.selectPreset('alternate')
+    await conversation.selectModel({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
+    await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen' }, expectedRevision: null })).rejects.toThrow('stale selection revision')
+    const selectedEvent = (await client.history(sessionId)).events.findLast(event => event.type === 'model/selection')
+    expect(selectedEvent?.data).toEqual({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
+    await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'unknown' }, expectedRevision: selectedEvent!.seq })).rejects.toThrow()
+    await conversation.select(sessionId)
     const first = conversation.send('first input')
     await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
     expect(conversation.getSnapshot()).toMatchObject({ state: 'sending', liveTruncated: true })
@@ -110,6 +130,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
+    expect(requests[0]).toMatchObject({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
+    await expect(client.selectPreset({ id: sessionId, preset: 'standard', expectedRevision: null })).rejects.toThrow()
+    await conversation.select(sessionId)
     expect(conversation.getSnapshot().liveText).toBeUndefined()
     expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     await conversation.select(sessionId)
@@ -162,4 +185,8 @@ it.each([
     Object.assign(reply.events[0]!, { ignorable: true })
     expect((await client.history(header.id as import('@deepseek-ai/dsh-session/types').SessionId)).events[0]?.type).toBe('future/required')
   }
+  rpc.call = vi.fn(async () => ({ ok: true, value: event.type === 'future/required'
+    ? { catalog: null, canSelectModel: 'true', presets: [] }
+    : { catalog: null, canSelectModel: true, presets: [{ id: '', name: 'invalid' }] } }))
+  await expect(client.modelControls()).rejects.toThrow()
 })

@@ -71,6 +71,7 @@ export function shippedNativeProfileComposition(
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live' }
           : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 },
       },
+      ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{
         id: 'session-controller',
         plugin: '@deepseek-ai/dsh-native-web-session-controller',

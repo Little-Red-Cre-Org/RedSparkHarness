@@ -35,7 +35,7 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
 const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
-  '@deepseek-ai/dsh-client-native-session': ['eventsource-parser'],
+  '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Legacy Host peers omitted by the separately published native entry. */
@@ -73,6 +73,8 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
+  '@deepseek-ai/dsh-native-model-selection/types': ['foldNativeModelSelectionState'],
+  '@deepseek-ai/dsh-agent-presets/selection': ['foldNativeAgentPresetFacts'],
   '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],

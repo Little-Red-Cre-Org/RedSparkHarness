@@ -6,6 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { NativeConversationController } from './controller.ts'
+import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 
 type Translate = (key: ConversationLocaleKey) => string
@@ -43,6 +44,7 @@ function Conversation({ controller, t }: { controller: NativeConversationControl
     <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
     {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
     {snapshot.selected === undefined ? <p>{t('empty')}</p> : <>
+      <ModelControls controller={controller} t={t} />
       <section aria-label={t('facts')}>
         {snapshot.events.map(event => <Message key={event.seq} event={event} t={t} />)}
       </section>

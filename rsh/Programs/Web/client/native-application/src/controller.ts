@@ -1,9 +1,14 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
 import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
+import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Settled durable history and the Client's outstanding operation. */
 export interface ConversationSnapshot {
+  readonly header?: SessionHeader | undefined
+  readonly modelControls?: NativeModelControls | undefined
   readonly sessions: readonly SessionHeader[]
   readonly selected?: SessionId
   readonly events: readonly SessionEvent[]
@@ -73,7 +78,7 @@ export class NativeConversationController {
 
   private async restore(id: SessionId): Promise<void> {
     const history = await this.client.history(id, this.lifetime.signal)
-    this.publish({ selected: id, events: history.events })
+    this.publish({ selected: id, header: history.header, events: history.events })
   }
 
   /** Read the persisted index without automatically resuming a Session.
@@ -81,7 +86,10 @@ export class NativeConversationController {
    */
   load(): Promise<void> {
     return this.run(async () => {
-      this.publish({ sessions: await this.client.list(this.lifetime.signal), error: undefined })
+      const [sessions, modelControls] = await Promise.all([
+        this.client.list(this.lifetime.signal), this.client.modelControls(this.lifetime.signal),
+      ])
+      this.publish({ sessions, modelControls, error: undefined })
     })
   }
 
@@ -106,6 +114,49 @@ export class NativeConversationController {
     this.assertReady()
     this.publish({ state: 'loading', error: undefined })
     return this.run(() => this.restore(id))
+  }
+
+  /** Refresh provider-owned menus without changing Session intent.
+   * @returns completion after the current Host catalog and standing roster reply.
+   */
+  refreshModelControls(): Promise<void> {
+    this.assertReady()
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => { this.publish({ modelControls: await this.client.modelControls(this.lifetime.signal) }) })
+  }
+
+  /** Persist a complete model and optional effort against the displayed intent revision.
+   * @param selected - provider-owned route and explicit effort, if chosen.
+   * @returns completion after durable selection and history refresh, including stale conflicts.
+   */
+  selectModel(selected: ModelSelection): Promise<void> {
+    this.assertReady()
+    const id = this.snapshot.selected
+    if (id === undefined) throw new Error('native conversation: select a Session')
+    const { revision } = foldNativeModelSelectionState(this.snapshot.events)
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      try { await this.client.selectModel(id, { selected, expectedRevision: revision }, this.lifetime.signal) }
+      finally { if (!this.lifetime.signal.aborted) await this.restore(id) }
+    })
+  }
+
+  /** Select a registered composition before the first turn locks the root epoch.
+   * @param preset - identifier advertised by the Host's standing registry.
+   * @returns completion after Program-owned Agent replacement and durable history refresh.
+   */
+  selectPreset(preset: string): Promise<void> {
+    this.assertReady()
+    const id = this.snapshot.selected
+    const header = this.snapshot.header
+    if (id === undefined || header === undefined) throw new Error('native conversation: select a Session')
+    const { revision, locked } = foldNativeAgentPresetFacts(header, this.snapshot.events)
+    if (locked) throw new Error('native conversation: preset is locked by the first turn')
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      try { await this.client.selectPreset({ id, preset, expectedRevision: revision }, this.lifetime.signal) }
+      finally { if (!this.lifetime.signal.aborted) await this.restore(id) }
+    })
   }
 
   /** Send human text through the Host's sole turn executor.

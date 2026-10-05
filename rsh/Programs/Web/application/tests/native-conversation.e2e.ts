@@ -30,6 +30,7 @@ it('creates, submits and restores the built native conversation through the ship
     ['native-web-session-controller', 'Programs/Web/api/native-web-session-controller'],
     ['credentials-local', 'Modules/Official/credentials/credentials-local'],
     ['native-agent', 'Engine/core/native-agent'],
+    ['agent-presets', 'Engine/preset/agent-presets'],
     ['native-model-execution', 'Engine/core/native-model-execution'],
     ['fs-local', 'Modules/Official/fs/fs-local'],
     ['session-persistence-jsonl', 'Engine/session/session-persistence-jsonl'],
@@ -42,11 +43,17 @@ it('creates, submits and restores the built native conversation through the ship
   mkdirSync(fixtureModel)
   writeFileSync(join(fixtureModel, 'package.json'), JSON.stringify({
     name: 'native-web-fixture-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection'], optional: [], provides: ['model'] } },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection', 'agentPresets'], optional: [], provides: ['model', 'modelDirectory'] } },
   }))
   writeFileSync(join(fixtureModel, 'native.mjs'), `export const plugin = {
-    apiVersion: 1, name: 'native-web-fixture-model', targets: ['host'], requires: ['hostConnection'], provides: ['model'],
+    apiVersion: 1, name: 'native-web-fixture-model', targets: ['host'], requires: ['hostConnection', 'agentPresets'], provides: ['model', 'modelDirectory'],
     resolve: () => context => {
+      for (const [id, name] of [['standard', 'Standard'], ['alternate', 'Alternate']]) context.own(context.require('agentPresets').register({ id, name, scope: context.scope }));
+      const reasoning = { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' };
+      context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Fixture' }],
+        resolve: async (provider, id) => ({ provider, id, name: id, reasoning }),
+        catalog: async defaults => ({ default: defaults, routableProviders: ['mock'], failures: [], groups: [{ id: 'mock', name: 'Fixture',
+          models: [{ id: 'fixture', name: 'Initial' }, { id: 'chosen', name: 'Chosen', reasoning }] }] }) });
       let resume; const continued = new Promise(resolve => { resume = resolve });
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/release', methods: ['POST'], requestBody: 'buffered',
         fetch: async () => { resume(); return new Response('released') } }));
@@ -71,12 +78,13 @@ it('creates, submits and restores the built native conversation through the ship
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
       maxSteps: 1, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 }],
     ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
+    ['presets', 'agent-presets', { default: 'standard' }],
     ['fs', 'fs-local', { cwd: workspace }], ['storage', 'session-persistence-jsonl', { root: sessionRoot, compression: 'none' }],
     ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
@@ -108,6 +116,18 @@ it('creates, submits and restores the built native conversation through the ship
       throw new Error(await page.locator('#root').innerText())
     }
     await page.getByRole('button', { name: 'New Session', exact: true }).click()
+    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await page.getByRole('combobox', { name: 'Preset', exact: true }).selectOption('alternate')
+    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    const selectedRoute = JSON.stringify(['mock', 'chosen'])
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(selectedRoute)
+    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).selectOption('high')
+    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    const controlsText = (await page.getByRole('group', { name: 'Model and preset', exact: true }).innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
+    const controlsPath = join(scenario, 'controls.expected.md')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
+    else expect(controlsText).toBe(readFileSync(controlsPath, 'utf8'))
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill(text)
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     const live = page.getByRole('article', { name: 'Live assistant output', exact: true })
@@ -131,6 +151,10 @@ it('creates, submits and restores the built native conversation through the ship
     if (selectedId === null) throw new Error('native Web omitted stored Session')
     await page.getByRole('combobox', { name: 'Sessions' }).selectOption(selectedId)
     await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    expect(await page.getByRole('combobox', { name: 'Model', exact: true }).inputValue()).toBe(selectedRoute)
+    expect(await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).inputValue()).toBe('high')
+    expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).inputValue()).toBe('alternate')
+    expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).isDisabled()).toBe(true)
     expect((await page.locator('section').innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(transcript)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     {

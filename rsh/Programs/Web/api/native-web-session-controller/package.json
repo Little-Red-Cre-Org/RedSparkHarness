@@ -48,6 +48,7 @@
         "codeRuntime",
         "timeContext",
         "modelSelection",
+        "modelDirectory",
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions"
@@ -74,7 +75,10 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
