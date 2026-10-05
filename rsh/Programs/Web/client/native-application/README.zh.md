@@ -35,6 +35,9 @@ React 与 Session 消息投影通过 peer 依赖共享应用实例；Session Con
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 
 <a id="invariants"></a>
+
+待答工具审批提供允许一次与拒绝操作。问题卡保留标题、详情、选项、多选及自定义文本。提交失败保留待答请求；取消禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
+
 ## 不变量
 
 视图读取选定 Host Consumer，不拥有独立执行观察，因此不发布不变量安装器。
@@ -68,4 +71,4 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 丰富工具卡片及其他模型片段呈现仍属于独立工作。
-- 附件上传、审批与问题回复、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。
+- 附件上传、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。

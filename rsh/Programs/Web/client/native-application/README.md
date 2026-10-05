@@ -33,6 +33,8 @@ React and Session message projection use shared application peer instances; the 
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
 
+Pending tool approvals offer allow-once and reject actions. Question cards preserve headings, detail, choices, multiple selection and custom text. Submission failures retain the request; cancellation disables input and keeps execution busy until Host settlement. Reload restores durable decision and tool-result facts, not obsolete pending presentations.
+
 ## Invariants
 
 The view reads the selected Host Consumer and owns no independent execution observations, so it publishes no invariant installer.
@@ -63,4 +65,4 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Rich tool cards and additional model chunk presentations remain separate work.
-- Attachment upload, approval and question responses, full Sidebar, layout and Settings remain separate native Client migrations.
+- Attachment upload, full Sidebar, layout and Settings remain separate native Client migrations.

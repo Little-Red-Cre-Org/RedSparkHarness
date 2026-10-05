@@ -7,6 +7,7 @@ import type { AskUserQuestionAnswer, AskUserQuestionItem } from './protocol.ts'
 import { UserQuestionError } from './question-error.ts'
 
 export * from './protocol.ts'
+export { parseUserQuestionAnswer } from './answer.ts'
 export { UserQuestionError } from './question-error.ts'
 
 /** An exact executing owner asking the human through an application Provider. */

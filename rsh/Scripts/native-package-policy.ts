@@ -158,7 +158,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
-  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
   ['rsh/Programs/CLI', ['./native-profile']],

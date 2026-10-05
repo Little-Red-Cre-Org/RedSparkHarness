@@ -41,7 +41,8 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
   const service = new NativeWebSessionService(executor as NativeHeadlessApplication,
     {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations,
     { cwd: '.', provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
-      maxPendingRequests: 1, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 1, maxFollowers: 1 },
+      maxPendingRequests: 1, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 1,
+      maxFollowers: 1, maxPendingHumanRequests: 2 },
     new AbortController().signal)
   try {
     const start = await service.handle('session/start', { sessionId: 'overflow-session', text: 'input', resume: true, follow: true }, new AbortController().signal)

@@ -51,7 +51,8 @@
         "modelDirectory",
         "agentPresets",
         "workspaceRegistry",
-        "agentInstructions"
+        "agentInstructions",
+        "userQuestions"
       ],
       "provides": [
         "nativeWebSession",
@@ -78,7 +79,9 @@
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^"
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-user-questions": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

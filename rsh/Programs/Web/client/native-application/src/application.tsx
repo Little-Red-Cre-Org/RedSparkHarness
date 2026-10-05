@@ -6,6 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { NativeConversationController } from './controller.ts'
+import { HumanInteraction } from './human.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 
@@ -55,6 +56,8 @@ function Conversation({ controller, t }: { controller: NativeConversationControl
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
         {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
       </article>}
+      {snapshot.human === undefined ? null : <HumanInteraction key={snapshot.human.id} controller={controller} prompt={snapshot.human}
+        disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} />}
       <form onSubmit={(event) => {
         event.preventDefault()
         if (!ready || draft.trim().length === 0) return

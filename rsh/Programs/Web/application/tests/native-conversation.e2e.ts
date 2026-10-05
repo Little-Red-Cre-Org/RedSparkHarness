@@ -30,6 +30,8 @@ it('creates, submits and restores the built native conversation through the ship
     ['native-web-session-controller', 'Programs/Web/api/native-web-session-controller'],
     ['credentials-local', 'Modules/Official/credentials/credentials-local'],
     ['native-agent', 'Engine/core/native-agent'],
+    ['native-tools', 'Engine/core/native-tools'],
+    ['native-approval', 'Modules/Official/interaction/native-approval'],
     ['agent-presets', 'Engine/preset/agent-presets'],
     ['native-model-execution', 'Engine/core/native-model-execution'],
     ['fs-local', 'Modules/Official/fs/fs-local'],
@@ -43,12 +45,15 @@ it('creates, submits and restores the built native conversation through the ship
   mkdirSync(fixtureModel)
   writeFileSync(join(fixtureModel, 'package.json'), JSON.stringify({
     name: 'native-web-fixture-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection', 'agentPresets'], optional: [], provides: ['model', 'modelDirectory'] } },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection', 'agentPresets', 'tools'], optional: [], provides: ['model', 'modelDirectory'] } },
   }))
   writeFileSync(join(fixtureModel, 'native.mjs'), `export const plugin = {
-    apiVersion: 1, name: 'native-web-fixture-model', targets: ['host'], requires: ['hostConnection', 'agentPresets'], provides: ['model', 'modelDirectory'],
+    apiVersion: 1, name: 'native-web-fixture-model', targets: ['host'], requires: ['hostConnection', 'agentPresets', 'tools'], provides: ['model', 'modelDirectory'],
     resolve: () => context => {
       for (const [id, name] of [['standard', 'Standard'], ['alternate', 'Alternate']]) context.own(context.require('agentPresets').register({ id, name, scope: context.scope }));
+      context.effect(context.require('tools').register({ schema: { name: 'guarded', description: 'Guarded fixture.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } }, approval: { reason: 'Protect this action.' },
+        execute: async () => ({ isError: false, content: [{ type: 'text', text: 'guarded allowed' }] }) }, context.scope));
       const reasoning = { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' };
       context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Fixture' }],
         resolve: async (provider, id) => ({ provider, id, name: id, reasoning }),
@@ -58,7 +63,18 @@ it('creates, submits and restores the built native conversation through the ship
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/release', methods: ['POST'], requestBody: 'buffered',
         fetch: async () => { resume(); return new Response('released') } }));
       context.own(() => { resume() });
+      let step = 0;
       context.provide('model', { async *stream(request) {
+      if (step < 3) {
+        const current = step++;
+        const name = current < 2 ? 'guarded' : 'ask_user_question';
+        const args = current < 2 ? {} : { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] };
+        const id = 'human-' + current;
+        yield { type: 'block-start', index: 0, blockType: 'tool-call' };
+        yield { type: 'tool-call-delta', index: 0, id, name, argumentsDelta: JSON.stringify(args) };
+        yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name, arguments: JSON.stringify(args) } };
+        yield { type: 'finish', reason: { kind: 'tool-calls' } }; return;
+      }
       const text = 'Native browser answer.';
       yield { type: 'block-start', index: 0, blockType: 'text' };
       yield { type: 'text-delta', index: 0, text };
@@ -76,7 +92,9 @@ it('creates, submits and restores the built native conversation through the ship
   const rows = [
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
-      maxSteps: 1, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 }],
+      maxSteps: 4, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
+      maxFollowers: 2, maxPendingHumanRequests: 2 }],
+    ['tools', 'native-tools'], ['approval', 'native-approval'],
     ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
     ['presets', 'agent-presets', { default: 'standard' }],
     ['fs', 'fs-local', { cwd: workspace }], ['storage', 'session-persistence-jsonl', { root: sessionRoot, compression: 'none' }],
@@ -84,7 +102,7 @@ it('creates, submits and restores the built native conversation through the ship
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
@@ -130,6 +148,23 @@ it('creates, submits and restores the built native conversation through the ship
     else expect(controlsText).toBe(readFileSync(controlsPath, 'utf8'))
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill(text)
     await page.getByRole('button', { name: 'Send', exact: true }).click()
+    const humanCards: string[] = []
+    const approvalCard = page.getByRole('region', { name: 'Tool approval', exact: true })
+    await page.getByRole('button', { name: 'Allow once', exact: true }).waitFor()
+    humanCards.push(await approvalCard.innerText())
+    await page.getByRole('button', { name: 'Allow once', exact: true }).click()
+    await page.getByRole('button', { name: 'Reject', exact: true }).waitFor()
+    humanCards.push(await approvalCard.innerText())
+    await page.getByRole('button', { name: 'Reject', exact: true }).click()
+    const questions = page.getByRole('form', { name: 'Pending questions', exact: true })
+    await questions.waitFor()
+    humanCards.push(await questions.innerText())
+    await questions.getByRole('radio', { name: 'Two', exact: true }).check()
+    await questions.getByRole('button', { name: 'Submit answer', exact: true }).click()
+    const humanText = humanCards.join('\n\n').replace(/\r\n/gu, '\n').trimEnd() + '\n'
+    const humanPath = join(scenario, 'human.expected.md')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(humanPath, humanText)
+    else expect(humanText).toBe(readFileSync(humanPath, 'utf8'))
     const live = page.getByRole('article', { name: 'Live assistant output', exact: true })
     await live.getByText('Native browser answer.', { exact: true }).waitFor()
     expect(await page.getByRole('status').innerText()).toBe('Running…')
@@ -140,7 +175,7 @@ it('creates, submits and restores the built native conversation through the ship
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/release', { method: 'POST' }); if (!response.ok) throw new Error('fixture release failed') })
     await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
     expect(await live.count()).toBe(0)
-    const transcript = (await page.locator('section').innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
+    const transcript = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     expect(transcript).toContain('Native browser answer.')
     const transcriptPath = join(scenario, 'conversation.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(transcriptPath, transcript)

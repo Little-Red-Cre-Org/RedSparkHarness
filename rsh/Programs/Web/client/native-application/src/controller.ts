@@ -1,5 +1,6 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
 import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
 import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
 import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
@@ -9,6 +10,8 @@ import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-se
 export interface ConversationSnapshot {
   readonly header?: SessionHeader | undefined
   readonly modelControls?: NativeModelControls | undefined
+  readonly human?: NativeWebHumanPrompt | undefined
+  readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly SessionHeader[]
   readonly selected?: SessionId
   readonly events: readonly SessionEvent[]
@@ -179,14 +182,16 @@ export class NativeConversationController {
         }
       } finally {
         this.turn = undefined
-        this.publish({ liveText: undefined, liveTruncated: false })
+        this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
         if (!this.lifetime.signal.aborted) await this.restore(id)
       }
     })
   }
 
   private observe(frame: NativeSessionFollowFrame): void {
-    if (frame.type === 'event') {
+    if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
+    else if (frame.type === 'human-removed') { if (this.snapshot.human?.id === frame.id) this.publish({ human: undefined, answeringHuman: false }) }
+    else if (frame.type === 'event') {
       const last = this.snapshot.events.at(-1)?.seq
       if (last !== undefined && frame.event.seq <= last) return
       if (last !== undefined && frame.event.seq !== last + 1) throw new Error('native conversation: live history sequence gap')
@@ -200,6 +205,22 @@ export class NativeConversationController {
       this.publish({ liveText: text.slice(-this.limits.maxLiveTextChars),
         liveTruncated: this.snapshot.liveTruncated === true || text.length > this.limits.maxLiveTextChars })
     }
+  }
+
+  /** Answer only the presentation the renderer observed, without changing turn readiness.
+   * @param prompt - exact displayed presentation.
+   * @param answer - human's structured choice.
+   * @returns acknowledgement; failures retain the request for correction.
+   */
+  answerHuman(prompt: NativeWebHumanPrompt, answer: NativeWebHumanAnswer): Promise<void> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.human !== prompt || this.snapshot.answeringHuman || this.snapshot.state !== 'sending') throw new Error('native conversation: no matching unanswered presentation')
+    this.publish({ answeringHuman: true, error: undefined })
+    const work = this.client.answerHuman(id, prompt.id, answer, this.lifetime.signal).catch((error: unknown) => {
+      this.publish({ error: error instanceof Error ? error.message : String(error) })
+    }).finally(() => { this.pending.delete(work); this.publish({ answeringHuman: false }) })
+    this.pending.add(work)
+    return work
   }
 
   /** Request cancellation; readiness is published only by the settled send operation. */

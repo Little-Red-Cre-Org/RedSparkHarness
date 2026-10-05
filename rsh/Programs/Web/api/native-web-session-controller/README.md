@@ -22,19 +22,22 @@ This Host Program contributes authenticated Session operations to the shared Con
 <a id="reference"></a>
 ## Reference
 
-Configuration includes the native headless workspace, model, prompt and budgets plus required positive integer limits: maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes and maxFollowers. History rejects overflow instead of truncating it. Ordinary requests and cancellation/status requests have separate bounded admission so a full prompt queue does not prevent cancellation.
+Configuration includes the native headless workspace, model, prompt and budgets plus required positive integer limits: maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers and maxPendingHumanRequests. History rejects overflow instead of truncating it. Ordinary requests and cancellation/status requests have separate bounded admission so a full prompt queue does not prevent cancellation.
 
 The Client Consumer owns list, blank creation, history, explicit fresh/resumed prompts, cancellation and status. Prompt success follows durable settlement; exact execution cancellation returns exitCode 130 after draining. A Session accepts one pending browser turn. Busy submissions reject instead of silently entering another queue. Live history uses the exact active writer; cold history closes its read handle before responding. Installation teardown withdraws routes, cancels requests and drains the executor.
 
 Optional modelDirectory advertises model metadata and provider failures; modelSelection validates and records intent through the sole Session maintenance owner. Selection requests carry an exact durable revision and reject pending turns. Retained writers reserve idle Agent maintenance before directory resolution and durable selection; cold operations retain their existing maintenance admission. Optional agentPresets advertises installed compositions; rootExecution applies blank-root selection and awaits epoch cleanup. Missing selection Providers fail explicit mutation requests rather than substituting defaults.
 
-Attachments, questions, approvals, directory policies, title and fork controls are separate Consumers. This package does not provide those operations.
+Attachments, directory policies, title and fork controls remain separate Consumers.
 
 Optional following delivers accepted durable events and transient assistant text through authenticated POST `/api/native-session/follow`. Each admission permits one follower with its exact Session and admission identity. The unread SSE queue is byte-bounded; overflow cancels execution and fails settlement without masking an execution or cleanup failure. Disconnect releases the follower and its queue; turn ownership remains with the executor until settlement. Installation shutdown closes followers before draining execution.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 
 <a id="invariants"></a>
+
+Optional approval and userQuestions Providers receive Web answerers only for exact active root turns owned by this Program. The executor captures that exact application owner before presentation or answer; matching Session ids alone never admit another Program's request. Human presentations are transient FIFO requests per turn with a global maxPendingHumanRequests limit. Answers require the authenticated Session, admission and presentation identities; stale or cancelled answers refuse. Existing Providers and tool consumers retain decision audit and result persistence. Teardown withdraws pending input before draining execution.
+
 ## Invariants
 
 The selected executor owns writer exclusivity and Agent identity. This Program owns only transport admission; it introduces no independent Session state requiring a runtime invariant.
@@ -69,4 +72,4 @@ This package does not alter the history prefix; a new user message extends the r
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Full product UI, attachments, approvals and question interactions are not provided by this package.
+- Full product UI and attachments are not provided by this package.
