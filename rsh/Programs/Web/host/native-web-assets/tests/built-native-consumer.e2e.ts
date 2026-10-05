@@ -1,6 +1,6 @@
 /** A packed-style consumer imports the built asset handler without Cordis installed. */
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +17,9 @@ it('loads the built native asset routes in an installed consumer without Cordis'
     mkdirSync(join(frontend, 'dist'), { recursive: true })
     copyFileSync(join(PACKAGE_ROOT, 'package.json'), join(installed, 'package.json'))
     copyFileSync(join(PACKAGE_ROOT, 'lib', 'index.js'), join(installed, 'lib', 'index.js'))
+    for (const file of readdirSync(join(PACKAGE_ROOT, 'lib')).filter(name => /^shared-.*\.js$/u.test(name))) {
+      copyFileSync(join(PACKAGE_ROOT, 'lib', file), join(installed, 'lib', file))
+    }
     writeFileSync(join(home, 'package.json'), '{"type":"module"}\n')
     writeFileSync(join(frontend, 'package.json'), JSON.stringify({
       name: '@deepseek-ai/dsh-web-frontend', exports: { './dist/*': './dist/*' },

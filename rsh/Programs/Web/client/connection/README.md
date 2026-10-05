@@ -29,6 +29,8 @@ The browser uses HTTP POST for Remote unary calls. API Gateway owns the `/api/re
 
 The `./native` browser entry installs the same Connection implementation as the Cordis Client adapter under the native `clientConnection` service. It accepts an empty configuration, selects the page's supplied RPC carrier or the Web transport, and publishes observable generation and recovery state. A native composition still needs a Host API route and a generation source before it can receive live Session events. Native Host disposal aborts the connection loop and waits for its generation source to settle; the adapter does not mount the Host `/api` route or browser authentication.
 
+The `./native-host` entry exposes one bounded request owner for authenticated Host Consumers. A Consumer supplies its request limit, admits a callback before acquiring resources, combines carrier and installation cancellation, and awaits accepted callbacks at shutdown. Capacity and closed-admission failures are explicit; the Consumer classifies its own RPC errors and retains independent cleanup failures. The Web and Desktop carriers can publish the same `hostConnection` service without owning Session or Agent state.
+
 -----
 
 <a id="browser-authentication-and-request-trust"></a>
