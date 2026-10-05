@@ -202,3 +202,5 @@ session.deriveMessages()         // the derived model history
 无。
 
 </details>
+
+`./event-validation` 为浏览器提供当前 Session 事件解析器，复用 seed 信封与消息验证。未知类型只有显式标记 `ignorable: true` 才能通过；不引入 Node 或 Cordis 依赖。

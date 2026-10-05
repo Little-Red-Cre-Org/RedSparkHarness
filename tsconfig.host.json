@@ -8,6 +8,7 @@
     "rewriteRelativeImportExtensions": false
   },
   "include": [
+    "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
     "rsh/Programs/Web/application/tests/scaffold.ts",
     "rsh/Programs/Web/application/tests/scaffold-generation.spec.ts",
     "rsh/Programs/Web/application/tests/default-model.e2e.ts",
@@ -107,6 +108,7 @@
     "rsh/Programs/Web/application/stress-tests/reasoning-chunks.stress.ts",
     "rsh/Programs/CLI/tests/**/*.ts",
     "rsh/Programs/DesktopHost/tests/**/*.ts",
+    "snapshots/web/native-session-core.snapshot.ts",
     "snapshots/native-headless/native-headless.snapshot.ts",
     "snapshots/native-headless/tool-results.snapshot.ts",
     "snapshots/native-headless/human-question.snapshot.ts",
@@ -396,6 +398,8 @@
     { "path": "./rsh/Programs/Web/host/directory-picker-native" },
     { "path": "./rsh/Programs/Web/host/frontend-static" },
     { "path": "./rsh/Programs/Web/host/native-web-assets" },
+    { "path": "./rsh/Programs/Web/client/native-session" },
+    { "path": "./rsh/Programs/Web/api/native-web-session-controller" },
     { "path": "./rsh/Programs/Web/host/native-web-host" },
     { "path": "./rsh/Programs/Web/host/open-in-app" },
     { "path": "./rsh/Programs/Web/host/plugin-inventory" },

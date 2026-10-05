@@ -8069,6 +8069,15 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../Engine/core/native-tools
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-web-host':
+        specifier: workspace:^
+        version: link:../Web/host/native-web-host
+      '@deepseek-ai/dsh-native-web-session-controller':
+        specifier: workspace:^
+        version: link:../Web/api/native-web-session-controller
       '@deepseek-ai/dsh-sandbox-local':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-local
@@ -8084,6 +8093,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-web-frontend':
+        specifier: workspace:^
+        version: link:../Web/application
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -8317,9 +8329,6 @@ importers:
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../Engine/preset/persona
@@ -9113,6 +9122,49 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
 
+  rsh/Programs/Web/api/native-web-session-controller:
+    dependencies:
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence
+    devDependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../../client/native-session
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-native-web-assets':
+        specifier: workspace:^
+        version: link:../../host/native-web-assets
+
   rsh/Programs/Web/api/remotes:
     dependencies:
       '@deepseek-ai/dsh-deque':
@@ -9727,6 +9779,21 @@ importers:
       '@deepseek-ai/dsh-package-manifest':
         specifier: workspace:^
         version: link:../../../../Core/util/package-manifest
+
+  rsh/Programs/Web/client/native-session:
+    devDependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../connection
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
 
   rsh/Programs/Web/client/resources:
     devDependencies:
