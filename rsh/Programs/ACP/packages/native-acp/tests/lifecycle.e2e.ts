@@ -55,10 +55,11 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     const prompt = transport.request('session/prompt', params, signal)
     void prompt.catch(() => {}) // The later assertion owns failures; teardown must not create an unhandled rejection.
     await entered.promise
-    expect(requests[0]).toMatchObject({ messages: expect.arrayContaining([{ role: 'user', content: expect.arrayContaining([
-      { type: 'text', text: 'wait until cancelled' },
-      { type: 'image_url', image_url: { url: expect.stringMatching(/^data:image\/png;base64,/) } },
-    ]) }]) })
+    const sent = requests[0] as { messages: readonly { role: string; content: readonly Record<string, unknown>[] }[] }
+    const user = sent.messages.find(message => message.role === 'user')
+    expect(user?.content[0]).toEqual({ type: 'text', text: 'wait until cancelled' })
+    const imagePart = user?.content.find(part => part.type === 'image_url')
+    expect(imagePart?.image_url).toHaveProperty('url', expect.stringMatching(/^data:image\/png;base64,/))
     await expect(transport.request('session/prompt', params, signal)).rejects.toThrow('session prompt is already running')
     transport.notify('session/cancel', { sessionId: created.sessionId })
     await transport.flush()
