@@ -1,7 +1,7 @@
 /** Client-safe payloads and event declarations owned by the agent-preset domain. */
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-session-projection/types'
-import type {} from '@deepseek-ai/dsh-typert-protocol'
+import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import type {} from '@deepseek-ai/cordis'
 import type { PresetTrust } from './preset.ts'
 
@@ -36,7 +36,7 @@ export interface AgentPresetRoster {
   readonly modeSelectionEnabled: boolean
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** No configured root supplies the requested id. */
     'agent-preset/not-found': { readonly agentPreset: string; readonly available: readonly string[] }

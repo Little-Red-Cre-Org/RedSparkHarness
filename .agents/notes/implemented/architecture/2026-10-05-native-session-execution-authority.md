@@ -16,6 +16,8 @@ A preset lease selects the Agent scope before contribution preparation. Its sele
 
 Recoverable deletion is an optional persistence capability. JSONL moves a complete Session directory, with every retained generation, into a receipt-addressed retained namespace. The Program checks the exact route and revision and refuses busy owners. Restoration checks the retained header and destination, and never overwrites an occupied Session. This capability does not erase generation bytes or modify committed repository fixtures.
 
+Workspace error declarations use the canonical `@deepseek-ai/dsh-typert-protocol/types` owner. All existing Remote error-code declarations and fixture augmentations use that same owner, so native and compatibility Consumers retain one typed failure vocabulary. Lookup and Context registration maps keep their existing declarations. Session Remote errors remain in its compatibility entry; Web Consumers import that declaration explicitly rather than depending on Workspace to load it. Pure Session types retain no Typert dependency.
+
 ## Consequences
 
 Model-visible inbox claims and selected input use existing Session events and are persisted before dispatch. Construction callbacks expose seed markers to the same writer. Stream observers receive the existing model dispatch; observer failure preserves its recorded partial attempt. None of these operations adds a model loop, permission authority or auxiliary writer.

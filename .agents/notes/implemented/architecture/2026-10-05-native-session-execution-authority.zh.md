@@ -16,6 +16,8 @@ Preset 租约在贡献准备之前选择 Agent scope。选择从既有 header �
 
 可恢复删除是可选持久化能力。JSONL 将包含全部保留代际的完整 Session 目录移入按回执寻址的保留命名空间。Program 检查精确路由和 revision，并拒绝忙碌所有者。恢复检查保留的 header 和目标，不覆盖已占用 Session。该能力不会擦除代际字节，也不修改仓库已提交的夹具。
 
+Workspace 错误声明使用 canonical 所有者 `@deepseek-ai/dsh-typert-protocol/types`。全部既有 Remote 错误码声明及夹具扩展使用同一所有者，使原生和兼容消费者保留同一套定型失败词汇。Lookup 与 Context 注册映射保留既有声明。Session Remote 错误留在兼容入口；Web 消费者显式导入该声明，不依赖 Workspace 间接加载。纯 Session 类型不引入 Typert 依赖。
+
 ## 影响
 
 模型可见 inbox 认领及选定输入使用既有 Session 事件，在 dispatch 前持久记录。构造回调将 seed marker 交给同一个 writer。流观察者接收既有模型 dispatch；观察者失败会保留已记录的部分尝试。这些操作均不添加模型循环、权限权威或辅助 writer。
