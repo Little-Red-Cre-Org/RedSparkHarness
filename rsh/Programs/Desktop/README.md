@@ -31,11 +31,13 @@ The local startup page exposes startup status and available recovery actions; th
 
 Electron chooses typed English or Chinese shell copy from its application locale and falls back to English. Menus, native dialogs, the startup page, and the plugin-management renderer use the same locale payload; the repository Client UI i18n gate checks these desktop sources.
 
-### Native Client preview
+### Explicit native composition
 
 The private Desktop Host can serve a separately selected native Client page at `/native.html`. An optional `rsh.client.json` in the desktop project root uses `formatVersion: 1` and an `installations` array; each row has a unique `id`, an installed package name in `plugin`, and optional JSON `config`. The Host resolves packages only from the project or bundled runtime, validates each exported `package.json.dsh.native` entry for the `client` target, and rejects browser graphs containing Cordis. It bundles the selected entries together and serves the JavaScript, styles, and emitted assets under `/.dsh/native-client/`.
 
-This preview does not select or replace the Host composition. Without `rsh.client.json`, `/native.html` returns 404 and `/` keeps the existing application. A configured profile that fails validation prevents Host startup; the default page will switch only after a production native renderer covers the supported UI and passes the profile acceptance checks.
+The existing profile keeps its Cordis Host by default. Explicitly declaring `dsh.profile.runtime: "native"` and `config: "rsh.profile.json"` selects one native Host instead. This mode requires `configReload: "startup"` when specified, one native Session controller with its Providers, and `rsh.client.json`; the root page then serves the selected native Client. Host and Client packages must resolve within the profile or bundled runtime, and their exported files must remain within their package. Invalid configuration, nonempty Cordis patches, missing Client composition, and another application or Connection Provider prevent activation. Electron owns the private carrier; the profile cannot start another application or HTTP listener through it. The shared Session execution Provider owns turns and restoration.
+
+The compatibility Host can still serve the native Client preview without selecting a native Host. Without `rsh.client.json`, its `/native.html` returns 404 and `/` keeps the existing application. Native mode supports the selected Session Client capabilities. Compatibility plugin list and mutation actions are unavailable for native profiles and report a localized message.
 
 ### Runtime and plugin activation
 

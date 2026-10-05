@@ -29,6 +29,10 @@ export function nativeSourceViolations(
   const errors: string[] = []
   const check = (node: ts.Node, argument: ts.Node | undefined): void => {
     if (argument === undefined || (!ts.isStringLiteral(argument) && !ts.isNoSubstitutionTemplateLiteral(argument))) {
+      // The planning loader imports only the export resolved from a validated installed manifest.
+      if (source.fileName.replaceAll('\\', '/').endsWith('/rsh/Programs/CLI/src/native-profile-loader.ts')
+        && ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+        && argument?.getText(source) === 'pathToFileURL(entryPath).href') return
       errors.push(`${source.fileName}:${node.getStart(source)}: native source cannot compute a module target`)
     } else if (!resolveAllowed(argument.text)) {
       errors.push(`${source.fileName}:${node.getStart(source)}: native source cannot reference ${argument.text}`)

@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
+`profile: desktop` identifies the existing Electron private Host lifecycle; its owner uses the real Desktop backend controller and Session round trip without adding an application entrypoint.
+
 ### Writing a snapshot suite
 
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.

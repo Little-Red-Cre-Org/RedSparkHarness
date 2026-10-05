@@ -15,7 +15,8 @@
     "dsh": "lib/bin.js"
   },
   "files": [
-    "lib/*.js"
+    "lib/*.js",
+    "lib/types/**/*.d.ts"
   ],
   "dsh": {
     "configTrees": [
@@ -195,5 +196,12 @@
     "execa": "^10.0.0",
     "vitest": "^4.1.8",
     "ws": "8.21.0"
+  },
+  "exports": {
+    "./native-profile": {
+      "types": "./lib/types/native-profile.d.ts",
+      "default": "./lib/native-profile.js"
+    },
+    "./package.json": "./package.json"
   }
 }

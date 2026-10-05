@@ -27,6 +27,8 @@ kind: "package-library"
 
 本包把随附 profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
 
+`profile: desktop` 标识既有 Electron 私有 Host 生命周期；其 owner 使用实际 Desktop 后端控制器与 Session 往返，不新增应用入口。
+
 ### 编写快照套件
 
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
