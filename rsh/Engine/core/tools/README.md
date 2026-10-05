@@ -232,6 +232,8 @@ The `./types` PTC event payloads and `FileDiff` in `./presentation` forward the 
 
 The legacy JSON Schema exports forward the native validator and schema types, so model API catalogs retain one declaration for each schema type.
 
+Search-card result types are re-exported from `dsh-native-tools/presentation`; compatibility and native search use one provider-neutral vocabulary.
+
 <a id="dev-note"></a>
 ### Dev Note
 

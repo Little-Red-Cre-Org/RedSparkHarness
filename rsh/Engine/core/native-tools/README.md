@@ -45,6 +45,8 @@ The consuming application owns request-prefix changes from registered schemas.
 
 No invariant companion is published because there is no independent observation of the owning application's durable result acceptance.
 
+The framework-free `./presentation` export owns search-card path and grouped-match result types as well as file diffs. Compatibility Tools re-export these same types; native search results persist their bounded metadata with the authoritative Tool result.
+
 <a id="dev-note"></a>
 ### Dev Note
 

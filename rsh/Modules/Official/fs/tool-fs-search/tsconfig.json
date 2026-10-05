@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../../../Core/vendor/cosmokit"
@@ -38,6 +40,15 @@
     },
     {
       "path": "../../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-prompt"
     }
   ]
 }

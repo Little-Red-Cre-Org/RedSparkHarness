@@ -297,6 +297,20 @@ export class HarnessClient {
   }
 
   /**
+   * Durably steer the admitted native SDK root at its next step without interrupting dispatch.
+   * @param sessionId - active Session owned by this runtime; idle or unknown identities reject.
+   * @param contentBlocks - ordered text and encoded images, admitted through the prompt policy.
+   * @returns the durable next-step message id; unsupported profiles reject.
+   */
+  async steer(sessionId: string, contentBlocks: SdkPromptContentBlock[]): Promise<string> {
+    const result = await this.request('session/steer', { sessionId, contentBlocks })
+    if (!isRecord(result) || typeof result.messageId !== 'string' || result.messageId.length === 0) {
+      throw new SdkProtocolError(`session/steer returned no message id: ${JSON.stringify(result)}`)
+    }
+    return result.messageId
+  }
+
+  /**
    * Cancel an admitted turn on the explicit native-sdk profile and await cleanup.
    * @param sessionId - Session whose active turn to cancel; other Sessions remain running.
    * @returns false when no admitted turn was active; rejects on unsupported profiles.
