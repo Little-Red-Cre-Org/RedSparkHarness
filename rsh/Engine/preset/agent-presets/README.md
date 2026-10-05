@@ -25,6 +25,10 @@ Use `dsh-agent-presets` to give each session the tools, prompt sections, and ski
 <a id="use-this-package"></a>
 ## Use this package
 
+The native `./native` Provider registers profile-installed standing compositions. Configure its explicit `default` identifier and register each composition with its actual NativeScope. Resolution returns that installation generation; Agent leases share its cancellation signal. Removing a standing composition closes admission, cancels its Agents and waits for their leases to release, reporting recorded cleanup failures. The Program owns Session choice events and Agent creation. This entry does not load `agent.cordis.yml`, discover preset roots or edit user settings; those operations remain in the compatibility entry. `./selection` reconstructs preset choice from complete Session history for both runtimes.
+
+The native entries do not load the optional Loader, Include, atomic-write, home-path, scope or Typert peers used by the compatibility entry.
+
 Mount this package in a composition that should give each agent session its own tools, prompt sections, and skills from a preset file. Every session names a preset — explicitly or through the configured default — and is composed from it; without the package, sessions fall back to whatever the host composition mounts.
 
 The shipped Web `standard`, `ptc`, and `cordis` presets include [explicit file delivery](../../../Programs/Web/client/ui-deliverables/README.md#explicit-deliveries). The `minimal` preset keeps its fixed two-tool training configuration.

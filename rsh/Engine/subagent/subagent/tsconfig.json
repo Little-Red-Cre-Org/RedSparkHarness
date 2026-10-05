@@ -36,7 +36,7 @@
       "path": "../../../Modules/Official/interaction/user-approval"
     },
     {
-      "path": "../../preset/agent-presets"
+      "path": "../../preset/agent-presets/tsconfig.host.json"
     },
     {
       "path": "../../../Modules/Official/sandbox/sandbox"
@@ -45,7 +45,7 @@
       "path": "../../../Modules/Official/sandbox/sandbox-policy"
     },
     {
-      "path": "../../session/session-persistence"
+      "path": "../../session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../../session/session-projection"

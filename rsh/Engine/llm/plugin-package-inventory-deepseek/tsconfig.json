@@ -27,7 +27,7 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../preset/agent-presets"
+      "path": "../../preset/agent-presets/tsconfig.host.json"
     },
     {
       "path": "../deepseek-llm-api-extensions"

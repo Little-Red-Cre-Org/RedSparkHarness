@@ -60,7 +60,7 @@
       "path": "../../../../Engine/llm/llm-retry"
     },
     {
-      "path": "../../../../Modules/Official/workspace/workspace"
+      "path": "../../../../Modules/Official/workspace/workspace/tsconfig.client.json"
     },
     {
       "path": "../../../../Engine/llm/token-meter"

@@ -12,12 +12,13 @@ import {
   sessionFormatCatalog,
 } from '@deepseek-ai/dsh-session-format-catalog'
 import { readdirSync, type Dirent } from 'node:fs'
-import { open, mkdir, readdir, realpath, link, rm, stat, truncate } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { open, mkdir, readdir, realpath, link, rm, stat, truncate, rename, readFile, rmdir, unlink, lstat } from 'node:fs/promises'
+import { dirname, join, resolve, relative, sep } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { scheduler } from 'node:timers/promises'
 import { randomBytes } from 'node:crypto'
 import {
+  SessionDeletionId, type SessionDeletionReceipt, type NativeSessionDeletionOperations,
   SessionPersistenceRevision, SessionFormatUnsupportedError,
   SessionPersistenceCorruptionError,
   SessionAlreadyExistsError, SessionPersistenceNotFoundError,
@@ -276,8 +277,174 @@ export class JsonlSessionBackend {
     this.assertUsableRoot()
   }
 
+  private readonly deletionWork = new Set<Promise<unknown>>()
+  private deletionClosing = false
+  /** Explicit physical recoverable deletion; retained bytes are not permanent erasure. */
+  readonly deletions: NativeSessionDeletionOperations = {
+    delete: (id, options) => this.ownDeletion(() => this.deleteStoredSession(id, options?.signal, options?.expectedRevision)),
+    restore: (id, options) => this.ownDeletion(() => this.restoreStoredSession(id, options?.signal, options?.expectedCwd)),
+    inspect: (id, options) => this.ownDeletion(() => this.inspectDeletedSession(id, options?.signal)),
+    list: options => this.ownDeletion(() => this.listDeletedSessions(options?.signal)),
+  }
+  private ownDeletion<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.deletionClosing) return Promise.reject(new Error('Session deletion capability is closed'))
+    const task = operation()
+    this.deletionWork.add(task)
+    void task.then(() => this.deletionWork.delete(task), () => this.deletionWork.delete(task))
+    return task
+  }
+  private async readDeletion(id: SessionDeletionId): Promise<{ receipt: SessionDeletionReceipt; destination: string }> {
+    const checked = SessionDeletionId(id)
+    const directory = join(this.root, '.rsh-session-trash', checked)
+    const info = await lstat(directory)
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('invalid retained Session directory')
+    const receiptInfo = await lstat(join(directory, 'receipt.json'))
+    if (!receiptInfo.isFile() || receiptInfo.isSymbolicLink()) throw new Error('invalid retained Session receipt file')
+    const value: unknown = JSON.parse(await readFile(join(this.root, '.rsh-session-trash', checked, 'receipt.json'), 'utf8'))
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('invalid stored Session deletion receipt')
+    const data = value as Record<string, unknown>
+    if (Object.keys(data).sort().join(',') !== 'id,path,sessionId' || data.id !== checked
+      || typeof data.sessionId !== 'string' || data.sessionId.length === 0 || typeof data.path !== 'string') {
+      throw new Error('invalid stored Session deletion receipt fields')
+    }
+    const parts = data.path.split('/')
+    if (parts.length !== 2 || parts.some(part => !part || part === '.' || part === '..' || /[\\:]/.test(part))
+      || parts[0]?.startsWith('.rsh-session-') || parts[1] !== encodeSegment(data.sessionId)) {
+      throw new Error('invalid stored Session deletion destination')
+    }
+    return { receipt: { id: checked, sessionId: makeSessionId(data.sessionId) }, destination: join(this.root, ...parts) }
+  }
+  private async deleteStoredSession(id: SessionId, signal?: AbortSignal,
+    expectedRevision?: PersistenceRevision): Promise<SessionDeletionReceipt> {
+    signal?.throwIfAborted()
+    const release = this.tracker.claimMutation(id)
+    let lease: SessionWriteLease | undefined
+    let failure: { error: unknown } | undefined
+    try {
+      await this.ensureRootEncoding()
+      const selected = await this.findLog(id, signal)
+      if (selected === undefined) throw new SessionPersistenceNotFoundError(id)
+      const dir = dirname(selected.sourcePath)
+      const sourceInfo = await lstat(dir)
+      if (!sourceInfo.isDirectory() || sourceInfo.isSymbolicLink()) throw new Error('invalid live Session directory')
+      lease = await this.acquireLease(id, undefined, dir)
+      const current = await this.findLog(id, signal)
+      if (current === undefined || dirname(current.sourcePath) !== dir) throw new SessionPersistenceNotFoundError(id)
+      if (expectedRevision !== undefined && fileRevision(await stat(current.sourcePath, { bigint: true })) !== expectedRevision) {
+        throw new Error('Session deletion revision changed')
+      }
+      const header = await this.readGenerationHeader(current, id, signal)
+      if (header === undefined) throw new Error('missing stored Session header')
+      const deletionId = SessionDeletionId(randomBytes(16).toString('hex'))
+      const target = join(this.root, '.rsh-session-trash', deletionId)
+      if (process.platform === 'win32') await ensureDurableDirectoryWin32(target)
+      else {
+        await mkdir(target, { recursive: true, mode: 0o700 })
+        await this.syncDirPosix(dirname(target))
+        await this.syncDirPosix(this.root)
+      }
+      const receiptFile = await open(join(target, 'receipt.json'), 'wx', 0o600)
+      try {
+        await receiptFile.writeFile(JSON.stringify({ id: deletionId, sessionId: id,
+          path: relative(this.root, dir).split(sep).join('/') }) + '\n')
+        await receiptFile.sync()
+      } finally { await receiptFile.close() }
+      if (process.platform !== 'win32') await this.syncDirPosix(target)
+      signal?.throwIfAborted()
+      await this.moveDeletedDirectory(dir, join(target, 'payload'))
+      this.coldLogMemo.delete(id)
+      return { id: deletionId, sessionId: id }
+    } catch (error: unknown) {
+      failure = { error }
+      throw error
+    } finally {
+      try {
+        try { await lease?.release() } catch (cleanup: unknown) {
+          if (failure !== undefined) throw new AggregateError([failure.error, cleanup], 'Session mutation failed and its lock release failed')
+          throw cleanup
+        }
+      } finally { release() }
+    }
+  }
+  private async restoreStoredSession(id: SessionDeletionId, signal?: AbortSignal, expectedCwd?: string): Promise<SessionId> {
+    signal?.throwIfAborted()
+    const { receipt, destination } = await this.readDeletion(id)
+    const release = this.tracker.claimMutation(receipt.sessionId)
+    let lease: SessionWriteLease | undefined
+    let failure: { error: unknown } | undefined
+    try {
+      lease = await this.acquireLease(receipt.sessionId, undefined, destination)
+      if (await this.findLog(receipt.sessionId, signal) !== undefined) throw new SessionAlreadyExistsError(receipt.sessionId)
+      const { payload, header } = await this.readRetainedGeneration(receipt, destination, signal)
+      if (header === undefined || sessionDir(this.root, header.cwd, header.id) !== destination) {
+        throw new Error('Session deletion receipt does not match its retained header')
+      }
+      if (expectedCwd !== undefined && header.cwd !== expectedCwd) throw new Error('retained Session workspace differs from the selected route')
+      // Only the ownership marker may occupy a previously absent destination.
+      const occupants = await readdir(destination)
+      if (occupants.some(name => name !== 'session.lock')) throw new SessionAlreadyExistsError(receipt.sessionId)
+      signal?.throwIfAborted()
+      if (occupants.includes('session.lock')) await unlink(join(destination, 'session.lock'))
+      await rmdir(destination)
+      await this.moveDeletedDirectory(payload, destination)
+      this.coldLogMemo.delete(receipt.sessionId)
+      return receipt.sessionId
+    } catch (error: unknown) {
+      failure = { error }
+      throw error
+    } finally {
+      try {
+        try { await lease?.release() } catch (cleanup: unknown) {
+          if (failure !== undefined) throw new AggregateError([failure.error, cleanup], 'Session mutation failed and its lock release failed')
+          throw cleanup
+        }
+      } finally { release() }
+    }
+  }
+  private async moveDeletedDirectory(source: string, destination: string): Promise<void> {
+    if (process.platform === 'win32') await publishNewFileWin32(source, destination)
+    else {
+      await rename(source, destination)
+      await this.syncDirPosix(dirname(source))
+      await this.syncDirPosix(dirname(destination))
+    }
+  }
+  private async inspectDeletedSession(id: SessionDeletionId, signal?: AbortSignal): Promise<SessionHeader> {
+    signal?.throwIfAborted()
+    const { receipt, destination } = await this.readDeletion(id)
+    const { header } = await this.readRetainedGeneration(receipt, destination, signal)
+    if (header === undefined) throw new Error('retained Session header is missing')
+    return header
+  }
+  private async readRetainedGeneration(receipt: SessionDeletionReceipt, destination: string,
+    signal?: AbortSignal): Promise<{ payload: string; header: SessionHeader | undefined }> {
+    const payload = join(this.root, '.rsh-session-trash', receipt.id, 'payload')
+    const payloadInfo = await lstat(payload)
+    if (!payloadInfo.isDirectory() || payloadInfo.isSymbolicLink()) throw new Error('invalid retained Session payload')
+    const selected = await this.resolveGenerationInDirectory(payload, signal)
+    if (selected === undefined) throw new SessionPersistenceNotFoundError(receipt.sessionId)
+    const header = await this.readGenerationHeader(selected, receipt.sessionId, signal, destination)
+    return { payload, header }
+  }
+  private async listDeletedSessions(signal?: AbortSignal): Promise<readonly SessionDeletionReceipt[]> {
+    let entries: Dirent[]
+    try { entries = await readdir(join(this.root, '.rsh-session-trash'), { withFileTypes: true }) }
+    catch (error) { if (isENOENT(error)) return []; throw error }
+    const receipts: SessionDeletionReceipt[] = []
+    for (const entry of entries) {
+      signal?.throwIfAborted()
+      if (!entry.isDirectory()) continue
+      const id = SessionDeletionId(entry.name)
+      const retained = await this.resolveGenerationInDirectory(join(this.root, '.rsh-session-trash', id, 'payload'), signal)
+      if (retained !== undefined) receipts.push((await this.readDeletion(id)).receipt)
+    }
+    return receipts
+  }
+
   /** Close every open handle after native work has stopped admitting new turns. */
   async close(): Promise<void> {
+    this.deletionClosing = true
+    await Promise.allSettled([...this.deletionWork])
     await this.tracker.closeAll()
   }
 
@@ -363,26 +530,38 @@ export class JsonlSessionBackend {
     options?.signal?.throwIfAborted()
     const pending = this.tracker.pendingOf(id)
     if (access === 'read') {
-      if (pending !== undefined) {
-        return this.tracker.adopt(new JsonlSessionHandle(this, id, pending.header, 'read', { cursor: 0, materialized: false, inheritedEventCount: pending.inheritedEventCount }))
-      }
-      const stored = await this.requireStoredLog(id, options?.signal)
-      let state: StorageHandleState
-      if (stored.status === 'prepared') {
-        state = {
-          cursor: 0,
-          materialized: true,
-          inheritedEventCount: stored.inheritedEventCount,
-          primed: stored,
+      const releaseAdmission = this.tracker.reserveRead(id)
+      try {
+        if (pending !== undefined) {
+          return this.tracker.adopt(new JsonlSessionHandle(this, id, pending.header, 'read', { cursor: 0, materialized: false, inheritedEventCount: pending.inheritedEventCount }))
         }
-      } else {
-        state = {
-          cursor: 0,
-          materialized: true,
-          inheritedEventCount: stored.inheritedEventCount,
+        const physical = await this.findLog(id, options?.signal)
+        if (physical === undefined) throw new SessionPersistenceNotFoundError(id)
+        const identity = await stat(dirname(physical.sourcePath), { bigint: true })
+        const stored = await this.requireStoredLog(id, options?.signal)
+        const confirmed = await stat(dirname(physical.sourcePath), { bigint: true })
+        if (confirmed.dev !== identity.dev || confirmed.ino !== identity.ino) {
+          throw new Error('Session read admission directory identity changed')
         }
-      }
-      return this.tracker.adopt(new JsonlSessionHandle(this, id, stored.meta, 'read', state))
+        let state: StorageHandleState
+        if (stored.status === 'prepared') {
+          state = {
+            cursor: 0,
+            directoryIdentity: `${identity.dev}:${identity.ino}`,
+            materialized: true,
+            inheritedEventCount: stored.inheritedEventCount,
+            primed: stored,
+          }
+        } else {
+          state = {
+            cursor: 0,
+            directoryIdentity: `${identity.dev}:${identity.ino}`,
+            materialized: true,
+            inheritedEventCount: stored.inheritedEventCount,
+          }
+        }
+        return this.tracker.adopt(new JsonlSessionHandle(this, id, stored.meta, 'read', state))
+      } finally { releaseAdmission() }
     }
     // A pending entry always belongs to an ACTIVE creator handle (close erases
     // it), so the claim below rejects that case as already owned.
@@ -894,7 +1073,7 @@ export class JsonlSessionBackend {
    * @returns the held lock.
    */
   private acquireLease(id: SessionId, cwd: string | undefined, dir = sessionDir(this.root, cwd, id)): Promise<SessionWriteLease> {
-    return SessionWriteLease.acquire(dir, id)
+    return SessionWriteLease.acquireCombined(join(this.root, '.rsh-session-ownership', encodeSegment(id)), dir, id)
   }
 
   /**
@@ -1034,6 +1213,7 @@ export class JsonlSessionBackend {
     selected: ResolvedJsonlGeneration,
     expectedId?: SessionId,
     signal?: AbortSignal,
+    retainedDestination?: string,
   ): Promise<SessionHeader | undefined> {
     let first: string | undefined
     try {
@@ -1075,6 +1255,12 @@ export class JsonlSessionBackend {
     }
     if (result.status === 'malformed') return undefined
     const header = this.currentHeader(result.header)
+    if (retainedDestination !== undefined) {
+      if (header.id !== expectedId || sessionDir(this.root, header.cwd, header.id) !== retainedDestination) {
+        throw new Error('retained Session header does not match its deletion receipt')
+      }
+      return header
+    }
     await this.assertStoredIdentity(
       selected.sourcePath,
       selected.sourceVersion,
@@ -1530,7 +1716,7 @@ export class JsonlSessionBackend {
       signal?.throwIfAborted()
       const entries = await readdir(this.root, { withFileTypes: true })
       signal?.throwIfAborted()
-      return entries.filter(e => e.isDirectory()).map(e => join(this.root, e.name))
+      return entries.filter(e => e.isDirectory() && e.name !== '.rsh-session-trash' && e.name !== '.rsh-session-ownership').map(e => join(this.root, e.name))
     } catch (error) {
       // Only an absent root means no sessions; rethrow every other I/O failure.
       if (isENOENT(error)) return []

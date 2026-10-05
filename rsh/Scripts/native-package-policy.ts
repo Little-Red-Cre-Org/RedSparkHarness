@@ -22,7 +22,9 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/session/session-format-v1-to-v2',
   'rsh/Engine/session/session-format-v2-to-v3',
   'rsh/Engine/context/native-time-context',
+  'rsh/Engine/workspace/workspace-definition',
   'rsh/Engine/core/native-agent',
+  'rsh/Engine/core/native-session-execution',
   'rsh/Engine/core/native-code-runtime',
   'rsh/Modules/Official/code-runtime/tool-code-runtime',
   'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox',
@@ -45,6 +47,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Engine/core/native-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
@@ -66,6 +69,8 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Core/storage/storage', 'Cordis and native storage hubs share the backend registry'],
   ['rsh/Core/storage/storage-json', 'Cordis and native JSON Providers share atomic storage operations'],
   ['rsh/Core/storage/storage-domain', 'Cordis and native domain Providers share schemas and durability'],
+  ['rsh/Engine/preset/agent-presets', 'Native standing composition leases and compatibility presets share durable selection facts'],
+  ['rsh/Modules/Official/workspace/workspace', 'Native and Cordis Workspace Providers share the durable v2 registry'],
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
@@ -95,6 +100,11 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
   ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Engine/preset/agent-presets', [
+    '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
+    '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
+    '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol',
+  ]],
 ])
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
@@ -104,6 +114,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
+  ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
+  ['rsh/Engine/core/native-agent', ['./inbox']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
@@ -112,6 +124,9 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
   ['rsh/Engine/core/session', ['./types']],
+  ['rsh/Engine/session/session-persistence', ['./deletion']],
+  ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
+  ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],
 ])
 
 /** Additional native exports compiled only for the Host. */
@@ -126,6 +141,10 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
+  ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
+  ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],
+  ['rsh/Engine/core/native-session-execution/read-history', ['host']],
+  ['rsh/Engine/core/native-agent/inbox', ['host', 'client']],
   ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
   ['rsh/Engine/core/native-tools/json-schema', ['host']],
   ['rsh/Engine/core/native-tools/code-output', ['host']],
@@ -137,4 +156,5 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],
   ['rsh/Core/storage/storage/backend', ['host']],
   ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
+  ['rsh/Engine/preset/agent-presets/native-definition', ['host']],
 ])

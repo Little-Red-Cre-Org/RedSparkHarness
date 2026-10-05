@@ -30,7 +30,7 @@
       "path": "../../../Modules/Official/todo/tool-todo"
     },
     {
-      "path": "../../session/session-persistence"
+      "path": "../../session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../../session/session-projection"

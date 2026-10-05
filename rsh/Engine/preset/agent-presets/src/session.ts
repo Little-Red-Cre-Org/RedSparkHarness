@@ -16,18 +16,7 @@
 
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { z } from 'zod'
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * The session's agent preset was chosen after creation, while the session
-     * was still blank. Log-only: it records the composition later turns ran
-     * under, so a resumed or forked session rebuilds the same one instead of
-     * the header's creation-time value.
-     */
-    'agent-preset/selected': { agentPreset: string }
-  }
-}
+export type * from './selection-events.ts'
 
 const agentPresetSchema = z.union([z.string(), z.null()])
 

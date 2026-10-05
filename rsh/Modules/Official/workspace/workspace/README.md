@@ -48,6 +48,16 @@ The package takes no configuration of its own; it needs a session store, a sessi
 
 With these rows mounted, creating a project shows up in the list immediately and survives a restart; the first start also groups existing sessions by the directory they ran in. If a required peer is missing, the workspace feature stays unavailable until it is mounted.
 
+### Native Provider
+
+Select `./native` to publish `workspaceRegistry` without Cordis. Both adapters use one registry runtime, the existing `workspace` v2 domain, global `archivedSessionIds`, bootstrap, recovery markers and write queues. Removing a workspace registration retains its directory and Session generations. Archiving retains workspace accounting and generation bytes; it does not delete a Session.
+
+Native composition requires `storageDomain`, `sessionPersistence` and `activeSessions`. The Provider observes exact current Agent/Session owners for immutable live headers; historical parent metadata grants no ownership. `./workspace-types` is the pure Host/Client vocabulary; `./types` also loads compatibility Typert declarations. Compiler faces are explicit.
+
+Native configuration resolves positive integer `maxArchiveSessionBytes` (default 16777216) and `maxArchiveSessionEvents` (default 100000). Exact archive targets are opened readonly and validated with observed byte/event limits and revision checks. Missing, future, corrupt, over-budget or concurrently changed targets reject without adding archive metadata. Persistence may materialize data before event-count validation; this is not a hard streaming-memory guarantee. Already archived identities resolve idempotently. Cancellation before domain write admission prevents a new write; admitted durable writes drain and are never reported as rolled back.
+
+Unload closes admission, removes and drains active-owner subscriptions, waits for accepted registry/entity work including attach-time filesystem reads, then closes the same domain. Held entities reject new mutations after close. Product archive UI, complete FTS parity and Session deletion require separate implementation and verification.
+
 ### Creating and ordering projects
 
 Create a project from any fully qualified directory that exists: filesystem roots such as `C:\` and ordinary directories are valid. Relative paths, Windows drive-relative paths such as `C:work`, missing paths, and files are rejected without creating a project; creating a project for a directory that already has one returns the existing project unchanged. Rename a project at any time, and move it to any position in the list:
@@ -71,6 +81,8 @@ Hide a session from the grouping when it should stop appearing there: it disappe
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
+
+WorkspaceId and Workspace are declared by [dsh-workspace-definition](../../../../Engine/workspace/workspace-definition/README.md); ./workspace-types re-exports them. Storage, directory validation and native active-session tracking remain owned by this Provider.
 
 <details>
 <summary>Implementation internals — click to expand</summary>

@@ -25,7 +25,14 @@ kind: "package-reference"
 
 `withInitiator()` 和 `withoutInitiator()` 保留原始同步值或返回的原生 Promise。它们不会从安装或注册 owner 推断身份。`dispose()` 拒绝新的 initiator boundary，等待已返回的 Promise boundary，再使 initiator 读取失效并释放剩余注册项。显式注销会在 Host 事件 bus 仍接收投递时触发事件；Host 关闭会在 Provider 清理前关闭该 bus，因此其剩余条目会在不分发的情况下释放。在一个 boundary 内发起释放的操作不能在该 boundary 内等待同一次释放。
 
+Agent 清理会先启动全部已注册的释放操作，再等待完成，使取消贡献能够解除活动执行的等待。Registry 关闭采用相同顺序，在发起者操作与注册全部排空后报告所有失败。
+
+`./inbox` 是 Host 与 Client 共享的 InboxTarget 和 agent/inbox/spliced 唯一声明；兼容 Agent 转发这些类型。Client 编译面只包含该纯声明，不加载原生 registry 实现。
+
 <a id="model-experience"></a>
+
+`execution(agent)` 为该精确注册 Agent 提供 FIFO 操作所有者。普通工作按准入顺序排队；空闲维护同步预留所有者并拒绝忙碌身份。释放会取消排队和活动工作，等待已接纳的函数结束，并释放其清理注册。Session writer 仍由 Program 持有。
+
 ## 模型体验
 
 只有消费应用将 Agent 的 Session 事件、工具 schema 与结果放入模型请求时，才会间接影响模型。

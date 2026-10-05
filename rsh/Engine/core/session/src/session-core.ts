@@ -440,6 +440,7 @@ export class Session {
    * @param seed - optional borrowed replay or fork events.
    * @param header - optional borrowed storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
+   * @param onConstructorEvent - receives a newly appended seed marker for persistence by the sole owner.
    * @returns a detached session.
    */
   static create(
@@ -447,8 +448,9 @@ export class Session {
     seed?: readonly SessionEvent[],
     header?: SessionHeader,
     inheritedEventCount?: SessionLogOffset,
+    onConstructorEvent?: (event: SessionEvent) => void,
   ): Session {
-    return new Session(id, seed, header, 'snapshot', inheritedEventCount)
+    return new Session(id, seed, header, 'snapshot', inheritedEventCount, onConstructorEvent)
   }
 
   /**

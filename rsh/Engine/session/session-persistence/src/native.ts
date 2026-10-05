@@ -1,4 +1,7 @@
 /** Provider-neutral Session persistence types, validation, and failures. */
+export { SessionDeletionId } from './deletion.ts'
+export type { SessionDeletionReceipt, NativeSessionDeletionOperations } from './deletion.ts'
+import type { NativeSessionDeletionOperations } from './deletion.ts'
 export type { SessionHeader } from '@deepseek-ai/dsh-session/native'
 export { SessionPersistenceRevision } from './revision.ts'
 export type { SessionPersistenceRevision as PersistenceRevision } from './revision.ts'
@@ -66,6 +69,9 @@ import type {} from '@deepseek-ai/dsh-native-runtime'
  * on this backend instance observe at least that prefix.
  */
 export interface NativeSessionPersistenceOperations {
+  /** Optional explicit recoverable physical deletion capability. */
+  readonly deletions?: NativeSessionDeletionOperations
+
   /**
    * Create a new stored session and take its write ownership.
    * @param header - the immutable header (id, version, cwd, lineage) to store.

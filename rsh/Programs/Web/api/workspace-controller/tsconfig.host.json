@@ -19,6 +19,6 @@
     { "path": "../../../../Core/storage/storage-domain" },
     { "path": "../../../../Core/typert/protocol" },
     { "path": "../../../../Core/util/deque" },
-    { "path": "../../../../Modules/Official/workspace/workspace" }
+    { "path": "../../../../Modules/Official/workspace/workspace/tsconfig.host.json" }
   ]
 }

@@ -325,7 +325,7 @@ Source: [`rsh/Programs/Web/api/workspace-files/src/index.ts`](../../Programs/Web
 
 ### `ctx.workspaceRegistry` — `WorkspaceRegistry`
 
-Durable workspace registry. Startup waits for `sessionPersistence`, builds one canonical-cwd header index, and completes the one-time history bootstrap before the service becomes active. The persistence dependency is mandatory so an unavailable peer can never be mistaken for an empty history and commit the initialized marker.
+Compatibility Service delegates every record and write to the shared runtime.
 
 ```ts cordis-catalog
 /**

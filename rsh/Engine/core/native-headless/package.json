@@ -2,7 +2,9 @@
   "name": "@deepseek-ai/dsh-native-headless",
   "description": "Native headless Agent composition for DeepSeek Harness",
   "version": "0.1.5-rc.2",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
@@ -13,20 +15,52 @@
     "native": {
       "apiVersion": 1,
       "entry": "./native",
-      "targets": ["host"],
-      "requires": ["fs", "sessionPersistence", "modelExecution", "agents"],
-      "optional": ["tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext"],
-      "provides": ["application"]
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "sessionPersistence",
+        "modelExecution",
+        "agents"
+      ],
+      "optional": [
+        "tools",
+        "promptSections",
+        "sandboxPolicy",
+        "approval",
+        "codeRuntime",
+        "timeContext",
+        "sessionExecution",
+        "activeSessions",
+        "agentPresets",
+        "workspaceRegistry"
+      ],
+      "provides": [
+        "application",
+        "rootExecution"
+      ]
     }
   },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^"
@@ -45,6 +79,11 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
   }
 }

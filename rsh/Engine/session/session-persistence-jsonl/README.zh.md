@@ -40,6 +40,8 @@ kind: "package-reference"
     root: /absolute/path/to/session-logs
 ```
 
+可恢复删除将整个 Session 目录移入 `.rsh-session-trash`，包括保留的代际。持久回执支持冷启动列举和精确恢复；这不是永久擦除。同一后端实例内已接纳及正在打开的 reader 和 writer 会阻止变更。根目录级 Session 身份租约跨后端实例和进程协调 writer 与删除。恢复拒绝已占用目标及不匹配的预期工作区。Provider 关闭先排空已接纳的删除工作，再关闭 handle。
+
 `root` 必填且无默认值：`process.cwd()` 默认值会随进程 cwd 变更而分散会话文件。现有根必须是可读目录；缺失根在第一次实体化时创建。
 
 `./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。原生 Host 移除 Provider 时会等待已打开句柄关闭。

@@ -7,9 +7,9 @@
 
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
-import type { WorkspaceId } from './types.ts'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import { defineDomain, domainTable, type DomainTableSpec } from '@deepseek-ai/dsh-storage-domain/native'
+import type { WorkspaceId } from './workspace-types.ts'
 
 /** Workspace id schema at the durable boundary; branding has no runtime representation. */
 const workspaceId = z.string().transform(value => value as WorkspaceId)
@@ -59,6 +59,8 @@ export const workspaceDomainState = z.object({
 /** Durable registry state inferred from {@link workspaceDomainState}. */
 export type WorkspaceDomainState = z.infer<typeof workspaceDomainState>
 
+const workspaces: DomainTableSpec<WorkspaceId, WorkspaceRecord> = domainTable<WorkspaceId, WorkspaceRecord>(workspaceRecord)
+
 /**
  * The workspace domain spec: one `workspaces` table keyed by
  * {@link WorkspaceId} plus the bootstrap/order singleton. The registry opens
@@ -72,5 +74,5 @@ export const workspaceDomainSpec = defineDomain({
     schema: workspaceDomainState,
     initial: { initialized: false, workspaceIds: [], archivedSessionIds: [] },
   },
-  tables: { workspaces: domainTable<WorkspaceId, WorkspaceRecord>(workspaceRecord) },
+  tables: { workspaces },
 })

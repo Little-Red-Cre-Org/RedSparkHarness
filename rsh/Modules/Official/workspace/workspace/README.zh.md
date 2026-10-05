@@ -48,6 +48,16 @@ kind: "package-reference"
 
 挂载这些行之后，创建项目会立即出现在列表中并在重启后保留；首次启动还会按会话运行的目录对既有会话分组。如果缺少某个必需依赖，workspace 功能会一直不可用，直到它被挂载。
 
+### 原生 Provider
+
+选择 `./native` 可发布 `workspaceRegistry`，无需 Cordis。两种适配器共用一个注册表运行时、既有 `workspace` v2 域、全局 `archivedSessionIds`、引导、恢复标记和写入队列。移除工作区注册项会保留目录与 Session 世代。归档会保留工作区成员记录和世代字节，不会删除 Session。
+
+原生组合要求 `storageDomain`、`sessionPersistence` 和 `activeSessions`。Provider 观察确切的当前 Agent/Session owner，读取不可变的现役会话头；历史父会话元数据不授予所有权。`./workspace-types` 是纯 Host/Client 词汇；`./types` 还加载兼容 Typert 声明。编译面明确分开。
+
+原生配置解析正整数 `maxArchiveSessionBytes`（默认 16777216）和 `maxArchiveSessionEvents`（默认 100000）。指定归档目标以只读方式打开，并检查观察到的字节/事件限额和 revision。缺失、未来版本、损坏、超限或并发变化的目标会拒绝，且不增加归档元数据。持久化读取器可能在事件数量校验前物化数据，因此这不是严格的流式内存保证。已归档标识保持幂等。进入域写入前的取消会阻止新增写入；已接纳的持久写入会排空，且不会被报告为已回滚。
+
+卸载会关闭接纳、撤销并排空现役 owner 订阅、等待已接纳的注册表/实体工作（包括 attach 前置文件系统读取），最后关闭同一域。关闭后持有的实体会拒绝新的变更。产品归档 UI、完整 FTS 对等与 Session 删除仍须单独实现和验证。
+
 ### 创建与排序项目
 
 从任何已存在的绝对目录路径创建项目：`C:\` 等文件系统根目录和普通目录都有效。相对路径、`C:work` 等 Windows 盘符相对路径、不存在的路径和文件都会被拒绝，且不会创建项目；为已有项目的目录再次创建会原样返回现有项目。你可以随时重命名项目，并把它移动到列表中的任意位置：
@@ -71,6 +81,8 @@ ctx.workspaceRegistry.list() // shows the project, newest first
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
+
+WorkspaceId 和 Workspace 由 [dsh-workspace-definition](../../../../Engine/workspace/workspace-definition/README.zh.md) 声明，./workspace-types 重新导出。存储、目录校验及原生活跃 Session 跟踪仍属于本 Provider。
 
 <details>
 <summary>实现细节——点击展开</summary>

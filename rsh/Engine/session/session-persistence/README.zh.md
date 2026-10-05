@@ -52,6 +52,8 @@ await ctx.sessionPersistence.flush()                           // backend-wide d
 
 `create` 与 `open(id, 'write')` 取得进程内单写者所有权：在持有者活跃期间第二次以写模式打开会以 `SessionAlreadyOwnedError` 拒绝，对已占用 id 执行 `create` 会以 `SessionAlreadyExistsError` 拒绝，在 `read` 句柄上执行修改会以 `SessionReadOnlyError` 拒绝——一种句柄类型，运行时拒绝。对已关闭句柄的任何操作会以 `SessionHandleClosedError` 拒绝，`SessionOwnershipLostError` 标记写所有权已永久丢失的写句柄（关闭并重新打开）。已创建的会话自 `create` 完成之刻起即可在本进程内被观察到，而后端可以把物理实体化推迟到第一次 `append` 或 `flush`；其他进程只能看到已实体化的会话，一个在崩溃前从未实体化的会话等于从未存在。
 
+可选 `deletions` 能力将已存储 Session 移出活动命名空间，并保留所有代际以供恢复。`./deletion` 包含带品牌的回执及 Provider 中立操作，不导入 Host runtime。Host 和 Client 编译程序使用显式入口；solution 根不会隐式编译任一入口。
+
 ### 实时写路径与关闭排空
 
 实时写路径由后端自持：它一次性安装会话监听器，把每个已发布会话的事件按 id 路由到该会话的活跃写句柄——`session/event` 复制进有界的内部批处理窗口，`session/flush` 是即时的持久性与错误观察屏障，`session/disposed` 执行最终排空并关闭句柄。没有活跃写句柄的已发布会话不做任何持久化。后台写入失败时按序保留其事件、暂停自动路径并记入日志；下一次显式 flush 会重试，并在再次失败时明确返回拒绝。`close()` 本身会先经由仍然打开的存储排空路由缓冲区再释放所有权，因此即便根 fiber 的 dispose（资源释放）并发运行各 fiber 的 disposer，后端拆卸时的关闭清扫也能保证应用关闭不丢数据。

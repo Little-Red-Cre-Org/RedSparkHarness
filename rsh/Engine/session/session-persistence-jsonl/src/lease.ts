@@ -43,6 +43,7 @@ export const LEASE_FILENAME = 'session.lock'
 type HeldLock =
   | { readonly kind: 'posix'; readonly handle: FileHandle }
   | { readonly kind: 'win32'; readonly handle: number }
+  | { readonly kind: 'combined'; readonly locks: readonly SessionWriteLease[] }
 
 /** Whether a flock failure means another descriptor holds the lock. */
 function isLockContention(error: unknown): boolean {
@@ -115,6 +116,23 @@ export class SessionWriteLease {
     throw new SessionAlreadyOwnedError(id)
   }
 
+  /** Acquire stable identity ownership before the movable artifact lock.
+   * @param stable - root-owned identity directory that is never moved.
+   * @param artifact - existing or materializing Session directory.
+   * @param id - exact Session identity.
+   * @returns combined ownership released in reverse acquisition order.
+   */
+  static async acquireCombined(stable: string, artifact: string, id: SessionId): Promise<SessionWriteLease> {
+    const first = await SessionWriteLease.acquire(stable, id)
+    try { return new SessionWriteLease({ kind: 'combined', locks: [first, await SessionWriteLease.acquire(artifact, id)] }) }
+    catch (error: unknown) {
+      try { await first.release() } catch (cleanup: unknown) {
+        throw new AggregateError([error, cleanup], 'Session identity acquisition failed and its lock release failed')
+      }
+      throw error
+    }
+  }
+
   /**
    * Release the kernel lock by closing its descriptor or handle. The POSIX
    * lock file is never removed: every acquired lock belongs to a
@@ -124,6 +142,14 @@ export class SessionWriteLease {
   async release(): Promise<void> {
     if (this.released) return
     this.released = true
+    if (this.held.kind === 'combined') {
+      const failures: unknown[] = []
+      for (const lock of [...this.held.locks].reverse()) {
+        try { await lock.release() } catch (error) { failures.push(error) }
+      }
+      if (failures.length > 0) throw new AggregateError(failures, 'Session ownership release failed')
+      return
+    }
     /* v8 ignore start -- native Windows coverage exercises this platform branch; Linux covers the POSIX peer */
     if (this.held.kind === 'win32') {
       await releaseLockHandleWin32(this.held.handle)

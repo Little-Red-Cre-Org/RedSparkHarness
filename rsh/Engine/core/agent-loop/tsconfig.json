@@ -24,7 +24,7 @@
       "path": "../session"
     },
     {
-      "path": "../../session/session-persistence"
+      "path": "../../session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../system-prompt"

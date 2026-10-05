@@ -1,58 +1,11 @@
 {
-  "extends": "../../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib/types"
-  },
-  "include": ["src"],
+  "files": [],
   "references": [
     {
-      "path": "../../../Core/vendor/cosmokit"
+      "path": "./tsconfig.host.json"
     },
     {
-      "path": "../../../Core/vendor/cordis"
-    },
-    {
-      "path": "../../../Core/vendor/schemastery"
-    },
-    {
-      "path": "../../../Core/vendor/include"
-    },
-    {
-      "path": "../../../Core/vendor/loader"
-    },
-    {
-      "path": "../../core/agent"
-    },
-    {
-      "path": "../../core/scope"
-    },
-    {
-      "path": "../../core/session"
-    },
-    {
-      "path": "../../session/session-projection"
-    },
-    {
-      "path": "../../core/system-prompt"
-    },
-    {
-      "path": "../../core/tools"
-    },
-    {
-      "path": "../../../Core/typert/protocol"
-    },
-    {
-      "path": "../../../Modules/Official/settings/settings"
-    },
-    {
-      "path": "../../../Core/util/atomic-write"
-    },
-    {
-      "path": "../../../Core/util/home-paths"
-    },
-    {
-      "path": "../../../Core/runtime-diagnostics/invariants"
+      "path": "./tsconfig.client.json"
     }
   ]
 }

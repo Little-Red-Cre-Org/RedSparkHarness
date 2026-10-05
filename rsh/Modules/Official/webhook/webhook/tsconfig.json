@@ -33,7 +33,7 @@
       "path": "../../../../Engine/core/agent-default-model"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets"
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
       "path": "../../interaction/permission-presets"
@@ -42,7 +42,7 @@
       "path": "../../../../Engine/session/session-title"
     },
     {
-      "path": "../../workspace/workspace"
+      "path": "../../workspace/workspace/tsconfig.host.json"
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"

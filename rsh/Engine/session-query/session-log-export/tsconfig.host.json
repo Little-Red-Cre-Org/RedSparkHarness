@@ -17,7 +17,7 @@
     { "path": "../../core/session" },
     { "path": "../../../Modules/Official/interaction/commands" },
     { "path": "../../session/session-format" },
-    { "path": "../../session/session-persistence" },
+    { "path": "../../session/session-persistence/tsconfig.host.json" },
     { "path": "../session-query" }
   ]
 }

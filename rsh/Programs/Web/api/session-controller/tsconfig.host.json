@@ -38,8 +38,8 @@
     { "path": "../../../../Engine/llm/llm" },
     { "path": "../../../../Core/util/deque" },
     { "path": "../../../../Core/util/native-command" },
-    { "path": "../../../../Engine/preset/agent-presets" },
-    { "path": "../../../../Engine/session/session-persistence" },
+    { "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json" },
+    { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
     { "path": "../../../../Engine/session/session-projection" },
     { "path": "../../../../Engine/session/session-projection-cache" },
     { "path": "../../../../Engine/session/session-title" },
@@ -50,6 +50,6 @@
     { "path": "../../../../Core/util/values" },
     { "path": "../../../../Core/typert/protocol" },
     { "path": "../../../../Core/typert/registry" },
-    { "path": "../../../../Modules/Official/workspace/workspace" }
+    { "path": "../../../../Modules/Official/workspace/workspace/tsconfig.host.json" }
   ]
 }

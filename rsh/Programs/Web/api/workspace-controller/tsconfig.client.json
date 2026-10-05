@@ -19,6 +19,6 @@
     { "path": "../../../../Engine/core/session" },
     { "path": "../../host/directory-picker" },
     { "path": "../../../../Core/typert/protocol" },
-    { "path": "../../../../Modules/Official/workspace/workspace" }
+    { "path": "../../../../Modules/Official/workspace/workspace/tsconfig.client.json" }
   ]
 }

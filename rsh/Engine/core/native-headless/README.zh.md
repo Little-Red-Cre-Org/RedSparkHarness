@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-headless` 为原生 `dsh --profile` 组合提供一个应用。它把用户提示词发送给选定模型，执行限定在工作目录内的 UTF-8 文件读写，可选地在 profile 选择的 worker runtime 中运行 TypeScript，将模型可见消息与工具结果写入已发布格式的 Session 日志，并在退出前关闭存储。原生 profile 还须安装文件系统、观察策略、Session 持久化、模型、模型执行及原生 Agent Provider。
+`dsh-native-headless` 为原生 `dsh --profile` 组合提供一个应用。它把用户提示词发送给选定模型，执行限定在工作目录内的 UTF-8 文件读写，可选地在 profile 选择的 worker runtime 中运行 TypeScript，将模型可见消息与工具结果写入已发布格式的 Session 日志，并在返回前完成其持有 writer 的结算。原生 profile 还须安装文件系统、观察策略、Session 持久化、模型、模型执行及原生 Agent Provider。
 
 ## 目录
 
@@ -21,9 +21,9 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用拥有一个 turn。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
+`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用通过同一个 Agent execution owner 接纳一个根输入。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
 
-应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；非授权结果会变为 `APPROVAL_*` 工具结果错误。每个 turn 会注册一个由 Session 标识派生的子作用域原生 Agent，在该 Agent 的显式 initiator boundary 内运行模型和工具工作，并且只在 turn 结束后注销它。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
+应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；非授权结果会变为 `APPROVAL_*` 工具结果错误。每个 Session 使用一个由其标识派生的子作用域原生 Agent。Turn 在该 Agent 的显式 initiator boundary 内运行，Program 在已接纳工作排空后释放身份。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
 
 [模型执行 Provider](../native-model-execution/README.zh.md)负责组装并记录每个助手流事件。应用继续拥有 turn 和工具执行。
 
@@ -32,6 +32,12 @@ kind: "package-reference"
 已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。
 
 已校验的 `builtinTools` 布尔值默认为 `true`。设为 `false` 会移除固定文件 schema 和内置 `{program}` 代码工具，并且仅调度注册表贡献。可选 PTC profile 显式选择该值，使注册表拥有的 `run_code` 成为唯一传输工具。Prompt 段在呈现文本进入持久化 system message 前接收精确的请求 Agent scope。
+
+一次性执行清理会在活动 owner 观察者拒绝后仍尝试关闭 writer，同时保留执行与清理失败。Agent 接纳在发布生命周期通知前拥有借用的 preset lease，通知失败或取消会释放 lease。驻留子级将选定 preset 持久化到创建 header，并在模块准备前校验恢复事实。
+
+`sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。待处理消息记录为持久 inbox 事件，step 准入在推导模型输入之前持久记录精确认领。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。
+
+`rootExecution` 提供带品牌的不可变路由、维护、执行、结算、已关闭 turn 的 fork 及可选可恢复删除。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
 
 <a id="dev-note"></a>
 ## 开发备注

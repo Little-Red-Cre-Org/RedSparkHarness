@@ -1,11 +1,22 @@
 /** Native Agent lifecycle, scope and asynchronous initiator attribution. */
+import { InitiatorRunTracker } from './initiator-runs.ts'
+export { InitiatorRunTracker } from './initiator-runs.ts'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 import { type NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-session/types'
+import { NativeAgentExecution } from './execution.ts'
+
+export type { NativeAgentExecution, NativeAgentExecutionStatus } from './execution.ts'
+export type * from './lifecycle-types.ts'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices { agents: NativeAgentRegistry }
 }
+
+/** One of the Agent's ordered pending-message lists. */
+export type { InboxTarget } from './inbox.ts'
+import type {} from './inbox.ts'
 
 /** Opaque identity for one live native Agent. */
 export type NativeAgentId = Branded<'NativeAgentId'>
@@ -33,14 +44,10 @@ export interface NativeAgentEventDispatcher {
 
 interface Entry {
   readonly agent: NativeAgent
+  execution: NativeAgentExecution | undefined
   announced: boolean
   readonly cleanups: Set<() => void | Promise<void>>
   release: Promise<void> | undefined
-}
-
-interface InitiatorRun {
-  active: boolean
-  readonly parent: InitiatorRun | undefined
 }
 
 const NO_INITIATOR_MESSAGE = 'native-agent: no initiating Agent is active'
@@ -58,10 +65,8 @@ function isNativePromise(value: unknown): value is Promise<unknown> {
 export class NativeAgentRegistry {
   private readonly entries = new Map<NativeAgentId, Entry>()
   private readonly initiators = new AsyncLocalStorage<NativeAgent | undefined>()
-  private readonly initiatorRuns = new AsyncLocalStorage<InitiatorRun>()
+  private readonly initiatorRuns = new InitiatorRunTracker()
   private state: 'active' | 'closing' | 'disposed' = 'active'
-  private activeInitiatorRuns = 0
-  private initiatorDrain: PromiseWithResolvers<void> | undefined
   private disposal: Promise<void> | undefined
   private lifecycleEventsEnabled = true
 
@@ -69,7 +74,7 @@ export class NativeAgentRegistry {
    * @param events - the selected native Host's typed scoped event dispatcher.
    * @param lifetime - Host cancellation, which closes event admission before owned resources drain.
    */
-  constructor(private readonly events: NativeAgentEventDispatcher, lifetime?: AbortSignal) {
+  constructor(private readonly events: NativeAgentEventDispatcher, private readonly lifetime?: AbortSignal) {
     const disableEvents = (): void => { this.lifecycleEventsEnabled = false }
     if (lifetime?.aborted) disableEvents()
     else lifetime?.addEventListener('abort', disableEvents, { once: true })
@@ -122,7 +127,7 @@ export class NativeAgentRegistry {
   register(agent: NativeAgent): () => Promise<void> {
     this.assertAccepting()
     if (this.entries.has(agent.id)) throw new Error(`native-agent: Agent "${agent.id}" is already registered`)
-    const entry: Entry = { agent, announced: true, cleanups: new Set(), release: undefined }
+    const entry: Entry = { agent, execution: undefined, announced: true, cleanups: new Set(), release: undefined }
     this.entries.set(agent.id, entry)
     try {
       this.events.emit(agent.scope, 'agent/created', agent)
@@ -134,12 +139,7 @@ export class NativeAgentRegistry {
       }
       throw error
     }
-    let disposed = false
-    return async () => {
-      if (disposed) return
-      disposed = true
-      await this.release(entry)
-    }
+    return () => this.release(entry)
   }
 
   /**
@@ -177,6 +177,18 @@ export class NativeAgentRegistry {
   }
 
   /**
+   * Obtain the unique FIFO execution and idle-maintenance owner for a registered Agent.
+   * @param agent - exact available identity; copied or releasing identities are refused.
+   * @returns the same execution owner across the Agent's registration lifetime.
+   */
+  execution(agent: NativeAgent): NativeAgentExecution {
+    this.assertAccepting()
+    const entry = this.entries.get(agent.id)
+    if (entry?.agent !== agent || entry.release !== undefined) throw new Error('native-agent: Agent is not the registered instance')
+    return entry.execution ??= new NativeAgentExecution(this, agent, this.lifetime)
+  }
+
+  /**
    * Stop new initiator boundaries, drain returned Promise operations, and
    * announce disposal for registrations the owner did not release first.
    */
@@ -186,18 +198,14 @@ export class NativeAgentRegistry {
 
   private async disposeInternal(): Promise<void> {
     if (this.state === 'active') this.state = 'closing'
-    this.releaseReentrantInitiatorRuns()
-    if (this.activeInitiatorRuns !== 0) {
-      this.initiatorDrain ??= Promise.withResolvers<void>()
-      await this.initiatorDrain.promise
-    }
     const errors: unknown[] = []
-    for (const entry of [...this.entries.values()]) {
-      try {
-        await this.release(entry)
-      } catch (error) {
-        errors.push(error)
-      }
+    const pending = [...this.entries.values()].map(entry => this.release(entry))
+    try {
+      const draining = this.initiatorRuns.drainReentrant()
+      if (draining !== undefined) pending.push(draining)
+    } catch (error: unknown) { errors.push(error) }
+    for (const result of await Promise.allSettled(pending)) {
+      if (result.status === 'rejected') errors.push(result.reason as unknown)
     }
     this.state = 'disposed'
     this.initiators.disable()
@@ -212,19 +220,23 @@ export class NativeAgentRegistry {
   }
 
   private release(entry: Entry): Promise<void> {
-    return entry.release ??= this.releaseInternal(entry)
+    if (entry.release !== undefined) return entry.release
+    const completion = Promise.withResolvers<void>()
+    entry.release = completion.promise
+    void this.releaseInternal(entry).then(completion.resolve, completion.reject)
+    return completion.promise
   }
 
   private async releaseInternal(entry: Entry): Promise<void> {
     if (this.entries.get(entry.agent.id) !== entry) return
     const errors: unknown[] = []
+    const pending: Promise<void>[] = []
     for (const cleanup of [...entry.cleanups]) {
       entry.cleanups.delete(cleanup)
-      try {
-        await cleanup()
-      } catch (error) {
-        errors.push(error)
-      }
+      try { pending.push(Promise.resolve(cleanup())) } catch (error: unknown) { errors.push(error) }
+    }
+    for (const result of await Promise.allSettled(pending)) {
+      if (result.status === 'rejected') errors.push(result.reason as unknown)
     }
     try {
       this.detach(entry)
@@ -236,42 +248,7 @@ export class NativeAgentRegistry {
 
   private runWithInitiator<T>(agent: NativeAgent | undefined, operation: () => T): T {
     this.assertAccepting()
-    const run: InitiatorRun = { active: true, parent: this.initiatorRuns.getStore() }
-    this.activeInitiatorRuns += 1
-    let result: T
-    try {
-      result = this.initiatorRuns.run(run, () => this.initiators.run(agent, operation))
-    } catch (error) {
-      this.releaseInitiatorRun(run)
-      throw error
-    }
-    if (isNativePromise(result)) {
-      try {
-        void Promise.prototype.then.call(result, () => { this.releaseInitiatorRun(run) }, () => { this.releaseInitiatorRun(run) })
-      } catch {
-        this.releaseInitiatorRun(run)
-      }
-    } else {
-      this.releaseInitiatorRun(run)
-    }
-    return result
-  }
-
-  private releaseReentrantInitiatorRuns(): void {
-    let run = this.initiatorRuns.getStore()
-    while (run !== undefined) {
-      this.releaseInitiatorRun(run)
-      run = run.parent
-    }
-  }
-
-  private releaseInitiatorRun(run: InitiatorRun): void {
-    if (!run.active) return
-    run.active = false
-    this.activeInitiatorRuns -= 1
-    if (this.activeInitiatorRuns !== 0) return
-    this.initiatorDrain?.resolve()
-    this.initiatorDrain = undefined
+    return this.initiatorRuns.run(() => this.initiators.run(agent, operation), isNativePromise)
   }
 
   private assertAccepting(): void {
