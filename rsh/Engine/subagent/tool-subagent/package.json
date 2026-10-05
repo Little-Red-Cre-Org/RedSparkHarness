@@ -61,7 +61,9 @@
     "@deepseek-ai/dsh-native-subagent": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-tool-jobs": "workspace:^",
+    "@deepseek-ai/dsh-native-jobs": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
@@ -95,7 +97,10 @@
         "subagents"
       ],
       "provides": [],
-      "optional": []
+      "optional": [
+        "jobs",
+        "jobControls"
+      ]
     }
   },
   "peerDependenciesMeta": {
