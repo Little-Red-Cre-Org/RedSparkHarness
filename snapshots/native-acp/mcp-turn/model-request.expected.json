@@ -1,37 +1,14 @@
 [
   {
-    "model": "fixture-model-next",
+    "model": "fixture-model",
     "messages": [
       {
-        "role": "developer",
+        "role": "system",
         "content": "You are a native ACP fixture."
       },
       {
         "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "say hello through native ACP"
-          },
-          {
-            "type": "text",
-            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
-          },
-          {
-            "type": "image_url",
-            "image_url": {
-              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
-            }
-          }
-        ]
-      },
-      {
-        "role": "assistant",
-        "content": "native ACP snapshot reply"
-      },
-      {
-        "role": "user",
-        "content": "write permission-proof.txt after one-shot approval"
+        "content": "add two and three with the Session MCP server"
       }
     ],
     "tools": [
@@ -203,42 +180,106 @@
             }
           }
         }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__add",
+          "description": "Adds two numbers.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "a": {
+                "type": "number",
+                "description": "First number"
+              },
+              "b": {
+                "type": "number",
+                "description": "Second number"
+              }
+            },
+            "required": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__greet",
+          "description": "Greets a person by name.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name to greet"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__fail",
+          "description": "Always returns an error.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__image",
+          "description": "Returns an image content block.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__crash",
+          "description": "Replies, then exits the server process (crash-recovery test).",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__admin_reset_2d9bb2dfe9aa",
+          "description": "Tool with a dotted name (normalization test).",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
       }
     ]
   },
   {
-    "model": "fixture-model-next",
+    "model": "fixture-model",
     "messages": [
       {
-        "role": "developer",
+        "role": "system",
         "content": "You are a native ACP fixture."
       },
       {
         "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "say hello through native ACP"
-          },
-          {
-            "type": "text",
-            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
-          },
-          {
-            "type": "image_url",
-            "image_url": {
-              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
-            }
-          }
-        ]
-      },
-      {
-        "role": "assistant",
-        "content": "native ACP snapshot reply"
-      },
-      {
-        "role": "user",
-        "content": "write permission-proof.txt after one-shot approval"
+        "content": "add two and three with the Session MCP server"
       },
       {
         "role": "assistant",
@@ -248,15 +289,15 @@
             "id": "permission-proof-call",
             "type": "function",
             "function": {
-              "name": "write_file",
-              "arguments": "{\"path\":\"permission-proof.txt\",\"content\":\"approved\\n\"}"
+              "name": "mcp__fixture__add",
+              "arguments": "{\"a\":2,\"b\":3}"
             }
           }
         ]
       },
       {
         "role": "tool",
-        "content": "create: permission-proof.txt",
+        "content": "5",
         "tool_call_id": "permission-proof-call"
       }
     ],
@@ -427,6 +468,93 @@
                 "type": "boolean"
               }
             }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__add",
+          "description": "Adds two numbers.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "a": {
+                "type": "number",
+                "description": "First number"
+              },
+              "b": {
+                "type": "number",
+                "description": "Second number"
+              }
+            },
+            "required": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__greet",
+          "description": "Greets a person by name.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name to greet"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__fail",
+          "description": "Always returns an error.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__image",
+          "description": "Returns an image content block.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__crash",
+          "description": "Replies, then exits the server process (crash-recovery test).",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "mcp__fixture__admin_reset_2d9bb2dfe9aa",
+          "description": "Tool with a dotted name (normalization test).",
+          "parameters": {
+            "type": "object",
+            "properties": {}
           }
         }
       }

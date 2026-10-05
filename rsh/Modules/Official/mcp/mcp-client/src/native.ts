@@ -7,7 +7,7 @@ export type {} from '@deepseek-ai/dsh-native-tools/native'
 export type {} from '@deepseek-ai/dsh-attachment/native'
 export type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type { Config } from './types.ts'
-import { resolveReconnectPolicy, startConnection } from './connection-core.ts'
+import { resolveReconnectPolicy, startConnection, type McpConnectionPorts } from './connection-core.ts'
 import { syncTools } from './tool-core.ts'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 export type { Config, StdioConfig, StreamableHttpConfig, McpResult } from './types.ts'
@@ -61,6 +61,8 @@ export function resolveNativeMcpConfig(input: unknown): Config {
 
 /** Selected capabilities and the actual installation or Session resource owner. */
 export interface NativeMcpClientPorts {
+  /** Consumer-selected diagnostic destination; protocol stdout remains owned by its carrier. */
+  readonly logger: McpConnectionPorts['logger']
   readonly tools: NativeToolRegistry
   readonly attachments: AttachmentOperations | undefined
   readonly model: NativeModel | undefined
@@ -92,9 +94,9 @@ export async function installNativeMcpClient(context: NativeMcpClientPorts, conf
     if (reservation.size === 0) scopes.delete(context.scope)
   })
   const connection = startConnection({
-    logger: console,
+    logger: context.logger,
     syncTools: (client, options, previous) => syncTools<NativeToolExecution>(client, {
-      logger: console,
+      logger: context.logger,
       tools: { register: (definition) => {
         context.signal.throwIfAborted()
         const { $schema: dialect, ...parameters } = definition.parameters
@@ -136,7 +138,7 @@ export const plugin: NativePlugin = { apiVersion: 1, name: '@deepseek-ai/dsh-mcp
   requires: ['tools'], optional: ['attachments', 'model'], provides: [],
   resolve(input) {
     const config = resolveNativeMcpConfig(input)
-    return (context: NativeContext) => installNativeMcpClient({ tools: context.require('tools'),
+    return (context: NativeContext) => installNativeMcpClient({ logger: console, tools: context.require('tools'),
       attachments: context.optional('attachments'), model: context.optional('model'), scope: context.scope,
       signal: context.signal, effect: dispose => context.effect(dispose) }, config)
   },

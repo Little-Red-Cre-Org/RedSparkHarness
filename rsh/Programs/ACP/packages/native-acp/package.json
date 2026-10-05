@@ -67,6 +67,8 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-timeout": "workspace:^",
+    "@deepseek-ai/dsh-mcp-client": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
@@ -83,6 +85,8 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-fs-local": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-json-rpc-line": "workspace:^"
   }
 }

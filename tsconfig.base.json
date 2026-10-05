@@ -588,6 +588,7 @@
       "@deepseek-ai/dsh-client-native-session/model-controls": ["./rsh/Programs/Web/client/native-session/src/model-controls.ts"],
       "@deepseek-ai/dsh-client-native-session/native": ["./rsh/Programs/Web/client/native-session/src/native.ts"],
       "@deepseek-ai/dsh-code-runtime-process-sandbox/native": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/native.ts"],
+      "@deepseek-ai/dsh-mcp-client/acp-config": ["./rsh/Modules/Official/mcp/mcp-client/src/acp-config.ts"],
       "@deepseek-ai/dsh-mcp-client/native": ["./rsh/Modules/Official/mcp/mcp-client/src/native.ts"],
       "@deepseek-ai/dsh-mcp-client/types": ["./rsh/Modules/Official/mcp/mcp-client/src/types.ts"],
       "@deepseek-ai/dsh-native-model-execution/adapter-directory": ["./rsh/Engine/core/native-model-execution/src/adapter-directory.ts"],

@@ -29,6 +29,8 @@ Add `dsh-mcp-client` when the model should call tools from an external MCP serve
 
 The `./native` entry registers MCP value tools in the selected NativeTools scope. Native and Cordis entries share transport supervision, paginated discovery, canonical raw results and image projection. The Cordis entry alone uses the optional `dsh-scope` and `dsh-tools` peers. Native configuration supplies every transport field, `toolCallTimeoutMs` and `failOnStartupError` explicitly; `reconnect` uses the same validated defaults shown below. Startup failure rejects activation when requested. Shutdown stops reconnect, closes the transport, drains synchronization and all tool registrations, and reports cleanup failures. Image results require the selected Attachment Provider and exact Session model route to declare image input; refusal retains canonical raw values and produces diagnostic text. Cancellation retains the calling signal reason and prevents later tool-result acceptance.
 
+The `./acp-config` leaf converts standard ACP stdio/HTTP declarations with the same namespace, environment and header validation for both carriers. Its caller supplies the owning configuration parser and timeout. `installNativeMcpClient` accepts the actual Consumer scope, resource owner and diagnostic logger; the [native ACP carrier](../../../../Programs/ACP/packages/native-acp/README.md) owns each Session independently and sends diagnostics to stderr.
+
 ### Minimal configuration
 
 Add one entry per server; nothing else is required. After the harness starts, the server's tools appear in the model's tool list.

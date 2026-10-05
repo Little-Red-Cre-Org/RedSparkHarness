@@ -28,6 +28,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
     ? answer.data.message.content[0].text : 'native ACP snapshot reply'
   const requests: Record<string, unknown>[] = []
   let permissionTurn = false
+  let mcpTurn = false
   const server = createServer((request, response) => {
     let body = ''
     request.setEncoding('utf8')
@@ -39,7 +40,8 @@ it('replays a native ACP turn with exact model input, output and durable Session
       const messages = payload.messages as readonly { role: string }[]
       const events = permissionTurn && messages.at(-1)?.role !== 'tool'
         ? [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-proof-call', type: 'function',
-          function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved\n' }) } }] } }] },
+          function: mcpTurn ? { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
+            : { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved\n' }) } }] } }] },
           { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
         : [
         { choices: [{ delta: { role: 'assistant', content: reply } }] },
@@ -178,6 +180,43 @@ it('replays a native ACP turn with exact model input, output and durable Session
         writeFileSync(join(permissionScene, name), expected)
       } else expect(expected).toBe(readFileSync(join(permissionScene, name), 'utf8'))
     }
+    const mcpScene = join(root, 'snapshots/native-acp/mcp-turn')
+    const mcpFixture = join(mcpScene, 'session.v3.jsonl')
+    const mcpInput = existsSync(mcpFixture) ? parseSessionLog(readFileSync(mcpFixture, 'utf8'))
+      .find(event => event.type === 'user/message' && event.data.source.kind === 'user') : undefined
+    const mcpTask = mcpInput?.type === 'user/message' && mcpInput.data.content[0]?.type === 'text'
+      ? mcpInput.data.content[0].text : 'add two and three with the Session MCP server'
+    const mcpCreated = await transport.request('session/new', { cwd: workspace, mcpServers: [{ name: 'fixture', command: process.execPath,
+      args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')], env: [] }] }, signal) as { sessionId: string }
+    const beforeMcp = output.length
+    mcpTurn = true
+    expect(await transport.request('session/prompt', { sessionId: mcpCreated.sessionId,
+      prompt: [{ type: 'text', text: mcpTask }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    const mcpPaths = readdirSync(sessions, { recursive: true }).filter(path => String(path).endsWith('session.v3.jsonl'))
+    const mcpLog = mcpPaths.map(path => readFileSync(join(sessions, String(path)), 'utf8'))
+      .find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === mcpCreated.sessionId)
+    if (mcpLog === undefined) throw new Error('native ACP MCP Session missing')
+    const mcpEvents = parseSessionLog(mcpLog)
+    expect(mcpEvents.filter(event => event.type === 'tool/call')).toMatchObject([{ data: { name: 'mcp__fixture__add' } }])
+    const mcpRequests = requests.slice(3).map(request => ({ model: request.model, messages: request.messages, tools: request.tools ?? [] }))
+    expect(mcpRequests).toHaveLength(2)
+    const mcpPrompts = normalizedSystemPrompts(mcpLog, context)
+    const mcpSchemas = normalizedToolSchemas(mcpLog, context)
+    if (mcpPrompts[0] === undefined || mcpSchemas[0] === undefined) throw new Error('native ACP MCP request header missing')
+    const mcpExpected = {
+      'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([mcpLog])[0] ?? mcpLog, context, { identityMode: 'preserve' }),
+      'protocol.expected.json': JSON.stringify(output.slice(beforeMcp).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
+      'model-request.expected.json': JSON.stringify(mcpRequests, null, 2) + '\n',
+      'system-prompt.expected.md': formatSystemPromptSnapshot(mcpPrompts[0], mcpPrompts.slice(1)),
+      'tool-schemas.expected.json': formatToolSchemasSnapshot(mcpSchemas[0], mcpSchemas.slice(1)),
+    }
+    for (const [name, expected] of Object.entries(mcpExpected)) {
+      if (process.env.DSH_SNAPSHOT === 'refresh') {
+        mkdirSync(mcpScene, { recursive: true })
+        writeFileSync(join(mcpScene, name), expected)
+      } else expect(expected).toBe(readFileSync(join(mcpScene, name), 'utf8'))
+    }
+    await transport.request('session/close', { sessionId: mcpCreated.sessionId }, signal)
   } finally {
     child.stdin.end()
     const exited = await child
