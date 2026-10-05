@@ -75,6 +75,10 @@ kind: "package-reference"
 
 -----
 
+### 原生组合
+
+`./native` 入口将相同文件操作发布为 NativeTools 值工具。它要求已选中的 `fs`、`fsObservationPolicy` 和 `tools` 服务；写入与编辑始终使用该观测权威。可选附件存储启用 `read_image`，后者在接纳图像字节前通过已选原生模型 Provider 解析准确的 Session 模型。具有作用域的提示段落仅对消费代理的作用域可见。工具结果、图像引用与展示元数据在观察者接纳及后续模型输入之前，经过 Headless 的唯一 Session 写入者持久化。
+
 <a id="understand-the-implementation"></a>
 ## 理解实现
 

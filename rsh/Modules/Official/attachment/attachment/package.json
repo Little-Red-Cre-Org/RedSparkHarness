@@ -15,6 +15,11 @@
   "types": "lib/types/index.d.ts",
   "exports": {
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./admission": { "types": "./lib/types/admission.d.ts", "default": "./lib/types/admission.js" },
+    "./brand": { "types": "./lib/types/brand.d.ts", "default": "./lib/types/brand.js" },
+    "./error": { "types": "./lib/types/error.d.ts", "default": "./lib/types/error.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/types/native.js" },
+    "./request-projection": { "types": "./lib/types/request-projection.d.ts", "default": "./lib/types/request-projection.js" },
     "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types/types.js" },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
@@ -23,6 +28,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
@@ -30,6 +36,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   }
 }

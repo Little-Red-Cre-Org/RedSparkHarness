@@ -153,6 +153,8 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs
   // them through its own CSS pipeline, so the sheets are published artifacts.
@@ -170,7 +172,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-launch-environment': ['lib/native.js'],
+  '@deepseek-ai/dsh-launch-environment': ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
@@ -192,7 +194,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-code-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-code-runtime-process-sandbox': ['lib/native.js'],
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-fs': ['lib/types-*.js'],
+  '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js'],
   '@deepseek-ai/dsh-native-tools': [
@@ -207,7 +209,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js'],
-  '@deepseek-ai/dsh-native-model-execution': ['lib/native.js'],
+  '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-pwsh-local': ['lib/resolve.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],

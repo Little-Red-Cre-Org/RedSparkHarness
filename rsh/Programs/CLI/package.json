@@ -43,7 +43,11 @@
     "@deepseek-ai/dsh-native-prompt": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-native-tool-jobs": "workspace:^",
-    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
+    "@deepseek-ai/dsh-tool-fs": "workspace:^",
+    "@deepseek-ai/dsh-attachment-local": "workspace:^",
+    "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
+    "@deepseek-ai/dsh-llm-deepseek": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -97,7 +101,6 @@
     "@deepseek-ai/dsh-tool-bash": "workspace:^",
     "@deepseek-ai/dsh-tool-bash-persistent": "workspace:^",
     "@deepseek-ai/dsh-tool-cordis": "workspace:^",
-    "@deepseek-ai/dsh-tool-fs": "workspace:^",
     "@deepseek-ai/dsh-tool-fs-search": "workspace:^",
     "@deepseek-ai/dsh-tool-goal": "workspace:^",
     "@deepseek-ai/dsh-tool-jobs": "workspace:^",

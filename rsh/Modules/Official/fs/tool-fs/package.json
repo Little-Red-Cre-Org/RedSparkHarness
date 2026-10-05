@@ -16,6 +16,26 @@
       "apiVersion": 1,
       "role": "consumer",
       "capability": "filesystem"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "fsObservationPolicy",
+        "tools"
+      ],
+      "optional": [
+        "attachments",
+        "model",
+        "sandboxPolicy",
+        "approval",
+        "promptSections"
+      ],
+      "provides": []
     }
   },
   "main": "lib/index.js",
@@ -29,13 +49,23 @@
       "types": "./lib/types/runtime.d.ts",
       "default": "./lib/runtime.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./image-core": {
+      "types": "./lib/types/read-image-core.d.ts",
+      "default": "./lib/read-image-core.js"
+    }
   },
   "files": [
     "lib/index.js",
     "lib/runtime.js",
-    "lib/types-*.js",
+    "lib/native.js",
+    "lib/read-image-core.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -54,13 +84,65 @@
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-user-approval": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-attachment": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-plugin-host": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-sandbox-policy": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-system-prompt": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-user-approval": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-model-execution": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-sandbox-policy": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-approval": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-prompt": {
+      "optional": true
+    },
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-loop": "workspace:^",
     "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-fs-observation-policy": "workspace:^",
@@ -75,6 +157,11 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime": "workspace:^"
+    "@deepseek-ai/dsh-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^"
   }
 }

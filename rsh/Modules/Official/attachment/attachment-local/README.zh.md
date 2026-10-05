@@ -87,17 +87,25 @@ kind: "package-reference"
 
 请求版本位于由 `dshCachePath` 解析的 `<DSH_HOME>/cache/attachments/request-images/`；显式 `dshHome` 设置同时适用于缓存与持久存储。在两次请求之间清空此缓存会保留持久附件，后续读取会重新生成请求版本。`readImageRequest` 在不放大的前提下缩放到路由像素预算，再通过相同的 alpha 路由与质量阶梯应用独立编码字节目标。缓存身份包含附件 id、变换版本、预算与固定编码参数；缓存字节会先通过文件头探测格式、8-bit sRGB/sRGBA、尺寸与 alpha 信息，不匹配时重新生成。并发调用方共享一次变换与缓存写入，且只在没有等待方时由取消停止共享工作。`imageHostPath` 派生规范化对象的宿主路径，挂载的文件系统可以把该路径映射进执行世界，而不会写入持久历史。
 
+已发布的 `./backend` 入口无需加载 Cordis，即可接收图片和原样文件、读取持久对象并派生请求版本。`./native` 入口把该后端安装为有作用域的 Host 附件 Provider，在卸载时等待已接收的操作完成；旧版 Cordis 服务也把存储委托给同一个后端。较小的 `./request-store` 入口只读取已有持久图片并派生请求版本，接收正整数并发数或共享队列。 后端通过 Attachment Definition 的纯 `./admission` 入口共享源批次限额与有序提示词提升。
+
+原生 Provider 在卸载时拒绝新操作，等待已接纳的操作与已打开流的清理完成。取消的图片调用者及时结算，但 Provider 卸载仍等待后台转换和缓存写入，包括同一版本键下被替换的前序任务。图片批次等待全部已接收准备任务结束后，保留单一原错误或聚合多项失败；准备失败时不发布对象。操作失败仍由调用者接收；流清理失败会拒绝共享关闭 Promise，保留单个错误或聚合多个错误。
+
 通用文件字节的唯一规范对象位于 `<DSH_HOME>/attachments/v1/file-objects/<digest-prefix>/<digest>`。每条引用路径 `<DSH_HOME>/attachments/v1/files/<digest-prefix>/<digest>/<name>` 都是只读硬链接，所以名称不同但字节相同的文件不会重复占用磁盘。`readFileStream` 以有界分块读取引用路径，并在消费方成功结束前校验完整摘要与记录的字节数。对象缺失、被改写或截断时，消费方会失败，不会得到字节已经变化的完整导出。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`LocalAttachmentStore`、`Config` schema、默认值 |
+| [`src/index.ts`](src/index.ts) | Cordis 服务适配器与 schema |
+| [`src/config.ts`](src/config.ts) | 共享本地配置默认值与原生校验 |
+| [`src/backend.ts`](src/backend.ts) | 不依赖 Cordis 的共享图片与文件存储操作 |
+| [`src/native.ts`](src/native.ts) | 原生 Host Provider 注册与操作排空 |
 | [`src/store.ts`](src/store.ts) | 内容寻址写入与校验读取：暂存、硬链接发布、fsync 链、摘要校验 |
 | [`src/file-store.ts`](src/file-store.ts) | 原样文件的流式写入、校验式流式读取与安全存储文件名 |
 | [`src/normalization.ts`](src/normalization.ts) + [`src/encoding.ts`](src/encoding.ts) | 提供方无关的规范化与有界格式／质量候选 |
-| [`src/request-image.ts`](src/request-image.ts) | 路由专用请求变换、缓存身份与 singleflight |
+| [`src/request-image.ts`](src/request-image.ts) | 路由专用请求变换与缓存身份 |
+| [`src/request-store.ts`](src/request-store.ts) | 不依赖 Cordis 的持久图片读取与共享请求工作 |
 | [`src/image.ts`](src/image.ts) | 完整光栅解码与元数据校验 |
 | — | 不发布运行时不变式伴生入口；不可变写入与校验读取在后端边界直接强制。 |
 

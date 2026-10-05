@@ -4,8 +4,11 @@ import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import sharp from 'sharp'
+import { CompressionLimiter } from '../src/compression-limiter.ts'
+import { LocalAttachmentBackend } from '../src/backend.ts'
+import { NativeLocalAttachmentStore } from '../src/native.ts'
 import LocalAttachmentStore, {
   DEFAULT_NORMALIZED_IMAGE_MAX_BYTES,
   DEFAULT_NORMALIZED_IMAGE_MAX_DIMENSION,
@@ -163,6 +166,37 @@ describe('local attachment service', () => {
         { data: Uint8Array.of(1, 2, 3), mediaType: 'image/png' },
       ])).rejects.toThrow(/Unsupported or malformed image data/)
       expect(existsSync(service.root)).toBe(false)
+      const entered = Promise.withResolvers<undefined>()
+      const release = Promise.withResolvers<undefined>()
+      const failure = new Error('image preparation failed')
+      const run = vi.spyOn(CompressionLimiter.prototype, 'run')
+        .mockImplementationOnce(async () => { throw failure })
+        .mockImplementationOnce(async (task) => {
+          entered.resolve(undefined)
+          await release.promise
+          return task()
+        })
+      const native = new NativeLocalAttachmentStore(new LocalAttachmentBackend({ dshHome }))
+      const batch = native.saveImages([
+        { data: valid, mediaType: 'image/png' },
+        { data: valid, mediaType: 'image/png' },
+      ])
+      const rejected = expect(batch).rejects.toBe(failure)
+      try {
+        await entered.promise
+        let closed = false
+        const closing = native.close().then(() => { closed = true })
+        await new Promise(resolve => setImmediate(resolve))
+        expect(closed).toBe(false)
+        release.resolve(undefined)
+        await rejected
+        await closing
+        expect(existsSync(service.root)).toBe(false)
+      } finally {
+        release.resolve(undefined)
+        await native.close()
+        run.mockRestore()
+      }
     } finally {
       await rm(dshHome, { recursive: true, force: true })
     }

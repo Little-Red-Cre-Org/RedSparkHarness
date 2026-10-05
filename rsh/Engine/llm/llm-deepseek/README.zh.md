@@ -96,6 +96,10 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 
 -----
 
+### 原生安装
+
+`./native` 入口使用相同的 DeepSeekAdapter、连接解析器与图像序列化，发布一个已选模型 Provider。原生凭据与启动环境为必需服务；附件与 Fs 为可选服务。连接配置在安装期间固定。Cordis 入口保留动态设置与扩展贡献；此原生入口不注册设置编辑器或请求扩展注册表。元数据查询与 HTTP 流在完成之前保留安装所有权；移除时取消接纳、关闭迭代器并报告清理失败。
+
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
