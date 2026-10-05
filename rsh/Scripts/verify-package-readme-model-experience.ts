@@ -49,6 +49,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox': { kind: 'indirect', reason: 'The process Provider delegates model-visible run_code schemas and durable results to its consuming application.' },
   'rsh/Core/util/errors': { kind: 'none', reason: 'Shared error representation does not create model requests.' },
   'rsh/Core/runtime-diagnostics/native-runtime': { kind: 'none', reason: 'The native lifecycle library owns no model request content or durable Session events.' },
+  'rsh/Engine/core/native-session-execution': { kind: 'indirect', reason: 'The routing registry delegates model-visible child messages and configuration recording to the selected Program.' },
+  'rsh/Engine/workspace/workspace-definition': { kind: 'none', reason: 'The stateless identity constructor and consumer types register no model-facing content.' },
   'rsh/Engine/core/native-agent': { kind: 'none', reason: 'Native Agent identity and initiator attribution add no model request content.' },
   'rsh/Engine/core/native-code-runtime': { kind: 'indirect', reason: 'The Provider delegates model-visible result rendering and durable Session logging to its consuming native application.' },
   'rsh/Engine/context/native-time-context': { kind: 'indirect', reason: 'The Provider delegates Session append and model-request placement to its consuming native application.' },

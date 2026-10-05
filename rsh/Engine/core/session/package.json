@@ -50,6 +50,7 @@
     "@deepseek-ai/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-scope": { "optional": true },
     "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {

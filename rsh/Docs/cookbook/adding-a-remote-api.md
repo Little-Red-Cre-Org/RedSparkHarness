@@ -62,7 +62,9 @@ A code reads `<domain>/<reason>`, and its declaration has four placement rules:
 ```ts
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+
+declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** No stored note carries that id. */
     'note/not-found': { readonly noteId: string }

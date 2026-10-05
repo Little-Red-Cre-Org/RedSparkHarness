@@ -27,6 +27,8 @@ kind: "package-reference"
 
 原生 `./native` Provider 注册由 profile 安装的常驻组装。配置显式 `default` 标识，并使用真实 NativeScope 注册每个组装。解析返回该次安装的 generation；Agent 租约共享其取消信号。移除常驻组装时，先关闭接纳并取消其 Agent，再等待租约释放，同时报告已记录的清理失败。Program 负责 Session 选择事件和 Agent 创建。此入口不加载 `agent.cordis.yml`、发现 preset 根目录或编辑用户设置；这些操作仍由兼容入口提供。`./selection` 为两个运行时从完整 Session 历史重建 preset 选择。
 
+原生入口不会加载兼容入口使用的可选 Loader、Include、原子写入、主目录路径、scope 或 Typert 对等依赖。
+
 在需要让每个 agent 会话从 preset 文件获得自己的工具、提示词段落与 skill 的组装中挂载本包。每个会话都会命名一个 preset——显式指定或通过配置的默认值——并据此组装；没有本包时，会话只能回退到宿主组装挂载的内容。
 
 随附 Web 的 `standard`、`ptc` 与 `cordis` preset 包含[显式文件交付](../../../Programs/Web/client/ui-deliverables/README.zh.md#explicit-deliveries)。`minimal` preset 保留固定的双工具训练配置。

@@ -87,17 +87,25 @@ Admission accepts up to 20 images and 200 MiB of source bytes per message; one s
 
 Request versions live below `<DSH_HOME>/cache/attachments/request-images/`, resolved by `dshCachePath`; an explicit `dshHome` setting applies to both cache and durable storage. Clearing this cache between requests preserves durable attachments, and later reads regenerate the variants. `readImageRequest` scales without enlargement to a route pixel budget, then applies a separate encoded-byte target through the same alpha routing and quality ladder. Its cache identity includes the attachment id, transform version, budgets, and fixed encoder settings; cached bytes are header-probed for format, 8-bit sRGB/sRGBA, dimensions, and alpha facts, and a mismatch regenerates the entry. Concurrent callers share one transform and cache write, while cancellation stops shared work only when no waiter remains. `imageHostPath` derives the normalized object's host path, and the mounted filesystem may map that path into its execution world without writing it to durable history.
 
+The published `./backend` entry admits images and verbatim files, reads durable objects, and derives request variants without loading Cordis. The `./native` entry installs that backend as a scoped Host attachment Provider and drains accepted operations when removed; the legacy Cordis service delegates storage to the same backend. The smaller `./request-store` entry reads existing durable images and derives request variants, accepting a positive concurrency or a shared queue. The backend shares source-batch limits and ordered prompt promotion with the Attachment Definition through its pure `./admission` entry.
+
+The native Provider rejects new work during removal and waits for accepted operations and open-stream cleanup. Cancelled image callers settle promptly, while Provider removal waits for their underlying transforms and cache writes, including predecessors replaced under the same variant key. Image batches wait for every accepted preparation before reporting one original error or aggregating multiple failures, and publish nothing if preparation fails. Operation failures remain with their callers; a stream cleanup failure rejects the shared close promise, preserving a single failure or aggregating multiple failures.
+
 Generic-file bytes have one canonical object at `<DSH_HOME>/attachments/v1/file-objects/<digest-prefix>/<digest>`. Each reference path at `<DSH_HOME>/attachments/v1/files/<digest-prefix>/<digest>/<name>` is a read-only hard link, so different names for equal bytes do not duplicate disk content. `readFileStream` reads the reference path in bounded chunks and verifies the complete digest and recorded byte count before a consumer can finish successfully. A missing, changed, or truncated object fails its consumer instead of producing a complete export with different bytes.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `LocalAttachmentStore`, `Config` schema, defaults |
+| [`src/index.ts`](src/index.ts) | Cordis service adapter and schema |
+| [`src/config.ts`](src/config.ts) | Shared local configuration defaults and native validation |
+| [`src/backend.ts`](src/backend.ts) | Shared Cordis-free image and file storage operations |
+| [`src/native.ts`](src/native.ts) | Native Host Provider registration and operation draining |
 | [`src/store.ts`](src/store.ts) | Content-addressed write and verified read: staging, hard-link publish, fsync chain, digest verification |
 | [`src/file-store.ts`](src/file-store.ts) | Verbatim streamed file writes, verified streamed reads, and safe stored filenames |
 | [`src/normalization.ts`](src/normalization.ts) + [`src/encoding.ts`](src/encoding.ts) | Provider-independent normalization and bounded format/quality candidates |
-| [`src/request-image.ts`](src/request-image.ts) | Route-specific request transforms, cache identity, and singleflight |
+| [`src/request-image.ts`](src/request-image.ts) | Route-specific request transforms and cache identity |
+| [`src/request-store.ts`](src/request-store.ts) | Cordis-free durable image reads and shared request work |
 | [`src/image.ts`](src/image.ts) | Full raster decode and metadata verification |
 | — | No runtime invariant companion is published; immutable writes and verified reads are enforced directly at the backend boundary. |
 

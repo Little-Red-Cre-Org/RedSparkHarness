@@ -1,3 +1,4 @@
+import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, expect, it } from 'vitest'
@@ -37,7 +38,9 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertContextMap {
     gatewayFixture: TypertContext<string>
   }
+}
 
+declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'session/agent-busy': { readonly reason: string }
   }

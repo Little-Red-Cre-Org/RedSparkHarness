@@ -4,6 +4,7 @@
  * @module @deepseek-ai/dsh-agent/types
  */
 
+export type { InboxTarget } from '@deepseek-ai/dsh-native-agent/inbox'
 import type { UserMessage } from '@deepseek-ai/dsh-llm/types'
 import type { OptionalSessionSeq, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { TypertContext, TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
@@ -25,9 +26,6 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     agent: TypertContext<SessionId>
   }
 }
-
-/** One of the two ordered pending-message lists owned by an agent. */
-export type InboxTarget = 'next-turn' | 'next-step'
 
 /** Complete pending Inbox value reconstructed from durable splices. */
 export interface InboxState {
@@ -75,21 +73,4 @@ export interface TurnBoundaryProjection {
   readonly lastStepBoundary: { readonly kind: 'start' | 'end'; readonly seq: SessionSeq } | null
   /** Turn number of the latest `turn/start`; 0 before the first turn. */
   readonly lastTurn: number
-}
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * One normalized mutation of an agent's durable pending-message lists.
-     * The session-projection registry applies the committed event before
-     * `Session.append()` returns; Inbox live notifications follow that commit.
-     */
-    'agent/inbox/spliced': {
-      target: InboxTarget
-      start: number
-      removedCount?: number
-      inserted: UserMessage[]
-      outcome?: 'canceled'
-    }
-  }
 }

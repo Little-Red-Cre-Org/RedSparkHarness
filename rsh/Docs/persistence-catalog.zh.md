@@ -110,7 +110,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/core/agent/src/types.ts:87`](../Engine/core/agent/src/types.ts)
+来源：[`rsh/Engine/core/native-agent/src/inbox.ts:15`](../Engine/core/native-agent/src/inbox.ts)
 
 ### `agent-preset/*`
 
@@ -120,15 +120,13 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 ```ts persistence-catalog
 /**
- * The session's agent preset was chosen after creation, while the session
- * was still blank. Log-only: it records the composition later turns ran
- * under, so a resumed or forked session rebuilds the same one instead of
- * the header's creation-time value.
+ * A blank Session selects its subsequent Agent composition.
+ * @param agentPreset - selected deployment preset identifier.
  */
 'agent-preset/selected': { agentPreset: string }
 ```
 
-来源：[`rsh/Engine/preset/agent-presets/src/session.ts:28`](../Engine/preset/agent-presets/src/session.ts)
+来源：[`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine/preset/agent-presets/src/selection-events.ts)
 
 ### `approval/*`
 
@@ -554,7 +552,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'model/selection': ModelSelection
 ```
 
-来源：[`rsh/Programs/Web/api/session-controller/src/types.ts:40`](../Programs/Web/api/session-controller/src/types.ts)
+来源：[`rsh/Programs/Web/api/session-controller/src/types.ts:41`](../Programs/Web/api/session-controller/src/types.ts)
 
 ### `native-approval/*`
 

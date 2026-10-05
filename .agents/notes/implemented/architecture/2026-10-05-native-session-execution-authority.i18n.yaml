@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-session-execution-authority.md
-2026-10-05-native-session-execution-authority.md: 67b66fc7135366c20777b108681c2db34b1fa847
-2026-10-05-native-session-execution-authority.zh.md: 2569ea45b499ca6a997edc883c1d7aef12795136
+2026-10-05-native-session-execution-authority.md: 6bfe70f4d3b340f36902547e081ebad6e91d0ecf
+2026-10-05-native-session-execution-authority.zh.md: 441dbcd82989e6a951e3cbb19333c54a889cff82

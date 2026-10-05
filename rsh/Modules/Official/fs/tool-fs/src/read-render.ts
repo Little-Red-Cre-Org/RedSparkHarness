@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-tool-fs/read-render
  */
 
-import { FsError } from '@deepseek-ai/dsh-fs'
+import { FsError } from '@deepseek-ai/dsh-fs/native'
 
 /** Default maximum characters returned for a single line (the `readMaxLineLength` config). */
 export const READ_MAX_LINE_LENGTH = 2000

@@ -25,6 +25,8 @@ kind: "package-reference"
 
 可选 `onChunk` 观察者接收同一次 dispatch 已接纳的流块。观察者失败会中断尝试并保留其已记录的部分流；观察者不会创建另一次模型请求或另一个 writer。
 
+已选模型 Provider 可以提供 `resolveModel` 来查询准确路由的元数据；缺少此能力时，图像工具会拒绝执行。`NativeAdapterModel` 使用安装取消信号转发实际 LLM Adapter，保留已接纳的元数据及流操作，并在移除期间关闭暂停的迭代器。失败或取消的 next 调用先关闭并排空其迭代器，再以原请求错误拒绝；迭代器清理失败保留给共享关闭 Promise 报告。此辅助类不提供模型目录或设置权威。
+
 <a id="dev-note"></a>
 ## 开发备注
 

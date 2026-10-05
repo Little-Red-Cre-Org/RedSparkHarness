@@ -15,7 +15,7 @@ export const plugin: NativePlugin = {
       throw new Error('native-prompt: configuration must be empty')
     }
     return (context) => {
-      const registry = new NativePromptRegistry()
+      const registry = new NativePromptRegistry(context.scope)
       context.own(() => { registry.clear() })
       context.provide('promptSections', registry)
     }

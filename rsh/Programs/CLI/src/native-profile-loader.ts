@@ -7,6 +7,8 @@ import {
   NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry,
   type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
+import { launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
+import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { applyNativeProfilePatches, parseNativeProfileConfig, profileRuntime, type NativeProfileConfig } from './native-profile-config.ts'
 
@@ -80,6 +82,7 @@ export async function loadNativeProfile(options: {
   onApplication?: (application: NativeApplication) => void
 }): Promise<LoadedNativeProfile> {
   const home = options.home ?? resolveDshHome()
+  const environment = options.target === 'host' ? loadLayeredEnv('dsh') : undefined
   const profileDir = join(home, 'profiles', options.profile)
   const profile = readNativeProfile({ profile: options.profile, patchFiles: options.patchFiles, home })
   const anchors = [createRequire(options.installAnchor), createRequire(join(profileDir, 'package.json'))]
@@ -117,6 +120,12 @@ export async function loadNativeProfile(options: {
     requests.set(row.id, { plugin, scope, config: row.config })
   }
   const planned = [...requests.values()]
+  if (environment !== undefined) for (const row of profile.scopes) {
+    if (row.parent !== undefined) continue
+    const scope = scopes.get(row.id)
+    if (scope === undefined) throw new Error(`native profile lost scope ${row.id}`)
+    planned.push({ plugin: launchEnvironmentProvider(environment), scope, config: undefined })
+  }
   if (options.onApplication !== undefined) {
     const applications = planned.filter(request => request.plugin.provides.includes('application'))
     if (applications.length !== 1) throw new Error(`native profile ${options.profile} must select exactly one application`)

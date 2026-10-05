@@ -24,6 +24,8 @@ The `./native` Provider accepts no configuration. Its `execute` call requires an
 
 An optional `onChunk` observer receives accepted stream chunks from this same dispatch. Observer failures interrupt the attempt and preserve its recorded partial stream; the observer creates neither another model request nor another writer.
 
+Selected Model Providers can expose `resolveModel` for exact route metadata; an image tool refuses when that capability is absent. `NativeAdapterModel` forwards an actual LLM adapter with installation cancellation, retains accepted metadata and stream operations, and closes paused iterators during removal. A failed or cancelled next call closes and drains its iterator before rejecting with the original request error; iterator cleanup failures remain recorded for the shared close promise. This helper supplies no model catalog or settings authority.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.

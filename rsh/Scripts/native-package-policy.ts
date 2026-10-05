@@ -2,6 +2,7 @@
 
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Core/identity/anonymous-user-id',
   'rsh/Core/subprocess/win32-process',
   'rsh/Core/util/http-proxy',
   'rsh/Core/util/atomic-write',
@@ -45,6 +46,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
   ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
@@ -61,6 +63,10 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
+  ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
+  ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
+  ['rsh/Engine/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
+  ['rsh/Engine/llm/llm-deepseek', 'Cordis and native official Providers share real HTTP/SSE adapter and static configuration'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
@@ -78,6 +84,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
+  ['rsh/Modules/Official/attachment/attachment', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
   ['rsh/Engine/llm/llm', ['host', 'client']],
@@ -89,9 +96,30 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
 ])
 
+/** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
+export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
+  ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
+  ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
+  ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
+  ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
+  ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Engine/preset/agent-presets', [
+    '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
+    '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
+    '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol',
+  ]],
+])
+
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
+  ['rsh/Core/util/launch-environment', ['./layers']],
+  ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
+  ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
+  ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
   ['rsh/Engine/core/native-agent', ['./inbox']],
@@ -99,7 +127,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
-  ['rsh/Modules/Official/attachment/attachment', ['./types']],
+  ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
   ['rsh/Engine/core/session', ['./types']],
@@ -112,11 +140,20 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
   ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
+  ['rsh/Core/util/launch-environment/layers', ['host']],
+  ['rsh/Modules/Official/fs/tool-fs/image-core', ['host']],
+  ['rsh/Modules/Official/attachment/attachment-local/backend', ['host']],
+  ['rsh/Modules/Official/attachment/attachment-local/request-store', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/admission', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/request-projection', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/brand', ['host', 'client']],
+  ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
+  ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/read-history', ['host']],
-  ['rsh/Engine/core/native-agent/inbox', ['host']],
+  ['rsh/Engine/core/native-agent/inbox', ['host', 'client']],
   ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
   ['rsh/Engine/core/native-tools/json-schema', ['host']],
   ['rsh/Engine/core/native-tools/code-output', ['host']],

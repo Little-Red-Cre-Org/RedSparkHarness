@@ -29,7 +29,7 @@ kind: "package-reference"
 
 你很少直接加载 `dsh-fs`：你挂载一个注册为 `ctx.fs` 的后端，然后从自己的插件调用该服务，或让 `dsh-tool-fs` 工具替你调用。本页服务于确实接触它的两类读者——选择后端的部署方，以及实现或消费该约定的开发者。
 
-`@deepseek-ai/dsh-fs/native` 声明原生 `fs` 服务及按作用域分发的决策与观察事件，不安装 Provider。原生 Consumer 使用 `FileSystemOperations`，根 Cordis 入口保留 `FileSystem` 注册。操作声明仍引用当前依赖兼容层的包中的 sandbox 策略类型。
+`@deepseek-ai/dsh-fs/native` 声明原生 `fs` 服务及按作用域分发的决策与观察事件，不安装 Provider。原生 Consumer 使用 `FileSystemOperations`，根 Cordis 入口保留 `FileSystem` 注册。操作声明仍引用当前依赖兼容层的包中的 sandbox 策略类型。`dsh-invariants` 和 `dsh-plugin-host` 是可选 peer，选用对应兼容 invariant/runtime 入口时需要提供；`./native` 不加载二者。
 
 ### 选择并挂载后端
 

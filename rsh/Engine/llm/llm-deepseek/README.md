@@ -96,6 +96,10 @@ Non-2xx responses fail with stable codes: `AUTH` (401/403), `QUOTA`, `RATE_LIMIT
 
 -----
 
+### Native installation
+
+The `./native` entry publishes one selected Model Provider using the same DeepSeekAdapter, connection parser and image serialization. Native credentials and launch environment are required; attachments and Fs are optional. Connection configuration is fixed for the installation. The Cordis entry retains dynamic settings and extension contributions; this native entry does not register a settings editor or request-extension registry. Metadata lookup and HTTP streams retain their installation ownership until completion, and removal cancels admission, closes iterators and reports cleanup failures.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

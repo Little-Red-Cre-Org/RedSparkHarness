@@ -6,6 +6,7 @@
  * @module @deepseek-ai/dsh-llm
  */
 
+import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import { Context } from '@deepseek-ai/cordis'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
@@ -13,7 +14,6 @@ import type {
   GenerateOptions,
   LlmConfigurableProvider,
   LlmDiscoveredModel,
-  LlmFailure,
   LlmImageRequestPricing,
   LlmModelContext,
   LlmModelDiscoveryRequest,
@@ -27,18 +27,16 @@ import type {
 import { freezeMessage, type Message } from './message.ts'
 import { resolveRetryPolicy } from './retry-policy.ts'
 import type { ResolvedRetryPolicy } from './retry-policy.ts'
-import type { ProviderRequestId } from './brand.ts'
 import { callConfigEquals } from './call-config.ts'
 import type { LlmCallConfig, LlmCallConfigAdapterDefaults } from './call-config.ts'
-import { HarnessError, INVALID_CREDENTIAL_CODE } from './error.ts'
+import { LlmError } from './error.ts'
 import { normalizeLlmFailure } from './adapter-failure.ts'
-import { normalizeApiKey } from './api-key.ts'
 import {
   contentHasFile, contentHasImage, fileHandleText, projectFilesToText, projectImagesForTextModel,
 } from './content.ts'
 import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** A draft provider interrogation refused or failed. */
     'llm/model-discovery-rejected': {
@@ -95,91 +93,6 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-/** Structured provider facts and cause accepted by {@link LlmError}. */
-export interface LlmErrorOptions extends ErrorOptions {
-  /** Valid HTTP status observed at the provider boundary. */
-  status?: number
-  /** Positive finite provider-requested delay in milliseconds. */
-  providerRetryAfterMs?: number
-  /** Non-empty opaque provider request id. */
-  requestId?: ProviderRequestId
-}
-
-/**
- * Typed error for LLM-related failures. Extends {@link HarnessError}, so the
- * `code` string (e.g. `AUTH`, `RATE_LIMIT`, `NO_ADAPTER`) is shared taxonomy.
- */
-export class LlmError extends HarnessError {
-  /** Serializable facts retained beside this live Error. */
-  readonly failure: LlmFailure
-
-  /**
-   * @param message - non-empty human-readable failure summary.
-   * @param code - non-empty stable provider-neutral machine code.
-   * @param options - optional cause and validated serializable provider facts.
-   */
-  constructor(message: string, code: string, options?: LlmErrorOptions) {
-    if (typeof message !== 'string' || message.length === 0) throw new Error('LlmError message must be a non-empty string')
-    if (typeof code !== 'string' || code.length === 0) throw new Error('LlmError code must be a non-empty string')
-    if (options?.status !== undefined
-      && (!Number.isInteger(options.status) || options.status < 100 || options.status > 599)) {
-      throw new Error('LlmError status must be an integer from 100 through 599')
-    }
-    if (options?.providerRetryAfterMs !== undefined
-      && (!Number.isFinite(options.providerRetryAfterMs) || options.providerRetryAfterMs <= 0)) {
-      throw new Error('LlmError providerRetryAfterMs must be a positive finite number')
-    }
-    if (options?.requestId !== undefined
-      && (typeof options.requestId !== 'string' || options.requestId.length === 0)) {
-      throw new Error('LlmError requestId must be a non-empty string')
-    }
-    super(message, code, options)
-    this.name = 'LlmError'
-    this.failure = Object.freeze({
-      message,
-      code,
-      ...options?.status === undefined ? {} : { status: options.status },
-      ...options?.providerRetryAfterMs === undefined ? {} : { providerRetryAfterMs: options.providerRetryAfterMs },
-      ...options?.requestId === undefined ? {} : { requestId: options.requestId },
-    })
-  }
-}
-
-/**
- * Accept one supplied credential, or refuse it as unusable.
- *
- * A stored key arrives from the credentials seam, a `.env` line, or a shell
- * export, all of which pick up surrounding whitespace, so trimming is silent.
- * Anything else fails here rather than inside `fetch`, whose ByteString
- * refusal names a UTF-16 code point instead of the setting to change. The key
- * never enters the message: `ref` names where to fix it, and echoing any part
- * of a secret into a log or a UI is the failure this diagnosis avoids.
- *
- * Lives beside {@link LlmError} rather than in `./api-key.ts` so the predicate
- * module stays dependency-free; both adapters share this one diagnosis instead
- * of keeping near-identical local copies.
- * @param raw - the credential exactly as supplied.
- * @param pkg - the refusing package name, prefixed to the diagnostic.
- * @param ref - the credential reference the value resolved through.
- * @returns the trimmed, usable key.
- */
-export function assertUsableApiKey(raw: string, pkg: string, ref: string): string {
-  const checked = normalizeApiKey(raw)
-  if (checked.ok) return checked.value
-  // The Models page is named as the writer it usually is, not as the only one:
-  // the same value can arrive from a hand-edited .env or a shell export in a
-  // composition that mounts no credentials seam at all, where directing the
-  // user to a page that deployment does not serve would be a dead end.
-  throw new LlmError(
-    checked.reason === 'empty'
-      ? `${pkg}: the API key resolved from ${ref} is blank; set ${ref} to the raw key`
-        + ' (the web Models page writes it) or export it in the launching environment'
-      : `${pkg}: the API key resolved from ${ref} contains characters no HTTP header can carry;`
-        + ` set ${ref} to the raw key alone (the web Models page writes it)`,
-    INVALID_CREDENTIAL_CODE,
-  )
-}
-
 /** One model call whose config and adapter registration were resolved together. */
 export interface PreparedLlmCall {
   /** Detached, deep-frozen config with any adapter-owned default materialized. */
@@ -204,103 +117,9 @@ export interface PreparedLlmCall {
   stream(options: GenerateOptions): AsyncIterable<StreamChunk>
 }
 
-/** One adapter-owned model-resolution generation bound to its eventual stream call. */
-export interface PreparedAdapterCall {
-  /** Exact model metadata from the same adapter generation as {@link stream}. */
-  readonly model: LlmResolvedModelInfo
-  /** Dispatch through that generation without re-reading dynamic connection facts. */
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
-}
-
-/**
- * Provider-wire adapter for the harness message and stream vocabulary. Register implementations
- * with `ctx.llm.registerAdapter(providers, adapter)`. Every provider HTTP request must include
- * `attributionHeaders()`; prove the headers are added in the wire request or library header hook. The direct-fetch
- * DeepSeek and library-backed pi-ai adapters meet this contract through different internals.
- */
-export abstract class LlmAdapter {
-  /**
-   * Describe one provider route owned by this adapter.
-   * @param provider - a route passed to `registerAdapter()` for this instance.
-   * @returns detached display metadata whose id must equal `provider`.
-   */
-  providerInfo(provider: string): LlmProviderInfo {
-    return { id: provider, name: provider }
-  }
-
-  /**
-   * Return the provider-owned retry policy captured with this route.
-   * @param _provider - a route passed to `registerAdapter()` for this instance.
-   * @returns a resolved policy, or `undefined` to use the normal defaults.
-   */
-  providerRetryPolicy(_provider: string): ResolvedRetryPolicy | undefined {
-    return undefined
-  }
-
-  /**
-   * Resolve provider-side request-image pricing for one exact model route.
-   * The default declares none, so consumers fall back to their own neutral
-   * estimate. Implementations must answer synchronously without I/O; the
-   * token meter resolves this per measurement.
-   * @param _provider - a route passed to `registerAdapter()` for this instance.
-   * @param _model - exact model id passed to {@link GenerateOptions.model}.
-   * @returns route-owned image pricing, or `undefined` when the route declares none.
-   */
-  imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined {
-    return undefined
-  }
-
-  /**
-   * List models this adapter can currently advertise for one owned provider.
-   * The result is advisory: an adapter may accept unlisted model ids, and
-   * consumers must not turn absence into request rejection.
-   * @param _provider - one provider route owned by this adapter.
-   * @returns discoverable models in adapter-preferred order.
-   */
-  listModels(_provider: string): Promise<readonly LlmModelInfo[]> {
-    return Promise.resolve([])
-  }
-
-  /**
-   * Resolve all metadata available for one exact model. This query is
-   * independent of the advisory catalog and does not validate request routing.
-   * @param provider - one provider route owned by this adapter.
-   * @param model - exact model id passed to {@link GenerateOptions.model}.
-   * @param _signal - cancellation for this exact-model lookup; asynchronous
-   *   implementations must settle promptly after it aborts.
-   * @returns provider/model identity plus any context, call-default, and reasoning metadata.
-   */
-  resolveModel(
-    provider: string,
-    model: string,
-    _signal?: AbortSignal,
-  ): Promise<LlmResolvedModelInfo> {
-    return Promise.resolve({ provider, id: model, name: model })
-  }
-
-  /**
-   * Bind exact model metadata and the eventual request dispatch to one adapter generation.
-   * Dynamic adapters override this so settings changes between preparation and
-   * dispatch cannot combine one generation's capabilities with another's endpoint.
-   * @param provider - registered provider route.
-   * @param model - exact model id.
-   * @param signal - cancellation for model resolution.
-   * @returns model metadata and a one-generation stream entry point.
-   */
-  async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
-    return {
-      model: await this.resolveModel(provider, model, signal),
-      stream: options => this.stream(options),
-    }
-  }
-
-  /**
-   * Stream one model call as raw chunks. The only required method.
-   * @param options - the fully-assembled request; implementations must honor `options.signal`.
-   * @returns the chunk stream, obeying the adapter contract documented on `StreamChunk`.
-   */
-  abstract stream(options: GenerateOptions): AsyncIterable<StreamChunk>
-}
+export { LlmAdapter } from './adapter.ts'
+export type { PreparedAdapterCall } from './adapter.ts'
+import { LlmAdapter } from './adapter.ts'
 
 /**
  * What {@link LlmRuntime.registerAdapter} returns: the disposer, plus an

@@ -53,6 +53,10 @@ kind: "package-reference"
 
 -----
 
+### 原生消费者
+
+`./native` 库声明已选中的 `attachments` 服务，并导出相同的附件操作与接纳类型。它不创建存储或安装器。原生与 Cordis 消费者共享字节引用、图像接纳及请求图像策略；已选存储 Provider 负责持久化与卸载。
+
 <a id="understand-the-implementation"></a>
 ## 理解实现
 

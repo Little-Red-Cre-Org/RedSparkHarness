@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../../../Core/vendor/cosmokit"
@@ -41,6 +43,24 @@
     },
     {
       "path": "../../attachment/attachment"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-model-execution"
+    },
+    {
+      "path": "../../../../Engine/core/native-prompt"
+    },
+    {
+      "path": "../../sandbox/native-sandbox-policy"
+    },
+    {
+      "path": "../../interaction/native-approval"
     }
   ]
 }

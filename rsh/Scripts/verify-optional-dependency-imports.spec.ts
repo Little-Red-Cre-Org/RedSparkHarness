@@ -15,7 +15,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { TypeScriptProject } from './ts-project.ts'
 import { collectOptionalImportViolations } from './verify-optional-dependency-imports.ts'
 
-const FIXTURE: Record<string, string> = {
+const FIXTURE = {
   'tsconfig.host.json': JSON.stringify({
     compilerOptions: {
       target: 'es2022',
@@ -181,6 +181,37 @@ afterAll(() => {
 })
 
 describe('optional dependency loads', () => {
+  it.each([false, true])('checks an allowlisted compatibility peer from the native entry (leaked: %s)', (leaked) => {
+    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-compatibility-peer-'))
+    try {
+      const files = {
+        'tsconfig.host.json': FIXTURE['tsconfig.host.json'],
+        'tsconfig.client.json': FIXTURE['tsconfig.host.json'],
+        'rsh/f/opt/package.json': FIXTURE['rsh/f/opt/package.json'],
+        'rsh/f/opt/src/index.ts': FIXTURE['rsh/f/opt/src/index.ts'],
+        'rsh/f/mixed/package.json': JSON.stringify({
+          name: '@f/mixed', version: '0.0.1',
+          exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+          dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
+          peerDependencies: { '@f/opt': '*' },
+          peerDependenciesMeta: { '@f/opt': { optional: true } },
+        }),
+        'rsh/f/mixed/src/index.ts': "export { runtimeValue } from '@f/opt'\n",
+        'rsh/f/mixed/src/native.ts': leaked ? "export { runtimeValue } from '@f/opt'\n" : 'export const native = 1\n',
+      }
+      for (const [path, content] of Object.entries(files)) {
+        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
+        writeFileSync(join(caseRoot, path), content)
+      }
+      const peers = new Map([['rsh/f/mixed', ['@f/opt']]])
+      expect(collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'host'), new Map(), peers)).toEqual([])
+      const actual = collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'client'), new Map(), peers)
+      expect(actual.map(violation => violation.split(' loads ')[0])).toEqual(leaked ? ['rsh/f/mixed/src/native.ts:1'] : [])
+    } finally {
+      rmSync(caseRoot, { recursive: true, force: true })
+    }
+  })
+
   it('reports every form the compiler keeps, and nothing else', () => {
     expect(violations.map(violation => violation.split(' loads ')[0])).toEqual([
       'rsh/f/cli-static-violation/src/startup.ts:1',

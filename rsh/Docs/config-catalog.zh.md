@@ -292,31 +292,28 @@ export interface Config {
 export interface Config {
   /** Explicit harness home; omitted follows `DSH_HOME`, then `~/.dsh`. */
   dshHome?: string
-  /** Maximum encoded bytes accepted for one submitted image. Default: 20 MiB. */
+  /** Maximum encoded bytes accepted for one submitted image. */
   maxImageBytes?: number
-  /** Maximum image count accepted in one submitted message. Default: 20. */
+  /** Maximum image count accepted in one submitted message. */
   maxImagesPerMessage?: number
-  /** Maximum aggregate encoded image bytes accepted in one submitted message. Default: 200 MiB. */
+  /** Maximum aggregate encoded image bytes accepted in one submitted message. */
   maxMessageImageBytes?: number
-  /** Maximum intrinsic width multiplied by height accepted for one submitted image. Default: 64,000,000. */
+  /** Maximum intrinsic width multiplied by height accepted for one submitted image. */
   maxImagePixels?: number
-  /** Maximum intrinsic width and maximum intrinsic height accepted for one submitted image. Default: 8192px. */
+  /** Maximum intrinsic width and height accepted for one submitted image. */
   maxImageDimension?: number
-  /** Total-pixel budget of the stored provider-independent normalized image. */
+  /** Total-pixel budget of the stored normalized image. */
   normalizedImageMaxPixels?: number
-  /** Long-edge pixel cap of the stored provider-independent normalized image, applied after the total-pixel budget. */
+  /** Long-edge pixel cap of the stored normalized image. */
   normalizedImageMaxDimension?: number
-  /**
-   * Encoded-byte target of the stored provider-independent normalized image;
-   * the smallest quality-ladder output is kept when no quality fits.
-   */
+  /** Encoded-byte target of the stored normalized image. */
   normalizedImageMaxBytes?: number
-  /** Maximum simultaneous normalization or request-image transformations in this service instance. */
+  /** Maximum simultaneous normalization or request-image transformations. */
   imageCompressionConcurrency?: number
 }
 ```
 
-来源：[`rsh/Modules/Official/attachment/attachment-local/src/index.ts:61`](../Modules/Official/attachment/attachment-local/src/index.ts)
+来源：[`rsh/Modules/Official/attachment/attachment-local/src/config.ts:27`](../Modules/Official/attachment/attachment-local/src/config.ts)
 
 <a id="deepseek-aidsh-bash-local"></a>
 
@@ -1118,9 +1115,9 @@ export interface DeepSeekCatalogModel {
 }
 ```
 
-依赖：[`ModelModality`](../Engine/llm/llm/src/index.ts) · [`RetryPolicyConfig`](../Engine/llm/llm/src/index.ts) · [`SystemPromptUpdate`](../Engine/llm/llm/src/index.ts)
+依赖：`ModelModality` (`@deepseek-ai/dsh-llm/native`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `SystemPromptUpdate` (`@deepseek-ai/dsh-llm/native`)
 
-来源：[`rsh/Engine/llm/llm-deepseek/src/index.ts:134`](../Engine/llm/llm-deepseek/src/index.ts)
+来源：[`rsh/Engine/llm/llm-deepseek/src/config.ts:74`](../Engine/llm/llm-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-llm-pi-ai"></a>
 
@@ -1393,7 +1390,7 @@ export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFo
 export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['thinkingTokenBudgetField']>
 ```
 
-依赖：`Api`（`@earendil-works/pi-ai`）· `CacheRetention`（`@earendil-works/pi-ai`）· `Model`（`@earendil-works/pi-ai`）· `ModelThinkingLevel`（`@earendil-works/pi-ai`）· `OpenAICompletionsCompat`（`@earendil-works/pi-ai`）· [`RetryPolicyConfig`](../Engine/llm/llm/src/index.ts) · `ThinkingBudgets`（`@earendil-works/pi-ai`）· `Transport`（`@earendil-works/pi-ai`)
+依赖：`Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`)
 
 来源：[`rsh/Engine/llm/llm-pi-ai/src/config.ts:221`](../Engine/llm/llm-pi-ai/src/config.ts)
 

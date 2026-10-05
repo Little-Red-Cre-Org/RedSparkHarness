@@ -17,6 +17,7 @@ kind: "package-library"
 - [使用本包](#use-this-package)
 - [实现](#implementation)
 - [延伸阅读](#further-exploration)
+- [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [开发备注](#dev-note)
 
@@ -42,9 +43,19 @@ kind: "package-library"
 - [官方 Workspace Provider](../../../Modules/Official/workspace/workspace/README.zh.md)
 - [原生根执行](../../core/native-session-execution/README.zh.md)
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+
+## Model Experience
+
+无，因为工作区身份构造函数和消费者类型不贡献模型可见文本。
+
+#### KV Cache effect
+
+本包不构造模型请求，因此不改变请求前缀或 KV 缓存复用。
 
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - WorkspaceId 不验证记录存在性或目录状态。调用方必须在路由执行前使用所选 Workspace Provider。
 
