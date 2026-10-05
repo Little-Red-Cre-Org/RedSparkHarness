@@ -17,7 +17,7 @@ import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-sessio
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application'
-import { plugin } from '../src/native.ts'
+import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
@@ -26,6 +26,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const scope = new NativeScope()
   let web: NativeHttpHost | undefined
   const requests: GenerateOptions[] = []
+  const firstContinue = Promise.withResolvers<undefined>()
+  let followFields: unknown
   let modelAborted!: () => void
   let releaseCleanup!: () => void
   const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
@@ -49,6 +51,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
         const text = requests.length === 1 ? 'first answer' : 'resumed answer'
         yield { type: 'block-start', index: 0, blockType: 'text' }
         yield { type: 'text-delta', index: 0, text }
+        if (requests.length === 1) await firstContinue.promise
         yield { type: 'block-end', index: 0, block: { type: 'text', text } }
         yield { type: 'finish', reason: { kind: 'stop' } }
       },
@@ -69,12 +72,15 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
-      maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100 } },
+      maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 } },
     ...[agents, execution, modelExecution, model, carrier].map(plugin => ({ plugin, scope, config: undefined })),
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
   ], 'host'))
   try {
+    for (const key of ['maxFollowBufferBytes', 'maxFollowers']) expect(() => resolveNativeWebSessionConfig({ cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
+      maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100,
+      maxFollowBufferBytes: 1000000, maxFollowers: 2, [key]: 0 })).toThrow(key)
     await host.start()
     if (web === undefined) throw new Error('missing HTTP Host')
     const login = await fetch(web.connection.authenticatedUrl(web.url), { redirect: 'manual' })
@@ -82,17 +88,29 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     if (cookie === undefined) throw new Error('missing browser authentication')
     const url = web.url
     const rpc = createWebConnectionRpc((input, init) => {
+      if (input.pathname.endsWith('/native-session/follow')) followFields = JSON.parse(init.body as string)
       const headers = new Headers(init.headers)
       headers.set('cookie', cookie)
       return fetch(new URL(input.pathname, url), { ...init, headers })
     })
-    const client = createNativeSessionClient(rpc)
-    const conversation = new NativeConversationController(client)
+    const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
+    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 100 })
     await conversation.load()
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
     expect((await client.list()).map(header => header.id)).toEqual([sessionId])
-    await conversation.send('first input')
+    const first = conversation.send('first input')
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
+    expect(conversation.getSnapshot()).toMatchObject({ state: 'sending', liveTruncated: true })
+    expect(conversation.getSnapshot().events.some(event => event.type === 'user/message')).toBe(true)
+    expect(conversation.getSnapshot().events.some(event => event.type === 'assistant/message')).toBe(false)
+    const admission = followFields as { sessionId: string; admissionId: string }
+    expect((await fetch(new URL('/api/native-session/follow', url), { method: 'POST', body: JSON.stringify(admission) })).status).toBe(401)
+    expect((await rpc.response!('/api', 'native-session/follow', { ...admission, admissionId: 'wrong' }, new AbortController().signal)).status).toBe(409)
+    expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
+    firstContinue.resolve(undefined)
+    await first
+    expect(conversation.getSnapshot().liveText).toBeUndefined()
     expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     await conversation.select(sessionId)
     await conversation.send('second input')
@@ -124,6 +142,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await conversation.close()
     await client.close()
   } finally {
+    firstContinue.resolve(undefined)
     releaseCleanup()
     await host.stop()
     await rm(directory, { recursive: true, force: true })
@@ -137,7 +156,7 @@ it.each([
   const header = { id: 'wire-session', version: 3, createdAt: 0, isSeeded: false }
   const reply = { header, events: [{ seq: 0, time: 0, ...event }], inheritedEventCount: 0 }
   const rpc = { call: vi.fn(async () => ({ ok: true, value: reply })) } as unknown as import('@deepseek-ai/dsh-client-connection/native').ClientConnectionRpc
-  const client = createNativeSessionClient(rpc)
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
   await expect(client.history(header.id as import('@deepseek-ai/dsh-session/types').SessionId)).rejects.toThrow()
   if (event.type === 'future/required') {
     Object.assign(reply.events[0]!, { ignorable: true })
