@@ -1533,8 +1533,11 @@ Source: [`rsh/Modules/Official/lsp/lsp-stdio/src/index.ts:82`](../Modules/Offici
 Requires: `tools`
 
 ```ts config-catalog
+/** Configuration for one selected MCP transport. */
+export type Config = McpClientConfig
+
 /** Configuration for one stdio or Streamable HTTP MCP server. */
-export type Config = StdioConfig | StreamableHttpConfig
+export type McpClientConfig = StdioConfig | StreamableHttpConfig
 
 /** Config for connecting to an MCP server via a spawned child process over stdio. */
 export interface StdioConfig {
@@ -1597,7 +1600,7 @@ export interface ReconnectConfig {
 }
 ```
 
-Source: [`rsh/Modules/Official/mcp/mcp-client/src/index.ts:98`](../Modules/Official/mcp/mcp-client/src/index.ts)
+Source: [`rsh/Modules/Official/mcp/mcp-client/src/index.ts:52`](../Modules/Official/mcp/mcp-client/src/index.ts)
 
 <a id="deepseek-aidsh-message-feedback"></a>
 
