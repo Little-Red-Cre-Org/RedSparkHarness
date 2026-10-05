@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { NativeClientEntryProgress } from '../src/native-entry.ts'
 
 const { bootNativeClientEntry } = vi.hoisted(() => ({ bootNativeClientEntry: vi.fn() }))
 
@@ -25,7 +26,7 @@ describe('native Web page entry', () => {
 
     expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('failed')
     expect(document.querySelector('#root [role="alert"]')?.textContent)
-      .toBe('native web: Host did not inject Client profile data')
+      .toBe('Failed to load pluginsnative web: Host did not inject Client profile data')
     expect(bootNativeClientEntry).not.toHaveBeenCalled()
     expect(console.error).toHaveBeenCalledOnce()
   })
@@ -41,9 +42,12 @@ describe('native Web page entry', () => {
     await vi.waitFor(() => { expect(container?.dataset.nativeBootState).toBe('ready') })
 
     expect(bootNativeClientEntry).toHaveBeenCalledWith(
-      container, wire, document.baseURI, undefined, expect.any(AbortSignal),
+      container, wire, document.baseURI, undefined, expect.any(AbortSignal), expect.anything(),
     )
     const signal = (bootNativeClientEntry.mock.calls[0] as unknown[])[4] as AbortSignal
+    const progress = (bootNativeClientEntry.mock.calls[0] as unknown[])[5] as NativeClientEntryProgress
+    expect(typeof progress.setTotal).toBe('function')
+    expect(typeof progress.setState).toBe('function')
     window.dispatchEvent(new Event('pagehide'))
     await vi.waitFor(() => { expect(stop).toHaveBeenCalledOnce() })
     expect(signal.aborted).toBe(true)
@@ -56,7 +60,7 @@ describe('native Web page entry', () => {
     await import('../src/native-main.ts')
     await vi.waitFor(() => { expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('failed') })
 
-    expect(document.querySelector('#root [role="alert"]')?.textContent).toBe('renderer failed')
+    expect(document.querySelector('#root [role="alert"]')?.textContent).toBe('Failed to load pluginsrenderer failed')
     expect(console.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'renderer failed' }))
   })
 
@@ -68,7 +72,7 @@ describe('native Web page entry', () => {
     await import('../src/native-main.ts')
     await vi.waitFor(() => { expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('failed') })
 
-    expect(document.querySelector('#root [role="alert"]')?.textContent).toBe('profile unavailable')
+    expect(document.querySelector('#root [role="alert"]')?.textContent).toBe('Failed to load pluginsprofile unavailable')
     expect(console.error).toHaveBeenCalledWith('profile unavailable')
   })
 

@@ -322,24 +322,16 @@ export interface Config {
 需要：`subprocess`
 
 ```ts config-catalog
-/** Plugin config (all optional — `static Config` supplies the defaults). */
-export interface Config {
-  /** Default working directory for commands (default: process.cwd()). */
-  cwd?: string
-  /** Default foreground timeout in milliseconds. */
-  timeoutMs?: number
-  /** Upper bound for per-call timeout overrides. */
-  maxTimeoutMs?: number
-  /** Per-stream in-memory output cap; overflow spills to a temp file. */
-  maxOutputBytes?: number
-  /** Per-stream spill-file cap; larger streams retain only their in-memory tail. */
-  maxSpillBytes?: number
-  /** Grace period for kill escalation and inherited pipes; at most `MAX_TIMER_DELAY_MS`. */
-  graceMs?: number
+/** Configurable Bash execution budgets. */
+export interface Config extends LocalConfig {
+  /** Explicit Bash executable; omitted configuration selects bash in the execution world. */
+  bashPath?: string
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/bash-local/src/index.ts:41`](../Modules/Official/shell/bash-local/src/index.ts)
+依赖：[`LocalConfig`](../Modules/Official/shell/shell-process-local/src/index.ts)
+
+来源：[`rsh/Modules/Official/shell/bash-local/src/controller.ts:15`](../Modules/Official/shell/bash-local/src/controller.ts)
 
 <a id="deepseek-aidsh-bash-sandbox"></a>
 
@@ -348,19 +340,13 @@ export interface Config {
 需要：`subprocess` · `sandbox` · `sandboxPolicy`
 
 ```ts config-catalog
-/**
- * Plugin config: the local executor's knobs, verbatim. The sandbox policy —
- * the default mode and fallback `workspace-write` root — is NOT here: it lives
- * on `ctx.sandboxPolicy` (`@deepseek-ai/dsh-sandbox-policy`), which resolves
- * each calling session's mode and cwd for every enforcing capability. The runner
- * choice is likewise the `ctx.sandbox` provider's config, not this executor's.
- */
+/** Local Bash budgets; sandbox policy and runner selection belong to their providers. */
 export type Config = LocalConfig
 ```
 
 依赖：[`LocalConfig`](#deepseek-aidsh-bash-local)
 
-来源：[`rsh/Modules/Official/shell/bash-sandbox/src/index.ts:36`](../Modules/Official/shell/bash-sandbox/src/index.ts)
+来源：[`rsh/Modules/Official/shell/bash-sandbox/src/index.ts:14`](../Modules/Official/shell/bash-sandbox/src/index.ts)
 
 <a id="deepseek-aidsh-client-connection"></a>
 
@@ -2191,7 +2177,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/shell-env/src/index.ts:28`](../Modules/Official/shell/shell-env/src/index.ts)
+来源：[`rsh/Modules/Official/shell/shell-env/src/index.ts:27`](../Modules/Official/shell/shell-env/src/index.ts)
 
 <a id="deepseek-aidsh-skill"></a>
 
@@ -2776,7 +2762,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/tool-bash/src/index.ts:33`](../Modules/Official/shell/tool-bash/src/index.ts)
+来源：[`rsh/Modules/Official/shell/tool-bash/src/index.ts:34`](../Modules/Official/shell/tool-bash/src/index.ts)
 
 <a id="deepseek-aidsh-tool-bash-persistent"></a>
 
@@ -2957,7 +2943,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/tool-pwsh/src/index.ts:51`](../Modules/Official/shell/tool-pwsh/src/index.ts)
+来源：[`rsh/Modules/Official/shell/tool-pwsh/src/index.ts:52`](../Modules/Official/shell/tool-pwsh/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh-persistent"></a>
 
@@ -3676,6 +3662,8 @@ export interface Config {
 - `@deepseek-ai/dsh-session-snapshot`（[`rsh/Tests/test-support/session-snapshot/src/index.ts`](../Tests/test-support/session-snapshot/src/index.ts)）
 - `@deepseek-ai/dsh-session-telemetry`（[`rsh/Engine/session/session-telemetry/src/index.ts`](../Engine/session/session-telemetry/src/index.ts)）
 - `@deepseek-ai/dsh-session-title-llm`（[`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts)）
+- `@deepseek-ai/dsh-shell-process-local`（[`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts)）
+- `@deepseek-ai/dsh-shell-sandbox-core`（[`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts)）
 - `@deepseek-ai/dsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
 - `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
 - `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）

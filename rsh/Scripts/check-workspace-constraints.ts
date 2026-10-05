@@ -162,7 +162,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // unpublished, as everywhere else in the repository.
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
-  '@deepseek-ai/dsh-client-web': ['lib/**/*.css', 'lib/native-boot.js'],
+  '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
   '@deepseek-ai/dsh-client-ui-theme': ['lib/styles'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
@@ -219,7 +219,14 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-pwsh-local': ['lib/resolve.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-bash-local': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-bash-sandbox': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-pwsh-local': ['lib/native.js', 'lib/resolve.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-pwsh-sandbox': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-bash': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-pwsh': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
   // Legacy Cordis entries and native values share their pure implementations.

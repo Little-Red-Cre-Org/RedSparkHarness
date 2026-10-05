@@ -8,7 +8,7 @@ These tests boot the real web composition in-process and drive it with a real Ch
 
 State-sensitive cases use Workspace, admission, attachment, and model-stream barriers to separate visible intermediate states from completed operations. Details close waits for frame transitions; archive verification assigns an explicit title to the seeded Session and follows that identity across reload. See the [CI fixture synchronization decision](../../../../../.agents/notes/implemented/testing/2026-09-08-ci-completion-observations.md).
 
-Native-page tests cover Host-injection failure, startup cancellation, pagehide cleanup, and the built `native.html` entry. Desktop Host unit tests exercise profile validation, installed-package resolution, single-graph bundling, Cordis rejection, boot-data injection, and native asset routing. The production browser smoke still serves a synthetic Host-routed renderer bundle, so it verifies browser boot and lifecycle rather than the Desktop Host process itself.
+Native-page tests cover Host-injection failure, module loading progress, startup cancellation, pagehide cleanup, and the built `native.html` entry. Desktop Host unit tests exercise profile validation, installed-package resolution, single-graph bundling, Cordis rejection, boot-data injection, and native asset routing. The production browser smoke still serves a synthetic Host-routed renderer bundle, so it verifies the Cordis-free boot page, browser handoff and lifecycle rather than the Desktop Host process itself.
 
 ## These are Host-face tests
 

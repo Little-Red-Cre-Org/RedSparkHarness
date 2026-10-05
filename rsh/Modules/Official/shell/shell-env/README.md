@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Load this plugin in any composition that mounts a model shell tool (`dsh-tool-bash` or `dsh-tool-pwsh`): each foreground or background shell call then runs with a freshly collected managed environment instead of whatever `DSH_*` values the process inherited.
 
+In a native profile, install `dsh-shell-env/native` before `dsh-tool-bash/native`. Consumers use the `dsh-shell-env/definition` interface; the native Provider uses the same key validation and built-in facts. Contributors pass their `register()` disposer to `context.own()`. The Bash tool collects values for the current Session before either a foreground run or a background job starts.
+
 ### What every shell call receives
 
 Every call receives `DSH_HOME` (the absolute Harness home), `DSH_SHELL=1`, and, for agent calls, `DSH_SESSION_ID` (the calling session's id).
@@ -86,7 +88,10 @@ This section explains the design decisions behind the registry and points at the
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry, `ShellEnvRegistry` service, and the built-in facts |
+| [`src/index.ts`](src/index.ts) | Cordis service adapter and effect-scoped contributor disposal |
+| [`src/definition.ts`](src/definition.ts) | Cordis-free native registration and collection interface |
+| [`src/native.ts`](src/native.ts) | Native Provider over the current tool execution |
+| [`src/controller.ts`](src/controller.ts) | Shared key ownership, built-in facts, and per-call collection |
 | — | No runtime invariant companion is published; the environment registry validates ownership and collected values at each registration/collection; it publishes no independent snapshot that a companion could cross-check. |
 
 ### Collection

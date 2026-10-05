@@ -102,11 +102,13 @@ describe('native Web entry', () => {
   it('loads the Host bundle and awaits renderer and stylesheet cleanup', async () => {
     const container = document.createElement('div')
     const unmount = vi.fn(() => { container.replaceChildren() })
+    const progress = { setTotal: vi.fn(), setState: vi.fn() }
     const importModule = vi.fn(async (url: string) => {
       expect(url).toBe(`https://dsh.example${MODULE_URL}`)
       return { plugins: { renderer: { plugin: clientRenderer(unmount) } } }
     })
-    const starting = bootNativeClientEntry(container, bootWire(['/.dsh/native-client/theme.css?v=1']), 'https://dsh.example/', importModule)
+    const starting = bootNativeClientEntry(container, bootWire(['/.dsh/native-client/theme.css?v=1']),
+      'https://dsh.example/', importModule, undefined, progress)
     expect(importModule).not.toHaveBeenCalled()
     const link = document.head.querySelector('link[rel="stylesheet"]')
     expect(link?.getAttribute('href')).toBe('https://dsh.example/.dsh/native-client/theme.css?v=1')
@@ -115,6 +117,8 @@ describe('native Web entry', () => {
 
     expect(container.textContent).toBe('native-ui')
     expect(importModule).toHaveBeenCalledOnce()
+    expect(progress.setTotal).toHaveBeenCalledWith(1)
+    expect(progress.setState.mock.calls).toEqual([['renderer', 'loading'], ['renderer', 'active']])
     await host.stop()
     expect(unmount).toHaveBeenCalledOnce()
     expect(container.textContent).toBe('')
@@ -197,10 +201,12 @@ describe('native Web entry', () => {
 
   it('rejects Host bundles that omit a selected module', async () => {
     const importModule = vi.fn(async () => ({ plugins: {} }))
+    const progress = { setTotal: vi.fn(), setState: vi.fn() }
     await expect(bootNativeClientEntry(document.createElement('div'), bootWire(),
-      'https://dsh.example/', importModule)).rejects.toThrow(
+      'https://dsh.example/', importModule, undefined, progress)).rejects.toThrow(
       'native web: Host bundle omitted module renderer',
     )
+    expect(progress.setState.mock.calls).toEqual([['renderer', 'loading'], ['renderer', 'failed']])
   })
 
   it('rejects unknown Host boot fields before loading plugins', async () => {
