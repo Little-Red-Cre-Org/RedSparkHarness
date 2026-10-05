@@ -8078,9 +8078,6 @@ importers:
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
