@@ -8,7 +8,7 @@ Python subprocess SDK for driving DeepSeek Harness over newline-delimited JSON-R
 python -m pip install deepseek-harness-sdk
 ```
 
-The native-sdk profile composes the production one-shot subagent tool. Session-tree subscriptions receive its accepted child events, including cancellation closers, while run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. Native catalogs and subagent.finished notifications remain unsupported.
+The native-sdk profile composes the production one-shot subagent tool. Session-tree subscriptions receive its accepted child events, including cancellation closers, while run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. A settled continuable child contributes a durable subagent-settled notice to the parent's next turn, after actual cleanup. Native catalogs and the separate subagent.finished wire notifications remain unsupported.
 
 ## Start a runtime
 
