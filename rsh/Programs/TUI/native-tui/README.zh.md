@@ -32,7 +32,7 @@ kind: "package-reference"
 <details>
 <summary>实现细节</summary>
 
-[应用](src/native.ts)只拥有输入队列与 Ink。选定的 `sessionExecution` 与 `activeSessions` Provider 传给共享执行器；终端不创建第二个 writer。已完成行来自持久事件，临时流帧只用于展示。[展示库](../terminal-ui/README.zh.md)同时服务兼容终端。未发布 invariant companion：队列与视图没有独立观察者；Session 与 Provider 拥有持久一致性验证。
+[启动层](src/native.ts)装配 Ink，[控制器](src/controller.ts)拥有输入队列、恢复与结算。选定的 `sessionExecution` 与 `activeSessions` Provider 传给共享执行器；终端不创建第二个 writer。已完成行来自持久事件，临时流帧只用于展示。[展示库](../terminal-ui/README.zh.md)同时服务兼容终端。未发布 invariant companion：队列与视图没有独立观察者；Session 与 Provider 拥有持久一致性验证。
 
 </details>
 

@@ -18,7 +18,7 @@ Copying the compatibility runner would retain Cordis ownership and duplicate exe
 
 ## Consequences
 
-Real TTY and Session snapshots verify subprocess interaction; unit-process V8 cannot observe this Ink application. Shared presentation retains compatibility tests and adds no model state.
+An independent controller owns input admission, cancellation, restore and drain; the existing terminal lifecycle case directly exercises its parameterized execution intervals, retaining per-file business coverage. Real TTY and Session snapshots verify subprocess interaction; only the thin Ink bootstrap and pure presentation unobservable to unit-process V8 use owner-local exclusions. Shared presentation retains compatibility tests and adds no model state.
 
 ## Verification
 

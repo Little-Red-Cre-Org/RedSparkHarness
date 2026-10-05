@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-terminal-session-owner.md
-2026-10-05-native-terminal-session-owner.md: 2fef2550e5d2effdb86bf3f3a90bf934f9563892
-2026-10-05-native-terminal-session-owner.zh.md: cc0c1d4c9ec963493cc185d4eb06b8d96e4e6552
+2026-10-05-native-terminal-session-owner.md: 518c8e63390ab7eb86ddcbe8d5f84aefa45b7564
+2026-10-05-native-terminal-session-owner.zh.md: 62fa94e2daabe32358fbccd72622242df8794191

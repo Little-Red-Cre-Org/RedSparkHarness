@@ -2,11 +2,13 @@
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
+import { controllerProof } from './controller-proof.ts'
 import { terminalFixture } from './pty-profile.ts'
 
 it('cancels through the actual TTY and drains cleanup before ordinary exit', async () => {
   const fixture = terminalFixture(true)
   try {
+    await controllerProof(fixture.workspace)
     const terminal = fixture.launch()
     let exited = false
     void terminal.done.then(() => { exited = true })

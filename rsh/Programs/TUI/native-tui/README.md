@@ -32,7 +32,7 @@ New conversations accept no positional arguments; `--resume <session-id>` opens 
 <details>
 <summary>Implementation internals</summary>
 
-The [application](src/native.ts) owns only input admission and Ink. It passes the selected `sessionExecution` and `activeSessions` Providers to the shared executor; the terminal creates no second writer. Completed rows originate in durable events, while temporary stream frames only affect presentation. The [presentation library](../terminal-ui/README.md) also serves the compatibility terminal. No invariant companion is published: queue and view have no independent observers; Session and its Providers own durable consistency validation.
+The [bootstrap](src/native.ts) assembles Ink; the [controller](src/controller.ts) owns input admission, restore and settlement. It passes the selected `sessionExecution` and `activeSessions` Providers to the shared executor; the terminal creates no second writer. Completed rows originate in durable events, while temporary stream frames only affect presentation. The [presentation library](../terminal-ui/README.md) also serves the compatibility terminal. No invariant companion is published: queue and view have no independent observers; Session and its Providers own durable consistency validation.
 
 </details>
 

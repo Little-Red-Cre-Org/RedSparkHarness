@@ -214,7 +214,7 @@ export default defineConfig({
         // The native Ink Program executes in real dsh PTY children; unit-process
         // V8 cannot observe it. Its terminal scene and lifecycle regression own
         // behavior; compatibility terminal tests retain shared row coverage.
-        'rsh/Programs/TUI/native-tui/src/{presentation,locale,index}.ts',
+        'rsh/Programs/TUI/native-tui/src/{native,presentation,locale,index}.ts',
         'rsh/Programs/TUI/terminal-ui/src/{copy,index}.ts',
         // Dynamic Host/Client composition is covered by its focused lifecycle
         // tests and assembled application checks rather than per-file coverage.
