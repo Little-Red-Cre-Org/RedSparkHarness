@@ -5,7 +5,7 @@ import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
@@ -71,6 +71,7 @@ export class NativeSdkApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     if (args.length > 0) throw new Error('native SDK: task arguments are unsupported')
     const transport = new JsonRpcLineTransport(this.input, this.output)
+    const releaseDescendants = this.observeDescendants(transport)
     let finish!: () => void
     const done = new Promise<void>((resolveDone) => { finish = resolveDone })
     const onEnd = (): void => { finish() }
@@ -103,13 +104,48 @@ export class NativeSdkApplication implements NativeApplication {
     } finally {
       this.input.off('end', onEnd)
       signal.removeEventListener('abort', onAbort)
-      transport.close()
-      this.input.pause()
+      try { await releaseDescendants() }
+      finally { transport.close(); this.input.pause() }
     }
   }
 
   private assertOpen(): void {
     if (this.closing) throw new Error('native SDK: closing')
+  }
+
+  private observeDescendants(transport: JsonRpcLineTransport): () => Promise<void> {
+    const active = this.context.require('activeSessions')
+    const observed = new Map<NativeActiveSessionOwner, () => void>()
+    const releaseAttached = active.onAttached((owner) => {
+      if (this.closing || owner.invocation !== 'delegated') return Promise.resolve()
+      const executor = this.executor
+      const interaction = executor?.interactionOwner(owner.agent)
+      if (interaction === undefined || executor === undefined) return Promise.resolve()
+      const root = active.owners().find(candidate => candidate.agent === interaction.displayRootAgent)
+      if (root === undefined || !this.activeTurns.get(String(root.session.id))?.received
+        || executor.rootExecution.capture(root).id !== SDK_ROOT_ROUTE) return Promise.resolve()
+      const parentSession = owner.session.header.parentSession
+      const parent = active.owners().find(candidate => candidate.session.id === parentSession)
+      if (parent === undefined || parent !== root && !observed.has(parent)) return Promise.resolve()
+      const childSessionId = String(owner.session.id)
+      observed.set(owner, owner.onEvent((event) => {
+        transport.notify('session.event', { sessionId: childSessionId, event })
+      }))
+      transport.notify('subagent.started', { parentSessionId: String(parentSession), childSessionId })
+      return Promise.resolve()
+    })
+    const releaseDetached = active.onDetached((owner) => {
+      observed.get(owner)?.()
+      observed.delete(owner)
+      return Promise.resolve()
+    })
+    return async () => {
+      try { await Promise.all([releaseAttached(), releaseDetached()]) }
+      finally {
+        for (const release of observed.values()) release()
+        observed.clear()
+      }
+    }
   }
 
   private track<T>(task: Promise<T>): Promise<T> {

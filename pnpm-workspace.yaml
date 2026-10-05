@@ -15,6 +15,7 @@ packages:
   - rsh/Modules/Community/*/*
   - rsh/Compatibility/DSH/*/*
   # Product assemblies over the package tier; rsh/Programs/CLI owns the `dsh` bin.
+  - rsh/Programs/TUI/*
   - rsh/Programs/CLI
   - rsh/Programs/Desktop
   - rsh/Programs/DesktopHost

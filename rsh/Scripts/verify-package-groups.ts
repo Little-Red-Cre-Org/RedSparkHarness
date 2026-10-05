@@ -100,6 +100,7 @@ function groupDirectories(): string[] {
     exclude: ['**/node_modules/**'],
   }).filter(entry => entry.isDirectory()).map(entry => entry.name))
   if (existsSync(resolve(root, 'rsh/Programs/CLI'))) names.push('cli')
+  if (existsSync(resolve(root, 'rsh/Programs/TUI'))) names.push('tui')
   if (existsSync(resolve(root, 'rsh/Programs/ACP/packages'))) names.push('acp')
   if (existsSync(resolve(root, 'rsh/Programs/SDK/packages'))) names.push('sdk')
   for (const name of ['api', 'host', 'client']) {
