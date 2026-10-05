@@ -82,6 +82,7 @@ export class NativeSdkApplication implements NativeApplication {
         case 'initialize': return this.track(this.initialize(params, signal))
         case 'session/prompt': return this.prompt(params, transport, signal)
         case 'session/cancel': return this.cancel(params)
+        case 'session/steer': return this.track(this.steer(params, signal))
         case 'session/fork': return this.track(this.fork(params, signal))
         case 'shutdown':
           this.closing = true
@@ -169,17 +170,12 @@ export class NativeSdkApplication implements NativeApplication {
     return { cancelled: true }
   }
 
-  private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
-    lifetime: AbortSignal): Promise<{ messageId: string }> {
-    this.assertOpen()
-    const executor = this.executor
-    if (executor === undefined) throw new Error('native SDK: initialize first')
-    const sessionId = nonempty(raw.sessionId, 'sessionId')
+  private promptParts(raw: Record<string, unknown>): AttachmentAdmissionPart[] {
     if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0) {
       throw new TypeError('native SDK: contentBlocks must be a nonempty array')
     }
     const attachments = this.context.require('attachments')
-    const parts = raw.contentBlocks.map((block: unknown): AttachmentAdmissionPart => {
+    return raw.contentBlocks.map((block: unknown): AttachmentAdmissionPart => {
       const fields = record(block, 'content block')
       if (fields.type === 'text' && typeof fields.text === 'string') return { type: 'text', text: fields.text }
       if (fields.type === 'image' && typeof fields.data === 'string') {
@@ -188,6 +184,41 @@ export class NativeSdkApplication implements NativeApplication {
       }
       throw new TypeError('native SDK: content blocks must be text or encoded raster images')
     })
+  }
+
+  private async steer(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<{ messageId: string }> {
+    this.assertOpen()
+    const executor = this.executor
+    if (executor === undefined) throw new Error('native SDK: initialize first')
+    const sessionId = nonempty(raw.sessionId, 'sessionId')
+    const admission = this.activeTurns.get(sessionId)
+    if (admission === undefined || !admission.received) throw new Error('native SDK: steering requires an admitted turn')
+    const active = this.context.require('activeSessions')
+    const owner = active.owners().find(candidate => candidate.session.id === sessionId)
+    if (owner === undefined || executor.rootExecution.capture(owner).id !== SDK_ROOT_ROUTE) {
+      throw new Error("native SDK: steering requires this application's live root owner")
+    }
+    const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
+    signal.throwIfAborted()
+    const content = await this.context.require('attachments').admitPromptContent(this.promptParts(raw))
+    signal.throwIfAborted()
+    this.assertOpen()
+    if (this.activeTurns.get(sessionId) !== admission || active.owner(owner.agent, owner.session) !== owner) {
+      throw new Error('native SDK: steering owner settled during attachment admission')
+    }
+    const message = createUserMessage({ content, source: { kind: 'user' } })
+    const messageId = await owner.enqueue(message, 'next-step', false, signal)
+    return { messageId: String(messageId) }
+  }
+
+  private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
+    lifetime: AbortSignal): Promise<{ messageId: string }> {
+    this.assertOpen()
+    const executor = this.executor
+    if (executor === undefined) throw new Error('native SDK: initialize first')
+    const sessionId = nonempty(raw.sessionId, 'sessionId')
+    const parts = this.promptParts(raw)
+    const attachments = this.context.require('attachments')
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<string>()
     const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }

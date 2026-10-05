@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The explicit `dsh --profile native-sdk` application serves the existing newline-delimited SDK JSON-RPC methods `initialize`, `session/prompt`, `session/cancel`, `session/fork`, and `shutdown` over stdio. It uses one native Session executor for identified sessions, sends persisted `session.event` notifications and whole-session `session.status` transitions, and aborts and drains model initialization and accepted turns on shutdown or input EOF. TypeScript and Python clients retain `sdk` as their default profile; callers select `native-sdk` explicitly.
+The explicit `dsh --profile native-sdk` application serves the existing newline-delimited SDK JSON-RPC methods `initialize`, `session/prompt`, `session/cancel`, `session/steer`, `session/fork`, and `shutdown` over stdio. It uses one native Session executor for identified sessions, sends persisted `session.event` notifications and whole-session `session.status` transitions, and aborts and drains model initialization and accepted turns on shutdown or input EOF. TypeScript and Python clients retain `sdk` as their default profile; callers select `native-sdk` explicitly.
 
 ## Table of Contents
 
@@ -27,6 +27,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 `session/fork` copies the source history through a closed turn into a fresh destination, without invoking a model. Its optional `atSeq` selects an existing event in that closed turn; omission selects the last closed turn. Source history remains unchanged, and the next destination prompt resumes the durable copy. The shipped native-sdk profile installs the Session-execution Provider; the application requires its execution and active-owner services explicitly.
 
 `session/prompt` accepts ordered text blocks and encoded raster images (`{ type: "image", data, mimeType }`). The required attachment Provider validates canonical base64, declared media type, decoded bytes and deployment limits before the durable inbox receipt. The Session stores immutable references; the selected model adapter reads verified request variants, including after restart or fork. Caller-supplied durable attachment references are refused. The selected model must support image input.
+
+`session/steer` queues ordered prompt content for the admitted root's next step through its exact active Session owner. It returns the message id after persistence and does not interrupt the current model dispatch. Unknown, idle, cancelled and foreign Program owners are refused. Accepted input remains pending when cancellation or natural turn completion occurs before another step; the next resumed turn claims it. Steering shares image admission with ordinary prompts.
 
 ## Dev Note
 

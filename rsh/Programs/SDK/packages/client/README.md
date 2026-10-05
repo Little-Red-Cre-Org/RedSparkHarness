@@ -109,6 +109,8 @@ With explicit `profile: "native-sdk"`, `HarnessSession.cancel()` and `HarnessCli
 
 With explicit `profile: "native-sdk"`, `run` also accepts encoded raster image blocks (`{ type: "image", data, mimeType }`) alongside text; the native attachment Provider owns validation and durable storage.
 
+`HarnessSession.steer(input)` and `HarnessClient.steer(sessionId, contentBlocks)` durably queue next-step input on the active native-sdk root. They return a message id without waiting for a model answer or cancelling the current dispatch; idle or unknown Sessions and compatibility profiles reject.
+
 `HarnessSession.fork(destinationSessionId, atSeq?)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.fork` exposes the wire receipt. The [native server reference](../native-server/README.md#configuration) owns source, workspace and closed-turn admission.
 
 ## Model Experience
