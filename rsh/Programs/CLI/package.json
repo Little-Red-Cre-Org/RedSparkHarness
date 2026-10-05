@@ -128,8 +128,7 @@
     "js-yaml": "^4.2.0",
     "node-addon-require-builtin": "^0.1.4",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
-    "@deepseek-ai/dsh-user-question-broker": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@deepseek-ai/dsh-user-question-broker": "workspace:^"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",

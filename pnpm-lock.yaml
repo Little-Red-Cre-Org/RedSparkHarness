@@ -8184,9 +8184,6 @@ importers:
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../Engine/preset/persona
