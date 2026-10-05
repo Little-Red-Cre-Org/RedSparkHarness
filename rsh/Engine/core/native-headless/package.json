@@ -33,6 +33,7 @@
         "timeContext",
         "sessionExecution",
         "activeSessions",
+        "modelSelection",
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions"
@@ -87,6 +88,7 @@
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^"
   }
 }

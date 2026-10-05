@@ -11,6 +11,7 @@
     "src/remote-events.ts"
   ],
   "references": [
+    { "path": "../../../../Engine/core/native-model-execution/tsconfig.client.json" },
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../gateway/tsconfig.client.json" },
     { "path": "../../../../Modules/Official/attachment/attachment" },
