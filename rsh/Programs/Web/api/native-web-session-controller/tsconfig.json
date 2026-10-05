@@ -37,6 +37,21 @@
     },
     {
       "path": "../../client/native-session"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/native-approval"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
     }
   ]
 }

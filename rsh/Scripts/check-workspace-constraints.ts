@@ -71,10 +71,11 @@ const applicationPackageDirectories = new Set([
 ])
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh': ['lib/*.js'],
+  '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@deepseek-ai/dsh-desktop-host': [
-    'lib/index.js',
+    'lib/*.js',
     'config/desktop.cordis.patch.yml',
+    'lib/types/**/*.d.ts',
   ],
   // Sourcemaps stay out by payload policy; the worker-preview surface
   // (dist/preview.html and dist/preview/) backs private experimental
@@ -208,7 +209,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/follow-types.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/native-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js'],

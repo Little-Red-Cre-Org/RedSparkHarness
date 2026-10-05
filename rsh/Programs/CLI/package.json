@@ -15,7 +15,8 @@
     "dsh": "lib/bin.js"
   },
   "files": [
-    "lib/*.js"
+    "lib/*.js",
+    "lib/types/**/*.d.ts"
   ],
   "dsh": {
     "configTrees": [
@@ -68,6 +69,8 @@
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "@deepseek-ai/dsh-user-questions": "workspace:^",
+    "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "optionalDependencies": {
@@ -117,7 +120,6 @@
     "@deepseek-ai/dsh-time-context": "workspace:^",
     "@deepseek-ai/dsh-tmux-context": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
-    "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
     "@deepseek-ai/dsh-tool-bash": "workspace:^",
     "@deepseek-ai/dsh-tool-bash-persistent": "workspace:^",
     "@deepseek-ai/dsh-tool-cordis": "workspace:^",
@@ -142,7 +144,6 @@
     "@deepseek-ai/schemastery": "workspace:^",
     "js-yaml": "^4.2.0",
     "node-addon-require-builtin": "^0.1.4",
-    "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-user-question-broker": "workspace:^"
   },
   "devDependencies": {
@@ -198,5 +199,12 @@
     "execa": "^10.0.0",
     "vitest": "^4.1.8",
     "ws": "8.21.0"
+  },
+  "exports": {
+    "./native-profile": {
+      "types": "./lib/types/native-profile.d.ts",
+      "default": "./lib/native-profile.js"
+    },
+    "./package.json": "./package.json"
   }
 }
