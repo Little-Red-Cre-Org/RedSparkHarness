@@ -33,6 +33,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/native-headless.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
+  'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
   'snapshots/native-headless/todo-native.snapshot.ts',
   'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
