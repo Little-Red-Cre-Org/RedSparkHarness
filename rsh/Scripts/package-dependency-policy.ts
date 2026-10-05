@@ -76,6 +76,8 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
   '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
+  '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
+  '@deepseek-ai/dsh-session/surface': ['validateSessionEventData', 'validateSurfaceMetadata'],
   '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports

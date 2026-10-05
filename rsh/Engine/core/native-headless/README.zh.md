@@ -101,3 +101,5 @@ kind: "package-reference"
 - 固定文件工具、`run_code` 和已注册工具串行执行；SDK 协议和 Web UI 仍然缺失。
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
 - Session 与持久化包仍携带 Cordis 依赖，但此组合不会创建 Cordis Context。
+
+其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务。

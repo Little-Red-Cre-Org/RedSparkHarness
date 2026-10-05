@@ -195,6 +195,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-code-runtime-process-sandbox': ['lib/native.js'],
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-tools': [

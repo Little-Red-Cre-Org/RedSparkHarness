@@ -3613,6 +3613,7 @@ export interface Config {
 - `@deepseek-ai/dsh-base`（[`rsh/Compatibility/DSH/bundle/base/src/index.ts`](../Compatibility/DSH/bundle/base/src/index.ts)）
 - `@deepseek-ai/dsh-brand`（[`rsh/Core/util/brand/src/index.ts`](../Core/util/brand/src/index.ts)）
 - `@deepseek-ai/dsh-chunked-list`（[`rsh/Core/util/chunked-list/src/index.ts`](../Core/util/chunked-list/src/index.ts)）
+- `@deepseek-ai/dsh-client-native-session` ([`rsh/Programs/Web/client/native-session/src/index.ts`](../Programs/Web/client/native-session/src/index.ts))
 - `@deepseek-ai/dsh-client-store`（[`rsh/Programs/Web/client/store/src/index.ts`](../Programs/Web/client/store/src/index.ts)）
 - `@deepseek-ai/dsh-client-test-runtime`（[`rsh/Tests/test-support/client-runtime/src/index.ts`](../Tests/test-support/client-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-dockkit`（[`rsh/Programs/Web/client/ui-dockkit/src/index.ts`](../Programs/Web/client/ui-dockkit/src/index.ts)）
@@ -3655,6 +3656,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
 - `@deepseek-ai/dsh-native-web-assets`（[`rsh/Programs/Web/host/native-web-assets/src/index.ts`](../Programs/Web/host/native-web-assets/src/index.ts)）
 - `@deepseek-ai/dsh-native-web-host`（[`rsh/Programs/Web/host/native-web-host/src/index.ts`](../Programs/Web/host/native-web-host/src/index.ts)）
+- `@deepseek-ai/dsh-native-web-session-controller` ([`rsh/Programs/Web/api/native-web-session-controller/src/index.ts`](../Programs/Web/api/native-web-session-controller/src/index.ts))
 - `@deepseek-ai/dsh-output-retention`（[`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts)）
 - `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))
 - `@deepseek-ai/dsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))
