@@ -835,7 +835,7 @@ Source: [`rsh/Engine/subagent/subagent/src/catalog.ts:40`](../Engine/subagent/su
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-Source: [`rsh/Engine/subagent/subagent/src/descriptor.ts:38`](../Engine/subagent/subagent/src/descriptor.ts)
+Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:39`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 

@@ -33,7 +33,7 @@ kind: "package-reference"
 
 在 agent 需要运行 bash 命令的任何组合中加载本插件：一旦挂载执行器提供方与 `dsh-shell-env` 注册表，它就注册 `bash` 工具，并在 `tools`、`shell`、`systemPrompt` 与 `shellEnv` 服务就绪之前保持等待。
 
-在原生 profile 中，将 `dsh-tool-bash/native` 与原生 `tools`、`dsh-shell-env/native` 组合，再选择 `dsh-bash-sandbox/native` 加 `dsh-native-sandbox-policy/native`，或在明确允许无隔离命令时选 `dsh-bash-local/native`。添加 `dsh-native-jobs` 与 `dsh-native-tool-jobs` 后，才会暴露 `run_in_background`、`job_output`、`job_list` 与 `job_kill`；进程结束后才能读取任务输出。选定的原生应用会把每次工具调用及结果写入 Session。使用沙箱 shell 且原生审批策略为 `ask` 时，schema 才会提供 `sandbox_permissions` 与 `justification`。升权必须严格拓宽模式并经过应用的原生审批路径；该路径会在命令运行前记录请求与决定。审批路径不可用或未授权时，重试会被拒绝，命令不会启动。
+在原生 profile 中，将 `dsh-tool-bash/native` 与原生 `tools`、`dsh-shell-env/native` 组合，再选择 `dsh-bash-sandbox/native` 加 `dsh-native-sandbox-policy/native`，或在明确允许无隔离命令时选 `dsh-bash-local/native`。添加 `dsh-native-jobs` 与 `dsh-native-tool-jobs` 后，才会暴露 `run_in_background`、`job_output`、`job_list` 与 `job_kill`；进程结束后才能读取任务输出。选定的原生应用会把每次工具调用及结果写入 Session。使用沙箱 shell 且原生审批策略为 `ask` 时，schema 才会提供 `sandbox_permissions` 与 `justification`。升权必须严格拓宽模式并经过应用的原生审批路径；该路径会在命令运行前记录请求与决定。审批路径不可用或未授权时，重试会被拒绝，命令不会启动。 已安装的 jobControls.jobs 必须标识选定的同一 jobs 注册表；不一致时加载失败。
 
 ### 最小配置
 

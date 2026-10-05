@@ -19,6 +19,8 @@ export interface NativeSessionConfiguration {
   readonly model: string
   readonly systemPrompt: string
   readonly maxSteps: number
+  /** Explicit Program-owned builtin capability selection; omission retains that Program's resolved selection. */
+  readonly builtinTools?: boolean
   readonly reasoningEffort?: ReasoningEffortId
   readonly maxTokens?: number
 }

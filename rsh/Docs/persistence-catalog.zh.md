@@ -837,7 +837,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-来源：[`rsh/Engine/subagent/subagent/src/descriptor.ts:38`](../Engine/subagent/subagent/src/descriptor.ts)
+来源：[`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:39`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
