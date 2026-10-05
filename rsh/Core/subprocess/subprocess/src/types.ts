@@ -42,6 +42,10 @@ export type SubprocessStdinMode = 'ignore' | 'pipe' | { readonly data: string }
  * the complete stream recoverable up to its cap (the bash tool shape).
  */
 export interface SubprocessCollect {
+  /** Observe captured bytes without consuming retained output; the callback must not throw.
+   * @param chunk - bytes delivered by this stream before process settlement.
+   */
+  onData?: (chunk: Uint8Array) => void
   /** In-memory cap in bytes; overflow keeps the TAIL. */
   maxBytes: number
   /** Full-stream spill file; absent disables spilling entirely. */

@@ -127,6 +127,9 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+
+Native background jobs publish live stdout and tagged stderr to `job_output`; settled output replaces the live tail with the existing loss, spill, and sandbox notices.
+
 ## Model Experience
 
 ### System prompt

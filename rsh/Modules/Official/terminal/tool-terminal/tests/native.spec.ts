@@ -57,10 +57,13 @@ it('preserves interactive state and cancels a native background send before awai
     const read = await invoke('terminal_read', { sessionId: terminalId, count: 10 })
     expect(JSON.stringify(read.content)).toContain('RSH_INTERACTIVE')
     await expect(invoke('terminal_signal', { sessionId: terminalId, signal: 'SIGKILL' })).rejects.toThrow('refusing to SIGKILL')
-    const sleeping = process.platform === 'win32' ? 'Start-Sleep -Seconds 30' : 'sleep 30'
+    const sleeping = process.platform === 'win32' ? "Write-Output ('RSH_' + 'LIVE'); Start-Sleep -Seconds 30"
+      : "printf 'RSH_%s\\n' LIVE; sleep 30"
     const background = await invoke('terminal_send', { sessionId: terminalId, text: sleeping, run_in_background: true })
     expect(background.isError).toBe(false)
     const jobId = NativeJobId((background.value as { jobId: string }).jobId)
+    await expect.poll(() => selected.jobs.read(jobId, agent).output, { timeout: 3000 }).toContain('RSH_LIVE')
+    expect(selected.jobs.get(jobId, agent).status).toBe('running')
     expect(selected.jobs.cancel(jobId, agent)).toBe('requested')
     expect((await selected.jobs.wait(jobId, agent, 5000)).status).toBe('cancelled')
     expect((await invoke('terminal_close', { sessionId: terminalId })).isError).toBe(false)
