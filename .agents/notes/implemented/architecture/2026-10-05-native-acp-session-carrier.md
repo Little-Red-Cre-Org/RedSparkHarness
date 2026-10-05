@@ -10,7 +10,7 @@ The explicit `native-acp` profile names a missing application and inherits nativ
 
 ## Decision
 
-The native ACP application uses the maintained ACP SDK for wire validation and stdio framing and the shared native-headless executor for all model, Agent, Tools, and Session work. Each connection-owned Session has its own workspace route and cancellation controller; durable storage owns Session identities and history. New Sessions materialize before acknowledgement, resume replays committed updates, and close releases execution without deleting history. Transport termination cancels accepted prompts and waits for executor teardown.
+The native ACP application uses the maintained ACP SDK for wire validation and stdio framing and the shared native-headless executor for all model, Agent, Tools, and Session work. Each connection-owned Session has its own workspace route and cancellation controller; durable storage owns Session identities and history. New Sessions materialize before acknowledgement, resume replays committed updates, and close releases execution without deleting history. Transport termination cancels accepted requests, waits for model initialization to settle, and drains executor teardown.
 
 The shipped native ACP profile uses the proven SDK carrier providers and keeps compatibility ACP selection unchanged. Text prompts, durable assistant/tool updates, cancellation, close, list, and resume are supported. Per-session MCP mounts, multimodal admission, mutable model controls, permission/question channels, and attachment presentation remain separate parity batches. Unsupported MCP declarations and prompt content reject explicitly, and the capability response advertises the supported input.
 

@@ -98,7 +98,7 @@ export class NativeAcpApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     if (args.length > 0) throw new Error('native ACP: task arguments are unsupported')
     const app = agent({ name: 'redspark-harness-native-acp' })
-      .onRequest(methods.agent.initialize, async ({ signal: requestSignal }) => {
+      .onRequest(methods.agent.initialize, ({ signal: requestSignal }) => this.track((async () => {
         if (this.initialized || this.initializing) throw RequestError.invalidRequest(undefined, 'already initialized')
         this.initializing = true
         try {
@@ -109,7 +109,7 @@ export class NativeAcpApplication implements NativeApplication {
         return { protocolVersion: PROTOCOL_VERSION, agentInfo: { name: 'redspark-harness-native-acp', version: '0.0.1' },
           agentCapabilities: { promptCapabilities: { image: false, audio: false, embeddedContext: false },
             mcpCapabilities: { http: false }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
-      })
+      })()))
       .onRequest(methods.agent.authenticate, () => ({}))
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
       .onRequest(methods.agent.session.resume, ({ params, signal: requestSignal }) => this.track((async () => {
