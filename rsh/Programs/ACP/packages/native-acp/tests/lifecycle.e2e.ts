@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
+import { startHttpMcpFixture } from '../../../../../Modules/Official/mcp/mcp-client/tests/http-fixture.ts'
 
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
 
@@ -14,6 +15,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-lifecycle-'))
   const entered = Promise.withResolvers<undefined>()
   let toolTurn = false
+  let mcpCall: { name: string; arguments: string } | undefined
   let permissionEntered = Promise.withResolvers<undefined>()
   let permissionRelease = Promise.withResolvers<undefined>()
   let permissionSettled = Promise.withResolvers<undefined>()
@@ -34,7 +36,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
           ? [{ choices: [{ delta: { role: 'assistant', content: 'permission tool settled' } }] },
             { choices: [{ delta: {}, finish_reason: 'stop' }] }]
           : [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-call', type: 'function',
-            function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission.txt', content: 'forbidden' }) } }] } }] },
+            function: mcpCall ?? { name: 'write_file', arguments: JSON.stringify({ path: 'permission.txt', content: 'forbidden' }) } }] } }] },
           { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
         response.end(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
         return
@@ -73,6 +75,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   })
   transport.start()
   const signal = AbortSignal.timeout(20_000)
+  const http = await startHttpMcpFixture()
   try {
     expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
       .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
@@ -117,6 +120,37 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     permissionRelease.resolve(undefined)
     await permissionSettled.promise
     await expect(readFile(join(home, 'permission.txt'))).rejects.toHaveProperty('code', 'ENOENT')
+    const stdioServers = [{ name: 'fixture', command: process.execPath,
+      args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')], env: [] }]
+    await expect(transport.request('session/new', { cwd: home, mcpServers: [{ ...stdioServers[0],
+      command: join(home, 'missing-mcp-server') }] }, signal)).rejects.toThrow()
+    expect(await transport.request('session/list', {}, signal)).toMatchObject({ sessions: [{ sessionId: created.sessionId }] })
+    const stdioSession = await transport.request('session/new', { cwd: home, mcpServers: stdioServers }, signal) as { sessionId: string }
+    const httpSession = await transport.request('session/new', { cwd: home, mcpServers: [{ type: 'http', name: 'fixture',
+      url: http.url, headers: [{ name: 'Authorization', value: 'Bearer native-acp-test' }] }] }, signal) as { sessionId: string }
+    const mcpPrompt = async (sessionId: string, expected: string, absent: string): Promise<void> => {
+      const before = requests.length
+      expect(await transport.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'use selected MCP tool' }] }, signal))
+        .toMatchObject({ stopReason: 'end_turn' })
+      const request = requests[before] as { tools: readonly { function: { name: string } }[] }
+      const names = request.tools.map(tool => tool.function.name)
+      expect(names).toContain(expected)
+      expect(names).not.toContain(absent)
+      const next = requests[before + 1] as { messages: readonly { role: string; content: string }[] }
+      expect(next.messages.filter(message => message.role === 'tool').at(-1)?.content).toContain(expected.endsWith('add') ? '5' : 'pong')
+    }
+    mcpCall = { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
+    await mcpPrompt(stdioSession.sessionId, 'mcp__fixture__add', 'mcp__fixture__ping')
+    await transport.request('session/close', { sessionId: stdioSession.sessionId }, signal)
+    mcpCall = { name: 'mcp__fixture__ping', arguments: '{}' }
+    await mcpPrompt(httpSession.sessionId, 'mcp__fixture__ping', 'mcp__fixture__add')
+    expect(http.authorization).toContain('Bearer native-acp-test')
+    await transport.request('session/resume', { sessionId: stdioSession.sessionId, cwd: home, mcpServers: stdioServers }, signal)
+    mcpCall = { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
+    await mcpPrompt(stdioSession.sessionId, 'mcp__fixture__add', 'mcp__fixture__ping')
+    await transport.request('session/close', { sessionId: stdioSession.sessionId }, signal)
+    await transport.request('session/close', { sessionId: httpSession.sessionId }, signal)
+    mcpCall = undefined
     permissionEntered = Promise.withResolvers<undefined>()
     permissionRelease = Promise.withResolvers<undefined>()
     permissionSettled = Promise.withResolvers<undefined>()
@@ -132,10 +166,12 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     expect(await closingSelection).toBeInstanceOf(Error)
     const paths = await readdir(join(home, 'sessions'), { recursive: true })
     const logs = await Promise.all(paths.filter(path => path.endsWith('session.v3.jsonl')).map(path => readFile(join(home, 'sessions', path), 'utf8')))
-    expect(logs).toHaveLength(2)
+    expect(logs).toHaveLength(4)
     const previous = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === created.sessionId)
     if (previous === undefined) throw new Error('durable ACP Session missing')
-    const events = [previous, ...logs.filter(log => log !== previous)].flatMap(log => log.trim().split('\n').slice(1)
+    const current = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === fresh.sessionId)
+    if (current === undefined) throw new Error('durable fresh ACP Session missing')
+    const events = [previous, current].flatMap(log => log.trim().split('\n').slice(1)
       .map(line => JSON.parse(line) as { type: string; data: { reason?: { kind: string } } }))
     expect(events.filter(event => event.type === 'turn/end')).toHaveLength(5)
     expect(events.filter(event => event.type === 'native-approval/decided').map(event => event.data))
@@ -147,6 +183,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     transport.close()
     child.kill('SIGKILL')
     await child
+    await http.close()
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => { resolve() }))
     await rm(home, { recursive: true, force: true })

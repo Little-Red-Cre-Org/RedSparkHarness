@@ -47,6 +47,7 @@ export function shippedNativeProfileComposition(
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
       ...(profile === 'native-acp' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-acp' ? [{ id: 'approval', plugin: '@deepseek-ai/dsh-native-approval', scope: ROOT }] : []),
+      ...(profile === 'native-acp' ? [{ id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT }] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,

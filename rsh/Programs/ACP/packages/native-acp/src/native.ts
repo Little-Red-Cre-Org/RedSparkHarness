@@ -12,6 +12,10 @@ import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-a
 import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
+import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
+import { AcpMcpConfigError, resolveAcpMcpConfigs } from '@deepseek-ai/dsh-mcp-client/acp-config'
+import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -32,13 +36,17 @@ export interface Config {
   readonly maxSteps: number
   /** Maximum unsettled permission wire requests; defaults to 32. */
   readonly maxPendingPermissions?: number
+  /** MCP tool timeout in milliseconds; defaults to 60000. */
+  readonly mcpToolCallTimeoutMs?: number
 }
 
-type ResolvedConfig = Config & { readonly maxPendingPermissions: number }
+type ResolvedConfig = Config & { readonly maxPendingPermissions: number; readonly mcpToolCallTimeoutMs: number }
 
 interface OwnedSession {
   readonly executor: NativeHeadlessApplication
   readonly lifetime: AbortController
+  readonly resources: ResourceOwner
+  readonly scope: NativeScope
   controlTail: Promise<void>
   controls: number
   notifications: Promise<void>
@@ -49,7 +57,7 @@ function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('native ACP: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxPendingPermissions'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
+    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
   }
   for (const key of ['provider', 'model', 'systemPrompt']) {
     if (typeof fields[key] !== 'string' || fields[key].length === 0) throw new TypeError(`native ACP: ${key} must be a nonempty string`)
@@ -61,8 +69,13 @@ function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof maxPendingPermissions !== 'number' || !Number.isSafeInteger(maxPendingPermissions) || maxPendingPermissions <= 0) {
     throw new TypeError('native ACP: maxPendingPermissions must be a positive integer')
   }
+  const mcpToolCallTimeoutMs = fields.mcpToolCallTimeoutMs === undefined ? 60_000 : fields.mcpToolCallTimeoutMs
+  if (typeof mcpToolCallTimeoutMs !== 'number' || !Number.isSafeInteger(mcpToolCallTimeoutMs)
+    || mcpToolCallTimeoutMs < 1 || mcpToolCallTimeoutMs > MAX_TIMER_DELAY_MS) {
+    throw new TypeError('native ACP: mcpToolCallTimeoutMs must be a positive timer-sized integer')
+  }
   return { provider: fields.provider as string, model: fields.model as string,
-    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps, maxPendingPermissions }
+    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps, maxPendingPermissions, mcpToolCallTimeoutMs }
 }
 
 /** Standard protocol updates reconstructed solely from committed Session facts. */
@@ -161,13 +174,14 @@ export class NativeAcpApplication implements NativeApplication {
         return { protocolVersion: PROTOCOL_VERSION, agentInfo: { name: 'redspark-harness-native-acp', version: '0.0.1' },
           agentCapabilities: { promptCapabilities: { image: this.context.optional('attachments') !== undefined
             && this.context.optional('modelDirectory') !== undefined, audio: false, embeddedContext: false },
-          mcpCapabilities: { http: false }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
+          mcpCapabilities: { http: this.context.optional('tools') !== undefined }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
       })()))
       .onRequest(methods.agent.authenticate, () => ({}))
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
       .onRequest(methods.agent.session.resume, ({ params, signal: requestSignal }) => this.track((async () => {
         this.ready()
-        const cwd = this.workspace(params.cwd, params.mcpServers ?? [])
+        const cwd = this.workspace(params.cwd)
+        const servers = this.resolveServers(params.mcpServers ?? [], cwd)
         if (this.sessions.has(params.sessionId) || this.activating.has(params.sessionId)) throw RequestError.invalidParams(undefined, 'session is already active')
         this.activating.add(params.sessionId)
         const id = SessionId(params.sessionId)
@@ -183,7 +197,7 @@ export class NativeAcpApplication implements NativeApplication {
             }
           } finally { await handle.close() }
           const record = this.createExecutor(params.sessionId, cwd)
-          const configOptions = await this.activate(record, params.sessionId, requestSignal)
+          const configOptions = await this.activate(record, params.sessionId, servers, requestSignal)
           this.sessions.set(params.sessionId, record)
           return { configOptions }
         } finally { this.activating.delete(params.sessionId) }
@@ -241,7 +255,7 @@ export class NativeAcpApplication implements NativeApplication {
       for (const record of this.sessions.values()) record.current?.abort.abort(this.lifetime.signal.reason)
       await Promise.allSettled([...this.pending])
       await Promise.allSettled([...this.permissions.values()])
-      const results = await Promise.allSettled([...this.sessions.values()].map(record => record.executor.dispose()))
+      const results = await Promise.allSettled([...this.sessions.values()].map(record => this.releaseSession(record)))
       this.sessions.clear()
       signal.removeEventListener('abort', cancel)
       connection.close()
@@ -266,30 +280,75 @@ export class NativeAcpApplication implements NativeApplication {
     if (!this.initialized) throw RequestError.invalidRequest(undefined, 'initialize first')
   }
 
-  private workspace(cwd: string, servers: NewSessionRequest['mcpServers']): string {
+  private workspace(cwd: string): string {
     if (!isAbsolute(cwd)) throw RequestError.invalidParams(undefined, 'cwd must be absolute')
-    if (servers.length > 0) throw RequestError.invalidParams(undefined, 'native ACP per-session MCP mounts are not supported')
     return resolve(cwd)
   }
 
+  private resolveServers(servers: NewSessionRequest['mcpServers'], cwd: string): McpConfig[] {
+    try {
+      const configs = resolveAcpMcpConfigs(servers, cwd, input => resolveNativeMcpConfig({ ...input,
+        toolCallTimeoutMs: this.config.mcpToolCallTimeoutMs }))
+      if (configs.length > 0 && this.context.optional('tools') === undefined) {
+        throw new AcpMcpConfigError('mcpServers require a native tools Provider')
+      }
+      return configs
+    } catch (error: unknown) {
+      if (error instanceof AcpMcpConfigError) throw RequestError.invalidParams(undefined, error.message)
+      throw error
+    }
+  }
+
   private createExecutor(id: string, cwd: string): OwnedSession {
-    const { maxPendingPermissions: _permissionCapacity, ...turn } = this.config
+    const { maxPendingPermissions: _permissionCapacity, mcpToolCallTimeoutMs: _mcpTimeout, ...turn } = this.config
+    const resources = new ResourceOwner()
+    const scope = new NativeScope(this.context.scope)
     return { executor: createNativeHeadlessApplication(this.context, { ...turn, cwd,
-      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }), lifetime: new AbortController(), controlTail: Promise.resolve(), controls: 0,
+      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }, scope), resources, scope, lifetime: resources.controller,
+    controlTail: Promise.resolve(), controls: 0,
     notifications: Promise.resolve() }
   }
 
-  private async activate(record: OwnedSession, id: string, signal: AbortSignal): Promise<SessionConfigOption[]> {
+  private async activate(record: OwnedSession, id: string, servers: readonly McpConfig[],
+    signal: AbortSignal, freshCwd?: string): Promise<SessionConfigOption[]> {
+    const admitted = AbortSignal.any([signal, this.lifetime.signal, record.lifetime.signal])
+    const cancel = (): void => { record.lifetime.abort(admitted.reason) }
+    admitted.addEventListener('abort', cancel, { once: true })
+    if (admitted.aborted) cancel()
     try {
-      const options = await this.modelOperation(record, id, AbortSignal.any([signal, this.lifetime.signal]),
+      for (const config of servers) {
+        admitted.throwIfAborted()
+        const tools = this.context.optional('tools')
+        if (tools === undefined) throw RequestError.invalidParams(undefined, 'mcpServers require a native tools Provider')
+        await installNativeMcpClient({ logger: { info: console.error, warn: console.warn, error: console.error },
+          tools, attachments: this.context.optional('attachments'),
+          model: this.context.require('model'), scope: record.scope, signal: record.lifetime.signal,
+          effect: dispose => record.resources.effect(dispose) }, config)
+      }
+      admitted.throwIfAborted()
+      if (freshCwd !== undefined) {
+        const handle = await this.context.require('sessionPersistence').create({ version: SESSION_FORMAT_VERSION,
+          id: SessionId(id), cwd: freshCwd, createdAt: Date.now(), isSeeded: false }, { signal: admitted })
+        try { await handle.flush({ signal: admitted }) } finally { await handle.close() }
+      }
+      const options = await this.modelOperation(record, id, admitted,
         (control, owner, admitted) => control.options(owner, admitted))
       this.assertOpen()
       return options
     } catch (error: unknown) {
-      try { await record.executor.dispose() }
+      try { await this.releaseSession(record) }
       catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native ACP model activation cleanup failed') }
       throw error
+    } finally { admitted.removeEventListener('abort', cancel) }
+  }
+
+  private async releaseSession(record: OwnedSession): Promise<void> {
+    record.lifetime.abort(new Error('ACP Session released'))
+    const failures: unknown[] = []
+    for (const release of [() => record.executor.dispose(), () => record.resources.dispose()]) {
+      try { await release() } catch (error: unknown) { failures.push(error) }
     }
+    if (failures.length > 0) throw new AggregateError(failures, 'native ACP Session resource cleanup failed')
   }
 
   private modelOperation(record: OwnedSession, id: string, signal: AbortSignal,
@@ -322,16 +381,14 @@ export class NativeAcpApplication implements NativeApplication {
   private async newSession(params: NewSessionRequest, signal: AbortSignal):
   Promise<{ sessionId: string; configOptions: SessionConfigOption[] }> {
     this.ready()
-    const cwd = this.workspace(params.cwd, params.mcpServers)
+    const cwd = this.workspace(params.cwd)
+    const servers = this.resolveServers(params.mcpServers, cwd)
     const fs = this.context.require('fs')
     const info = await fs.stat(await fs.resolve('.', { cwd, signal }), signal)
     if (info?.type !== 'directory') throw RequestError.invalidParams(undefined, 'cwd must be a directory')
     const id = SessionId(randomUUID())
-    const handle = await this.context.require('sessionPersistence').create({ version: SESSION_FORMAT_VERSION,
-      id, cwd, createdAt: Date.now(), isSeeded: false }, { signal })
-    try { await handle.flush({ signal }) } finally { await handle.close() }
     const record = this.createExecutor(id, cwd)
-    const configOptions = await this.activate(record, id, signal)
+    const configOptions = await this.activate(record, id, servers, signal, cwd)
     this.sessions.set(id, record)
     return { sessionId: id, configOptions }
   }
@@ -426,7 +483,7 @@ export class NativeAcpApplication implements NativeApplication {
       record.lifetime.abort(new Error('ACP Session closed'))
       await record.current?.done.catch(() => {}) // Prompt failure is returned by its own protocol request.
       await record.controlTail
-      await record.executor.dispose()
+      await this.releaseSession(record)
     } finally { this.activating.delete(id) }
     return {}
   }

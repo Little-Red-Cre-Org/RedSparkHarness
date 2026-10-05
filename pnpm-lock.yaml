@@ -6532,6 +6532,9 @@ importers:
 
   rsh/Modules/Official/mcp/mcp-client:
     dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: 1.4.0
+        version: 1.4.0(zod@4.4.3)
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../attachment/attachment
@@ -8118,6 +8121,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-mcp-client':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/mcp/mcp-client
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
@@ -8145,6 +8151,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-timeout':
+        specifier: workspace:^
+        version: link:../../../../Core/util/timeout
     devDependencies:
       '@deepseek-ai/dsh-json-rpc-line':
         specifier: workspace:^

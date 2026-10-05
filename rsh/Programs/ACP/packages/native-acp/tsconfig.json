@@ -9,6 +9,12 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../../Modules/Official/mcp/mcp-client"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {

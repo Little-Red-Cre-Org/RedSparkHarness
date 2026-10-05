@@ -1,0 +1,34 @@
+[
+  {
+    "sessionUpdate": "tool_call",
+    "toolCallId": "permission-proof-call",
+    "title": "mcp__fixture__add",
+    "kind": "other",
+    "status": "in_progress",
+    "rawInput": {
+      "a": 2,
+      "b": 3
+    }
+  },
+  {
+    "sessionUpdate": "tool_call_update",
+    "toolCallId": "permission-proof-call",
+    "status": "completed",
+    "content": [
+      {
+        "type": "content",
+        "content": {
+          "type": "text",
+          "text": "5"
+        }
+      }
+    ]
+  },
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "content": {
+      "type": "text",
+      "text": "native ACP snapshot reply"
+    }
+  }
+]
