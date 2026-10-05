@@ -87,6 +87,16 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
 ])
 
+/** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
+export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
+  ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
+  ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
+  ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
+  ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+])
+
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Core/util/launch-environment', ['./layers']],

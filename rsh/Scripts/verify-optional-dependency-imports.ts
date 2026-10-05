@@ -32,7 +32,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { isAbsolute, relative, resolve } from 'node:path'
 import ts from 'typescript'
-import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
+import { mixedNativeLibraryDirectories, nativeCompatibilityOnlyPeers, nativeSafeSourceEntryTargets, nativeSafeSourceSubpaths } from './native-package-policy.ts'
+import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
 import { TypeScriptProject, type CompilerFace } from './ts-project.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
@@ -94,6 +95,7 @@ interface PackageOptionalImports {
   readonly optional: Map<string, OptionalKind>
   readonly exports: Record<string, unknown>
   readonly binSources: readonly string[] | undefined
+  readonly nativeTargets: readonly string[] | undefined
 }
 
 const optionalByDirectory = new Map<string, PackageOptionalImports>()
@@ -115,6 +117,8 @@ function optionalFor(projectRoot: string, relativePath: string): PackageOptional
     : {}
   const optional = optionalDependencies(manifest)
   const exports = record(manifest, 'exports')
+  const native = record(manifest, 'dsh').native
+  const nativeTargets = native === undefined ? undefined : parseNativeEntryManifest(native, new Set(Object.keys(exports))).targets
   const bin = manifest.bin
   const binTargets = typeof bin === 'string'
     ? [bin]
@@ -130,6 +134,7 @@ function optionalFor(projectRoot: string, relativePath: string): PackageOptional
     optional,
     exports,
     binSources,
+    nativeTargets,
   }
   optionalByDirectory.set(directory, result)
   return result
@@ -240,6 +245,7 @@ function binarySourceClosure(project: TypeScriptProject, entryPaths: readonly st
  * @param packageDirectory - absolute package directory.
  * @param projectRoot - TypeScript project root.
  * @param safeSubpaths - package directories and Cordis-free export names.
+ * @param face - restrict entries to their declared compiler face when provided.
  * @returns Types entry paths whose runtime source closures must not load Cordis.
  */
 function cordisFreeTypesEntries(
@@ -247,12 +253,17 @@ function cordisFreeTypesEntries(
   packageDirectory: string,
   projectRoot: string,
   safeSubpaths: ReadonlyMap<string, readonly string[]>,
+  face?: CompilerFace,
 ): string[] {
   const directoryName = relative(projectRoot, packageDirectory).replaceAll('\\', '/')
   const subpaths = [...(safeSubpaths.get(directoryName) ?? [])]
   if ('./native' in packageImports.exports) subpaths.push('./native')
   const types: string[] = []
   for (const subpath of subpaths) {
+    const targets = subpath === './native'
+      ? packageImports.nativeTargets ?? mixedNativeLibraryDirectories.get(directoryName) ?? ['host', 'client']
+      : nativeSafeSourceEntryTargets.get(`${directoryName}${subpath.slice(1)}`) ?? ['host', 'client']
+    if (face !== undefined && !targets.includes(face)) continue
     const entry = packageImports.exports[subpath]
     const typesPath = entry !== null && typeof entry === 'object' && !Array.isArray(entry)
       ? (entry as Record<string, unknown>).types
@@ -316,11 +327,14 @@ function exportLoadsModule(declaration: ts.ExportDeclaration, checker: ts.TypeCh
 /**
  * Collect disallowed static value imports of optional dependencies in one face.
  * @param project - a bound repository project.
+ * @param safeSubpaths - declared native-safe exports beyond each native entry.
+ * @param compatibilityPeers - exact peers required only by a mixed package's legacy entries.
  * @returns One message per violation, sorted by location.
  */
 export function collectOptionalImportViolations(
   project: TypeScriptProject,
   safeSubpaths: ReadonlyMap<string, readonly string[]> = nativeSafeSourceSubpaths,
+  compatibilityPeers: ReadonlyMap<string, readonly string[]> = nativeCompatibilityOnlyPeers,
 ): string[] {
   const checker = project.checker
   const violations: string[] = []
@@ -350,13 +364,14 @@ export function collectOptionalImportViolations(
       if (specifierNode === undefined || !ts.isStringLiteral(specifierNode)) continue
       const kind = optional.get(packageOf(specifierNode.text))
       if (kind === undefined) continue
-      if (packageOf(specifierNode.text) === '@deepseek-ai/cordis'
+      if ((packageOf(specifierNode.text) === '@deepseek-ai/cordis'
+        || compatibilityPeers.get(relative(project.projectRoot, directory).replaceAll('\\', '/'))?.includes(packageOf(specifierNode.text)))
         && kind === 'peerDependenciesMeta'
         && cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths).length > 0) {
         let closure = cordisFreeClosureByDirectory.get(directory)
         if (closure === undefined) {
           closure = new Set<string>()
-          for (const typesPath of cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths)) {
+          for (const typesPath of cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths, project.face)) {
             for (const source of cordisFreeSourceClosure(project, typesPath, directory)) closure.add(source)
           }
           cordisFreeClosureByDirectory.set(directory, closure)
