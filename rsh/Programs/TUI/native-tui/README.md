@@ -24,7 +24,7 @@ The native terminal supports multiple conversation turns, live output and file t
 
 The `./native` entry is assembled by `dsh --profile native-tui`. It uses the [shared executor configuration](../../../Engine/core/native-headless/README.md#configuration) and requires `locale` (`en` or `zh`), `background` (`#rrggbb`), and positive safe integers `maxQueuedInputs`, `maxHistoryEvents`, `maxTranscriptEvents`, and `maxStreamChunks`. History reads exceeding their limit fail; presentation and streamed chunks retain their configured recent counts.
 
-New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input, Esc stops the active turn and sends a nonempty draft, and Ctrl+C stops while busy or exits while idle. `/help`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink.
+New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input, Esc stops the active turn and sends a nonempty draft, and Ctrl+C stops while busy or exits while idle. `/help`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
 
 <a id="implementation"></a>
 ## Implementation

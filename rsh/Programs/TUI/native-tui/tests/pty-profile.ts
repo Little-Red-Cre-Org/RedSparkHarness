@@ -2,7 +2,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, lstatSync, realpathSync, rmSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawn, type IPty } from 'node-pty'
 import { vi } from 'vitest'
 import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
@@ -13,9 +13,10 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 /** Create an isolated supported native composition and a deterministic model.
  * @param cancellation - whether the fixture model waits for cancellation and explicit cleanup release.
  * @param script - committed assistant responses for replay; omitted only by the cancellation fixture.
+ * @param cleanupFailure - inject a controller teardown rejection after its real drain.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
-export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[]) {
+export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -30,6 +31,10 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } } }))
   writeFileSync(join(model, 'native.mjs'), `import { writeFile, access } from 'node:fs/promises';
     import { setTimeout as wait } from 'node:timers/promises';
+    ${cleanupFailure ? `import { NativeTuiApplication } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Programs/TUI/native-tui/lib/native.js')).href)};
+    const controller = Object.getPrototypeOf(NativeTuiApplication.prototype);
+    const close = controller.close;
+    controller.close = async function () { await close.call(this); throw new Error('fixture executor cleanup failed'); };` : ''}
     const home = ${JSON.stringify(home)};
     const script = ${JSON.stringify(script ?? [])};
     export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ['model'],

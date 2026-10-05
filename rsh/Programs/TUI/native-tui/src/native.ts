@@ -57,10 +57,18 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
    */
   override close(): Promise<void> {
     return this.closingInk ??= (async () => {
-      await super.close()
-      const exited = this.ink?.waitUntilExit()
-      this.ink?.unmount()
-      await exited
+      const failures: unknown[] = []
+      try { await super.close() }
+      catch (error: unknown) { failures.push(error) }
+      finally {
+        try {
+          const exited = this.ink?.waitUntilExit()
+          this.ink?.unmount()
+          await exited
+        } catch (error: unknown) { failures.push(error) }
+      }
+      if (failures.length === 1) throw failures[0]
+      if (failures.length > 1) throw new AggregateError(failures, 'native-tui: execution and terminal cleanup failed')
     })()
   }
 }

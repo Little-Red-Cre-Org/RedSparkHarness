@@ -24,7 +24,7 @@ kind: "package-reference"
 
 `./native` 入口由 `dsh --profile native-tui` 装配。它复用[共享执行器的配置](../../../Engine/core/native-headless/README.zh.md#configuration)，并要求 `locale` 为 `en` 或 `zh`、`background` 为 `#rrggbb`，以及正安全整数 `maxQueuedInputs`、`maxHistoryEvents`、`maxTranscriptEvents`、`maxStreamChunks`。历史读取超过上限会失败；展示与流式缓存只保留最近的配置条数。
 
-新会话不接受位置参数；`--resume <session-id>` 恢复原会话。Enter 排队，Esc 停止当前轮次并发送非空草稿，Ctrl+C 在执行时停止、空闲时退出。`/help`、`/clear`、`/retry`、`/exit`、`/quit` 可用；其他命令明确报错。`/clear` 仅清理视图。停止会丢弃尚未执行的输入；退出先取消并等待接受的执行清理，再释放 Ink。
+新会话不接受位置参数；`--resume <session-id>` 恢复原会话。Enter 排队，Esc 停止当前轮次并发送非空草稿，Ctrl+C 在执行时停止、空闲时退出。`/help`、`/clear`、`/retry`、`/exit`、`/quit` 可用；其他命令明确报错。`/clear` 仅清理视图。停止会丢弃尚未执行的输入；退出先取消并等待接受的执行清理，再释放 Ink。执行清理拒绝时仍释放 Ink；执行和终端清理同时失败时以 `AggregateError` 保留两者。
 
 <a id="implementation"></a>
 ## 实现

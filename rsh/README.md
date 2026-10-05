@@ -73,7 +73,7 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`sdk/`](Programs/SDK/packages/README.md) | Out-of-process SDK: JSON-RPC protocol and TypeScript client/server |
 | [`acp/`](Programs/ACP/packages/README.md) | Automation-only Agent Client Protocol server |
 | [`cli/`](Programs/CLI/README.md) | Profile-only command-line application launcher |
-| [`tui/`](Programs/TUI/README.md) | Native terminal application and shared presentation |
+| [`tui/`](Programs/TUI/README.md) | Native terminal and presentation |
 | [`interaction/`](Modules/Official/interaction/README.md) | Human-collaboration plane: approval/interaction seams, permission preset, commands, ask-user tool |
 | [`boot/`](Compatibility/DSH/boot/README.md) | Shared app-bin boot glue |
 | [`bridge/`](Compatibility/DSH/bridge/README.md) | Explicit Cordis contributions selected by native runtime profiles |

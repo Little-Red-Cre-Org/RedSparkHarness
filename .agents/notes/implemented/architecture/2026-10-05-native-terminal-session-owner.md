@@ -22,4 +22,4 @@ An independent controller owns input admission, cancellation, restore and drain;
 
 ## Verification
 
-One keyless real dsh terminal scene covers a tool result, queued multi-turn input and cold resume of the same Session. One real TTY regression holds model cleanup after cancellation and proves ordinary exit waits for release. Existing compatibility presentation tests cover shared formatting and filtering.
+One keyless real dsh terminal scene covers a tool result, queued multi-turn input and cold resume of the same Session. The real TTY regression holds model cleanup after cancellation and proves ordinary exit waits for release, including an injected controller teardown rejection that must release Ink and retain the original error. Existing compatibility presentation tests cover shared formatting and filtering.
