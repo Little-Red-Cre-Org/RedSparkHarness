@@ -8,7 +8,7 @@
 python -m pip install deepseek-harness-sdk
 ```
 
-native-sdk 配置组合生产前台 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。此原生组合不支持后台、可持续与 subagent.finished 通知。
+native-sdk 配置组合生产一次性 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。此原生组合不支持可持续与 subagent.finished 通知。
 
 ## 启动运行时
 

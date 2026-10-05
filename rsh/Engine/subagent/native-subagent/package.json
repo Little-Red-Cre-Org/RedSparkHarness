@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-native-subagent",
-  "description": "Native foreground in-process spawn Subagent Definition and Provider",
+  "description": "Native one-shot in-process spawn Subagent Definition and Provider",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
@@ -37,7 +37,8 @@
     "@deepseek-ai/dsh-native-prompt": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-subagent-protocol": "workspace:^"
+    "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
+    "@deepseek-ai/dsh-native-jobs": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -51,7 +52,8 @@
         "promptSections"
       ],
       "optional": [
-        "tools"
+        "tools",
+        "jobs"
       ],
       "provides": [
         "subagents"

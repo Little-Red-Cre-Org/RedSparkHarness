@@ -89,6 +89,23 @@ with DeepSeekHarness(config) as restored:
         {"type": "text", "text": "Subagent ended: error. Partial output follows."},
         {"type": "text", "text": "partial failed child output"}]
     assert failed.final_response == result.final_response
+    with restored.client.subscribe_session_notifications(session.id) as background_events:
+        started = session.run("start a background child")
+        assert started.events[-1]["data"]["reason"]["kind"] == "completed"
+        start = next(event for event in started.events if event["type"] == "tool/result")["data"]["message"]["content"][0]
+        assert start["isError"] is False and "Job: subagent-1" in start["content"][0]["text"]
+        while True:
+            notification = background_events.next()
+            if notification.method == "session.event" and notification.payload["sessionId"] != session.id \
+                and notification.payload["event"]["type"] == "tool/call":
+                break
+        stopped = session.run("stop the background child")
+        outputs = [event["data"]["message"]["content"][0] for event in stopped.events if event["type"] == "tool/result"]
+        assert "background child live output" in outputs[0]["content"][0]["text"]
+        assert "running" in outputs[0]["content"][0]["text"]
+        assert "requested cancellation" in outputs[1]["content"][0]["text"]
+        assert "cancelled" in outputs[2]["content"][0]["text"]
+        assert stopped.final_response == result.final_response
     child_cancelled = False
 
     def cancel_child(notification):

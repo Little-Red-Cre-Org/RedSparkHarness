@@ -1,9 +1,10 @@
-/** Foreground model Consumer of the selected native Subagent Provider. */
+/** One-shot model Consumer of the selected native Subagent Provider. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeSubagentOptions, NativeSubagentResult } from '@deepseek-ai/dsh-native-subagent'
+import type { NativeSubagentOptions, NativeSubagentResult, NativeSubagentBackground } from '@deepseek-ai/dsh-native-subagent'
 import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
+import type {} from '@deepseek-ai/dsh-native-tool-jobs'
 
 interface Config { readonly toolName: string; readonly options: NativeSubagentOptions }
 
@@ -51,30 +52,42 @@ function resolveConfig(input: unknown): Config {
   } }
 }
 
-/** Native foreground delegation; background and continuable requests are unsupported and refused. */
+/** Native one-shot delegation with Agent-owned background execution when Jobs controls are installed. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-tool-subagent', targets: ['host'],
-  requires: ['tools', 'subagents'], provides: [],
+  requires: ['tools', 'subagents'], optional: ['jobs', 'jobControls'], provides: [],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
       const subagents = context.require('subagents')
       const tools = context.require('tools')
+      const controls = context.optional('jobControls')
+      const jobs = context.optional('jobs')
+      if (controls !== undefined && (controls.jobs !== jobs || subagents.backgroundJobs !== jobs)) {
+        throw new Error('native tool-subagent: Provider, jobs and jobControls must select the same Jobs registry')
+      }
+      const background = controls !== undefined
       const contribution: NativeValueToolContribution = {
-        schema: { name: config.toolName, description: 'Delegate one task to a fresh foreground child. '
-          + 'The child starts without your conversation; this call waits for its final result and cleanup.',
+        schema: { name: config.toolName, description: 'Delegate one task to a fresh child without your conversation. '
+          + (background ? 'By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.'
+            : 'This call waits for its final result and cleanup.'),
         parameters: { type: 'object', additionalProperties: false, required: ['description', 'prompt'], properties: {
           description: { type: 'string' }, prompt: { type: 'string' },
+          ...background ? { run_in_background: { type: 'boolean' as const } } : {},
         } } },
         output: {
-          schema: { type: 'object', additionalProperties: false, required: ['id', 'provider', 'stopReason', 'output'], properties: {
+          schema: { oneOf: [{ type: 'object', additionalProperties: false, required: ['id', 'provider', 'stopReason', 'output'], properties: {
             id: { type: 'string' }, provider: { type: 'string' },
             stopReason: { type: 'string', enum: ['completed', 'max-tokens', 'aborted', 'refusal', 'error'] },
             output: { type: 'array', items: { type: 'object', additionalProperties: true } },
-          } },
+          } }, { type: 'object', additionalProperties: false, required: ['id', 'jobId', 'provider'], properties: {
+            id: { type: 'string' }, jobId: { type: 'string' }, provider: { type: 'string' },
+          } }] },
           render: (_call, value) => {
             // The Provider supplies typed content; NativeTools owns its lossless JSON snapshot.
-            const result = value as unknown as NativeSubagentResult
+            const result = value as unknown as NativeSubagentResult | NativeSubagentBackground
+            if ('jobId' in result) return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Child session: ${result.id}. Use job_output to read output or wait; job_kill requests cancellation.` }],
+              meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, jobId: result.jobId } }
             const content: ContentBlock[] = [...result.output]
             if (result.stopReason !== 'completed') content.unshift({ type: 'text', text: `Subagent ended: ${result.stopReason}. Partial output follows.` })
             return { content, isError: result.stopReason !== 'completed', meta: {
@@ -83,11 +96,11 @@ export const plugin: NativePlugin = {
           },
         },
         async execute(call) {
-          const args = call.arguments as { description: string; prompt: string }
+          const args = call.arguments as { description: string; prompt: string; run_in_background?: boolean }
           if (args.description.length === 0 || args.prompt.length === 0) throw new Error('subagent: description and prompt must be nonempty')
           const request = subagents.resolve({ agent: call.agent, session: call.session, label: args.description,
             prompt: [{ type: 'text', text: args.prompt }], options: config.options })
-          return subagents.run(request, call.signal)
+          return args.run_in_background === true ? subagents.startBackground(request, call.signal) : subagents.run(request, call.signal)
         },
       }
       context.own(tools.registerValueTool(contribution, context.scope))

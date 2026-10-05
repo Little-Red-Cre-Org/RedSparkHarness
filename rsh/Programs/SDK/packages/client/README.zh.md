@@ -25,7 +25,7 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-native-sdk 配置组合生产前台 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。此原生组合不支持后台、可持续与 subagent.finished 通知。
+native-sdk 配置组合生产一次性 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。此原生组合不支持可持续与 subagent.finished 通知。
 
 当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `DeepSeekHarness`，运行提示词，然后关闭它，使子进程总能被回收。
 
