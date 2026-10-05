@@ -38,6 +38,8 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 
 待答工具审批提供允许一次与拒绝操作。问题卡保留标题、详情、选项、多选及自定义文本。提交失败保留待答请求；取消禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
 
+图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
+
 ## 不变量
 
 视图读取选定 Host Consumer，不拥有独立执行观察，因此不发布不变量安装器。
@@ -54,7 +56,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 
 #### 模型看到什么
 
-提交的用户文本记录为 `user/message`。模型意图修改是持久化 `model/selection` 事实；已安装组合的修改使用 `agent-preset/selected`。目录发现与查看历史不贡献模型输入。
+提交的用户文本及已准入的图片引用记录为 `user/message`。模型意图修改是持久化 `model/selection` 事实；已安装组合的修改使用 `agent-preset/selected`。目录发现与查看历史不贡献模型输入。
 
 #### Token 影响
 
@@ -71,4 +73,4 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 丰富工具卡片及其他模型片段呈现仍属于独立工作。
-- 附件上传、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。
+- 文件上传、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。

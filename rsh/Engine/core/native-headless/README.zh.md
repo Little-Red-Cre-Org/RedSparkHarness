@@ -45,6 +45,8 @@ kind: "package-reference"
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
 
+根调用的 `prepareMessage` 优先于 `message`。准备过程在既有执行所有者内运行，位于有效下一模型选择之后、inbox 准入之前。它返回带身份的输入，不暴露 Session 写入者；拒绝或取消不会准入用户输入。
+
 根任务取消时，即使初始轮次失败或等待结算的信号已被取消，也会关闭并等待已有驻留 epoch 清理完成。执行失败与 epoch 清理失败会一并报告，保留原执行错误。
 
 <a id="dev-note"></a>

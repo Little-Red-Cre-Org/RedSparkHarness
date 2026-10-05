@@ -8,6 +8,7 @@ import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
@@ -56,7 +57,7 @@ it('creates, submits and restores the built native conversation through the ship
         execute: async () => ({ isError: false, content: [{ type: 'text', text: 'guarded allowed' }] }) }, context.scope));
       const reasoning = { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' };
       context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Fixture' }],
-        resolve: async (provider, id) => ({ provider, id, name: id, reasoning }),
+        resolve: async (provider, id) => ({ provider, id, name: id, reasoning, inputModalities: ['text', 'image'] }),
         catalog: async defaults => ({ default: defaults, routableProviders: ['mock'], failures: [], groups: [{ id: 'mock', name: 'Fixture',
           models: [{ id: 'fixture', name: 'Initial' }, { id: 'chosen', name: 'Chosen', reasoning }] }] }) });
       let resume; const continued = new Promise(resolve => { resume = resolve });
@@ -65,6 +66,8 @@ it('creates, submits and restores the built native conversation through the ship
       context.own(() => { resume() });
       let step = 0;
       context.provide('model', { async *stream(request) {
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(${JSON.stringify(join(home, 'image-request.json'))}, JSON.stringify(request.messages));
       if (step < 3) {
         const current = step++;
         const name = current < 2 ? 'guarded' : 'ask_user_question';
@@ -102,7 +105,7 @@ it('creates, submits and restores the built native conversation through the ship
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
@@ -147,6 +150,7 @@ it('creates, submits and restores the built native conversation through the ship
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
     else expect(controlsText).toBe(readFileSync(controlsPath, 'utf8'))
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill(text)
+    await page.getByLabel('Add images', { exact: true }).setInputFiles(join(scenario, 'image.png'))
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     const humanCards: string[] = []
     const approvalCard = page.getByRole('region', { name: 'Tool approval', exact: true })
@@ -175,6 +179,12 @@ it('creates, submits and restores the built native conversation through the ship
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/release', { method: 'POST' }); if (!response.ok) throw new Error('fixture release failed') })
     await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
     expect(await live.count()).toBe(0)
+    await page.waitForFunction(() => document.querySelector('section img') !== null || document.querySelector('[role=alert]') !== null)
+    expect(await page.getByRole('alert').allTextContents()).toEqual([])
+    await page.locator('section img').waitFor()
+    await page.waitForFunction(() => { const img = document.querySelector('section img'); return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 })
+    const modelMessages = JSON.parse(readFileSync(join(home, 'image-request.json'), 'utf8')) as { content: { type: string; attachment?: { attachmentId: string } }[] }[]
+    expect(modelMessages.some(message => message.content.some(block => block.type === 'image' && typeof block.attachment?.attachmentId === 'string'))).toBe(true)
     const transcript = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     expect(transcript).toContain('Native browser answer.')
     const transcriptPath = join(scenario, 'conversation.expected.md')
@@ -190,6 +200,7 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).inputValue()).toBe('high')
     expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).inputValue()).toBe('alternate')
     expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).isDisabled()).toBe(true)
+    await page.waitForFunction(() => { const img = document.querySelector('section img'); return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 })
     expect((await page.locator('section').innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(transcript)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     {
@@ -200,6 +211,12 @@ it('creates, submits and restores the built native conversation through the ship
       const stored = readdirSync(sessionRoot, { recursive: true }).find(path => typeof path === 'string' && path.endsWith(name))
       if (typeof stored !== 'string') throw new Error('native Web omitted Session JSONL')
       const raw = readFileSync(join(sessionRoot, stored), 'utf8')
+      const imageRefs = raw.trim().split('\n').slice(1).map(line => JSON.parse(line) as { type?: unknown; seq: number })
+        .filter(event => event.type === 'user/message').map(event => parseSessionEvent(event, event.seq))
+        .flatMap(event => event.type === 'user/message' ? event.data.content : []).filter(block => block.type === 'image')
+        .map(block => block.attachment)
+      expect(imageRefs).toHaveLength(1)
+      expect(modelMessages.flatMap(message => message.content).filter(block => block.type === 'image').map(block => block.attachment)).toEqual(imageRefs)
       const context = { sessionIds: [id], cwd: workspace }
       const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, { ...context, sessionIds: [] }, { identityMode: 'preserve' })
       if (normalized === undefined) throw new Error('missing normalized Session')

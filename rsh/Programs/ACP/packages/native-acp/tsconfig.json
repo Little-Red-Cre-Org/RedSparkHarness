@@ -37,6 +37,9 @@
     },
     {
       "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
     }
   ]
 }
