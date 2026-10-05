@@ -88,6 +88,20 @@ export interface SdkEncodedImageBlock {
 /** SDK prompt input: ordinary durable blocks plus inline images awaiting admission. */
 export type SdkPromptContentBlock = ContentBlock | SdkEncodedImageBlock
 
+/** Ordered input for the active native SDK root's next step. */
+export interface SessionSteerParams {
+  /** Currently admitted Session owned by this SDK runtime. */
+  sessionId: string
+  /** Text and encoded image blocks admitted through the same attachment policy as prompts. */
+  contentBlocks: SdkPromptContentBlock[]
+}
+
+/** Durable receipt for a next-step input; not a model result or interruption receipt. */
+export interface SessionSteerResult {
+  /** Identity retained in the durable next-step inbox. */
+  messageId: string
+}
+
 /** Durable enqueue receipt for one prompt. */
 export interface SessionPromptResult {
   /** Identity of the queued user message. */
@@ -153,6 +167,7 @@ export interface HarnessSdkRequestMap {
   'initialize': { params: InitializeParams; result: InitializeResult }
   'session/cancel': { params: SessionCancelParams; result: SessionCancelResult }
   'session/fork': { params: SessionForkParams; result: SessionForkResult }
+  'session/steer': { params: SessionSteerParams; result: SessionSteerResult }
   'session/prompt': { params: SessionPromptParams; result: SessionPromptResult }
   'shutdown': { params: undefined; result: Record<string, never> }
 }

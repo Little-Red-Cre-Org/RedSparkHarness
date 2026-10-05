@@ -172,6 +172,16 @@ export class HarnessSession {
   constructor(readonly harness: DeepSeekHarness, readonly id: string) {}
 
   /**
+   * Queue input for this admitted native SDK root's next step without cancelling dispatch.
+   * @param input - text or encoded-image content, using the same admission as run.
+   * @returns the durable message id; idle Sessions and unsupported profiles reject.
+   */
+  async steer(input: string | SdkPromptContentBlock[]): Promise<string> {
+    await this.harness.start()
+    return this.harness.client.steer(this.id, normalizeInput(input))
+  }
+
+  /**
    * Cancel this Session's admitted native-sdk turn and await owned cleanup.
    * @returns false when no admitted turn was active; rejects on unsupported profiles.
    */
