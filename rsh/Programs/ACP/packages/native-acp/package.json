@@ -50,7 +50,9 @@
         "sessionExecution",
         "activeSessions",
         "agentPresets",
-        "workspaceRegistry"
+        "workspaceRegistry",
+        "attachments",
+        "modelDirectory"
       ],
       "provides": [
         "application"
@@ -74,7 +76,8 @@
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@agentclientprotocol/sdk": "1.4.0",
     "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
+    "@deepseek-ai/dsh-attachment": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-json-rpc-line": "workspace:^"

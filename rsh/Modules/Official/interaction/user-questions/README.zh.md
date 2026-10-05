@@ -83,3 +83,5 @@ kind: "package-reference"
 </details>
 
 **运行时不变式：** 不发布伴生入口。answerer waterfall 按请求解析并把结果直接返回调用方；该 seam 不发布独立的请求／回答审计流。
+
+parseUserQuestionAnswer 按精确展示的问题校验应用传输答案。待答问题 broker 与 Web 传输复用此解析器，检查选项归属、选择数量、重复标识与完整批次回答。

@@ -3887,6 +3887,36 @@ importers:
         specifier: workspace:^
         version: link:../session-projection
 
+  rsh/Engine/subagent/native-subagent:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../core/native-jobs
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-subagent-protocol':
+        specifier: workspace:^
+        version: link:../subagent-protocol
+
   rsh/Engine/subagent/subagent:
     dependencies:
       '@deepseek-ai/dsh-brand':
@@ -3895,6 +3925,9 @@ importers:
       '@deepseek-ai/dsh-chunked-list':
         specifier: workspace:^
         version: link:../../../Core/util/chunked-list
+      '@deepseek-ai/dsh-subagent-protocol':
+        specifier: workspace:^
+        version: link:../subagent-protocol
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -4344,6 +4377,18 @@ importers:
         specifier: workspace:^
         version: link:../../../Modules/Official/interaction/user-approval
 
+  rsh/Engine/subagent/subagent-protocol:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
+
   rsh/Engine/subagent/subagent-spawn-in-process:
     dependencies:
       '@deepseek-ai/schemastery':
@@ -4401,6 +4446,24 @@ importers:
 
   rsh/Engine/subagent/tool-subagent:
     dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../core/native-jobs
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../native-subagent
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../jobs/native-tool-jobs
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -4426,9 +4489,6 @@ importers:
       '@deepseek-ai/dsh-jobs-local':
         specifier: workspace:^
         version: link:../../jobs/jobs-local
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../llm/llm
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../core/scope
@@ -7721,6 +7781,18 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -8094,6 +8166,9 @@ importers:
       '@agentclientprotocol/sdk':
         specifier: 1.4.0
         version: 1.4.0(zod@4.4.3)
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
@@ -8206,6 +8281,9 @@ importers:
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../Engine/subagent/native-subagent
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -8236,12 +8314,21 @@ importers:
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../Core/subprocess/subprocess-local
+      '@deepseek-ai/dsh-tool-ask-user':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/tool-ask-user
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-tool-subagent':
+        specifier: workspace:^
+        version: link:../../Engine/subagent/tool-subagent
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/user-questions
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
@@ -8538,9 +8625,6 @@ importers:
       '@deepseek-ai/dsh-token-meter':
         specifier: workspace:^
         version: link:../../Engine/llm/token-meter
-      '@deepseek-ai/dsh-tool-ask-user':
-        specifier: workspace:^
-        version: link:../../Modules/Official/interaction/tool-ask-user
       '@deepseek-ai/dsh-tool-bash':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/tool-bash
@@ -8577,9 +8661,6 @@ importers:
       '@deepseek-ai/dsh-tool-str-replace-editor':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-str-replace-editor
-      '@deepseek-ai/dsh-tool-subagent':
-        specifier: workspace:^
-        version: link:../../Engine/subagent/tool-subagent
       '@deepseek-ai/dsh-tool-subagent-control':
         specifier: workspace:^
         version: link:../../Engine/subagent/tool-subagent-control
@@ -8595,9 +8676,6 @@ importers:
       '@deepseek-ai/dsh-user-question-broker':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/user-question-broker
-      '@deepseek-ai/dsh-user-questions':
-        specifier: workspace:^
-        version: link:../../Modules/Official/interaction/user-questions
       '@deepseek-ai/dsh-web-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/web-app
@@ -8632,6 +8710,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1067.0
         version: 3.1067.0
+      '@deepseek-ai/dsh':
+        specifier: workspace:^
+        version: link:../CLI
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
@@ -8695,12 +8776,30 @@ importers:
       '@deepseek-ai/dsh-client-modules':
         specifier: workspace:^
         version: link:../Web/client/modules
+      '@deepseek-ai/dsh-client-native-application':
+        specifier: workspace:^
+        version: link:../Web/client/native-application
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../Web/client/native-session
       '@deepseek-ai/dsh-client-ui-directory-picker-native':
         specifier: workspace:^
         version: link:../Web/client/ui-directory-picker-native
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../Web/client/ui-renderer
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../Web/client/ui-slots
       '@deepseek-ai/dsh-cmdline':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/boot/cmdline
+      '@deepseek-ai/dsh-credentials-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/credentials-local
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-host-directory-picker-native':
         specifier: workspace:^
         version: link:../Web/host/directory-picker-native
@@ -8710,9 +8809,27 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-model-execution
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-web-assets':
+        specifier: workspace:^
+        version: link:../Web/host/native-web-assets
+      '@deepseek-ai/dsh-native-web-session-controller':
+        specifier: workspace:^
+        version: link:../Web/api/native-web-session-controller
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-persistence-jsonl
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
@@ -9368,6 +9485,12 @@ importers:
 
   rsh/Programs/Web/api/native-web-session-controller:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../../client/connection
@@ -9377,12 +9500,18 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-headless
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -9395,7 +9524,16 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/user-questions
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
+      '@deepseek-ai/dsh-attachment-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment-local
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
@@ -10032,12 +10170,18 @@ importers:
 
   rsh/Programs/Web/client/native-application:
     devDependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../native-session
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -10056,13 +10200,22 @@ importers:
       eventsource-parser:
         specifier: ^3.1.0
         version: 3.1.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../connection
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime

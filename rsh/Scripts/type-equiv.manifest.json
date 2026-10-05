@@ -517,7 +517,7 @@
     {
       "doc": "rsh/Docs/subsystems/todo.md",
       "symbol": "TodoItem",
-      "source": "rsh/Modules/Official/todo/tool-todo/src/types.ts"
+      "source": "rsh/Modules/Official/todo/tool-todo/src/todo-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session.md",

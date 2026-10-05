@@ -1,6 +1,7 @@
 /** In-place owner of the reserved desktop profile and its private pnpm state. */
 
 import { valid } from 'semver'
+import { profileDirectoryRuntime, profileDirectoryReloadMode, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
 import { spawn } from 'node:child_process'
 import {
   existsSync,
@@ -47,7 +48,7 @@ interface DesktopProjectManifest {
   readonly dependencies: Record<string, string>
   readonly dsh: {
     readonly profile: {
-      readonly bundles: string[]
+      readonly bundles?: string[]
     }
   }
 }
@@ -151,9 +152,10 @@ function projectManifest(projectDir: string): DesktopProjectManifest {
   const value = readJson(path)
   const dsh = isRecord(value) && isRecord(value.dsh) ? value.dsh : undefined
   const profile = isRecord(dsh?.profile) ? dsh.profile : undefined
+  const native = profileDirectoryRuntime(projectDir) === 'native'
   if (!isRecord(value) || value.name !== PROJECT_NAME || value.private !== true
     || typeof value.version !== 'string' || (value.dependencies !== undefined && !isRecord(value.dependencies))
-    || !Array.isArray(profile?.bundles) || !profile.bundles.every(bundle => typeof bundle === 'string')) {
+    || (!native && (!Array.isArray(profile?.bundles) || !profile.bundles.every(bundle => typeof bundle === 'string')))) {
     throw new Error(`desktop project: invalid desktop profile manifest ${path}`)
   }
   const manifest = { ...value, dependencies: value.dependencies ?? {} } as unknown as DesktopProjectManifest
@@ -166,6 +168,7 @@ function projectManifest(projectDir: string): DesktopProjectManifest {
 
 function profilePluginNames(projectDir: string): readonly string[] {
   const bundles = projectManifest(projectDir).dsh.profile.bundles
+  if (bundles === undefined) throw new Error('desktop project: compatibility plugin management requires a Cordis profile')
   if (!DESKTOP_PROFILE_BUNDLES.every((bundle, index) => bundles[index] === bundle)) {
     throw new Error('desktop project: profile must begin with the built-in desktop bundle list')
   }
@@ -235,7 +238,17 @@ export class DesktopProjectManager {
   /** Read the active desktop plugin inventory. */
   listPlugins(): readonly DesktopPluginRecord[] {
     if (!existsSync(this.paths.profile)) return []
+    this.assertLegacyPluginManagement()
     return pluginRecords(this.paths.profile)
+  }
+
+  /** @returns Whether the current profile supports compatibility plugin operations. */
+  supportsLegacyPluginManagement(): boolean {
+    return profileDirectoryRuntime(this.paths.profile) === 'legacy'
+  }
+
+  private assertLegacyPluginManagement(): void {
+    if (!this.supportsLegacyPluginManagement()) throw new Error('desktop project: native profiles do not support compatibility plugin management')
   }
 
   /**
@@ -298,6 +311,13 @@ export class DesktopProjectManager {
 
   private prepareProfile(projectDir: string): void {
     const runtime = this.currentRuntime()
+    if (profileDirectoryRuntime(projectDir) === 'native') {
+      projectManifest(projectDir)
+      if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('desktop project: native profiles require configReload startup')
+      readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
+      linkDesktopHostPackages(projectDir, this.runtime.dsh, runtime)
+      return
+    }
     linkDesktopHostPackages(projectDir, this.runtime.dsh, runtime)
     validateDesktopPluginGraph(projectDir, this.runtime.dsh, runtime, profilePluginNames(projectDir))
   }
@@ -316,7 +336,7 @@ export class DesktopProjectManager {
           && realpathSync.native(link.target) === realpathSync.native(join(this.runtime.dsh, 'node_modules', link.name)))) {
         return false
       }
-      if (previous === undefined) createPluginProfile(this.paths.profile)
+      if (previous === undefined && profileDirectoryRuntime(this.paths.profile) === 'legacy') createPluginProfile(this.paths.profile)
       await this.reconcileProfile(this.paths.profile, previous)
       return true
     })
@@ -327,6 +347,7 @@ export class DesktopProjectManager {
     await this.withLock(async () => {
       this.currentRuntime()
       if (!existsSync(this.paths.profile)) throw new Error('desktop project: active profile is not installed')
+      this.assertLegacyPluginManagement()
       await hooks.beforeChange()
       if (mutation.type === 'plugins-disable-all') {
         const manifest = projectManifest(this.paths.profile)
@@ -354,7 +375,8 @@ export class DesktopProjectManager {
   private async reconcileProfile(projectDir: string, previous: DesktopProfileState | undefined, packagesChanged = false): Promise<void> {
     const target = this.currentRuntime()
     const rebuild = (!packagesChanged && existsSync(this.pendingPackages))
-      || (previous !== undefined && pluginRecords(projectDir).length > 0
+      || (previous !== undefined && (profileDirectoryRuntime(projectDir) === 'native'
+        ? Object.keys(projectManifest(projectDir).dependencies).length : pluginRecords(projectDir).length) > 0
       && (previous.nodeVersion !== target.release.nodeVersion || previous.platform !== target.platform || previous.arch !== target.arch))
     if (rebuild) {
       writeFileSync(this.pendingPackages, '')

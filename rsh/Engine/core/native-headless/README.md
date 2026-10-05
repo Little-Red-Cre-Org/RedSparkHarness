@@ -20,6 +20,8 @@ English | [中文](README.zh.md)
 
 ## Configuration
 
+Delegated invocations retain the selected sandbox policy and cannot expand permissions through approvals. Required approval requests record asked and decided facts with policy never and outcome rejected; root requests still use the selected approval answerer. Interrupted transient children repair their turn through the existing owner so accepted-event observers and the durable log receive the same cancellation closers.
+
 The optional `agentInstructions` Provider prepares workspace instructions before each admitted model request. The application records its returned context as `user/message` before dispatch; stored source facts govern resume reconciliation and accepted filesystem results govern nested discovery.
 
 The `./native` entry requires an absolute existing directory in `cwd`, nonempty `provider`, `model`, and `systemPrompt` strings, and an optional positive `maxSteps` (default `4`). Unknown fields fail profile activation. The application accepts a prompt or `--resume <session-id> [prompt]`; each invocation admits one root input through the same Agent execution owner. Resume refuses a changed workspace or system prompt rather than silently sending history from another profile. Its fixed schema exposes `read_file` and `write_file`; an installed `codeRuntime` adds `run_code`, which accepts `{ "program": string }` and records the runtime's bounded JSON result as its tool outcome. A program failure becomes a `NativeCodeRuntimeError` tool result with a `CODE_RUNTIME_*` error code. Optional `tools` and `promptSections` services add reversible schemas and system text, optional `sandboxPolicy` supplies the current Session policy to fixed writes, and optional `approval` applies its policy before `write_file` or a protected contribution runs. Writes use the filesystem observation policy, and paths outside `cwd` fail with `FS_SANDBOX_DENIED`.
@@ -41,6 +43,8 @@ The validated `builtinTools` boolean defaults to `true`. Setting it to `false` r
 One-shot teardown attempts writer closure even when an active-owner observer rejects, preserving execution and cleanup failures together. Agent admission owns borrowed preset leases before lifecycle announcement; failed or cancelled announcement releases them. Resident children persist that selected preset in their creation header and validate restored facts before module preparation.
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
+
+Root `prepareMessage` takes priority over `message`. Preparation runs under the existing execution owner after effective next-model selection and before inbox admission. It returns identified input without access to the Session writer; rejection or cancellation admits no user input.
 
 Root cancellation closes and drains an already retained epoch even when the initial turn fails or the settlement signal is already aborted. Execution and epoch-cleanup failures are reported together; the original execution failure remains observable.
 

@@ -835,7 +835,7 @@ Source: [`rsh/Engine/subagent/subagent/src/catalog.ts:40`](../Engine/subagent/su
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-Source: [`rsh/Engine/subagent/subagent/src/descriptor.ts:38`](../Engine/subagent/subagent/src/descriptor.ts)
+Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:39`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
@@ -952,7 +952,7 @@ Source: [`rsh/Modules/Community/experimental/agent-team/src/types.ts:223`](../Mo
 
 Types: [TodoItem](subsystems/todo.md)
 
-Source: [`rsh/Modules/Official/todo/tool-todo/src/types.ts:31`](../Modules/Official/todo/tool-todo/src/types.ts)
+Source: [`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/Official/todo/tool-todo/src/todo-types.ts)
 
 ### `tool/*`
 

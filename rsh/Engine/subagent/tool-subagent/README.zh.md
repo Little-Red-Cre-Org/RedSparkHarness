@@ -25,6 +25,8 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+原生 ./native 入口消费 native-subagent 的一次性能力。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。模型提供 description 与 prompt；仅在 jobs 与 jobControls 都安装时可使用 run_in_background。NativeTools 校验参数并记录子任务 id、提供者、停止原因和真实输出。后台启动在真实就绪后返回子 id 与 Jobs 句柄；job_output 读取实时或最终输出，job_kill 请求取消。可持续参数仍被拒绝。 Provider 的 backgroundJobs、选定的 jobs 和 jobControls.jobs 必须标识同一注册表；不一致时加载失败。
+
 每个委派目标挂载一个实例，且每个实例的 `toolName` 必须不同。工具与其提供方同时存在、同时消失，因此同级加载顺序与提供方重新加载都不会让工具悬空。
 
 ### 最小配置

@@ -3,6 +3,9 @@ import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import { createNativeHeadlessApplication, resolveNativeHeadlessConfig } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { setTimeout } from 'node:timers/promises'
 
 export const plugin = {
   apiVersion: 1, name: 'sdk-descendant-fixture', targets: ['host'],
@@ -14,6 +17,29 @@ export const plugin = {
     let foreign
     const tools = context.optional('tools')
     if (!tools) throw new Error('sdk descendant fixture requires native tools')
+    const approval = context.optional('approval')
+    if (approval) context.own(approval.registerAnswerer(request => {
+      writeFileSync(join(context.require('sessionExecution').configuration(request.agent,
+        context.require('activeSessions').owners().find(owner => owner.agent === request.agent).session).cwd, 'answerer-called'), 'called')
+      return 'allowed-once'
+    }))
+    context.own(tools.register({
+      schema: { name: 'fixture_wait', description: 'Wait until the initiating Session is cancelled.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } },
+      execute: async call => {
+        await setTimeout(30000, undefined, { signal: call.signal })
+        throw new Error('fixture wait was not cancelled')
+      },
+    }, context.scope))
+    context.own(tools.register({
+      schema: { name: 'fixture_protected', description: 'Write the protected fixture marker.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } },
+      approval: { reason: 'A fixture effect needs approval.' },
+      execute: async call => {
+        writeFileSync(join(call.session.header.cwd, 'protected-marker'), 'written')
+        return { content: [{ type: 'text', text: 'written' }], isError: false }
+      },
+    }, context.scope))
     context.own(tools.register({
       schema: { name: 'fixture_delegate_child', description: 'Delegate the fixture task.',
         parameters: { type: 'object', properties: {}, additionalProperties: false } },

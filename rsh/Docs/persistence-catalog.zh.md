@@ -837,7 +837,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-来源：[`rsh/Engine/subagent/subagent/src/descriptor.ts:38`](../Engine/subagent/subagent/src/descriptor.ts)
+来源：[`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:39`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
@@ -954,7 +954,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[TodoItem](subsystems/todo.zh.md)
 
-来源：[`rsh/Modules/Official/todo/tool-todo/src/types.ts:31`](../Modules/Official/todo/tool-todo/src/types.ts)
+来源：[`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/Official/todo/tool-todo/src/todo-types.ts)
 
 ### `tool/*`
 

@@ -38,6 +38,49 @@ it('replays a native SDK turn with exact model input, output and durable Session
         return
       }
       const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
+      if (last?.role === 'user' && last.content === 'fail production child') {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', content: 'partial failed child output' } }] },
+          { error: { message: 'fixture child model failed', type: 'invalid_request_error', code: 'fixture_child_failure' } },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join(''))
+        return
+      }
+      if (last?.role === 'user' && ['hold production child', 'hold background child'].includes(String(last.content))) {
+        response.end([
+          ...last.content === 'hold background child' ? [{ choices: [{ delta: { role: 'assistant', content: 'background child live output' } }] }] : [],
+          { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'child-wait', type: 'function',
+            function: { name: 'fixture_wait', arguments: '{}' } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
+      if (last?.role === 'user' && ['start a background child', 'stop the background child'].includes(String(last.content))) {
+        const calls = last.content === 'start a background child'
+          ? [{ name: 'subagent', arguments: JSON.stringify({ description: 'background child', prompt: 'hold background child', run_in_background: true }) }]
+          : [{ name: 'job_output', arguments: JSON.stringify({ job_id: 'subagent-1' }) },
+            { name: 'job_kill', arguments: JSON.stringify({ job_id: 'subagent-1', reason: 'fixture background cancel' }) },
+            { name: 'job_output', arguments: JSON.stringify({ job_id: 'subagent-1', wait: true, timeout_ms: 10000 }) }]
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: calls.map((call, index) => ({ index,
+            id: `background-call-${index}`, type: 'function', function: call })) } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
+      if (last?.role === 'user' && ['spawn a production child', 'cancel a production child', 'fail a production child', 'production child task'].includes(String(last.content))) {
+        const calls = last.content !== 'production child task'
+          ? [{ name: 'subagent', arguments: JSON.stringify({ description: 'production child',
+              prompt: last.content === 'spawn a production child' ? 'production child task'
+                : last.content === 'fail a production child' ? 'fail production child' : 'hold production child' }) }]
+          : [{ name: 'fixture_delegate_child', arguments: '{}' }, { name: 'fixture_protected', arguments: '{}' },
+              { name: 'subagent', arguments: JSON.stringify({ description: 'forbidden grandchild', prompt: 'grandchild task' }) }]
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: calls.map((call, index) => ({ index,
+            id: `production-call-${index}`, type: 'function', function: call })) } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (last?.role === 'user' && ['delegate a native child', 'foreign root task'].includes(String(last.content))) {
         response.end([
           { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'fixture-delegate', type: 'function',
@@ -46,7 +89,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
         ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
         return
       }
-      const responseText = last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
+      const productionChild = (modelRequest.messages as Array<{ role: string; content: unknown }>)
+        .some(message => message.role === 'user' && message.content === 'production child task')
+      const responseText = productionChild ? 'production child reply'
+        : last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
       response.end([
         { choices: [{ delta: { role: 'assistant', content: responseText } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
@@ -77,11 +123,13 @@ it('replays a native SDK turn with exact model input, output and durable Session
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
     ...composition.installations,
-    { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: 'root' },
+    { id: 'fixture-approval', plugin: '@deepseek-ai/dsh-native-approval', scope: 'root', config: { policy: 'ask' } },
     { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants' },
   ] }))
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
     { id: 'app', config: { systemPrompt: 'You are a native SDK fixture.', maxSteps: 2 } },
+    { id: 'subagent-tool', config: { toolName: 'subagent', maxDepth: 1, maxTokens: 128,
+      persona: 'Only the production child receives this persona.', toolFilter: { deny: ['fixture_delegate_child'] } } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
@@ -152,14 +200,69 @@ it('replays a native SDK turn with exact model input, output and durable Session
       try {
         result = await restored.session('sdk-recorded-fork').run('retain the image')
         result = await restored.session('sdk-recorded-fork').run('delegate a native child')
+        const delegated = result
+        result = await restored.session('sdk-recorded-fork').run('spawn a production child')
+        result = { ...result, notifications: [...delegated.notifications, ...result.notifications] }
+        const production = result
+        const session = restored.session('sdk-recorded-fork')
+        const failed = await session.run('fail a production child')
+        expect(failed.events.find(event => event.type === 'tool/result')?.data.message.content)
+          .toMatchObject([{ type: 'tool-result', isError: true, content: [
+            { type: 'text', text: 'Subagent ended: error. Partial output follows.' },
+            { type: 'text', text: 'partial failed child output' },
+          ] }])
+        expect(failed.finalResponse).toBe(reply)
+        const backgroundEvents = restored.client.subscribeSessionTree(session.id)
+        try {
+          const started = await session.run('start a background child')
+          expect(started.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+          const start = started.events.find(event => event.type === 'tool/result')?.data.message.content[0]
+          expect(start).toMatchObject({ type: 'tool-result', isError: false, content: [{ type: 'text', text: expect.stringContaining('Job: subagent-1') }] })
+          for (;;) {
+            const notification = await backgroundEvents.next()
+            if (notification.method === 'session.event' && notification.params.sessionId !== session.id
+              && (notification.params.event as { type?: string }).type === 'tool/call') break
+          }
+          const stopped = await session.run('stop the background child')
+          const outputs = stopped.events.filter(event => event.type === 'tool/result').map(event => event.data.message.content[0])
+          expect(outputs[0]).toMatchObject({ type: 'tool-result', isError: false, content: [{ type: 'text', text: expect.stringContaining('background child live output') }] })
+          expect(JSON.stringify(outputs[0])).toContain('running')
+          expect(JSON.stringify(outputs[1])).toContain('requested cancellation')
+          expect(JSON.stringify(outputs[2])).toContain('cancelled')
+          expect(stopped.finalResponse).toBe(reply)
+        } finally { backgroundEvents.close() }
+        const childChunk = Promise.withResolvers<void>()
+        const pending = session.run('cancel a production child', { onNotification: notification => {
+          if (notification.method === 'session.event' && notification.params.sessionId !== session.id
+            && (notification.params.event as { type?: string }).type === 'tool/call') childChunk.resolve()
+        } })
+        await childChunk.promise
+        expect(await session.cancel()).toBe(true)
+        const cancelledChild = await pending
+        expect(cancelledChild.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+        expect(cancelledChild.notifications.some(notification => notification.method === 'session.event'
+          && notification.params.sessionId !== session.id && (notification.params.event as { type: string; data: unknown }).type === 'turn/end')).toBe(true)
+        result = production
       }
       finally { await restored.close() }
+      const recovered = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try {
+        const resumed = await recovered.session('sdk-recorded-fork').run('recover after child cancellation')
+        expect(resumed.finalResponse).toBe(reply)
+        expect(resumed.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+      }
+      finally { await recovered.close() }
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(10)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(25)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
-      .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' }])
+      .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
+        { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])
+    const spawned = result.notifications.filter(notification => notification.method === 'subagent.started').at(-1)?.params.childSessionId
+    expect(typeof spawned).toBe('string')
+    expect(existsSync(join(workspace, 'protected-marker'))).toBe(false)
+    expect(existsSync(join(workspace, 'answerer-called'))).toBe(false)
     expect(result.notifications.some(notification => notification.method === 'session.event'
       && notification.params.sessionId === 'sdk-recorded-child'
       && (notification.params.event as { type: string }).type === 'turn/end')).toBe(true)
@@ -177,7 +280,53 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     const raw = findLog('sdk-recorded-turn')
     const forkRaw = findLog('sdk-recorded-fork')
-    expect(logs).toHaveLength(5)
+    expect(logs).toHaveLength(9)
+    const childTask = (log: string, task: string): boolean => (JSON.parse(log.split('\n')[0] ?? '{}') as { origin?: string }).origin === 'subagent'
+      && parseSessionLog(log).some(event => event.type === 'user/message' && event.data.content.some(block => block.type === 'text' && block.text === task))
+    const failedChildLog = logs.find(log => childTask(log, 'fail production child'))
+    if (failedChildLog === undefined) throw new Error('native-sdk snapshot: failed child missing')
+    expect(parseSessionLog(failedChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'error' } } })
+    const normalizedFailed = normalizeSessionSnapshot(redactSessionSnapshotIds([failedChildLog])[0] ?? failedChildLog,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    const failedFixture = join(scene, 'session.4.v3.jsonl')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(failedFixture, normalizedFailed)
+    else expect(normalizedFailed).toBe(readFileSync(failedFixture, 'utf8'))
+    const backgroundLog = logs.find(log => childTask(log, 'hold background child'))
+    if (backgroundLog === undefined) throw new Error('native-sdk snapshot: background child missing')
+    expect(parseSessionLog(backgroundLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+    const normalizedBackground = normalizeSessionSnapshot(redactSessionSnapshotIds([backgroundLog])[0] ?? backgroundLog,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    const backgroundFixture = join(scene, 'session.5.v3.jsonl')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(backgroundFixture, normalizedBackground)
+    else expect(normalizedBackground).toBe(readFileSync(backgroundFixture, 'utf8'))
+    const cancelledChildLog = logs.find(log => childTask(log, 'hold production child'))
+    if (cancelledChildLog === undefined) throw new Error('native-sdk snapshot: cancelled child missing')
+    expect(parseSessionLog(cancelledChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+    const normalizedCancelled = normalizeSessionSnapshot(redactSessionSnapshotIds([cancelledChildLog])[0] ?? cancelledChildLog,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    const cancelledFixture = join(scene, 'session.3.v3.jsonl')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cancelledFixture, normalizedCancelled)
+    else expect(normalizedCancelled).toBe(readFileSync(cancelledFixture, 'utf8'))
+    const productionRaw = findLog(String(spawned))
+    const productionEvents = parseSessionLog(productionRaw)
+    expect(productionEvents.find(event => event.type === 'subagent/descriptor')?.data)
+      .toMatchObject({ version: 3, mode: 'one-shot', provider: 'spawn', label: 'production child' })
+    expect(productionEvents.find(event => event.type === 'native-approval/decided')?.data)
+      .toMatchObject({ policy: 'never', outcome: 'rejected' })
+    expect(productionEvents.filter(event => event.type === 'tool/result').every(event => event.data.message.content[0]?.type === 'tool-result'
+      && event.data.message.content[0].isError)).toBe(true)
+    const childRequest = requests[11]
+    expect((childRequest?.tools as Array<{ function: { name: string } }>).map(tool => tool.function.name))
+      .not.toContain('fixture_delegate_child')
+    expect(JSON.stringify(childRequest?.tools)).not.toContain('read_file')
+    expect(JSON.stringify(childRequest?.messages)).toContain('Only the production child receives this persona.')
+    expect(JSON.stringify(requests[10]?.messages)).not.toContain('Only the production child receives this persona.')
+    expect(childRequest?.max_completion_tokens, JSON.stringify(childRequest)).toBe(128)
+    const productionFixture = join(scene, 'session.2.v3.jsonl')
+    const normalizedProduction = normalizeSessionSnapshot(redactSessionSnapshotIds([productionRaw])[0] ?? productionRaw,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(productionFixture, normalizedProduction)
+    else expect(normalizedProduction).toBe(readFileSync(productionFixture, 'utf8'))
     const childRaw = findLog('sdk-recorded-child')
     expect(JSON.parse(childRaw.split('\n')[0] ?? '{}')).toMatchObject({ parentSession: 'sdk-recorded-fork', origin: 'subagent' })
     const normalizedChild = normalizeSessionSnapshot(redactSessionSnapshotIds([childRaw])[0] ?? childRaw,
