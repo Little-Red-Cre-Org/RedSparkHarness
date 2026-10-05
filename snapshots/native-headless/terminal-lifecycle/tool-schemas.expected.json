@@ -1,0 +1,54 @@
+{
+  "initial": [
+    {
+      "name": "terminal_open",
+      "description": "Allocate an owner-scoped PTY process. This lifecycle-only tool does not send input or read output.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "shell"
+            ],
+            "description": "Configured terminal backend type."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute initial working directory."
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_list",
+      "description": "List PTY processes owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "terminal_close",
+      "description": "Close one owned PTY process and wait for provider-observed process cleanup.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "changes": []
+}
