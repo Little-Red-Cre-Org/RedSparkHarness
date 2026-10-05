@@ -111,6 +111,7 @@
     "snapshots/web/native-session-core.snapshot.ts",
     "snapshots/native-headless/native-headless.snapshot.ts",
     "snapshots/native-headless/tool-results.snapshot.ts",
+    "snapshots/native-headless/mcp-image-native.snapshot.ts",
     "snapshots/native-headless/ptc-jobs.snapshot.ts",
     "snapshots/native-headless/read-image-native.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",
