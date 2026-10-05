@@ -27,10 +27,16 @@
       "path": "../shell"
     },
     {
+      "path": "../shell-process-local"
+    },
+    {
       "path": "../../../../Core/subprocess/subprocess"
     },
     {
-      "path": "../../settings/settings"
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../settings/settings/tsconfig.json"
     }
   ]
 }

@@ -24,10 +24,25 @@
       "path": "../../../../Engine/core/tools"
     },
     {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-jobs/tsconfig.json"
+    },
+    {
+      "path": "../../../../Engine/jobs/native-tool-jobs/tsconfig.json"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../../../Engine/core/agent"
     },
     {
       "path": "../shell"
+    },
+    {
+      "path": "../pwsh-local"
     },
     {
       "path": "../shell-env"
@@ -49,6 +64,12 @@
     },
     {
       "path": "../../sandbox/sandbox-policy"
+    },
+    {
+      "path": "../../sandbox/native-sandbox-policy/tsconfig.json"
+    },
+    {
+      "path": "../../interaction/native-approval"
     }
   ]
 }
