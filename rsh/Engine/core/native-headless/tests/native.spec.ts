@@ -13,6 +13,7 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
 import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
@@ -24,7 +25,7 @@ import { plugin as appPlugin } from '../src/native.ts'
 
 async function fixture(
   script: ConstructorParameters<typeof MockAdapter>[0],
-  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number }; instructions?: boolean; maxSteps?: number; directory?: string } = {},
+  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number }; instructions?: boolean; ptc?: boolean; maxSteps?: number; directory?: string } = {},
 ) {
   const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
   const workspace = join(directory, 'work')
@@ -55,10 +56,11 @@ async function fixture(
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
-    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4 } },
+    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}) } },
     { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: codeRuntimePlugin, scope, config: { computeMs: 2_000, maxWallMs: 2_000 } },
+    ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
     ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
     ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
     { plugin: toolsPlugin, scope, config: undefined },
@@ -491,10 +493,11 @@ it('persists native workspace instructions and reconciles an offline edit on res
 })
 
 
-it('projects nested instruction discovery and removal after accepted native file results', async () => {
+it.each([false, true])('projects nested instruction discovery and removal after accepted file results (PTC %s)', async (ptc) => {
   let state = await fixture([
-    toolCallResponse('read-1', 'read', { file_path: 'nested/file.txt' }),
-  ], { instructions: true, maxSteps: 1 })
+    ptc ? toolCallResponse('code-1', 'run_code', { code: "return await tools.read({ file_path: 'nested/file.txt' })", description: 'Read nested file.' })
+      : toolCallResponse('read-1', 'read', { file_path: 'nested/file.txt' }),
+  ], { instructions: true, maxSteps: 1, ptc })
   const fs = await import('node:fs/promises')
   try {
     await fs.mkdir(join(state.workspace, 'nested'))
@@ -526,7 +529,7 @@ it('projects nested instruction discovery and removal after accepted native file
     state = await fixture([
       toolCallResponse('read-2', 'read', { file_path: 'nested/file.txt' }),
       textResponse('done'),
-    ], { instructions: true, maxSteps: 1, directory })
+    ], { instructions: true, maxSteps: 1, directory, ptc })
     registerRead(true)
     await state.host.run(state.scope, { kind: 'nested-instructions-cold-resume' }, invocation => state.app.run(['--resume', id, 'continue'], invocation.signal))
     expect(JSON.stringify(state.adapter.requests[0]?.messages)).toContain('Nested rule.')

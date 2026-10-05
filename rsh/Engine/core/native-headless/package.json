@@ -64,6 +64,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^"
   },
   "dependencies": {

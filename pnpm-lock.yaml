@@ -2219,6 +2219,9 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl

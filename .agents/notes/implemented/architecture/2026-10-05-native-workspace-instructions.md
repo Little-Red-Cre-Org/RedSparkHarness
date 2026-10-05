@@ -18,7 +18,7 @@ The composer is installation-owned even when Cordis returns new filesystem proxy
 
 ## Consequences
 
-Native instruction preparation uses the sole Session writer and the selected filesystem Provider. Stored instruction sources govern cold resume, while accepted file results enable nested discovery. Restoration reconstructs discovery hints from committed filesystem calls and their linked successful results, matched by call identity, turn and step; no independent path history is written. The native entry installs no Cordis service and owns no independent history.
+Native instruction preparation uses the sole Session writer and the selected filesystem Provider. Stored instruction sources govern cold resume, while accepted file results enable nested discovery. Restoration reconstructs discovery hints from committed filesystem calls and their linked successful results, matched by call identity, turn and step; no independent path history is written. PTC filesystem paths require matching dispatch-start and successful dispatch events inside an outer call with an accepted result; a failed enclosing program retains its already successful filesystem observations. The native entry installs no Cordis service and owns no independent history.
 
 ## Alternatives considered
 

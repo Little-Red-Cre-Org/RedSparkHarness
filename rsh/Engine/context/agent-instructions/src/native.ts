@@ -11,6 +11,13 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices { agentInstructions: NativeAgentInstructions }
 }
 
+function touchedFile(name: string, args: unknown): string | undefined {
+  if (!['read', 'write', 'edit'].includes(name) || typeof args !== 'object' || args === null
+    || !('file_path' in args) || typeof args.file_path !== 'string') return undefined
+  const path = args.file_path.trim()
+  return path.length === 0 ? undefined : path
+}
+
 /** Request-context Provider; accepted filesystem results enable nested instruction discovery. */
 export class NativeAgentInstructions {
   private readonly touches = new WeakMap<Session, string[]>()
@@ -25,27 +32,49 @@ export class NativeAgentInstructions {
    */
   seed(session: Session, events: readonly SessionEvent[]): void {
     if (this.lifetime.aborted) return
-    const calls = new Map(events.filter(event => event.type === 'tool/call').map(event => [event.seq, event]))
+    const calls = new Map<SessionEvent['seq'], {
+      call: Extract<SessionEvent, { type: 'tool/call' }>
+      nested: string[]
+      starts: Map<string, Extract<SessionEvent, { type: 'tool/ptc-dispatch-start' }>>
+    }>()
     const paths: string[] = []
     for (const event of events) {
-      if (event.type !== 'tool/result' || event.data.error !== undefined) continue
-      for (const block of event.data.message.content) {
-        if (block.type !== 'tool-result' || block.isError) continue
-        for (const seq of event.sourceEventSeqs ?? []) {
-          const call = calls.get(seq)
-          if (call === undefined || call.data.callId !== block.toolCallId
-            || call.data.turn !== event.data.turn || call.data.step !== event.data.step
-            || !['read', 'write', 'edit'].includes(call.data.name)) continue
-          let argumentsValue: unknown
-          try { argumentsValue = JSON.parse(call.data.arguments) }
-          catch (error) {
-            if (!(error instanceof SyntaxError)) throw error
-            continue
+      if (event.type === 'tool/call') {
+        calls.set(event.seq, { call: event, nested: [], starts: new Map() })
+      } else if (event.type === 'tool/ptc-dispatch-start') {
+        const owner = [...calls.values()].findLast(value => value.call.data.callId === event.data.rootCallId)
+        if (owner?.call.data.name === 'run_code' && event.data.parentCallId === event.data.rootCallId) {
+          owner.starts.set(event.data.subCallId, event)
+        }
+      } else if (event.type === 'tool/ptc-dispatch') {
+        const owner = [...calls.values()].findLast(value => value.call.data.callId === event.data.rootCallId)
+        const start = owner?.starts.get(event.data.subCallId)
+        if (start === undefined || owner === undefined) continue
+        owner.starts.delete(event.data.subCallId)
+        if (event.data.isError || start.data.rootCallId !== event.data.rootCallId
+          || start.data.parentCallId !== event.data.parentCallId || start.data.name !== event.data.name
+          || JSON.stringify(start.data.arguments) !== JSON.stringify(event.data.arguments)) continue
+        const path = touchedFile(event.data.name, start.data.arguments)
+        if (path !== undefined) owner.nested.push(path)
+      } else if (event.type === 'tool/result') {
+        for (const block of event.data.message.content) {
+          if (block.type !== 'tool-result') continue
+          for (const seq of event.sourceEventSeqs ?? []) {
+            const owner = calls.get(seq)
+            if (owner === undefined || owner.call.data.callId !== block.toolCallId
+              || owner.call.data.turn !== event.data.turn || owner.call.data.step !== event.data.step) continue
+            calls.delete(seq)
+            paths.push(...owner.nested)
+            if (block.isError || event.data.error !== undefined) continue
+            let argumentsValue: unknown
+            try { argumentsValue = JSON.parse(owner.call.data.arguments) }
+            catch (error) {
+              if (!(error instanceof SyntaxError)) throw error
+              continue
+            }
+            const path = touchedFile(owner.call.data.name, argumentsValue)
+            if (path !== undefined) paths.push(path)
           }
-          if (typeof argumentsValue !== 'object' || argumentsValue === null
-            || !('file_path' in argumentsValue) || typeof argumentsValue.file_path !== 'string') continue
-          const path = argumentsValue.file_path.trim()
-          if (path.length > 0) paths.push(path)
         }
       }
     }
@@ -61,11 +90,9 @@ export class NativeAgentInstructions {
     if (this.lifetime.aborted) return
     const paths = this.nestedTouches.get(call) ?? []
     this.nestedTouches.delete(call)
-    if (!result.isError && !call.signal.aborted && ['read', 'write', 'edit'].includes(call.name)
-      && typeof call.arguments === 'object' && call.arguments !== null
-      && 'file_path' in call.arguments && typeof call.arguments.file_path === 'string') {
-      const path = call.arguments.file_path.trim()
-      if (path.length > 0) paths.push(path)
+    if (!result.isError && !call.signal.aborted) {
+      const path = touchedFile(call.name, call.arguments)
+      if (path !== undefined) paths.push(path)
     }
     if (paths.length === 0) return
     if (call.parent !== undefined) {
