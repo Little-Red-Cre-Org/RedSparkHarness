@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-root-cancellation-drain.md
+2026-10-05-native-root-cancellation-drain.md: 67700f20b8bd2d1ede871839d9f5da3785ac4384
+2026-10-05-native-root-cancellation-drain.zh.md: 8410a1ec699806477042e5289018384690ef58ec
