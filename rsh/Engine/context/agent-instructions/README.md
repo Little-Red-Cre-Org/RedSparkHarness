@@ -29,6 +29,8 @@ Mount this plugin when agents should work from the workspace's own instruction f
 
 ### What the agent gets
 
+The native `./native` entry provides `agentInstructions` over the selected `fs` Provider. The Program awaits instruction preparation after input admission and appends the returned user message before deriving model history. Accepted native filesystem results enable nested discovery on the following request; reads remain request-owned and installation cancellation prevents late context. Native and Cordis entries share discovery, digest deduplication, byte budgeting and reconciliation.
+
 The first request includes one durable baseline message with the user-global `$DSH_HOME/AGENTS.md` followed by the project chain — every existing candidate file from the project root down to the session working directory, in broad-to-specific order. Sibling files whose content matches after trimming render once, so a `CLAUDE.md` that duplicates its `AGENTS.md` is not repeated. After a successful `read`, `write`, or `edit` call reaches a deeper directory, the next request includes the newly applicable instruction file; a changed file replaces its content, and a file that disappears or duplicates an earlier candidate produces a removal notice.
 
 ### Configuration
