@@ -46,6 +46,7 @@ export function shippedNativeProfileComposition(
           systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
       ...(profile === 'native-acp' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
+      ...(profile === 'native-acp' ? [{ id: 'approval', plugin: '@deepseek-ai/dsh-native-approval', scope: ROOT }] : []),
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },

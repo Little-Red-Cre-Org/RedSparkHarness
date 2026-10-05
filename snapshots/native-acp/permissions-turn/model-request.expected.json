@@ -1,0 +1,181 @@
+[
+  {
+    "model": "fixture-model-next",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "You are a native ACP fixture."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "say hello through native ACP"
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "native ACP snapshot reply"
+      },
+      {
+        "role": "user",
+        "content": "write permission-proof.txt after one-shot approval"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "fixture-model-next",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "You are a native ACP fixture."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "say hello through native ACP"
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "native ACP snapshot reply"
+      },
+      {
+        "role": "user",
+        "content": "write permission-proof.txt after one-shot approval"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "permission-proof-call",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"permission-proof.txt\",\"content\":\"approved\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "create: permission-proof.txt",
+        "tool_call_id": "permission-proof-call"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+]

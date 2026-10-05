@@ -30,6 +30,8 @@ New and resumed Sessions return standard `configOptions` from the selected model
 
 Image prompts require the selected attachment Provider and model directory. Initialization advertises image admission only when both are installed; each image prompt checks the Session's next selected model and prepares attachments within the same root execution admission, rejecting models without declared image input. The attachment Provider validates configured raster formats, base64, byte and pixel limits, normalizes the batch, and returns durable references in input order before user-message admission. Invalid images never enter the Session inbox. Cancellation and transport drain also cover image preparation.
 
+The shipped approval Provider routes exact owned root tool calls to standard `session/request_permission` after their committed tool update. Only `allow-once` grants execution; rejection, unknown choices and cancellation fail closed. The executor records each asked/decided pair. Each Session permits one unsettled permission wire request across close and resume; positive `maxPendingPermissions` bounds the whole connection (default `32`). Further requests at capacity return an unavailable decision. Cancellation sends cooperative wire cancellation and settles the Session audit without awaiting a peer that ignores cancellation. Its old wire request remains connection-owned until the peer replies or EOF closes the connection; a late reply cannot grant execution. Connection shutdown rejects and drains these requests before releasing Providers.
+
 ## Dev Note
 
 The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership. No invariant entry is published because this carrier owns no independent Agent or Session state projection that can diverge from the executor.
@@ -52,4 +54,4 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- Per-session MCP mounts, audio/embedded input, permission/question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises no audio, embedded context or HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
+- Per-session MCP mounts, audio/embedded input, question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises no audio, embedded context or HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.

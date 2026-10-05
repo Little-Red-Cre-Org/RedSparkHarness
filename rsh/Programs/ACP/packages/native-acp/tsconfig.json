@@ -43,6 +43,9 @@
     },
     {
       "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/native-approval"
     }
   ]
 }

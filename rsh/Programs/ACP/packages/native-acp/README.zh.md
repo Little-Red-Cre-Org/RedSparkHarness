@@ -32,6 +32,8 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 图片提示需要所选附件 Provider 与模型目录。初始化仅在两者均安装时声明图片准入；每次图片提示在同一次根执行准入中检查 Session 下一步选择的模型并准备附件，拒绝未声明图片输入的模型。附件 Provider 校验已配置的位图格式、base64、字节与像素限额，标准化整批图片，并在用户消息准入之前按输入顺序返回持久引用。非法图片不会进入 Session 收件箱。取消与传输结束的清理也覆盖图片准备。
 
+预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消发送协作式传输取消，并完成 Session 审计结算，不等待忽略取消的对端。旧传输请求由连接持有，直到对端答复或 EOF 关闭连接；迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
+
 <a id="dev-note"></a>
 
 ## 开发备注
@@ -60,4 +62,4 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 ## 已知限制与延后工作
 
-- Session 专属 MCP 挂载、音频／嵌入式输入、权限／提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
+- Session 专属 MCP 挂载、音频／嵌入式输入、提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。

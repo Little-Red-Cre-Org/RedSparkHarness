@@ -12,15 +12,33 @@ const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
 
 it('admits ordered ACP images, rejects malformed data, restores history and drains cancellation and EOF', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-lifecycle-'))
-  let entered = Promise.withResolvers<undefined>()
+  const entered = Promise.withResolvers<undefined>()
+  let toolTurn = false
+  let permissionEntered = Promise.withResolvers<undefined>()
+  let permissionRelease = Promise.withResolvers<undefined>()
+  let permissionSettled = Promise.withResolvers<undefined>()
+  let holdPermission = false
+  const permissionRequests: Record<string, unknown>[] = []
+  let lastUpdate: unknown
   const requests: unknown[] = []
   const server = createServer((request, response) => {
     let body = ''
     request.setEncoding('utf8')
     request.on('data', (chunk: string) => { body += chunk })
     request.on('end', () => {
-      requests.push(JSON.parse(body) as unknown)
+      const payload = JSON.parse(body) as { messages: readonly { role: string }[] }
+      requests.push(payload)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
+      if (toolTurn) {
+        const events = payload.messages.at(-1)?.role === 'tool'
+          ? [{ choices: [{ delta: { role: 'assistant', content: 'permission tool settled' } }] },
+            { choices: [{ delta: {}, finish_reason: 'stop' }] }]
+          : [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-call', type: 'function',
+            function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission.txt', content: 'forbidden' }) } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
+        response.end(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       response.write('data: {"choices":[{"delta":{"role":"assistant","content":"partial"}}]}\n\n')
       entered.resolve(undefined)
     })
@@ -30,7 +48,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   if (address === null || typeof address === 'string') throw new Error('model endpoint did not bind')
   const patch = join(home, 'model.patch.json')
   await writeFile(patch, JSON.stringify({ formatVersion: 1, installations: [
-    { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'ACP lifecycle fixture', maxSteps: 1 } },
+    { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'ACP lifecycle fixture', maxSteps: 2 } },
     { id: 'storage', config: { root: join(home, 'sessions'), compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_ACP_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
@@ -40,6 +58,19 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
   const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
+  transport.onNotification((method, params) => { if (method === 'session/update') lastUpdate = params.update })
+  transport.onRequest(async (method, params) => {
+    expect(method).toBe('session/request_permission')
+    expect(lastUpdate).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-call' })
+    expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
+    permissionRequests.push(params)
+    if (!holdPermission) return { outcome: { outcome: 'selected', optionId: 'unknown-grant' } }
+    permissionEntered.resolve(undefined)
+    try {
+      await permissionRelease.promise
+      return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
+    } finally { permissionSettled.resolve(undefined) }
+  })
   transport.start()
   const signal = AbortSignal.timeout(20_000)
   try {
@@ -68,12 +99,31 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await transport.flush()
     expect(await prompt).toMatchObject({ stopReason: 'cancelled' })
     expect(await configured).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model']) }] })
+    toolTurn = true
+    const permissionParams = { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'ask before writing permission.txt' }] }
+    expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
+    await expect(readFile(join(home, 'permission.txt'))).rejects.toHaveProperty('code', 'ENOENT')
+    holdPermission = true
+    const cancelledPermission = transport.request('session/prompt', permissionParams, signal)
+    void cancelledPermission.catch(() => {}) // Its assertion owns the cancelled prompt response.
+    await permissionEntered.promise
+    transport.notify('session/cancel', { sessionId: created.sessionId })
+    await transport.flush()
+    expect(await cancelledPermission).toMatchObject({ stopReason: 'cancelled' })
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
-    entered = Promise.withResolvers<undefined>()
-    const pending = transport.request('session/prompt', params, signal).catch((error: unknown) => error)
-    await entered.promise
-    const closingSelection = transport.request('session/set_config_option', { sessionId: created.sessionId,
+    expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(permissionRequests).toHaveLength(2)
+    permissionRelease.resolve(undefined)
+    await permissionSettled.promise
+    await expect(readFile(join(home, 'permission.txt'))).rejects.toHaveProperty('code', 'ENOENT')
+    permissionEntered = Promise.withResolvers<undefined>()
+    permissionRelease = Promise.withResolvers<undefined>()
+    permissionSettled = Promise.withResolvers<undefined>()
+    const fresh = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
+    const pending = transport.request('session/prompt', { ...permissionParams, sessionId: fresh.sessionId }, signal).catch((error: unknown) => error)
+    await permissionEntered.promise
+    const closingSelection = transport.request('session/set_config_option', { sessionId: fresh.sessionId,
       configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal).catch((error: unknown) => error)
     child.stdin.end()
     const exit = await child
@@ -81,14 +131,19 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await pending
     expect(await closingSelection).toBeInstanceOf(Error)
     const paths = await readdir(join(home, 'sessions'), { recursive: true })
-    const physical = paths.find(path => path.endsWith('session.v3.jsonl'))
-    if (physical === undefined) throw new Error('durable ACP Session missing')
-    const events = (await readFile(join(home, 'sessions', physical), 'utf8')).trim().split('\n').slice(1)
-      .map(line => JSON.parse(line) as { type: string; data: { reason?: { kind: string } } })
-    expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
+    const logs = await Promise.all(paths.filter(path => path.endsWith('session.v3.jsonl')).map(path => readFile(join(home, 'sessions', path), 'utf8')))
+    expect(logs).toHaveLength(2)
+    const previous = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === created.sessionId)
+    if (previous === undefined) throw new Error('durable ACP Session missing')
+    const events = [previous, ...logs.filter(log => log !== previous)].flatMap(log => log.trim().split('\n').slice(1)
+      .map(line => JSON.parse(line) as { type: string; data: { reason?: { kind: string } } }))
+    expect(events.filter(event => event.type === 'turn/end')).toHaveLength(5)
+    expect(events.filter(event => event.type === 'native-approval/decided').map(event => event.data))
+      .toMatchObject([{ outcome: 'rejected' }, { outcome: 'cancelled' }, { outcome: 'unavailable' }, { outcome: 'cancelled' }])
     expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)
     expect(events.at(-1)?.type).toBe('turn/end')
   } finally {
+    permissionRelease.resolve(undefined)
     transport.close()
     child.kill('SIGKILL')
     await child
