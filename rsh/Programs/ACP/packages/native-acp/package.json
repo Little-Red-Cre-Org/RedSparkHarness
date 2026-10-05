@@ -85,6 +85,8 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-fs-local": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-json-rpc-line": "workspace:^"
   }
 }

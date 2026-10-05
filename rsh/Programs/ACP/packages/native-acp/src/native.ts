@@ -51,6 +51,7 @@ interface OwnedSession {
   controls: number
   notifications: Promise<void>
   current?: { readonly abort: AbortController; readonly done: Promise<PromptResponse> }
+  closing?: Promise<void>
 }
 
 function resolveConfig(input: unknown): ResolvedConfig {
@@ -216,6 +217,7 @@ export class NativeAcpApplication implements NativeApplication {
         this.ready()
         const record = this.sessions.get(params.sessionId)
         if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
+        if (record.closing !== undefined) throw RequestError.invalidRequest(undefined, 'session is closing')
         const selection = this.context.optional('modelSelection')
         const directory = this.context.optional('modelDirectory')
         if (selection === undefined || directory === undefined) throw RequestError.invalidParams(undefined, 'model configuration is unavailable')
@@ -403,6 +405,7 @@ export class NativeAcpApplication implements NativeApplication {
     this.ready()
     const record = this.sessions.get(params.sessionId)
     if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
+    if (record.closing !== undefined) throw RequestError.invalidRequest(undefined, 'session is closing')
     if (record.current !== undefined) throw RequestError.invalidRequest(undefined, 'session prompt is already running')
     if (record.controls !== 0) throw RequestError.invalidRequest(undefined, 'session configuration is in progress')
     if (params.prompt.length === 0) throw RequestError.invalidParams(undefined, 'native ACP prompt must be nonempty')
@@ -476,15 +479,15 @@ export class NativeAcpApplication implements NativeApplication {
     this.ready()
     const record = this.sessions.get(id)
     if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
-    this.sessions.delete(id)
-    this.activating.add(id)
-    try {
+    record.closing ??= Promise.resolve().then(async () => {
       record.current?.abort.abort(new Error('ACP Session closed'))
       record.lifetime.abort(new Error('ACP Session closed'))
       await record.current?.done.catch(() => {}) // Prompt failure is returned by its own protocol request.
       await record.controlTail
       await this.releaseSession(record)
-    } finally { this.activating.delete(id) }
+      if (this.sessions.get(id) === record) this.sessions.delete(id)
+    })
+    await record.closing
     return {}
   }
 }

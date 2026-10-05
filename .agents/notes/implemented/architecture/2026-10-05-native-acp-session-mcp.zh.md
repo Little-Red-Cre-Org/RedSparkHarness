@@ -14,7 +14,7 @@ MCP Module 拥有两种承载共用、不依赖 Cordis 的 ACP 声明转换器�
 
 每个原生 ACP Session 拥有独立下级作用域和资源所有者。选定的执行器继承该作用域，由维护中的 MCP 连接监督器在此注册工具并拥有传输代际。安装前校验完整列表。初次发现先于持久化创建和发布；安装失败排空其连接与注册，不创建 Session。恢复先核对存储所有权，再挂载提供的声明。
 
-Session 关闭或 Program EOF 会取消并排空选定执行器及连接。MCP 诊断使用承载选择的 stderr logger。执行器仍是唯一 Session writer，记录每项模型可见工具 schema 与结果。
+Session 关闭或 Program EOF 会停止准入，并取消选定执行器与连接。MCP 撤销在取消期间开始；资源释放等待协作排空。清理失败会保留正在关闭的记录，拒绝恢复、提示和配置修改。仅清理成功才移除记录；EOF 聚合上报失败。MCP 诊断使用承载选择的 stderr logger。执行器仍是唯一 Session writer，记录每项模型可见工具 schema 与结果。
 
 ## 考虑过的替代方案
 

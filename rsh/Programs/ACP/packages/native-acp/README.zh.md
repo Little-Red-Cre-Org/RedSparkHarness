@@ -36,7 +36,7 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 <a id="dev-note"></a>
 
-安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会取消并排空其连接。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。
+安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会停止工具准入，并协作排空执行器与连接。MCP 撤销随取消开始。关闭失败会保留已关闭的 Session 记录，拒绝恢复、提示和配置修改；仅清理成功才移除该记录。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。
 
 ## 开发备注
 

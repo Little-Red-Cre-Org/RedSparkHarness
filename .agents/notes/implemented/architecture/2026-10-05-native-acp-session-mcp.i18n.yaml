@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-acp-session-mcp.md
-2026-10-05-native-acp-session-mcp.md: af17436042b06be185ce35893ba553b50519828e
-2026-10-05-native-acp-session-mcp.zh.md: e77df582202e3827553cde11145609176d315c7f
+2026-10-05-native-acp-session-mcp.md: b1c2e1a8cfd9572225ec0a72cf050354b149ecbf
+2026-10-05-native-acp-session-mcp.zh.md: 1d13a23718fe2b544b4ff4197bb73305ad0fa26a

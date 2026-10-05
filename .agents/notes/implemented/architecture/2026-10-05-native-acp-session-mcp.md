@@ -14,7 +14,7 @@ The MCP Module owns one Cordis-free ACP descriptor converter used by both carrie
 
 Each native ACP Session owns a descendant scope and resource owner. The selected executor inherits that scope, while the maintained MCP connection supervisor registers tools and owns transport generations there. Validation covers the complete list before installation. Initial discovery precedes durable creation and publication; failed installation drains its connections and registrations without creating a Session. Resume verifies stored ownership before mounting the supplied declarations.
 
-Session close and Program EOF abort and drain the selected executor and connections. MCP diagnostics use the carrier-selected stderr logger. The executor remains the sole Session writer and records every model-visible tool schema and result.
+Session close and Program EOF close admission and cancel the selected executor and connections. MCP withdrawal begins during cancellation; resource release awaits cooperative drain. Cleanup failure retains the closing record, refusing resume, prompts and configuration changes. Only successful cleanup removes it; EOF reports aggregated failures. MCP diagnostics use the carrier-selected stderr logger. The executor remains the sole Session writer and records every model-visible tool schema and result.
 
 ## Alternatives considered
 

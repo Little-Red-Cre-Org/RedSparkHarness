@@ -8155,9 +8155,15 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
     devDependencies:
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-json-rpc-line':
         specifier: workspace:^
         version: link:../../../../Core/util/json-rpc-line
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence-jsonl
 
   rsh/Programs/CLI:
     dependencies:

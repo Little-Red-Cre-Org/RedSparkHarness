@@ -4,12 +4,113 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PassThrough } from 'node:stream'
 import { execa } from 'execa'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { startHttpMcpFixture } from '../../../../../Modules/Official/mcp/mcp-client/tests/http-fixture.ts'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
+import { plugin as persistencePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
+import { plugin as executionPlugin } from '@deepseek-ai/dsh-native-session-execution'
+import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
+import { plugin as modelSelectionPlugin } from '@deepseek-ai/dsh-native-model-selection/native'
+import { MockAdapter, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
+import { plugin as carrierPlugin, NativeAcpApplication } from '../src/native.ts'
 
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
+
+async function failedClose(home: string): Promise<void> {
+  const scope = new NativeScope()
+  const input = new PassThrough()
+  const output = new PassThrough()
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const failure = new Error('ACP retained writer close failed')
+  const causes = (error: unknown): readonly unknown[] => error instanceof AggregateError ? error.errors.flatMap(causes) : [error]
+  const model = new MockAdapter([textResponse('Retained ACP turn.')])
+  let app: NativeAcpApplication | undefined
+  const modelProvider: NativePlugin = { apiVersion: 1, name: 'close-model', targets: ['host'],
+    requires: [], provides: ['model', 'modelDirectory'], resolve: () => (context) => {
+      context.provide('model', model)
+      context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Mock' }],
+        catalog: async defaults => ({ default: defaults, routableProviders: ['mock'], failures: [],
+          groups: [{ id: 'mock', name: 'Mock', models: [{ id: 'mock', name: 'Mock' }] }] }),
+        resolve: (provider, id) => model.resolveModel(provider, id) })
+    } }
+  const capture: NativePlugin = { apiVersion: 1, name: 'close-capture', targets: ['host'],
+    requires: ['application', 'sessionPersistence', 'activeSessions'], provides: [], resolve: () => (context) => {
+      const application = context.require('application')
+      if (!(application instanceof NativeAcpApplication)) throw new Error('ACP close carrier missing')
+      app = application
+      context.effect(context.require('activeSessions').onAttached(async (owner) => { context.own(owner.retain()) }))
+      const storage = context.require('sessionPersistence')
+      const open = storage.open.bind(storage)
+      const spy = vi.spyOn(storage, 'open').mockImplementation(async (...args) => {
+        const writer = await open(...args)
+        if (args[1] === 'write') {
+          const close = writer.close.bind(writer)
+          vi.spyOn(writer, 'close').mockImplementation(async () => {
+            entered.resolve(undefined)
+            await release.promise
+            await close()
+            throw failure
+          })
+        }
+        return writer
+      })
+      context.own(() => { spy.mockRestore() })
+    } }
+  const carrier: NativePlugin = { ...carrierPlugin, resolve: () => (context) => {
+    context.provide('application', new NativeAcpApplication(context, { provider: 'mock', model: 'mock',
+      systemPrompt: 'ACP retained close.', maxSteps: 1, maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output))
+  } }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: carrier, scope, config: undefined }, { plugin: modelProvider, scope, config: undefined },
+    { plugin: capture, scope, config: undefined }, { plugin: executionPlugin, scope, config: undefined },
+    { plugin: modelSelectionPlugin, scope, config: undefined },
+    { plugin: agentPlugin, scope, config: undefined }, { plugin: modelExecutionPlugin, scope, config: undefined },
+    { plugin: localFilesystemPlugin, scope, config: { cwd: home } },
+    { plugin: persistencePlugin, scope, config: { root: join(home, 'failed-close-sessions'), compression: 'none' } },
+  ], 'host'))
+  await host.start()
+  if (app === undefined) throw new Error('ACP close carrier did not start')
+  const application = app
+  const done = host.run(scope, { kind: 'test' }, invocation => application.run([], invocation.signal)).catch((error: unknown) => error)
+  const transport = new JsonRpcLineTransport(output, input)
+  transport.start()
+  const signal = AbortSignal.timeout(10_000)
+  try {
+    await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
+    const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
+    const closing = transport.request('session/close', { sessionId: created.sessionId }, signal).catch((error: unknown) => error)
+    await entered.promise
+    const rejected = async (): Promise<void> => {
+      await expect(transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal))
+        .rejects.toThrow('session is already active')
+      await expect(transport.request('session/prompt', { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'late input' }] }, signal))
+        .rejects.toThrow('session is closing')
+      await expect(transport.request('session/set_config_option', { sessionId: created.sessionId, configId: 'model', value: 'late' }, signal))
+        .rejects.toThrow('session is closing')
+    }
+    await rejected()
+    release.resolve(undefined)
+    expect(await closing).toBeInstanceOf(Error)
+    await rejected()
+    expect(model.requests).toHaveLength(0)
+    input.end()
+    expect(causes(await done)).toContain(failure)
+  } finally {
+    release.resolve(undefined)
+    input.end()
+    await done
+    try { await host.stop() } catch (error) { expect(causes(error)).toContain(failure) }
+    transport.close()
+    input.destroy()
+    output.destroy()
+  }
+}
 
 it('admits ordered ACP images, rejects malformed data, restores history and drains cancellation and EOF', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-lifecycle-'))
@@ -178,6 +279,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       .toMatchObject([{ outcome: 'rejected' }, { outcome: 'cancelled' }, { outcome: 'unavailable' }, { outcome: 'cancelled' }])
     expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)
     expect(events.at(-1)?.type).toBe('turn/end')
+    await failedClose(home)
   } finally {
     permissionRelease.resolve(undefined)
     transport.close()
