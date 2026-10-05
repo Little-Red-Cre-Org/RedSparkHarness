@@ -183,6 +183,7 @@ export class NativeConversationController {
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const turn = new AbortController()
+    const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
     this.turn = turn
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
@@ -197,24 +198,27 @@ export class NativeConversationController {
             if (mediaType === undefined || file.size > policy.maxImageBytes) throw new Error('native conversation: image type or size is refused')
             const data = await new Promise<string | undefined>((resolve, reject) => {
               const reader = new FileReader()
-              const abort = (): void => { reader.abort(); resolve(undefined) }
-              const cleanup = (): void => { turn.signal.removeEventListener('abort', abort) }
+              const abort = (): void => { cleanup(); reader.abort(); resolve(undefined) }
+              const cleanup = (): void => {
+                signal.removeEventListener('abort', abort)
+                reader.onload = reader.onerror = reader.onabort = null
+              }
               reader.onload = () => {
                 cleanup()
                 const dataUrl = reader.result as string
                 resolve(dataUrl.slice(dataUrl.indexOf(',') + 1))
               }
               reader.onerror = () => { cleanup(); reject(new Error('native conversation: image read failed', { cause: reader.error })) }
-              reader.onabort = cleanup
-              turn.signal.addEventListener('abort', abort, { once: true })
-              if (turn.signal.aborted) abort()
+              reader.onabort = (): void => { cleanup(); resolve(undefined) }
+              signal.addEventListener('abort', abort, { once: true })
+              if (signal.aborted) abort()
               else reader.readAsDataURL(file)
             })
             if (data === undefined) return
             images.push({ mediaType, data, name: file.name })
           }
         }
-        const result = await this.client.prompt(id, text, true, AbortSignal.any([turn.signal, this.lifetime.signal]),
+        const result = await this.client.prompt(id, text, true, signal,
           (frame) => { this.observe(frame) }, images)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
