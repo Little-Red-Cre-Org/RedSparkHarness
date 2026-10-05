@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-tools` 让原生 profile 添加可由模型调用的工具，而不添加第二个工具循环或 Session 写入者。每项贡献提供一个 schema 和执行函数，其 disposer 只移除该项贡献。执行时会收到精确的原生 Agent、Session 和取消信号。消费应用拥有工具调用校验，并且只记录一次返回结果。
+`dsh-native-tools` 为原生 profile 添加按作用域可见的模型工具和类型化程序绑定。贡献共享校验、审批、取消和结果处理。应用保留唯一 Session writer，并决定完成的结果何时持久化。
 
 ## 目录
 
@@ -21,27 +21,29 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口只接受空配置对象。它要求 `agents` 并提供 `tools`；Consumer 必须在注册贡献前声明该服务。贡献可声明带有 reason 的 `approval`。其消费应用提供对应的 `authorize()` 回调；注册表会在 executor 前调用它，受保护贡献没有审批 authority 时会失败。重复 schema 名称会在激活期间失败，携带未注册 Agent 的调用会在执行前失败，释放时会清除其余注册项。
+`./native` 入口接受 `mode: native | ptc | both`（默认 `both`）。Native 模式对模型调用隐藏 `run_code`；PTC 模式只暴露该传输，并要求存在可见的已注册 `run_code`；both 模式暴露所有可见工具。各模式的程序绑定保留同一组按作用域可见的能力。未知配置字段会使激活失败。
+
+Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
 
 纯 `./types` 和 `./presentation` 出口与 Host、Client Consumer 共享持久 PTC 事件 payload 和文件 diff。注册表入口仅属于 Host。这些声明不安装 PTC executor，也不改变 Session 事件名或 payload 字段。
 
 <a id="model-experience"></a>
 ## 模型体验
 
-只有消费应用把 schema 放入请求时，注册表才会添加 schema。工具实现返回文本、结构化内容和可选错误元数据；应用把该结果转换为一个面向模型的 Session 事件。
+通过消费的原生应用间接影响模型。选定的 schema 和呈现结果进入模型请求；带来源的额外上下文成为独立的日志消息。
 
 #### KV Cache 影响
 
-添加、移除或重排 schema 会改变消费应用选择的模型请求前缀。
+消费应用拥有注册 schema 导致的请求前缀变化。
 
 ## 已知限制与后续工作
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 注册表不解析模型参数、不渲染 UI，也不写入 Session 事件。
-- 注册项限定于一个原生安装，不替代旧工具生命周期服务。
+- 注册表提供 PTC dispatch 和 TypeScript/Python 绑定呈现器；实际 code-runtime Consumer 与选定的 runtime Provider 是独立安装项。
+- 注册表不打开 Session 存储，也不添加第二执行循环。应用拥有持久事件顺序和模型请求。
 
-不发布 invariant companion，因为注册表没有超出其所属应用的独立持久化观测。
+不发布 invariant companion，因为不存在对所属应用持久结果接受状态的独立观察。
 
 <a id="dev-note"></a>
 ### 开发备注

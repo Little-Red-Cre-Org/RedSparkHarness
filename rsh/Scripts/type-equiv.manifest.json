@@ -884,22 +884,22 @@
     {
       "doc": "rsh/Docs/subsystems/tools.md",
       "symbol": "JsonSchemaScalar",
-      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+      "source": "rsh/Engine/core/native-tools/src/json-schema.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/tools.md",
       "symbol": "JsonSchemaType",
-      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+      "source": "rsh/Engine/core/native-tools/src/json-schema.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/tools.md",
       "symbol": "JsonSchemaNode",
-      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+      "source": "rsh/Engine/core/native-tools/src/json-schema.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/tools.md",
       "symbol": "ObjectJsonSchema",
-      "source": "rsh/Engine/core/tools/src/json-schema.ts"
+      "source": "rsh/Engine/core/native-tools/src/json-schema.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",

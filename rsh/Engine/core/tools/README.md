@@ -230,6 +230,8 @@ These limits define when the registry needs special care. They are current packa
 
 The `./types` PTC event payloads and `FileDiff` in `./presentation` forward the pure declarations owned by `dsh-native-tools`. Importing these compatibility exports preserves Session event augmentation without installing the native registry.
 
+The legacy JSON Schema exports forward the native validator and schema types, so model API catalogs retain one declaration for each schema type.
+
 <a id="dev-note"></a>
 ### Dev Note
 

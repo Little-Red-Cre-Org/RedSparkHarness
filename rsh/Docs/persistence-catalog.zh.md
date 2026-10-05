@@ -1003,7 +1003,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'tool/ptc-dispatch': PtcDispatchEventData
 ```
 
-来源：[`rsh/Engine/core/native-tools/src/types.ts:56`](../Engine/core/native-tools/src/types.ts)
+来源：[`rsh/Engine/core/native-tools/src/types.ts:62`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolptc-dispatch-start--log-only"></a>
 
@@ -1026,7 +1026,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'tool/ptc-dispatch-start': PtcDispatchStartEventData
 ```
 
-来源：[`rsh/Engine/core/native-tools/src/types.ts:40`](../Engine/core/native-tools/src/types.ts)
+来源：[`rsh/Engine/core/native-tools/src/types.ts:46`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolresult--surface"></a>
 

@@ -73,7 +73,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
-  ['rsh/Engine/core/native-tools', ['./types', './presentation']],
+  ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
@@ -87,6 +87,11 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
+  ['rsh/Engine/core/native-tools/json-schema', ['host']],
+  ['rsh/Engine/core/native-tools/code-output', ['host']],
+  ['rsh/Engine/core/native-tools/sdk-typescript', ['host']],
+  ['rsh/Engine/core/native-tools/sdk-python', ['host']],
+  ['rsh/Engine/core/native-tools/ordered-dispatch', ['host']],
   ['rsh/Programs/Web/client/connection/native-host', ['host']],
   ['rsh/Programs/Web/client/connection/native-http-bridge', ['host']],
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],

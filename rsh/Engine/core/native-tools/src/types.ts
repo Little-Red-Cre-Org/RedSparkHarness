@@ -7,6 +7,12 @@
 import type {} from '@deepseek-ai/dsh-session/types'
 import type { ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm/native'
 
+/** Intersect inherited tool visibility while preserving contributions registered in the consuming scope. */
+export interface NativeToolRestriction {
+  readonly allow?: readonly string[]
+  readonly deny?: readonly string[]
+}
+
 /** Payload recorded when one nested PTC mode Tool dispatch starts. */
 export interface PtcDispatchStartEventData {
   rootCallId: ToolCallId

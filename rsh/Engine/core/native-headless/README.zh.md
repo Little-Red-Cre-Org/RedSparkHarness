@@ -29,6 +29,8 @@ kind: "package-reference"
 
 应用使用 `dsh-session-persistence/native` 的 `NativeSessionPersistenceOperations`；JSONL 是一个可替换 Provider。每轮只拥有其选定 Session 句柄，并等待其持久化和关闭。应用不关闭或实例化持久化服务。改变 Provider 类型所有权不会改变模型输入或已记录事件。
 
+已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。
+
 <a id="dev-note"></a>
 ## 开发备注
 
@@ -61,7 +63,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-模型收到固定 `read_file` 和 `write_file` schema，安装 `codeRuntime` 时还会收到 `run_code`，以及可选 `tools` 注册表中的每个 schema。下一次请求前，文件内容、有界代码结果、固定工具错误和已注册工具结果会进入一条工具结果消息。
+模型收到固定 `read_file` 和 `write_file` schema，安装 `codeRuntime` 时还会收到 `run_code`，以及可选 `tools` 注册表按模式选定的 schema。下一次请求前，文件内容、有界代码结果、固定工具错误和已注册工具结果会进入一条工具结果消息。
 
 #### Token 影响
 
