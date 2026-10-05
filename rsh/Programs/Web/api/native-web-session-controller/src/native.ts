@@ -20,6 +20,7 @@ import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-executi
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
+import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -76,7 +77,10 @@ const modelSelectionInput = z.strictObject({
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
   readonly directory?: NativeModelDirectory | undefined
-  readonly models?: NativeModelSelectionOperations | undefined
+  readonly models?: {
+    readonly selection: NativeModelSelectionOperations
+    readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
+  } | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
 }
 
@@ -264,7 +268,13 @@ export class NativeWebSessionService {
             const selected = { provider: parsed.provider, model: parsed.model,
               ...parsed.reasoningEffort === undefined ? {} : { reasoningEffort: parsed.reasoningEffort } }
             await this.executor.executeSessionOperation({ id, resume: true },
-              (owner, effective) => selection.select(owner, { selected, expectedRevision }, effective), accepted)
+              (owner, effective) => {
+                const execution = selection.executionFor(owner.agent)
+                const commit = (signal: AbortSignal) => selection.selection.select(owner, { selected, expectedRevision }, signal)
+                // Cold operations hold maintenance already; retained owners need idle admission.
+                return execution.status === 'maintenance' ? commit(effective)
+                  : execution.runMaintenance(signal => commit(AbortSignal.any([effective, signal])))
+              }, accepted)
           } else {
             if (this.selections.presets === undefined) throw new Error('native web session: preset selection is unavailable')
             if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid preset')
@@ -323,8 +333,10 @@ export const plugin: NativePlugin = {
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
+      const models = context.optional('modelSelection')
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
-        { directory: context.optional('modelDirectory'), models: context.optional('modelSelection'), presets: context.optional('agentPresets') })
+        { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'),
+          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
         (endpoint, payload, signal) => service.handle(endpoint, payload, signal)))

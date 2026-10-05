@@ -7,6 +7,7 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
+import type { NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelection } from '@deepseek-ai/dsh-native-model-selection/native'
@@ -30,18 +31,33 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let web: NativeHttpHost | undefined
   const requests: GenerateOptions[] = []
   const firstContinue = Promise.withResolvers<undefined>()
+  const resolving = Promise.withResolvers<undefined>()
+  const releaseResolution = Promise.withResolvers<undefined>()
+  let holdResolution = false
+  let releaseRetainedRoot: (() => void) | undefined
+  let retainedExecution: NativeAgentExecution | undefined
   let followFields: unknown
   let modelAborted!: () => void
   let releaseCleanup!: () => void
   const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
   const cleanup = new Promise<void>((resolve) => { releaseCleanup = resolve })
   const model: NativePlugin = {
-    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets'], provides: ['model', 'modelDirectory'],
+    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets', 'activeSessions', 'agents'], provides: ['model', 'modelDirectory'],
     resolve: () => (context) => {
       for (const id of ['standard', 'alternate']) context.own(context.require('agentPresets').register({ id, name: id, scope }))
       const reasoning = { efforts: [{ id: ReasoningEffortId('high'), name: 'High' }] }
       context.provide('modelDirectory', { providers: () => [{ id: 'fixture', name: 'Fixture' }],
-        resolve: async (provider, id) => ({ provider, id, name: id, reasoning }),
+        resolve: async (provider, id) => {
+          if (releaseRetainedRoot === undefined) {
+            const owner = context.require('activeSessions').owners().find(owner => owner.invocation === 'root')
+            if (owner === undefined) throw new Error('missing active root')
+            retainedExecution = context.require('agents').execution(owner.agent)
+            releaseRetainedRoot = owner.retain()
+            context.own(releaseRetainedRoot)
+          }
+          if (holdResolution) { resolving.resolve(undefined); await releaseResolution.promise }
+          return { provider, id, name: id, reasoning }
+        },
         catalog: async defaults => ({ default: defaults, routableProviders: ['fixture'], failures: [], groups: [{
           id: 'fixture', name: 'Fixture', models: [{ id: 'chosen', name: 'Chosen', reasoning }],
         }] }) })
@@ -83,7 +99,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
-      maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 } },
+      maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 } },
     ...[agents, execution, modelExecution, modelSelection, model, carrier].map(plugin => ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
@@ -118,6 +134,22 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const selectedEvent = (await client.history(sessionId)).events.findLast(event => event.type === 'model/selection')
     expect(selectedEvent?.data).toEqual({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'unknown' }, expectedRevision: selectedEvent!.seq })).rejects.toThrow()
+    holdResolution = true
+    const selection = client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'high' }, expectedRevision: selectedEvent!.seq })
+    await resolving.promise
+    const queuedAbort = new AbortController()
+    const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal)
+    const refusedQueued = expect(queued).resolves.toEqual({ exitCode: 130 })
+    await vi.waitFor(async () => { expect((await client.status(sessionId)).status === 'running' || requests.length > 0).toBe(true) })
+    expect(requests).toHaveLength(0)
+    expect(retainedExecution?.status).toBe('maintenance')
+    queuedAbort.abort(new Error('cancel queued dispatch'))
+    holdResolution = false
+    releaseResolution.resolve(undefined)
+    await selection
+    await refusedQueued
+    expect(requests).toHaveLength(0)
+    releaseRetainedRoot?.()
     await conversation.select(sessionId)
     const first = conversation.send('first input')
     await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
@@ -149,7 +181,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
     await vi.waitFor(() => { expect(requests).toHaveLength(3) })
-    // The sole ordinary admission slot is full; control admission must still cancel it.
+    // Control admission still cancels the accepted turn and awaits cleanup.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
     conversation.cancel()
     expect(conversation.getSnapshot().state).toBe('cancelling')
@@ -165,6 +197,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await conversation.close()
     await client.close()
   } finally {
+    releaseResolution.resolve(undefined)
+    releaseRetainedRoot?.()
     firstContinue.resolve(undefined)
     releaseCleanup()
     await host.stop()

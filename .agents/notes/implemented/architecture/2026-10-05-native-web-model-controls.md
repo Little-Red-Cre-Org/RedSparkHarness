@@ -12,7 +12,7 @@ The native conversation needs provider-discovered models and reasoning efforts w
 
 The Host advertises its selected model directory and installed preset metadata through authenticated Session RPC. Directory failures remain visible. Discovery is advisory; explicit routes remain owned by model resolution, and recorded routes absent from discovery remain visible.
 
-The Client folds model intent and preset facts from durable history using their owning pure projections. Every mutation submits the displayed revision. The existing executor exclusively owns Session maintenance and the existing root execution authority performs preset epoch transitions. The page stays busy until settlement and refreshes durable facts even after a stale revision failure.
+The Client folds model intent and preset facts from durable history using their owning pure projections. Every mutation submits the displayed revision. The existing executor exclusively owns Session maintenance and the existing root execution authority performs preset epoch transitions. Retained writers synchronously reserve the selected Agent's idle maintenance before asynchronous directory resolution; cold operations reuse their existing reservation. Concurrent turns queue behind that reservation. The page stays busy until settlement and refreshes durable facts even after a stale revision failure.
 
 ## Alternatives considered
 
