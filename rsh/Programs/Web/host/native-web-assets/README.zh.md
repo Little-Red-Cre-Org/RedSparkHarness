@@ -23,6 +23,8 @@ kind: "package-reference"
 
 `createNativeDesktopAssetHandler(runtimeDir, nativeClient, transportScript)` 要求安装包含 `dist/native.html` 的 `@deepseek-ai/dsh-web-frontend` 分发包，提供已校验的 Client bundle 和 Host 自有浏览器传输脚本；它不要求 `dist/index.html`。它的 `update(bundle)` 会为实时 Host 原子发布完整替换资源表。它在 `/`、`/index.html`、`/native.html` 及未匹配的应用路径提供原生页面；已编译的 Client 资源只来自所给资源表。它支持 `GET` 和 `HEAD`，对旧 `/plugins/` 请求返回 404，并拒绝解码后或经符号链接指向前端分发目录外的静态路径。`listenNativeHttpHost(registry, assets, bridge, config)` 默认绑定回环监听器，将 `/api` 与已注册 channel 交给共享 Connection 策略，并提供 `close()` 做确定性销毁。组合 Host 显式注入原生 Connection bridge。`createDesktopAssetRoutes` 将相同的原生和静态路由提供给兼容 Host，后者还要求 `dist/index.html` 并拥有 `/plugins/` 端点。
 
+`prepareNativeClientBundle` 返回编译资源和仅供 Host 使用的输入目录，以便实时观察。构建失败时会报告这些目录，并为未解析的包导入包含现有的 `node_modules` 位置，使 Host 可以在缺失的导入恢复后重新构建，而不发布不完整的图。
+
 <a id="model-experience"></a>
 ## 模型体验
 

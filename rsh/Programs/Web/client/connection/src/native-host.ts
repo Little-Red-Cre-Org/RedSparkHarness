@@ -1,9 +1,18 @@
 /** Cordis-free Host Connection registry factory for native carriers. */
 
+import type {} from '@deepseek-ai/dsh-native-runtime'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { assertTrustedAuthority } from './api-request-trust.ts'
 import { BrowserAuth } from './browser-auth.ts'
 import { HostConnectionRegistry } from './host-core.ts'
+import type { HostConnectionHandle } from './rpc.ts'
+
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices {
+    /** Carrier-owned Connection routes shared by Web and Desktop applications. */
+    hostConnection: HostConnectionHandle
+  }
+}
 
 /** Native Host authentication and trust configuration. */
 export interface NativeHostConnectionConfig {
@@ -60,3 +69,5 @@ export async function createNativeHostConnectionRegistry(
 export { HostConnectionRegistry }
 export type { ConnectionFetchHandler, ConnectionRpcEndpointMatcher, ConnectionRpcHandler, ConnectionRpcResult, HostConnectionHandle } from './rpc.ts'
 export type { HostConnectionOwner } from './host-core.ts'
+
+export { NativeConnectionRequestOwner, NativeConnectionRequestAdmissionError } from './native-request-owner.ts'
