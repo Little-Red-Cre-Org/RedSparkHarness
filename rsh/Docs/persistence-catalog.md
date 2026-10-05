@@ -827,15 +827,15 @@ Source: [`rsh/Engine/subagent/subagent/src/catalog.ts:40`](../Engine/subagent/su
 ```ts persistence-catalog
 /**
  * Durable identity and lifecycle mode of a session-backed subagent child,
- * appended once by the establishing provider inside the child's initial
- * turn, before its first request. Continuable records also carry their
+ * appended once by the establishing provider during fresh materialization,
+ * before its first request. Continuable records also carry their
  * resumable composition. Log-only: it carries no `surfaceOp`, never enters
  * model history, and survives compaction.
  */
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:39`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
+Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:40`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
