@@ -704,14 +704,14 @@ describe('dependency sections', () => {
     expect(expected.get('immer')?.section).toBe('dependencies')
     expect(expected.get('zustand')?.section).toBe('dependencies')
     expect(collectClientRuntimeDependencyPolicyViolations(
-      [subject], subject.workspaceNames, runtimePolicy,
+      [subject], runtimePolicy,
     )).toEqual([])
     expect(collectPackageDependencyViolations(state)).toEqual([])
     repairPackageDependencyManifest(subject)
     expect(subject.manifest.dependencies).toEqual({ immer: '^10.1.1', zustand: '~4.4.7' })
 
     expect(collectClientRuntimeDependencyPolicyViolations(
-      [subject], subject.workspaceNames, policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
+      [subject], policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
     )).toEqual(['clientRuntimeDependencies lists unused @f/probe dependency missing'])
   })
 

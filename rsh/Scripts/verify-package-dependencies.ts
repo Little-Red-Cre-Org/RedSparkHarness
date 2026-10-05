@@ -466,7 +466,6 @@ export function readPackageDependencyFacts(
 /** Validate runtime dependencies retained by published Client entries. */
 export function collectClientRuntimeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
-  workspaceNames: ReadonlySet<string>,
   policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies'>,
 ): string[] {
   const violations: string[] = []
@@ -580,7 +579,7 @@ export function readPackageDependencyState(
     policyViolations: [
       ...discovered.violations,
       ...collectHostDependencyExportPolicyViolations(facts, workspaceNames, policy),
-      ...collectClientRuntimeDependencyPolicyViolations(facts, workspaceNames, policy),
+      ...collectClientRuntimeDependencyPolicyViolations(facts, policy),
       ...Object.keys(policy.configurationOnlyDevDependencies)
         .filter(name => !selectedNames.has(name))
         .map(name => `configurationOnlyDevDependencies names unmanaged package ${name}`),
