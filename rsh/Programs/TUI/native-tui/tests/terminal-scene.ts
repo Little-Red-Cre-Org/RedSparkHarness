@@ -27,6 +27,11 @@ export async function terminalScene(scenario: string, modelControls = false, pre
     const terminal = fixture.launch()
     await terminal.waitFor('Ready')
     if (presets) {
+      await terminal.submit('/sessions')
+      await terminal.waitFor('Select Session')
+      await terminal.submit('/mode')
+      await terminal.waitFor('Enter a displayed number.')
+      terminal.write('\x1b')
       await terminal.submit('/mode')
       await terminal.waitFor('2. alternate (alternate)')
       await terminal.submit('2')

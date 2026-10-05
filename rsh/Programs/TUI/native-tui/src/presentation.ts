@@ -131,15 +131,6 @@ export function TerminalView({ interaction, locale, model, background }: {
       }, (error: unknown) => { setPresetMenu(undefined); setNotice(String(error)) })
       return
     }
-    if (text === '/mode') {
-      void interaction.presets().then((observed) => {
-        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
-        if (observed.facts.locked) { setNotice(copy.presetLocked); return }
-        setPresetMenu(observed.entries.length === 0 ? undefined : observed)
-        setNotice(observed.entries.length === 0 ? copy.noPresets : '')
-      }, (error: unknown) => { setNotice(String(error)) })
-      return
-    }
     if (menu !== undefined) {
       const index = Number(text) - 1
       const selected = Number.isSafeInteger(index) && index >= 0 ? menu.choices[index] : undefined
@@ -156,6 +147,15 @@ export function TerminalView({ interaction, locale, model, background }: {
       void interaction.selectSession(id).then(() => {
         setSessionMenu(undefined); setFirst(-1); setScrollLines(0); setLast(''); setNotice(copy.sessionOpened)
       }, (error: unknown) => { setSessionMenu(undefined); setNotice(String(error)) })
+      return
+    }
+    if (text === '/mode') {
+      void interaction.presets().then((observed) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
+        if (observed.facts.locked) { setNotice(copy.presetLocked); return }
+        setPresetMenu(observed.entries.length === 0 ? undefined : observed)
+        setNotice(observed.entries.length === 0 ? copy.noPresets : '')
+      }, (error: unknown) => { setNotice(String(error)) })
       return
     }
     if (text === '/sessions') {
