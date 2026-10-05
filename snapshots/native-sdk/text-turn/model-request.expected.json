@@ -64,6 +64,53 @@
     {
       "type": "function",
       "function": {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh foreground child. The child starts without your conversation; this call waits for its final result and cleanup.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "fixture_wait",
+        "description": "Wait until the initiating Session is cancelled.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "fixture_protected",
+        "description": "Write the protected fixture marker.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "fixture_delegate_child",
         "description": "Delegate the fixture task.",
         "parameters": {
