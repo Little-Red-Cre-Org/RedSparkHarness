@@ -26,6 +26,8 @@ The profile sets `systemPrompt` and positive `maxSteps`. `initialize` selects on
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.
 
+The native route also emits `session.chunk` for accepted model chunks and serves `session/cancel`. Cancellation targets only the currently admitted turn, returns false before a durable receipt or after settlement, and awaits the turn before replying. Queued prompts and other Sessions remain admitted independently. Chunks project the selected dispatch; `assistant/message` or `assistant/attempt` remains their durable owner. Same-id prompts restore stored history; Session fork has no SDK wire method yet.
+
 ## Model Experience
 
 ### SDK text prompts

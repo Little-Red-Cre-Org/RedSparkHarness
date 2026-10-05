@@ -136,6 +136,14 @@ class Session:
         self.harness = harness
         self.id = session_id
 
+    def cancel(self) -> bool:
+        """Cancel this Session's admitted native-sdk turn and await owned cleanup.
+
+        Returns False when no turn was admitted; unsupported profiles reject the request.
+        """
+        self.harness.start()
+        return self.harness.client.session_cancel(self.id)
+
     def run(
         self,
         input: str | list[JsonObject],

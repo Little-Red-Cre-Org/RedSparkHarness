@@ -33,13 +33,15 @@ The [Core transport](../../../../Core/util/json-rpc-line/README.md) owns newline
 
 ### The SDK methods
 
-Both wire ends share one method set: three client-to-server requests and four server-to-client notifications.
+The compatibility profile serves the original three request methods and four notifications. The native-sdk profile also serves per-Session cancellation and live model chunks.
 
 | Direction | Method | Payload types |
 |---|---|---|
 | client→server | `initialize` | `InitializeParams` → `InitializeResult` |
 | client→server | `session/prompt` | `SessionPromptParams` → `SessionPromptResult` (durable enqueue receipt) |
+| client→server | `session/cancel` | `SessionCancelParams` → `SessionCancelResult` (native-sdk only) |
 | client→server | `shutdown` | no params → `{}` |
+| server→client | `session.chunk` | `SessionChunkNotification` (native-sdk live model projection) |
 | server→client | `session.event` | `SessionEventNotification` (every session in the runtime, unfiltered) |
 | server→client | `session.status` | `SessionStatusNotification` (whole-agent `running`/`idle` transition) |
 | server→client | `subagent.started` | `SubagentStartedNotification` |

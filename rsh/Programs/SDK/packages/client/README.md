@@ -104,6 +104,9 @@ Read these pages when the client contract is not enough. They move from the wire
 -----
 
 <a id="model-experience"></a>
+
+With explicit `profile: "native-sdk"`, `HarnessSession.cancel()` and `HarnessClient.cancel(sessionId)` await cancellation of the admitted turn and return false when none is active. `onNotification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
+
 ## Model Experience
 
 None, as this is a client-process library; model-facing behavior lives in the spawned runtime's composed plugins.

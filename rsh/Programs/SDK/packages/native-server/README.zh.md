@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供现有的按行分帧 SDK JSON-RPC 方法：`initialize`、`session/prompt` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
+显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供现有的按行分帧 SDK JSON-RPC 方法：`initialize`、`session/prompt`、`session/cancel` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
 
 ## 目录
 
@@ -31,6 +31,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 [原生 SDK 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.zh.md)说明了进程和 Session 的所有权选择。
 
 <a id="model-experience"></a>
+
+原生路径还为已接收模型分块发送 `session.chunk`，并提供 `session/cancel`。取消仅针对当前已接收轮次，在持久化接收前或结束后返回 false，并等待轮次结束后响应。排队提示与其它 Session 独立接收。分块投影选定派发，`assistant/message` 或 `assistant/attempt` 仍是其持久化所有者。同 id 提示恢复存储历史；Session 分叉尚无 SDK 协议方法。
 
 ## 模型体验
 

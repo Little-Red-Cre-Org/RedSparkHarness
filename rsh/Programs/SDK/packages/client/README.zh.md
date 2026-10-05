@@ -104,6 +104,9 @@ console.log(result.finalResponse)
 -----
 
 <a id="model-experience"></a>
+
+显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
+
 ## 模型体验
 
 无，因为这是客户端进程库；模型可见行为存在于所 spawn 运行时组合的插件中。

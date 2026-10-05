@@ -172,6 +172,15 @@ export class HarnessSession {
   constructor(readonly harness: DeepSeekHarness, readonly id: string) {}
 
   /**
+   * Cancel this Session's admitted native-sdk turn and await owned cleanup.
+   * @returns false when no admitted turn was active; rejects on unsupported profiles.
+   */
+  async cancel(): Promise<boolean> {
+    await this.harness.start()
+    return this.harness.client.cancel(this.id)
+  }
+
+  /**
    * Queue one prompt, then observe the whole session through its next idle.
    * @param input - prompt text, or content blocks sent verbatim.
    * @param options - optional per-notification observer.
