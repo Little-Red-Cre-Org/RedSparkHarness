@@ -20,10 +20,9 @@ const fixture = join(scene, 'session.v3.jsonl')
 
 it('replays a native ACP turn with exact model input, output and durable Session events', async () => {
   const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
-  const input = recorded?.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
   const answer = recorded?.find(event => event.type === 'assistant/message')
-  const task = input?.type === 'user/message' && input.data.content[0]?.type === 'text'
-    ? input.data.content[0].text : 'say hello through native ACP'
+  const task = 'say hello through native ACP'
+  const linkedText = `${task}\n[resource_link name="notes \\"draft\\"" uri="file:///reference.md"]\n`
   const reply = answer?.type === 'assistant/message' && answer.data.message.content[0]?.type === 'text'
     ? answer.data.message.content[0].text : 'native ACP snapshot reply'
   const requests: Record<string, unknown>[] = []
@@ -96,7 +95,8 @@ it('replays a native ACP turn with exact model input, output and durable Session
       configId: 'reasoning_effort', value: 'high' }, signal)
     const image = readFileSync(join(scene, 'image.png')).toString('base64')
     const result = await transport.request('session/prompt', { sessionId: created.sessionId,
-      prompt: [{ type: 'text', text: task }, { type: 'image', mimeType: 'image/png', data: image }] }, signal)
+      prompt: [{ type: 'text', text: task }, { type: 'resource_link', name: 'notes "draft"', uri: 'file:///reference.md' },
+        { type: 'image', mimeType: 'image/png', data: image }, { type: 'text', text: ' Review the linked file.' }] }, signal)
     expect(result).toMatchObject({ stopReason: 'end_turn' })
     expect(output).toMatchObject([{ sessionUpdate: 'config_option_update' }, { sessionUpdate: 'config_option_update' },
       { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
@@ -129,8 +129,9 @@ it('replays a native ACP turn with exact model input, output and durable Session
       messages: request.messages, tools: request.tools ?? [] }, null, 2)
     expect(serialized.split(JSON.stringify(caption))).toHaveLength(2)
     expect(request.messages).toMatchObject([{ role: 'developer' }, { role: 'user', content: [
-      { type: 'text', text: task }, { type: 'text', text: caption },
+      { type: 'text', text: linkedText }, { type: 'text', text: caption },
       { type: 'image_url', image_url: { url: `data:${ref.mediaType};base64,${storedImage.toString('base64')}` } },
+      { type: 'text', text: ' Review the linked file.' },
     ] }])
     const modelInput = serialized.replace(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n'
     const context = { cwd: workspace, sessionIds: [] }
