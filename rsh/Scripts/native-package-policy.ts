@@ -62,6 +62,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
   ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
+  ['rsh/Modules/Official/mcp/mcp-client', 'Cordis and native MCP Consumers share connection supervision and protocol tool projection'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
@@ -76,6 +77,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/preset/agent-presets', 'Native standing composition leases and compatibility presets share durable selection facts'],
   ['rsh/Modules/Official/workspace/workspace', 'Native and Cordis Workspace Providers share the durable v2 registry'],
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
+  ['rsh/Modules/Official/settings/settings-file', 'Cordis and native settings Providers share the document format and atomic file owner'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
   ['rsh/Modules/Official/fs/fs-observation-policy', 'Cordis event policy and native entry share a package'],
@@ -94,6 +96,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Programs/Web/client/web', ['client']],
   ['rsh/Core/util/launch-environment', ['host', 'client']],
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
+  ['rsh/Modules/Official/settings/settings', ['host']],
 ])
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
@@ -106,6 +109,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
   ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/preset/agent-presets', [
     '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
     '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
@@ -120,6 +124,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['./types']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
   ['rsh/Engine/core/native-agent', ['./inbox']],
@@ -149,6 +154,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/attachment/attachment/brand', ['host', 'client']],
   ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
+  ['rsh/Modules/Official/mcp/mcp-client/types', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],

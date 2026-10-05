@@ -29,6 +29,7 @@ const snapshotAdapters = [
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
+  'snapshots/native-headless/mcp-image-native.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',

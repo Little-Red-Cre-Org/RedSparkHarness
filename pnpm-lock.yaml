@@ -6447,6 +6447,30 @@ importers:
 
   rsh/Modules/Official/mcp/mcp-client:
     dependencies:
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../attachment/attachment
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
+      '@deepseek-ai/dsh-timeout':
+        specifier: workspace:^
+        version: link:../../../../Core/util/timeout
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../../Core/util/values
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6460,27 +6484,21 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
-      '@deepseek-ai/dsh-attachment':
-        specifier: workspace:^
-        version: link:../../attachment/attachment
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../attachment/attachment-local
       '@deepseek-ai/dsh-http-proxy':
         specifier: workspace:^
         version: link:../../../../Core/util/http-proxy
-      '@deepseek-ai/dsh-llm':
+      '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope
-      '@deepseek-ai/dsh-subprocess':
+      '@deepseek-ai/dsh-session':
         specifier: workspace:^
-        version: link:../../../../Core/subprocess/subprocess
-      '@deepseek-ai/dsh-timeout':
-        specifier: workspace:^
-        version: link:../../../../Core/util/timeout
+        version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
@@ -6667,6 +6685,9 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -6695,6 +6716,9 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../../Core/util/home-paths
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../settings
