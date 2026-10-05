@@ -18,7 +18,7 @@ import { NativeProgramActiveSession } from './continuation-active-session.ts'
 import { NativeWorkspaceRoutes, resolveWorkspaceRouteConfiguration, type NativeWorkspaceRouteConfiguration } from './workspace-routes.ts'
 import { SessionPersistenceNotFoundError, type SessionDeletionId, type SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { StreamChunk, MessageId } from '@deepseek-ai/dsh-llm/native'
+import type { StreamChunk, MessageId, LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
 import { isAbsolute, resolve } from 'node:path'
 import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
@@ -64,6 +64,13 @@ export interface NativeTurnRequest {
   /** Explicit composition for a fresh root; resume and fork use accepted history. */
   readonly preset?: string
   readonly message?: UserMessage
+  /**
+   * Prepare root input instead of message while the original Agent owns execution and the Session writer.
+   * @param model - next durable selection, or the selected root route's explicit model defaults.
+   * @param signal - composed caller, Agent and Program cancellation.
+   * @returns identified user input; rejection admits no input or model request.
+   */
+  readonly prepareMessage?: (model: Readonly<Pick<LlmCallConfig, 'provider' | 'model'>>, signal: AbortSignal) => Promise<UserMessage>
   /** Observe accepted model chunks without assigning process output to the executor. */
   readonly onChunk?: (chunk: StreamChunk) => void
   /** Observe Session events after backend append; a failure interrupts the turn. */
@@ -71,7 +78,7 @@ export interface NativeTurnRequest {
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -617,8 +624,16 @@ export class NativeHeadlessApplication implements NativeApplication {
         await activeOwner.settled({ kind: 'completed' })
         return { exitCode: 0 }
       }
-      if (request.message !== undefined) {
-        track(session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [request.message] }))
+      let message = request.message
+      if (request.prepareMessage !== undefined) {
+        if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: input preparation requires the active root owner')
+        const selected = (await this.modelSelection?.state(activeOwner, signal))?.next ?? config
+        signal.throwIfAborted()
+        message = await request.prepareMessage({ provider: selected.provider, model: selected.model }, signal)
+        signal.throwIfAborted()
+      }
+      if (message !== undefined) {
+        track(session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [message] }))
         await persist()
       }
       track(session.append('turn/start', { turn }))

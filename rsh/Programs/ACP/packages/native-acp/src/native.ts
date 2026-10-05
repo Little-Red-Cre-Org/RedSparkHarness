@@ -6,7 +6,7 @@ import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type AgentConnection, type NewSessionRequest, type PromptRequest, type PromptResponse,
   type SessionUpdate, type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
+import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
@@ -316,30 +316,31 @@ export class NativeAcpApplication implements NativeApplication {
       let exitCode: number
       try {
         const hasImage = parts.some(part => part.type === 'image')
+        let input: Pick<NativeTurnRequest, 'message' | 'prepareMessage'>
         if (hasImage) {
           const directory = this.context.optional('modelDirectory')
           if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
-          await record.executor.executeSessionOperation({ id: SessionId(params.sessionId), resume: true }, async (owner, admitted) => {
-            const check = async (effective: AbortSignal): Promise<void> => {
-              const selection = await this.context.optional('modelSelection')?.state(owner, effective)
-              const route = selection?.next ?? this.config
-              const info = await directory.resolve(route.provider, route.model, effective)
-              if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
-            }
-            const execution = this.context.require('agents').execution(owner.agent)
-            if (execution.status === 'maintenance') await check(admitted)
-            else await execution.runMaintenance(agentSignal => check(AbortSignal.any([agentSignal, admitted])))
-          }, signal)
+          if (attachments === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
+          input = { prepareMessage: async (model, admitted) => {
+            const info = await directory.resolve(model.provider, model.model, admitted)
+            if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
+            admitted.throwIfAborted()
+            const content = await attachments.admitPromptContent(parts)
+            admitted.throwIfAborted()
+            return createUserMessage({ content, source: { kind: 'user' } })
+          } }
+        } else {
+          signal.throwIfAborted()
+          const content = attachments === undefined
+            ? parts.map((part) => {
+              if (part.type !== 'text') throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
+              return part
+            }) : await attachments.admitPromptContent(parts)
+          input = { message: createUserMessage({ content, source: { kind: 'user' } }) }
         }
         signal.throwIfAborted()
-        const content = attachments === undefined
-          ? parts.map((part) => {
-            if (part.type !== 'text') throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
-            return part
-          }) : await attachments.admitPromptContent(parts)
-        signal.throwIfAborted()
         const result = await record.executor.executeRootTurn({ id: SessionId(params.sessionId), resume: true,
-          message: createUserMessage({ content, source: { kind: 'user' } }), onEvent: (event) => {
+          ...input, onEvent: (event) => {
             for (const update of updates(event)) {
               notifications = notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
               void notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
