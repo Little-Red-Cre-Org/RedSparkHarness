@@ -1,6 +1,7 @@
 /** One recorded native ACP turn through the shipped dsh profile and standard protocol. */
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,6 +9,7 @@ import { expect, it } from 'vitest'
 import { execa } from 'execa'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { requestImageHandleText } from '@deepseek-ai/dsh-llm/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
   normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
 
@@ -49,7 +51,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
     { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'You are a native ACP fixture.', maxSteps: 1 } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
-      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model' }] } } } },
+      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
     cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
@@ -64,9 +66,11 @@ it('replays a native ACP turn with exact model input, output and durable Session
   const signal = AbortSignal.timeout(20_000)
   try {
     const initialized = await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
-    expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: false } } })
+    expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: true } } })
     const created = await transport.request('session/new', { cwd: workspace, mcpServers: [] }, signal) as { sessionId: string }
-    const result = await transport.request('session/prompt', { sessionId: created.sessionId, prompt: [{ type: 'text', text: task }] }, signal)
+    const image = readFileSync(join(scene, 'image.png')).toString('base64')
+    const result = await transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'text', text: task }, { type: 'image', mimeType: 'image/png', data: image }] }, signal)
     expect(result).toMatchObject({ stopReason: 'end_turn' })
     expect(output).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
     const protocol = JSON.stringify(output.map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n'
@@ -78,10 +82,26 @@ it('replays a native ACP turn with exact model input, output and durable Session
     expect(requests).toHaveLength(1)
     const request = requests[0]
     if (request === undefined) throw new Error('native-acp snapshot: model request missing')
-    const modelInput = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2) + '\n'
     const physical = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))
     if (physical === undefined) throw new Error('native-acp snapshot: durable Session missing')
     const raw = readFileSync(join(sessions, String(physical)), 'utf8')
+    const imageEvent = parseSessionLog(raw).find(event => event.type === 'user/message')
+    const imageBlock = imageEvent?.type === 'user/message' ? imageEvent.data.content.find(block => block.type === 'image') : undefined
+    if (imageBlock?.type !== 'image') throw new Error('native-acp snapshot: durable image missing')
+    const ref = imageBlock.attachment
+    const digest = String(ref.attachmentId).slice('sha256:'.length)
+    const attachmentPath = join(home, 'attachments', 'v1', 'objects', digest.slice(0, 2), digest)
+    const storedImage = readFileSync(attachmentPath)
+    expect(`sha256:${createHash('sha256').update(storedImage).digest('hex')}`).toBe(ref.attachmentId)
+    const caption = requestImageHandleText(ref, ref, { readonlyPath: attachmentPath })
+    const stableCaption = requestImageHandleText(ref, ref, { readonlyPath: '{{attachment}}' })
+    const serialized = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2)
+    expect(serialized.split(JSON.stringify(caption))).toHaveLength(2)
+    expect(request.messages).toMatchObject([{ role: 'system' }, { role: 'user', content: [
+      { type: 'text', text: task }, { type: 'text', text: caption },
+      { type: 'image_url', image_url: { url: `data:${ref.mediaType};base64,${storedImage.toString('base64')}` } },
+    ] }])
+    const modelInput = serialized.replace(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n'
     const context = { cwd: workspace, sessionIds: [] }
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
     const prompts = normalizedSystemPrompts(raw, context)

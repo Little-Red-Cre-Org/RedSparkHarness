@@ -22,20 +22,27 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
+配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
-附件、问题、审批、目录策略、标题与分叉控制属于独立 Consumer。本包不提供这些操作。
+可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
+
+可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
 可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。安装关闭先关闭跟随者，再排空执行。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
 <a id="invariants"></a>
+
+可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。执行器在展示或回答前捕获精确应用所有者；仅 Session 标识相同不会准入其他 Program 的请求。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。
+
 ## 不变量
 
 选定执行器拥有写入独占与 Agent 身份。本 Program 只拥有传输准入，不引入需要运行时不变量检查的独立 Session 状态。
+
+运行时入口分块使用发布 manifest 声明的 shared-* 前缀。
 
 CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。随附 native-web Host 的运行时目录通过该确切 CLI 安装解析前端。前端包发布静态 dist 文件，不声明运行时依赖；其开发用 Cordis 图不作为运行时依赖安装。
 
@@ -51,7 +58,7 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 
 #### 模型看到什么
 
-人工文本进入原生执行器的持久化 inbox 与普通 Session 模型历史。该 Program 不增加工具或隐藏提示段。
+人工文本及已准入图片引用进入原生执行器的持久化 inbox 与普通 Session 模型历史。选定模型 Provider 将引用投影为图片输入。该 Program 不增加工具或隐藏提示段。
 
 #### Token 影响
 
@@ -65,4 +72,4 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 完整产品 UI、附件、审批和问题交互不由该包提供。
+- 完整产品 UI、文件及音频上传不由该包提供。

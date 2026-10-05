@@ -6,6 +6,7 @@ import { ChatRow, StreamBlock, stripAnsi } from '@deepseek-ai/dsh-terminal-ui'
 import { createUserMessage, type UserMessage, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { terminalCopy } from './locale.ts'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TerminalModelState } from './models.ts'
 import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
@@ -45,6 +46,10 @@ export interface TerminalInteraction {
    * @returns accepted durable choice and metadata.
    */
   selectModel(request: NativeModelSelectionRequest): Promise<TerminalModelState>
+  /** @returns stored Session identities in the configured workspace. */
+  sessions(): Promise<readonly SessionId[]>
+  /** @param id - selected stored Session. @returns completion of exclusive restore and transcript replacement. */
+  selectSession(id: SessionId): Promise<void>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
@@ -68,6 +73,7 @@ export function TerminalView({ interaction, locale, model, background }: {
   const [notice, setNotice] = useState('')
   const [last, setLast] = useState('')
   const [first, setFirst] = useState(-1)
+  const [sessionMenu, setSessionMenu] = useState<readonly SessionId[]>()
   const [menu, setMenu] = useState<{
     title: string
     labels: readonly string[]
@@ -76,9 +82,14 @@ export function TerminalView({ interaction, locale, model, background }: {
   }>()
   const { stdout } = useStdout()
   useEffect(() => interaction.subscribe(() => { setState(interaction.snapshot()) }), [interaction])
+  useEffect(() => {
+    if (state.human === undefined || menu === undefined && sessionMenu === undefined) return
+    setMenu(undefined); setSessionMenu(undefined); setInput(''); setNotice(copy.menuInterrupted)
+  }, [state.human, menu, sessionMenu, copy.menuInterrupted])
   useInput((keyInput, key) => {
     if (key.ctrl && keyInput === 'c') { if (state.busy) interaction.cancel(); else interaction.exit() }
     if (key.escape && menu !== undefined) { setMenu(undefined); setNotice(''); return }
+    if (key.escape && sessionMenu !== undefined) { setSessionMenu(undefined); setNotice(''); return }
     if (key.escape && state.human !== undefined) { interaction.cancel(); setNotice(''); return }
     if (key.escape && state.busy) {
       interaction.cancel()
@@ -90,6 +101,10 @@ export function TerminalView({ interaction, locale, model, background }: {
     if (text === '') return
     if (text === '/exit' || text === '/quit') { interaction.exit(); return }
     if (state.human !== undefined) {
+      if (menu !== undefined || sessionMenu !== undefined) {
+        setMenu(undefined); setSessionMenu(undefined); setNotice(copy.menuInterrupted)
+        return
+      }
       try { interaction.answerHuman(text, state.human); setNotice('') } catch (error: unknown) { setNotice(String(error)) }
       return
     }
@@ -102,8 +117,26 @@ export function TerminalView({ interaction, locale, model, background }: {
       }, (error: unknown) => { setMenu(undefined); setNotice(String(error)) })
       return
     }
+    if (sessionMenu !== undefined) {
+      const index = Number(text) - 1
+      const id = Number.isSafeInteger(index) && index >= 0 ? sessionMenu[index] : undefined
+      if (id === undefined) { setNotice(copy.selectNumber); return }
+      void interaction.selectSession(id).then(() => {
+        setSessionMenu(undefined); setFirst(-1); setLast(''); setNotice(copy.sessionOpened)
+      }, (error: unknown) => { setSessionMenu(undefined); setNotice(String(error)) })
+      return
+    }
+    if (text === '/sessions') {
+      void interaction.sessions().then((sessions) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
+        setSessionMenu(sessions.length === 0 ? undefined : sessions)
+        setNotice(sessions.length === 0 ? copy.noSessions : '')
+      }, (error: unknown) => { setNotice(String(error)) })
+      return
+    }
     if (text === '/model' || text === '/reasoning') {
       void interaction.models().then((observed) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
         const selected = observed.state.next ?? model
         const choices = text === '/model' ? observed.catalog.groups.flatMap(group => group.models.map(entry => ({ provider: group.id, model: entry.id })))
           : [{ provider: selected.provider, model: selected.model },
@@ -175,6 +208,10 @@ export function TerminalView({ interaction, locale, model, background }: {
     menu === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
       React.createElement(Text, { bold: true }, menu.title),
       ...menu.labels.map((label, index) => React.createElement(Text, { key: index }, stripAnsi(`${index + 1}. ${label}`))),
+      React.createElement(Text, { dimColor: true }, copy.menuHint)),
+    sessionMenu === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
+      React.createElement(Text, { bold: true }, copy.sessions),
+      ...sessionMenu.map((id, index) => React.createElement(Text, { key: id }, stripAnsi(`${index + 1}. ${id}`))),
       React.createElement(Text, { dimColor: true }, copy.menuHint)),
     React.createElement(TextInput, { value: input, onChange: setInput, placeholder: copy.placeholder,
       onSubmit: (value: string) => { submit(value); setInput('') } }),

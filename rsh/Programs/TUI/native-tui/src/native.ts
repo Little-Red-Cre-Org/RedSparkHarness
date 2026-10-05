@@ -34,6 +34,8 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
   constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config,
     selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     super({
+      sessions: async signal => (await context.require('sessionPersistence').list({ signal }))
+        .filter(row => row.header.cwd === config.cwd).map(row => row.header.id),
       models: selection !== undefined && directory !== undefined
         ? terminalModelOperations(executor, selection, directory, config, agent => context.require('agents').execution(agent)) : undefined,
       turn: (request, signal) => executor.executeRootTurn(request, signal),
