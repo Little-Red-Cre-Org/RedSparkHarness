@@ -25,7 +25,7 @@ The page lists stored Sessions, creates blank Sessions, selects durable history 
 
 The transcript uses the shared Session append-origin and message projection rules. Replacement copies remain model-only; raw Session records remain available in a disclosure, including tool results, permissions, interruptions and opaque ignorable facts. Transport and history failures remain visible; failed submission retains its draft.
 
-Configuration accepts only `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
+Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
 
 React and Session message projection use shared application peer instances; the Session Consumer is a type-only dependency supplied by the selected runtime capability.
 
@@ -37,7 +37,7 @@ The view reads the selected Host Consumer and owns no independent execution obse
 
 ## Dev Note
 
-Lifecycle ownership and the distinction between durable transcript refresh and streaming are described in the [Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md).
+Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md).
 
 ## Model Experience
 
@@ -57,5 +57,7 @@ The Host owns resumed context and its existing prefix; UI selection changes no S
 
 ## Known Limitations and Deferred Work
 
-- The transcript refreshes after execution settles; live model output remains separate P4 work.
+Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
+
+- Rich tool cards and additional model chunk presentations remain separate work.
 - Attachment upload, approval and question responses, full Sidebar, layout and Settings remain separate native Client migrations.
