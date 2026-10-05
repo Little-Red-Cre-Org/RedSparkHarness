@@ -15,11 +15,12 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh --profile rsh` | Open the persistent RedSpark terminal session. |
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
 | `dsh --profile native-sdk` | Serve text and image SDK turns, live model chunks, Session cancellation, next-step steering and closed-turn forks over JSON-RPC stdio. |
+| `dsh --profile native-acp` | Drive native text Sessions, cancellation, and durable resume over standard ACP stdio. |
 | `dsh --profile sdk-minimal` | Serve SDK clients with the standalone minimal agent tree. |
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
-The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, and `native-sdk` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
+The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
 ## App arguments
 
@@ -46,6 +47,8 @@ Selecting a shipped `native-*` profile creates its native profile files on first
 A native profile instead declares `dsh.profile.runtime: "native"` and `config: "rsh.profile.json"` in its package manifest. Its versioned JSON file lists scope identities and plugin installations, each with an id, package name, scope and complete config. Native `--patch` files are versioned JSON overlays that replace an existing installation's config or `disabled` value in argument order. The launcher validates every selected package's `dsh.native` metadata before importing entries, refuses nonempty Cordis patch layers, and starts one selected native application. See [native headless](../../Engine/core/native-headless/README.md) for the available one-shot application.
 
 The CLI's native launcher depends on the native runtime directly. Cordis, profile boot, config dump, and profile package-management dependencies are optional packages; ordinary installs include them, while native-only deployments may omit optional dependencies. A legacy profile or legacy-only CLI mode then reports the required installation change before importing Cordis. Native profile plugins remain dependencies of the selected profile.
+
+Explicit shipped native profiles include the native Session execution Provider, which supplies the selected execution registry and active Session owners. The CLI resolver declares this Provider as a direct dependency; legacy profile selection remains unchanged.
 
 Host profiles capture inherited, invoking-directory and Harness-home environment layers before plugin imports. The same checked loader serves compatibility boot; every root scope owns the real launch snapshot Provider. Client-only profiles do not install it.
 

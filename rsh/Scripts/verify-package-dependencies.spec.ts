@@ -9,6 +9,7 @@ import {
 import {
   collectHostDependencyExportPolicyViolations,
   collectClientRuntimeDependencyPolicyViolations,
+  collectPublishedTypeDependencyPolicyViolations,
   collectPackageDependencyViolations,
   collectRuntimeSourceExportUses,
   discoverPackageDependencyScope,
@@ -91,6 +92,7 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
     peerRequiredHostDependencies: new Set(),
     configurationOnlyDevDependencies: new Set(),
     clientRuntimeDependencies: new Set(),
+    publishedTypeSourceUses: new Map(),
     clientInject: new Set(),
   }
 }
@@ -183,6 +185,7 @@ function hostRuntimeFixture(): {
     peerRequiredHostDependencies: new Set(),
     configurationOnlyDevDependencies: new Set(),
     clientRuntimeDependencies: new Set(),
+    publishedTypeSourceUses: new Map(),
     clientInject: new Set(),
   }
   return { provider, workspaceNames, consumerFacts }
@@ -687,6 +690,35 @@ describe('face-aware source classification', () => {
 })
 
 describe('dependency sections', () => {
+  it('retains reviewed published types and rejects stale declaration relationships', () => {
+    const dependency = '@deepseek-ai/dsh-types'
+    const typePolicy = policy({ publishedTypeDependencies: { '@f/probe': [dependency] } })
+    const source = sourceFacts({ 'src/index.ts': `export type { Payload } from '${dependency}'` }, {
+      dependencies: { [dependency]: 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^' }, peerDependencies: { [CORDIS]: 'workspace:^' },
+    }, 'configured-host', typePolicy)
+    const published = { ...source, workspaceNames: new Set([...source.workspaceNames, dependency]) }
+    const observed = { ...published, publishedTypeSourceUses: new Map() }
+    const validPolicy = policy({ publishedTypeDependencies: { '@f/probe': [dependency] } })
+    expect(expectedPackageDependencies(published).get(dependency)?.section).toBe('dependencies')
+    expect(collectPackageDependencyViolations({ facts: [published], packages: [], policyViolations: [],
+      workspaceNames: published.workspaceNames })).toEqual([])
+    repairPackageDependencyManifest(published)
+    expect(published.manifest.dependencies?.[dependency]).toBe('workspace:^')
+    expect(collectPublishedTypeDependencyPolicyViolations([published], validPolicy)).toEqual([])
+    expect(collectPublishedTypeDependencyPolicyViolations([observed], validPolicy)).toContain(
+      `publishedTypeDependencies lists @f/probe dependency ${dependency} without a source type import`,
+    )
+    const runtimeOnly = sourceFacts({ 'src/index.ts': `import '${dependency}'` }, {}, 'configured-host', typePolicy)
+    expect(runtimeOnly.publishedTypeSourceUses.size).toBe(0)
+    expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
+      missing: [dependency], '@f/probe': ['unknown'],
+    } }))).toContain('publishedTypeDependencies names unknown workspace package unknown')
+    expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
+      missing: [dependency],
+    } }))).toContain('publishedTypeDependencies names unmanaged package missing')
+  })
+
   it('keeps reviewed third-party Client library imports as production dependencies', () => {
     const runtimePolicy = policy({ clientRuntimeDependencies: { '@f/probe': ['immer', 'zustand'] } })
     const subject = sourceFacts({

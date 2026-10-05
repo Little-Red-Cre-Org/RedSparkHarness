@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-tool-todo` gives the agent a structured task list to plan with: break multi-step work into concrete tasks, mark the task you are working on, and check tasks off as they finish. The list survives across turns and reopened sessions, so the agent and the UI always see the latest plan. One configuration flag decides whether several tasks may be in progress at once, for agents that run work in parallel. Use it wherever an agent should keep a visible task list; each update replaces the whole list, and only the owning agent session can change it.
+`dsh-tool-todo` gives the agent a structured task list to plan with: break multi-step work into concrete tasks, mark the task you are working on, and check tasks off as they finish. The finished list stays visible until the next turn starts and can be reconstructed when its session is reopened. One configuration flag decides whether several tasks may be in progress at once, for agents that run work in parallel. Use it wherever an agent should keep a visible task list; each update replaces the whole list, and only the owning agent session can change it.
 
 ## Table of Contents
 
@@ -47,6 +47,8 @@ Choose it when one agent session should own the task list and whole-list updates
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-todo) is the exhaustive source for the accepted field.
 
+The native `./native` entry selects `tools` and `activeSessions` from the profile and requires the same explicit parallelism setting. A successful call awaits durable `todo/write` acceptance before returning its counts. `readTodos(owner, signal)` reconstructs the standing list from the retained writer, including restored and fork-inherited events; the next `turn/start` clears it. The native registry owns Agent attribution, cancellation and registration disposal.
+
 ### What each call does
 
 The agent sends the ENTIRE list on every update; the new list replaces the previous one, so there are no partial updates or per-item edits. Each item is a short task description plus a status of `pending`, `in_progress`, or `completed`. A successful update returns the new counts — `Updated todo list: <pending> pending, <inProgress> in progress, <completed> completed.` — and the UI shows the new plan. Updates fail visibly when a task description is empty or duplicated, when an item carries fields beyond the description and status, or — when parallel work is disabled — when more than one task is marked in progress.
@@ -81,7 +83,10 @@ The [todo_write tool Agent Note](../../../../../.agents/notes/archived/feature/2
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, tool registration, `todos` projection unit |
-| [`src/types.ts`](src/types.ts) | The one home of the `todos` projection-key declaration and its payload types |
+| [`src/types.ts`](src/types.ts) | Compatibility projection-key declarations and todo type re-export |
+| [`src/todo-types.ts`](src/todo-types.ts) | Shared todo payload and durable event declaration |
+| [`src/todo-core.ts`](src/todo-core.ts) | Shared instructions, normalization and durable validation |
+| [`src/native.ts`](src/native.ts) | Native tool consumer and asynchronous standing-plan read |
 | [`src/client.ts`](src/client.ts) | Client-namespace re-export of the types outlet |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: validates durable whole-list snapshots and open-turn ownership |
 

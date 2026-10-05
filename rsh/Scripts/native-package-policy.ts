@@ -2,6 +2,8 @@
 
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Programs/TUI/native-tui',
+  'rsh/Programs/TUI/terminal-ui',
   'rsh/Core/identity/anonymous-user-id',
   'rsh/Modules/Official/shell/shell-process-local',
   'rsh/Modules/Official/shell/shell-sandbox-core',
@@ -45,6 +47,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/client/native-session',
   'rsh/Programs/Web/client/native-application',
   'rsh/Programs/Web/host/native-web-host',
+  'rsh/Programs/ACP/packages/native-acp',
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
@@ -53,6 +56,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/TUI/native-tui', ['host']],
+  ['rsh/Programs/TUI/terminal-ui', ['host']],
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Modules/Official/shell/shell-process-local', ['host']],
   ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
@@ -69,12 +74,14 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/Web/client/native-session', ['client']],
   ['rsh/Programs/Web/client/native-application', ['client']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
+  ['rsh/Programs/ACP/packages/native-acp', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
   ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
   ['rsh/Engine/context/agent-instructions', 'Native and Cordis instruction Providers share discovery, rendering and durable reconciliation'],
@@ -131,6 +138,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],

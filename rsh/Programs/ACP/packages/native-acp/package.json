@@ -1,0 +1,82 @@
+{
+  "name": "@deepseek-ai/dsh-native-acp",
+  "description": "Standard ACP carrier over the native Agent and Session executor",
+  "version": "0.1.5-rc.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Programs/ACP/packages/native-acp"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "sessionPersistence",
+        "model",
+        "modelExecution",
+        "agents"
+      ],
+      "optional": [
+        "tools",
+        "promptSections",
+        "sandboxPolicy",
+        "approval",
+        "codeRuntime",
+        "timeContext",
+        "agentInstructions",
+        "modelSelection",
+        "sessionExecution",
+        "activeSessions",
+        "agentPresets",
+        "workspaceRegistry"
+      ],
+      "provides": [
+        "application"
+      ]
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-native-headless": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-fs": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@agentclientprotocol/sdk": "1.4.0",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-json-rpc-line": "workspace:^"
+  }
+}

@@ -38,6 +38,8 @@ kind: "package-bundle"
 <details>
 <summary>实现细节 — 点击展开</summary>
 
+消息行与文本工具由[共享终端展示库](../../../../Programs/TUI/terminal-ui/README.zh.md)提供。
+
 [组合包补丁](cordis.patch.yml) 将共享服务保留在基础组合中，并将 Agent 拥有的工具放入所选预设。具名驱动等待 Loader 完成挂载后创建 Agent。持久化事件驱动已完成的对话行，实时助手帧提供临时输出。插件释放负责 Ink 实例、定时器、审批请求和 Agent 句柄。
 
 不发布运行时 invariant companion：渲染器使用的可独立观察关系由 Agent、Session 和预设服务拥有。开发检查为 `pnpm --filter @deepseek-ai/dsh-rsh test` 和 `pnpm --filter @deepseek-ai/dsh-rsh lint`。

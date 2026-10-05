@@ -73,6 +73,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`sdk/`](Programs/SDK/packages/README.zh.md) | 进程外 SDK：JSON-RPC 协议与 TypeScript 客户端／服务器 |
 | [`acp/`](Programs/ACP/packages/README.zh.md) | 仅面向自动化的 ACP（Agent Client Protocol）服务器 |
 | [`cli/`](Programs/CLI/README.zh.md) | 仅通过 profile 启动的命令行应用入口 |
+| [`tui/`](Programs/TUI/README.zh.md) | 原生终端应用与共享展示 |
 | [`interaction/`](Modules/Official/interaction/README.zh.md) | 人机协作平面：批准／交互 seam、权限预设、命令、询问用户的工具 |
 | [`boot/`](Compatibility/DSH/boot/README.zh.md) | 共享的 app bin 启动粘合层 |
 | [`bridge/`](Compatibility/DSH/bridge/README.zh.md) | 由原生运行时 profile 选择的显式 Cordis 贡献 |

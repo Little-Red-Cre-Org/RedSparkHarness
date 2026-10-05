@@ -121,6 +121,7 @@ flowchart TD
   end
   subgraph group_acp["group: acp"]
     pkg_acp["acp"]
+    pkg_native_acp["native-acp"]
   end
   subgraph group_api["group: api"]
     pkg_api_gateway["api-gateway"]
@@ -386,6 +387,10 @@ flowchart TD
     pkg_remote_mock["remote-mock"]
     pkg_session_snapshot["session-snapshot"]
   end
+  subgraph group_TUI["group: TUI"]
+    pkg_native_tui["native-tui"]
+    pkg_terminal_ui["terminal-ui"]
+  end
   subgraph group_typert["group: typert"]
     pkg_typert_generator["typert-generator"]
     pkg_typert_loader["typert-loader"]
@@ -461,6 +466,7 @@ flowchart TD
   pkg_subprocess_local --> pkg_native_runtime
   pkg_subprocess_local --> pkg_subprocess
   pkg_subprocess_local --> pkg_timeout
+  pkg_terminal_ui --> pkg_llm
   pkg_native_agent --> pkg_llm
   pkg_native_agent --> pkg_session
   pkg_skill_badge --> pkg_skill
@@ -807,6 +813,10 @@ flowchart TD
   pkg_spill_policy --> pkg_tools
   pkg_tool_todo --> pkg_agent
   pkg_tool_todo --> pkg_invariants
+  pkg_tool_todo --> pkg_native_agent
+  pkg_tool_todo --> pkg_native_runtime
+  pkg_tool_todo --> pkg_native_session_execution
+  pkg_tool_todo --> pkg_native_tools
   pkg_tool_todo --> pkg_session
   pkg_tool_todo --> pkg_session_projection
   pkg_tool_todo --> pkg_tools
@@ -1240,6 +1250,7 @@ flowchart TD
 | [`native-prompt`](../Engine/core/native-prompt) | `core` | — |
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
+| [`native-acp`](../Programs/ACP/packages/native-acp) | `acp` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |
 | [`native-web-session-controller`](../Programs/Web/api/native-web-session-controller) | `api` | — |
@@ -1337,6 +1348,7 @@ flowchart TD
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |
 | [`llm-mock-server`](../Tests/test-support/llm-mock-server) | `test-support` | — |
 | [`remote-mock`](../Tests/test-support/remote-mock) | `test-support` | — |
+| [`native-tui`](../Programs/TUI/native-tui) | `TUI` | — |
 | [`typert-generator`](../Core/typert/generator) | `typert` | — |
 | [`typert-protocol`](../Core/typert/protocol) | `typert` | — |
 | [`typert-registry`](../Core/typert/registry) | `typert` | — |
@@ -1369,6 +1381,7 @@ flowchart TD
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
 | [`sandbox-local`](../Modules/Official/sandbox/sandbox-local) | `sandbox` | [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
+| [`terminal-ui`](../Programs/TUI/terminal-ui) | `TUI` | [`llm`](../Engine/llm/llm) |
 | [`native-agent`](../Engine/core/native-agent) | `core` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |
 | [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
@@ -1448,7 +1461,7 @@ flowchart TD
 | [`tool-skill`](../Modules/Official/skill/tool-skill) | `skill` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`skill`](../Modules/Official/skill/skill), [`tools`](../Engine/core/tools) |
 | [`tool-web`](../Modules/Official/web/tool-web) | `web` | [`llm`](../Engine/llm/llm), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`web`](../Modules/Official/web/web) |
 | [`spill-policy`](../Modules/Official/spill/spill-policy) | `spill` | [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`tools`](../Engine/core/tools) |
-| [`tool-todo`](../Modules/Official/todo/tool-todo) | `todo` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
+| [`tool-todo`](../Modules/Official/todo/tool-todo) | `todo` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`plan-mode`](../Modules/Official/plan/plan-mode) | `plan` | [`agent`](../Engine/core/agent), [`commands`](../Modules/Official/interaction/commands), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-questions`](../Modules/Official/interaction/user-questions) |
 | [`hooks-codex`](../Modules/Official/hooks/hooks-codex) | `hooks` | [`agent`](../Engine/core/agent), [`hook-protocol`](../Modules/Official/hooks/hook-protocol), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`task-scheduler`](../Modules/Official/automation/task-scheduler) | `automation` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools) |

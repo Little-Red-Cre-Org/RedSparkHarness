@@ -23,6 +23,7 @@
     "rsh/Modules/Community/*/*",
     "rsh/Compatibility/DSH/*/*",
     "rsh/Programs/CLI",
+    "rsh/Programs/TUI/*",
     "rsh/Programs/Desktop",
     "rsh/Programs/DesktopHost",
     "rsh/Programs/ACP/packages/*",

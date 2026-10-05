@@ -112,6 +112,8 @@
     "snapshots/web/native-session-core.snapshot.ts",
     "snapshots/native-headless/native-headless.snapshot.ts",
     "snapshots/native-headless/tool-results.snapshot.ts",
+    "snapshots/native-tui/native-tui.snapshot.ts",
+    "rsh/Programs/TUI/native-tui/tests/**/*.ts",
     "snapshots/native-headless/human-question.snapshot.ts",
     "snapshots/native-headless/mcp-image-native.snapshot.ts",
     "snapshots/native-headless/ptc-jobs.snapshot.ts",
@@ -154,6 +156,8 @@
     "rsh/Scripts/client-bundle-purity.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Programs/TUI/terminal-ui" },
+    { "path": "./rsh/Programs/TUI/native-tui" },
     { "path": "./rsh/Programs/Web/client/native-application/tsconfig.json" },
     { "path": "./rsh/Modules/Official/code-runtime/tool-code-runtime" },
     { "path": "./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox" },
@@ -353,6 +357,7 @@
     { "path": "./rsh/Compatibility/DSH/bridge/compat-fs-policy" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-tool-fs" },
     { "path": "./rsh/Programs/SDK/packages/server" },
+    { "path": "./rsh/Programs/ACP/packages/native-acp" },
     { "path": "./rsh/Programs/SDK/packages/native-server" },
     { "path": "./rsh/Tests/test-support/llm-replay" },
     { "path": "./rsh/Core/typert/generator" },

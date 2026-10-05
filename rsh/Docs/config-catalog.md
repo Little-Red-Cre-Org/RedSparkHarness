@@ -3147,7 +3147,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/todo/tool-todo/src/index.ts:29`](../Modules/Official/todo/tool-todo/src/index.ts)
+Source: [`rsh/Modules/Official/todo/tool-todo/src/index.ts:30`](../Modules/Official/todo/tool-todo/src/index.ts)
 
 <a id="deepseek-aidsh-tool-web"></a>
 
@@ -3629,6 +3629,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-launch-environment` ([`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts))
 - `@deepseek-ai/dsh-llm-mock-server` ([`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts))
 - `@deepseek-ai/dsh-loader-smoke` ([`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts))
+- `@deepseek-ai/dsh-native-acp` ([`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts))
 - `@deepseek-ai/dsh-native-agent` ([`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts))
 - `@deepseek-ai/dsh-native-approval` ([`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts))
 - `@deepseek-ai/dsh-native-code-runtime` ([`rsh/Engine/core/native-code-runtime/src/index.ts`](../Engine/core/native-code-runtime/src/index.ts))
@@ -3645,6 +3646,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-time-context` ([`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts))
 - `@deepseek-ai/dsh-native-tool-jobs` ([`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-tools` ([`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts))
+- `@deepseek-ai/dsh-native-tui` ([`rsh/Programs/TUI/native-tui/src/index.ts`](../Programs/TUI/native-tui/src/index.ts))
 - `@deepseek-ai/dsh-native-web-assets` ([`rsh/Programs/Web/host/native-web-assets/src/index.ts`](../Programs/Web/host/native-web-assets/src/index.ts))
 - `@deepseek-ai/dsh-native-web-host` ([`rsh/Programs/Web/host/native-web-host/src/index.ts`](../Programs/Web/host/native-web-host/src/index.ts))
 - `@deepseek-ai/dsh-native-web-session-controller` ([`rsh/Programs/Web/api/native-web-session-controller/src/index.ts`](../Programs/Web/api/native-web-session-controller/src/index.ts))
@@ -3667,6 +3669,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-shell-process-local` ([`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts))
 - `@deepseek-ai/dsh-shell-sandbox-core` ([`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts))
 - `@deepseek-ai/dsh-subagent-in-process-driver` ([`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts))
+- `@deepseek-ai/dsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
 - `@deepseek-ai/dsh-timeout` ([`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts))
 - `@deepseek-ai/dsh-tool-code-runtime` ([`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts))
 - `@deepseek-ai/dsh-typert-generator` ([`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts))
