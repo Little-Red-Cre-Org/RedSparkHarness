@@ -85,6 +85,8 @@
     { "path": "./rsh/Programs/Web/client/native-application" },
     { "path": "./rsh/Modules/Official/interaction/user-questions/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-agent/tsconfig.client.json" },
+    { "path": "./rsh/Engine/core/native-model-execution/tsconfig.client.json" },
+    { "path": "./rsh/Engine/llm/native-model-selection/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-session-execution/tsconfig.client.json" },
     { "path": "./rsh/Engine/session/session-persistence/tsconfig.client.json" },
     { "path": "./rsh/Engine/preset/agent-presets/tsconfig.client.json" },

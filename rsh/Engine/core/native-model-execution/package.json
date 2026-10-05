@@ -38,18 +38,34 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./model-selection": {
+      "types": "./lib/types/model-selection.d.ts",
+      "default": "./lib/model-selection.js"
+    },
+    "./model-directory": {
+      "types": "./lib/types/model-directory.d.ts",
+      "default": "./lib/model-directory.js"
+    },
+    "./adapter-directory": {
+      "types": "./lib/types/adapter-directory.d.ts",
+      "default": "./lib/adapter-directory.js"
+    }
   },
   "files": [
     "lib/index.js",
     "lib/native.js",
     "lib/shared-*.js",
+    "lib/model-selection.js",
+    "lib/model-directory.js",
+    "lib/adapter-directory.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-util-values": "workspace:^"
   }
 }

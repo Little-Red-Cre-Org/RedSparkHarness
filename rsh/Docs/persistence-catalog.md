@@ -543,14 +543,11 @@ Source: [`rsh/Engine/llm/llm-retry/src/types.ts:11`](../Engine/llm/llm-retry/src
 #### `model/selection` — log-only
 
 ```ts persistence-catalog
-/**
- * Complete validated model selection requested for subsequent prompt
- * assembly. Log-only: it never enters derived model history.
- */
+/** Complete validated selection for subsequent prompt assembly; excluded from model history. */
 'model/selection': ModelSelection
 ```
 
-Source: [`rsh/Programs/Web/api/session-controller/src/types.ts:41`](../Programs/Web/api/session-controller/src/types.ts)
+Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../Engine/core/native-model-execution/src/model-selection.ts)
 
 ### `native-approval/*`
 

@@ -6,7 +6,8 @@
  * @module dsh-llm/call-config
  */
 
-import type { GenerateOptions } from './types.ts'
+import { LlmError } from './error.ts'
+import type { LlmResolvedModelInfo, GenerateOptions } from './types.ts'
 import type { ReasoningEffortId } from './brand.ts'
 
 /** Process-local identities of request objects assembled by dsh-agent-loop. */
@@ -37,6 +38,41 @@ export interface LlmCallConfigAdapterDefaults {
   reasoningEffort?: true
   maxTokens?: true
 }
+
+/** Resolve request controls against metadata captured from its dispatch generation.
+ * @param config - selected route and explicit request controls.
+ * @param info - exact model metadata bound to that route's eventual dispatch.
+ * @returns request controls with declared defaults; unsupported reasoning rejects.
+ */
+export function resolveCallConfigWithModel(config: LlmCallConfig, info: LlmResolvedModelInfo): LlmCallConfig {
+  const defaulted = config.maxTokens === undefined && info.defaultMaxTokens !== undefined
+    ? { ...config, maxTokens: info.defaultMaxTokens }
+    : config
+  const reasoning = info.reasoning
+  const requested = defaulted.reasoningEffort
+  let resolvedConfig = defaulted
+  if (reasoning === undefined) {
+    if (requested !== undefined) {
+      throw new LlmError(
+        `provider "${config.provider}" model "${config.model}" does not support reasoning effort "${requested}"`,
+        'UNSUPPORTED_REASONING_EFFORT',
+      )
+    }
+  } else {
+    const effective = requested ?? reasoning.defaultEffort
+    if (effective !== undefined) {
+      if (!reasoning.efforts.some(effort => effort.id === effective)) {
+        throw new LlmError(
+          `provider "${config.provider}" model "${config.model}" does not support reasoning effort "${effective}"`,
+          'UNSUPPORTED_REASONING_EFFORT',
+        )
+      }
+      if (requested !== effective) resolvedConfig = { ...defaulted, reasoningEffort: effective }
+    }
+  }
+  return resolvedConfig
+}
+
 
 /**
  * Field-wise equality over {@link LlmCallConfig} — the comparison a caller

@@ -30,6 +30,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 `session/steer` queues ordered prompt content for the admitted root's next step through its exact active Session owner. It returns the message id after persistence and does not interrupt the current model dispatch. Unknown, idle, cancelled and foreign Program owners are refused. Accepted input remains pending when cancellation or natural turn completion occurs before another step; the next resumed turn claims it. Steering shares image admission with ordinary prompts.
 
+The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
+
 ## Dev Note
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.

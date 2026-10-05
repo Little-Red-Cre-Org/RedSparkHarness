@@ -1,6 +1,7 @@
 /** Native pi-ai Provider using the shared catalog, profiles, auth and HTTP adapter. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
+import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
 import type {} from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
@@ -14,7 +15,7 @@ import { authContextFrom, credentialStoreFrom } from './auth-core.ts'
 /** Publish the pi-ai adapter with the current native settings profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-llm-pi-ai', targets: ['host'],
-  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings'], provides: ['model'],
+  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings'], provides: ['model', 'modelDirectory'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) {
       throw new Error('llm-pi-ai: native configuration must be an object with providers')
@@ -55,6 +56,9 @@ export const plugin: NativePlugin = {
       })
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
+      const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
+      context.own(() => directory.dispose())
+      context.provide('modelDirectory', directory)
       context.provide('model', model)
     }
   },

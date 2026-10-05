@@ -81,7 +81,8 @@
         "settings"
       ],
       "provides": [
-        "model"
+        "model",
+        "modelDirectory"
       ]
     }
   },

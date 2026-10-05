@@ -32,6 +32,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 `session/steer` 通过精确的活动 Session 所有者，为已接收根任务的下一步排入有序提示内容。持久化后返回消息 ID，不中断当前模型派发。拒绝未知、空闲、已取消或属于其它 Program 的所有者。如果下一步开始之前任务被取消或自然结束，已接收输入仍保留为待处理项，恢复轮次会认领它。引导输入与普通提示共用图片准入。
 
+应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
+
 <a id="dev-note"></a>
 
 ## 开发备注

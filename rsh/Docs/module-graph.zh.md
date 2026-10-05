@@ -34,6 +34,7 @@ flowchart TD
     pkg_llm_deepseek["llm-deepseek"]
     pkg_llm_pi_ai["llm-pi-ai"]
     pkg_llm_retry["llm-retry"]
+    pkg_native_model_selection["native-model-selection"]
     pkg_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek"]
     pkg_token_meter["token-meter"]
   end
@@ -1226,6 +1227,7 @@ flowchart TD
 | [`util-values`](../Core/util/values) | `util` | — |
 | [`util-workspace-path`](../Core/util/workspace-path) | `util` | — |
 | [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions) | `llm` | — |
+| [`native-model-selection`](../Engine/llm/native-model-selection) | `llm` | — |
 | [`native-code-runtime`](../Engine/core/native-code-runtime) | `core` | — |
 | [`native-headless`](../Engine/core/native-headless) | `core` | — |
 | [`native-jobs`](../Engine/core/native-jobs) | `core` | — |
