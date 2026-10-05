@@ -28,6 +28,7 @@ const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
+  'snapshots/native-headless/mcp-image-native.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
