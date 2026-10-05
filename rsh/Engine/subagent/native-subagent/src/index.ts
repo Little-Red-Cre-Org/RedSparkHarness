@@ -96,8 +96,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     const provider = options.provider ?? latest?.provider ?? parent.provider
     const model = options.model ?? latest?.model ?? parent.model
     const changedRoute = provider !== (latest?.provider ?? parent.provider) || model !== (latest?.model ?? parent.model)
-    const reasoningEffort = options.reasoningEffort ?? (changedRoute ? undefined : latest?.reasoningEffort ?? parent.reasoningEffort)
-    const maxTokens = options.maxTokens ?? latest?.maxTokens ?? parent.maxTokens
+    const reasoningEffort = options.reasoningEffort ?? (changedRoute ? undefined
+      : latest === undefined ? parent.reasoningEffort : latest.reasoningEffort)
+    const maxTokens = options.maxTokens ?? (latest === undefined ? parent.maxTokens : latest.maxTokens)
     if (options.toolFilter !== undefined && this.context.optional('tools') === undefined) {
       throw new Error('native-subagent: toolFilter requires tools')
     }
