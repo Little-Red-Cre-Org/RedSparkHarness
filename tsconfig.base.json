@@ -28,6 +28,7 @@
     // not declaration path aliases, keep each package/vendor source compiled
     // under its own tsconfig boundary.
     "paths": {
+      "@deepseek-ai/dsh-tool-todo/native": ["./rsh/Modules/Official/todo/tool-todo/src/native.ts"],
       "@deepseek-ai/dsh-native-tui": ["./rsh/Programs/TUI/native-tui/src"],
       "@deepseek-ai/dsh-native-tui/native": ["./rsh/Programs/TUI/native-tui/src/native.ts"],
       "@deepseek-ai/dsh-terminal-ui": ["./rsh/Programs/TUI/terminal-ui/src"],
