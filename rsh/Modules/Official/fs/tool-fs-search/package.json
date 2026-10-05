@@ -58,17 +58,17 @@
   "dependencies": {
     "@vscode/ripgrep": "^1.18.0",
     "@deepseek-ai/schemastery": "workspace:^",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "@deepseek-ai/dsh-output-retention": "workspace:^",
+    "@deepseek-ai/dsh-timeout": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-output-retention": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-spill": "workspace:^",
     "@deepseek-ai/dsh-subprocess": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-errors": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
@@ -79,11 +79,10 @@
     "@deepseek-ai/dsh-subprocess": "workspace:^",
     "@deepseek-ai/dsh-subprocess-local": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-output-retention": "workspace:^",
+    "@deepseek-ai/dsh-errors": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-spill": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
@@ -94,12 +93,6 @@
     "@deepseek-ai/dsh-spill-local": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-output-retention": {
-      "optional": true
-    },
     "@deepseek-ai/dsh-session": {
       "optional": true
     },
@@ -110,9 +103,6 @@
       "optional": true
     },
     "@deepseek-ai/dsh-system-prompt": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-timeout": {
       "optional": true
     },
     "@deepseek-ai/dsh-tools": {

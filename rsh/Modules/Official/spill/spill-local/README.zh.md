@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在需要把文本 spill 到本地文件系统的组合中挂载此后端。它注册为 `dsh-spill-policy` 插件与其他调用方使用的 `ctx.spillStore` 服务。
 
+本包实现 provider seam，因此 `dsh-spill` 与 NativeRuntime 保持必需对等依赖（peer dependency）。Cordis 对等依赖对于包管理器安装保持可选；原生组合可选择 `./native` 而不安装 Cordis。
+
 ### 最小配置
 
 不带配置加载插件是安全的：文件会落在操作系统临时目录下延迟创建的私有（0700）每进程目录中。当文件必须位于已知位置时，设置 `root`。

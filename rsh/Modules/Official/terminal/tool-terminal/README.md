@@ -27,6 +27,8 @@ Use `dsh-tool-terminal` when an agent needs persistent terminal state or interac
 
 The native `./native` entry requires `type` matching the selected backend and registers all six terminal tools. `maxResultBytes` bounds rendered output; `enableRunInBackground` defaults to true and requires a native Jobs Provider at installation. Set it false for a foreground-only composition. Foreground cancellation interrupts the send, while background work remains owned by the exact Agent and settles through NativeJobs. NativeJobs receives sanitized send output directly; `job_output` reads the retained live text without consuming the send viewport. Final formatted output replaces that text and preserves truncation metadata. Returned text and send presentation metadata enter the application-owned Session result.
 
+The package root remains the Cordis plugin entry and loads its compatibility implementation only when `apply` runs. Its Cordis peer dependencies are optional for package-manager installation; native compositions should select `./native`, while Cordis compositions must install the `dsh-tools` peer used by the compatibility entry.
+
 Enable these tools when the composition mounts a terminal backend and the model should be able to use terminal state across calls — stepping a debugger, exploring in a REPL, or returning to a shell after interrupting a foreground command. The guidance section steers the model toward the one-shot bash, read, write, and edit tools for bounded operations.
 
 ### The six tools
@@ -85,7 +87,9 @@ The package is a thin adapter: the six tools forward to `ctx.terminals` with the
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Six tool definitions, schemas, guidance section, background-job integration |
+| [`src/index.ts`](src/index.ts) | Public Cordis facade and lazy compatibility loading |
+| [`src/compat.ts`](src/compat.ts) | Six tool definitions, schemas, guidance section, background-job integration |
+| [`src/config.ts`](src/config.ts) | Public configuration type and schema |
 | [`src/render.ts`](src/render.ts) | Result rendering and the complete-result UTF-8 cap |
 
 ### Result bounding

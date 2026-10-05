@@ -143,9 +143,11 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
+  ['rsh/Modules/Official/terminal/tool-terminal', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
