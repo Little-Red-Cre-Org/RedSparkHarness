@@ -507,6 +507,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         seedResident = !this.seededContinuations.has(resident)
         if (seedResident) {
           this.timeContext?.seed(session, stored.events)
+          this.agentInstructions?.seed(session, stored.events)
           this.seededContinuations.add(resident)
         }
       } else if (fresh !== undefined) {
@@ -517,6 +518,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         const lastTurn = restoredPrefix.findLast(event => event.type === 'turn/end')
         turn = lastTurn?.type === 'turn/end' ? lastTurn.data.turn + 1 : 1
         this.timeContext?.seed(session, restoredPrefix)
+        this.agentInstructions?.seed(session, restoredPrefix)
       } else {
         const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
         const closers = interruptedTurnClosers(stored.events)
@@ -527,6 +529,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         session = Session.fromRestore(id, repaired, writer.header, writer.inheritedEventCount, stored.eventState,
           (event) => { pending.push(event) })
         this.timeContext?.seed(session, repaired)
+        this.agentInstructions?.seed(session, stored.events)
         restoredPrefix = [...repaired, ...pending]
         acceptedPreset = foldNativeAgentPresetFacts(session.header, restoredPrefix).preset
       }

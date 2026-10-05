@@ -1,6 +1,6 @@
 /** Native workspace instructions prepared against the single durable Session authority. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session/native'
+import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session/native'
 import type { NativeToolExecution, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -17,6 +17,40 @@ export class NativeAgentInstructions {
   private readonly nestedTouches = new WeakMap<NativeToolExecution, string[]>()
   /** @param composer - shared instruction discovery and durable reconciliation. @param lifetime - installation cancellation. */
   constructor(private readonly composer: InstructionComposer, private readonly lifetime: AbortSignal) {}
+
+  /**
+   * Restore discovery hints from accepted calls and their successful durable results.
+   * @param session - exact restored Session whose cwd resolves relative file paths.
+   * @param events - writer-owned committed history, including inherited calls.
+   */
+  seed(session: Session, events: readonly SessionEvent[]): void {
+    if (this.lifetime.aborted) return
+    const calls = new Map(events.filter(event => event.type === 'tool/call').map(event => [event.seq, event]))
+    const paths: string[] = []
+    for (const event of events) {
+      if (event.type !== 'tool/result' || event.data.error !== undefined) continue
+      for (const block of event.data.message.content) {
+        if (block.type !== 'tool-result' || block.isError) continue
+        for (const seq of event.sourceEventSeqs ?? []) {
+          const call = calls.get(seq)
+          if (call === undefined || call.data.callId !== block.toolCallId
+            || call.data.turn !== event.data.turn || call.data.step !== event.data.step
+            || !['read', 'write', 'edit'].includes(call.data.name)) continue
+          let argumentsValue: unknown
+          try { argumentsValue = JSON.parse(call.data.arguments) }
+          catch (error) {
+            if (!(error instanceof SyntaxError)) throw error
+            continue
+          }
+          if (typeof argumentsValue !== 'object' || argumentsValue === null
+            || !('file_path' in argumentsValue) || typeof argumentsValue.file_path !== 'string') continue
+          const path = argumentsValue.file_path.trim()
+          if (path.length > 0) paths.push(path)
+        }
+      }
+    }
+    this.touches.set(session, [...new Set([...this.touches.get(session) ?? [], ...paths])])
+  }
 
   /**
    * Observe a persisted tool result without starting background file reads.
