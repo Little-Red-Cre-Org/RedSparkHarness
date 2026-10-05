@@ -9374,6 +9374,12 @@ importers:
 
   rsh/Programs/TUI/native-tui:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm

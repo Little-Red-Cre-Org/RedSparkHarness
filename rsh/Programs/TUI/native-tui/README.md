@@ -24,7 +24,7 @@ The native terminal supports multiple conversation turns, live output and file t
 
 The `./native` entry is assembled by `dsh --profile native-tui`. It uses the [shared executor configuration](../../../Engine/core/native-headless/README.md#configuration) and requires `locale` (`en` or `zh`), `background` (`#rrggbb`), and positive safe integers `maxQueuedInputs`, `maxHistoryEvents`, `maxTranscriptEvents`, `maxStreamChunks`, and `maxPendingHumanRequests`. History reads exceeding their limit fail; presentation and streamed chunks retain their configured recent counts.
 
-New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input. Outside a human request, Esc stops the active turn and sends a nonempty draft. Ctrl+C stops while busy or exits while idle. `/help`, `/sessions`, `/model`, `/reasoning`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
+New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input. Outside a human request, Esc stops the active turn and sends a nonempty draft. Ctrl+C stops while busy or exits while idle. `/help`, `/sessions`, `/mode`, `/model`, `/reasoning`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
 
 The shipped profile installs `modelSelection`; its adapter provides `modelDirectory`. `/model` reads advertised models and isolated Provider failures; `/reasoning` reads the selected model's actual efforts. Enter a displayed number to commit the complete choice, or Esc to dismiss. Both require an idle terminal without queued input. Selections compare the observed durable revision under the shared executor's exclusive Session maintenance and persist before affecting the next turn. Cold restore retains the choice. The header shows the selected route and effective effort; input modalities and context capacity come from the actual Provider, with unknown metadata marked explicitly. Custom compositions without both Providers report unavailable controls.
 
@@ -33,6 +33,8 @@ Tool approvals offer `/allow` for one operation or `/deny`; model questions acce
 `/sessions` lists stored Session identities in the configured workspace while the terminal is idle and has no queued input or pending human request. Enter a displayed number to restore that Session through the existing executor, or Esc to dismiss. A human request cancels pending selector work and closes visible menus; their selection input never answers the request. Restore replaces transcript and model observations only after history succeeds, clears the previous retry input, and submits no model request. Subsequent input belongs to the selected Session. The persistence Provider owns discovery and the executor retains writer ownership.
 
 The application declares the shared executor’s optional `modelSelection` service; a configured Provider applies durable selections to subsequent turns.
+
+`/mode` lists standing compositions from the selected `agentPresets` Registry before the first turn. A numbered choice goes through the root executor's durable revision check and Agent replacement; the terminal receives only metadata and recorded selection facts. Started Sessions refuse changes, including after cold restore. The menu submits no model request. Custom profiles install the Registry and its standing compositions explicitly; the shipped template does not yet install them, and unavailable controls report that missing Provider.
 
 <a id="implementation"></a>
 ## Implementation
@@ -57,7 +59,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Preset and permission selectors, Plan/Todo panels, contributed commands are not connected.
+- Shipped preset installation, permission selectors, Plan/Todo panels and contributed commands are not connected.
 - Page Up and Page Down browse retained transcript rows using the shared rendered-line estimate. Sending input, restoring a Session or clearing the view returns to the bottom. Large individual messages and streamed output remain presentation-limited while complete accepted output stays in Session.
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 

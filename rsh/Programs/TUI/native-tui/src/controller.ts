@@ -10,10 +10,13 @@ import type { TerminalModelOperations, TerminalModelState } from './models.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import { applyModelSelectionProjection, type ModelSelectionProjectionState } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
+import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
+import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
+  readonly presets?: TerminalPresetOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -182,7 +185,7 @@ export class TerminalController implements TerminalInteraction {
       if (this.state.human !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
       this.selectedId = id
       this.modelProjection = events.reduce(applyModelSelectionProjection, { lastUsed: null, pending: null })
-      this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined,
+      this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined, preset: undefined,
         choice: this.modelProjection.pending ?? this.modelProjection.lastUsed })
     })
   }
@@ -197,6 +200,26 @@ export class TerminalController implements TerminalInteraction {
       this.modelProjection = { lastUsed: model.state.lastUsed, pending: model.state.next }
       this.publish({ model, choice: model.state.next ?? this.state.choice })
       return model
+    })
+  }
+
+  /** @returns installed compositions and complete durable selection facts while exclusively idle. */
+  presets(): Promise<TerminalPresetState> { return this.presetOperation((presets, signal) => presets.read(this.selectedId, signal)) }
+
+  /** @param request - installed composition and observed revision. @returns committed blank-Session choice. */
+  selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState> {
+    return this.presetOperation((presets, signal) => presets.select(this.selectedId, request, signal))
+  }
+
+  private presetOperation(
+    operation: (presets: TerminalPresetOperations, signal: AbortSignal) => Promise<TerminalPresetState>,
+  ): Promise<TerminalPresetState> {
+    return this.idleOperation(async (signal) => {
+      const presets = this.execution.presets
+      if (presets === undefined) throw new Error(terminalCopy(this.config.locale).presetUnavailable)
+      const preset = await operation(presets, signal)
+      this.publish({ preset })
+      return preset
     })
   }
 
