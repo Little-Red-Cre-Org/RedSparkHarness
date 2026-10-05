@@ -1308,7 +1308,7 @@ function renderEventRelations(pkgs: Pkg[], events: readonly EventEntry[]): strin
     const directoryName = pkg.rel.split('/').at(-1)
     if (directoryName !== undefined) pkgsByShort.set(directoryName, pkg)
   }
-  const maintenance = 'generated: Cordis event declarations and producer/listener edges are resolved from separate Host and Client TypeScript Programs, then merged by event'
+  const maintenance = 'generated: Cordis event declarations come from the Host catalog; producer/listener edges are resolved from separate Host and Client TypeScript Programs, then merged by event'
   const lines = generatedHeader('Event Producer And Consumer Matrix')
   lines.push(
     'This matrix shows which packages dispatch each harness-owned event and which packages listen to it. Events are many-to-many, so the dense relation data is presented as a table rather than one large graph. Receiver and event-name types also cover contained dispatch sites that deliberately bypass `ctx.emit`, such as subagent lifecycle containment.',

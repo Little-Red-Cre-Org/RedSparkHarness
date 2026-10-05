@@ -106,4 +106,4 @@
 | `slots/changed` | [`client-ui-renderer`](../Programs/Web/client/ui-renderer) (`emit`) | - |
 | `theme/change` | [`client-ui-theme`](../Programs/Web/client/ui-theme) (`emit`) | [`client-ui-layout`](../Programs/Web/client/ui-layout), [`client-ui-theme`](../Programs/Web/client/ui-theme) |
 
-Maintenance mode: generated: Cordis event declarations and producer/listener edges are resolved from separate Host and Client TypeScript Programs, then merged by event.
+Maintenance mode: generated: Cordis event declarations come from the Host catalog; producer/listener edges are resolved from separate Host and Client TypeScript Programs, then merged by event.
