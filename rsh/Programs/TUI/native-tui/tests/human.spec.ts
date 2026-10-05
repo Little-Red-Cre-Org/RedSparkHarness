@@ -44,6 +44,9 @@ it('answers exact root requests, refuses stale input and drains cancelled or rem
     const allowed = approval(request)
     const shown = controller.snapshot().human!
     expect(shown).toMatchObject({ kind: 'approval', toolName: 'write_file' })
+    await expect(controller.sessions()).rejects.toThrow('idle terminal')
+    await expect(controller.selectSession(SessionId('another'))).rejects.toThrow('idle terminal')
+    expect(controller.ownsSession(id)).toBe(true)
     expect(() =>{  controller.answerHuman('yes', shown) }).toThrow('/allow')
     controller.answerHuman('/allow', shown)
     expect(await allowed).toBe('allowed-once')

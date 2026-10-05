@@ -65,7 +65,10 @@ export class TerminalController implements TerminalInteraction {
     this.selectedId = id
     this.lifetime = AbortSignal.any([ownerSignal, this.shutdown.signal])
     this.human = new TerminalHumanInteraction(config.maxPendingHumanRequests, terminalCopy(config.locale),
-      (human) => { this.publish({ human }) })
+      (human) => {
+        if (human !== undefined && this.maintenance) this.active?.abort(new Error(terminalCopy(config.locale).modelBusy))
+        this.publish({ human })
+      })
   }
 
   /** @returns the current immutable renderer observation. */
@@ -174,6 +177,7 @@ export class TerminalController implements TerminalInteraction {
       await this.execution.open(id, true, signal)
       const events = await this.execution.history(id, signal)
       signal.throwIfAborted()
+      if (this.state.human !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
       this.selectedId = id
       this.modelProjection = events.reduce(applyModelSelectionProjection, { lastUsed: null, pending: null })
       this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined,
@@ -197,7 +201,7 @@ export class TerminalController implements TerminalInteraction {
   private async idleOperation<Result>(operation: (signal: AbortSignal) => Promise<Result>): Promise<Result> {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
-    if (this.draining !== undefined || this.queue.length !== 0) throw new Error(copy.modelBusy)
+    if (this.draining !== undefined || this.queue.length !== 0 || this.state.human !== undefined) throw new Error(copy.modelBusy)
     const controller = new AbortController()
     this.active = controller
     this.maintenance = true

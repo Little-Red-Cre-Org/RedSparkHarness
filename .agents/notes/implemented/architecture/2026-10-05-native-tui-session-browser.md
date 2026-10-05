@@ -10,7 +10,7 @@ An interactive terminal needs to restore stored conversations without process re
 
 ## Decision
 
-The selected persistence Provider lists Session identities in the configured workspace. The terminal admits discovery and restore only while idle, using the same cancellation and drain interval as model controls. The existing executor opens the selected Session and its bounded history reader supplies validated events.
+The selected persistence Provider lists Session identities in the configured workspace. The terminal admits discovery and restore only while idle without a pending human request, using the same cancellation and drain interval as model controls. Human requests cancel selector work and dismiss visible menus without submitting their selection input as an answer. The existing executor opens the selected Session and its bounded history reader supplies validated events.
 
 The controller changes its selected identity and transcript only after restore succeeds. It reconstructs model observations from durable events and clears metadata belonging to the prior conversation. The renderer clears its view offset and retry input after accepted restore. Subsequent user input targets the selected Session; discovery and restore submit no model request.
 

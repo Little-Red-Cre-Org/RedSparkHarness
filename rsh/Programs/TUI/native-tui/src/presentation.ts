@@ -82,6 +82,10 @@ export function TerminalView({ interaction, locale, model, background }: {
   }>()
   const { stdout } = useStdout()
   useEffect(() => interaction.subscribe(() => { setState(interaction.snapshot()) }), [interaction])
+  useEffect(() => {
+    if (state.human === undefined || menu === undefined && sessionMenu === undefined) return
+    setMenu(undefined); setSessionMenu(undefined); setInput(''); setNotice(copy.menuInterrupted)
+  }, [state.human, menu, sessionMenu, copy.menuInterrupted])
   useInput((keyInput, key) => {
     if (key.ctrl && keyInput === 'c') { if (state.busy) interaction.cancel(); else interaction.exit() }
     if (key.escape && menu !== undefined) { setMenu(undefined); setNotice(''); return }
@@ -97,6 +101,10 @@ export function TerminalView({ interaction, locale, model, background }: {
     if (text === '') return
     if (text === '/exit' || text === '/quit') { interaction.exit(); return }
     if (state.human !== undefined) {
+      if (menu !== undefined || sessionMenu !== undefined) {
+        setMenu(undefined); setSessionMenu(undefined); setNotice(copy.menuInterrupted)
+        return
+      }
       try { interaction.answerHuman(text, state.human); setNotice('') } catch (error: unknown) { setNotice(String(error)) }
       return
     }
@@ -120,6 +128,7 @@ export function TerminalView({ interaction, locale, model, background }: {
     }
     if (text === '/sessions') {
       void interaction.sessions().then((sessions) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
         setSessionMenu(sessions.length === 0 ? undefined : sessions)
         setNotice(sessions.length === 0 ? copy.noSessions : '')
       }, (error: unknown) => { setNotice(String(error)) })
@@ -127,6 +136,7 @@ export function TerminalView({ interaction, locale, model, background }: {
     }
     if (text === '/model' || text === '/reasoning') {
       void interaction.models().then((observed) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
         const selected = observed.state.next ?? model
         const choices = text === '/model' ? observed.catalog.groups.flatMap(group => group.models.map(entry => ({ provider: group.id, model: entry.id })))
           : [{ provider: selected.provider, model: selected.model },
