@@ -628,6 +628,7 @@
       "@deepseek-ai/dsh-tool-fs-search/native": ["./rsh/Modules/Official/fs/tool-fs-search/src/native.ts"],
       "@deepseek-ai/dsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"],
       "@deepseek-ai/dsh-tool-terminal/native": ["./rsh/Modules/Official/terminal/tool-terminal/src/native.ts"],
+      "@deepseek-ai/dsh-tool-todo/client-native": ["./rsh/Modules/Official/todo/tool-todo/src/client-native.ts"],
       "@deepseek-ai/dsh-user-question-broker/native": ["./rsh/Modules/Official/interaction/user-question-broker/src/native.ts"],
       "@deepseek-ai/dsh-user-questions/broker": ["./rsh/Modules/Official/interaction/user-questions/src/broker.ts"],
       "@deepseek-ai/dsh-user-questions/native": ["./rsh/Modules/Official/interaction/user-questions/src/native.ts"],
