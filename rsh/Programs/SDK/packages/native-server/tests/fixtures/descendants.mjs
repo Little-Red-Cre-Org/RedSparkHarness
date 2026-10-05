@@ -12,7 +12,7 @@ export const plugin = {
   requires: ['sessionExecution', 'activeSessions', 'fs', 'sessionPersistence', 'model', 'modelExecution', 'agents'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection'],
   provides: [],
-  resolve: () => (context) => {
+  resolve: (config) => (context) => {
     const execution = context.require('sessionExecution')
     let foreign
     const tools = context.optional('tools')
@@ -23,6 +23,32 @@ export const plugin = {
         context.require('activeSessions').owners().find(owner => owner.agent === request.agent).session).cwd, 'answerer-called'), 'called')
       return 'allowed-once'
     }))
+    context.own(tools.register({
+      schema: { name: 'fixture_wait_settlement', description: 'Wait for the actual child settlement notice in the parent inbox.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } },
+      execute: async call => {
+        const owner = context.require('activeSessions').owners().find(value => value.agent === call.agent)
+        if (!owner) throw new Error('fixture settlement requires the exact active parent')
+        const accepted = Promise.withResolvers()
+        const select = event => {
+          if (event.type !== 'agent/inbox/spliced') return
+          const notice = event.data.inserted.find(message => message.source.kind === 'subagent-settled'
+            && message.source.summary.includes('finished and will do no further work'))
+          if (notice) accepted.resolve(notice)
+        }
+        const release = owner.onEvent(select)
+        const abort = () => accepted.reject(call.signal.reason)
+        call.signal.addEventListener('abort', abort, { once: true })
+        try {
+          call.signal.throwIfAborted()
+          for (const event of await owner.readEvents({ signal: call.signal })) select(event)
+          const ready = await fetch(config.settlementReadyUrl, { signal: call.signal })
+          if (!ready.ok) throw new Error('fixture settlement readiness was rejected')
+          const notice = await accepted.promise
+          return { content: notice.content, isError: false }
+        } finally { release(); call.signal.removeEventListener('abort', abort) }
+      },
+    }, context.scope))
     context.own(tools.register({
       schema: { name: 'fixture_wait', description: 'Wait until the initiating Session is cancelled.',
         parameters: { type: 'object', properties: {}, additionalProperties: false } },

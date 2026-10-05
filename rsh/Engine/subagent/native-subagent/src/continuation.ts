@@ -1,11 +1,12 @@
 /** Continuable child admission over the selected Program's existing residency and writer. */
 import { randomUUID } from 'node:crypto'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
+import { foldConsumedWork } from '@deepseek-ai/dsh-native-agent/consumed-work'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import { createUserMessage, type ContentBlock, type MessageId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session } from '@deepseek-ai/dsh-session/native'
 import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
-import { createAdjacentAgentMessage, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData } from '@deepseek-ai/dsh-subagent-protocol'
+import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData } from '@deepseek-ai/dsh-subagent-protocol'
 import type { NativeSubagentRequest } from './index.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }
@@ -42,6 +43,7 @@ export class NativeSubagentContinuations {
     })
     const child = await operations.open({ id, resume: false, config: request.config, maxDepth: request.maxDepth,
       prepare: (setup) => { this.prepare(request, setup) },
+      onSettled: this.settlement(operations, request.agent, request.session, id, 0),
     }, signal)
     this.own(child, request.agent)
     try {
@@ -100,7 +102,9 @@ export class NativeSubagentContinuations {
       if (observed.header.delegationDepth !== depth) throw new Error('native-subagent: stored child depth differs from its direct parent')
       const request = this.resolveRestored(agent, session, observed, descriptor, depth)
       const handle = await operations.open({ id: target, resume: true, config: request.config, maxDepth: depth,
-        prepare: (setup) => { this.prepare(request, setup) } }, signal)
+        prepare: (setup) => { this.prepare(request, setup) },
+        onSettled: this.settlement(operations, agent, session, target, observed.events.length),
+      }, signal)
       child = this.own(handle, agent)
       materialized = true
       try { signal.throwIfAborted(); this.assertOpen() } catch (error: unknown) { return this.closeAfterFailure(handle, error) }
@@ -133,6 +137,20 @@ export class NativeSubagentContinuations {
     const results = await Promise.allSettled([...this.children.values()].map(child => child.handle.dispose()))
     const failures = new Set([...this.failures, ...results.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])])
     if (failures.size > 0) throw new AggregateError([...failures], 'native-subagent: continuable child release failed')
+  }
+
+  private settlement(operations: NativeSessionContinuations, parent: NativeAgent, session: Session,
+    id: SessionId, boundary: number): (result: unknown, failure: unknown) => Promise<void> {
+    return async (_result, failure) => {
+      if (this.closing || this.context.signal.aborted) return
+      const own = failure === undefined ? (await operations.observe(id, this.context.signal)).events.slice(boundary) : []
+      const output = failure === undefined ? finalAssistantOutput(own) : undefined
+      const terminal = { stopReason: failure === undefined ? subagentEpochStopReason(foldConsumedWork(own)) : 'error',
+        ...output === undefined ? {} : { output } }
+      const residentParent = this.children.get(session.id)
+      const wake = residentParent?.handle.agent === parent && !residentParent.handle.isClosing
+      await operations.deliver(session.id, createSettlementMessage(id, terminal), 'next-turn', wake, this.context.signal)
+    }
   }
 
   private resolveRestored(agent: NativeAgent, session: Session, observed: NativeContinuationObservation,

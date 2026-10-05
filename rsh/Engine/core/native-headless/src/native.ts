@@ -1585,10 +1585,51 @@ export class NativeHeadlessApplication implements NativeApplication {
         const owner = await NativeContinuationSession.restore(this.storage, id, AbortSignal.any([signal, agentSignal]))
         try { return await owner.enqueue(message, target, signal) } finally { await owner.close() }
       }
-      accepted = await (recipient.status === 'idle' ? recipient.runMaintenance(admit) : recipient.run(admit, signal))
+      accepted = await (recipient.status === 'idle' ? recipient.runMaintenance(admit)
+        : this.admitContinuationWhileBusy(recipient, id, message, target, signal, admit))
     }
     if (wake) this.queueRootWake(id, recipient)
     return accepted
+  }
+
+  private async admitContinuationWhileBusy(recipient: NativeAgentExecution, id: SessionId, message: UserMessage,
+    target: InboxTarget, signal: AbortSignal, admit: (signal: AbortSignal) => Promise<MessageId>): Promise<MessageId> {
+    const registry = this.activeSessionRegistry
+    if (registry === undefined) return recipient.run(admit, signal)
+    const effective = AbortSignal.any([signal, recipient.signal, this.context.signal])
+    const queuedCancellation = new AbortController()
+    const selectedLiveOwner = new Error('native-headless: continuation admitted by the active owner')
+    const accepted = Promise.withResolvers<MessageId>()
+    let claimed = false
+    const attached = (owner: NativeActiveSessionOwner): Promise<void> => {
+      if (claimed || owner.agent !== recipient.agent || owner.session.id !== id || !owner.writerAvailable
+        || this.executions.get(id)?.execution !== recipient || this.agents.get(recipient.agent.id) !== recipient.agent) {
+        return Promise.resolve()
+      }
+      claimed = true
+      queuedCancellation.abort(selectedLiveOwner)
+      // The attachment callback does not wait for an operation queued behind this same turn.
+      void owner.enqueue(message, target, false, effective).then(accepted.resolve, accepted.reject)
+      return Promise.resolve()
+    }
+    const release = registry.onAttached(attached)
+    const queued = recipient.run(async (composed) => {
+      if (claimed) return accepted.promise
+      claimed = true
+      return admit(composed)
+    }, AbortSignal.any([effective, queuedCancellation.signal]))
+    void queued.then(accepted.resolve, (error: unknown) => {
+      if (error !== selectedLiveOwner) accepted.reject(error)
+    })
+    for (const owner of registry.owners()) void attached(owner)
+    try { return await accepted.promise }
+    finally {
+      await release()
+      try { await queued } catch (error: unknown) {
+        // The live owner cancels only the still-queued alternative, before its body can acquire a writer.
+        if (error !== selectedLiveOwner) throw error
+      }
+    }
   }
 
   private queueRootWake(id: SessionId, recipient: NativeAgentExecution): void {

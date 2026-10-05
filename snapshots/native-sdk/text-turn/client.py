@@ -153,6 +153,10 @@ with DeepSeekHarness(config) as cold:
         assert len(refused_results) == 2 and all(event["data"]["message"]["content"][0]["isError"] is True for event in refused_results)
         sent = session.run("cold resume the continuable child")
         assert next(event for event in sent.events if event["type"] == "tool/result")["data"]["message"]["content"][0]["isError"] is False
+        notice = session.run("await the continuation settlement notice")
+        assert "Its closing message:" in json.dumps(notice.events)
+        assert result.final_response in json.dumps(notice.events)
+        session.run("consume the continuation notice")
         while True:
             notification = tree.next()
             if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \

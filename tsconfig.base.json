@@ -591,6 +591,7 @@
       "@deepseek-ai/dsh-mcp-client/acp-config": ["./rsh/Modules/Official/mcp/mcp-client/src/acp-config.ts"],
       "@deepseek-ai/dsh-mcp-client/native": ["./rsh/Modules/Official/mcp/mcp-client/src/native.ts"],
       "@deepseek-ai/dsh-mcp-client/types": ["./rsh/Modules/Official/mcp/mcp-client/src/types.ts"],
+      "@deepseek-ai/dsh-native-agent/consumed-work": ["./rsh/Engine/core/native-agent/src/consumed-work.ts"],
       "@deepseek-ai/dsh-native-model-execution/adapter-directory": ["./rsh/Engine/core/native-model-execution/src/adapter-directory.ts"],
       "@deepseek-ai/dsh-native-model-execution/model-directory": ["./rsh/Engine/core/native-model-execution/src/model-directory.ts"],
       "@deepseek-ai/dsh-native-model-execution/model-selection": ["./rsh/Engine/core/native-model-execution/src/model-selection.ts"],
