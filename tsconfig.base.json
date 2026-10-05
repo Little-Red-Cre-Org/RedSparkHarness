@@ -544,6 +544,7 @@
       "@deepseek-ai/dsh-tools/invariant": ["./rsh/Engine/core/tools/src/invariant.ts"],
       "@deepseek-ai/dsh-user-approval": ["./rsh/Modules/Official/interaction/user-approval/src"],
       "@deepseek-ai/dsh-user-approval/invariant": ["./rsh/Modules/Official/interaction/user-approval/src/invariant.ts"],
+      "@deepseek-ai/dsh-user-question-broker": ["./rsh/Modules/Official/interaction/user-question-broker/src"],
       "@deepseek-ai/dsh-user-questions": ["./rsh/Modules/Official/interaction/user-questions/src"],
       "@deepseek-ai/dsh-web": ["./rsh/Modules/Official/web/web/src"],
       "@deepseek-ai/dsh-web-app": ["./rsh/Compatibility/DSH/bundle/web-app/src"],
@@ -591,7 +592,12 @@
       "@deepseek-ai/dsh-tool-bash/native": ["./rsh/Modules/Official/shell/tool-bash/src/native.ts"],
       "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"],
       "@deepseek-ai/dsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"],
-      "@deepseek-ai/dsh-tool-terminal/native": ["./rsh/Modules/Official/terminal/tool-terminal/src/native.ts"]
+      "@deepseek-ai/dsh-tool-terminal/native": ["./rsh/Modules/Official/terminal/tool-terminal/src/native.ts"],
+      "@deepseek-ai/dsh-tool-ask-user/native": ["./rsh/Modules/Official/interaction/tool-ask-user/src/native.ts"],
+      "@deepseek-ai/dsh-user-question-broker/native": ["./rsh/Modules/Official/interaction/user-question-broker/src/native.ts"],
+      "@deepseek-ai/dsh-user-questions/broker": ["./rsh/Modules/Official/interaction/user-questions/src/broker.ts"],
+      "@deepseek-ai/dsh-user-questions/native": ["./rsh/Modules/Official/interaction/user-questions/src/native.ts"],
+      "@deepseek-ai/dsh-user-questions/protocol": ["./rsh/Modules/Official/interaction/user-questions/src/protocol.ts"]
       // END generated package aliases
     }
   }

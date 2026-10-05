@@ -212,6 +212,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Compatibility/DSH/boot/app-boot': { kind: 'indirect', reason: 'Only the loaded plugin tree contributes model context.' },
   'rsh/Compatibility/DSH/boot/cmdline': { kind: 'none', reason: 'Resolves the process command line before any session exists; configured rows own every model-visible consequence.' },
   'rsh/Modules/Official/interaction/permission-presets': { kind: 'indirect', reason: 'The service writes mechanism events rendered by dsh-user-approval and dsh-tool-bash.' },
+  'rsh/Modules/Official/interaction/user-question-broker': { kind: 'indirect', reason: 'The shared broker supplies answers to question Consumers; it creates no model messages or separate Session events.' },
   'rsh/Modules/Official/interaction/user-questions': { kind: 'indirect', reason: 'Model-facing consumers render provider answers and seam errors.' },
   'rsh/Core/util/timeout': { kind: 'indirect', reason: 'Only timeout consumers render timeout outcomes.' },
   'rsh/Core/util/output-retention': { kind: 'indirect', reason: 'Only retention consumers render retained content and omission metadata.' },
