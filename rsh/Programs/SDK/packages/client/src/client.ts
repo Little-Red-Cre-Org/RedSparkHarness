@@ -310,6 +310,22 @@ export class HarnessClient {
   }
 
   /**
+   * Copy a closed native-sdk turn into a fresh Session without a model request.
+   * @param sessionId - readable source Session under the initialized workspace.
+   * @param destinationSessionId - fresh destination identity; existing identities reject.
+   * @param atSeq - source event in a closed turn; omitted selects its last closed turn.
+   * @returns the durable destination identity; unsupported profiles reject.
+   */
+  async fork(sessionId: string, destinationSessionId: string, atSeq?: number): Promise<string> {
+    const result = await this.request('session/fork', { sessionId, destinationSessionId,
+      ...atSeq === undefined ? {} : { atSeq } })
+    if (!isRecord(result) || typeof result.sessionId !== 'string' || result.sessionId !== destinationSessionId) {
+      throw new SdkProtocolError(`session/fork returned no matching Session identity: ${JSON.stringify(result)}`)
+    }
+    return result.sessionId
+  }
+
+  /**
    * Send one JSON-RPC request and await its result.
    * @param method - the wire method name.
    * @param params - the params object; omitted params send `{}`.

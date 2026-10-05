@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, TypeAlias, TypeVar
 
-from pydantic import BaseModel, StrictBool
+from pydantic import BaseModel, StrictBool, StrictStr
 
-from .errors import JsonRpcError, TransportClosedError
+from .errors import JsonRpcError, SdkProtocolError, TransportClosedError
 from .models import IncomingRequest, InitializeResponse, JsonObject, JsonValue, Notification
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -38,6 +38,10 @@ class HarnessConfig:
 
 class _SessionCancelResponse(BaseModel):
     cancelled: StrictBool
+
+
+class _SessionForkResponse(BaseModel):
+    sessionId: StrictStr
 
 
 class HarnessClient:
@@ -200,6 +204,20 @@ class HarnessClient:
         return self.request(
             "session/cancel", {"sessionId": session_id}, response_model=_SessionCancelResponse
         ).cancelled
+
+    def session_fork(self, session_id: str, destination_session_id: str, at_seq: int | None = None) -> str:
+        """Copy a closed native-sdk turn into a fresh Session without running it.
+
+        The optional source event must belong to a closed turn; omission selects the last closed turn.
+        Existing destinations and unsupported profiles reject the request.
+        """
+        payload: JsonObject = {"sessionId": session_id, "destinationSessionId": destination_session_id}
+        if at_seq is not None:
+            payload["atSeq"] = at_seq
+        result = self.request("session/fork", payload, response_model=_SessionForkResponse)
+        if result.sessionId != destination_session_id:
+            raise SdkProtocolError("session/fork returned a different Session identity")
+        return result.sessionId
 
     def request(
         self,

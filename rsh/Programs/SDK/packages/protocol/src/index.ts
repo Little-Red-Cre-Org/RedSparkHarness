@@ -22,6 +22,8 @@ export type {
   SessionCancelParams,
   SessionCancelResult,
   SessionEventNotification,
+  SessionForkParams,
+  SessionForkResult,
   SessionStatusNotification,
   SessionPromptParams,
   SessionPromptResult,

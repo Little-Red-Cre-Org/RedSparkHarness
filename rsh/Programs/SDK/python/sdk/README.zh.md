@@ -34,6 +34,8 @@ print(result.final_response)
 
 显式选择 `profile="native-sdk"` 后，`Session.cancel()` 与 `HarnessClient.session_cancel(session_id)` 等待已接收轮次取消；无活动轮次时返回 False。`on_notification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
+`Session.fork(destination_session_id, at_seq=None)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.session_fork` 提供协议回执。分叉不调用模型。
+
 ## 自定义插件
 
 持久自定义属于 `dsh` profile。使用运行时 wheel 包提供的 `dsh` 命令初始化随附的 SDK profile，并安装外部 bundle：

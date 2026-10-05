@@ -33,13 +33,14 @@ The [Core transport](../../../../Core/util/json-rpc-line/README.md) owns newline
 
 ### The SDK methods
 
-The compatibility profile serves the original three request methods and four notifications. The native-sdk profile also serves per-Session cancellation and live model chunks.
+The compatibility profile serves the original three request methods and four notifications. The native-sdk profile also serves per-Session cancellation, closed-turn forks and live model chunks.
 
 | Direction | Method | Payload types |
 |---|---|---|
 | client→server | `initialize` | `InitializeParams` → `InitializeResult` |
 | client→server | `session/prompt` | `SessionPromptParams` → `SessionPromptResult` (durable enqueue receipt) |
 | client→server | `session/cancel` | `SessionCancelParams` → `SessionCancelResult` (native-sdk only) |
+| client→server | `session/fork` | `SessionForkParams` → `SessionForkResult` (native-sdk only) |
 | client→server | `shutdown` | no params → `{}` |
 | server→client | `session.chunk` | `SessionChunkNotification` (native-sdk live model projection) |
 | server→client | `session.event` | `SessionEventNotification` (every session in the runtime, unfiltered) |

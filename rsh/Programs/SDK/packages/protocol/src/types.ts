@@ -52,6 +52,22 @@ export interface SessionCancelResult {
   cancelled: boolean
 }
 
+/** Parameters for copying a closed native Session turn into a fresh identity. */
+export interface SessionForkParams {
+  /** Readable source Session under the initialized workspace. */
+  sessionId: string
+  /** Fresh destination Session; existing identities are rejected. */
+  destinationSessionId: string
+  /** Source event whose containing turn has ended; omitted selects the last closed turn. */
+  atSeq?: number
+}
+
+/** Reply after the copied history and fork marker are durable. */
+export interface SessionForkResult {
+  /** Fresh Session identity ready for a resumed prompt. */
+  sessionId: string
+}
+
 /** Live projection of an accepted model chunk; not another durable event stream. */
 export interface SessionChunkNotification {
   /** Session whose selected model dispatch accepted the chunk. */
@@ -136,6 +152,7 @@ export interface HarnessSdkNotificationMap {
 export interface HarnessSdkRequestMap {
   'initialize': { params: InitializeParams; result: InitializeResult }
   'session/cancel': { params: SessionCancelParams; result: SessionCancelResult }
+  'session/fork': { params: SessionForkParams; result: SessionForkResult }
   'session/prompt': { params: SessionPromptParams; result: SessionPromptResult }
   'shutdown': { params: undefined; result: Record<string, never> }
 }

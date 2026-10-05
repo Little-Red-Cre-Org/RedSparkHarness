@@ -14,7 +14,7 @@ Status: implemented
 
 ## Consequences
 
-取消等待选定轮次结束；排队提示与其它 Session 独立。流通知不新增 writer 或持久化日志，完成消息与中断尝试重建已接收分块。原生 profile 仍需显式选择。同 id 冷恢复保持支持；SDK Session 分叉仍是独立未实现模块。
+取消等待选定轮次结束；排队提示与其它 Session 独立。流通知不新增 writer 或持久化日志，完成消息与中断尝试重建已接收分块。原生 profile 仍需显式选择。同 id 冷恢复保持支持；SDK Session 分叉由[分叉投影](2026-10-05-native-sdk-fork.zh.md)提供。
 
 ## Alternatives considered
 

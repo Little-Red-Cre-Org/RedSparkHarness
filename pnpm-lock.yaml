@@ -2219,12 +2219,12 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
-      '@deepseek-ai/dsh-tool-code-runtime':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
 
   rsh/Engine/core/native-jobs:
     dependencies:
@@ -8060,6 +8060,9 @@ importers:
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -8069,9 +8072,6 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../Engine/core/native-tools
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-web-host':
         specifier: workspace:^
         version: link:../Web/host/native-web-host
@@ -8590,6 +8590,9 @@ importers:
 
   rsh/Programs/SDK/packages/native-server:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -8611,6 +8614,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
