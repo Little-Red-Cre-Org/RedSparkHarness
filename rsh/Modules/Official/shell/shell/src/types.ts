@@ -7,11 +7,11 @@
  * @module dsh-shell/types
  */
 
-import type { SandboxEnforcement, SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
-import type { CollectedOutput, DshEnvironment } from '@deepseek-ai/dsh-subprocess'
+import type { SandboxEnforcement, SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
+import type { CollectedOutput, DshEnvironment } from '@deepseek-ai/dsh-subprocess/native'
 
-export { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-subprocess'
-export type { CollectedOutput, DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-subprocess'
+export { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-subprocess/native'
+export type { CollectedOutput, DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-subprocess/native'
 
 /**
  * Sandbox facts for one run, present iff a sandboxing executor handled it.

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-28-native-shell-definition-and-local-bash.md
+2026-09-28-native-shell-definition-and-local-bash.md: c74f1b3a330ad2c89cfe312ffebede5d43791f47
+2026-09-28-native-shell-definition-and-local-bash.zh.md: 647b8b7ea2b9d59b539b7f2662159568945d2db9

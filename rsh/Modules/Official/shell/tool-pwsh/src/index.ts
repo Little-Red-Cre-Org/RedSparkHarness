@@ -33,6 +33,7 @@ import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandb
 import { ESCALATION_TARGETS, approveEscalation, validateEscalationArgs } from '@deepseek-ai/dsh-sandbox'
 import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
 import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
+import { canonicalShellResult } from '@deepseek-ai/dsh-shell/native'
 import { parseExitStatus } from '@deepseek-ai/dsh-shell'
 import { processOutcome } from './background.ts'
 import { renderPwshProcessRead, renderPwshResult } from './render.ts'
@@ -157,32 +158,10 @@ function resolveWorkdir(modelWorkdir: string | undefined, exec: { agent?: Agent 
 
 /** Detach the executor DTO from readonly Service Definition types into plain JSON data. */
 function canonicalPwshResult(result: ShellRunResult): PwshForegroundResult {
-  const output = (stream: ShellRunResult['stdout']) => ({
-    text: stream.text,
-    truncated: stream.truncated,
-    ...stream.spillPath !== undefined ? { spillPath: stream.spillPath } : {},
-  })
-  return {
-    kind: 'foreground',
-    exitCode: result.exitCode,
-    signal: result.signal,
-    timedOut: result.timedOut,
-    aborted: result.aborted,
-    timeoutMs: result.timeoutMs,
-    /* jscpd:ignore-start -- the canonical projection and background-handle shape mirror dsh-tool-bash's by design (Agent Note). */
-    stdout: output(result.stdout),
-    stderr: output(result.stderr),
-    ...result.sandbox !== undefined ? {
-      sandbox: {
-        mode: result.sandbox.mode,
-        denied: result.sandbox.denied,
-        ...result.sandbox.enforcement !== undefined ? { enforcement: result.sandbox.enforcement } : {},
-        ...result.sandbox.runnerFailed !== undefined ? { runnerFailed: result.sandbox.runnerFailed } : {},
-      },
-    } : {},
-  }
+  return { kind: 'foreground', ...canonicalShellResult(result) }
 }
 
+/* jscpd:ignore-start -- background handles share the Bash result fields. */
 /** Canonical background-handle properties shared by the pwsh output union. */
 const BACKGROUND_OUTPUT_PROPERTIES = {
   kind: { type: 'string', required: true, const: 'background' },

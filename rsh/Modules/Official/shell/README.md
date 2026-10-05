@@ -25,6 +25,8 @@ The shell group provides command execution to agents: run a foreground command a
 | Package | Role | ctx key |
 |---|---|---|
 | [`shell`](shell/README.md) | Defines the executor contract: foreground runs, background handles, and request resolution | `ctx.shell` |
+| [`shell-process-local`](shell-process-local/README.md) | Shares process budgets, output collection, and cancellation between native and Cordis executors | Internal helper |
+| [`shell-sandbox-core`](shell-sandbox-core/README.md) | Shares confinement selection and result classification between native and Cordis executors | Internal helper |
 | [`bash-local`](bash-local/README.md) | Runs Bash commands as fresh `bash -c` processes on POSIX | registers `ctx.shell` |
 | [`bash-sandbox`](bash-sandbox/README.md) | Runs Bash commands confined through the sandbox capability, reporting denials as facts | registers `ctx.shell` |
 | [`pwsh-local`](pwsh-local/README.md) | Runs PowerShell commands as fresh `pwsh -Command` processes on Windows | registers `ctx.shell` |
@@ -35,7 +37,7 @@ The shell group provides command execution to agents: run a foreground command a
 | [`tool-pwsh`](tool-pwsh/README.md) | Exposes PowerShell execution to the model as the `pwsh` tool | registers on `ctx.tools` |
 | [`tool-pwsh-persistent`](tool-pwsh-persistent/README.md) | Runs model shell calls in one owner-isolated persistent PowerShell session | registers on `ctx.tools` |
 
-A profile layer selects exactly one executor implementation (the win32 layer swaps the POSIX rows for the pwsh ones; mounting two fails loudly at load time on the duplicate service registration) and the model-facing tools it needs. A sandboxed composition also selects a `ctx.sandbox` provider and `ctx.sandboxPolicy`; the [base bundle](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) owns the shipped wiring.
+A profile layer selects exactly one executor implementation (the win32 layer swaps the POSIX rows for the pwsh ones; mounting two fails loudly at load time on the duplicate service registration) and the model-facing tools it needs. A sandboxed composition also selects a sandbox Provider and policy Provider; the [base bundle](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) and shipped `native-headless` profile own their respective wiring.
 
 -----
 
