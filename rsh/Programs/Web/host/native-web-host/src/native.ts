@@ -8,7 +8,7 @@ import {
   type NativeHttpHost,
 } from '@deepseek-ai/dsh-native-web-assets'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { watch, type FSWatcher } from 'node:fs'
+import { NativeClientReloader } from './client-reload.ts'
 import { createHash } from 'node:crypto'
 import type { NativeWebHostService } from './index.ts'
 
@@ -120,7 +120,7 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-native-web-host',
   targets: ['host'],
   requires: ['credentials'],
-  provides: ['nativeWebHost', 'application'],
+  provides: ['nativeWebHost', 'hostConnection', 'application'],
   resolve(input) {
     const config = resolveNativeWebHostConfig(input)
     return async (context: NativeContext) => {
@@ -148,30 +148,33 @@ export const plugin: NativePlugin = {
           path: '/api/native-client/reload', methods: ['GET'], requestBody: 'buffered', fetch: reload,
         })
         : () => Promise.resolve()
-      let watcher: FSWatcher | undefined
-      let pendingReload: Promise<void> = Promise.resolve()
+      let reloader: NativeClientReloader | undefined
+      context.own(async () => {
+        const outcomes = await Promise.allSettled([
+          Promise.resolve().then(() => reloader?.close()),
+          Promise.resolve().then(routeDisposer),
+          Promise.resolve().then(() => host.close()),
+        ])
+        const failures: unknown[] = []
+        for (const outcome of outcomes) if (outcome.status === 'rejected') failures.push(outcome.reason)
+        if (failures.length > 0) throw new AggregateError(failures, 'Native Web Host cleanup failed')
+      })
       if (config.clientReload === 'live') {
-        watcher = watch(config.projectDir, { persistent: false }, (_event, filename) => {
-          if (filename !== 'rsh.client.json') return
-          pendingReload = pendingReload.then(async () => {
-            const candidate = await prepareNativeClientBundle(config.projectDir, config.runtimeDir)
-            if (candidate === undefined) return
+        reloader = new NativeClientReloader(bundle,
+          () => prepareNativeClientBundle(config.projectDir, config.runtimeDir),
+          (candidate) => {
             const nextRevision = createHash('sha256').update(JSON.stringify(candidate.wire)).digest('hex')
             if (nextRevision === revision) return
-            currentBundle = { ...candidate, wire: { ...candidate.wire, reload: { endpoint: '/api/native-client/reload', revision: nextRevision } } }
-            assets.update(currentBundle)
+            const nextBundle = { ...candidate, wire: { ...candidate.wire, reload: { endpoint: '/api/native-client/reload', revision: nextRevision } } }
+            assets.update(nextBundle)
+            currentBundle = nextBundle
             revision = nextRevision
-          }).catch((error: unknown) => { process.stderr.write(`native web: Client reload rejected: ${String(error)}\n`) })
-        })
+          }, (error) => { process.stderr.write(`native web: Client reload rejected: ${String(error)}\n`) })
+        await reloader.ready()
       }
+      context.provide('hostConnection', host.connection)
       context.provide('nativeWebHost', host)
       context.provide('application', new NativeWebApplication(host))
-      context.own(async () => {
-        watcher?.close()
-        await pendingReload
-        await routeDisposer()
-        await host.close()
-      })
     }
   },
 }

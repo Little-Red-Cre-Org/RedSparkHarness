@@ -168,11 +168,14 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-settings': ['lib/native.js'],
+  '@deepseek-ai/dsh-settings-file': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-launch-environment': ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-mcp-client': ['lib/native.js', 'lib/types.js', 'lib/shared-*.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
@@ -196,7 +199,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
-  '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js'],
+  '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-tools': [
     'lib/json-schema.js', 'lib/code-output.js', 'lib/ts-types.js', 'lib/py-types.js',
     'lib/ordered-dispatch.js', 'lib/types.js', 'lib/presentation.js', 'lib/shared-*.js',
