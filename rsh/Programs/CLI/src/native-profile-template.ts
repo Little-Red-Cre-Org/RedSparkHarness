@@ -81,6 +81,7 @@ export function shippedNativeProfileComposition(
         config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32 },
       }] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? [{ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT }] : []),
+      ...(profile === 'native-tui' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
