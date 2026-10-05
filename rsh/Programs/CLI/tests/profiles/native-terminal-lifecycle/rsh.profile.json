@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "scopes": [{ "id": "root" }],
+  "installations": [
+    { "id": "app", "plugin": "@deepseek-ai/dsh-native-headless", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED", "provider": "fixture", "model": "terminal-list", "systemPrompt": "List terminal sessions using terminal_list.", "maxSteps": 2, "builtinTools": false } },
+    { "id": "agents", "plugin": "@deepseek-ai/dsh-native-agent", "scope": "root" },
+    { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "scope": "root" },
+    { "id": "model-execution", "plugin": "@deepseek-ai/dsh-native-model-execution", "scope": "root" },
+    { "id": "storage", "plugin": "@deepseek-ai/dsh-session-persistence-jsonl", "scope": "root", "config": { "root": "PROFILE_PATCH_REQUIRED", "compression": "none" } },
+    { "id": "fs", "plugin": "@deepseek-ai/dsh-fs-local", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED" } },
+    { "id": "subprocess", "plugin": "@deepseek-ai/dsh-subprocess-local", "scope": "root" },
+    { "id": "sandbox-policy", "plugin": "@deepseek-ai/dsh-native-sandbox-policy", "scope": "root", "config": { "mode": "danger-full-access", "workspaceRoot": "PROFILE_PATCH_REQUIRED" } },
+    { "id": "terminal", "plugin": "@deepseek-ai/dsh-terminal", "scope": "root" },
+    { "id": "terminal-backend", "plugin": "@deepseek-ai/dsh-terminal-bash", "scope": "root", "config": { "type": "shell", "shellPath": "PROFILE_PATCH_REQUIRED", "shellArgs": [], "rows": 24, "cols": 80, "graceMs": 2000 } },
+    { "id": "terminal-tools", "plugin": "@deepseek-ai/dsh-tool-terminal", "scope": "root", "config": { "type": "shell", "enableRunInBackground": false } },
+    { "id": "model", "plugin": "native-terminal-fixture-model", "scope": "root" }
+  ]
+}

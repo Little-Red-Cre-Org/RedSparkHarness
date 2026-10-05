@@ -24,6 +24,8 @@ This Cordis-free library owns request budget resolution, managed subprocess laun
 
 No invariant companion is published because subprocess ownership and completion are enforced by the provider service, and request budgets are validated before constructing a controller.
 
+Output observers decode the existing captured byte events with one UTF-8 decoder per stream and stop publishing after cancellation or settlement. Cancelled background handles await managed-range exit before settlement; cleanup failure rejects `done`.
+
 ## Model Experience
 
 Indirectly, through the Bash and PowerShell tools that render these process results.

@@ -84,6 +84,9 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/shell/pwsh-sandbox', 'Cordis and native installers share confined process operations'],
   ['rsh/Modules/Official/shell/tool-bash', 'Cordis and native Consumers share Bash tool presentation'],
   ['rsh/Modules/Official/shell/tool-pwsh', 'Cordis and native Consumers share PowerShell tool presentation'],
+  ['rsh/Modules/Official/terminal/terminal', 'Cordis and native Definitions share Agent-owned PTY lifecycle'],
+  ['rsh/Modules/Official/terminal/terminal-bash', 'Cordis and native Providers share the subprocess terminal primitive'],
+  ['rsh/Modules/Official/terminal/tool-terminal', 'Cordis and native Consumers share terminal lifecycle tools'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
   ['rsh/Engine/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
@@ -141,6 +144,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Programs/Web/client/native-session', ['./follow-types']],
+  ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
@@ -167,6 +171,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
+  ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
   ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
   ['rsh/Core/util/launch-environment/layers', ['host']],

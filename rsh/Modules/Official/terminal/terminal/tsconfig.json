@@ -19,6 +19,15 @@
     },
     {
       "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/session"
     }
   ]
 }

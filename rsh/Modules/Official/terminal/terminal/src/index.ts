@@ -4,6 +4,7 @@
  * @module @deepseek-ai/dsh-terminal
  */
 
+import { TerminalError } from './error.ts'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { TerminalBackendCleanupError } from './types.ts'
@@ -51,25 +52,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-/** Machine-routable PTY service failures. */
-export type TerminalErrorCode =
-  | 'DUPLICATE_BACKEND'
-  | 'DUPLICATE_NAME'
-  | 'FOREIGN_SESSION'
-  | 'NO_BACKEND'
-  | 'NO_SESSION'
-  | 'OWNER_NOT_LIVE'
-  | 'SEND_ACTIVE'
-  | 'SERVICE_DISPOSING'
-
-/** Error carrying a stable {@link TerminalErrorCode}. */
-export class TerminalError extends Error {
-  constructor(message: string, readonly code: TerminalErrorCode) {
-    super(message)
-    this.name = 'TerminalError'
-  }
-}
-
+export { TerminalError, type TerminalErrorCode } from './error.ts'
 /**
  * Brand one registry-minted string as a {@link TerminalSessionId}.
  * @param value - raw registry-issued id.
