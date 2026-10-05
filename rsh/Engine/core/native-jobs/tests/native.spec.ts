@@ -38,21 +38,24 @@ function agent(id: string, parent: NativeScope): NativeAgent {
 
 describe('NativeJobRegistry', () => {
   it('owns output and completion state under one exact registered Agent', async () => {
-    const { host, root, agents, jobs } = await fixture()
+    const { host, root, agents, jobs } = await fixture({ maxOutputBytes: 12 })
     const owner = agent('owner', root)
     const release = Promise.withResolvers<undefined>()
     const unregister = agents.register(owner)
     try {
       const id = jobs.start({
         agent: owner, kind: 'subagent', label: 'inspect workspace',
-        async run() {
+        async run(_signal, publishOutput) {
+          publishOutput('old progress\n')
+          publishOutput('live output\n')
           await release.promise
           return { status: 'completed', detail: 'completed normally', output: 'result text' }
         },
       })
       expect(id).toBe(NativeJobId('subagent-1'))
       expect(jobs.get(id, owner)).toMatchObject({ id, status: 'running', owner })
-      expect(jobs.read(id, owner).output).toBe('')
+      expect(jobs.read(id, owner)).toMatchObject({ output: 'live output\n', truncated: true, snapshot: { status: 'running' } })
+      expect(jobs.read(id, owner).output).toBe('live output\n')
       release.resolve(undefined)
       await expect(jobs.wait(id, owner, 1_000)).resolves.toMatchObject({ status: 'completed', detail: 'completed normally' })
       expect(jobs.read(id, owner)).toMatchObject({ output: 'result text', snapshot: { status: 'completed' } })

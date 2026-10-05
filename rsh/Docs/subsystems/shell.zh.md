@@ -22,6 +22,11 @@ bash 执行 seam 分为 Service Definition（[dsh-shell](../../Modules/Official/
  * fully-resolved {@link ShellExecSpec}.
  */
 interface ShellExecRequest {
+  /** Observe decoded captured output without consuming it; the callback must not throw.
+   * @param stream - stdout or stderr.
+   * @param text - UTF-8 text delivered before cancellation or settlement.
+   */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   /** Working directory override (default: implementation-configured). */
   workdir?: string | undefined
@@ -72,6 +77,8 @@ interface ShellExecRequest {
  * background processes have no executor timeout.
  */
 interface ShellExecSpec {
+  /** Output observer carried through from {@link ShellExecRequest.onOutput}. */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   workdir: string
   timeoutMs: number
@@ -167,7 +174,7 @@ interface ShellSandboxInfo {
 
 ## 后台进程：`ShellProcess`
 
-`start()` 返回不含 id 或所有者的句柄。`dsh-tool-bash` 将它适配为 `ctx.jobs.start()` 钩子；随后由通用运行时拥有任务标识与生命周期。`done` 会在底层进程结算时完成且绝不 reject；subprocess 提供方的 rejection 会生成状态为 `killed` 的进程，并把不声明阶段的错误写入 stderr。进程结算后仍可读取，并且沙箱事实会在 `done` 完成前写入。
+`start()` 返回不含 id 或所有者的句柄。`dsh-tool-bash` 将它适配为 `ctx.jobs.start()` 钩子；随后由通用运行时拥有任务标识与生命周期。`done` 在取消或提供方失败后等待托管进程范围清理；清理观察失败会 reject。subprocess 提供方的 rejection 会生成状态为 `killed` 的进程，并把不声明阶段的错误写入 stderr。进程结算后仍可读取，并且沙箱事实会在 `done` 完成前写入。
 
 ```ts type-equiv
 /**
@@ -184,8 +191,9 @@ interface ShellProcess {
   /** Terminating signal name, when signal-killed. */
   signal: NodeJS.Signals | null
   /**
-   * Resolves when the underlying process settles (never rejects — provider
-   * rejection settles as `killed` with a stage-neutral error on stderr).
+   * Resolves after process settlement and, on cancellation or provider failure,
+   * managed-range exit. Provider rejection settles as `killed` with an error
+   * on stderr; failure to observe managed-range cleanup rejects.
    */
   readonly done: Promise<void>
   /** Sandbox facts, stamped once a confined process settles. */
@@ -241,7 +249,7 @@ Abstract bash execution service. Subclass, implement the abstract methods, and l
 Implementations must honor these semantics:
 
 - run rejects only for infrastructure failures. Nonzero exits, timeout kills, and abort kills resolve with a ShellRunResult.
-- start returns immediately; no timeout applies to background processes. `done` settles at process close and never rejects; spawn failures settle as `killed` with the error on stderr.
+- start returns immediately; no timeout applies to background processes. `done` awaits managed-range cleanup after cancellation or provider failure; cleanup observation failure rejects. Spawn failures settle as `killed` with the error on stderr.
 - ShellProcess.readOutput is incremental: consecutive reads never repeat output. Lossy reads report truncation and available spill files.
 - A still-running background process is stopped and awaited when its owning composition tears down. With the subprocess seam that boundary is `ctx.subprocess` disposal, so a background process survives an executor-only reload.
 

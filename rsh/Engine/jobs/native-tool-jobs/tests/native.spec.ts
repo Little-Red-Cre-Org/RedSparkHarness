@@ -97,7 +97,7 @@ describe('native job tools', () => {
       await expect(call('job_output', { job_id: id })).rejects.toThrow('belongs to another Agent')
       await expect(call('job_kill', { job_id: id })).rejects.toThrow('belongs to another Agent')
       await expect(call('job_output', { job_id: id, timeout_ms: 10 })).rejects.toThrow('requires wait: true')
-      await expect(call('job_list', { extra: true })).rejects.toThrow('unexpected argument')
+      await expect(call('job_list', { extra: true })).rejects.toThrow('additionalProperties: false')
     } finally {
       await releaseBob()
       await releaseAlice()
