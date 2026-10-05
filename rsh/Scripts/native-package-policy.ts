@@ -87,6 +87,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
   ['rsh/Engine/subagent/tool-subagent-control', 'Native and Cordis controls route adjacent messages and interruption through their selected Subagent Provider'],
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
@@ -146,6 +147,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],

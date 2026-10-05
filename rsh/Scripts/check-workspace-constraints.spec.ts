@@ -317,7 +317,8 @@ describe('package payload constraints', () => {
   it.each([
     ['@deepseek-ai/dsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-launch-environment', ['lib/native.js']],
+    ['@deepseek-ai/dsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([
       'lib/index.js',
@@ -332,7 +333,7 @@ describe('package payload constraints', () => {
 
   it('includes the Cordis-free sandbox policy type entry in the package', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
-      'lib/index.js', 'lib/native-types.js', 'lib/types/**/*.d.ts',
+      'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 })

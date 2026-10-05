@@ -6,7 +6,7 @@
 {"type":"system/message","data":{"turn":1,"step":1,"message":{"role":"system","content":[{"type":"text","text":"{{system}}"}],"source":{"kind":"plugin","plugin":"native-headless"},"id":"{{message:2}}"}},"surfaceOp":"append"}
 {"type":"user/message","data":{"content":[{"type":"text","text":"say hello through native SDK"}],"source":{"kind":"user"},"role":"user","id":"{{message:1}}"},"surfaceOp":"append"}
 {"type":"request/header","data":{"header":{"config":{"provider":"fixture","model":"fixture-model"},"tools":"{{tools}}"},"reason":"initial"}}
-{"type":"request/context","data":{"provider":"fixture","model":"fixture-model"}}
+{"type":"request/context","data":{"provider":"fixture","model":"fixture-model","contextWindow":262144}}
 {"type":"agent/inbox/spliced","data":{"target":"next-step","start":0,"inserted":[{"content":[{"type":"text","text":"redirect after cancellation"}],"source":{"kind":"user"},"role":"user","id":"{{message:3}}"}]}}
 {"type":"assistant/attempt","data":{"turn":1,"step":1,"stream":[{"type":"chunk","time":0,"chunk":{"type":"block-start","index":0,"blockType":"text"}},{"type":"text-chunks","time0":0,"index":0,"dt":[],"texts":["native SDK snapshot reply"]}]}}
 {"type":"step/end","data":{"turn":1,"step":1}}

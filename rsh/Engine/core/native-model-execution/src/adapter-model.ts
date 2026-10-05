@@ -1,5 +1,5 @@
 /** Installation-owned lifetime for the two real native HTTP adapters. */
-import type { GenerateOptions, LlmAdapter, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import type { GenerateOptions, LlmAdapter, LlmImageRequestPricing, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import type { NativeModel } from './index.ts'
 
 /** Forward the selected adapter and drain accepted operations and stream cleanup during removal. */
@@ -15,6 +15,12 @@ export class NativeAdapterModel implements NativeModel {
    * @param lifetime - installation cancellation.
    */
   constructor(private readonly adapter: LlmAdapter, private readonly lifetime: AbortSignal) {}
+
+  /** @inheritdoc */
+  imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined {
+    this.signal().throwIfAborted()
+    return this.adapter.imageRequestPricing(provider, model)
+  }
 
   private signal(caller?: AbortSignal): AbortSignal {
     return AbortSignal.any([this.lifetime, this.shutdown.signal, ...caller === undefined ? [] : [caller]])

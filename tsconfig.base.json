@@ -637,6 +637,7 @@
       "@deepseek-ai/dsh-terminal/error": ["./rsh/Modules/Official/terminal/terminal/src/error.ts"],
       "@deepseek-ai/dsh-terminal/native": ["./rsh/Modules/Official/terminal/terminal/src/native.ts"],
       "@deepseek-ai/dsh-terminal/protocol": ["./rsh/Modules/Official/terminal/terminal/src/protocol.ts"],
+      "@deepseek-ai/dsh-token-meter/native": ["./rsh/Engine/llm/token-meter/src/native.ts"],
       "@deepseek-ai/dsh-tool-ask-user/native": ["./rsh/Modules/Official/interaction/tool-ask-user/src/native.ts"],
       "@deepseek-ai/dsh-tool-bash/native": ["./rsh/Modules/Official/shell/tool-bash/src/native.ts"],
       "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"],

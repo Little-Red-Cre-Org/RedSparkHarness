@@ -709,8 +709,11 @@ export class NativeHeadlessApplication implements NativeApplication {
             }))
           }
           const priorContext = session.requestContext()
-          if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model) {
-            track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model }))
+          const contextWindow = preparedStep.modelInfo?.context?.contextWindow
+          if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model
+            || priorContext.contextWindow !== contextWindow) {
+            track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model,
+              ...contextWindow === undefined ? {} : { contextWindow } }))
           }
           await persist()
           const options: GenerateOptions = {
