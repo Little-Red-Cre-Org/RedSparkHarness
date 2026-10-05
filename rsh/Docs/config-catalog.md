@@ -3636,6 +3636,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
 - `@deepseek-ai/dsh-native-jobs` ([`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-model-execution` ([`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts))
+- `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
 - `@deepseek-ai/dsh-native-prompt` ([`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-sandbox-policy` ([`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts))

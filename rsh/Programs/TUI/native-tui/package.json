@@ -72,7 +72,8 @@
         "timeContext",
         "agentPresets",
         "workspaceRegistry",
-        "agentInstructions"
+        "agentInstructions",
+        "modelSelection"
       ],
       "provides": [
         "application",

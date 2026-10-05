@@ -26,6 +26,8 @@ The `./native` entry is assembled by `dsh --profile native-tui`. It uses the [sh
 
 New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input, Esc stops the active turn and sends a nonempty draft, and Ctrl+C stops while busy or exits while idle. `/help`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
 
+The application declares the shared executor’s optional `modelSelection` service; a configured Provider applies durable selections to subsequent turns.
+
 <a id="implementation"></a>
 ## Implementation
 
@@ -54,6 +56,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 
 <a id="dev-note"></a>
+
 ### Dev Note
 
 <details>

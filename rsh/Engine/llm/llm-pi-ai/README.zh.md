@@ -182,6 +182,9 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 -----
 
 <a id="model-experience"></a>
+
+原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。移除会先排空已接纳查询，再释放适配器。
+
 ## 模型体验
 
 ### 经 pi-ai 的提供方请求
@@ -215,7 +218,6 @@ pi-ai 事件变成 harness 的推理、文本、工具调用、用量与 finish 
 ## 已知限制与延期工作
 
 <a id="known-limitations-and-deferred-work"></a>
-
 
 这些限制说明适配器在哪里停止、由未来工作接续。它们是当前包约束，不是通用 pi-ai 对比或任务积压。
 

@@ -161,6 +161,8 @@ These limits define where this service stops and other packages or future work b
 - **`BlockAssembler` handles core block kinds only** — a plugin-added block type whose stream is never closed by `block-end` makes `blocks()` throw.
 - **`GenerateOptions.sessionId` is a locally-declared brand** — importing dsh-session's `SessionId` would create a dependency cycle.
 
+`resolveCallConfigWithModel` resolves explicit request controls against the captured Provider metadata. Prepared dispatch uses this result for both the durable request header and the actual model call; advisory directory defaults cannot replace explicit controls.
+
 <a id="dev-note"></a>
 ### Dev Note
 

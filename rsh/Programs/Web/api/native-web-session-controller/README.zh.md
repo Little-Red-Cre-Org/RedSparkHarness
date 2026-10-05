@@ -40,7 +40,7 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 <a id="dev-note"></a>
 ## 开发备注
 
-原生 Session 执行器拥有持久化与 Agent；该包只拥有传输操作。
+原生 Session 执行器拥有持久化与 Agent；该包只拥有传输操作。安装可选 modelSelection 服务后会保留所选 Session 模型。
 
 <a id="model-experience"></a>
 ## 模型体验
