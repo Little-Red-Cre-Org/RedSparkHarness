@@ -43,10 +43,13 @@ export function shippedNativeProfileComposition(
     installations: [
       { id: 'app', plugin: '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
         config: { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
+      { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
+      { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,
+        config: { dshHome: home } },
       { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: ROOT },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,

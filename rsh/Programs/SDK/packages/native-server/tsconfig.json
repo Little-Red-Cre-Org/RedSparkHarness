@@ -3,6 +3,9 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
   "include": ["src"],
   "references": [
+    { "path": "../../../../Modules/Official/attachment/attachment" },
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json" },
     { "path": "../../../../Core/util/json-rpc-line" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../../../Engine/core/native-headless" },
