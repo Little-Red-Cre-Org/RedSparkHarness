@@ -29,6 +29,8 @@ The root export and descriptor and assistant-output leaves require no runtime in
 
 Descriptors record child mode, selected provider and label. The output fold consumes accepted Session events and retains actual final or partial assistant content. It creates no Session, writer or execution.
 
+Settlement helpers select the ending from accepted-work accounting and construct the shared runtime-owned notice, including its child attribution and closing content. The consuming Provider owns cleanup completion and durable inbox admission.
+
 <a id="model-experience"></a>
 ## Model Experience
 

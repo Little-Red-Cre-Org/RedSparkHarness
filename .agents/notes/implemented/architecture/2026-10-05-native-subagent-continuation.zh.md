@@ -19,3 +19,5 @@ Status: implemented
 ## 结果
 
 可持续部署要求控制工具绑定同一 Provider 与 Tools 注册表。run_in_background:false 保留普通一次性执行。按接收方串行投递，启动或冷准入失败等待新建驻留清理。打断停放未认领输入；另一消息唤醒。父级销毁与提供者卸载等待子执行清理，保留清理失败。两个 SDK 通过既有 Session 树订阅观察已接受子事件。目录、外部后端、persona 插值与自动完成结果通知仍是独立能力。
+
+运行时结束通知采用[结束通知准入](2026-10-05-native-subagent-settlement.zh.md)；独立 subagent.finished wire 通知仍是后续能力。

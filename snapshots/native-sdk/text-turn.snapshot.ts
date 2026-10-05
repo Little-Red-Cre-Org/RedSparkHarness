@@ -25,7 +25,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
   const reply = answer?.type === 'assistant/message' && answer.data.message.content[0]?.type === 'text'
     ? answer.data.message.content[0].text : 'native SDK snapshot reply'
   const requests: Record<string, unknown>[] = []
+  let releaseColdChild: (() => void) | undefined
   const server = createServer((request, response) => {
+    if (request.url === '/settlement-ready') {
+      if (releaseColdChild === undefined) throw new Error('native-sdk snapshot: cold child was not waiting for settlement')
+      releaseColdChild()
+      response.end('ready')
+      return
+    }
     let body = ''
     request.setEncoding('utf8')
     request.on('data', (chunk: string) => { body += chunk })
@@ -39,6 +46,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
       }
       const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
       const continuationCommand = last?.role === 'user' ? String(last.content) : ''
+      if (continuationCommand === 'await the continuation settlement notice') {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'wait-settlement', type: 'function',
+            function: { name: 'fixture_wait_settlement', arguments: '{}' } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (continuationCommand === 'refuse invalid continuation recipients') {
         response.end([
           { choices: [{ delta: { role: 'assistant', tool_calls: [
@@ -118,10 +133,13 @@ it('replays a native SDK turn with exact model input, output and durable Session
         .some(message => message.role === 'user' && message.content === 'production child task')
       const responseText = productionChild ? 'production child reply'
         : last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
-      response.end([
+      const finishResponse = () => response.end([
         { choices: [{ delta: { role: 'assistant', content: responseText } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
       ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+      if (String(last?.content).includes('cold continuation follow-up')
+        && JSON.stringify(modelRequest.messages).includes('Only the continuable child receives this persona.')) releaseColdChild = finishResponse
+      else finishResponse()
     })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -149,7 +167,8 @@ it('replays a native SDK turn with exact model input, output and durable Session
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
     ...composition.installations,
     { id: 'fixture-approval', plugin: '@deepseek-ai/dsh-native-approval', scope: 'root', config: { policy: 'ask' } },
-    { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants' },
+    { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants',
+      config: { settlementReadyUrl: `http://127.0.0.1:${address.port}/settlement-ready` } },
     { id: 'continuable-tool', scope: 'root', plugin: '@deepseek-ai/dsh-tool-subagent', config: {
       toolName: 'continuable_subagent', backgroundMode: 'continuable', maxDepth: 1, maxSteps: 2, maxTokens: 128,
       persona: 'Only the continuable child receives this persona.', toolFilter: { deny: ['fixture_delegate_child'] },
@@ -320,6 +339,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
           const sent = await session.run('cold resume the continuable child')
           expect(sent.events.find(event => event.type === 'tool/result')?.data.message.content[0])
             .toMatchObject({ type: 'tool-result', isError: false })
+          const notice = await session.run('await the continuation settlement notice')
+          expect(JSON.stringify(notice.events)).toContain('Its closing message:')
+          expect(JSON.stringify(notice.events)).toContain(reply)
+          await session.run('consume the continuation notice')
           for (;;) {
             const notification = await tree.next()
             if (notification.method === 'session.event' && notification.params.sessionId === continuationId
@@ -334,7 +357,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(35)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(38)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
       .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
         { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])
@@ -373,6 +396,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
     expect(continuationEvents.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
     expect(continuationEvents.some(event => event.type === 'user/message' && event.data.source.kind === 'agent-message'
       && event.data.content.some(block => block.type === 'text' && block.text === 'cold continuation follow-up'))).toBe(true)
+    const notices = parseSessionLog(forkRaw).filter(event => event.type === 'agent/inbox/spliced'
+      && event.data.inserted.some(message => message.source.kind === 'subagent-settled'))
+    expect(notices.some(event => JSON.stringify(event.data).includes('Its closing message:'))).toBe(true)
+    expect(requests.some(request => JSON.stringify(request.messages).includes('finished and will do no further work'))).toBe(true)
     const coldRequest = requests.find(request => JSON.stringify(request.messages).includes('cold continuation follow-up')
       && JSON.stringify(request.messages).includes('Only the continuable child receives this persona.'))
     expect(coldRequest).toBeDefined()

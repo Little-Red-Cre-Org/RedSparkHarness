@@ -19,6 +19,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
+import { subagentEpochStopReason } from '@deepseek-ai/dsh-subagent-protocol'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionId, SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session'
 import { finalAssistantOutput } from './assistant-output.ts'
@@ -235,30 +236,7 @@ export function createActivationObserver(
  *   closed cleanly and had nothing left to run.
  */
 function epochStopReason(events: readonly SessionEvent[]): SubagentResult['stopReason'] {
-  const { end, droppedUnrun } = foldConsumedWork(events)
-  switch (end?.data.reason.kind) {
-    case 'max-tokens':
-      return 'max-tokens'
-    case 'aborted':
-    case 'interrupted':
-      return 'aborted'
-    case 'error':
-      return 'error'
-    // A pre-step rejection — a hook deny, a policy plugin — discarded input
-    // this epoch had claimed: the work was declined, not done.
-    case 'blocked':
-      return 'refusal'
-    // A clean ending and no accounting turn at all share one rule: the epoch
-    // finished what it was given unless a cancelled queue says otherwise.
-    case undefined:
-    case 'completed':
-      return droppedUnrun ? 'aborted' : 'completed'
-    /* v8 ignore next 3 -- `TurnEndReason` is merge-extensible, so this arm needs a
-     * backend that adds a variant; treating an unnameable reason as success would
-     * report failed work as completed. */
-    default:
-      return 'error'
-  }
+  return subagentEpochStopReason(foldConsumedWork(events))
 }
 
 /** Render any listener-thrown value without letting coercion escape containment. */

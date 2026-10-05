@@ -191,6 +191,18 @@
     {
       "type": "function",
       "function": {
+        "name": "fixture_wait_settlement",
+        "description": "Wait for the actual child settlement notice in the parent inbox.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "fixture_wait",
         "description": "Wait until the initiating Session is cancelled.",
         "parameters": {

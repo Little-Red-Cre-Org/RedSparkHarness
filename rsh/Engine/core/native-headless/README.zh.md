@@ -56,6 +56,8 @@ kind: "package-reference"
 
 不发布 invariant companion：应用没有能够独立核对其自身状态的进程内观测。Session 持久化与文件系统 Provider 保留各自的校验。
 
+向忙碌接收者投递 continuation 输入时，实际 active owner 接入后即可通过其收件箱准入。排队的空闲备用操作和实时收件箱只认领一次消息；选中实时所有者会取消并排空尚未执行的备用操作。准入失败保留原始原因。
+
 <a id="model-experience"></a>
 
 ## 模型体验
