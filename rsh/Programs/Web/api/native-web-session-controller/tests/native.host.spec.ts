@@ -1,5 +1,6 @@
 /** Native browser Session lifecycle through the authenticated HTTP Connection carrier. */
-import { mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
+import { plugin as attachmentStorage } from '@deepseek-ai/dsh-attachment-local/native'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
@@ -52,6 +53,10 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const resolving = Promise.withResolvers<undefined>()
   const releaseResolution = Promise.withResolvers<undefined>()
   let holdResolution = false
+  const preparingImage = Promise.withResolvers<undefined>()
+  const releaseImage = Promise.withResolvers<undefined>()
+  let holdImage = false
+  let imageExecution: NativeAgentExecution | undefined
   let releaseRetainedRoot: (() => void) | undefined
   let retainedExecution: NativeAgentExecution | undefined
   let humanSteps: StreamChunk[][] | undefined
@@ -80,7 +85,13 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             context.own(releaseRetainedRoot)
           }
           if (holdResolution) { resolving.resolve(undefined); await releaseResolution.promise }
-          return { provider, id, name: id, reasoning }
+          if (holdImage) {
+            const owner = context.require('activeSessions').owners().find(owner => owner.invocation === 'root')!
+            imageExecution = context.require('agents').execution(owner.agent)
+            preparingImage.resolve(undefined)
+            await releaseImage.promise
+          }
+          return { provider, id, name: id, reasoning, inputModalities: ['text', 'image'] }
         },
         catalog: async defaults => ({ default: defaults, routableProviders: ['fixture'], failures: [], groups: [{
           id: 'fixture', name: 'Fixture', models: [{ id: 'chosen', name: 'Chosen', reasoning }],
@@ -157,6 +168,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
+    { plugin: attachmentStorage, scope, config: { dshHome: directory } },
   ], 'host'))
   try {
     for (const key of ['maxFollowBufferBytes', 'maxFollowers']) expect(() => resolveNativeWebSessionConfig({ cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
@@ -221,8 +233,32 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(conversation.getSnapshot().liveText).toBeUndefined()
     expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     await conversation.select(sessionId)
-    await conversation.send('second input')
+    const png = await readFile(new URL('../../../../../../snapshots/native-sdk/text-turn/image.png', import.meta.url))
+    const images = [{ mediaType: 'image/png' as const, data: png.toString('base64'), name: 'image.png' }]
+    await expect(client.prompt(sessionId, 'invalid image', true, undefined, undefined,
+      [{ mediaType: 'image/png', data: 'invalid' }])).rejects.toThrow('canonical base64')
+    expect((await client.history(sessionId)).events.some(event => event.type === 'user/message'
+      && event.data.content.some(block => block.type === 'text' && block.text === 'invalid image'))).toBe(false)
+    holdImage = true
+    const imageTurn = client.prompt(sessionId, 'second input', true, undefined, undefined, images)
+    await preparingImage.promise
+    expect(imageExecution?.status).toBe('running')
+    expect(() => imageExecution!.runMaintenance(() => Promise.resolve(undefined))).toThrow('Agent is busy')
+    expect(requests).toHaveLength(1)
+    holdImage = false
+    releaseImage.resolve(undefined)
+    await imageTurn
+    await conversation.select(sessionId)
     const history = await client.history(sessionId)
+    const image = history.events.flatMap(event => event.type === 'user/message' ? event.data.content : []).find(block => block.type === 'image')
+    if (image?.type !== 'image') throw new Error('image input was not durable')
+    expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'image'
+      && block.attachment.attachmentId === image.attachment.attachmentId))).toBe(true)
+    const blob = await client.image(sessionId, image.attachment)
+    expect(blob.type).toBe('image/png')
+    expect(blob.size).toBe(image.attachment.bytes)
+    expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
+    expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
       .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
@@ -233,7 +269,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     let settled = false
     const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
-    await vi.waitFor(() => { expect(requests).toHaveLength(3) })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(3) })
     // Control admission still cancels the accepted turn and awaits cleanup.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
     conversation.cancel()
@@ -308,6 +344,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseForeignModel.resolve(undefined)
     releaseWebRead.resolve(undefined)
     releaseResolution.resolve(undefined)
+    releaseImage.resolve(undefined)
     releaseRetainedRoot?.()
     firstContinue.resolve(undefined)
     releaseCleanup()

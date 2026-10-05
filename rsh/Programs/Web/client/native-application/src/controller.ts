@@ -1,5 +1,6 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
 import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
 import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
@@ -162,21 +163,63 @@ export class NativeConversationController {
     })
   }
 
+  /** Fetch a recorded image without changing execution readiness.
+   * @param sessionId - owning displayed Session.
+   * @param image - recorded reference.
+   * @param signal - render lifetime cancellation.
+   * @returns verified image Blob.
+   */
+  image(sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal): Promise<Blob> {
+    return this.client.image(sessionId, image, AbortSignal.any([signal, this.lifetime.signal]))
+  }
+
   /** Send human text through the Host's sole turn executor.
    * @param text - nonempty submitted text.
+   * @param files - browser-selected raster files; Provider limits govern admission.
    * @returns completion after Host settlement and durable transcript refresh.
    */
-  send(text: string): Promise<void> {
+  send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const turn = new AbortController()
+    const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
     this.turn = turn
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
       try {
-        const result = await this.client.prompt(id, text, true, AbortSignal.any([turn.signal, this.lifetime.signal]),
-          (frame) => { this.observe(frame) })
+        const images: NativeImageUpload[] = []
+        const policy = this.snapshot.modelControls?.images
+        if (files.length > 0) {
+          if (policy === undefined || files.length > policy.maxImagesPerMessage
+            || files.reduce((sum, file) => sum + file.size, 0) > policy.maxMessageImageBytes) throw new Error('native conversation: image batch exceeds configured limits or is unavailable')
+          for (const file of files) {
+            const mediaType = policy.mediaTypes.find(type => type === file.type)
+            if (mediaType === undefined || file.size > policy.maxImageBytes) throw new Error('native conversation: image type or size is refused')
+            const data = await new Promise<string | undefined>((resolve, reject) => {
+              const reader = new FileReader()
+              const abort = (): void => { cleanup(); reader.abort(); resolve(undefined) }
+              const cleanup = (): void => {
+                signal.removeEventListener('abort', abort)
+                reader.onload = reader.onerror = reader.onabort = null
+              }
+              reader.onload = () => {
+                cleanup()
+                const dataUrl = reader.result as string
+                resolve(dataUrl.slice(dataUrl.indexOf(',') + 1))
+              }
+              reader.onerror = () => { cleanup(); reject(new Error('native conversation: image read failed', { cause: reader.error })) }
+              reader.onabort = (): void => { cleanup(); resolve(undefined) }
+              signal.addEventListener('abort', abort, { once: true })
+              if (signal.aborted) abort()
+              else reader.readAsDataURL(file)
+            })
+            if (data === undefined) return
+            images.push({ mediaType, data, name: file.name })
+          }
+        }
+        const result = await this.client.prompt(id, text, true, signal,
+          (frame) => { this.observe(frame) }, images)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }

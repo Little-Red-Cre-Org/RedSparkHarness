@@ -6,6 +6,14 @@ import type { ModelCatalog } from '@deepseek-ai/dsh-native-model-selection/types
 export interface NativeModelControls {
   readonly catalog: ModelCatalog | null
   readonly canSelectModel: boolean
+  readonly images?: {
+    readonly maxImageBytes: number
+    readonly maxImagesPerMessage: number
+    readonly maxMessageImageBytes: number
+    readonly maxImagePixels: number
+    readonly maxImageDimension: number
+    readonly mediaTypes: readonly ('image/png' | 'image/jpeg' | 'image/webp' | 'image/gif')[]
+  }
   readonly presets: readonly { readonly id: string; readonly name: string; readonly description?: string }[]
 }
 
@@ -24,4 +32,9 @@ export const nativeModelControlsSchema = z.strictObject({
     failures: z.array(z.strictObject({ id: text, name: text, message: z.string() })),
   }).nullable(),
   canSelectModel: z.boolean(), presets: z.array(z.strictObject(named)),
+  images: z.strictObject({ maxImageBytes: z.number().int().positive(), maxImagesPerMessage: z.number().int().positive(),
+    maxMessageImageBytes: z.number().int().positive(), maxImagePixels: z.number().int().positive(),
+    maxImageDimension: z.number().int().positive(),
+    mediaTypes: z.array(z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])),
+  }).optional(),
 }) as unknown as z.ZodType<NativeModelControls>

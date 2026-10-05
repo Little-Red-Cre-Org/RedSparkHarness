@@ -10,13 +10,20 @@ import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
 
-it('cancels a running ACP prompt, rejects overlap and drains an active prompt on EOF', async () => {
+it('admits ordered ACP images, rejects malformed data, restores history and drains cancellation and EOF', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-lifecycle-'))
   let entered = Promise.withResolvers<undefined>()
-  const server = createServer((_request, response) => {
-    response.writeHead(200, { 'content-type': 'text/event-stream' })
-    response.write('data: {"choices":[{"delta":{"role":"assistant","content":"partial"}}]}\n\n')
-    entered.resolve(undefined)
+  const requests: unknown[] = []
+  const server = createServer((request, response) => {
+    let body = ''
+    request.setEncoding('utf8')
+    request.on('data', (chunk: string) => { body += chunk })
+    request.on('end', () => {
+      requests.push(JSON.parse(body) as unknown)
+      response.writeHead(200, { 'content-type': 'text/event-stream' })
+      response.write('data: {"choices":[{"delta":{"role":"assistant","content":"partial"}}]}\n\n')
+      entered.resolve(undefined)
+    })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   const address = server.address()
@@ -26,7 +33,7 @@ it('cancels a running ACP prompt, rejects overlap and drains an active prompt on
     { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'ACP lifecycle fixture', maxSteps: 1 } },
     { id: 'storage', config: { root: join(home, 'sessions'), compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_ACP_FIXTURE_KEY', api: 'openai-completions',
-      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model' }] } } } },
+      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
     cwd: home, env: { DSH_HOME: home, NATIVE_ACP_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
@@ -36,15 +43,29 @@ it('cancels a running ACP prompt, rejects overlap and drains an active prompt on
   transport.start()
   const signal = AbortSignal.timeout(20_000)
   try {
-    await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
+    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
+      .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
     const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
-    const params = { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'wait until cancelled' }] }
+    await expect(transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'image', mimeType: 'image/png', data: 'not-base64' }] }, signal)).rejects.toThrow()
+    expect(requests).toHaveLength(0)
+    const image = (await readFile(join(root, 'snapshots/native-sdk/text-turn/image.png'))).toString('base64')
+    const params = { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'wait until cancelled' },
+      { type: 'image', mimeType: 'image/png', data: image }] }
     const prompt = transport.request('session/prompt', params, signal)
+    void prompt.catch(() => {}) // The later assertion owns failures; teardown must not create an unhandled rejection.
     await entered.promise
+    const sent = requests[0] as { messages: readonly { role: string; content: readonly Record<string, unknown>[] }[] }
+    const user = sent.messages.find(message => message.role === 'user')
+    expect(user?.content[0]).toEqual({ type: 'text', text: 'wait until cancelled' })
+    const imagePart = user?.content.find(part => part.type === 'image_url')
+    expect(imagePart?.image_url).toHaveProperty('url', expect.stringMatching(/^data:image\/png;base64,/))
     await expect(transport.request('session/prompt', params, signal)).rejects.toThrow('session prompt is already running')
     transport.notify('session/cancel', { sessionId: created.sessionId })
     await transport.flush()
     expect(await prompt).toMatchObject({ stopReason: 'cancelled' })
+    await transport.request('session/close', { sessionId: created.sessionId }, signal)
+    await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
     entered = Promise.withResolvers<undefined>()
     const pending = transport.request('session/prompt', params, signal).catch((error: unknown) => error)
     await entered.promise

@@ -22,6 +22,8 @@ import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 
 import { NativeWebHumanInteraction } from './human.ts'
 import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
@@ -92,6 +94,7 @@ export interface NativeWebSelectionProviders {
     readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
   } | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
+  readonly attachments?: AttachmentOperations | undefined
 }
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
@@ -162,11 +165,20 @@ export class NativeWebSessionService {
   private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
     signal.throwIfAborted()
     const fields = object(payload)
-    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow'].includes(key)) throw new Error('native web session: unexpected prompt field')
+    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow', 'images'].includes(key)) throw new Error('native web session: unexpected prompt field')
     const id = sessionId(fields.sessionId)
     if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) throw new TypeError('native web session: text exceeds configured limits or is empty')
     if (fields.follow !== undefined && typeof fields.follow !== 'boolean') throw new TypeError('native web session: follow must be boolean')
     if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
+    const images = fields.images === undefined ? [] : z.array(z.strictObject({
+      mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']), data: z.string(), name: z.string().optional(),
+    })).parse(fields.images)
+    const attachments = this.selections.attachments
+    const directory = this.selections.directory
+    const imageProviders = images.length === 0 ? undefined : (() => {
+      if (attachments === undefined || directory === undefined) throw new Error('native web session: image input is unavailable')
+      return { attachments, directory }
+    })()
     if (this.turns.has(id)) throw new Error('native web session: Session already has a pending turn')
     if (this.turns.size >= this.config.maxPendingRequests) throw new Error('native web session: turn settlement capacity reached')
     const controller = new AbortController()
@@ -181,7 +193,16 @@ export class NativeWebSessionService {
       const turnSignal = AbortSignal.any([accepted, controller.signal])
       try {
         const result = await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
-          message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }),
+          ...imageProviders === undefined ? { message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }
+            : { prepareMessage: async (route, preparationSignal) => {
+              const info = await imageProviders.directory.resolve(route.provider, route.model, preparationSignal)
+              preparationSignal.throwIfAborted()
+              if (!info.inputModalities?.includes('image')) throw new Error('native web session: selected model does not accept images')
+              const content = await imageProviders.attachments.admitPromptContent([{ type: 'text', text: fields.text as string },
+                ...images.map(image => ({ type: 'image' as const, mediaType: image.mediaType, data: image.data, ...image.name === undefined ? {} : { name: image.name } }))])
+              preparationSignal.throwIfAborted()
+              return createUserMessage({ source: { kind: 'user' }, content })
+            } },
           ...feed === undefined ? {} : { onEvent: (event) => { feed.push({ type: 'event', event }) }, onChunk: (chunk) => {
             if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
             if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
@@ -238,6 +259,33 @@ export class NativeWebSessionService {
     return turn.feed.response(signal, () => { this.followers-- })
   }
 
+  /** Read only an image already recorded in this Program's workspace Session.
+   * @param request - authenticated image lookup with Session and attachment identities.
+   * @returns verified raster bytes; caller-supplied paths and references are never accepted.
+   */
+  async image(request: Request): Promise<Response> {
+    return this.controls.run(request.signal, async (signal) => {
+      const fields = z.strictObject({ sessionId: z.string().min(1).max(256), attachmentId: z.string().min(1) }).parse(await request.json())
+      const attachments = this.selections.attachments
+      if (attachments === undefined) return new Response(null, { status: 404 })
+      const history = await readNativeSessionHistory(sessionId(fields.sessionId), {
+        active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+        label: 'native web image', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+      }, signal)
+      if (history.header.cwd !== this.config.cwd) return new Response(null, { status: 403 })
+      const image = history.events.flatMap(event => isAppendSurfaceEvent(event) ? deriveEventMessage(event)?.content ?? [] : [])
+        .find(block => block.type === 'image' && block.attachment.attachmentId === fields.attachmentId)
+      if (image?.type !== 'image') return new Response(null, { status: 404 })
+      if (image.attachment.bytes > attachments.imageLimits.maxImageBytes) return new Response(null, { status: 413 })
+      const stored = await attachments.readImage(image.attachment, signal)
+      signal.throwIfAborted()
+      return new Response(new Uint8Array(stored.data), { headers: {
+        'Content-Type': stored.ref.mediaType, 'Content-Length': String(stored.data.byteLength), 'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store',
+      } })
+    })
+  }
+
   private async settle(payload: unknown, signal: AbortSignal): Promise<unknown> {
     const fields = object(payload)
     for (const key of Object.keys(fields)) if (!['sessionId', 'admissionId'].includes(key)) throw new Error('native web session: unexpected settlement field')
@@ -287,6 +335,7 @@ export class NativeWebSessionService {
             ...this.config.reasoningEffort === undefined ? {} : { reasoningEffort: this.config.reasoningEffort },
           }, accepted),
           canSelectModel: this.selections.models !== undefined,
+          images: this.selections.directory === undefined ? undefined : this.selections.attachments?.imageLimits,
           presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
             ...description === undefined ? {} : { description } })) ?? [],
         }
@@ -354,7 +403,7 @@ export class NativeWebSessionService {
         throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
-      return { ok: false, error: { code: 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
     }
   }
 
@@ -375,7 +424,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -387,7 +436,7 @@ export const plugin: NativePlugin = {
       })
       const models = context.optional('modelSelection')
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
-        { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'),
+        { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
@@ -395,6 +444,8 @@ export const plugin: NativePlugin = {
         (endpoint, payload, signal) => service.handle(endpoint, payload, signal)))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.image(request) }))
       context.provide('nativeWebSession', service)
       context.provide('rootExecution', executor.rootExecution)
     }

@@ -28,7 +28,7 @@ The Client Consumer owns list, blank creation, history, explicit fresh/resumed p
 
 Optional modelDirectory advertises model metadata and provider failures; modelSelection validates and records intent through the sole Session maintenance owner. Selection requests carry an exact durable revision and reject pending turns. Retained writers reserve idle Agent maintenance before directory resolution and durable selection; cold operations retain their existing maintenance admission. Optional agentPresets advertises installed compositions; rootExecution applies blank-root selection and awaits epoch cleanup. Missing selection Providers fail explicit mutation requests rather than substituting defaults.
 
-Attachments, directory policies, title and fork controls remain separate Consumers.
+Optional attachments and modelDirectory admit ordered raster uploads after resolving the effective next model inside root execution. The shared attachment Provider validates canonical encoding and batch limits; only durable references enter the user message. Authentication and complete Session history govern image reads, including inherited references. The endpoint rejects another workspace, absent references and oversized images, and returns verified raster bytes with exact media type and no-store headers. Directory policies, title and fork controls remain separate Consumers.
 
 Optional following delivers accepted durable events and transient assistant text through authenticated POST `/api/native-session/follow`. Each admission permits one follower with its exact Session and admission identity. The unread SSE queue is byte-bounded; overflow cancels execution and fails settlement without masking an execution or cleanup failure. Disconnect releases the follower and its queue; turn ownership remains with the executor until settlement. Installation shutdown closes followers before draining execution.
 
@@ -58,7 +58,7 @@ The native Session executor owns persistence and Agents; this package owns trans
 
 #### What the model sees
 
-Human text enters the native executor's durable inbox and normal Session model history. This Program adds no tools or hidden prompt sections.
+Human text and admitted image references enter the native executor's durable inbox and normal Session model history. The selected model Provider projects those references into image inputs. This Program adds no tools or hidden prompt sections.
 
 #### Token effect
 
@@ -72,4 +72,4 @@ This package does not alter the history prefix; a new user message extends the r
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Full product UI and attachments are not provided by this package.
+- Full product UI, file and audio uploads are not provided by this package.
