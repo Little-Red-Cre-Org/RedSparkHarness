@@ -12,7 +12,7 @@ Settlement-only conversation cannot display accepted Session facts or assistant 
 
 The selected Connection supplies an authenticated Fetch response for a feature-owned SSE route. The existing turn admission owns its bounded feed; the route checks the exact Session and admission identity and permits one follower. No second Agent, Session writer, job registry or reconnect schedule is introduced.
 
-The executor forwards accepted durable events and transient assistant text separately. The unread Host queue and active followers have explicit configured limits. Queue overflow cancels the exact turn and fails settlement; detach releases unread data and its follower slot. Host disposal closes streams and drains the existing execution owner.
+The executor forwards accepted durable events and transient assistant text separately. The unread Host queue and active followers have explicit configured limits. Queue overflow cancels the exact turn and fails settlement; distinct execution or cleanup failures remain in the combined failure; detach releases unread data and its follower slot. Host disposal closes streams and drains the existing execution owner.
 
 The Client uses maintained eventsource-parser framing and the existing Session parser. Malformed frames, premature EOF and observer failures cancel the admitted turn and await durable settlement. Caller abort detaches the stream but cannot make the prompt resolve before writer cleanup. A carrier lacking Fetch responses rejects observed prompts before admission.
 

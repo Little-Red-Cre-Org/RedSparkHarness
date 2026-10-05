@@ -28,7 +28,7 @@ The Client Consumer owns list, blank creation, history, explicit fresh/resumed p
 
 Attachments, questions, approvals, directory policies, title and fork controls are separate Consumers. This package does not provide those operations.
 
-Optional following delivers accepted durable events and transient assistant text through authenticated POST `/api/native-session/follow`. Each admission permits one follower with its exact Session and admission identity. The unread SSE queue is byte-bounded; overflow cancels execution and fails settlement. Disconnect releases the follower and its queue; turn ownership remains with the executor until settlement. Installation shutdown closes followers before draining execution.
+Optional following delivers accepted durable events and transient assistant text through authenticated POST `/api/native-session/follow`. Each admission permits one follower with its exact Session and admission identity. The unread SSE queue is byte-bounded; overflow cancels execution and fails settlement without masking an execution or cleanup failure. Disconnect releases the follower and its queue; turn ownership remains with the executor until settlement. Installation shutdown closes followers before draining execution.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 

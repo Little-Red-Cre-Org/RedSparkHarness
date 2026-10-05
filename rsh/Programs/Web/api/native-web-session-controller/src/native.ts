@@ -128,7 +128,10 @@ export class NativeWebSessionService {
         return result
       } catch (error: unknown) {
         const failure = feed?.failure()
-        if (failure !== undefined) throw failure
+        if (failure !== undefined) {
+          if (error === failure) throw failure
+          throw new AggregateError([failure, error], `${failure.message}; execution failed: ${error instanceof Error ? error.message : String(error)}`)
+        }
         // Exact execution cancellation is observed after the shared writer has drained.
         if (turnSignal.aborted && error === turnSignal.reason) return { exitCode: 130 }
         throw error
