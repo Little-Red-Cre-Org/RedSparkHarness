@@ -45,6 +45,7 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "agentInstructions",
         "sessionExecution",
         "activeSessions",
         "agentPresets",
