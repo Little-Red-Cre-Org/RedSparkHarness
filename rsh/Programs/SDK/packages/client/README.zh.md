@@ -123,8 +123,8 @@ console.log(result.finalResponse)
 这些限制说明本客户端何时不合适或需要特别注意。它们是当前包约束，不是与其他 SDK 客户端的对比或任务积压。
 
 - **无捆绑运行时解析**——客户端解析同版本 `@deepseek-ai/dsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
-- **无轮次中取消**——协议层没有提示词取消方法；放弃轮次意味着关闭运行时（见[协议限制](../protocol/README.zh.md#known-limitations-and-deferred-work)）。
-- **没有逐提示词结果**——低层 `prompt()` 只返回入队回执；高层 `run()` 负责从回执到 idle 的收集，放弃该过程意味着关闭运行时。
+- **兼容 profile 的取消限制**——兼容 profile 没有提示词取消方法；放弃其轮次意味着关闭运行时（见[协议限制](../protocol/README.zh.md#known-limitations-and-deferred-work)）。
+- **没有逐提示词结果**——低层 `prompt()` 只返回入队回执；高层 `run()` 负责从回执到 idle 的收集。
 - **客户端→服务端通知与服务端→客户端请求**在协议两端都未实现；传输层为未来审批流程保留了承载能力。
 
 <a id="dev-note"></a>

@@ -123,8 +123,8 @@ None in the client process. Profile, patch, provider, model, and history choices
 These limits define when the client is a poor fit or needs special care. They are current package constraints, not a comparison with other SDK clients or a task backlog.
 
 - **No bundled-runtime resolution** — the client resolves the same-version `@deepseek-ai/dsh` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
-- **No mid-turn cancel** — the wire has no prompt-cancel method; abandoning a turn means closing the runtime (see the [protocol limitations](../protocol/README.md#known-limitations-and-deferred-work)).
-- **No per-prompt result** — low-level `prompt()` returns only an enqueue receipt; high-level `run()` owns receipt-to-idle collection, and abandoning it means closing the runtime.
+- **Compatibility-profile cancellation** — compatibility profiles have no prompt-cancel method; abandoning their turn means closing the runtime (see the [protocol limitations](../protocol/README.md#known-limitations-and-deferred-work)).
+- **No per-prompt result** — low-level `prompt()` returns only an enqueue receipt; high-level `run()` owns receipt-to-idle collection.
 - **Client→server notifications and server→client requests are unimplemented** on both wire ends; the transport carries them for future approval flows.
 
 <a id="dev-note"></a>
