@@ -1,7 +1,8 @@
 /** Keyless native terminal tool transcript through a shipped dsh profile. */
-import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync,
+  symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
@@ -41,6 +42,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
   const modules = join(profile, 'node_modules')
   const workspace = join(home, 'work')
   const sessions = join(home, 'sessions')
+  const junctions: string[] = []
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   mkdirSync(workspace)
   for (const file of ['package.json', 'rsh.profile.json']) copyFileSync(join(shippedProfile, file), join(profile, file))
@@ -56,7 +58,11 @@ it('records the native terminal lifecycle tool schema and list result', async ()
     ['dsh-terminal', 'rsh/Modules/Official/terminal/terminal'],
     ['dsh-terminal-bash', 'rsh/Modules/Official/terminal/terminal-bash'],
     ['dsh-tool-terminal', 'rsh/Modules/Official/terminal/tool-terminal'],
-  ] as const) symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
+  ] as const) {
+    const junction = join(modules, '@deepseek-ai', name)
+    symlinkSync(join(root, path), junction, 'junction')
+    junctions.push(junction)
+  }
   const model = join(modules, 'native-terminal-fixture-model')
   mkdirSync(model)
   writeFileSync(join(model, 'package.json'), JSON.stringify({
@@ -109,5 +115,14 @@ it('records the native terminal lifecycle tool schema and list result', async ()
       expect(prompt).toBe(readFileSync(join(scenario, 'system-prompt.expected.md'), 'utf8'))
       expect(tools).toBe(readFileSync(join(scenario, 'tool-schemas.expected.json'), 'utf8'))
     }
-  } finally { rmSync(home, { recursive: true, force: true }) }
+  } finally {
+    if (!lstatSync(home).isDirectory() || dirname(realpathSync(home)) !== realpathSync(tmpdir())) {
+      throw new Error(`terminal-lifecycle: refusing to remove changed temp home ${home}`)
+    }
+    for (const junction of junctions) {
+      if (!lstatSync(junction).isSymbolicLink()) throw new Error(`terminal-lifecycle: refusing to remove changed junction ${junction}`)
+    }
+    for (const junction of junctions) unlinkSync(junction)
+    rmSync(home, { recursive: true, force: true })
+  }
 }, 45_000)
