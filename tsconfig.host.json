@@ -260,7 +260,7 @@
     { "path": "./rsh/Engine/core/native-headless" },
     { "path": "./rsh/Engine/core/native-session-execution/tsconfig.host.json" },
     { "path": "./rsh/Engine/workspace/workspace-definition" },
-    { "path": "./rsh/Engine/core/native-agent" },
+    { "path": "./rsh/Engine/core/native-agent/tsconfig.host.json" },
     { "path": "./rsh/Engine/core/native-model-execution" },
     { "path": "./rsh/Engine/core/native-jobs" },
     { "path": "./rsh/Engine/core/native-code-runtime" },

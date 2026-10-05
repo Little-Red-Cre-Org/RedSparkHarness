@@ -12,7 +12,7 @@
       "path": "../../../Core/util/values"
     },
     {
-      "path": "../native-agent"
+      "path": "../native-agent/tsconfig.host.json"
     },
     {
       "path": "../native-model-execution"

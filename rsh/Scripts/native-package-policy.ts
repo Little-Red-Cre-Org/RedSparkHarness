@@ -100,6 +100,11 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
   ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Engine/preset/agent-presets', [
+    '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
+    '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
+    '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol',
+  ]],
 ])
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
@@ -139,7 +144,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/read-history', ['host']],
-  ['rsh/Engine/core/native-agent/inbox', ['host']],
+  ['rsh/Engine/core/native-agent/inbox', ['host', 'client']],
   ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
   ['rsh/Engine/core/native-tools/json-schema', ['host']],
   ['rsh/Engine/core/native-tools/code-output', ['host']],

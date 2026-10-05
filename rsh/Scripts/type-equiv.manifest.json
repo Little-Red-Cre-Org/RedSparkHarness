@@ -139,7 +139,7 @@
     {
       "doc": "rsh/Docs/subsystems/core.md",
       "symbol": "InboxTarget",
-      "source": "rsh/Engine/core/agent/src/types.ts"
+      "source": "rsh/Engine/core/native-agent/src/inbox.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/core.md",

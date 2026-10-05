@@ -82,6 +82,7 @@
     "rsh/Programs/Web/client/*/tests/**/*.host.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Engine/core/native-agent/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-session-execution/tsconfig.client.json" },
     { "path": "./rsh/Engine/session/session-persistence/tsconfig.client.json" },
     { "path": "./rsh/Engine/preset/agent-presets/tsconfig.client.json" },

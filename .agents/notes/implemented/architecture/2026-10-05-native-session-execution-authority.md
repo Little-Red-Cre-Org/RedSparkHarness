@@ -35,3 +35,5 @@ A second continuation queue or writer would split ordered input ownership. Recon
 ## Verification
 
 The focused owning cases use real NativeHost, JSONL persistence and the existing controlled model adapter. They cover maintenance without a model request, a resident child across parent closure and cold resume, independent close failure while another writer remains held, and retained-generation byte identity through cold restoration. Publication validation checks owning TypeScript programs and Cordis-free native entries; it does not claim every application carrier is migrated.
+
+NativeAgent's pure `./inbox` leaf owns the sole InboxTarget and `agent/inbox/spliced` declarations, forwarded by the compatibility Agent. Its separate Client program includes only that leaf; event fields, format versions and committed Session generations remain unchanged.
