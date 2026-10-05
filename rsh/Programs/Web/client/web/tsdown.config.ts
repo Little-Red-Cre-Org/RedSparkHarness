@@ -2,7 +2,7 @@ import { clientOnly, staticLinked } from '../tsdown.client.ts'
 
 const legacy = staticLinked(
   '@deepseek-ai/dsh-client-web',
-  ['lib/types/index.js'],
+  ['lib/types/index.js', 'lib/types/boot-page.js'],
 )
 
 const native = clientOnly([{

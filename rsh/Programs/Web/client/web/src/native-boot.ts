@@ -7,6 +7,9 @@ import {
 
 export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-renderer/native'
 
+/** Module import and installation states exposed to the native loading page. */
+export type NativeClientEntryState = 'loading' | 'active' | 'failed'
+
 /** Browser graph operations consumed by native installation. */
 export interface NativeClientModuleSource {
   readonly manifest: { readonly modules: readonly { readonly id: string }[] }
@@ -58,6 +61,11 @@ export interface NativeClientBootOptions {
   readonly container: HTMLElement
   /** Skip activation after pending imports settle or stop the composition after it starts. */
   readonly signal?: AbortSignal
+  /**
+   * Report initial module import and completed installation without exposing plugin configuration.
+   * Callback failure stops the composition.
+   */
+  readonly onEntryState?: (id: string, state: NativeClientEntryState) => void
 }
 
 function nativePlugin(value: unknown, id: string): NativePlugin {
@@ -93,6 +101,7 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
   const prepare = async (
     { modules, selections }: Pick<NativeClientBootOptions, 'modules' | 'selections'>,
     previous: ReadonlyMap<string, InstallationRequest>,
+    onEntryState?: NativeClientBootOptions['onEntryState'],
   ): Promise<Map<string, InstallationRequest>> => {
     admission.throwIfAborted()
     const graphIds = new Set(modules.manifest.modules.map(row => row.id))
@@ -105,16 +114,23 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
     const requests = new Map<string, InstallationRequest>()
     for (const selection of selections) {
       admission.throwIfAborted()
-      const exports = await modules.import(selection.id, '', {})
-      admission.throwIfAborted()
-      const plugin = nativePlugin(exports, selection.id)
+      onEntryState?.(selection.id, 'loading')
+      let plugin: NativePlugin
+      try {
+        const exports = await modules.import(selection.id, '', {})
+        admission.throwIfAborted()
+        plugin = nativePlugin(exports, selection.id)
+      } catch (error) {
+        onEntryState?.(selection.id, 'failed')
+        throw error
+      }
       const prior = previous.get(selection.id)
       requests.set(selection.id, prior !== undefined && prior.plugin === plugin && dequal(prior.config, selection.config)
         ? prior : { plugin, scope, config: selection.config })
     }
     return requests
   }
-  let requests = await prepare(options, new Map())
+  let requests = await prepare(options, new Map(), options.onEntryState)
   admission.throwIfAborted()
   const mountPlugin: NativePlugin = {
     apiVersion: 1, name: 'native-client-mount', targets: ['client'],
@@ -154,9 +170,9 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
       await stop()
       signal.throwIfAborted()
     }
+    for (const selection of options.selections) options.onEntryState?.(selection.id, 'active')
   } catch (error) {
-    signal?.removeEventListener('abort', stopOnAbort)
-    await stopping?.catch(() => undefined)
+    await stop().catch(() => undefined)
     throw error
   }
   return {

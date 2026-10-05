@@ -7,11 +7,9 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-仅 Host 使用的 `./resolve` 导出提供既有 PowerShell 可执行文件解析器，不加载 Cordis 执行器。包根继续转发同一函数。
-
 ## 概述
 
-`dsh-pwsh-local` 是 PowerShell 执行器：每条命令都以全新的非交互 `pwsh -Command` 进程运行，不加载 profile 文件，因此调用之间不会残留任何 shell 状态。它逐调用镜像 `dsh-bash-local` 的语义，并额外负责 PowerShell 层事项：可执行文件解析、UTF-8 输出固定与面向模型的终端环境。命令以 harness 进程自身的权限运行——本执行器不做任何隔离；需要沙箱能力时请组合 `dsh-pwsh-sandbox`。挂载后，面向模型的 `pwsh` 工具会与它对接。
+`dsh-pwsh-local` 是 PowerShell 执行器：每条命令都以全新的非交互 `pwsh -Command` 进程运行，不加载 profile 文件，因此调用之间不会残留任何 shell 状态。它逐调用镜像 `dsh-bash-local` 的语义，并额外负责 PowerShell 层事项：可执行文件解析、UTF-8 输出固定与面向模型的终端环境。`./native` 入口通过原生 `subprocess` Provider 提供 `shell`。命令以 harness 进程自身的权限运行——本执行器不做任何隔离；需要沙箱能力时请组合 `dsh-pwsh-sandbox`。挂载后，面向模型的 `pwsh` 工具会与它对接。
 
 ## 目录
 
@@ -53,7 +51,7 @@ kind: "package-reference"
 | `maxOutputBytes` | `64,000` | 每流内存输出上限；溢出后 spill 到临时文件 |
 | `maxSpillBytes` | `67,108,864` | 每流完整输出的 spill 上限 |
 | `graceMs` | `3,000` | 终止升级与退出后管道排空的宽限时间 |
-| `pwshPath` | 自动解析 | 显式 pwsh 可执行文件；否则依次探测常见位置，再查 PATH |
+| `pwshPath` | 自动解析 | 非空的显式 pwsh 可执行文件；否则依次探测常见位置，再查 PATH |
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-pwsh-local)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
@@ -94,6 +92,8 @@ if (result.timedOut) console.log('timed out after', result.timeoutMs)
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`PwshLocalExecutor`、`Config`、设置接线、argv seam |
+| [`src/controller.ts`](src/controller.ts) | 在共用进程控制器上定义原生可执行文件解析、PowerShell 参数和环境默认值 |
+| [`src/native.ts`](src/native.ts) | 基于 `subprocess` 的原生 `shell` Provider |
 | [`src/resolve.ts`](src/resolve.ts) | 纯函数 `resolvePwshPath`/`candidatePwshPaths` 可执行文件解析 |
 | — | 不发布运行时不变式伴生入口；除所属 seam 强制执行的约定外，本包不公开独立的事件序列或可变数据关系。 |
 | `tests/` | 已演练的行为：预算、分类、解析、后台句柄 |

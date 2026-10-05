@@ -47,8 +47,11 @@ describe('BootPage', () => {
   it('shows the complete sweep report', () => {
     const { el, page } = mount()
     const report = 'web boot: 1 entry did not activate\nx: pending (waiting for service: y)'
+    el.replaceChildren(document.createElement('main'))
     page.fail(report)
     page.setState('a', 'active')
+    expect(el.querySelector('[role="alert"]')).not.toBeNull()
+    expect(el.querySelector('main')).toBeNull()
     expect(el.textContent).toContain(report)
     expect(el.textContent).not.toContain('Loading plugins…')
   })
