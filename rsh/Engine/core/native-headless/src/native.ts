@@ -907,11 +907,22 @@ export class NativeHeadlessApplication implements NativeApplication {
    * @param request - identified input and observers retained through durable root settlement.
    * @param signal - cancellation closes and drains the selected root epoch.
    * @returns the final root answer after writer release; ordinary turns retain their existing result.
+   * @throws AggregateError preserving execution and owned cleanup failures when cleanup fails.
    */
   async executeRootTurn(request: NativeTurnRequest, signal: AbortSignal): Promise<NativeTurnResult> {
     const observation: { release?: () => void; epoch?: NativeContinuationActivation } = {}
     try {
-      const result = await this.executeTurnAdmitted(request, signal, observation)
+      let result: NativeTurnResult
+      try { result = await this.executeTurnAdmitted(request, signal, observation) }
+      catch (error: unknown) {
+        if (observation.epoch !== undefined) {
+          try { await observation.epoch.close() }
+          catch (cleanup: unknown) {
+            throw new AggregateError([error, cleanup], 'native-headless: root execution and epoch cleanup failed')
+          }
+        }
+        throw error
+      }
       if (observation.epoch === undefined) return result
       await this.waitRootEpoch(request.id, signal, observation.epoch)
       return observation.epoch.lastResult ?? result
@@ -1114,6 +1125,7 @@ export class NativeHeadlessApplication implements NativeApplication {
    * @param id - Session whose current Program epoch is observed.
    * @param signal - caller cancellation; it closes and drains this epoch before rejecting.
    * @returns its final turn result, or undefined when no retained epoch exists.
+   * @throws AggregateError containing epoch cleanup failures and an already accepted cancellation cause.
    */
   async waitRootSettlement(id: SessionId, signal: AbortSignal): Promise<NativeTurnResult | undefined> {
     return this.waitRootEpoch(id, signal)
@@ -1121,9 +1133,9 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   private async waitRootEpoch(id: SessionId, signal: AbortSignal,
     selected?: NativeContinuationActivation): Promise<NativeTurnResult | undefined> {
-    signal.throwIfAborted()
     const activation = selected ?? this.rootEpochs.get(id)?.activation
     if (activation === undefined) {
+      signal.throwIfAborted()
       const execution = this.executions.get(id)?.execution
       return execution === undefined ? undefined : this.settledRoots.get(execution)
     }
@@ -1134,7 +1146,11 @@ export class NativeHeadlessApplication implements NativeApplication {
     signal.addEventListener('abort', onAbort, { once: true })
     try {
       if (signal.aborted) onAbort()
-      await activation.done
+      try { await activation.done }
+      catch (error: unknown) {
+        throw new AggregateError([...signal.aborted ? [signal.reason as unknown] : [], error],
+          'native-headless: root epoch cleanup failed')
+      }
       signal.throwIfAborted()
       return activation.lastResult
     } finally { signal.removeEventListener('abort', onAbort) }

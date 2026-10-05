@@ -30,6 +30,8 @@ The shipped profile installs `modelSelection`; its adapter provides `modelDirect
 
 Tool approvals offer `/allow` for one operation or `/deny`; model questions accept numbered single/multiple choices, free text without options, or `/other text`. The exact active root Session owns each request. The terminal only presents a bounded FIFO and refuses stale renderer answers; the existing executor writes approval audits and question tool results. During a human request, Esc cancels the turn and retains the unsubmitted draft; Enter after settlement submits that draft as new input. Exit withdraws pending input before execution drain. Other Sessions and delegated requests retain their existing answerer chain. Question and approval controls require their selected Providers; no permission preset, policy change or persistent grant is implied.
 
+The application declares the shared executor’s optional `modelSelection` service; a configured Provider applies durable selections to subsequent turns.
+
 <a id="implementation"></a>
 ## Implementation
 
@@ -58,6 +60,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 
 <a id="dev-note"></a>
+
 ### Dev Note
 
 <details>

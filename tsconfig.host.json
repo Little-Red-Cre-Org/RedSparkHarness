@@ -9,6 +9,7 @@
   },
   "include": [
     "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
+    "rsh/Programs/Web/application/tests/native-conversation.e2e.ts",
     "rsh/Programs/Web/application/tests/scaffold.ts",
     "rsh/Programs/Web/application/tests/scaffold-generation.spec.ts",
     "rsh/Programs/Web/application/tests/default-model.e2e.ts",
@@ -157,6 +158,7 @@
   "references": [
     { "path": "./rsh/Programs/TUI/terminal-ui" },
     { "path": "./rsh/Programs/TUI/native-tui" },
+    { "path": "./rsh/Programs/Web/client/native-application/tsconfig.json" },
     { "path": "./rsh/Modules/Official/code-runtime/tool-code-runtime" },
     { "path": "./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox" },
     { "path": "./rsh/Programs/Web/client/ui-deliverables/tsconfig.host.json" },

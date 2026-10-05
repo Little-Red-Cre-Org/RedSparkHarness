@@ -31,6 +31,11 @@ export type RpcStreamOpen = (
 export function createWebConnectionRpc(doFetch?: RpcFetch, openStream?: RpcStreamOpen): ClientConnectionRpc {
   const send: RpcFetch = doFetch ?? ((input, init) => globalThis.fetch(input, init))
   return {
+    response(channel, endpoint, payload, signal) {
+      assertTarget(channel, endpoint)
+      return send(new URL(`${channel}/${endpoint}`, resolveBase()), { method: 'POST',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal })
+    },
     async call(channel, endpoint, payload, signal) {
       assertTarget(channel, endpoint)
       const rpcId = RpcId(randomUuid())

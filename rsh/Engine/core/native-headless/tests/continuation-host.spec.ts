@@ -269,3 +269,57 @@ it('drains every retained root and unregisters Agents after one writer close fai
     await rm(state.root, { recursive: true, force: true })
   }
 })
+
+it.each(['initial-turn', 'already-aborted-settlement'] as const)('drains a retained root before rejecting %s cancellation', async (mode) => {
+  const state = await fixture(mode === 'initial-turn' ? ['hang'] : [textResponse('Root settled.')])
+  const id = SessionId('cancelled-retained-root')
+  const controller = new AbortController()
+  const detached = Promise.withResolvers<undefined>()
+  const releaseCleanup = Promise.withResolvers<undefined>()
+  const cleanupFailure = new Error('retained cleanup failed')
+  let release: (() => void) | undefined
+  const removeAttached = state.activeSessions.onAttached(async (owner) => { release = owner.retain() })
+  const removeDetached = state.activeSessions.onDetached(async () => {
+    detached.resolve(undefined)
+    await releaseCleanup.promise
+    throw cleanupFailure
+  })
+  try {
+    const request = { id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text' as const, text: 'Start retained work.' }] }) }
+    let pending: Promise<unknown>
+    if (mode === 'initial-turn') {
+      pending = state.app.executeRootTurn({ ...request, onChunk: (chunk): void => {
+        if (chunk.type === 'text-delta') controller.abort({ kind: 'user' })
+      } }, controller.signal).catch((error: unknown) => error)
+    } else {
+      await state.app.executeTurn(request, controller.signal)
+      controller.abort({ kind: 'user' })
+      pending = state.app.waitRootSettlement(id, controller.signal).catch((error: unknown) => error)
+    }
+    let settled = false
+    void pending.then(() => { settled = true })
+    await detached.promise
+    expect(settled).toBe(false)
+    releaseCleanup.resolve(undefined)
+    const result = await pending
+    const causes = (error: unknown): readonly unknown[] => error instanceof AggregateError
+      ? error.errors.flatMap(causes) : [error]
+    if (mode === 'initial-turn') {
+      expect(causes(result)[0]).toMatchObject({ message: 'aborted' })
+      expect(causes(result)).toContain(cleanupFailure)
+    } else {
+      expect(causes(result)).toContain(controller.signal.reason)
+      expect(causes(result)).toContain(cleanupFailure)
+    }
+    expect(state.activeSessions.owners()).toHaveLength(0)
+    const writer = await state.storage.open(id, 'write')
+    await writer.close()
+  } finally {
+    releaseCleanup.resolve(undefined)
+    release?.()
+    await removeAttached()
+    await removeDetached()
+    await state.close()
+  }
+})
