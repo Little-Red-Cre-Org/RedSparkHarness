@@ -26,17 +26,25 @@ it('replays a native ACP turn with exact model input, output and durable Session
   const reply = answer?.type === 'assistant/message' && answer.data.message.content[0]?.type === 'text'
     ? answer.data.message.content[0].text : 'native ACP snapshot reply'
   const requests: Record<string, unknown>[] = []
+  let permissionTurn = false
   const server = createServer((request, response) => {
     let body = ''
     request.setEncoding('utf8')
     request.on('data', (chunk: string) => { body += chunk })
     request.on('end', () => {
-      requests.push(JSON.parse(body) as Record<string, unknown>)
+      const payload = JSON.parse(body) as Record<string, unknown>
+      requests.push(payload)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
-      response.end([
+      const messages = payload.messages as readonly { role: string }[]
+      const events = permissionTurn && messages.at(-1)?.role !== 'tool'
+        ? [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-proof-call', type: 'function',
+          function: { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved' }) } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
+        : [
         { choices: [{ delta: { role: 'assistant', content: reply } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
-      ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+      ]
+      response.end(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
     })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -48,7 +56,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
   const patch = join(home, 'model.patch.json')
   mkdirSync(workspace)
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
-    { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'You are a native ACP fixture.', maxSteps: 1 } },
+    { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'You are a native ACP fixture.', maxSteps: 2 } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] },
@@ -62,6 +70,12 @@ it('replays a native ACP turn with exact model input, output and durable Session
   const output: Record<string, unknown>[] = []
   transport.onNotification((method, params) => {
     if (method === 'session/update') output.push(params.update as Record<string, unknown>)
+  })
+  transport.onRequest((method, params) => {
+    expect(method).toBe('session/request_permission')
+    expect(output.at(-1)).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-proof-call' })
+    expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
+    return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
   })
   transport.start()
   const signal = AbortSignal.timeout(20_000)
@@ -135,6 +149,28 @@ it('replays a native ACP turn with exact model input, output and durable Session
       expect(modelInput).toBe(readFileSync(join(scene, 'model-request.expected.json'), 'utf8'))
       expect(systemPrompt).toBe(readFileSync(join(scene, 'system-prompt.expected.md'), 'utf8'))
       expect(tools).toBe(readFileSync(join(scene, 'tool-schemas.expected.json'), 'utf8'))
+    }
+    const beforePermission = output.length
+    permissionTurn = true
+    expect(await transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'text', text: 'write permission-proof.txt after one-shot approval' }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(readFileSync(join(workspace, 'permission-proof.txt'), 'utf8')).toBe('approved')
+    expect(requests).toHaveLength(3)
+    const permissionLog = readFileSync(join(sessions, String(physical)), 'utf8')
+    const decisions = parseSessionLog(permissionLog).filter(event => event.type === 'native-approval/decided')
+    expect(decisions).toMatchObject([{ data: { outcome: 'allowed-once' } }])
+    const permissionScene = join(root, 'snapshots/native-acp/permissions-turn')
+    const expectations = {
+      'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([permissionLog])[0] ?? permissionLog, context, { identityMode: 'preserve' }),
+      'protocol.expected.json': JSON.stringify(output.slice(beforePermission).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
+      'model-request.expected.json': JSON.stringify(requests.slice(1).map(request => ({ model: request.model,
+        messages: request.messages, tools: request.tools ?? [] })), null, 2).replaceAll(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n',
+    }
+    for (const [name, expected] of Object.entries(expectations)) {
+      if (process.env.DSH_SNAPSHOT === 'refresh') {
+        mkdirSync(permissionScene, { recursive: true })
+        writeFileSync(join(permissionScene, name), expected)
+      } else expect(expected).toBe(readFileSync(join(permissionScene, name), 'utf8'))
     }
   } finally {
     child.stdin.end()

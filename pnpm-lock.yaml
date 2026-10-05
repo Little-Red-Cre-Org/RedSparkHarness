@@ -8109,6 +8109,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-headless
@@ -8179,6 +8182,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../Engine/core/native-code-runtime
