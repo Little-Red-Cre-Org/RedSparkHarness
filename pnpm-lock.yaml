@@ -2222,12 +2222,12 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
-      '@deepseek-ai/dsh-tool-code-runtime':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
 
   rsh/Engine/core/native-jobs:
     dependencies:
@@ -2939,6 +2939,9 @@ importers:
         specifier: workspace:^
         version: link:../../../Core/util/values
     devDependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../context/agent-instructions
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand

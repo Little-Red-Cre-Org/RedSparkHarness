@@ -43,6 +43,7 @@ it('uses prepared defaults instead of advisory defaults and changes them after a
     await second.roots.execute({ route: second.route, id, resume: true }, new AbortController().signal)
     expect((await readEvents(second.storage, id)).filter(event => event.type === 'user/message' && event.data.source.kind === 'user')).toHaveLength(2)
     expect(requests.map(request => [request.maxTokens, request.reasoningEffort])).toEqual([[256, 'high'], [512, 'low']])
+    expect(requests.every(request => JSON.stringify(request.messages).includes('preserve workspace instructions.'))).toBe(true)
     const headers = (await readEvents(second.storage, id)).filter(event => event.type === 'request/header')
     expect(headers.map(event => [event.data.header.config.maxTokens, event.data.header.config.reasoningEffort]))
       .toEqual([[256, 'high'], [512, 'low']])

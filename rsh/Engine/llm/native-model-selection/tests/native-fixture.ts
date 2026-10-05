@@ -1,5 +1,5 @@
 /** Real Program composition shared by model intent and carrier tests. */
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -12,6 +12,7 @@ import { plugin as executionPlugin, type NativeRootExecutionOperations, type Nat
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
 import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
+import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { type LlmResolvedModelInfo, type ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { plugin } from '../src/native.ts'
@@ -46,6 +47,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
     } }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined }, { plugin, scope, config: undefined },
+    { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: home } },
     { plugin: appPlugin, scope, config: { cwd: home, provider: 'fixture', model: 'default', systemPrompt: 'Selection.', maxSteps: 1,
       ...options?.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
       ...options?.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort } } },
@@ -55,6 +57,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
     { plugin: storagePlugin, scope, config: { root: join(home, 'sessions'), compression: 'none' } },
   ], 'host'))
   try {
+    await writeFile(join(home, 'AGENTS.md'), 'Use the selected model and preserve workspace instructions.')
     await host.start()
     if (roots === undefined || selection === undefined || storage === undefined || active === undefined) throw new Error('actual selection services missing')
     return { host, home, roots, selection, storage, active, route: brandString<NativeRootRouteId>('root'),
