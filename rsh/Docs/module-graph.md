@@ -32,6 +32,7 @@ flowchart TD
     pkg_llm_deepseek["llm-deepseek"]
     pkg_llm_pi_ai["llm-pi-ai"]
     pkg_llm_retry["llm-retry"]
+    pkg_native_model_selection["native-model-selection"]
     pkg_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek"]
     pkg_token_meter["token-meter"]
   end
@@ -400,6 +401,7 @@ flowchart TD
   end
   pkg_launch_environment --> pkg_native_runtime
   pkg_llm --> pkg_errors
+  pkg_llm --> pkg_typert_protocol
   pkg_scope --> pkg_invariants
   pkg_attachment --> pkg_brand
   pkg_attachment --> pkg_native_runtime
@@ -1217,6 +1219,7 @@ flowchart TD
 | [`util-values`](../Core/util/values) | `util` | — |
 | [`util-workspace-path`](../Core/util/workspace-path) | `util` | — |
 | [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions) | `llm` | — |
+| [`native-model-selection`](../Engine/llm/native-model-selection) | `llm` | — |
 | [`native-code-runtime`](../Engine/core/native-code-runtime) | `core` | — |
 | [`native-headless`](../Engine/core/native-headless) | `core` | — |
 | [`native-jobs`](../Engine/core/native-jobs) | `core` | — |
@@ -1320,7 +1323,7 @@ flowchart TD
 | [`typert-registry`](../Core/typert/registry) | `typert` | — |
 | [`workspace-definition`](../Engine/workspace/workspace-definition) | `workspace` | — |
 | [`launch-environment`](../Core/util/launch-environment) | `util` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
-| [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors) |
+| [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors), [`typert-protocol`](../Core/typert/protocol) |
 | [`scope`](../Engine/core/scope) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`attachment`](../Modules/Official/attachment/attachment) | `attachment` | [`brand`](../Core/util/brand), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`client-connection`](../Programs/Web/client/connection) | `client` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |

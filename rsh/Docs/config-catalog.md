@@ -1963,7 +1963,7 @@ export interface Config {
 export type JsonlCompression = 'zstd' | 'none'
 ```
 
-Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:87`](../Engine/session/session-persistence-jsonl/src/backend.ts)
+Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:88`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 
@@ -3645,9 +3645,11 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
 - `@deepseek-ai/dsh-native-jobs` ([`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-model-execution` ([`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts))
+- `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
 - `@deepseek-ai/dsh-native-prompt` ([`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-sandbox-policy` ([`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts))
+- `@deepseek-ai/dsh-native-session-execution` ([`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts))
 - `@deepseek-ai/dsh-native-time-context` ([`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts))
 - `@deepseek-ai/dsh-native-tool-jobs` ([`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-tools` ([`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts))
@@ -3680,3 +3682,4 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-util-values` ([`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts))
 - `@deepseek-ai/dsh-util-workspace-path` ([`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts))
 - `@deepseek-ai/dsh-win32-process` ([`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts))
+- `@deepseek-ai/dsh-workspace-definition` ([`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts))

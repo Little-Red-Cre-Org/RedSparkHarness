@@ -31,6 +31,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-headless',
   'rsh/Engine/core/native-jobs',
   'rsh/Engine/core/native-model-execution',
+  'rsh/Engine/llm/native-model-selection',
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
   'rsh/Engine/jobs/native-tool-jobs',
@@ -47,6 +48,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Engine/core/native-model-execution', ['host']],
+  ['rsh/Engine/llm/native-model-selection', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Engine/core/native-code-runtime', ['host']],
@@ -109,6 +112,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
+  ['rsh/Engine/llm/native-model-selection', ['./types']],
   ['rsh/Core/util/launch-environment', ['./layers']],
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
@@ -131,6 +136,11 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+
+  ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
+  ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
+  ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
+  ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
   ['rsh/Core/util/launch-environment/layers', ['host']],
   ['rsh/Modules/Official/fs/tool-fs/image-core', ['host']],
   ['rsh/Modules/Official/attachment/attachment-local/backend', ['host']],

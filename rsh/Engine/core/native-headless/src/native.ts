@@ -1,5 +1,6 @@
 /** Native headless Agent authority over the existing Session and filesystem interfaces. */
 import { randomUUID } from 'node:crypto'
+import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgentExecution, InboxTarget } from '@deepseek-ai/dsh-native-agent'
@@ -41,7 +42,7 @@ import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
-  type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
+  callConfigEquals, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
 } from '@deepseek-ai/dsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent, type TurnEndCancelCause } from '@deepseek-ai/dsh-session/native'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
@@ -277,6 +278,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly timeContext: NativeTimeContext | undefined,
     private readonly sessionExecution?: NativeSessionExecutionOperations,
     private readonly activeSessionRegistry?: NativeActiveSessionOperations,
+    private readonly modelSelection?: NativeModelSelectionOperations,
     private readonly agentPresets?: NativeAgentPresetOperations,
     workspaceRegistry?: WorkspaceRegistryRuntime,
     private readonly executionScope: NativeScope = context.scope,
@@ -613,8 +615,21 @@ export class NativeHeadlessApplication implements NativeApplication {
       track(session.append('turn/start', { turn }))
       let reason: import('@deepseek-ai/dsh-session/native').TurnEndReason = { kind: 'completed' }
       try {
-        const admit = async (step: number): Promise<readonly UserMessage[] | undefined> => {
-          if (activeOwner === undefined) return owner.claim(step === 1 ? 'next-turn' : 'next-step')
+        const prepare = async () => {
+          let selection: Awaited<ReturnType<NativeModelSelectionOperations['capture']>> | undefined
+          if (invocation === 'root' && this.modelSelection !== undefined) {
+            if (activeOwner === undefined) throw new Error('native-headless: model selection requires the active Session Provider')
+            selection = await this.modelSelection.capture(activeOwner, config, signal)
+          }
+          const preparedStep = await this.modelExecution.prepareStep(selection?.requestedConfig ?? config, signal)
+          signal.throwIfAborted()
+          return { selection, preparedStep }
+        }
+        const admit = async (step: number) => {
+          if (activeOwner === undefined) {
+            const prepared = await prepare()
+            return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), ...prepared }
+          }
           const candidates = [...owner.messages('next-step'), ...step === 1 ? owner.messages('next-turn').slice(0, 1) : []]
           const decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal })
           signal.throwIfAborted()
@@ -623,8 +638,9 @@ export class NativeHeadlessApplication implements NativeApplication {
             reason = { kind: 'blocked' }
             return undefined
           }
+          const prepared = await prepare()
           await owner.remove(decision.messages.map(input => input.id), undefined, signal)
-          return decision.messages
+          return { inputs: decision.messages, ...prepared }
         }
         const initialInputs = await admit(1)
         request.initialize?.((type, data, ...options) => {
@@ -636,8 +652,10 @@ export class NativeHeadlessApplication implements NativeApplication {
         request.onReady?.(agent)
         for (let step = 1; step <= config.maxSteps; step++) {
           signal.throwIfAborted()
-          const inputs = step === 1 ? initialInputs : await admit(step)
-          if (inputs === undefined) break
+          const admitted = step === 1 ? initialInputs : await admit(step)
+          if (admitted === undefined) break
+          const { inputs, selection, preparedStep } = admitted
+          const stepConfig = preparedStep.config
           track(session.append('step/start', { turn, step }))
           if (step === 1) {
             if (session.deriveMessages().every(message => message.role !== 'system')) {
@@ -647,32 +665,28 @@ export class NativeHeadlessApplication implements NativeApplication {
           for (const input of inputs) {
             track(session.append('user/message', input, { surfaceOp: 'append' }))
           }
+          if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
           const timeContext = this.timeContext?.prepare({ session, turn, step })
           if (timeContext !== undefined) {
             track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
           }
           const priorHeader = session.requestHeader()
-          if (priorHeader === undefined || step === 1 && request.resume) {
+          if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
             track(session.append('request/header', {
-              header: { config: { provider: config.provider, model: config.model,
-                ...config.maxTokens === undefined ? {} : { maxTokens: config.maxTokens },
-                ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort } }, tools: schemas },
+              header: { config: { ...stepConfig }, tools: schemas },
               reason: priorHeader === undefined ? 'initial' : 'resume',
             }))
           }
           const priorContext = session.requestContext()
-          if (priorContext?.provider !== config.provider || priorContext.model !== config.model) {
-            track(session.append('request/context', { provider: config.provider, model: config.model }))
+          if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model) {
+            track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model }))
           }
           await persist()
           const options: GenerateOptions = {
-            provider: config.provider, model: config.model,
-            ...config.maxTokens === undefined ? {} : { maxTokens: config.maxTokens },
-            ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort },
-            messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
+            ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
           }
           const { message, finish } = await this.modelExecution.execute({
-            session, turn, step, options, append: track, persist,
+            session, turn, step, options, prepared: preparedStep, append: track, persist,
             onChunk: (chunk) => {
               request.onChunk?.(chunk)
               for (const observe of this.rootChunkObservers.get(owner) ?? []) {
@@ -1696,7 +1710,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
   const application = new NativeHeadlessApplication(
     context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveConfig(config), context.require('agents'),
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
-    context.optional('codeRuntime'), context.optional('timeContext'), context.optional('sessionExecution'), context.optional('activeSessions'),
+    context.optional('codeRuntime'), context.optional('timeContext'), context.optional('sessionExecution'), context.optional('activeSessions'), context.optional('modelSelection'),
     context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope,
   )
   context.own(() => application.dispose())
@@ -1707,7 +1721,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)

@@ -1,6 +1,8 @@
 /** Browser-safe request, result, and lifecycle vocabulary for the Session Remote service. */
 
 import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
+export type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection, ModelReasoningEffort, ModelReasoning, ModelCatalogModel, ModelProviderGroup, ModelCatalogFailure, ModelCatalog } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type {
   AttachmentIdType, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
 } from '@deepseek-ai/dsh-attachment'
@@ -29,16 +31,6 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     imageLimits: ImageAttachmentLimits
     /** Durable model selection already used and selected for the next request. */
     modelSelection: ModelSelectionProjection
-  }
-}
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * Complete validated model selection requested for subsequent prompt
-     * assembly. Log-only: it never enters derived model history.
-     */
-    'model/selection': ModelSelection
   }
 }
 
@@ -82,73 +74,6 @@ export type PromptContentPart =
     readonly name?: string
   }
   | { readonly type: 'file'; readonly receiptId: Branded<'file-upload-receipt-id'> }
-
-/** Complete model selection for one Session. */
-export interface ModelSelection {
-  readonly provider: string
-  readonly model: string
-  readonly reasoningEffort?: string
-}
-
-/** Host fold state for durable model selection. */
-export interface ModelSelectionProjectionState {
-  /** Selection consumed by the latest recorded model request. */
-  readonly lastUsed: ModelSelection | null
-  /** Later user selection not yet consumed by a matching model request. */
-  readonly pending: ModelSelection | null
-}
-
-/** Client view of the durable model-selection fold. */
-export interface ModelSelectionProjection {
-  /** Selection consumed by the latest recorded model request. */
-  readonly lastUsed: ModelSelection | null
-  /** Selection the next request should use, falling back to {@link lastUsed}. */
-  readonly next: ModelSelection | null
-}
-
-/** One adapter-owned reasoning effort for an exact model route. */
-export interface ModelReasoningEffort {
-  readonly id: string
-  readonly name: string
-  readonly description?: string
-}
-
-/** Selectable reasoning metadata for one exact model route. */
-export interface ModelReasoning {
-  readonly efforts: readonly ModelReasoningEffort[]
-  readonly defaultEffort?: string
-}
-
-/** One model displayed inside its provider group. */
-export interface ModelCatalogModel {
-  readonly id: string
-  readonly name: string
-  readonly description?: string
-  readonly reasoning?: ModelReasoning
-}
-
-/** One provider and its successfully loaded model catalog. */
-export interface ModelProviderGroup {
-  readonly id: string
-  readonly name: string
-  readonly models: readonly ModelCatalogModel[]
-}
-
-/** One provider whose model catalog lookup failed. */
-export interface ModelCatalogFailure {
-  readonly id: string
-  readonly name: string
-  readonly message: string
-}
-
-/** Host-generation model catalog and the default used by unconfigured Sessions. */
-export interface ModelCatalog {
-  readonly default: ModelSelection
-  /** Provider routes currently able to serve a request, including empty catalogs. */
-  readonly routableProviders: readonly string[]
-  readonly groups: readonly ModelProviderGroup[]
-  readonly failures: readonly ModelCatalogFailure[]
-}
 
 /** One client-requested mutation of a still-pending queue item. */
 export type QueueAction =

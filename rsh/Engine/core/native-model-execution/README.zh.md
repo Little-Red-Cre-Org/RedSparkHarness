@@ -33,6 +33,8 @@ kind: "package-reference"
 本包不提供 invariant companion：服务把模型流写入调用方的 Session，没有可能与之独立偏离的另一份观察。
 
 <a id="model-experience"></a>
+`./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
+
 ## 模型体验
 
 ### 助手流

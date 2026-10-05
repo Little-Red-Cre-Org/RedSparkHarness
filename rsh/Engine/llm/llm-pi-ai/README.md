@@ -180,6 +180,8 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+The native `modelDirectory` uses this installation’s exact adapter and configured routes. Catalog failures are isolated per Provider, and an unadvertised model can still resolve through its actual route. Removal drains accepted lookups before releasing the adapter.
+
 ## Model Experience
 
 ### Provider request through pi-ai
@@ -213,7 +215,6 @@ Recorded response content appends to the next request and does not invalidate it
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
-
 
 These limits define where the adapter stops and future work begins. They are current package constraints, not a general pi-ai comparison or a task backlog.
 
