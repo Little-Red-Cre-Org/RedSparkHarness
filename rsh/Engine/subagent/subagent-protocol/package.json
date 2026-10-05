@@ -29,7 +29,10 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "lib/*.js",
+    "lib/index.js",
+    "lib/descriptor.js",
+    "lib/assistant-output.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
