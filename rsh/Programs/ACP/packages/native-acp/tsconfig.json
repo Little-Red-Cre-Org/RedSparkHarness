@@ -40,6 +40,9 @@
     },
     {
       "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
     }
   ]
 }

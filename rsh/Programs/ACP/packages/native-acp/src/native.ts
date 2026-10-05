@@ -4,19 +4,20 @@ import { isAbsolute, resolve } from 'node:path'
 import { Readable, Writable } from 'node:stream'
 import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type AgentConnection, type NewSessionRequest, type PromptRequest, type PromptResponse,
-  type SessionUpdate, type SessionNotification } from '@agentclientprotocol/sdk'
+  type SessionUpdate, type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import { NativeAcpModelControls } from './model-controls.ts'
 
 /** Profile-owned model route and turn policy. */
 export interface Config {
@@ -32,6 +33,9 @@ export interface Config {
 
 interface OwnedSession {
   readonly executor: NativeHeadlessApplication
+  readonly lifetime: AbortController
+  controlTail: Promise<void>
+  controls: number
   current?: { readonly abort: AbortController; readonly done: Promise<PromptResponse> }
 }
 
@@ -131,10 +135,11 @@ export class NativeAcpApplication implements NativeApplication {
             for (const event of events.events) {
               for (const update of updates(event)) await this.notify({ sessionId: params.sessionId, update })
             }
-            this.assertOpen()
-            this.sessions.set(params.sessionId, this.createExecutor(params.sessionId, cwd))
-            return {}
           } finally { await handle.close() }
+          const record = this.createExecutor(params.sessionId, cwd)
+          const configOptions = await this.activate(record, params.sessionId, requestSignal)
+          this.sessions.set(params.sessionId, record)
+          return { configOptions }
         } finally { this.activating.delete(params.sessionId) }
       })()))
       .onRequest(methods.agent.session.list, ({ params, signal: requestSignal }) => this.track((async () => {
@@ -147,6 +152,27 @@ export class NativeAcpApplication implements NativeApplication {
           ? [] : [{ sessionId: String(header.id), cwd: header.cwd, updatedAt: new Date(header.createdAt).toISOString() }]) }
       })()))
       .onRequest(methods.agent.session.prompt, ({ params, signal: requestSignal }) => this.track(this.prompt(params, requestSignal)))
+      .onRequest(methods.agent.session.setConfigOption, ({ params, signal: requestSignal }) => this.track((async () => {
+        this.ready()
+        const record = this.sessions.get(params.sessionId)
+        if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
+        const selection = this.context.optional('modelSelection')
+        const directory = this.context.optional('modelDirectory')
+        if (selection === undefined || directory === undefined) throw RequestError.invalidParams(undefined, 'model configuration is unavailable')
+        const signal = AbortSignal.any([requestSignal, record.lifetime.signal, this.lifetime.signal])
+        // The preceding prompt's protocol request reports its own execution failure.
+        const previous = Promise.all([record.controlTail, record.current?.done.catch(() => undefined)]).then(() => undefined)
+        record.controls += 1
+        const operation = (async () => {
+          await this.waitControl(previous, signal)
+          const configOptions = await this.modelOperation(record, params.sessionId, signal,
+            (control, owner, admitted) => control.set(owner, params.configId, params.value, admitted))
+          await this.notify({ sessionId: params.sessionId, update: { sessionUpdate: 'config_option_update', configOptions } })
+          return { configOptions }
+        })()
+        record.controlTail = Promise.allSettled([previous, operation]).then(() => undefined)
+        try { return await operation } finally { record.controls -= 1 }
+      })()))
       .onRequest(methods.agent.session.close, ({ params }) => this.track(this.closeSession(params.sessionId)))
       .onNotification(methods.agent.session.cancel, ({ params }) => {
         this.sessions.get(params.sessionId)?.current?.abort.abort(new Error('ACP client cancelled'))
@@ -200,10 +226,51 @@ export class NativeAcpApplication implements NativeApplication {
 
   private createExecutor(id: string, cwd: string): OwnedSession {
     return { executor: createNativeHeadlessApplication(this.context, { ...this.config, cwd,
-      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }) }
+      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }), lifetime: new AbortController(), controlTail: Promise.resolve(), controls: 0 }
   }
 
-  private async newSession(params: NewSessionRequest, signal: AbortSignal): Promise<{ sessionId: string }> {
+  private async activate(record: OwnedSession, id: string, signal: AbortSignal): Promise<SessionConfigOption[]> {
+    try {
+      const options = await this.modelOperation(record, id, AbortSignal.any([signal, this.lifetime.signal]),
+        (control, owner, admitted) => control.options(owner, admitted))
+      this.assertOpen()
+      return options
+    } catch (error: unknown) {
+      try { await record.executor.dispose() }
+      catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native ACP model activation cleanup failed') }
+      throw error
+    }
+  }
+
+  private modelOperation(record: OwnedSession, id: string, signal: AbortSignal,
+    operation: (control: NativeAcpModelControls, owner: NativeActiveSessionOwner,
+      signal: AbortSignal) => Promise<SessionConfigOption[]>): Promise<SessionConfigOption[]> {
+    const selection = this.context.optional('modelSelection')
+    const directory = this.context.optional('modelDirectory')
+    if (selection === undefined || directory === undefined) return Promise.resolve([])
+    const control = new NativeAcpModelControls(selection, directory, this.config)
+    return record.executor.executeSessionOperation({ id: SessionId(id), resume: true }, (owner, admitted) => {
+      const execution = this.context.require('agents').execution(owner.agent)
+      return execution.status === 'maintenance' ? operation(control, owner, admitted)
+        : execution.runMaintenance(agentSignal => operation(control, owner, AbortSignal.any([agentSignal, admitted])))
+    }, signal)
+  }
+
+  private async waitControl(previous: Promise<void>, signal: AbortSignal): Promise<void> {
+    signal.throwIfAborted()
+    let abort: (() => void) | undefined
+    try {
+      await Promise.race([previous, new Promise<never>((_resolve, reject) => {
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
+        abort = () => { reject(signal.reason) }
+        signal.addEventListener('abort', abort, { once: true })
+      })])
+      signal.throwIfAborted()
+    } finally { if (abort !== undefined) signal.removeEventListener('abort', abort) }
+  }
+
+  private async newSession(params: NewSessionRequest, signal: AbortSignal):
+  Promise<{ sessionId: string; configOptions: SessionConfigOption[] }> {
     this.ready()
     const cwd = this.workspace(params.cwd, params.mcpServers)
     const fs = this.context.require('fs')
@@ -213,9 +280,10 @@ export class NativeAcpApplication implements NativeApplication {
     const handle = await this.context.require('sessionPersistence').create({ version: SESSION_FORMAT_VERSION,
       id, cwd, createdAt: Date.now(), isSeeded: false }, { signal })
     try { await handle.flush({ signal }) } finally { await handle.close() }
-    this.assertOpen()
-    this.sessions.set(id, this.createExecutor(id, cwd))
-    return { sessionId: id }
+    const record = this.createExecutor(id, cwd)
+    const configOptions = await this.activate(record, id, signal)
+    this.sessions.set(id, record)
+    return { sessionId: id, configOptions }
   }
 
   private async notify(notification: SessionNotification): Promise<void> {
@@ -229,6 +297,7 @@ export class NativeAcpApplication implements NativeApplication {
     const record = this.sessions.get(params.sessionId)
     if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
     if (record.current !== undefined) throw RequestError.invalidRequest(undefined, 'session prompt is already running')
+    if (record.controls !== 0) throw RequestError.invalidRequest(undefined, 'session configuration is in progress')
     if (params.prompt.length === 0) throw RequestError.invalidParams(undefined, 'native ACP prompt must be nonempty')
     const attachments = this.context.optional('attachments')
     const parts = params.prompt.map((block): AttachmentAdmissionPart => {
@@ -303,7 +372,9 @@ export class NativeAcpApplication implements NativeApplication {
     this.activating.add(id)
     try {
       record.current?.abort.abort(new Error('ACP Session closed'))
+      record.lifetime.abort(new Error('ACP Session closed'))
       await record.current?.done.catch(() => {}) // Prompt failure is returned by its own protocol request.
+      await record.controlTail
       await record.executor.dispose()
     } finally { this.activating.delete(id) }
     return {}

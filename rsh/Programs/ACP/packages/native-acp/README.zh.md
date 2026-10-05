@@ -28,6 +28,8 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 应用声明共享执行器的可选 `modelSelection` 服务，并使用其 Host 编译配置。
 
+新建和恢复的 Session 返回所选模型目录提供的标准 `configOptions`。`session/set_config_option` 接受已公布的不透明模型值与声明的推理档位，通过独占 Session 维护持久化完整选择，并发送 `config_option_update`。提示执行期间收到的请求等待该提示结算，选择用于下一轮；配置待结算时拒绝另一提示。调用方取消会中断排队的发现与修改；关闭和 EOF 会取消并排空已接收的控制操作。缺少目录或选择 Provider 时返回空选项并拒绝修改。目录缺项不会清除当前已记录的路由。
+
 图片提示需要所选附件 Provider 与模型目录。初始化仅在两者均安装时声明图片准入；每次图片提示在空闲 Agent 维护中检查 Session 下一步选择的模型，并拒绝未声明图片输入的模型。附件 Provider 校验已配置的位图格式、base64、字节与像素限额，标准化整批图片，并在用户消息准入之前按输入顺序返回持久引用。非法图片不会进入 Session 收件箱。取消与传输结束的清理也覆盖图片准备。
 
 <a id="dev-note"></a>
@@ -44,7 +46,7 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 #### 模型看到什么
 
-通过 `session/prompt` 接收的文本和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。ACP 展示通知不添加模型输入。
+通过 `session/prompt` 接收的文本和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
 
 #### Token 影响
 
@@ -58,4 +60,4 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 ## 已知限制与延后工作
 
-- Session 专属 MCP 挂载、音频／嵌入式输入、模型配置控制、权限／提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
+- Session 专属 MCP 挂载、音频／嵌入式输入、权限／提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
