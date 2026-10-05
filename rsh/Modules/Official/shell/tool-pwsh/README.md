@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 
 The native entry registers tools in its installation scope. Descendant Agents see these contributions; sibling Agents do not.
 
-The native contribution declares the same canonical foreground/background result fields as Bash. Foreground values retain independent exit, timeout, abort, stream and sandbox facts; background starts retain the native `jobId`. Native background execution requires both the job registry and its control tools. The registry validates the value before the PowerShell renderer produces its existing text. Both native and Cordis consumers use `canonicalShellResult` from the shell definition. These declarations do not install PTC bindings or change background job ownership.
+The native contribution declares the same canonical foreground/background result fields as Bash. Foreground values retain independent exit, timeout, abort, stream and sandbox facts; background starts retain the native `jobId`. Native background execution requires both the job registry and its control tools. The registry validates the value before the PowerShell renderer produces its existing text. Both native and Cordis consumers use `canonicalShellResult` from the shell definition. These declarations do not install PTC bindings or change background job ownership. Installed jobControls.jobs must identify the same selected jobs registry; mismatches fail loading.
 
 Load this plugin in any composition where the agent should run PowerShell commands — typically a Windows composition whose `ctx.shell` is backed by a PowerShell executor. It registers the `pwsh` tool once the executor provider and the `dsh-shell-env` registry are mounted.
 

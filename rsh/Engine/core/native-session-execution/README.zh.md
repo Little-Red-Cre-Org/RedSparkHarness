@@ -23,6 +23,8 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
+NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的选择传递给 Program 执行器；省略时保留该 Program 解析后的选择。受限子组合必须禁用内置能力，并在首次请求前安装注册工具限制。
+
 `./native` 入口要求 `agents`、提供 `sessionExecution` 与 `activeSessions`，并接收空配置。未知字段使激活失败。Profile 显式选择此 Provider；本次变更不修改应用默认组合。
 
 <a id="execution-ownership"></a>

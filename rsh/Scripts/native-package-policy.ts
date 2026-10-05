@@ -38,6 +38,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/llm/native-model-selection',
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
+  'rsh/Engine/subagent/subagent-protocol',
+  'rsh/Engine/subagent/native-subagent',
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/interaction/user-question-broker',
@@ -81,6 +83,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
   ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
@@ -158,6 +161,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],

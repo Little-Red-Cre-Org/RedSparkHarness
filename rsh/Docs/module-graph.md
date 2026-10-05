@@ -78,6 +78,7 @@ flowchart TD
     pkg_tool_skill["tool-skill"]
   end
   subgraph group_subagent["group: subagent"]
+    pkg_native_subagent["native-subagent"]
     pkg_subagent["subagent"]
     pkg_subagent_acp["subagent-acp"]
     pkg_subagent_claude_code["subagent-claude-code"]
@@ -85,6 +86,7 @@ flowchart TD
     pkg_subagent_dsh_sdk["subagent-dsh-sdk"]
     pkg_subagent_fork_in_process["subagent-fork-in-process"]
     pkg_subagent_in_process_driver["subagent-in-process-driver"]
+    pkg_subagent_protocol["subagent-protocol"]
     pkg_subagent_spawn_in_process["subagent-spawn-in-process"]
     pkg_tool_subagent["tool-subagent"]
     pkg_tool_subagent_control["tool-subagent-control"]
@@ -1250,6 +1252,8 @@ flowchart TD
 | [`native-prompt`](../Engine/core/native-prompt) | `core` | — |
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
+| [`native-subagent`](../Engine/subagent/native-subagent) | `subagent` | — |
+| [`subagent-protocol`](../Engine/subagent/subagent-protocol) | `subagent` | — |
 | [`native-acp`](../Programs/ACP/packages/native-acp) | `acp` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |

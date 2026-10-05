@@ -21,6 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
+委派调用保留选定沙箱策略，不能通过审批扩张权限。需要审批的请求记录 asked 与 decided 事实，其中策略为 never、结果为 rejected；根请求仍使用选定审批回答者。中断的临时子任务通过既有所有者修复 turn，使已接受事件观察者与持久日志收到相同取消关闭事件。
 
 可选的 `agentInstructions` Provider 在每个获准模型请求之前准备工作区指令。应用在分发前将返回的上下文记录为 `user/message`；持久化来源事实控制恢复协调，已接纳的文件系统结果控制嵌套目录发现。
 

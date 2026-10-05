@@ -757,11 +757,13 @@ export class NativeHeadlessApplication implements NativeApplication {
                 await persist()
                 await writer.flush()
                 const approvalSignal = AbortSignal.any([signal, requested.signal])
-                const decision = await service.request({
-                  id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
-                  ...requested.reason === undefined ? {} : { reason: requested.reason },
-                  signal: approvalSignal,
-                })
+                const decision = invocation === 'delegated'
+                  ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
+                  : await service.request({
+                    id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
+                    ...requested.reason === undefined ? {} : { reason: requested.reason },
+                    signal: approvalSignal,
+                  })
                 track(session.append('native-approval/decided', decision))
                 await persist()
                 await writer.flush()
@@ -856,19 +858,8 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {
           track(session.append('turn/end', { turn, reason }))
           await persist()
-        } else if (resident !== undefined || this.rootEpochs.has(id)) {
-          await owner.repair(reason)
         } else {
-          await persist()
-          const stored = await writer.read(0, Number.MAX_SAFE_INTEGER)
-          const closers = interruptedTurnClosers(stored.events)
-          const repaired = closers.map(event => event.type === 'turn/end' ? {
-            ...event, data: { ...event.data, reason },
-          } : event)
-          if (repaired.length > 0) {
-            await writer.append(repaired)
-            for (const event of repaired) notifyEvent(event)
-          }
+          await owner.repair(reason)
         }
         await writer.flush()
         await activeOwner?.settled(reason)

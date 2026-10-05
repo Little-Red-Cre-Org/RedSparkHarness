@@ -25,6 +25,8 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+The native-sdk profile composes the production one-shot subagent tool. Session-tree subscriptions receive its accepted child events, including cancellation closers, while run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. Continuable children and subagent.finished notifications remain unsupported by this native composition.
+
 Use this client when TypeScript code must drive a complete Harness runtime from another process and you can name the runtime executable explicitly. The common path is minimal: construct a `DeepSeekHarness` with a launch spec, run prompts, and close it so the child process is always reaped.
 
 ### Running agent turns with DeepSeekHarness

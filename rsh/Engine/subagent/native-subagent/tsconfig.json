@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-prompt"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../subagent-protocol"
+    },
+    {
+      "path": "../../core/native-jobs"
+    }
+  ]
+}

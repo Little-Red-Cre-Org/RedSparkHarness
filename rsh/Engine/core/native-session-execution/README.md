@@ -22,6 +22,8 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
+NativeSessionConfiguration may explicitly select builtinTools. Delegation carries that resolved choice to the Program executor; omission retains that Program’s resolved selection. A restricted child composition must disable builtin capabilities and install its registered-tool restrictions before the first request.
+
 The `./native` entry requires `agents`, provides `sessionExecution` and `activeSessions` and accepts an empty configuration. Unknown fields fail activation. Profiles explicitly select this Provider; this change does not alter application defaults.
 
 <a id="execution-ownership"></a>
