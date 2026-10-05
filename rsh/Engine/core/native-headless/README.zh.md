@@ -21,7 +21,6 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-Program 可通过 `prepareMessage` 代替 `message` 接纳根输入。回调收到下一步持久化模型选择与组合取消信号，原始 Agent 在准备期间持有执行权及其 Session writer；准备完成后才追加收件箱。拒绝时不接纳输入或模型请求。委派 turn 不提供此回调。
 
 可选的 `agentInstructions` Provider 在每个获准模型请求之前准备工作区指令。应用在分发前将返回的上下文记录为 `user/message`；持久化来源事实控制恢复协调，已接纳的文件系统结果控制嵌套目录发现。
 
