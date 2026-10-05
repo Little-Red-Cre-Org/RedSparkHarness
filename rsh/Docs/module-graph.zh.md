@@ -495,6 +495,7 @@ flowchart TD
   pkg_session_projection --> pkg_session
   pkg_settings --> pkg_brand
   pkg_settings --> pkg_invariants
+  pkg_settings --> pkg_native_runtime
   pkg_settings --> pkg_session
   pkg_session_snapshot --> pkg_http_proxy
   pkg_session_snapshot --> pkg_session
@@ -526,6 +527,7 @@ flowchart TD
   pkg_session_turn_outline --> pkg_session_projection
   pkg_settings_file --> pkg_atomic_write
   pkg_settings_file --> pkg_home_paths
+  pkg_settings_file --> pkg_native_runtime
   pkg_settings_file --> pkg_settings
   pkg_shell --> pkg_sandbox
   pkg_shell --> pkg_settings
@@ -1362,7 +1364,7 @@ flowchart TD
 | [`session-log-deepseek`](../Engine/session/session-log-deepseek) | `session` | [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions), [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session) |
 | [`session-persistence`](../Engine/session/session-persistence) | `session` | [`brand`](../Core/util/brand), [`session`](../Engine/core/session), [`timeout`](../Core/util/timeout) |
 | [`session-projection`](../Engine/session/session-projection) | `session` | [`session`](../Engine/core/session) |
-| [`settings`](../Modules/Official/settings/settings) | `settings` | [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session) |
+| [`settings`](../Modules/Official/settings/settings) | `settings` | [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`session-snapshot`](../Tests/test-support/session-snapshot) | `test-support` | [`http-proxy`](../Core/util/http-proxy), [`session`](../Engine/core/session) |
 | [`agent`](../Engine/core/agent) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`typert-protocol`](../Core/typert/protocol), [`util-values`](../Core/util/values) |
 | [`fs`](../Modules/Official/fs/fs) | `fs` | [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox) |
@@ -1372,7 +1374,7 @@ flowchart TD
 | [`session-projection-cache`](../Engine/session/session-projection-cache) | `session` | [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`storage-domain`](../Core/storage/storage-domain) |
 | [`session-stats`](../Engine/session/session-stats) | `session` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
 | [`session-turn-outline`](../Engine/session/session-turn-outline) | `session` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
-| [`settings-file`](../Modules/Official/settings/settings-file) | `settings` | [`atomic-write`](../Core/util/atomic-write), [`home-paths`](../Core/util/home-paths), [`settings`](../Modules/Official/settings/settings) |
+| [`settings-file`](../Modules/Official/settings/settings-file) | `settings` | [`atomic-write`](../Core/util/atomic-write), [`home-paths`](../Core/util/home-paths), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`settings`](../Modules/Official/settings/settings) |
 | [`shell`](../Modules/Official/shell/shell) | `shell` | [`sandbox`](../Modules/Official/sandbox/sandbox), [`settings`](../Modules/Official/settings/settings), [`subprocess`](../Core/subprocess/subprocess) |
 | [`llm-deepseek`](../Engine/llm/llm-deepseek) | `llm` | [`anonymous-user-id`](../Core/identity/anonymous-user-id), [`atomic-write`](../Core/util/atomic-write), [`attachment`](../Modules/Official/attachment/attachment), [`credentials`](../Modules/Official/credentials/credentials), [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions), [`fs`](../Modules/Official/fs/fs), [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`llm`](../Engine/llm/llm), [`settings`](../Modules/Official/settings/settings), [`timeout`](../Core/util/timeout) |
 | [`llm-pi-ai`](../Engine/llm/llm-pi-ai) | `llm` | [`attachment`](../Modules/Official/attachment/attachment), [`authorization`](../Modules/Official/credentials/authorization), [`credentials`](../Modules/Official/credentials/credentials), [`fs`](../Modules/Official/fs/fs), [`launch-environment`](../Core/util/launch-environment), [`llm`](../Engine/llm/llm), [`settings`](../Modules/Official/settings/settings), [`timeout`](../Core/util/timeout) |
