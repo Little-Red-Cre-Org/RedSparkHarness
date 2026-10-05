@@ -73,6 +73,8 @@
       "@deepseek-ai/dsh-compat-dsh-runtime/native": ["./rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts"],
       "@deepseek-ai/dsh-credentials/native": ["./rsh/Modules/Official/credentials/credentials/src/native.ts"],
       "@deepseek-ai/dsh-credentials-local/native": ["./rsh/Modules/Official/credentials/credentials-local/src/native.ts"],
+      "@deepseek-ai/dsh-settings/native": ["./rsh/Modules/Official/settings/settings/src/native.ts"],
+      "@deepseek-ai/dsh-settings-file/native": ["./rsh/Modules/Official/settings/settings-file/src/native.ts"],
       "@deepseek-ai/dsh-launch-environment/native": ["./rsh/Core/util/launch-environment/src/native.ts"],
       "@deepseek-ai/dsh-launch-environment/layers": ["./rsh/Core/util/launch-environment/src/layers.ts"],
       "@deepseek-ai/dsh-client-web/native": ["./rsh/Programs/Web/client/web/src/native-boot.ts"],

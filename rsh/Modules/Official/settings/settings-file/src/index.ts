@@ -16,7 +16,7 @@ import { Document, parseDocument } from 'yaml'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { canonicalizeWatchPath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { SettingsProvider, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
+import { isMapLike, patchNode } from './yaml-patch.ts'
 
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
@@ -65,31 +65,6 @@ export function resolveSpec(config: Config): ResolvedSpec {
     watch: config.watch ?? true,
     debounceMs: config.debounceMs ?? 100,
   }
-}
-
-/** Whether a parsed YAML value is a map for diffing purposes. */
-function isMapLike(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/**
- * Apply the difference between one node's stored and next value as minimal
- * `setIn`/`deleteIn` edits, recursing through maps, so every untouched node —
- * and the key node of every changed pair — keeps its comments, anchors, and
- * formatting. Non-map values (arrays and scalars) replace wholesale when
- * unequal, taking any comments inside them along.
- */
-function patchNode(document: Document, path: readonly string[], current: unknown, next: unknown): void {
-  if (isMapLike(current) && isMapLike(next)) {
-    for (const key of Object.keys(current)) {
-      if (!(key in next)) document.deleteIn([...path, key])
-    }
-    for (const [key, value] of Object.entries(next)) {
-      patchNode(document, [...path, key], current[key], value)
-    }
-    return
-  }
-  if (!deepEqualJson(current, next)) document.setIn([...path], next)
 }
 
 /** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
