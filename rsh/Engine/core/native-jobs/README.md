@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-native-jobs` provides a native `jobs` registry for work owned by one exact live Agent. It assigns kind-prefixed ids, fences reads and cancellation to that same Agent object, records final status and output, and drains cooperative runners during Host teardown or manual Agent release. It does not decide which job facts become model-visible or durable Session events.
+`dsh-native-jobs` provides a native `jobs` registry for work owned by one exact live Agent. It assigns kind-prefixed ids, fences reads and cancellation to that same Agent object, records status and bounded live and final output, and drains cooperative runners during Host teardown or manual Agent release. It does not decide which job facts become model-visible or durable Session events.
 
 ## Table of Contents
 
@@ -21,9 +21,9 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry requires `agents`, provides `jobs`, and accepts `maxConcurrentPerAgent`, a positive safe-integer ceiling whose default is `10`. `start()` validates the exact registered Agent, a lowercase-hyphenated kind, and a nonempty label before it invokes the runner. A runner gets one `AbortSignal`; a synchronous throw or rejected promise becomes a failed terminal record, while an expected operational failure resolves an explicit terminal outcome.
+The `./native` entry requires `agents`, provides `jobs`, and accepts `maxConcurrentPerAgent`, a positive safe-integer ceiling whose default is `10`, and `maxOutputBytes`, a positive safe-integer retained UTF-8 tail budget whose default is `262144`. `start()` validates the exact registered Agent, a lowercase-hyphenated kind, and a nonempty label before it invokes the runner. A runner gets one `AbortSignal` and a callback to publish observed text until cancellation or settlement; a synchronous throw or rejected promise becomes a failed terminal record, while an expected operational failure resolves an explicit terminal outcome.
 
-`cancel()` moves a live record to `stopping` and aborts the runner; its eventual outcome remains authoritative. `read()` returns final output only after settlement. `wait()` uses the caller-supplied timeout and optional cancellation signal; cancelling a wait leaves the job running. `dispose()` stops admission, aborts live runners, then waits for their cooperative completion. When the owner begins release, the registry aborts and drains all of that Agent's live runners before the Agent publishes disposal. Each public read, wait, and cancellation requires the original registered available Agent instance, so an unregistered, releasing, or replacement object cannot inspect an earlier owner's jobs.
+`cancel()` moves a live record to `stopping` and aborts the runner; its eventual outcome remains authoritative. `read()` returns retained live or final output without consuming it and reports truncation. A terminal outcome with `output` replaces the live text with its final display; an outcome without output preserves it. Cancellation or settlement deactivates the callback; final outcomes still arrive after owned cleanup. `wait()` uses the caller-supplied timeout and optional cancellation signal; cancelling a wait leaves the job running. `dispose()` stops admission, aborts live runners, then waits for their cooperative completion. When the owner begins release, the registry aborts and drains all of that Agent's live runners before the Agent publishes disposal. Each public read, wait, and cancellation requires the original registered available Agent instance, so an unregistered, releasing, or replacement object cannot inspect an earlier owner's jobs.
 
 <a id="model-experience"></a>
 ## Model Experience

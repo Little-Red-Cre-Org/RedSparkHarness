@@ -35,12 +35,17 @@
     "./surface": {
       "types": "./lib/types/surface.d.ts",
       "default": "./lib/types/surface.js"
+    },
+    "./event-validation": {
+      "types": "./lib/types/event-validation.d.ts",
+      "default": "./lib/event-validation.js"
     }
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
     "lib/native.js",
+    "lib/event-validation.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],

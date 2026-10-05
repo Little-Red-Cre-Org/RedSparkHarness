@@ -40,6 +40,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/interaction/user-question-broker',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
+  'rsh/Programs/Web/api/native-web-session-controller',
+  'rsh/Programs/Web/client/native-session',
   'rsh/Programs/Web/host/native-web-host',
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
@@ -59,6 +61,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Engine/core/native-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
+  ['rsh/Programs/Web/api/native-web-session-controller', ['host']],
+  ['rsh/Programs/Web/client/native-session', ['client']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
@@ -141,6 +145,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
@@ -159,7 +164,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
-  ['rsh/Engine/core/session', ['./types']],
+  ['rsh/Engine/core/session', ['./types', './surface', './event-validation']],
   ['rsh/Engine/session/session-persistence', ['./deletion']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
   ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],
@@ -167,6 +172,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
+  ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
   ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
   ['rsh/Core/util/launch-environment/layers', ['host']],

@@ -164,6 +164,7 @@
     { "path": "./rsh/Programs/Web/client/ui-session" },
     { "path": "./rsh/Programs/Web/client/resources" },
     { "path": "./rsh/Programs/Web/api/workspace-files/tsconfig.client.json" },
+    { "path": "./rsh/Programs/Web/client/native-session" },
     { "path": "./rsh/Programs/Web/client/web" },
     { "path": "./rsh/Engine/context/file-reference" },
     { "path": "./rsh/Programs/Web/application" }

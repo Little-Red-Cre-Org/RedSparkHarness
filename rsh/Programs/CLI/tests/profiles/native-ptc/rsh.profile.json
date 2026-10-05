@@ -117,6 +117,24 @@
       "id": "model",
       "plugin": "native-ptc-model",
       "scope": "root"
+    },
+    {
+      "id": "shell",
+      "plugin": "@deepseek-ai/dsh-bash-local",
+      "scope": "root",
+      "config": {
+        "graceMs": 500
+      }
+    },
+    {
+      "id": "shell-env",
+      "plugin": "@deepseek-ai/dsh-shell-env",
+      "scope": "root"
+    },
+    {
+      "id": "tool-bash",
+      "plugin": "@deepseek-ai/dsh-tool-bash",
+      "scope": "root"
     }
   ]
 }

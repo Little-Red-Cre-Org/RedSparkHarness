@@ -202,3 +202,5 @@ These limits define when the session store needs special care. They are current 
 None.
 
 </details>
+
+`./event-validation` exposes the current Session event parser to browsers using the same seed-envelope and message validators. Unknown types require `ignorable: true`; this entry imports neither Node nor Cordis.

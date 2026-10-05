@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-The native `./native` entry provides an independent `terminals` service for real PTY process lifecycle. It publishes owner-scoped ids only after allocation, lists sessions for the exact Agent, and awaits Provider-observed process cleanup on close, Agent release, backend removal, or Host shutdown. Native sessions expose no interactive send, read, signal, startup output, or readiness API; the Cordis `.` entry owns those operations. The [native lifecycle decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-lifecycle.md) explains this scope.
+The native `./native` entry provides owner-scoped allocation, listing, interactive sends, retained reads, foreground signals and awaited cleanup through `terminals`. Its backend retains the shared terminal protocol in `./protocol`; `./error` publishes failures without loading Cordis. Agent release, backend removal and Host shutdown abort admission and await Provider-observed cleanup. Sessions remain process-local. The [native interaction decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-interaction.md) records ownership and implementation reuse.
 
 Mount `@deepseek-ai/dsh-terminal` whenever a composition needs terminal sessions whose state survives across tool calls. The service alone does nothing useful: pair it with a backend such as `@deepseek-ai/dsh-terminal-bash` and a tool package such as `@deepseek-ai/dsh-tool-terminal`, and load all three in one composition.
 
