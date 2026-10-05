@@ -51,7 +51,7 @@
       "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
     },
     {
-      "path": "../../../../Engine/core/native-model-execution"
+      "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
     },
     {
       "path": "../../../../Engine/core/native-prompt"

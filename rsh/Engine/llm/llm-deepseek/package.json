@@ -90,7 +90,8 @@
         "fs"
       ],
       "provides": [
-        "model"
+        "model",
+        "modelDirectory"
       ]
     }
   },

@@ -26,6 +26,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 `session/fork` copies the source history through a closed turn into a fresh destination, without invoking a model. Its optional `atSeq` selects an existing event in that closed turn; omission selects the last closed turn. Source history remains unchanged, and the next destination prompt resumes the durable copy. The shipped native-sdk profile installs the Session-execution Provider; the application requires its execution and active-owner services explicitly.
 
+The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
+
 ## Dev Note
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.

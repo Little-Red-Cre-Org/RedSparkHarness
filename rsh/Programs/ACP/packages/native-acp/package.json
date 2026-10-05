@@ -46,6 +46,7 @@
         "codeRuntime",
         "timeContext",
         "agentInstructions",
+        "modelSelection",
         "sessionExecution",
         "activeSessions",
         "agentPresets",

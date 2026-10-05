@@ -22,6 +22,7 @@
     "src/skill-catalog.ts"
   ],
   "references": [
+    { "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json" },
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/vendor/schemastery" },
     { "path": "../../../../Engine/core/agent" },

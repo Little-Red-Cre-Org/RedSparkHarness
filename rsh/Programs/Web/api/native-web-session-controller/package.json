@@ -47,6 +47,7 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "modelSelection",
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions"

@@ -1,0 +1,19 @@
+{
+  "include": [
+    "src/types.ts"
+  ],
+  "extends": "../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/client.tsbuildinfo",
+    "rootDir": "src"
+  },
+  "references": [
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../core/native-model-execution/tsconfig.client.json"
+    }
+  ]
+}

@@ -26,6 +26,8 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 原生预设组合安装模型适配器、原生 Agent 与模型执行、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。只有精确的执行取消原因会转换为取消响应；清理失败及无关的执行失败仍作为协议错误上报。
 
+应用声明共享执行器的可选 `modelSelection` 服务，并使用其 Host 编译配置。
+
 <a id="dev-note"></a>
 
 ## 开发备注

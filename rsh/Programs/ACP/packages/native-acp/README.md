@@ -24,6 +24,8 @@ The profile sets `provider`, `model`, `systemPrompt`, and positive `maxSteps`. E
 
 The shipped native composition installs the model adapter, native Agent and model execution, local filesystem, credentials, and Session persistence. Additional native tools may be installed through profile patches. Only the exact execution cancellation reason becomes a cancelled response; cleanup and unrelated execution failures remain protocol errors.
 
+The application declares the shared executor’s optional `modelSelection` service and consumes its Host compiler face.
+
 ## Dev Note
 
 The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership. No invariant entry is published because this carrier owns no independent Agent or Session state projection that can diverge from the executor.

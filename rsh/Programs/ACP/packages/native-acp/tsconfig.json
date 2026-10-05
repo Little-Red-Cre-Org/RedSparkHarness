@@ -30,7 +30,7 @@
       "path": "../../../../Engine/core/native-agent/tsconfig.host.json"
     },
     {
-      "path": "../../../../Engine/core/native-model-execution"
+      "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
     },
     {
       "path": "../../../../Core/util/brand"
