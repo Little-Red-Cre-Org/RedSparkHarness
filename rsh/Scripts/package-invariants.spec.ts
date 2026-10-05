@@ -218,7 +218,42 @@ describe('package invariant gate', () => {
       buildEntry: "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })\n",
       message: 'package build override must omit lib/types/invariant.js when src/invariant.ts is absent',
     },
-  ])('checks brace-list build entries from source without lib output', ({ companion, buildEntry, message }) => {
+    {
+      companion: true,
+      buildEntry: "export default clientBundle('@deepseek-ai/dsh-probe', ['lib/types/index.js', 'lib/types/invariant.js'])\n",
+      message: undefined,
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig([entry('lib/types/index.js'), entry('lib/types/invariant.js')])\n",
+      message: undefined,
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig({ entry: condition ? ['lib/types/invariant.js'] : ['lib/types/index.js'] })\n",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      companion: true,
+      buildEntry: "export default condition ? defineConfig({ entry: ['lib/types/invariant.js'] }) : defineConfig({ entry: ['lib/types/index.js'] })\n",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig(() => ({ note: { entry: ['lib/types/invariant.js'] } }))\n",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig({ entry: { invariant: 'lib/types/index.js' } })\n",
+      message: 'package build override must bundle lib/types/invariant.js',
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig({ entry: { index: 'lib/types/index.js', metadata: { note: 'lib/types/invariant.js' } } })\n",
+      message: 'package build override has an unsupported entry declaration',
+    },
+  ])('checks only supported build-entry forms from source without lib output', ({ companion, buildEntry, message }) => {
     const root = fixture({ companion, buildEntry })
     expect(existsSync(join(root, 'rsh/Engine/core/probe/lib'))).toBe(false)
     const buildViolations = collectPackageInvariantViolations(root)

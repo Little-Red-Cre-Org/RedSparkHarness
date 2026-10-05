@@ -178,7 +178,14 @@ function checkBuild(
   const configPath = `${owner.dir}/tsdown.config.ts`
   if (!existsSync(resolve(root, configPath))) return
   const source = readFileSync(resolve(root, configPath), 'utf8')
-  const bundlesCompanion = tsdownEntriesIncludeInvariant(source)
+  const entries = inspectTsdownEntries(source)
+  if (!entries.supported) {
+    if (hasCompanion || entries.declaresEntry) {
+      addViolation(violations, configPath, 'package build override has an unsupported entry declaration')
+    }
+    return
+  }
+  const bundlesCompanion = entries.includesInvariant
   if (hasCompanion && !bundlesCompanion) {
     addViolation(violations, configPath, 'package build override must bundle lib/types/invariant.js')
   } else if (!hasCompanion && bundlesCompanion) {
@@ -190,39 +197,153 @@ function checkBuild(
   }
 }
 
-function tsdownEntriesIncludeInvariant(source: string): boolean {
-  const sourceFile = ts.createSourceFile('tsdown.config.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
-  const defaultExport = sourceFile.statements.find(ts.isExportAssignment)
-  if (defaultExport === undefined) return false
-
-  const entries: ts.Expression[] = []
-  const visit = (node: ts.Node): void => {
-    if (ts.isPropertyAssignment(node)
-      && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
-      && node.name.text === 'entry') {
-      entries.push(node.initializer)
-    }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-      if (node.expression.text === 'entry') entries.push(...node.arguments)
-      if (node.expression.text === 'clientBundle' && node.arguments[1] !== undefined) {
-        entries.push(node.arguments[1])
-      }
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(defaultExport.expression)
-
-  return entries.some(entry => stringLiteralValues(entry).some(patternIncludesInvariantEntry))
+interface TsdownEntryScan {
+  readonly supported: boolean
+  readonly includesInvariant: boolean
+  readonly declaresEntry: boolean
 }
 
-function stringLiteralValues(expression: ts.Expression): string[] {
-  const values: string[] = []
+function inspectTsdownEntries(source: string): TsdownEntryScan {
+  const sourceFile = ts.createSourceFile('tsdown.config.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const defaultExport = sourceFile.statements.find(ts.isExportAssignment)
+  if (defaultExport === undefined) return { supported: false, includesInvariant: false, declaresEntry: false }
+  const result = inspectConfigExpression(defaultExport.expression)
+  return result.supported
+    ? result
+    : { ...result, declaresEntry: result.declaresEntry || containsEntryDeclaration(defaultExport.expression) }
+}
+
+function inspectConfigExpression(expression: ts.Expression): TsdownEntryScan {
+  if (ts.isObjectLiteralExpression(expression)) return inspectConfigObject(expression)
+  if (ts.isArrayLiteralExpression(expression)) return combineEntryScans(expression.elements.map(inspectConfigExpression))
+  if (!ts.isCallExpression(expression) || !ts.isIdentifier(expression.expression)) {
+    return unsupportedEntryScan(false)
+  }
+
+  const helper = expression.expression.text
+  if (helper === 'defineConfig') {
+    return expression.arguments.length === 1 && expression.arguments[0] !== undefined
+      ? inspectConfigExpression(expression.arguments[0]) : unsupportedEntryScan(true)
+  }
+  if (helper === 'entry') {
+    return expression.arguments.length === 1 && expression.arguments[0] !== undefined
+      ? inspectEntryValue(expression.arguments[0]) : unsupportedEntryScan(true)
+  }
+  if (helper === 'clientBundle') return inspectClientBundle(expression.arguments)
+  if (helper === 'clientLibrary' || helper === 'staticLinked') {
+    return expression.arguments.length === 2 && expression.arguments[1] !== undefined
+      ? inspectEntryValue(expression.arguments[1]) : unsupportedEntryScan(true)
+  }
+  return unsupportedEntryScan(true)
+}
+
+function inspectConfigObject(config: ts.ObjectLiteralExpression): TsdownEntryScan {
+  const properties = config.properties.filter(property => propertyNameIsEntry(property.name))
+  if (properties.length === 0) {
+    return config.properties.some(property => ts.isSpreadAssignment(property)
+      || ts.isComputedPropertyName(property.name))
+      ? unsupportedEntryScan(true) : { supported: true, includesInvariant: false, declaresEntry: false }
+  }
+  if (properties.length !== 1 || !ts.isPropertyAssignment(properties[0])) return unsupportedEntryScan(true)
+  const entryIndex = config.properties.indexOf(properties[0])
+  if (config.properties.slice(entryIndex + 1).some(property => ts.isSpreadAssignment(property)
+    || ts.isComputedPropertyName(property.name))) return unsupportedEntryScan(true)
+  return inspectEntryValue(properties[0].initializer)
+}
+
+function inspectConfigArray(configs: ts.NodeArray<ts.Expression>): TsdownEntryScan {
+  return combineEntryScans(configs.map(inspectConfigExpression))
+}
+
+function inspectClientBundle(args: ts.NodeArray<ts.Expression>): TsdownEntryScan {
+  const entries = args[1]
+  if (args.length < 2 || args.length > 3 || entries === undefined) return unsupportedEntryScan(true)
+  const primary = inspectEntryValue(entries)
+  if (!primary.supported || args[2] === undefined) return primary
+  const options = args[2]
+  if (!ts.isObjectLiteralExpression(options)) return unsupportedEntryScan(true)
+  const companions = options.properties.filter(property => propertyNameIs(property.name, 'companions'))
+  const libOverrides = options.properties.filter(property => propertyNameIs(property.name, 'lib'))
+  if (options.properties.some(property => ts.isSpreadAssignment(property) || ts.isComputedPropertyName(property.name))) {
+    return unsupportedEntryScan(true)
+  }
+  if (libOverrides.some(property => !ts.isPropertyAssignment(property)
+    || !ts.isObjectLiteralExpression(property.initializer)
+    || property.initializer.properties.some(option => ts.isSpreadAssignment(option)
+      || ts.isComputedPropertyName(option.name) || propertyNameIs(option.name, 'entry')))) {
+    return unsupportedEntryScan(true)
+  }
+  if (companions.length === 0) return primary
+  if (companions.length !== 1 || !ts.isPropertyAssignment(companions[0])
+    || !ts.isArrayLiteralExpression(companions[0].initializer)) return unsupportedEntryScan(true)
+  const extra = inspectConfigArray(companions[0].initializer.elements)
+  const combined = combineEntryScans([primary, extra])
+  return combined.supported ? combined : { ...combined, declaresEntry: true }
+}
+
+function inspectEntryValue(expression: ts.Expression): TsdownEntryScan {
+  if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
+    return { supported: true, includesInvariant: patternIncludesInvariantEntry(expression.text), declaresEntry: true }
+  }
+  if (ts.isArrayLiteralExpression(expression)) {
+    const values = expression.elements
+    if (!values.every(isEntryString)) {
+      return unsupportedEntryScan(true)
+    }
+    return combineEntryScans(values.map(inspectEntryValue))
+  }
+  if (ts.isObjectLiteralExpression(expression)) {
+    const values = expression.properties.map(property => ts.isPropertyAssignment(property) ? property.initializer : undefined)
+    if (values.length === 0 || values.some(value => value === undefined || !isEntryString(value))) {
+      return unsupportedEntryScan(true)
+    }
+    return combineEntryScans(values.map(value => inspectEntryValue(value as ts.StringLiteral | ts.NoSubstitutionTemplateLiteral)))
+  }
+  return unsupportedEntryScan(true)
+}
+
+function isEntryString(expression: ts.Expression): expression is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {
+  return ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)
+}
+
+function combineEntryScans(scans: readonly TsdownEntryScan[]): TsdownEntryScan {
+  return {
+    supported: scans.every(scan => scan.supported),
+    includesInvariant: scans.some(scan => scan.includesInvariant),
+    declaresEntry: scans.some(scan => scan.declaresEntry),
+  }
+}
+
+function unsupportedEntryScan(declaresEntry: boolean): TsdownEntryScan {
+  return { supported: false, includesInvariant: false, declaresEntry }
+}
+
+function propertyNameIsEntry(name: ts.PropertyName | undefined): boolean {
+  return propertyNameIs(name, 'entry')
+}
+
+function propertyNameIs(name: ts.PropertyName | undefined, value: string): boolean {
+  return name !== undefined && (ts.isIdentifier(name) || ts.isStringLiteral(name)) && name.text === value
+}
+
+function containsEntryDeclaration(expression: ts.Expression): boolean {
+  let found = false
   const visit = (node: ts.Node): void => {
-    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) values.push(node.text)
+    if (found) return
+    if ((ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node) || ts.isMethodDeclaration(node)
+      || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node))
+      && (propertyNameIsEntry(node.name) || ts.isComputedPropertyName(node.name))) {
+      found = true
+      return
+    }
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'entry') {
+      found = true
+      return
+    }
     ts.forEachChild(node, visit)
   }
   visit(expression)
-  return values
+  return found
 }
 
 function patternIncludesInvariantEntry(pattern: string): boolean {

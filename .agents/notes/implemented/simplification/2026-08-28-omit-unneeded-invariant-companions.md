@@ -26,7 +26,7 @@ A package without a qualifying relationship omits `src/invariant.ts`, the `./inv
 
 `verify-package-invariants` scans every package. It requires a package-specific omission reason in the English README, rejects partial export, publication, or companion build wiring, rejects empty installers, and applies the registration, Loader namespace, reporter-use, dependency, reference, and build checks to every published companion. The Vitest host mounts the current package companion only when one exists, while topology and built-artifact checks enumerate the published set.
 
-The source-plane build check reads each `tsdown.config.ts` entry declaration directly, including brace alternatives such as `lib/types/{index,invariant,native,types}.js`; it does not depend on emitted `lib/` files. The separate built-package check verifies artifact closure after compilation.
+The source-plane build check reads each `tsdown.config.ts` entry declaration directly, including brace alternatives such as `lib/types/{index,invariant,native,types}.js`; it does not depend on emitted `lib/` files. It reads literal entry values only from supported config objects, config arrays, `entry()`, `clientBundle()`, `clientLibrary()`, and `staticLinked()` calls; unsupported entry declarations fail instead of treating nested strings as published paths. The separate built-package check verifies artifact closure after compilation.
 
 ### Audit result
 

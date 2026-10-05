@@ -26,7 +26,7 @@ Status: implemented
 
 `verify-package-invariants` 会扫描每个包。它要求英文 README 记录包级省略原因，拒绝不完整的导出、发布或伴生入口构建接线，拒绝空 installer，并对每个已发布伴生入口执行注册、Loader namespace、reporter 使用、依赖、引用与构建检查。Vitest Host 只在当前包存在伴生入口时挂载它，拓扑与构建产物检查则枚举已发布集合。
 
-source-plane 构建检查直接读取各 `tsdown.config.ts` 中的入口声明，包括 `lib/types/{index,invariant,native,types}.js` 这样的 brace alternatives；它不依赖已生成的 `lib/` 文件。独立的 built-package 检查会在编译后验证产物闭包。
+source-plane 构建检查直接读取各 `tsdown.config.ts` 中的入口声明，包括 `lib/types/{index,invariant,native,types}.js` 这样的 brace alternatives；它不依赖已生成的 `lib/` 文件。检查只从受支持的 config 对象、config 数组、`entry()`、`clientBundle()`、`clientLibrary()` 与 `staticLinked()` 调用中读取字面入口值；不支持的入口声明会直接失败，不会把嵌套字符串当成发布路径。独立的 built-package 检查会在编译后验证产物闭包。
 
 ### 审计结果
 
