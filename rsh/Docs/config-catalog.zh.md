@@ -1535,8 +1535,11 @@ export interface LspLocalServerConfig {
 需要：`tools`
 
 ```ts config-catalog
+/** Configuration for one selected MCP transport. */
+export type Config = McpClientConfig
+
 /** Configuration for one stdio or Streamable HTTP MCP server. */
-export type Config = StdioConfig | StreamableHttpConfig
+export type McpClientConfig = StdioConfig | StreamableHttpConfig
 
 /** Config for connecting to an MCP server via a spawned child process over stdio. */
 export interface StdioConfig {
@@ -1599,7 +1602,7 @@ export interface ReconnectConfig {
 }
 ```
 
-来源：[`rsh/Modules/Official/mcp/mcp-client/src/index.ts:98`](../Modules/Official/mcp/mcp-client/src/index.ts)
+来源：[`rsh/Modules/Official/mcp/mcp-client/src/index.ts:52`](../Modules/Official/mcp/mcp-client/src/index.ts)
 
 <a id="deepseek-aidsh-message-feedback"></a>
 
@@ -3650,7 +3653,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
 - `@deepseek-ai/dsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）
-- `@deepseek-ai/dsh-native-session-execution` ([`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts))
+- `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
@@ -3683,4 +3686,4 @@ export interface Config {
 - `@deepseek-ai/dsh-util-values`（[`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts)）
 - `@deepseek-ai/dsh-util-workspace-path`（[`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts)）
 - `@deepseek-ai/dsh-win32-process`（[`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts)）
-- `@deepseek-ai/dsh-workspace-definition` ([`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts))
+- `@deepseek-ai/dsh-workspace-definition`（[`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts)）

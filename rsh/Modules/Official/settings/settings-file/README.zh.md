@@ -48,6 +48,8 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+原生 Host 入口通过 `@deepseek-ai/dsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。
+
 ### 编辑文档
 
 文档是 namespace 到用户分节的 YAML 或 JSON 映射。用户可以直接编辑：任何变更都会自动生效，删除文件则让所有 namespace 回到默认值与 `base`。存在但非法的文档在启动时使插件加载失败——提供方绝不会静默忽略或覆盖它。运行中不可读或不可解析的编辑只告警并保留最后可用分节，因此手改出错不会拖垮进程。
@@ -90,6 +92,8 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 提供方：spec 解析、加载/解析、写锁下的读-改-写、watcher 生命周期、YAML/JSON 渲染 |
+| [`src/native.ts`](src/native.ts) | 原生提供方：文件存储、锁、监听器与 Host 生命周期 |
+| [`src/yaml-patch.ts`](src/yaml-patch.ts) | 共用的保留注释的 YAML 叶节点编辑 |
 | — | 不发布运行时不变式伴生入口；文件往返、watcher 时序与原子写入行为由包测试证明，进程内提交关系归 `@deepseek-ai/dsh-settings` 所有。 |
 
 ### 文档生命周期

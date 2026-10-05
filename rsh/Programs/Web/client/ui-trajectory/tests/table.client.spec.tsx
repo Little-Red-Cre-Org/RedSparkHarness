@@ -2,7 +2,7 @@
 /** Trajectory ledger selection, details, status, and fold behavior. */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import type { RenderMessageImages } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { TrajectoryTable as LocalizedTrajectoryTable } from '../src/client/TrajectoryTable.tsx'
@@ -70,6 +70,18 @@ afterEach(() => {
   vi.restoreAllMocks()
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
 })
+
+async function scrollAndSettle(element: HTMLElement, count = 1) {
+  vi.useFakeTimers()
+  try {
+    await act(async () => {
+      for (let index = 0; index < count; index++) fireEvent.scroll(element)
+      await vi.runOnlyPendingTimersAsync()
+    })
+  } finally {
+    vi.useRealTimers()
+  }
+}
 
 const TURNS: readonly TrajectoryTurnModel[] = [{
   turn: 1,
@@ -537,8 +549,7 @@ describe('TrajectoryTable', () => {
       scrollHeight: { configurable: true, get: () => scrollHeight },
     })
     tablePane.scrollTop = 0
-    fireEvent.scroll(tablePane)
-    fireEvent.scroll(tablePane)
+    await scrollAndSettle(tablePane, 2)
 
     await waitFor(() => { expect(onLoadOlder).toHaveBeenCalledOnce() })
     expect(screen.getByRole('status').textContent).toContain('Loading earlier history…')
@@ -691,7 +702,7 @@ describe('TrajectoryTable', () => {
 
     const tablePane = screen.getByRole('table').parentElement as HTMLElement
     tablePane.scrollTop = 9_000
-    fireEvent.scroll(tablePane)
+    await scrollAndSettle(tablePane)
     await waitFor(() => {
       expect(Number(view.container.querySelector(
         'tr[data-virtual-position]',
@@ -784,7 +795,7 @@ describe('TrajectoryTable', () => {
     )
     const tablePane = screen.getByRole('table').parentElement as HTMLElement
     tablePane.scrollTop = 5_000
-    fireEvent.scroll(tablePane)
+    await scrollAndSettle(tablePane)
 
     await waitFor(() => {
       expect(view.container.querySelector('tr[data-virtual-position="201"]')).toBeTruthy()

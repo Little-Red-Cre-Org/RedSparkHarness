@@ -77,7 +77,8 @@
       ],
       "optional": [
         "attachments",
-        "fs"
+        "fs",
+        "settings"
       ],
       "provides": [
         "model",

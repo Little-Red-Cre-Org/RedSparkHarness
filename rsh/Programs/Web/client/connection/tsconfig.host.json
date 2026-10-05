@@ -18,7 +18,8 @@
     "src/recovery-config.ts",
     "src/rpc-host.ts",
     "src/rpc-schema.ts",
-    "src/rpc.ts"
+    "src/rpc.ts",
+    "src/native-request-owner.ts"
   ],
   "references": [
     {
@@ -41,6 +42,9 @@
     },
     {
       "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

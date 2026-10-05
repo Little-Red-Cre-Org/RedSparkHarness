@@ -23,6 +23,8 @@ English | [中文](README.zh.md)
 
 `createNativeDesktopAssetHandler(runtimeDir, nativeClient, transportScript)` requires an installed `@deepseek-ai/dsh-web-frontend` distribution containing `dist/native.html`, a validated Client bundle, and a Host-owned browser transport script. Its `update(bundle)` operation publishes a complete replacement asset map atomically for a live Host. It does not require `dist/index.html`. It serves the native page at `/`, `/index.html`, `/native.html`, and unmatched application paths; compiled Client assets come only from the supplied asset map. `GET` and `HEAD` are supported, legacy `/plugins/` requests return 404, and decoded or symlinked static paths outside the installed frontend are rejected. `listenNativeHttpHost(registry, assets, bridge, config)` binds a loopback listener by default, routes `/api` and registered channels through the shared Connection policy, and exposes `close()` for deterministic teardown. The composing Host injects the native Connection bridge explicitly. `createDesktopAssetRoutes` exposes the same native and static routes to the compatibility Host, which also requires `dist/index.html` and owns the `/plugins/` endpoint.
 
+`prepareNativeClientBundle` returns the compiled assets and Host-only input directories for live observation. A failed build reports those directories, including existing `node_modules` locations for unresolved package imports, so the Host can rebuild after a missing import is restored without publishing an incomplete graph.
+
 <a id="model-experience"></a>
 ## Model Experience
 
