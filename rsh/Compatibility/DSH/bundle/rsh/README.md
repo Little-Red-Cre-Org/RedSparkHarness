@@ -38,6 +38,8 @@ Approval requests accept `y` for a one-time grant or `n` for rejection. Other ke
 <details>
 <summary>Implementation internals — click to expand</summary>
 
+Transcript rows and text helpers come from the [shared terminal presentation library](../../../../Programs/TUI/terminal-ui/README.md).
+
 The [bundle patch](cordis.patch.yml) leaves shared services in the base composition and moves Agent-owned tools into the selected preset. The named runner waits for Loader settlement before mounting an Agent. Durable events drive completed transcript rows, while live assistant frames provide temporary output. Plugin teardown owns the Ink instance, timers, approval requests, and Agent handle.
 
 No runtime invariant companion is published: the Agent, Session, and preset services own the independently observable relationships consumed by this renderer. Development checks are `pnpm --filter @deepseek-ai/dsh-rsh test` and `pnpm --filter @deepseek-ai/dsh-rsh lint`.

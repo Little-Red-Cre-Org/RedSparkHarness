@@ -28,6 +28,11 @@
     // not declaration path aliases, keep each package/vendor source compiled
     // under its own tsconfig boundary.
     "paths": {
+      "@deepseek-ai/dsh-native-tui": ["./rsh/Programs/TUI/native-tui/src"],
+      "@deepseek-ai/dsh-native-tui/native": ["./rsh/Programs/TUI/native-tui/src/native.ts"],
+      "@deepseek-ai/dsh-terminal-ui": ["./rsh/Programs/TUI/terminal-ui/src"],
+      "@deepseek-ai/dsh-terminal-ui/presentation": ["./rsh/Programs/TUI/terminal-ui/src/ui.js"],
+      "@deepseek-ai/dsh-terminal-ui/utilities": ["./rsh/Programs/TUI/terminal-ui/src/utils.js"],
       "@deepseek-ai/dsh-attachment/native": ["./rsh/Modules/Official/attachment/attachment/src/native.ts"],
       "@deepseek-ai/dsh-attachment/admission": ["./rsh/Modules/Official/attachment/attachment/src/admission.ts"],
       "@deepseek-ai/dsh-attachment/brand": ["./rsh/Modules/Official/attachment/attachment/src/brand.ts"],
@@ -65,6 +70,7 @@
       "@deepseek-ai/dsh-native-model-execution/native": ["./rsh/Engine/core/native-model-execution/src/native.ts"],
       "@deepseek-ai/dsh-native-prompt/native": ["./rsh/Engine/core/native-prompt/src/index.ts"],
       "@deepseek-ai/dsh-native-web-host/native": ["./rsh/Programs/Web/host/native-web-host/src/native.ts"],
+      "@deepseek-ai/dsh-native-acp/native": ["./rsh/Programs/ACP/packages/native-acp/src/native.ts"],
       "@deepseek-ai/dsh-native-sdk-server": ["./rsh/Programs/SDK/packages/native-server/src"],
       "@deepseek-ai/dsh-native-sdk-server/native": ["./rsh/Programs/SDK/packages/native-server/src/native.ts"],
       "@deepseek-ai/dsh-native-sandbox-policy/native": ["./rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts"],
@@ -424,6 +430,7 @@
       "@deepseek-ai/dsh-lsp-stdio": ["./rsh/Modules/Official/lsp/lsp-stdio/src"],
       "@deepseek-ai/dsh-mcp-client": ["./rsh/Modules/Official/mcp/mcp-client/src"],
       "@deepseek-ai/dsh-message-feedback": ["./rsh/Modules/Official/feedback/message-feedback/src"],
+      "@deepseek-ai/dsh-native-acp": ["./rsh/Programs/ACP/packages/native-acp/src"],
       "@deepseek-ai/dsh-native-command": ["./rsh/Core/util/native-command/src"],
       "@deepseek-ai/dsh-native-headless": ["./rsh/Engine/core/native-headless/src"],
       "@deepseek-ai/dsh-native-model-selection": ["./rsh/Engine/llm/native-model-selection/src"],

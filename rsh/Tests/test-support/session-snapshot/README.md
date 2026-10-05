@@ -25,9 +25,13 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+Scenario manifests accept the explicit `native-tui` profile; its real-terminal adapter drives the public `dsh` launcher and uses the same Session as replay input and durable expected output.
+
 This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
 ### Writing a snapshot suite
+
+The closed profile manifest accepts `native-acp` for native ACP protocol scenarios backed by shared Session recordings.
 
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.
 
