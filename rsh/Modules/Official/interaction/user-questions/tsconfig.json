@@ -1,24 +1,11 @@
 {
-  "extends": "../../../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib/types"
-  },
-  "include": [
-    "src"
-  ],
+  "files": [],
   "references": [
     {
-      "path": "../../../../Core/vendor/cosmokit"
+      "path": "./tsconfig.host.json"
     },
     {
-      "path": "../../../../Core/vendor/cordis"
-    },
-    {
-      "path": "../../../../Engine/core/agent"
-    },
-    {
-      "path": "../../../../Engine/llm/llm"
+      "path": "./tsconfig.client.json"
     }
   ]
 }

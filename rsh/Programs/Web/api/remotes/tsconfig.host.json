@@ -54,7 +54,7 @@
       "path": "../../../../Modules/Official/interaction/user-approval"
     },
     {
-      "path": "../../../../Modules/Official/interaction/user-questions"
+      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
     },
     {
       "path": "../session-controller/tsconfig.host.json"

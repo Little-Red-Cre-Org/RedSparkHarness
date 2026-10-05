@@ -35,6 +35,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-tools',
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
+  'rsh/Modules/Official/interaction/user-question-broker',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/host/native-web-host',
@@ -48,6 +49,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Engine/core/native-code-runtime', ['host']],
@@ -60,6 +62,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
+  ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
   ['rsh/Modules/Official/mcp/mcp-client', 'Cordis and native MCP Consumers share connection supervision and protocol tool projection'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
@@ -99,6 +103,8 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
+  ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
   ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],
@@ -115,6 +121,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
@@ -138,6 +145,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
+  ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
   ['rsh/Core/util/launch-environment/layers', ['host']],
   ['rsh/Modules/Official/fs/tool-fs/image-core', ['host']],
   ['rsh/Modules/Official/attachment/attachment-local/backend', ['host']],
