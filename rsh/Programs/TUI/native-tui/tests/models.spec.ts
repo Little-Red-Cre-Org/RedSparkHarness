@@ -12,7 +12,7 @@ import { terminalModelOperations } from '../src/models.ts'
 
 it('owns idle model maintenance, durable revision forwarding and cancelled menu drain', async () => {
   const config = resolveNativeTuiConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Terminal.',
-    locale: 'en', background: '#000000', maxQueuedInputs: 1, maxHistoryEvents: 100, maxTranscriptEvents: 2, maxStreamChunks: 2 })
+    locale: 'en', background: '#000000', maxQueuedInputs: 1, maxHistoryEvents: 100, maxTranscriptEvents: 2, maxStreamChunks: 2, maxPendingHumanRequests: 2 })
   const id = SessionId('terminal-model-maintenance')
   const owner = {} as NativeActiveSessionOwner // This port proof observes identity; the real dsh snapshot owns the complete Session.
   let state: NativeModelSelectionState = { revision: null, lastUsed: null, next: null }

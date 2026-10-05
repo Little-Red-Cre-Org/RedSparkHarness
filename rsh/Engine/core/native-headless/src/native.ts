@@ -739,14 +739,16 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }))
                 await persist()
                 await writer.flush()
+                const approvalSignal = AbortSignal.any([signal, requested.signal])
                 const decision = await service.request({
                   id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
                   ...requested.reason === undefined ? {} : { reason: requested.reason },
-                  signal: AbortSignal.any([signal, requested.signal]),
+                  signal: approvalSignal,
                 })
                 track(session.append('native-approval/decided', decision))
                 await persist()
                 await writer.flush()
+                approvalSignal.throwIfAborted()
                 return decision.outcome
               }
               const authorize = async (requested: NativeToolApproval): Promise<void> => {
