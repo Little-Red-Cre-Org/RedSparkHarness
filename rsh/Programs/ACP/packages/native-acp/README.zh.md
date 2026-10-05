@@ -22,11 +22,13 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个文本提示。重叠的提示显式失败。创建返回之前，空 Session 已持久化。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
+Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，空 Session 已持久化。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
 
 原生预设组合安装模型适配器、原生 Agent 与模型执行、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。只有精确的执行取消原因会转换为取消响应；清理失败及无关的执行失败仍作为协议错误上报。
 
 应用声明共享执行器的可选 `modelSelection` 服务，并使用其 Host 编译配置。
+
+图片提示需要所选附件 Provider 与模型目录。初始化仅在两者均安装时声明图片准入；每次图片提示在同一次根执行准入中检查 Session 下一步选择的模型并准备附件，拒绝未声明图片输入的模型。附件 Provider 校验已配置的位图格式、base64、字节与像素限额，标准化整批图片，并在用户消息准入之前按输入顺序返回持久引用。非法图片不会进入 Session 收件箱。取消与传输结束的清理也覆盖图片准备。
 
 <a id="dev-note"></a>
 
@@ -38,22 +40,22 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 ## 模型体验
 
-### ACP 文本提示
+### ACP 文本与图片提示
 
 #### 模型看到什么
 
-通过 `session/prompt` 接收的文本进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。ACP 展示通知不添加模型输入。
+通过 `session/prompt` 接收的文本和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。ACP 展示通知不添加模型输入。
 
 #### Token 影响
 
-提交的文本在获准执行的步骤以及保留它的后续步骤中增加输入 token。
+提交的文本和模型图片预览在获准执行的步骤以及保留它们的后续步骤中增加输入 token。
 
 #### KV Cache 影响
 
-提交的提示在保留的历史后追加用户文本；此前请求内容保留其顺序。
+提交的提示在保留的历史后追加用户内容；此前请求内容保留其顺序。
 
 <a id="known-limitations-and-deferred-work"></a>
 
 ## 已知限制与延后工作
 
-- Session 专属 MCP 挂载、图片／音频／嵌入式输入、模型配置控制、权限／提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明仅支持文本提示且不支持 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
+- Session 专属 MCP 挂载、音频／嵌入式输入、模型配置控制、权限／提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
