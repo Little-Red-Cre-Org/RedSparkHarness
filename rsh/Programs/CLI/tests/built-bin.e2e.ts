@@ -607,10 +607,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         '',
       ].join('\n'))
     } finally {
-      if (child.exitCode === null) {
-        child.kill('SIGKILL')
-        await child
-      }
+      child.kill('SIGKILL')
+      await child
       rmSync(fixture.home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
@@ -642,10 +640,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         '',
       ].join('\n'))
     } finally {
-      if (child.exitCode === null) {
-        child.kill('SIGKILL')
-        await child
-      }
+      child.kill('SIGKILL')
+      await child
       rmSync(fixture.home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
@@ -686,10 +682,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(events.match(/app:start:first\n/g)).toHaveLength(1)
       expect(events).not.toContain('app:start:second\n')
     } finally {
-      if (child.exitCode === null) {
-        child.kill('SIGKILL')
-        await child
-      }
+      child.kill('SIGKILL')
+      await child
       rmSync(fixture.home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
