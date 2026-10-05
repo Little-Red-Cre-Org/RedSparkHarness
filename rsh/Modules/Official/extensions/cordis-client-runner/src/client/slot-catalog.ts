@@ -552,6 +552,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     ownerPropsReferences: [
       'Workspace',
+      'WorkspaceId',
     ],
     standardProps: [
       'useResource: UseResource',

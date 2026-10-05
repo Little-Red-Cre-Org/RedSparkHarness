@@ -37,3 +37,5 @@ Workspace 错误声明使用 canonical 所有者 `@deepseek-ai/dsh-typert-protoc
 定向拥有者用例使用真实 NativeHost、JSONL 持久化及既有受控模型 adapter。覆盖无模型请求的维护、跨父任务关闭与冷恢复的常驻子任务、另一 writer 仍被保留时的独立关闭失败，以及冷恢复前后保留代际的字节一致性。发布验证检查拥有者 TypeScript 程序及不依赖 Cordis 的原生入口；不声称所有应用载体已迁移。
 
 NativeAgent 的纯 `./inbox` 叶拥有 InboxTarget 和 `agent/inbox/spliced` 的唯一声明，兼容 Agent 转发同一类型。独立 Client 编译面仅包含该叶；事件字段、格式版本及已提交 Session 代际保持不变。
+
+Client 目录只分析包的独立部分 Client 项目实际编译的导出，不把 Host 根入口纳入该程序。发布检查保留 Session 与 LLM 兼容入口的可选 peer，使其独立原生入口不安装这些依赖；保留 renderer 共享的 React 与 slot peer，只把确认属于浏览器运行时的依赖列为安装依赖。固定的浏览器 Session 凭据地址仍使用品牌类型，原生 Host 代码无需加载依赖 Cordis 的凭据入口。
