@@ -73,7 +73,8 @@
     "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
+    "@deepseek-ai/dsh-tool-subagent-control": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -134,7 +135,6 @@
     "@deepseek-ai/dsh-tool-ralph": "workspace:^",
     "@deepseek-ai/dsh-tool-skill": "workspace:^",
     "@deepseek-ai/dsh-tool-str-replace-editor": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent-control": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-tool-web": "workspace:^",
     "@deepseek-ai/dsh-tool-workflow": "workspace:^",

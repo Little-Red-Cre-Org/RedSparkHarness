@@ -1,5 +1,6 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
@@ -63,6 +64,7 @@ function Message({ event, t, sessionId, controller }: {
 
 function Conversation({ controller, t }: { controller: NativeConversationController; t: Translate }) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
+  const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
@@ -86,6 +88,12 @@ function Conversation({ controller, t }: { controller: NativeConversationControl
     {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
     {selected === undefined ? <p>{t('empty')}</p> : <>
       <ModelControls controller={controller} t={t} />
+      {todos === null ? null : <aside aria-label={t('todos')}>
+        <h2>{t('todos')}</h2>
+        <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
+          <span>{t(todo.status)}</span>: {todo.content}
+        </li>)}</ul>
+      </aside>}
       <section aria-label={t('facts')}>
         {snapshot.events.map(event => <Message key={event.seq} event={event} t={t} sessionId={selected} controller={controller} />)}
       </section>

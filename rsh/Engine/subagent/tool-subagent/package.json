@@ -99,7 +99,8 @@
       "provides": [],
       "optional": [
         "jobs",
-        "jobControls"
+        "jobControls",
+        "subagentControls"
       ]
     }
   },

@@ -1,15 +1,17 @@
-/** Native one-shot Subagent Definition and in-process spawn Provider. */
+/** Native Subagent Definition and in-process spawn Provider. */
 import { randomUUID } from 'node:crypto'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk, type MessageId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
+import { NativeSubagentContinuations } from './continuation.ts'
+import type { NativeDelegationSetup, NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeJobId, NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
 import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 import type {} from '@deepseek-ai/dsh-native-prompt'
 import type {} from '@deepseek-ai/dsh-native-tools'
+import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 
 /** Explicit deployment choices for one fresh child. */
 export interface NativeSubagentOptions {
@@ -50,10 +52,32 @@ export interface NativeSubagentBackground {
   readonly provider: string
 }
 
-/** Replaceable one-shot Provider; Programs retain Agent execution and Session writing. */
+/** Durable continuation and initial inbox acceptance. */
+export interface NativeSubagentContinuation {
+  readonly id: SessionId
+  readonly provider: string
+  readonly messageId: MessageId
+}
+
+/** Exact active caller addressing one existing child or its direct parent. */
+export interface NativeSubagentControlRequest {
+  readonly agent: NativeAgent
+  readonly session: Session
+  readonly target: SessionId
+}
+
+/** Actual control tools bound to the selected Provider and registry. */
+export interface NativeSubagentControlTools {
+  readonly subagents: NativeSubagentOperations
+  readonly tools: NativeToolRegistry
+}
+
+/** Replaceable Subagent Provider; Programs retain Agent execution and Session writing. */
 export interface NativeSubagentOperations {
   /** Jobs registry selected by this Provider for background starts; absent in foreground-only assemblies. */
   readonly backgroundJobs: NativeJobRegistry | undefined
+  /** Tools registry selected for child permissions and continuation controls; absent in tool-free assemblies. */
+  readonly continuationTools: NativeToolRegistry | undefined
   /**
    * Resolve the latest logged parent route, budgets and scoped deployment choices.
    * @param request - exact active initiating parent, prompt and deployment policy.
@@ -80,10 +104,30 @@ export interface NativeSubagentOperations {
    * @returns real child identity and job handle after its initial durable facts are committed; startup failures reject after cleanup.
    */
   startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground>
+  /** Create a durable continuable child and accept its first message without waiting for model output.
+   * @param request - resolved child permissions and startup composition.
+   * @param signal - cancellation before durable message acceptance.
+   * @returns actual child and accepted input identities.
+   */
+  startContinuable(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentContinuation>
+  /** Send to an adjacent live child or cold-resume a durable continuable child.
+   * @param request - exact caller, recipient and authored content.
+   * @param signal - cancellation before durable acceptance.
+   * @returns the accepted message id, independently of its eventual answer.
+   */
+  sendMessage(request: NativeSubagentControlRequest & { readonly content: readonly ContentBlock[] },
+    signal: AbortSignal): Promise<MessageId>
+  /** Interrupt a live descendant's current turn while retaining pending input.
+   * @param request - exact active ancestor and addressed child; absent targets are a no-op.
+   */
+  interrupt(request: NativeSubagentControlRequest): void
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { subagents: NativeSubagentOperations }
+  interface NativeServices {
+    subagents: NativeSubagentOperations
+    subagentControls: NativeSubagentControlTools
+  }
 }
 
 function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['stopReason'] {
@@ -100,13 +144,19 @@ function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['st
 
 /** One in-process Provider without a second Agent loop, result registry or writer. */
 export class NativeSpawnSubagents implements NativeSubagentOperations {
-  private readonly pending = new Map<Promise<NativeSubagentResult>, AbortSignal>()
+  private readonly pending = new Map<Promise<unknown>, AbortSignal>()
+  private readonly continuations: NativeSubagentContinuations
   private readonly cancellation = new AbortController()
   private closing = false
-  constructor(private readonly context: NativeContext, readonly providerName: string) {}
+  constructor(private readonly context: NativeContext, readonly providerName: string) {
+    this.continuations = new NativeSubagentContinuations(context, providerName, (request, setup) => { this.prepare(request, setup) })
+  }
 
   /** @inheritdoc */
   get backgroundJobs(): NativeJobRegistry | undefined { return this.context.optional('jobs') }
+
+  /** @inheritdoc */
+  get continuationTools(): NativeToolRegistry | undefined { return this.context.optional('tools') }
 
   /** @inheritdoc */
   resolve(request: Parameters<NativeSubagentOperations['resolve']>[0]): NativeSubagentRequest {
@@ -184,7 +234,27 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     }
   }
 
-  private track(task: Promise<NativeSubagentResult>, signal: AbortSignal): Promise<NativeSubagentResult> {
+  /** @inheritdoc */
+  startContinuable(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentContinuation> {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
+    return this.track(this.continuations.start(request, effective), effective)
+  }
+
+  /** @inheritdoc */
+  sendMessage(request: NativeSubagentControlRequest & { readonly content: readonly ContentBlock[] },
+    signal: AbortSignal): Promise<MessageId> {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
+    return this.track(this.continuations.send(request.agent, request.session, request.target, request.content, effective), effective)
+  }
+
+  /** @inheritdoc */
+  interrupt(request: NativeSubagentControlRequest): void {
+    this.continuations.interrupt(request.agent, request.session, request.target)
+  }
+
+  private track<T>(task: Promise<T>, signal: AbortSignal): Promise<T> {
     this.pending.set(task, signal)
     const settled = (): void => { this.pending.delete(task) }
     void task.then(settled, settled)
@@ -198,10 +268,24 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     this.closing = true
     this.cancellation.abort(new Error('native-subagent: Provider is closing'))
     const pending = [...this.pending]
-    const results = await Promise.allSettled(pending.map(([task]) => task))
+    const results = await Promise.allSettled([...pending.map(([task]) => task), this.continuations.dispose()])
     const errors = results.flatMap((result, index) => result.status === 'rejected'
       && result.reason !== pending[index]?.[1].reason ? [result.reason as unknown] : [])
     if (errors.length > 0) throw new AggregateError(errors, 'native-subagent: accepted run cleanup failed')
+  }
+
+  private prepare(request: NativeSubagentRequest, { agent, own }: NativeDelegationSetup): void {
+    const prompt = this.context.require('promptSections')
+    own(prompt.register({ name: 'subagent:delegation', order: 100, text: () => SUBAGENT_DELEGATION_CONTEXT }, agent.scope))
+    if (request.toolFilter !== undefined) {
+      const tools = this.context.optional('tools')
+      if (tools === undefined) throw new Error('native-subagent: toolFilter requires tools')
+      own(tools.restrict(request.toolFilter, agent.scope))
+    }
+    const persona = request.persona
+    if (persona !== undefined) {
+      own(prompt.register({ name: 'deployment:persona-prefix', order: 0, text: () => persona }, agent.scope))
+    }
   }
 
   private async execute(request: NativeSubagentRequest, signal: AbortSignal, background?: {
@@ -222,19 +306,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
             if (chunk.type === 'text-delta') background.publishOutput(chunk.text)
           } },
         message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
-        prepare: ({ agent, own }) => {
-          const prompt = this.context.require('promptSections')
-          own(prompt.register({ name: 'subagent:delegation', order: 100, text: () => SUBAGENT_DELEGATION_CONTEXT }, agent.scope))
-          if (request.toolFilter !== undefined) {
-            const tools = this.context.optional('tools')
-            if (tools === undefined) throw new Error('native-subagent: toolFilter requires tools')
-            own(tools.restrict(request.toolFilter, agent.scope))
-          }
-          const persona = request.persona
-          if (persona !== undefined) {
-            own(prompt.register({ name: 'deployment:persona-prefix', order: 0, text: () => persona }, agent.scope))
-          }
-        },
+        prepare: (setup) => { this.prepare(request, setup) },
         initialize: (append) => { append('subagent/descriptor', descriptor) },
         onEvent: (event) => {
           output.push(event)

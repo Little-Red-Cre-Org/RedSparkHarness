@@ -52,6 +52,7 @@ export function shippedNativeProfileComposition(
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },
       { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT, config: { providerName: 'spawn' } },
+      { id: 'subagent-controls', plugin: '@deepseek-ai/dsh-tool-subagent-control', scope: ROOT },
       { id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: ROOT,
         config: { toolName: 'subagent', maxDepth: 3 } },
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },

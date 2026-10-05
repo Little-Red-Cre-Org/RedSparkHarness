@@ -78,6 +78,7 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
+  '@deepseek-ai/dsh-tool-todo/client-native': ['foldTodos'],
   '@deepseek-ai/dsh-native-model-selection/types': ['foldNativeModelSelectionState'],
   '@deepseek-ai/dsh-agent-presets/selection': ['foldNativeAgentPresetFacts'],
   '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
