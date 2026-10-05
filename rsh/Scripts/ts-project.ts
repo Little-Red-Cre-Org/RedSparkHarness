@@ -91,7 +91,7 @@ export class TypeScriptProject {
    * @param projectRoot - repository root the program is seeded and reported from.
    * @param face - which compiler face aggregate to flatten.
    */
-  constructor(readonly projectRoot: string, face: CompilerFace = 'host') {
+  constructor(readonly projectRoot: string, readonly face: CompilerFace = 'host') {
     const graph = loadProjectGraph(projectRoot, face)
     this.program = ts.createProgram(graph.rootNames, semanticCompilerOptions(graph.options))
     this.checker = this.program.getTypeChecker()

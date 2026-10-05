@@ -2,12 +2,16 @@
 import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type {} from '@deepseek-ai/dsh-session/types'
 
-/** One ordered pending-message list owned by an Agent. */
+/** One of the two ordered pending-message lists owned by an agent. */
 export type InboxTarget = 'next-turn' | 'next-step'
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
-    /** One normalized durable pending-message insertion, removal or cancellation. */
+    /**
+     * One normalized mutation of an agent's durable pending-message lists.
+     * The session-projection registry applies the committed event before
+     * `Session.append()` returns; Inbox live notifications follow that commit.
+     */
     'agent/inbox/spliced': {
       target: InboxTarget
       start: number

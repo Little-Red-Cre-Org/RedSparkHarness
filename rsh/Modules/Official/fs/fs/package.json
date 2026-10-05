@@ -67,6 +67,8 @@
     "@deepseek-ai/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-invariants": { "optional": true },
+    "@deepseek-ai/dsh-plugin-host": { "optional": true },
     "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {

@@ -16,7 +16,7 @@
       "path": "../../../Core/runtime-diagnostics/native-runtime"
     },
     {
-      "path": "../native-agent"
+      "path": "../native-agent/tsconfig.host.json"
     },
     {
       "path": "../session"
