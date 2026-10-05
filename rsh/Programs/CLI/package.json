@@ -69,7 +69,6 @@
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-native-subagent": "workspace:^",
     "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
