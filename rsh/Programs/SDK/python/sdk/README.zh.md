@@ -36,6 +36,8 @@ print(result.final_response)
 
 显式选择 `profile="native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片字典（`{"type": "image", "data": ..., "mimeType": "image/png"}`）；原生附件 Provider 负责校验与持久化存储。
 
+`Session.steer(input)` 与 `HarnessClient.session_steer(session_id, content_blocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发；空闲或未知 Session 及兼容 profile 拒绝该请求.
+
 `Session.fork(destination_session_id, at_seq=None)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.session_fork` 提供协议回执。分叉不调用模型。
 
 ## 自定义插件

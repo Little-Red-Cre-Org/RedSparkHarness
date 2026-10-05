@@ -107,6 +107,7 @@ export function shippedNativeProfileComposition(
       { id: 'code-runtime', plugin: '@deepseek-ai/dsh-code-runtime-process-sandbox', scope: ROOT },
       { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: ROOT },
       { id: 'bash', plugin: windows ? '@deepseek-ai/dsh-pwsh-sandbox' : '@deepseek-ai/dsh-bash-sandbox', scope: ROOT },
+      { id: 'spill-store', plugin: '@deepseek-ai/dsh-spill-local', scope: ROOT },
       { id: 'search-tools', plugin: '@deepseek-ai/dsh-tool-fs-search', scope: ROOT,
         config: { sampleOverCapGlobResults: false } },
       ...(profile === 'native-web' ? [{ id: 'user-questions', plugin: '@deepseek-ai/dsh-user-questions', scope: ROOT },
