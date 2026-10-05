@@ -23,8 +23,10 @@ it('defines a native-web Host composition and Client profile without Cordis rows
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
-    ensureShippedNativeProfile('native-headless', home)
-    expect(nativeProfileReloadMode('native-headless', home)).toBe('startup')
+    for (const name of ['native-headless', 'native-sdk', 'native-acp', 'native-tui']) {
+      ensureShippedNativeProfile(name, home)
+      expect(nativeProfileReloadMode(name, home)).toBe('startup')
+    }
     const client = JSON.parse(await readFile(join(home, 'profiles', 'native-web', 'rsh.client.json'), 'utf8')) as {
       installations: Array<{ id: string; plugin: string }>
     }

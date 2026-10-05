@@ -30,6 +30,8 @@ Layers apply to an empty entry list in this order: each bundle in the profile's 
 
 Custom profiles default to live patch reload. The shipped `web` profile is live; `headless`, `sdk`, `sdk-minimal`, and `acp` apply all layers once at startup because replacing a one-shot or stdio application's dependencies after it owns work would invalidate that lifecycle.
 
+Native profiles use `dsh.profile.configReload` instead: the shipped `native-web` profile watches `rsh.profile.json` and explicit JSON `--patch` files, then replaces the Host installation plan. Native headless, SDK, ACP, and TUI profiles remain startup-only. This Host configuration reload is separate from compatibility `cordis.patch.yml` reload and Web Client asset rebuilding.
+
 To see the tree your machine boots:
 
 ```sh

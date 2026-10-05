@@ -30,6 +30,8 @@
 
 自定义 profile 默认实时重载 patch。随附的 `web` profile 使用实时重载；`headless`、`sdk`、`sdk-minimal` 和 `acp` 则只在启动时应用一次所有配置层，因为一次性应用或 stdio 应用拥有工作之后，替换其依赖会破坏该生命周期。
 
+Native profile 使用 `dsh.profile.configReload`：随附的 `native-web` profile 监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，然后替换 Host 安装计划。Native headless、SDK、ACP 和 TUI profile 仍只在启动时加载。该 Host 配置重载独立于兼容模式的 `cordis.patch.yml` 重载和 Web Client 资源重建。
+
 要查看你的机器启动的配置树：
 
 ```sh
