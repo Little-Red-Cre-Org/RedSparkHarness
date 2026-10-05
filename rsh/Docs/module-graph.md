@@ -32,6 +32,7 @@ flowchart TD
     pkg_llm_deepseek["llm-deepseek"]
     pkg_llm_pi_ai["llm-pi-ai"]
     pkg_llm_retry["llm-retry"]
+    pkg_native_model_selection["native-model-selection"]
     pkg_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek"]
     pkg_token_meter["token-meter"]
   end
@@ -164,6 +165,7 @@ flowchart TD
     pkg_client_hmr["client-hmr"]
     pkg_client_locale["client-locale"]
     pkg_client_modules["client-modules"]
+    pkg_client_native_application["client-native-application"]
     pkg_client_native_session["client-native-session"]
     pkg_client_resources["client-resources"]
     pkg_client_store["client-store"]
@@ -483,6 +485,7 @@ flowchart TD
   pkg_app_boot --> pkg_home_paths
   pkg_app_boot --> pkg_launch_environment
   pkg_app_boot --> pkg_system_prompt
+  pkg_client_native_application --> pkg_session
   pkg_client_native_session --> pkg_session
   pkg_code_runtime_worker_thread --> pkg_code_runtime
   pkg_code_runtime_worker_thread --> pkg_session
@@ -1227,6 +1230,7 @@ flowchart TD
 | [`util-values`](../Core/util/values) | `util` | — |
 | [`util-workspace-path`](../Core/util/workspace-path) | `util` | — |
 | [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions) | `llm` | — |
+| [`native-model-selection`](../Engine/llm/native-model-selection) | `llm` | — |
 | [`native-code-runtime`](../Engine/core/native-code-runtime) | `core` | — |
 | [`native-headless`](../Engine/core/native-headless) | `core` | — |
 | [`native-jobs`](../Engine/core/native-jobs) | `core` | — |
@@ -1371,6 +1375,7 @@ flowchart TD
 | [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`api-workspace-controller`](../Programs/Web/api/workspace-controller) | `api` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`host-directory-picker`](../Programs/Web/host/directory-picker), [`session`](../Engine/core/session), [`storage-domain`](../Core/storage/storage-domain), [`typert-protocol`](../Core/typert/protocol), [`workspace`](../Modules/Official/workspace/workspace) |
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
+| [`client-native-application`](../Programs/Web/client/native-application) | `client` | [`session`](../Engine/core/session) |
 | [`client-native-session`](../Programs/Web/client/native-session) | `client` | [`session`](../Engine/core/session) |
 | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread) | `code-runtime` | [`code-runtime`](../Modules/Official/code-runtime/code-runtime), [`session`](../Engine/core/session), [`timeout`](../Core/util/timeout) |
 | [`persona`](../Engine/preset/persona) | `preset` | [`system-prompt`](../Engine/core/system-prompt) |

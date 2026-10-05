@@ -3,6 +3,8 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
   "include": ["src"],
   "references": [
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json" },
     { "path": "../../../../Core/util/json-rpc-line" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../../../Engine/core/native-headless" },
@@ -11,6 +13,6 @@
     { "path": "../../../../Modules/Official/fs/fs" },
     { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
     { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" },
-    { "path": "../../../../Engine/core/native-model-execution" }
+    { "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json" }
   ]
 }

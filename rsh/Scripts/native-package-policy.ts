@@ -33,6 +33,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-headless',
   'rsh/Engine/core/native-jobs',
   'rsh/Engine/core/native-model-execution',
+  'rsh/Engine/llm/native-model-selection',
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
   'rsh/Engine/jobs/native-tool-jobs',
@@ -42,6 +43,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
   'rsh/Programs/Web/client/native-session',
+  'rsh/Programs/Web/client/native-application',
   'rsh/Programs/Web/host/native-web-host',
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
@@ -55,6 +57,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/shell/shell-process-local', ['host']],
   ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Engine/core/native-model-execution', ['host']],
+  ['rsh/Engine/llm/native-model-selection', ['host']],
   ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
@@ -63,6 +67,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
   ['rsh/Programs/Web/api/native-web-session-controller', ['host']],
   ['rsh/Programs/Web/client/native-session', ['client']],
+  ['rsh/Programs/Web/client/native-application', ['client']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
@@ -145,6 +150,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
+  ['rsh/Engine/llm/native-model-selection', ['./types']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
@@ -172,6 +179,10 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
+  ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
+  ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
+  ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
   ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
   ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],

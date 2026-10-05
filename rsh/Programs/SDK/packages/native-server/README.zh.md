@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供现有的按行分帧 SDK JSON-RPC 方法：`initialize`、`session/prompt` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
+显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供现有的按行分帧 SDK JSON-RPC 方法：`initialize`、`session/prompt`、`session/cancel`、`session/fork` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
 
 ## 目录
 
@@ -23,6 +23,12 @@ kind: "package-reference"
 ## 配置
 
 Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前进程选择一个工作目录、提供方、模型，以及可选的推理强度和输出 token 上限。每个 Session ID 同时只运行一个轮次；后续提示从该 Session 的持久日志恢复，包括进程重启之后。`session/prompt` 仅在收件箱回执持久化后返回消息 ID；在此之前的失败以 JSON-RPC 错误返回给两个 SDK 客户端。
+
+原生路径还为已接收模型分块发送 `session.chunk`，并提供 `session/cancel`。取消仅针对当前已接收轮次，在持久化接收前或结束后返回 false，并等待其资源清理结束后响应。清理失败会拒绝取消请求。排队提示与其它 Session 独立接收。分块投影选定派发，`assistant/message` 或 `assistant/attempt` 仍是其持久化所有者。同 id 提示恢复存储历史。
+
+`session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。随附 native-sdk profile 安装 Session-execution Provider；应用显式要求其执行与活动所有者服务。
+
+应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 
 <a id="dev-note"></a>
 
