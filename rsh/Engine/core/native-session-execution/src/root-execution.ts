@@ -110,6 +110,7 @@ export interface NativeRootExecutionOperations {
    */
   capture(owner: NativeActiveSessionOwner): Readonly<NativeRootRoute>
   /** Close the exact attached root Agent epoch and drain its execution, retained work and writer.
+   * Callers must not await cancellation from inside the execution being closed.
    * @param owner - live root owned by this Program; released or foreign owners are rejected.
    * @returns completion after the original Agent registration and owned resources release; cleanup failures remain visible.
    */
