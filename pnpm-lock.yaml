@@ -8072,12 +8072,12 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -8611,6 +8611,9 @@ importers:
 
   rsh/Programs/SDK/packages/native-server:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -8632,6 +8635,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -9826,6 +9832,10 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/native-session:
+    dependencies:
+      eventsource-parser:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
