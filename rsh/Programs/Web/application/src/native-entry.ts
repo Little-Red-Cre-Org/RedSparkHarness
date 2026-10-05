@@ -6,9 +6,16 @@ import type {
   NativeClientHost,
   NativeClientModuleSource,
   NativeClientSelection,
+  NativeClientEntryState,
 } from '@deepseek-ai/dsh-client-web/native'
 
 const NATIVE_MODULE_PATH = '/.dsh/native-client/'
+
+/** Startup-only progress projection for the native page. */
+export interface NativeClientEntryProgress {
+  setTotal(total: number): void
+  setState(id: string, state: NativeClientEntryState): void
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -198,6 +205,7 @@ function importNativeBundle(url: string): Promise<unknown> {
  * @param baseUrl - document URL used to constrain module imports to the Host route.
  * @param importModule - test seam replacing browser ESM loading.
  * @param signal - skips activation after pending imports settle and owns the active composition lifetime.
+ * @param progress - optional native page receiving initial module installation state.
  * @returns active host with replacement of module selections; injected styles remain owned until stop.
  */
 export async function bootNativeClientEntry(
@@ -206,9 +214,11 @@ export async function bootNativeClientEntry(
   baseUrl = document.baseURI,
   importModule: (url: string) => Promise<unknown> = importNativeBundle,
   signal?: AbortSignal,
+  progress?: NativeClientEntryProgress,
 ): Promise<NativeClientHost> {
   signal?.throwIfAborted()
   const wire = parseNativeClientBootWire(value, baseUrl)
+  progress?.setTotal(wire.selections.length)
   let activeStyles = installStyles(wire.styles)
   try {
     if (wire.styles.length > 0) await waitForStyles(activeStyles.ready, signal)
@@ -225,6 +235,7 @@ export async function bootNativeClientEntry(
     const options: NativeClientBootOptions = {
       modules, selections: wire.selections, container,
       ...(signal === undefined ? {} : { signal }),
+      ...(progress === undefined ? {} : { onEntryState: (id: string, state: NativeClientEntryState) => progress.setState(id, state) }),
     }
     const host = await bootNativeClient(options)
     const result: NativeClientHost = {

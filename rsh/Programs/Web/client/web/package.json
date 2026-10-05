@@ -22,6 +22,10 @@
       "types": "./lib/types/native-boot.d.ts",
       "default": "./lib/native-boot.js"
     },
+    "./boot-page": {
+      "types": "./lib/types/boot-page.d.ts",
+      "default": "./lib/boot-page.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -55,6 +59,7 @@
   },
   "files": [
     "lib/index.js",
+    "lib/boot-page.js",
     "lib/**/*.css",
     "lib/native-boot.js",
     "lib/types/**/*.d.ts"
