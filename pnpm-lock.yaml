@@ -12043,6 +12043,9 @@ importers:
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../native-web-assets
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
 
   rsh/Programs/Web/host/open-in-app:
     dependencies:

@@ -35,7 +35,7 @@ kind: "package-reference"
 <details>
 <summary>实现细节——点击展开</summary>
 
-激活通过 `dsh-native-web-assets` 准备 Client 图，通过 `dsh-client-connection/native-host` 创建一个 Host Connection registry，并通过原生 `node:http` bridge 绑定 Fetch 路由。实时模式监视 profile 目录以观察原子替换，串行准备候选，并同时更新资源表和 revision；无效候选保留当前页面。浏览器在调用 `NativeClientHost.replace` 前先加载候选样式和模块，因此替换或导入失败会保留当前 UI。后续原生 Host Provider 使用发布的 `nativeWebHost` 服务注册 RPC channel 或精确 Fetch 路由。NativeHost 拥有监听器释放器，因此会先排空路由贡献，再关闭 socket。本包不导入 Cordis Loader、旧 Web Server，也不创建第二套 Agent、Session 或 Tools 权威。
+激活通过 `dsh-native-web-assets` 准备 Client 图，通过 `dsh-client-connection/native-host` 创建一个 Host Connection registry，并通过原生 `node:http` bridge 绑定 Fetch 路由。领域 Provider 在 `hostConnection` 上注册 RPC channel 和精确 Fetch 路由；监听器使用同一个 handle。`nativeWebHost` 暴露 HTTP 载体，两项服务都不会创建第二个 registry。实时模式观察 Client 源码依赖，并同时发布完整的重建资源与 revision。构建失败时保留当前页面。NativeHost 在关闭时等待 watcher、路由和监听器结束。本包不导入 Cordis Loader 或旧 Web Server。
 
 </details>
 
@@ -70,7 +70,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - 本包只提供 HTTP 载体和 Client 启动；原生领域 Provider 仍需提供 Session、Agent、工具及其他产品 API channel。
-- 新建 `native-web` profile 启用 `clientReload: live`；其他 profile 默认使用 `startup`。该重载覆盖选中的原生 Client profile 和编译后的模块图，不提供源码级模块 HMR 或任意旧插件支持。CLI 的实时配置监视会在原生安装图变化时单独替换 Host application。参见[原生 CLI profile](../../../CLI/README.zh.md#profiles)。
+- `clientReload: live` 观察已编译的输入、相对导入目录及未解析的包位置，不跟随符号链接。重建失败时保留已发布的资源、wire 和 revision；关闭时等待 watcher 和已接受的构建结束。这是 Client 图替换，不是旧插件 HMR。CLI 会在其 profile 变化时另行替换 Host 安装图。参见[原生 CLI profile](../../../CLI/README.zh.md#profiles)。
 - 非 loopback 绑定必须显式提供受信 authority，本身不会让监听器适合不受信网络。
 
 <a id="dev-note"></a>

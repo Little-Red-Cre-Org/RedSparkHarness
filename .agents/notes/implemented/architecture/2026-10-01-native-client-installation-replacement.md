@@ -24,7 +24,7 @@ The mount request consumes the selected application and renderer. Replacement re
 
 ## Consequences
 
-The Client kernel can replace both configuration and explicitly supplied module exports. Native Web Host live mode now watches the profile directory, publishes a versioned wire through an authenticated Connection Fetch route, and updates the asset map only after a complete candidate bundle succeeds. The browser loads candidate styles and imports before committing replacement; a failed candidate leaves the current UI and its styles. The boot scope remains a single root; source-level module HMR, arbitrary legacy plugin reload, and full Client migration remain outside this decision.
+The Client kernel can replace both configuration and explicitly supplied module exports. Native Web Host live mode observes the profile and compiled input directories, publishes a versioned wire through an authenticated Connection Fetch route, and updates the asset map only after a complete candidate bundle succeeds. The browser loads candidate styles and imports before committing replacement; a failed candidate leaves the current UI and its styles. The boot scope remains a single root; arbitrary legacy plugin reload and full Client migration remain outside this decision.
 
 ## Verification
 
