@@ -4,12 +4,16 @@ import type { Readable, Writable } from 'node:stream'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+
+const SDK_ROOT_ROUTE = brandString<NativeRootRouteId>('root')
 
 /** Fixed profile policy; initialize selects the workspace and model route. */
 export interface Config {
@@ -37,12 +41,20 @@ function resolveConfig(input: unknown): Config {
   return { systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps }
 }
 
+interface NativeSdkTurnAdmission {
+  controller: AbortController
+  received: boolean
+  settled: Promise<void>
+  failure?: AggregateError
+}
+
 /** One native executor and one JSON-RPC connection owned by the profile. */
 export class NativeSdkApplication implements NativeApplication {
   private executor: NativeHeadlessApplication | undefined
   private readonly abort = new AbortController()
   private readonly sessions = new Map<string, Promise<void>>()
   private readonly pending = new Set<Promise<unknown>>()
+  private readonly activeTurns = new Map<string, NativeSdkTurnAdmission>()
   private closing = false
   private initializing = false
 
@@ -68,6 +80,8 @@ export class NativeSdkApplication implements NativeApplication {
       switch (method) {
         case 'initialize': return this.track(this.initialize(params, signal))
         case 'session/prompt': return this.prompt(params, transport, signal)
+        case 'session/cancel': return this.cancel(params)
+        case 'session/fork': return this.track(this.fork(params, signal))
         case 'shutdown':
           this.closing = true
           setImmediate(finish)
@@ -121,12 +135,37 @@ export class NativeSdkApplication implements NativeApplication {
       signal.throwIfAborted()
       this.assertOpen()
       this.executor = createNativeHeadlessApplication(this.context, {
-        cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps: this.config.maxSteps,
+        rootRouteId: SDK_ROOT_ROUTE, cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps: this.config.maxSteps,
         ...reasoningEffort === undefined ? {} : { reasoningEffort },
         ...maxTokens === undefined ? {} : { maxTokens },
-      })
+      }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
       return { serverInfo: { name: 'deepseek-harness-sdk-runtime', version: '0.0.1' } }
     } finally { this.initializing = false }
+  }
+
+  private async fork(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<{ sessionId: string }> {
+    this.assertOpen()
+    const executor = this.executor
+    if (executor === undefined) throw new Error('native SDK: initialize first')
+    const atSeq = raw.atSeq
+    if (atSeq !== undefined && typeof atSeq !== 'number') throw new TypeError('native SDK: atSeq must be a non-negative safe integer')
+    const id = await executor.rootExecution.fork({ route: SDK_ROOT_ROUTE,
+      source: SessionId(nonempty(raw.sessionId, 'sessionId')),
+      id: SessionId(nonempty(raw.destinationSessionId, 'destinationSessionId')),
+      ...atSeq === undefined ? {} : { atSeq: SessionSeq(atSeq) },
+    }, AbortSignal.any([lifetime, this.abort.signal]))
+    return { sessionId: id }
+  }
+
+  private async cancel(raw: Record<string, unknown>): Promise<{ cancelled: boolean }> {
+    this.assertOpen()
+    if (this.executor === undefined) throw new Error('native SDK: initialize first')
+    const active = this.activeTurns.get(nonempty(raw.sessionId, 'sessionId'))
+    if (active === undefined || !active.received) return { cancelled: false }
+    active.controller.abort({ kind: 'user' })
+    await active.settled
+    if (active.failure !== undefined) throw active.failure
+    return { cancelled: true }
   }
 
   private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
@@ -147,30 +186,35 @@ export class NativeSdkApplication implements NativeApplication {
     const message = createUserMessage({ content, source: { kind: 'user' } })
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<void>()
-    const admission = { received: false }
+    const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
     const task = (async () => {
       try {
         if (previous !== undefined) await previous
-        const signal = AbortSignal.any([lifetime, this.abort.signal])
+        this.activeTurns.set(sessionId, admission)
+        const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
         const id = SessionId(sessionId)
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
-        await executor.executeRootTurn({ id, resume, message, onEvent: (event) => {
-          transport.notify('session.event', { sessionId, event })
-          if (!admission.received && event.type === 'agent/inbox/spliced'
+        await executor.executeRootTurn({ id, resume, message,
+          onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
+            transport.notify('session.event', { sessionId, event })
+            if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
-            admission.received = true
-            accepted.resolve()
-            transport.notify('session.status', { sessionId, status: 'running' })
-          }
-        } }, signal)
+              admission.received = true
+              accepted.resolve()
+              transport.notify('session.status', { sessionId, status: 'running' })
+            }
+          } }, signal)
         if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
       } catch (error: unknown) {
+        if (error instanceof AggregateError) admission.failure = error
         if (admission.received) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
         else accepted.reject(error)
       } finally {
+        if (this.activeTurns.get(sessionId) === admission) this.activeTurns.delete(sessionId)
         if (admission.received) transport.notify('session.status', { sessionId, status: 'idle' })
       }
     })()
+    admission.settled = task
     this.sessions.set(sessionId, task)
     void this.track(task)
     await accepted.promise
@@ -181,9 +225,9 @@ export class NativeSdkApplication implements NativeApplication {
 /** Host installation selected by the shipped native-sdk profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents'],
+  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry'],
+    'agentPresets', 'workspaceRegistry'],
   provides: ['application'],
   resolve(input) {
     const config = resolveConfig(input)

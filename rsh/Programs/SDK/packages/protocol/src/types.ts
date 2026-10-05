@@ -1,6 +1,6 @@
 /**
- * Named wire types for the DeepSeek Harness SDK runtime protocol: the three
- * request/result pairs and the four server-to-client notification payloads
+ * Named wire types for the DeepSeek Harness SDK runtime protocol: the
+ * request/result pairs and the server-to-client notification payloads
  * exchanged over the newline-delimited JSON-RPC stdio transport. The server
  * plugin (`@deepseek-ai/dsh-sdk-jsonrpc-server`) and SDK clients share these shapes;
  * `serverInfo.name` stays the wire-stable `deepseek-harness-sdk-runtime`.
@@ -8,7 +8,7 @@
  * @module @deepseek-ai/dsh-sdk-protocol/types
  */
 
-import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent'
 
@@ -38,6 +38,42 @@ export interface SessionPromptParams {
   sessionId: string
   /** The prompt content blocks, sent verbatim as the user message. */
   contentBlocks: SdkPromptContentBlock[]
+}
+
+/** Parameters for cancelling only the currently admitted native Session turn. */
+export interface SessionCancelParams {
+  /** Existing Session identity; unaccepted prompts are not cancelled. */
+  sessionId: string
+}
+
+/** Reply after the selected native turn and its owned cleanup settle. */
+export interface SessionCancelResult {
+  /** False when no admitted turn was active; true after its cancellation settled. */
+  cancelled: boolean
+}
+
+/** Parameters for copying a closed native Session turn into a fresh identity. */
+export interface SessionForkParams {
+  /** Readable source Session under the initialized workspace. */
+  sessionId: string
+  /** Fresh destination Session; existing identities are rejected. */
+  destinationSessionId: string
+  /** Source event whose containing turn has ended; omitted selects the last closed turn. */
+  atSeq?: number
+}
+
+/** Reply after the copied history and fork marker are durable. */
+export interface SessionForkResult {
+  /** Fresh Session identity ready for a resumed prompt. */
+  sessionId: string
+}
+
+/** Live projection of an accepted model chunk; not another durable event stream. */
+export interface SessionChunkNotification {
+  /** Session whose selected model dispatch accepted the chunk. */
+  sessionId: string
+  /** Shared model chunk; its completed or interrupted attempt owns durable reconstruction. */
+  chunk: StreamChunk
 }
 
 /** Inline raster input admitted into the runtime's durable attachment store. */
@@ -105,6 +141,7 @@ export interface SubagentFinishedNotification {
 
 /** Server-to-client notifications by JSON-RPC method name. */
 export interface HarnessSdkNotificationMap {
+  'session.chunk': SessionChunkNotification
   'session.event': SessionEventNotification
   'session.status': SessionStatusNotification
   'subagent.started': SubagentStartedNotification
@@ -114,6 +151,8 @@ export interface HarnessSdkNotificationMap {
 /** Client-to-server request methods with their param and result shapes. */
 export interface HarnessSdkRequestMap {
   'initialize': { params: InitializeParams; result: InitializeResult }
+  'session/cancel': { params: SessionCancelParams; result: SessionCancelResult }
+  'session/fork': { params: SessionForkParams; result: SessionForkResult }
   'session/prompt': { params: SessionPromptParams; result: SessionPromptResult }
   'shutdown': { params: undefined; result: Record<string, never> }
 }

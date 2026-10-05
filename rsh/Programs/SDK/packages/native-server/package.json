@@ -20,14 +20,16 @@
     "apiVersion": 1,
     "entry": "./native",
     "targets": ["host"],
-    "requires": ["fs", "sessionPersistence", "model", "modelExecution", "agents"],
+    "requires": ["fs", "sessionPersistence", "model", "modelExecution", "agents", "sessionExecution", "activeSessions"],
     "optional": ["tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext", "agentInstructions", "modelSelection",
-      "sessionExecution", "activeSessions", "agentPresets", "workspaceRegistry"],
+      "agentPresets", "workspaceRegistry"],
     "provides": ["application"]
   } },
   "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-json-rpc-line": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",

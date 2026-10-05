@@ -1,45 +1,31 @@
 {
-  "initial": [
+  "model": "fixture-model",
+  "messages": [
     {
-      "name": "read_file",
-      "description": "Read a UTF-8 file within the selected workspace.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "path"
-        ],
-        "additionalProperties": false
-      }
+      "role": "system",
+      "content": "You are a native SDK fixture."
     },
     {
-      "name": "write_file",
-      "description": "Create or replace a UTF-8 file within the selected workspace.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "path",
-          "content"
-        ],
-        "additionalProperties": false
-      }
+      "role": "user",
+      "content": "say hello through native SDK"
+    },
+    {
+      "role": "user",
+      "content": "finish after cancellation"
+    },
+    {
+      "role": "assistant",
+      "content": "native SDK snapshot reply"
+    },
+    {
+      "role": "user",
+      "content": "finish the cold fork"
     }
   ],
-  "changes": [
-    [
-      {
+  "tools": [
+    {
+      "type": "function",
+      "function": {
         "name": "read_file",
         "description": "Read a UTF-8 file within the selected workspace.",
         "parameters": {
@@ -54,8 +40,11 @@
           ],
           "additionalProperties": false
         }
-      },
-      {
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "write_file",
         "description": "Create or replace a UTF-8 file within the selected workspace.",
         "parameters": {
@@ -75,6 +64,6 @@
           "additionalProperties": false
         }
       }
-    ]
+    }
   ]
 }
