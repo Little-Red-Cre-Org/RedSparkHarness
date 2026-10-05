@@ -467,12 +467,12 @@
     {
       "doc": "rsh/Docs/subsystems/token-meter.md",
       "symbol": "TokenMeasurement",
-      "source": "rsh/Engine/llm/token-meter/src/types.ts"
+      "source": "rsh/Engine/llm/token-meter/src/meter-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/token-meter.md",
       "symbol": "TokenSurfaceNode",
-      "source": "rsh/Engine/llm/token-meter/src/types.ts"
+      "source": "rsh/Engine/llm/token-meter/src/meter-types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session.md",

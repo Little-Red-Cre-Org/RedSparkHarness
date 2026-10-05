@@ -29,6 +29,8 @@ Program 可通过 `prepareMessage` 代替 `message` 接纳根输入。回调收�
 
 应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；未中止的非授权结果会变为 `APPROVAL_*` 工具结果错误。取消在决定审计刷新后保留借用 signal 的原始原因；审计或清理失败仍作为错误传播。每个 Session 使用一个由其标识派生的子作用域原生 Agent。Turn 在该 Agent 的显式 initiator boundary 内运行，Program 在已接纳工作排空后释放身份。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
 
+每次 dispatch 前，既有 Session writer 将已准备模型代际声明的容量记录在 `request/context` 中。路由或容量变化会替换已记录上下文；缺少容量会清除旧值。不增加独立目录查询或 Session 格式代际。
+
 [模型执行 Provider](../native-model-execution/README.zh.md)负责组装并记录每个助手流事件。应用继续拥有 turn 和工具执行。
 
 应用使用 `dsh-session-persistence/native` 的 `NativeSessionPersistenceOperations`；JSONL 是一个可替换 Provider。每轮只拥有其选定 Session 句柄，并等待其持久化和关闭。应用不关闭或实例化持久化服务。改变 Provider 类型所有权不会改变模型输入或已记录事件。

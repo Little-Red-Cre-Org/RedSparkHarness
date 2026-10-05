@@ -13,6 +13,7 @@ import { plugin as executionPlugin, type NativeSessionExecutionOperations, type 
   type NativeActiveSessionOperations, type NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
+import { plugin as meterPlugin, type NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as presetsPlugin, type NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
@@ -32,8 +33,9 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
   let tools: NativeToolRegistry | undefined
   let activeSessions: NativeActiveSessionOperations | undefined
   let presets: NativeAgentPresetOperations | undefined
+  let meter: NativeTokenMeterOperations | undefined
   const capture: NativePlugin = { apiVersion: 1, name: 'continuation-capture', targets: ['host'],
-    requires: ['application', 'sessionPersistence', 'agents', 'sessionExecution', 'tools', 'activeSessions'],
+    requires: ['application', 'sessionPersistence', 'agents', 'sessionExecution', 'tools', 'activeSessions', 'tokenMeter'],
     optional: ['agentPresets'], provides: [],
     resolve: () => (context) => {
       const application = context.require('application')
@@ -45,6 +47,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
       tools = context.require('tools')
       activeSessions = context.require('activeSessions')
       presets = context.optional('agentPresets')
+      meter = context.require('tokenMeter')
     } }
   const modelProvider: NativePlugin = { apiVersion: 1, name: 'continuation-model', targets: ['host'],
     requires: [], provides: ['model'], resolve: () => (context) => { context.provide('model', model) } }
@@ -59,6 +62,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
     { plugin: agentPlugin, scope, config: undefined },
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined },
+    { plugin: meterPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
     { plugin: storagePlugin, scope, config: { root: join(root, 'sessions'), compression: 'none' } },
     { plugin: modelProvider, scope, config: undefined },
@@ -67,17 +71,18 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
   ], 'host'))
   await host.start()
   if (app === undefined || storage === undefined || agents === undefined || execution === undefined || tools === undefined
-    || activeSessions === undefined) {
+    || activeSessions === undefined || meter === undefined) {
     throw new Error('missing continuation fixture services')
   }
-  return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, events: host.events, presets,
+  return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, meter, events: host.events, presets,
     async close() { await host.stop(); await rm(root, { recursive: true }) } }
 }
 
 
 
 it('routes root maintenance and execution through the original Agent without an extra model turn', async () => {
-  const state = await fixture([textResponse('Scheduled root complete.')])
+  const state = await fixture([textResponse('Scheduled root complete.').map(chunk => chunk.type === 'usage'
+    ? { ...chunk, usage: { inputTokens: 1000, outputTokens: 20, cacheReadTokens: 50 } } : chunk), textResponse('Capacity unknown.')])
   const signal = new AbortController().signal
   const id = SessionId('scheduled-root')
   const routeId = brandString<NativeRootRouteId>('root')
@@ -96,13 +101,33 @@ it('routes root maintenance and execution through the original Agent without an 
     if (original === undefined) throw new Error('root maintenance did not attach its owner')
     const completedOwner = original
     expect(() => state.app.rootExecution.capture(completedOwner)).toThrow('exact attached root owner')
+    const resolveModel = state.model.resolveModel.bind(state.model)
+    const metadata = vi.spyOn(state.model, 'resolveModel').mockImplementation(async (provider, model) => ({
+      ...await resolveModel(provider, model), context: { contextWindow: 8192 },
+    }))
+    const measured: { capacity: number | undefined; baseline: string; tokens: number }[] = []
+    const observe = (): void => {
+      const owner = state.activeSessions.owners().find(candidate => candidate.session.id === id)
+      if (owner === undefined) throw new Error('missing original meter owner')
+      expect(state.app.rootExecution.capture(owner)).toBe(route)
+      const measurement = state.meter.measure(owner.session)
+      measured.push({ capacity: owner.session.requestContext()?.contextWindow,
+        baseline: measurement.baseline.kind, tokens: measurement.totalTokens })
+    }
     const result = await state.app.rootExecution.execute({ route: routeId, id, resume: true,
       message: createUserMessage({ source: { kind: 'user' },
-        content: [{ type: 'text', text: 'Run the scheduled root.' }] }) }, signal)
+        content: [{ type: 'text', text: 'Run the scheduled root.' }] }),
+      onEvent: (event) => { if (event.type === 'assistant/message') observe() } }, signal)
     expect(result.answer).toBe('Scheduled root complete.')
     expect(state.model.requests).toHaveLength(1)
     expect(JSON.stringify(state.model.requests[0]?.messages)).toContain('Run the scheduled root.')
     expect(state.agents.get(original.agent.id)).toBe(original.agent)
+    expect(measured).toEqual([{ capacity: 8192, baseline: 'usage', tokens: 1070 }])
+    metadata.mockRestore()
+    await state.app.rootExecution.execute({ route: routeId, id, resume: true,
+      message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue.' }] }),
+      onEvent: (event) => { if (event.type === 'assistant/message') observe() } }, signal)
+    expect(measured[1]).toMatchObject({ capacity: undefined, baseline: 'estimated' })
     await state.app.dispose()
     expect(() => state.app.rootExecution.settle({ route: routeId, id }, signal)).toThrow('application is disposed')
   } finally { await state.close() }
