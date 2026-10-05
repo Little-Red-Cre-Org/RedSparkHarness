@@ -87,20 +87,47 @@ it('replays a native SDK turn with exact model input, output and durable Session
       expect(cancelled.events.some(event => event.type === 'assistant/attempt')).toBe(true)
       await harness.close()
       const resumed = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
-      try { result = await resumed.run('finish after cancellation', { sessionId: 'sdk-recorded-turn' }) }
+      try {
+        result = await resumed.run('finish after cancellation', { sessionId: 'sdk-recorded-turn' })
+        const source = resumed.session('sdk-recorded-turn')
+        await expect(source.fork('sdk-recorded-turn')).rejects.toThrow()
+        await expect(source.fork('sdk-recorded-fork', Number.MAX_SAFE_INTEGER)).rejects.toThrow()
+        const anchor = result.events.at(-1)?.seq
+        if (anchor === undefined) throw new Error('native-sdk snapshot: fork anchor missing')
+        const fork = await source.fork('sdk-recorded-fork', anchor)
+        expect(fork.id).toBe('sdk-recorded-fork')
+        expect(requests).toHaveLength(2)
+      }
       finally { await resumed.close() }
+      const forked = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try { result = await forked.session('sdk-recorded-fork').run('finish the cold fork') }
+      finally { await forked.close() }
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(3)
     const request = requests[1]
     if (request === undefined) throw new Error('native-sdk snapshot: model request missing')
     const modelInput = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2) + '\n'
-    const physical = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))
-    if (physical === undefined) throw new Error('native-sdk snapshot: durable Session missing')
-    const raw = readFileSync(join(sessions, String(physical)), 'utf8')
+    const logs = readdirSync(sessions, { recursive: true }).filter(name => String(name).endsWith('session.v3.jsonl'))
+      .map(name => readFileSync(join(sessions, String(name)), 'utf8'))
+    const findLog = (id: string): string => {
+      const raw = logs.find(log => (JSON.parse(log.split('\n')[0] ?? '{}') as { id: string }).id === id)
+      if (raw === undefined) throw new Error(`native-sdk snapshot: durable Session missing: ${id}`)
+      return raw
+    }
+    const raw = findLog('sdk-recorded-turn')
+    const forkRaw = findLog('sdk-recorded-fork')
+    expect(logs).toHaveLength(2)
     const context = { cwd: workspace, sessionIds: [] }
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
+    const forkContext = { cwd: workspace, sessionIds: [] }
+    const normalizedFork = normalizeSessionSnapshot(redactSessionSnapshotIds([forkRaw])[0] ?? forkRaw,
+      forkContext, { identityMode: 'preserve' })
+    const forkRequest = requests[2]
+    if (forkRequest === undefined) throw new Error('native-sdk snapshot: fork model request missing')
+    const forkModelInput = JSON.stringify({ model: forkRequest.model, messages: forkRequest.messages,
+      tools: forkRequest.tools ?? [] }, null, 2) + '\n'
     const prompts = normalizedSystemPrompts(raw, context)
     const schemas = normalizedToolSchemas(raw, context)
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-sdk snapshot: request header missing')
@@ -108,11 +135,15 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
     if (process.env.DSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
+      writeFileSync(join(scene, 'fork-session.v3.jsonl'), normalizedFork)
+      writeFileSync(join(scene, 'fork-model-request.expected.json'), forkModelInput)
       writeFileSync(join(scene, 'model-request.expected.json'), modelInput)
       writeFileSync(join(scene, 'system-prompt.expected.md'), systemPrompt)
       writeFileSync(join(scene, 'tool-schemas.expected.json'), tools)
     } else {
       expect(normalized).toBe(readFileSync(fixture, 'utf8'))
+      expect(normalizedFork).toBe(readFileSync(join(scene, 'fork-session.v3.jsonl'), 'utf8'))
+      expect(forkModelInput).toBe(readFileSync(join(scene, 'fork-model-request.expected.json'), 'utf8'))
       expect(modelInput).toBe(readFileSync(join(scene, 'model-request.expected.json'), 'utf8'))
       expect(systemPrompt).toBe(readFileSync(join(scene, 'system-prompt.expected.md'), 'utf8'))
       expect(tools).toBe(readFileSync(join(scene, 'tool-schemas.expected.json'), 'utf8'))

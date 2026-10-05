@@ -14,7 +14,7 @@ The native transport projects accepted StreamChunk values through session.chunk 
 
 ## Consequences
 
-Cancellation awaits selected turn settlement; queued prompts and other Sessions remain independent. Stream notifications add no writer or durable log; completed messages and interrupted attempts reconstruct accepted chunks. The explicit native profile remains opt-in. Same-id cold resume remains supported; SDK Session fork remains a separate missing module.
+Cancellation awaits selected turn settlement; queued prompts and other Sessions remain independent. Stream notifications add no writer or durable log; completed messages and interrupted attempts reconstruct accepted chunks. The explicit native profile remains opt-in. Same-id cold resume remains supported; SDK Session forks are provided by the [fork projection](2026-10-05-native-sdk-fork.md).
 
 ## Alternatives considered
 

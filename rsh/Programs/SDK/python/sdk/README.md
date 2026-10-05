@@ -34,6 +34,8 @@ print(result.final_response)
 
 With explicit `profile="native-sdk"`, `Session.cancel()` and `HarnessClient.session_cancel(session_id)` await cancellation of the admitted turn and return False when none is active. `on_notification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
 
+`Session.fork(destination_session_id, at_seq=None)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.session_fork` exposes the wire receipt. Forking does not invoke a model.
+
 ## Customize plugins
 
 Persistent customization belongs to a `dsh` profile. Initialize the shipped SDK profile and install an external bundle with the runtime wheel's `dsh` command:

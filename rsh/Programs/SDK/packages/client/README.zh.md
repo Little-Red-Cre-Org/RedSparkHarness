@@ -107,6 +107,8 @@ console.log(result.finalResponse)
 
 显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
+`HarnessSession.fork(destinationSessionId, atSeq?)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.fork` 提供协议回执。[原生服务端参考](../native-server/README.zh.md#configuration)定义源、工作区与已结束轮次的准入。
+
 ## 模型体验
 
 无，因为这是客户端进程库；模型可见行为存在于所 spawn 运行时组合的插件中。
