@@ -48,6 +48,8 @@ Choose it as the default user-settings store: one human-readable document that u
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
 
+The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@deepseek-ai/dsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation.
+
 ### Editing the document
 
 The document is a YAML or JSON mapping of namespace to user section. Users can edit it directly: any change takes effect automatically, and deleting the file resets every namespace to defaults and `base`. A document that exists but is invalid fails plugin load at boot — the provider never silently ignores or overwrites it. Once live, an unreadable or unparsable edit warns and keeps the last good sections, so a hand-edit mistake cannot take the process down.
@@ -90,6 +92,8 @@ This section explains the design decisions behind the provider and points at the
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Provider: spec resolution, load/parse, read-modify-write under the writer lock, watcher lifecycle, YAML/JSON rendering |
+| [`src/native.ts`](src/native.ts) | Native Provider: file storage, lock, watcher and Host lifecycle |
+| [`src/yaml-patch.ts`](src/yaml-patch.ts) | Shared comment-preserving YAML leaf edits |
 | — | No runtime invariant companion is published; this provider's contracts are file round-trip, watcher timing, and atomic-write behavior — IO effects proven by package tests; the in-process commit relation is owned by `@deepseek-ai/dsh-settings`. |
 
 ### Document lifecycle

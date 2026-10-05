@@ -1535,8 +1535,11 @@ export interface LspLocalServerConfig {
 需要：`tools`
 
 ```ts config-catalog
+/** Configuration for one selected MCP transport. */
+export type Config = McpClientConfig
+
 /** Configuration for one stdio or Streamable HTTP MCP server. */
-export type Config = StdioConfig | StreamableHttpConfig
+export type McpClientConfig = StdioConfig | StreamableHttpConfig
 
 /** Config for connecting to an MCP server via a spawned child process over stdio. */
 export interface StdioConfig {
@@ -1599,7 +1602,7 @@ export interface ReconnectConfig {
 }
 ```
 
-来源：[`rsh/Modules/Official/mcp/mcp-client/src/index.ts:98`](../Modules/Official/mcp/mcp-client/src/index.ts)
+来源：[`rsh/Modules/Official/mcp/mcp-client/src/index.ts:52`](../Modules/Official/mcp/mcp-client/src/index.ts)
 
 <a id="deepseek-aidsh-message-feedback"></a>
 
@@ -3639,7 +3642,7 @@ export interface Config {
 - `@deepseek-ai/dsh-launch-environment`（[`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts)）
 - `@deepseek-ai/dsh-llm-mock-server`（[`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts)）
 - `@deepseek-ai/dsh-loader-smoke`（[`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts)）
-- `@deepseek-ai/dsh-native-acp` ([`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts))
+- `@deepseek-ai/dsh-native-acp`（[`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts)）
 - `@deepseek-ai/dsh-native-agent`（[`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts)）
 - `@deepseek-ai/dsh-native-approval`（[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts)）
 - `@deepseek-ai/dsh-native-code-runtime`（[`rsh/Engine/core/native-code-runtime/src/index.ts`](../Engine/core/native-code-runtime/src/index.ts)）
@@ -3650,7 +3653,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
 - `@deepseek-ai/dsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）
-- `@deepseek-ai/dsh-native-sdk-server` ([`rsh/Programs/SDK/packages/native-server/src/index.ts`](../Programs/SDK/packages/native-server/src/index.ts))
+- `@deepseek-ai/dsh-native-sdk-server`（[`rsh/Programs/SDK/packages/native-server/src/index.ts`](../Programs/SDK/packages/native-server/src/index.ts)）
 - `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）

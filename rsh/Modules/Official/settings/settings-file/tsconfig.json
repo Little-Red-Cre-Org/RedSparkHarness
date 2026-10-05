@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {
