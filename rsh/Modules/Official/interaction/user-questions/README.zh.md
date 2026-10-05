@@ -40,6 +40,12 @@ kind: "package-reference"
 
 请求包含 agent 时，`ask()` 会通过当前 `AgentRegistry` 验证该 agent 与注册表中的存活实例是同一对象，并且只允许运行时根调用。持久谱系不构成权限依据：带有历史委托深度的会话恢复为新的运行时根后可以提问；归属于另一个 agent 的存活子级即使持久化记录的委托深度为零也会被拒绝。Web 回答者只接收带 Agent scope 的请求；不含 agent 的程序化请求仍会交给本地未限定 scope 的 waterfall listener，若无人接受则以 `NO_PROVIDER` 失败。
 
+### 原生组合
+
+`./native` 入口通过选定的 `agents` 与 `activeSessions` 提供 `userQuestions`。每个请求必须携带当前执行的准确 Agent 与 Session；仅根调用可以提问，包括恢复为根的历史子 Session。回答者按 scope 选择，通过 `next()` 委托并保留上游取消信号。移除时取消下游呈现并等待其释放。纯 `./protocol` 入口拥有共享问题与回答值；`./types` 保留兼容事件。
+
+选择 `@deepseek-ai/dsh-user-question-broker` 作为待回答问题的 Provider。认证应用通过其 `userQuestionBroker` 服务订阅，使用原 Agent 与不透明请求 id 回答。格式错误或过期回答会被拒绝；移除最后一个接收者会取消待回答问题。原生应用必须提供传输；此能力组不装配 SDK、ACP 或 Web 回答端。
+
 ### 呈现意图
 
 `intent` 声明某个问题本身就是一种已知决策，因此认识该标签的 UI 可以照此呈现——`plan-review` 表示 `detail` 是一份待审阅的计划，`dsh-plan-mode` 会在 `exit_plan_mode` 的问题上设置它。意图只改变呈现：遵循它的 UI 回答的仍是通用 UI 会发送的那些选项标签，不认识该标签的 UI 渲染通用选项列表，因此调用方两种情况下读到的回答字段相同。`approve` 指名表示批准的标签，而不依赖选项顺序。有两项断言无法通过类型表达，`ask()` 会以 `BAD_INTENT` 拒绝它们：`approve` 未命中该问题自身的任一选项，以及意图落在没有 `detail` 的问题上——而 `detail` 正是它自称在审阅的东西。

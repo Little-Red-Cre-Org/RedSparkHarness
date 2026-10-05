@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Compose this plugin wherever the model should be able to pause for a human decision: it provides the `ask_user_question` tool and needs the `ctx.userQuestions` seam with an answerer that accepts the scoped request. Without one, the tool call fails with an error instead of degrading.
 
+The native `./native` entry contributes a value tool to the selected `tools` registry and requires `userQuestions`. Select the separate pending-question broker Provider and an authenticated answering transport. The Program records the final answer or error through its existing `tool/result` writer; this Consumer creates no Session events or writer. Tool, answerer, Agent and Host removal cancel and drain accepted questions.
+
 ### When to call the tool
 
 The model calls `ask_user_question` when it needs confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable `id` that is echoed in the answer; a recommended option goes first with `(Recommended)` appended to its label.
@@ -57,7 +59,7 @@ The tool returns one answer object per question: `selected` holds the chosen opt
 
 ### When the call fails
 
-The tool call blocks until the human answers and cancels only through the turn's signal. No accepting answerer, an aborted call, or a caller that is not the exact live runtime root each settles as an error the model sees in the tool result — most notably, a live child agent owned by another agent is rejected (`DELEGATED_CALLER`) and must include the unresolved question or decision in its final result.
+The tool call waits until the human answers or its owner cancels the request. No accepting answerer, an aborted call, or a caller that is not the exact live runtime root each settles as an error the model sees in the tool result — most notably, a live child agent owned by another agent is rejected (`DELEGATED_CALLER`) and must include the unresolved question or decision in its final result.
 
 -----
 
