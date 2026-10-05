@@ -48,7 +48,8 @@
         "codeRuntime",
         "timeContext",
         "agentPresets",
-        "workspaceRegistry"
+        "workspaceRegistry",
+        "agentInstructions"
       ],
       "provides": [
         "nativeWebSession",
