@@ -17,6 +17,10 @@ import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-executi
 import { terminalModelOperations } from './models.ts'
 import type {} from '@deepseek-ai/dsh-user-questions/native'
 import { bindTerminalHumanAnswerers } from './human.ts'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
+import type { TerminalPresetState } from './presets.ts'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -33,7 +37,27 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
    */
   constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config,
     selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
+    const registry = context.optional('agentPresets')
+    const history = (id: SessionId, signal: AbortSignal) => readNativeSessionHistory(id, {
+      active: context.require('activeSessions'), persistence: context.require('sessionPersistence'),
+      maxHistoryEvents: config.maxHistoryEvents, label: 'native-tui',
+      onCleanupFailure: (error) => { console.error('native-tui: reader cleanup failed', error) },
+    }, signal)
+    const readPresets = registry === undefined ? undefined : async (id: SessionId, signal: AbortSignal): Promise<TerminalPresetState> => {
+      const stored = await history(id, signal)
+      return { facts: foldNativeAgentPresetFacts(stored.header, stored.events),
+        entries: registry.list().map(({ id, name, description }) => ({
+          id, name, ...description === undefined ? {} : { description },
+        })) }
+    }
     super({
+      presets: readPresets === undefined ? undefined : {
+        read: readPresets,
+        select: async (id, request, signal) => {
+          await executor.rootExecution.selectPreset({ ...request, id, route: config.rootRouteId ?? brandString<NativeRootRouteId>('root') }, signal)
+          return readPresets(id, signal)
+        },
+      },
       sessions: async signal => (await context.require('sessionPersistence').list({ signal }))
         .filter(row => row.header.cwd === config.cwd).map(row => row.header.id),
       models: selection !== undefined && directory !== undefined
@@ -42,11 +66,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
       open: async (id, resume, signal) => {
         await executor.executeSessionOperation({ id, resume }, () => Promise.resolve(undefined), signal)
       },
-      history: async (id, signal) => (await readNativeSessionHistory(id, {
-        active: context.require('activeSessions'), persistence: context.require('sessionPersistence'),
-        maxHistoryEvents: config.maxHistoryEvents, label: 'native-tui',
-        onCleanupFailure: (error) => { console.error('native-tui: reader cleanup failed', error) },
-      }, signal)).events,
+      history: async (id, signal) => (await history(id, signal)).events,
     }, context.signal, config, SessionId('session-' + randomUUID()))
     bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), id => this.ownsSession(id), context,
       context.optional('approval'), context.optional('userQuestions'))
