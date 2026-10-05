@@ -25,9 +25,13 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
+场景清单接受显式 `native-tui` 配置；真实终端适配器驱动公开 `dsh` 入口，读取同一 Session 作为重放输入与持久输出。
+
 本包把随附 profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
 
 ### 编写快照套件
+
+封闭的 profile manifest 接受 `native-acp`，用于基于共享会话记录的原生 ACP 协议场景。
 
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
 
