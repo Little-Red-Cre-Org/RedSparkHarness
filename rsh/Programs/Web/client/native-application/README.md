@@ -35,6 +35,8 @@ The native-web first-use roster selects only this application, renderer, Connect
 
 Pending tool approvals offer allow-once and reject actions. Question cards preserve headings, detail, choices, multiple selection and custom text. Submission failures retain the request; cancellation disables input and keeps execution busy until Host settlement. Reload restores durable decision and tool-result facts, not obsolete pending presentations.
 
+Image uploads use the advertised attachment limits and the selected Session's next model. The renderer displays only durable image references and owns each fetch, Blob URL and unmount cleanup. Reload fetches images again from the recorded Session. Upload errors retain the input for correction.
+
 ## Invariants
 
 The view reads the selected Host Consumer and owns no independent execution observations, so it publishes no invariant installer.
@@ -49,7 +51,7 @@ Lifecycle ownership is described in the [conversation decision](../../../../../.
 
 #### What the model sees
 
-Submitted human text is recorded as `user/message`. Model intent changes are durable `model/selection` facts; installed composition changes use `agent-preset/selected`. Discovery and viewing history contribute no model input.
+Submitted human text and admitted image references are recorded as `user/message`. Model intent changes are durable `model/selection` facts; installed composition changes use `agent-preset/selected`. Discovery and viewing history contribute no model input.
 
 #### Token effect
 
@@ -65,4 +67,4 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Rich tool cards and additional model chunk presentations remain separate work.
-- Attachment upload, full Sidebar, layout and Settings remain separate native Client migrations.
+- File uploads, full Sidebar, layout and Settings remain separate native Client migrations.

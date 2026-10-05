@@ -28,6 +28,8 @@ kind: "package-reference"
 
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。
 
+提示上传携带有序的编码光栅图片；Host 在根所有者内准入它们。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
+
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
 共享 Session 包是 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
@@ -54,7 +56,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-只有提交的人工文本通过 Host 执行器进入模型输入；本包不贡献模型工具或提示段。
+提交的人工文本及已准入的持久化图片引用通过 Host 执行器进入模型输入；本包不贡献模型工具或提示段。
 
 #### Token 影响
 
@@ -68,4 +70,4 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 完整产品 UI、附件、审批和问题交互不由该包提供。
+- 完整产品 UI、文件及音频上传不由该包提供。

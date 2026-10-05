@@ -6,7 +6,7 @@ import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import type { SessionId, SessionHeader, SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
@@ -15,6 +15,16 @@ import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-p
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
+
+/** Raster upload bytes encoded by the browser; the Host admits their durable references. */
+export interface NativeImageUpload {
+  readonly mediaType: NativeSessionImage['mediaType']
+  readonly data: string
+  readonly name?: string
+}
+
+/** Original durable image identity from the Session message protocol. */
+export type NativeSessionImage = Extract<SessionEventMap['user/message']['content'][number], { type: 'image' }>['attachment']
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
@@ -33,6 +43,13 @@ export interface NativeSessionClientConfig {
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** Fetch verified bytes of an image recorded in the selected Session.
+   * @param sessionId - recorded Session identity.
+   * @param image - image reference obtained from its validated history.
+   * @param signal - caller cancellation.
+   * @returns verified raster Blob, suitable for an owned object URL.
+   */
+  image(sessionId: SessionId, image: NativeSessionImage, signal?: AbortSignal): Promise<Blob>
   /** Answer a presentation belonging to this Consumer's exact outstanding turn.
    * @param sessionId - selected Session.
    * @param id - observed pending presentation identity.
@@ -89,10 +106,11 @@ export interface NativeSessionClient {
    * @param resume - explicit existing-Session selection.
    * @param signal - abort cancels and drains this turn.
    * @param observe - synchronous presentation observer; failures cancel and drain the turn.
+   * @param images - ordered browser uploads, admitted by the Host before the user message.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void): Promise<{
+    observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[]): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -208,6 +226,7 @@ export function createNativeSessionClient(
   }
   async function prompt(
     sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
+    images?: readonly NativeImageUpload[],
   ) {
     const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     accepted.throwIfAborted()
@@ -215,7 +234,8 @@ export function createNativeSessionClient(
     if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
     const following = new AbortController()
     // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined }, undefined, false)
+    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined,
+      ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
     const abort = (): void => {
@@ -264,6 +284,18 @@ export function createNativeSessionClient(
     } finally { if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId); accepted.removeEventListener('abort', abort) }
   }
   return {
+    async image(sessionId, image, signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      accepted.throwIfAborted()
+      if (rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      const response = await rpc.response('/api', 'native-session/image', { sessionId, attachmentId: image.attachmentId }, accepted)
+      if (!response.ok || response.headers.get('content-type') !== image.mediaType
+        || response.headers.get('content-length') !== String(image.bytes)) throw new Error(`native Session image: invalid response HTTP ${response.status}`)
+      const blob = await response.blob()
+      accepted.throwIfAborted()
+      if (blob.size !== image.bytes) throw new Error('native Session image: byte length mismatch')
+      return blob
+    },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
       await Promise.allSettled([...pendingPrompts])
@@ -283,8 +315,8 @@ export function createNativeSessionClient(
     },
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
-    prompt(sessionId, text, resume, signal, observe) {
-      const pending = prompt(sessionId, text, resume, signal, observe)
+    prompt(sessionId, text, resume, signal, observe, images) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images)
       pendingPrompts.add(pending)
       const settled = (): void => { pendingPrompts.delete(pending) }
       void pending.then(settled, settled)

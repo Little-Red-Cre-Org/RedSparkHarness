@@ -49,6 +49,9 @@
     },
     {
       "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
     }
   ]
 }

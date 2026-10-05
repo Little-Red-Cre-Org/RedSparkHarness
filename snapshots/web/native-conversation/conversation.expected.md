@@ -1,5 +1,6 @@
 User
 Native browser input.
+image.png
 Assistant
 {
   "type": "tool-call",
