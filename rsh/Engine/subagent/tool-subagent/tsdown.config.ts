@@ -10,10 +10,14 @@ const nodeOutput = {
   clean: false,
 }
 
-/** Build self-contained Loader entries so the package needs no private chunks. */
+/** Build literal Loader entries with the lazy Cordis chunk publishable. */
 export default defineConfig([
   { ...nodeOutput, entry: ['lib/types/native.js'] },
-  { ...nodeOutput, entry: ['lib/types/index.js'] },
+  {
+    ...nodeOutput,
+    entry: ['lib/types/index.js'],
+    outputOptions: { chunkFileNames: 'shared-[hash].js' },
+  },
   { ...nodeOutput, entry: ['lib/types/model-selection-settings.js'] },
   { ...nodeOutput, entry: ['lib/types/invariant.js'] },
 ])
