@@ -1,8 +1,8 @@
 # Agent Note: Native root cancellation drains retained work
 
-English | [中文](2026-10-05-native-root-cancellation-drain.zh.md)
-
 Status: implemented
+
+English | [中文](2026-10-05-native-root-cancellation-drain.zh.md)
 
 ## Problem
 
@@ -16,6 +16,6 @@ The root executor closes the captured epoch after initial-turn failure and await
 
 Program callers receive cancellation only after retained work drains. Session ownership remains with the existing activation; no additional cleanup registry or writer is introduced.
 
-## Alternatives
+## Alternatives considered
 
 Caller-owned cleanup would duplicate the Engine's lifecycle authority and could affect unrelated Sessions.

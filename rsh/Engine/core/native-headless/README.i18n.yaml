@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Engine/core/native-headless/README.md
 README.md: 388e919e52778d028f7ca08547c274e7fd873a50
-README.zh.md: 36bca2c859f69118a31a6b281cff53665f743451
+README.zh.md: 30f17b062fd717de2e273686cc0e8e8fa744c5c4
