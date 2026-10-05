@@ -51,7 +51,10 @@ export function imageMediaTypeForPath(filePath: string): ImageMediaType | undefi
  */
 export function formatImageReadOutput(
   displayPath: string,
-  image: Pick<ImageAttachmentRef, 'mediaType' | 'bytes' | 'width' | 'height' | 'originalDimensions'>,
+  image: Pick<ImageAttachmentRef, 'mediaType' | 'bytes' | 'width' | 'height' | 'originalDimensions'> & {
+    attachmentId: string
+    name?: string
+  },
 ): string {
   let scaled = ''
   if (image.originalDimensions !== undefined) {

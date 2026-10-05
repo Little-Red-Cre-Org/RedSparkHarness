@@ -65,7 +65,7 @@ export const inject = ['llm']
 const NS = 'llm-deepseek'
 const PROVIDER = 'deepseek-official'
 import { Config, resolveAdapterOptions, type ResolvedDeepSeekOptions } from './config.ts'
-export { Config, resolveAdapterOptions } from './config.ts'
+export { Config, PUBLIC_BASE_URL, resolveAdapterOptions } from './config.ts'
 export function apply(ctx: Context, config: Config): void {
   let current: () => Config = () => config
   let lastRaw: Config | undefined
