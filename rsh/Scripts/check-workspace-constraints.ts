@@ -215,6 +215,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/native.js', 'lib/native-host.js', 'lib/http-bridge.js', 'lib/native-http-bridge.js',
     'lib/host-core-*.js', 'lib/rpc-*.js', 'lib/recovery-config-*.js',
   ],
+  '@deepseek-ai/dsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js'],
