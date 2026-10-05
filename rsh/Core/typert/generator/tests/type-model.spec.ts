@@ -1144,6 +1144,28 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
     ])
   })
 
+  it('uses only exported Client roots from a partial Client project', () => {
+    const root = copyFixture('typert-partial-client-')
+    const packageRoot = join(root, 'packages/client')
+    const manifestPath = join(packageRoot, 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { exports: Record<string, unknown> }
+    manifest.exports['./types'] = { types: './lib/types/types.d.ts', default: './lib/types.js' }
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+    writeFileSync(join(packageRoot, 'src/types.ts'), '/** @typert object */\nexport interface ClientTypes { readonly client: true }\n')
+    writeFileSync(join(packageRoot, 'tsconfig.client.json'), JSON.stringify({
+      extends: './tsconfig.json', files: ['src/types.ts'], include: [],
+    }))
+    writeFileSync(join(root, 'tsconfig.client.json'), JSON.stringify({
+      extends: './tsconfig.base.json', files: [],
+      references: [{ path: './packages/client/tsconfig.client.json' }],
+    }))
+
+    const analyzer = new WorkspaceAnalyzer({ root, faces: ['client'], checkDiagnostics: false })
+    expect(analyzer.discoverPackages().map(item => item.package)).toContain('@fixture/client')
+    const client = analyzer.analyze().faces[0]
+    expect(client?.packages[0]?.exports.map(entry => entry.subpath)).toEqual(['./types'])
+  })
+
   it('accepts package export forms while skipping artifact-only rows and unexported packages', { timeout: 180_000 }, () => {
     const root = copyFixture('typert-export-forms-')
     const hostRoot = join(root, 'packages/host')
