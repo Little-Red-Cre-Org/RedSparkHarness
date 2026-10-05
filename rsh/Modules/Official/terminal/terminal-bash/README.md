@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-The native `./native` entry registers a PTY backend using the selected native subprocess and sandbox-policy services. Its profile config explicitly supplies `type`, `shellPath`, `shellArgs`, `rows`, `cols`, and `graceMs`; the subprocess provider resolves the executable and allocates a real terminal session. This entry drains output without retaining or returning it, and reports only top-level process status. A confined policy requires a sandbox Provider; no unconfined fallback is used.
+The native `./native` entry uses the selected subprocess and sandbox-policy services with the same `LocalPtySession`, sanitizer, shell environment and startup preparation as Cordis. `type` selects the backend; `shellDialect` chooses bash or pwsh defaults, and shell, sizing, retention and readiness fields use the shared validated configuration. Native `graceMs` supplies `disposeGraceMs`. A confined policy requires a sandbox Provider; no unconfined fallback is used. Native sandbox mode is installation-fixed and remains attached to the terminal until awaited close.
 
 On Windows, the local ConPTY process is outside Job containment. The local subprocess Provider reports weaker descendant cleanup: processes that escape the directly observed tree may survive close. The native backend inherits that limit and does not claim complete cleanup of an unobservable process.
 
@@ -69,7 +69,7 @@ Both dialects expose the same readiness contract, so consumers are dialect-agnos
 
 ### Sandboxing and safe operation
 
-The shell runs under the effective sandbox boundary for its whole life. Changing the effective sandbox mode is rejected while the owner still has open sessions or a spawn in progress — wait for creation to settle and close the sessions first, so a terminal opened with wider access cannot survive a downgrade. The backend supplies only terminal-specific environment overrides; the subprocess provider applies its shared credential scrub.
+The shell runs under the effective sandbox boundary for its whole life. In a Cordis composition, changing the effective sandbox mode is rejected while the owner still has open sessions or a spawn in progress — wait for creation to settle and close the sessions first, so a terminal opened with wider access cannot survive a downgrade. The backend supplies only terminal-specific environment overrides; the subprocess provider applies its shared credential scrub.
 
 ### Observable outcomes and failures
 

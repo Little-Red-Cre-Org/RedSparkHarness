@@ -20,12 +20,16 @@
       "default": "./lib/index.js"
     },
     "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./protocol": { "types": "./lib/types/protocol.d.ts", "default": "./lib/protocol.js" },
+    "./error": { "types": "./lib/types/error.d.ts", "default": "./lib/error.js" },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/protocol.js",
+    "lib/error.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
