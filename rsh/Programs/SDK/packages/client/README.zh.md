@@ -25,6 +25,8 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
+native-sdk 配置组合生产一次性 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。原生目录与独立 subagent.finished wire 通知仍不支持。
+
 当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `DeepSeekHarness`，运行提示词，然后关闭它，使子进程总能被回收。
 
 ### 用 DeepSeekHarness 运行 agent 轮次

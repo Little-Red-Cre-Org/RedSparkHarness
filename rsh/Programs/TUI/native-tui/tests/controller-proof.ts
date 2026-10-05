@@ -32,7 +32,7 @@ export async function controllerProof(workspace: string): Promise<void> {
       const open = vi.fn(async () => undefined)
       let calls = 0
       const execution: TerminalExecution = {
-        open, history: async () => events,
+        open, history: async () => events, sessions: async () => [],
         turn: async (request, signal) => {
           calls++
           entered.resolve(undefined)
@@ -94,7 +94,7 @@ export async function controllerProof(workspace: string): Promise<void> {
     }
     const launch = new AbortController()
     const controller = new TerminalController({
-      turn: async () => ({ exitCode: 0 }), open: async () => { throw new Error('restore refused') }, history: async () => [],
+      turn: async () => ({ exitCode: 0 }), open: async () => { throw new Error('restore refused') }, history: async () => [], sessions: async () => [],
     }, new AbortController().signal, settings, SessionId('refused-session'))
     try {
       for (const args of [['bad'], ['--resume', ''], ['--resume', 'id', 'extra']]) await expect(controller.initialize(args, launch.signal)).rejects.toThrow()

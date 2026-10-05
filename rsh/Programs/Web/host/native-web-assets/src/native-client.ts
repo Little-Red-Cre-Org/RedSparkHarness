@@ -123,9 +123,9 @@ function readPackageManifest(path: string): PackageManifest {
   return { ...(typeof value.name === 'string' ? { name: value.name } : {}), exports, ...(dsh === undefined ? {} : { dsh }) }
 }
 
-function selectedEntries(profile: NativeClientProfile, projectDir: string, runtimeDir: string): SelectedEntry[] {
+function selectedEntries(profile: NativeClientProfile, projectDir: string, runtimeDir: string, installedOnly: boolean): SelectedEntry[] {
   const roots = [realpathSync(projectDir), realpathSync(runtimeDir)]
-  const sourceWorkspace = workspaceRoot(roots[1] ?? runtimeDir)
+  const sourceWorkspace = installedOnly ? undefined : workspaceRoot(roots[1] ?? runtimeDir)
   return profile.installations.map((row) => {
     let packageRoot: string | undefined
     for (const root of roots) {
@@ -155,11 +155,13 @@ function selectedEntries(profile: NativeClientProfile, projectDir: string, runti
  * Read, validate, and bundle a selected native Client profile.
  * @param projectDir - profile-owned package root containing `rsh.client.json`.
  * @param runtimeDir - installed runtime root containing shared frontend packages.
+ * @param installedOnly - private Desktop carriers reject packages outside their installed roots.
  * @returns one native browser graph, or undefined when no profile file exists.
  */
 export async function prepareNativeClientBundle(
   projectDir: string,
   runtimeDir: string,
+  installedOnly = false,
 ): Promise<NativeClientBundle | undefined> {
   const profilePath = join(projectDir, PROFILE_FILENAME)
   if (!existsSync(profilePath)) return undefined
@@ -170,7 +172,7 @@ export async function prepareNativeClientBundle(
     throw new Error(`dsh native web: cannot load ${PROFILE_FILENAME}: ${String(error)}`, { cause: error })
   }
 
-  const entries = selectedEntries(profile, projectDir, runtimeDir)
+  const entries = selectedEntries(profile, projectDir, runtimeDir, installedOnly)
   const importRows = entries.map((entry, index) => `import * as plugin${index} from ${JSON.stringify(entry.entryPath)}`)
   const pluginRows = entries.map((entry, index) => `${JSON.stringify(entry.id)}: plugin${index}`).join(',')
   const watchDirectories = new Set([resolve(projectDir), ...entries.map(entry => dirname(entry.manifestPath))])

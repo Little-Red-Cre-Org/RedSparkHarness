@@ -29,6 +29,8 @@ Scenario manifests accept the explicit `native-tui` profile; its real-terminal a
 
 This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
+`profile: desktop` identifies the existing Electron private Host lifecycle; its owner uses the real Desktop backend controller and Session round trip without adding an application entrypoint.
+
 ### Writing a snapshot suite
 
 The closed profile manifest accepts `native-acp` for native ACP protocol scenarios backed by shared Session recordings.

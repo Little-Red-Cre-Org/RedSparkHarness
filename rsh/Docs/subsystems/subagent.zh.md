@@ -10,6 +10,8 @@ Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subag
 
 `subagentCatalog` projection 通过 Session 观察和客户端快照暴露按父会话事件排序的 `SubagentCatalogEntry[]`。每个条目包含子级 id、创建时间、模式和依模式确定的标签；fork 继承的目录事实不在其中。[subagent 包](../../Engine/subagent/subagent/README.zh.md) 定义目录创建和持久化语义。
 
+原生一次性组合使用 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 作为可替换服务定义与选定派生提供者，以 [tool-subagent 的原生入口](../../Engine/subagent/tool-subagent/README.zh.md) 为消费者。NativeSubagentOperations 解析精确活跃父配置，并通过 sessionExecution 委派；Program 保留 Agent 执行与唯一 Session 写入器。共享 [subagent-protocol](../../Engine/subagent/subagent-protocol/README.zh.md) 拥有描述符载荷、输出归并与委派权限文本。原生 Agent 所有的后台执行使用 NativeJobs 与既有 job_output/job_kill 消费者；可持续子任务复用 Program 可持续权威，通过[原生控制工具](../../Engine/subagent/tool-subagent-control/README.zh.md)实现相邻消息、打断与基于描述符的冷恢复。目录与完成结果投影仍为兼容能力。
+
 ## 两类能力，两种发现方式
 
 提供方通过一个静态描述符公布其**启动时**功能，服务会在单次 run 存在之前即行检查；如果请求依赖提供方不具备的功能，会被明确拒绝（`SubagentError('UNSUPPORTED_CAPABILITY')`），绝不会被接受后静默忽略。这些 flag 仅描述单次 [`start()`](#the-provider-contract-subagentprovider) 路径，即由提供方组合子 agent 的路径。**可继续**子 agent 由继续执行管理器自行组合，因此它们由唯一一个可选方法把关，方法存在即为能力，并以 TypeScript 的类型收窄作为发现机制：[`SubagentProvider.prepareContinuable`](#the-provider-contract-subagentprovider)。
@@ -205,7 +207,7 @@ interface ContinuableStart {
 /**
  * Durable attribution for the runtime's own account of a continuable child
  * settling. Deliberately a different kind from
- * {@link AgentMessageSource}: an Agent message is content the sender chose,
+ * `AgentMessageSource`: an Agent message is content the sender chose,
  * while this message is the manager stating what became of the child, and a
  * transcript that merged them would credit the child with words it never wrote.
  */

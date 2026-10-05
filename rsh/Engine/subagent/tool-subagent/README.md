@@ -25,6 +25,8 @@ Use this package to give an agent a named tool that delegates work to a configur
 <a id="use-this-package"></a>
 ## Use this package
 
+The ./native entry consumes native-subagent. Configuration requires toolName and maxDepth; maxSteps, provider, model, reasoningEffort, maxTokens, persona and toolFilter are optional deployment choices. backgroundMode defaults to one-shot: run_in_background requires jobs and jobControls, returns after readiness, and job_output/job_kill observe or cancel the Agent-owned job. The Provider backgroundJobs, selected jobs and jobControls.jobs must identify the same registry; mismatches fail loading. backgroundMode:continuable defaults to durable initial-message acceptance; run_in_background:false waits for an ordinary one-shot result. Continuable mode requires subagentControls bound to the same selected Provider and its continuationTools registry. NativeTools validates arguments and records actual results.
+
 Mount one instance per delegation target, each with a distinct `toolName`. The tool exists exactly while its provider does, so sibling load order and provider reloads never strand it.
 
 ### Minimal configuration

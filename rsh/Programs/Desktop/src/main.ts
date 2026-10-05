@@ -265,6 +265,7 @@ async function main(): Promise<void> {
 
   recoverApplication = async (action): Promise<void> => {
     await startup?.catch(() => undefined)
+    if (action === 'plugins' && !manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     await backend.stop()
     if (action === 'restart') {
       app.relaunch()
@@ -336,6 +337,7 @@ async function main(): Promise<void> {
       throw new Error('dsh desktop: plugin package changes require a packaged application')
     }
     await startup?.catch(() => undefined)
+    if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     pageError = undefined
     await navigateMain(startupUrl)
     try {
@@ -382,6 +384,7 @@ async function main(): Promise<void> {
   ipcMain.handle(DESKTOP_IPC.pluginsList, (event) => {
     assertDesktopSender(event, ['shell'])
     if (development !== undefined) return []
+    if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     return manager.listPlugins()
   })
   ipcMain.handle(DESKTOP_IPC.pluginsAdd, (event, spec: unknown) => {
@@ -486,6 +489,11 @@ async function main(): Promise<void> {
   }
 
   const openPluginWindow = (): void => {
+    if (!manager.supportsLegacyPluginManagement()) {
+      void dialog.showMessageBox({ type: 'info', title: messages.pluginWindowTitle, message: messages.nativePluginManagementUnavailable })
+        .catch((error: unknown) => { console.error(error) })
+      return
+    }
     if (pluginWindow !== undefined && !pluginWindow.isDestroyed()) {
       pluginWindow.focus()
       return

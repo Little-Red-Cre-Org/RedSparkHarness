@@ -48,9 +48,12 @@
         "codeRuntime",
         "timeContext",
         "modelSelection",
+        "modelDirectory",
         "agentPresets",
         "workspaceRegistry",
-        "agentInstructions"
+        "agentInstructions",
+        "userQuestions",
+        "attachments"
       ],
       "provides": [
         "nativeWebSession",
@@ -74,7 +77,13 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-user-questions": "workspace:^",
+    "@deepseek-ai/dsh-attachment": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
@@ -84,6 +93,7 @@
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-client-native-application": "workspace:^"
+    "@deepseek-ai/dsh-client-native-application": "workspace:^",
+    "@deepseek-ai/dsh-attachment-local": "workspace:^"
   }
 }

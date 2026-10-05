@@ -20,7 +20,9 @@ English | [中文](README.zh.md)
 
 ## Configuration
 
-Programs may supply `prepareMessage` instead of `message` for root input admission. The callback receives the next durable model selection and composed cancellation while the original Agent holds execution and its Session writer; preparation completes before inbox append. Rejection admits no input or model request. Delegated turns do not expose this callback.
+Delegated invocations retain the selected sandbox policy and cannot expand permissions through approvals. Required approval requests record asked and decided facts with policy never and outcome rejected; root requests still use the selected approval answerer. Interrupted transient children repair their turn through the existing owner so accepted-event observers and the durable log receive the same cancellation closers.
+
+Continuation observations expose immutable deployment defaults in the exact authorizing workspace. Module Providers reconstruct durable child route and composition independently of those per-activation budgets; the Program retains residency, pending input and the only writer.
 
 The optional `agentInstructions` Provider prepares workspace instructions before each admitted model request. The application records its returned context as `user/message` before dispatch; stored source facts govern resume reconciliation and accepted filesystem results govern nested discovery.
 
@@ -40,17 +42,21 @@ The validated `builtinTools` boolean defaults to `true`. Setting it to `false` r
 
 `sessionExecution` routes child turns and continuations through the same executor. `activeSessions` publishes the exact current Agent, Session and writer; Consumers retain that owner to keep a root resident, or append through idle maintenance without starting a model turn. Pending messages are durable inbox events, and step admission persists their exact claims before deriving model input. Resume and forks retain historical preset selection; preset removal cancels and drains its exact leases.
 
-`rootExecution` exposes branded immutable routes, maintenance, execution, settlement, closed-turn forks and optional recoverable deletion. Dynamic `workspaceRoutes` requires an explicit positive `maxRoutes` and nonempty absolute `allowedRoots`; selection validates the existing Workspace directory against the same filesystem and sandbox policy. Workspace records and global archive ids use the shared v2 storage domain. Deletion refuses busy writers and mismatched routes; it never cancels a task to delete its log. Application disposal attempts every execution and retained epoch close, waits for all of them, and aggregates failures after identity and preset cleanup.
+`rootExecution` exposes branded immutable routes, maintenance, execution, [exact root cancellation](../native-session-execution/README.md#execution-ownership), settlement, closed-turn forks and optional recoverable deletion. Dynamic `workspaceRoutes` requires an explicit positive `maxRoutes` and nonempty absolute `allowedRoots`; selection validates the existing Workspace directory against the same filesystem and sandbox policy. Workspace records and global archive ids use the shared v2 storage domain. Deletion refuses busy writers and mismatched routes; it never cancels a task to delete its log. Application disposal attempts every execution and retained epoch close, waits for all of them, and aggregates failures after identity and preset cleanup.
 
 One-shot teardown attempts writer closure even when an active-owner observer rejects, preserving execution and cleanup failures together. Agent admission owns borrowed preset leases before lifecycle announcement; failed or cancelled announcement releases them. Resident children persist that selected preset in their creation header and validate restored facts before module preparation.
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
+
+Root `prepareMessage` takes priority over `message`. Preparation runs under the existing execution owner after effective next-model selection and before inbox admission. It returns identified input without access to the Session writer; rejection or cancellation admits no user input.
 
 Root cancellation closes and drains an already retained epoch even when the initial turn fails or the settlement signal is already aborted. Execution and epoch-cleanup failures are reported together; the original execution failure remains observable.
 
 ## Dev Note
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.
+
+Continuation input to a busy recipient uses its actual active owner as soon as that owner attaches. A queued idle fallback and live inbox admission claim the message once; selecting the live owner cancels and drains the still-queued fallback. Admission failures preserve their original causes.
 
 ## Model Experience
 

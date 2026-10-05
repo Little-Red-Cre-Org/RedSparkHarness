@@ -40,6 +40,12 @@
     },
     {
       "path": "../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Engine/preset/agent-presets/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Core/util/brand"
     }
   ]
 }

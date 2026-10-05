@@ -165,7 +165,31 @@ export function nativeProfileReloadMode(name: string, home: string = resolveDshH
 
 function profileExecution(name: string, home: string): { runtime: 'native' | 'legacy'; reload: 'startup' | 'live' } {
   validateProfileName(name)
-  const manifestPath = join(home, 'profiles', name, 'package.json')
+  return profileDirectoryExecution(join(home, 'profiles', name))
+}
+
+/**
+ * Detect a staged or installed profile's explicit native marker before legacy boot.
+ * @param profileDir - installed profile directory.
+ * @returns native only when the package explicitly selects rsh.profile.json.
+ */
+export function profileDirectoryRuntime(profileDir: string): 'native' | 'legacy' {
+  return profileDirectoryExecution(profileDir).runtime
+}
+
+/**
+ * Read the requested reload lifetime for an installed native profile.
+ * @param profileDir - installed or staged profile directory.
+ * @returns the explicit reload lifetime, or startup when omitted.
+ */
+export function profileDirectoryReloadMode(profileDir: string): 'startup' | 'live' {
+  const execution = profileDirectoryExecution(profileDir)
+  if (execution.runtime !== 'native') throw new Error('dsh: profile does not select native execution')
+  return execution.reload
+}
+
+function profileDirectoryExecution(profileDir: string): { runtime: 'native' | 'legacy'; reload: 'startup' | 'live' } {
+  const manifestPath = join(profileDir, 'package.json')
   if (!existsSync(manifestPath)) return { runtime: 'legacy', reload: 'startup' }
   const manifest = object(JSON.parse(readFileSync(manifestPath, 'utf8')) as unknown, 'profile package')
   const dsh = manifest.dsh === undefined ? {} : object(manifest.dsh, 'profile dsh')

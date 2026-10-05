@@ -49,6 +49,21 @@
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../native-subagent"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-jobs"
+    },
+    {
+      "path": "../../jobs/native-tool-jobs"
     }
   ]
 }

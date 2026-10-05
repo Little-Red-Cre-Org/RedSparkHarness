@@ -1,9 +1,18 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
 import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
+import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Settled durable history and the Client's outstanding operation. */
 export interface ConversationSnapshot {
+  readonly header?: SessionHeader | undefined
+  readonly modelControls?: NativeModelControls | undefined
+  readonly human?: NativeWebHumanPrompt | undefined
+  readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly SessionHeader[]
   readonly selected?: SessionId
   readonly events: readonly SessionEvent[]
@@ -73,7 +82,7 @@ export class NativeConversationController {
 
   private async restore(id: SessionId): Promise<void> {
     const history = await this.client.history(id, this.lifetime.signal)
-    this.publish({ selected: id, events: history.events })
+    this.publish({ selected: id, header: history.header, events: history.events })
   }
 
   /** Read the persisted index without automatically resuming a Session.
@@ -81,7 +90,10 @@ export class NativeConversationController {
    */
   load(): Promise<void> {
     return this.run(async () => {
-      this.publish({ sessions: await this.client.list(this.lifetime.signal), error: undefined })
+      const [sessions, modelControls] = await Promise.all([
+        this.client.list(this.lifetime.signal), this.client.modelControls(this.lifetime.signal),
+      ])
+      this.publish({ sessions, modelControls, error: undefined })
     })
   }
 
@@ -108,34 +120,121 @@ export class NativeConversationController {
     return this.run(() => this.restore(id))
   }
 
+  /** Refresh provider-owned menus without changing Session intent.
+   * @returns completion after the current Host catalog and standing roster reply.
+   */
+  refreshModelControls(): Promise<void> {
+    this.assertReady()
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => { this.publish({ modelControls: await this.client.modelControls(this.lifetime.signal) }) })
+  }
+
+  /** Persist a complete model and optional effort against the displayed intent revision.
+   * @param selected - provider-owned route and explicit effort, if chosen.
+   * @returns completion after durable selection and history refresh, including stale conflicts.
+   */
+  selectModel(selected: ModelSelection): Promise<void> {
+    this.assertReady()
+    const id = this.snapshot.selected
+    if (id === undefined) throw new Error('native conversation: select a Session')
+    const { revision } = foldNativeModelSelectionState(this.snapshot.events)
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      try { await this.client.selectModel(id, { selected, expectedRevision: revision }, this.lifetime.signal) }
+      finally { if (!this.lifetime.signal.aborted) await this.restore(id) }
+    })
+  }
+
+  /** Select a registered composition before the first turn locks the root epoch.
+   * @param preset - identifier advertised by the Host's standing registry.
+   * @returns completion after Program-owned Agent replacement and durable history refresh.
+   */
+  selectPreset(preset: string): Promise<void> {
+    this.assertReady()
+    const id = this.snapshot.selected
+    const header = this.snapshot.header
+    if (id === undefined || header === undefined) throw new Error('native conversation: select a Session')
+    const { revision, locked } = foldNativeAgentPresetFacts(header, this.snapshot.events)
+    if (locked) throw new Error('native conversation: preset is locked by the first turn')
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      try { await this.client.selectPreset({ id, preset, expectedRevision: revision }, this.lifetime.signal) }
+      finally { if (!this.lifetime.signal.aborted) await this.restore(id) }
+    })
+  }
+
+  /** Fetch a recorded image without changing execution readiness.
+   * @param sessionId - owning displayed Session.
+   * @param image - recorded reference.
+   * @param signal - render lifetime cancellation.
+   * @returns verified image Blob.
+   */
+  image(sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal): Promise<Blob> {
+    return this.client.image(sessionId, image, AbortSignal.any([signal, this.lifetime.signal]))
+  }
+
   /** Send human text through the Host's sole turn executor.
    * @param text - nonempty submitted text.
+   * @param files - browser-selected raster files; Provider limits govern admission.
    * @returns completion after Host settlement and durable transcript refresh.
    */
-  send(text: string): Promise<void> {
+  send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const turn = new AbortController()
+    const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
     this.turn = turn
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
       try {
-        const result = await this.client.prompt(id, text, true, AbortSignal.any([turn.signal, this.lifetime.signal]),
-          (frame) => { this.observe(frame) })
+        const images: NativeImageUpload[] = []
+        const policy = this.snapshot.modelControls?.images
+        if (files.length > 0) {
+          if (policy === undefined || files.length > policy.maxImagesPerMessage
+            || files.reduce((sum, file) => sum + file.size, 0) > policy.maxMessageImageBytes) throw new Error('native conversation: image batch exceeds configured limits or is unavailable')
+          for (const file of files) {
+            const mediaType = policy.mediaTypes.find(type => type === file.type)
+            if (mediaType === undefined || file.size > policy.maxImageBytes) throw new Error('native conversation: image type or size is refused')
+            const data = await new Promise<string | undefined>((resolve, reject) => {
+              const reader = new FileReader()
+              const abort = (): void => { cleanup(); reader.abort(); resolve(undefined) }
+              const cleanup = (): void => {
+                signal.removeEventListener('abort', abort)
+                reader.onload = reader.onerror = reader.onabort = null
+              }
+              reader.onload = () => {
+                cleanup()
+                const dataUrl = reader.result as string
+                resolve(dataUrl.slice(dataUrl.indexOf(',') + 1))
+              }
+              reader.onerror = () => { cleanup(); reject(new Error('native conversation: image read failed', { cause: reader.error })) }
+              reader.onabort = (): void => { cleanup(); resolve(undefined) }
+              signal.addEventListener('abort', abort, { once: true })
+              if (signal.aborted) abort()
+              else reader.readAsDataURL(file)
+            })
+            if (data === undefined) return
+            images.push({ mediaType, data, name: file.name })
+          }
+        }
+        const result = await this.client.prompt(id, text, true, signal,
+          (frame) => { this.observe(frame) }, images)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }
       } finally {
         this.turn = undefined
-        this.publish({ liveText: undefined, liveTruncated: false })
+        this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
         if (!this.lifetime.signal.aborted) await this.restore(id)
       }
     })
   }
 
   private observe(frame: NativeSessionFollowFrame): void {
-    if (frame.type === 'event') {
+    if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
+    else if (frame.type === 'human-removed') { if (this.snapshot.human?.id === frame.id) this.publish({ human: undefined, answeringHuman: false }) }
+    else if (frame.type === 'event') {
       const last = this.snapshot.events.at(-1)?.seq
       if (last !== undefined && frame.event.seq <= last) return
       if (last !== undefined && frame.event.seq !== last + 1) throw new Error('native conversation: live history sequence gap')
@@ -149,6 +248,22 @@ export class NativeConversationController {
       this.publish({ liveText: text.slice(-this.limits.maxLiveTextChars),
         liveTruncated: this.snapshot.liveTruncated === true || text.length > this.limits.maxLiveTextChars })
     }
+  }
+
+  /** Answer only the presentation the renderer observed, without changing turn readiness.
+   * @param prompt - exact displayed presentation.
+   * @param answer - human's structured choice.
+   * @returns acknowledgement; failures retain the request for correction.
+   */
+  answerHuman(prompt: NativeWebHumanPrompt, answer: NativeWebHumanAnswer): Promise<void> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.human !== prompt || this.snapshot.answeringHuman || this.snapshot.state !== 'sending') throw new Error('native conversation: no matching unanswered presentation')
+    this.publish({ answeringHuman: true, error: undefined })
+    const work = this.client.answerHuman(id, prompt.id, answer, this.lifetime.signal).catch((error: unknown) => {
+      this.publish({ error: error instanceof Error ? error.message : String(error) })
+    }).finally(() => { this.pending.delete(work); this.publish({ answeringHuman: false }) })
+    this.pending.add(work)
+    return work
   }
 
   /** Request cancellation; readiness is published only by the settled send operation. */
