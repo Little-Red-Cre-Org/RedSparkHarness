@@ -14,7 +14,7 @@ import { resolveNativeTuiConfig } from '../src/config.ts'
  */
 export async function controllerProof(workspace: string): Promise<void> {
   const config = { cwd: workspace, provider: 'fixture', model: 'fixture', systemPrompt: 'Terminal proof', locale: 'en',
-    background: '#000000', maxQueuedInputs: 1, maxHistoryEvents: 100, maxTranscriptEvents: 3, maxStreamChunks: 2 }
+    background: '#000000', maxQueuedInputs: 1, maxHistoryEvents: 100, maxTranscriptEvents: 3, maxStreamChunks: 2, maxPendingHumanRequests: 2 }
   for (const invalid of [null, { ...config, locale: 'invalid' }, { ...config, background: 'invalid' },
     ...['maxQueuedInputs', 'maxHistoryEvents', 'maxTranscriptEvents', 'maxStreamChunks'].map(key => ({ ...config, [key]: 0 }))]) {
     expect(() => resolveNativeTuiConfig(invalid)).toThrow()
