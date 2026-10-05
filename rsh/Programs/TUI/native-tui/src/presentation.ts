@@ -79,6 +79,7 @@ export function TerminalView({ interaction, locale, model, background }: {
   useInput((keyInput, key) => {
     if (key.ctrl && keyInput === 'c') { if (state.busy) interaction.cancel(); else interaction.exit() }
     if (key.escape && menu !== undefined) { setMenu(undefined); setNotice(''); return }
+    if (key.escape && state.human !== undefined) { interaction.cancel(); setNotice(''); return }
     if (key.escape && state.busy) {
       interaction.cancel()
       if (input.trim() !== '') { submit(input); setInput('') }

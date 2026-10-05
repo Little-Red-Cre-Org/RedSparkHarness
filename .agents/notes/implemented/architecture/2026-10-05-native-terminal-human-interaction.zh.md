@@ -18,4 +18,4 @@ Ink 记录审计事件会引入第二个 writer。持久权限授权超出单次
 
 ## 后果
 
-既有执行器记录审批 asked／decided 事件和模型可见提问结果。调用方取消、退出和 Provider 移除先释放待回答呈现，再等待已接受执行排空。显式 native-tui profile 安装既有提问 Definition 与模型工具，并声明直接 resolver 依赖。旧默认装配不变。权限预设选择和专门 Plan 面板仍是独立 Consumer。
+既有执行器记录审批 asked／decided 事件和模型可见提问结果。调用方取消、退出和 Provider 移除先释放待回答呈现，再等待已接受执行排空。人机请求期间的 Esc 保留未提交草稿。审批取消持久记录决定审计并传递借用 signal 的原始原因，不将普通取消变为权限拒绝。显式 native-tui profile 安装既有提问 Definition 与模型工具，并声明直接 resolver 依赖。旧默认装配不变。权限预设选择和专门 Plan 面板仍是独立 Consumer。
