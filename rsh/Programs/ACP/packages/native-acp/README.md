@@ -26,7 +26,7 @@ The shipped native composition installs the model adapter, native Agent and mode
 
 The application declares the shared executor’s optional `modelSelection` service and consumes its Host compiler face.
 
-Image prompts require the selected attachment Provider and model directory. Initialization advertises image admission only when both are installed; each image prompt checks the Session's next selected model under idle Agent maintenance and rejects models without declared image input. The attachment Provider validates configured raster formats, base64, byte and pixel limits, normalizes the batch, and returns durable references in input order before user-message admission. Invalid images never enter the Session inbox. Cancellation and transport drain also cover image preparation.
+Image prompts require the selected attachment Provider and model directory. Initialization advertises image admission only when both are installed; each image prompt checks the Session's next selected model and prepares attachments within the same root execution admission, rejecting models without declared image input. The attachment Provider validates configured raster formats, base64, byte and pixel limits, normalizes the batch, and returns durable references in input order before user-message admission. Invalid images never enter the Session inbox. Cancellation and transport drain also cover image preparation.
 
 ## Dev Note
 
