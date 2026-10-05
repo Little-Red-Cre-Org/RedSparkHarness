@@ -17,7 +17,7 @@ interface ToolArgsMap {
   };
   /** List background jobs owned by this Agent. */
   job_list: Record<string, never>;
-  /** Read a background job result and status; optionally wait for completion. */
+  /** Read retained live or final background job output and status; optionally wait for completion. */
   job_output: {
     job_id: string;
     wait?: boolean;
@@ -28,6 +28,7 @@ interface ToolArgsMap {
 interface ToolOutputMap {
   job_kill: {
     text: string;
+    truncated?: boolean;
     jobs: ({
       id: string;
       kind: string;
@@ -41,6 +42,7 @@ interface ToolOutputMap {
   };
   job_list: {
     text: string;
+    truncated?: boolean;
     jobs: ({
       id: string;
       kind: string;
@@ -54,6 +56,7 @@ interface ToolOutputMap {
   };
   job_output: {
     text: string;
+    truncated?: boolean;
     jobs: ({
       id: string;
       kind: string;

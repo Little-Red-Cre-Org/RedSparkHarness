@@ -27,7 +27,7 @@ it('offers background execution only with job controls and reports a failed sand
       return () => {}
     } } as unknown as NativeToolRegistry
     const jobs = { start(spec: NativeJobStart) {
-      runner = signal => spec.run(signal)
+      runner = (signal, publishOutput) => spec.run(signal, publishOutput)
       return NativeJobId('pwsh-1')
     } } as NativeJobRegistry
     const shellEnv = { collect: () => ({}) } as unknown as ShellEnvironment<NativeToolExecution>
@@ -59,7 +59,7 @@ it('offers background execution only with job controls and reports a failed sand
       } else {
         await expect(contribution.execute(call)).resolves.toEqual({ kind: 'background', jobId: 'pwsh-1' })
         if (runner === undefined) throw new Error('background runner not registered')
-        const outcome: NativeJobOutcome = await runner(new AbortController().signal)
+        const outcome: NativeJobOutcome = await runner(new AbortController().signal, () => {})
         expect(outcome.status).toBe('failed')
         expect(outcome.output).toContain('runner failed')
       }

@@ -91,6 +91,7 @@ class LocalSendOperation implements TerminalSendOperation {
     maxBytes: number,
     readonly startedAt: number,
     private readonly onCancel: () => void,
+    private readonly onOutput?: (text: string) => void,
   ) {
     this.output = new BoundedTextBuffer(maxBytes)
     this.promise = Promise.withResolvers<TerminalSendResult>()
@@ -110,7 +111,10 @@ class LocalSendOperation implements TerminalSendOperation {
   }
 
   append(text: string): void {
-    if (!this.finished) this.output.append(text)
+    if (!this.finished) {
+      this.output.append(text)
+      this.onOutput?.(text)
+    }
   }
 
   settle(waitReason: TerminalWaitReason, sessionStatus: TerminalSessionStatus, inheritedTruncation: boolean): void {
@@ -265,6 +269,7 @@ export class LocalPtySession implements TerminalBackendSession {
       this.config.maxReadBytes,
       Date.now(),
       () => { this.interrupt(operation) },
+      request.onOutput,
     )
     this.active = operation
     this.resetReadinessEvidence()

@@ -57,6 +57,8 @@ export interface TerminalSendRequest {
   submit: boolean
   /** Cancellation for the wait; backends also interrupt the foreground command. */
   signal?: AbortSignal
+  /** Observe sanitized output without consuming the operation viewport; notification stops at settlement. */
+  onOutput?: (text: string) => void
 }
 
 /** Incremental output consumed from one live send operation. */
