@@ -461,7 +461,7 @@
     {
       "doc": "rsh/Docs/subsystems/llm-streaming.md",
       "symbol": "LlmAdapter",
-      "source": "rsh/Engine/llm/llm/src/index.ts",
+      "source": "rsh/Engine/llm/llm/src/adapter.ts",
       "projection": "public-api"
     },
     {
