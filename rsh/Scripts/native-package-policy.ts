@@ -101,6 +101,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
   ['rsh/Core/storage/storage-json', ['@deepseek-ai/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-attachment']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/preset/agent-presets', [
     '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
     '@deepseek-ai/dsh-atomic-write', '@deepseek-ai/dsh-home-paths',
