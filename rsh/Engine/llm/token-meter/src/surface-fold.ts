@@ -14,10 +14,10 @@
  * @module @deepseek-ai/dsh-token-meter/surface-fold
  */
 
-import { deriveEventMessage } from '@deepseek-ai/dsh-session'
-import type { SessionSeq, SurfaceEvent } from '@deepseek-ai/dsh-session'
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { deriveEventMessage } from '@deepseek-ai/dsh-session/native'
+import type { SessionSeq, SurfaceEvent } from '@deepseek-ai/dsh-session/native'
+import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm/native'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
 import { estimateMessage, estimateStructuralBlock } from './estimate.ts'
 
 type FileAttachmentRef = Extract<ContentBlock, { type: 'file' }>['attachment']

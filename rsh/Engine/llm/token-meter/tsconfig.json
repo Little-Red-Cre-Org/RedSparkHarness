@@ -31,6 +31,12 @@
     },
     {
       "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-model-execution/tsconfig.host.json"
     }
   ]
 }

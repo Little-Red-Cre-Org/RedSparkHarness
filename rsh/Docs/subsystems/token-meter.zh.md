@@ -4,7 +4,7 @@
 
 `@deepseek-ai/dsh-token-meter` 公开一个独立的回放快照，用于表示请求压力与按位置计算的表层定价。`logRevision` 表示生成该计量中每个字段时所消费的持久事件数量。
 
-来源：[`rsh/Engine/llm/token-meter/src/types.ts`](../../Engine/llm/token-meter/src/types.ts)
+来源：[`rsh/Engine/llm/token-meter/src/meter-types.ts`](../../Engine/llm/token-meter/src/meter-types.ts)
 
 ## `TokenMeasurement`
 

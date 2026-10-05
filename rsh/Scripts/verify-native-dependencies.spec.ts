@@ -216,10 +216,16 @@ it('checks a declared Cordis-free subpath in a mixed package', () => {
   mkdirSync(join(dir, 'src'), { recursive: true })
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: '@deepseek-ai/dsh-attachment',
-    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types.js' } },
+    exports: Object.fromEntries(['native', 'types', 'brand', 'error', 'admission', 'request-projection'].map(entry => [
+      `./${entry}`, { types: `./lib/types/${entry}.d.ts`, default: `./lib/${entry}.js` },
+    ])),
   }))
+  writeFileSync(join(dir, 'src/native.ts'), 'export type { Attachment } from "./types.ts"')
   writeFileSync(join(dir, 'src/types.ts'), 'export type { Attachment } from "./safe.ts"')
   writeFileSync(join(dir, 'src/safe.ts'), 'export interface Attachment {}')
+  for (const entry of ['brand', 'error', 'admission', 'request-projection']) {
+    writeFileSync(join(dir, `src/${entry}.ts`), 'export {}')
+  }
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/safe.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Attachment {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
