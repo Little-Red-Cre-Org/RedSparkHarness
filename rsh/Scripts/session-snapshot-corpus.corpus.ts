@@ -29,9 +29,10 @@ const snapshotAdapters = [
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
-  'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
+  'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
+  'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',
 ] as const

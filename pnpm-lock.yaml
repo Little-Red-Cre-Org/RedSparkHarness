@@ -2670,6 +2670,9 @@ importers:
 
   rsh/Engine/llm/llm:
     dependencies:
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
@@ -2692,9 +2695,6 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../Core/vendor/cordis
-      '@deepseek-ai/dsh-attachment':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-errors':
         specifier: workspace:^
         version: link:../../../Core/util/errors
@@ -7357,9 +7357,15 @@ importers:
 
   rsh/Modules/Official/terminal/terminal:
     dependencies:
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -7373,12 +7379,6 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
-      '@deepseek-ai/dsh-native-agent':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/native-agent
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/terminal/terminal-bash:
     dependencies:
