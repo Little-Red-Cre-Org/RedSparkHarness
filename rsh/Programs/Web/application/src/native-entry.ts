@@ -235,7 +235,7 @@ export async function bootNativeClientEntry(
     const options: NativeClientBootOptions = {
       modules, selections: wire.selections, container,
       ...(signal === undefined ? {} : { signal }),
-      ...(progress === undefined ? {} : { onEntryState: (id: string, state: NativeClientEntryState) => progress.setState(id, state) }),
+      ...(progress === undefined ? {} : { onEntryState: (id: string, state: NativeClientEntryState) => { progress.setState(id, state) } }),
     }
     const host = await bootNativeClient(options)
     const result: NativeClientHost = {

@@ -27,6 +27,8 @@ kind: "package-reference"
 
 凡模型应当能够暂停等待人类决定的场景，都可组合此插件：它提供 `ask_user_question` 工具，并且需要带有接受作用域请求的 answerer 的 `ctx.userQuestions` seam。没有 answerer 接受时，工具调用会以错误失败，而不是降级。
 
+原生 `./native` 入口向选定的 `tools` 注册表贡献值工具，并依赖 `userQuestions`。需要另外选择待回答问题的 broker Provider 与认证回答传输。Program 使用既有 `tool/result` writer 记录最终回答或错误；此 Consumer 不创建 Session 事件或 writer。工具、回答者、Agent 或 Host 移除时取消并排空已接受的问题。
+
 ### 何时调用该工具
 
 当模型需要确认、选择结果或缺失的信息才能继续时，调用 `ask_user_question`。发送一个或多个问题，每个问题携带稳定的 `id`（回答中会原样包含）；推荐选项放在首位，并在标签末尾追加 `(Recommended)`。
@@ -57,7 +59,7 @@ kind: "package-reference"
 
 ### 调用何时失败
 
-工具调用会阻塞到用户作答，并且只能通过当前轮次的信号取消。没有 answerer 接受、调用被中止、或调用方不是确切的存活运行时根，都会以模型在工具结果中看到的错误结算——最值得注意的是，归属于另一个 agent 的存活子级会被拒绝（`DELEGATED_CALLER`），必须在最终结果中包含尚未解决的问题或决定。
+工具调用等待用户回答或其拥有者取消请求。没有 answerer 接受、调用被中止、或调用方不是确切的存活运行时根，都会以模型在工具结果中看到的错误结算——最值得注意的是，归属于另一个 agent 的存活子级会被拒绝（`DELEGATED_CALLER`），必须在最终结果中包含尚未解决的问题或决定。
 
 -----
 
@@ -138,7 +140,7 @@ kind: "package-reference"
 
 这些限制说明该工具何时不合适。它们是当前包约束，不是 UI 积压事项。
 
-- **待处理问题会阻塞工具调用，直至用户作答**：该工具未声明 `timeout-policy` 预算；取消仅沿用当前轮次的 `exec.signal`。
+- **待处理问题会阻塞工具调用，直至用户作答**：该工具未声明 `timeout-policy` 预算；原生取消还包括选定拥有者的移除。
 - **运行时中归属于其他 agent 的 subagent 不能向用户提问**：`ask_user_question` 会以 `DELEGATED_CALLER` 拒绝归属于另一个 agent 的存活子级；该子级必须在最终结果中包含尚未解决的问题或决定。持久谱系不能决定这一边界，因此带有谱系的会话恢复为运行时根后可以正常提问。
 - **Native 回答渲染为 JSON 文本**：规范值仍为结构化数据，但模型侧结果使用紧凑 JSON，而非更丰富的内容块词汇。
 

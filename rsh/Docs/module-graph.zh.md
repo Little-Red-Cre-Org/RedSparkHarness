@@ -279,6 +279,7 @@ flowchart TD
     pkg_permission_presets["permission-presets"]
     pkg_tool_ask_user["tool-ask-user"]
     pkg_user_approval["user-approval"]
+    pkg_user_question_broker["user-question-broker"]
     pkg_user_questions["user-questions"]
   end
   subgraph group_jobs["group: jobs"]
@@ -849,7 +850,6 @@ flowchart TD
   pkg_tool_call_timeout_policy --> pkg_tools
   pkg_tool_ask_user --> pkg_agent
   pkg_tool_ask_user --> pkg_tools
-  pkg_tool_ask_user --> pkg_user_questions
   pkg_tool_jobs --> pkg_agent
   pkg_tool_jobs --> pkg_jobs
   pkg_tool_jobs --> pkg_llm
@@ -1301,6 +1301,7 @@ flowchart TD
 | [`native-web-assets`](../Programs/Web/host/native-web-assets) | `host` | — |
 | [`native-web-host`](../Programs/Web/host/native-web-host) | `host` | — |
 | [`native-approval`](../Modules/Official/interaction/native-approval) | `interaction` | — |
+| [`user-question-broker`](../Modules/Official/interaction/user-question-broker) | `interaction` | — |
 | [`native-tool-jobs`](../Engine/jobs/native-tool-jobs) | `jobs` | — |
 | [`invariants`](../Core/runtime-diagnostics/invariants) | `runtime-diagnostics` | — |
 | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) | `runtime-diagnostics` | — |
@@ -1436,7 +1437,7 @@ flowchart TD
 | [`message-feedback`](../Modules/Official/feedback/message-feedback) | `feedback` | [`brand`](../Core/util/brand), [`command-feedback`](../Modules/Official/feedback/command-feedback), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`typert-protocol`](../Core/typert/protocol) |
 | [`repeat-tool-reminder`](../Modules/Official/guard/repeat-tool-reminder) | `guard` | [`agent`](../Engine/core/agent), [`tools`](../Engine/core/tools) |
 | [`tool-call-timeout-policy`](../Modules/Official/guard/timeout-policy) | `guard` | [`llm`](../Engine/llm/llm), [`timeout`](../Core/util/timeout), [`tools`](../Engine/core/tools) |
-| [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user) | `interaction` | [`agent`](../Engine/core/agent), [`tools`](../Engine/core/tools), [`user-questions`](../Modules/Official/interaction/user-questions) |
+| [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user) | `interaction` | [`agent`](../Engine/core/agent), [`tools`](../Engine/core/tools) |
 | [`tool-jobs`](../Engine/jobs/tool-jobs) | `jobs` | [`agent`](../Engine/core/agent), [`jobs`](../Engine/jobs/jobs), [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`tool-lsp`](../Modules/Official/lsp/tool-lsp) | `lsp` | [`llm`](../Engine/llm/llm), [`lsp`](../Modules/Official/lsp/lsp), [`system-prompt`](../Engine/core/system-prompt), [`timeout`](../Core/util/timeout), [`tools`](../Engine/core/tools) |
 | [`mcp-client`](../Modules/Official/mcp/mcp-client) | `mcp` | [`scope`](../Engine/core/scope), [`tools`](../Engine/core/tools) |
