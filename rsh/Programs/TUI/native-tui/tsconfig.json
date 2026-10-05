@@ -18,6 +18,12 @@
       "path": "../../../Engine/core/native-session-execution/tsconfig.host.json"
     },
     {
+      "path": "../../../Engine/core/native-model-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Engine/llm/native-model-selection/tsconfig.host.json"
+    },
+    {
       "path": "../../../Engine/core/session"
     },
     {

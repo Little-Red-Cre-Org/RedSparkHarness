@@ -26,6 +26,8 @@ The `./native` entry is assembled by `dsh --profile native-tui`. It uses the [sh
 
 New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input, Esc stops the active turn and sends a nonempty draft, and Ctrl+C stops while busy or exits while idle. `/help`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
 
+The shipped profile installs `modelSelection`; its adapter provides `modelDirectory`. `/model` reads advertised models and isolated Provider failures; `/reasoning` reads the selected model's actual efforts. Enter a displayed number to commit the complete choice, or Esc to dismiss. Both require an idle terminal without queued input. Selections compare the observed durable revision under the shared executor's exclusive Session maintenance and persist before affecting the next turn. Cold restore retains the choice. The header shows the selected route and effective effort; input modalities and context capacity come from the actual Provider, with unknown metadata marked explicitly. Custom compositions without both Providers report unavailable controls.
+
 <a id="implementation"></a>
 ## Implementation
 
@@ -49,7 +51,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Model, reasoning, preset and permission selectors, interactive approvals, Plan/Todo panels, contributed commands and a Session browser are not connected.
+- Preset and permission selectors, interactive approvals, Plan/Todo panels, contributed commands and a Session browser are not connected.
 - The view shows recent message rows without history scrolling; large streamed output is presentation-limited while complete accepted output remains in Session.
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 

@@ -40,7 +40,7 @@ The CLI carries the native Web Host, Session controller and frontend static arti
 <a id="dev-note"></a>
 ## Dev Note
 
-The native Session executor owns persistence and Agents; this package owns transport operations only.
+The native Session executor owns persistence and Agents; this package owns transport operations only. Its optional modelSelection service preserves the selected Session model when installed.
 
 <a id="model-experience"></a>
 ## Model Experience

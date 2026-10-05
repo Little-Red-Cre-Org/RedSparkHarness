@@ -12,6 +12,9 @@ import { TerminalView } from './presentation.ts'
 import { TerminalController } from './controller.ts'
 import { resolveNativeTuiConfig, type Config } from './config.ts'
 import { terminalCopy } from './locale.ts'
+import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
+import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import { terminalModelOperations } from './models.ts'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -23,9 +26,14 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
    * @param context - selected native installation authorities.
    * @param executor - selected sole Session execution owner.
    * @param config - resolved terminal settings.
+   * @param selection - optional Session selection Provider.
+   * @param directory - optional actual model directory Provider.
    */
-  constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config) {
+  constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config,
+    selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     super({
+      models: selection !== undefined && directory !== undefined
+        ? terminalModelOperations(executor, selection, directory, config) : undefined,
       turn: (request, signal) => executor.executeRootTurn(request, signal),
       open: async (id, resume, signal) => {
         await executor.executeSessionOperation({ id, resume }, () => Promise.resolve(undefined), signal)
@@ -47,7 +55,9 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
     try {
       await this.initialize(args, signal)
       this.ink = render(React.createElement(TerminalView, { interaction: this, locale: this.config.locale,
-        model: this.config.provider + '/' + this.config.model, background: this.config.background }), { exitOnCtrlC: false })
+        model: { provider: this.config.provider, model: this.config.model,
+          ...this.config.reasoningEffort === undefined ? {} : { reasoningEffort: String(this.config.reasoningEffort) } },
+        background: this.config.background }), { exitOnCtrlC: false })
       await this.waitForExit()
     } finally { await this.close() }
     return this.status(signal)
@@ -77,7 +87,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeTuiConfig(input)
@@ -87,7 +97,7 @@ export const plugin: NativePlugin = {
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
-      const application = new NativeTuiApplication(context, executor, config)
+      const application = new NativeTuiApplication(context, executor, config, context.optional('modelSelection'), context.optional('modelDirectory'))
       context.own(() => application.close())
       context.provide('application', application)
       context.provide('rootExecution', executor.rootExecution)
