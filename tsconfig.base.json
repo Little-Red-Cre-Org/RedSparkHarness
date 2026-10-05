@@ -573,11 +573,14 @@
       "@deepseek-ai/dsh-sandbox-local/native": ["./rsh/Modules/Official/sandbox/sandbox-local/src/native.ts"],
       "@deepseek-ai/dsh-sandbox/native": ["./rsh/Modules/Official/sandbox/sandbox/src/native.ts"],
       "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
+      "@deepseek-ai/dsh-spill-local/native": ["./rsh/Modules/Official/spill/spill-local/src/native.ts"],
+      "@deepseek-ai/dsh-spill/native": ["./rsh/Modules/Official/spill/spill/src/native.ts"],
       "@deepseek-ai/dsh-storage-domain/native": ["./rsh/Core/storage/storage-domain/src/native.ts"],
       "@deepseek-ai/dsh-storage-json/native": ["./rsh/Core/storage/storage-json/src/native.ts"],
       "@deepseek-ai/dsh-storage/backend": ["./rsh/Core/storage/storage/src/backend.ts"],
       "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"],
-      "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"]
+      "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"],
+      "@deepseek-ai/dsh-tool-fs-search/native": ["./rsh/Modules/Official/fs/tool-fs-search/src/native.ts"]
       // END generated package aliases
     }
   }
