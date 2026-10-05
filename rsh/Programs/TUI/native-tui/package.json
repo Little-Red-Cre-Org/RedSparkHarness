@@ -44,7 +44,9 @@
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "zod": "^4.3.6",
-    "@deepseek-ai/dsh-native-agent": "workspace:^"
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-user-questions": "workspace:^"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
@@ -76,7 +78,8 @@
         "workspaceRegistry",
         "agentInstructions",
         "modelSelection",
-        "modelDirectory"
+        "modelDirectory",
+        "userQuestions"
       ],
       "provides": [
         "application",

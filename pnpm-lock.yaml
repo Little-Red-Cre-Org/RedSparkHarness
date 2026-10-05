@@ -8091,6 +8091,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../Engine/core/native-code-runtime
@@ -9148,6 +9151,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../Engine/core/native-headless
@@ -9169,6 +9175,9 @@ importers:
       '@deepseek-ai/dsh-terminal-ui':
         specifier: workspace:^
         version: link:../terminal-ui
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/user-questions
       ink:
         specifier: ^5.2.1
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
