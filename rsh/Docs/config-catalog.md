@@ -3667,6 +3667,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-typert-generator` ([`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts))
 - `@deepseek-ai/dsh-typert-protocol` ([`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts))
 - `@deepseek-ai/dsh-typert-registry` ([`rsh/Core/typert/registry/src/index.ts`](../Core/typert/registry/src/index.ts))
+- `@deepseek-ai/dsh-user-question-broker` ([`rsh/Modules/Official/interaction/user-question-broker/src/index.ts`](../Modules/Official/interaction/user-question-broker/src/index.ts))
 - `@deepseek-ai/dsh-util-crypto` ([`rsh/Core/util/crypto/src/index.ts`](../Core/util/crypto/src/index.ts))
 - `@deepseek-ai/dsh-util-time` ([`rsh/Core/util/time/src/index.ts`](../Core/util/time/src/index.ts))
 - `@deepseek-ai/dsh-util-values` ([`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts))

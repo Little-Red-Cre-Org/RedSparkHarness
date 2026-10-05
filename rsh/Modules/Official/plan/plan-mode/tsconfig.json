@@ -27,7 +27,7 @@
       "path": "../../../../Engine/core/system-prompt"
     },
     {
-      "path": "../../interaction/user-questions"
+      "path": "../../interaction/user-questions/tsconfig.host.json"
     },
     {
       "path": "../../interaction/commands"
