@@ -1,6 +1,8 @@
+import type { MessageImageSource, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+export type { MessageImageSource, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
 /** Target-neutral Conversation slot declarations and composed component props. */
 import type { ReactNode, RefObject } from 'react'
-import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { FileUploadReceiptId } from '@deepseek-ai/dsh-client-file-upload/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
@@ -70,29 +72,6 @@ export interface ComposerAttachmentsOwnerProps {
   onRetryFile: (id: DraftAttachmentId) => void
   /** Display-ready limits for the drop invitation. */
   dropLimits?: { readonly count: number; readonly size: string } | undefined
-}
-
-/**
- * One image inside a message record: a durable admitted reference, or the
- * local preview of a submission echo whose admission is still in flight.
- */
-export type MessageImageSource =
-  | { readonly attachment: ImageAttachmentRef }
-  | {
-    readonly preview: {
-      /** Browser-owned preview URL (lifecycle stays with the submitter). */
-      readonly url: string
-      readonly name?: string
-      /** Intrinsic pixel width, when the intake probe has resolved it. */
-      readonly width?: number
-      /** Intrinsic pixel height, when the intake probe has resolved it. */
-      readonly height?: number
-    }
-  }
-
-/** Durable image loader with an optional synchronous cache read. */
-export type MessageImageLoader = ((attachment: ImageAttachmentRef) => Promise<string>) & {
-  peek?: (attachment: ImageAttachmentRef) => string | undefined
 }
 
 /** Message image group handed to the optional attachment presentation plugin. */

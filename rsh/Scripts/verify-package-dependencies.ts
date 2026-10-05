@@ -7,6 +7,7 @@ import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:
 import ts from 'typescript'
 import { WorkspaceTypertGenerator } from '../Core/typert/generator/src/workspace.ts'
 import { writeModuleGraph } from './gen-module-graph.ts'
+import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
 import {
   hasClientDeclaration,
   OPTIONAL_NATIVE_HOST_PEERS,
@@ -674,6 +675,9 @@ export function expectedPackageDependencies(
   for (const name of Object.keys(facts.manifest.peerDependencies ?? {})) {
     if (name !== CORDIS) add(name, 'devDependencies', 'existing non-Cordis peer')
   }
+  for (const name of SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? ''] ?? []) {
+    if (facts.allSourceUses.has(name)) add(name, 'peer-dev', 'shared browser runtime instance')
+  }
   for (const [name, paths] of facts.hostRuntimeSourceUses) {
     const sharedPeer = SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? '']?.includes(name) === true
     const optionalPeer = OPTIONAL_NATIVE_HOST_PEERS[facts.manifest.name ?? '']?.includes(name) === true
@@ -751,11 +755,13 @@ function describeSections(sections: readonly DependencySection[]): string {
 }
 
 /** A mixed package may leave Cordis uninstalled when its separate native export is selected. */
-function optionalNativeCordisPeer(manifest: PackageDependencyManifest): boolean {
+function optionalNativeCordisPeer(facts: PackageDependencyFacts): boolean {
+  const manifest = facts.manifest
   const exports = manifest.exports
   const metadata = manifest.peerDependenciesMeta?.[CORDIS]
   return exports !== null && typeof exports === 'object' && !Array.isArray(exports)
-    && Object.hasOwn(exports, './native')
+    && (Object.hasOwn(exports, './native') || (nativeSafeSourceSubpaths.get(normalizePath(dirname(facts.manifestPath))) ?? [])
+      .some(entry => Object.hasOwn(exports, entry)))
     && metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
     && Object.keys(metadata).length === 1
     && (metadata as { optional?: unknown }).optional === true
@@ -791,7 +797,7 @@ export function collectPackageDependencyViolations(state: PackageDependencyState
           && (!facts.workspaceNames.has(name)
             || section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE)
           && (facts.manifest.peerDependenciesMeta?.[name] === undefined
-            || (name === CORDIS && optionalNativeCordisPeer(facts.manifest))
+            || (name === CORDIS && optionalNativeCordisPeer(facts))
             || optionalNativeHostPeer(facts.manifest, name))) continue
         violations.push(
           `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies`
@@ -886,7 +892,7 @@ export function repairPackageDependencyManifest(facts: PackageDependencyFacts): 
       }
       mutableSection(facts.manifest, 'peerDependencies')[name] = range
       mutableSection(facts.manifest, 'devDependencies')[name] = range
-      if (!(name === CORDIS && optionalNativeCordisPeer(facts.manifest))
+      if (!(name === CORDIS && optionalNativeCordisPeer(facts))
         && !optionalNativeHostPeer(facts.manifest, name)) deletePeerMeta(facts.manifest, name)
       continue
     }

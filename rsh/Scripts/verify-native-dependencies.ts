@@ -1,7 +1,8 @@
 /** Validate native source imports, type references, augmentations and manifest dependencies. */
 import { existsSync, globSync, readFileSync } from 'node:fs'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
 import {
@@ -245,6 +246,20 @@ export function collectNativeDependencyViolations(root: string): string[] {
       const parts = specifier.split('/')
       return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0] ?? specifier
     }
+    const stylesheetReferenceAllowed = (owner: string, sourceFile: string, specifier: string): boolean => {
+      if (face !== 'client' || !specifier.endsWith('.css')) return false
+      if (sourceFile.endsWith('.d.ts') && (specifier === '*.module.css' || specifier === '*.css')) return true
+      if (specifier.startsWith('.')) {
+        const stylesheet = resolve(dirname(sourceFile), specifier)
+        const path = relative(resolve(root, owner, 'src'), stylesheet)
+        return !path.startsWith('..') && !isAbsolute(path) && existsSync(stylesheet)
+      }
+      if (!packageDependencies(owner).has(packageName(specifier))) return false
+      try { return existsSync(createRequire(sourceFile).resolve(specifier)) }
+      catch { // A missing stylesheet cannot be emitted by the Client bundle.
+        return false
+      }
+    }
     const nativeReferenceAllowed = (
       sourceOwner: string,
       sourceFile: string,
@@ -254,6 +269,7 @@ export function collectNativeDependencyViolations(root: string): string[] {
       if (specifier.startsWith('node:')) return true
       if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
       if (specifier.startsWith('@deepseek-ai/cordis-plugin-')) return false
+      if (stylesheetReferenceAllowed(sourceOwner, sourceFile, specifier)) return true
       const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
       if (resolved === undefined) return false
       const targetOwner = nativeOwner(resolved.resolvedFileName)
@@ -266,6 +282,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
       }
       const target = relative(root, resolved.resolvedFileName).replaceAll('\\', '/')
       const declared = packageDependencies(sourceOwner).has(packageName(specifier))
+        || (resolved.resolvedFileName.endsWith('.d.ts') && resolved.packageId?.name.startsWith('@types/') === true
+          && packageDependencies(sourceOwner).has(resolved.packageId.name))
       if (!declared) return false
       if (target.startsWith('rsh/Core/vendor/cordis/')) return false
       if (target.startsWith('rsh/Core/vendor/') || target.startsWith('rsh/Core/native/system/packages/')) return true
@@ -277,6 +295,7 @@ export function collectNativeDependencyViolations(root: string): string[] {
       for (const error of mixedNativeSourceViolations(project, directory, mixed.manifest, mixed.entry,
         (sourceFile, specifier) => {
           if (specifier.startsWith('node:')) return true
+          if (stylesheetReferenceAllowed(dir, sourceFile, specifier)) return true
           const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
           if (resolved === undefined) return false
           const target = relative(directory, resolved.resolvedFileName).replaceAll('\\', '/')
@@ -293,6 +312,7 @@ export function collectNativeDependencyViolations(root: string): string[] {
       for (const error of mixedNativeSourceViolations(project, resolve(root, dir), manifest, './native',
         (sourceFile, specifier) => {
           if (specifier.startsWith('node:')) return true
+          if (stylesheetReferenceAllowed(dir, sourceFile, specifier)) return true
           const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
           if (resolved === undefined) return false
           const target = relative(resolve(root, dir), resolved.resolvedFileName).replaceAll('\\', '/')
@@ -311,6 +331,7 @@ export function collectNativeDependencyViolations(root: string): string[] {
         for (const error of mixedNativeSourceViolations(project, packageDir, manifest, entry,
           (sourceFile, specifier) => {
             if (specifier.startsWith('node:')) return true
+            if (stylesheetReferenceAllowed(dir, sourceFile, specifier)) return true
             const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
             if (resolved === undefined) return false
             const target = relative(packageDir, resolved.resolvedFileName).replaceAll('\\', '/')

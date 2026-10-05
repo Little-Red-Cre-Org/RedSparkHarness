@@ -22,6 +22,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./controller": {
+      "types": "./lib/types/controller.d.ts",
+      "default": "./lib/controller.js"
+    },
     "./package.json": "./package.json"
   },
   "dsh": {
@@ -47,6 +51,7 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/controller.js",
     "lib/native-*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -60,6 +65,7 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^"
   },
   "devDependencies": {
@@ -71,6 +77,7 @@
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^"
   }
 }

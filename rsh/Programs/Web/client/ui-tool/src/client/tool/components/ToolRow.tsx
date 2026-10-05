@@ -4,9 +4,9 @@ import {
   CodeBlock, DiffBlock, DisclosureRow, IconInspectOutline12, ReadBlock, SearchBlock, StateDot, TerminalBlock, WebBlock,
   diffTotals,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { OpenFileOptions, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+import type { ToolImagesOwnerProps } from '../../../tool-renderer-types.ts'
 import { CHAT_DIFF_MAX_LINES, type DiffCardModel } from '../models/diff-card-model.ts'
 import { CHAT_READ_MAX_LINES, type ReadCardModel } from '../models/read-card-model.ts'
 import type { ImageCardModel } from '../models/image-card-model.ts'
@@ -65,7 +65,7 @@ export interface ToolRowProps {
    * slot, supplied by the toolview that owns this row together with the
    * session-authorized loader.
    */
-  renderSlot?: PropsRenderSlots<'tool.call.images'>['renderSlot'] | undefined
+  renderSlot?: (key: 'tool.call.images', props: ToolImagesOwnerProps) => ReactNode | undefined
   /** Session-authorized image URL loader for the gallery slot. */
   loadImage?: MessageImageLoader | undefined
   search?: SearchCardModel | null | undefined

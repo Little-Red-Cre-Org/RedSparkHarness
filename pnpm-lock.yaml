@@ -1424,11 +1424,7 @@ importers:
 
   rsh/Core/util/values: {}
 
-  rsh/Core/util/workspace-path:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
+  rsh/Core/util/workspace-path: {}
 
   rsh/Core/vendor/cordis:
     dependencies:
@@ -10172,6 +10168,9 @@ importers:
 
   rsh/Programs/Web/client/locale:
     dependencies:
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -10200,9 +10199,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-settings':
         specifier: workspace:^
         version: link:../ui-settings
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../ui-slots
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -10242,6 +10238,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-tool':
+        specifier: workspace:^
+        version: link:../ui-tool
       '@deepseek-ai/dsh-native-model-selection':
         specifier: workspace:^
         version: link:../../../../Engine/llm/native-model-selection
@@ -10667,6 +10666,15 @@ importers:
 
   rsh/Programs/Web/client/ui-conversation:
     dependencies:
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -10683,9 +10691,6 @@ importers:
       '@deepseek-ai/dsh-api-workspace-controller':
         specifier: workspace:^
         version: link:../../api/workspace-controller
-      '@deepseek-ai/dsh-attachment':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
@@ -10716,9 +10721,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-settings':
         specifier: workspace:^
         version: link:../ui-settings
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../ui-slots
       '@deepseek-ai/dsh-client-ui-workspace':
         specifier: workspace:^
         version: link:../ui-workspace
@@ -10728,9 +10730,6 @@ importers:
       '@deepseek-ai/dsh-goal':
         specifier: workspace:^
         version: link:../../../../Engine/goal/goal
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
       '@deepseek-ai/dsh-llm-retry':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm-retry
@@ -11503,22 +11502,10 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-primitives:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
+    dependencies:
       '@shikijs/langs':
         specifier: ^4.3.1
         version: 4.3.1
-      '@types/mdast':
-        specifier: ^4.0.4
-        version: 4.0.4
-      '@types/react':
-        specifier: ~18.3.1
-        version: 18.3.31
-      '@types/react-dom':
-        specifier: ~18.3.0
-        version: 18.3.7(@types/react@18.3.31)
       anser:
         specifier: ^2.3.5
         version: 2.3.5
@@ -11561,6 +11548,19 @@ importers:
       micromark-util-symbol:
         specifier: ^2.0.1
         version: 2.0.1
+      shiki:
+        specifier: ^4.3.1
+        version: 4.3.1
+    devDependencies:
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ~18.3.0
+        version: 18.3.7(@types/react@18.3.31)
       micromark-util-types:
         specifier: ^2.0.2
         version: 2.0.2
@@ -11570,9 +11570,6 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
-      shiki:
-        specifier: ^4.3.1
-        version: 4.3.1
 
   rsh/Programs/Web/client/ui-reference:
     devDependencies:
@@ -12258,10 +12255,11 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   rsh/Programs/Web/client/ui-slots:
-    devDependencies:
+    dependencies:
       '@deepseek-ai/dsh-client-store':
         specifier: workspace:^
         version: link:../store
+    devDependencies:
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -12379,6 +12377,13 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-tool:
+    dependencies:
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      clsx:
+        specifier: ^2.0.0
+        version: 2.1.1
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -12419,9 +12424,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-session':
         specifier: workspace:^
         version: link:../ui-session
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../ui-slots
       '@deepseek-ai/dsh-code-runtime-worker-thread':
         specifier: workspace:^
         version: link:../../../../Modules/Official/code-runtime/code-runtime-worker-thread
@@ -12452,9 +12454,6 @@ importers:
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
-      clsx:
-        specifier: ^2.0.0
-        version: 2.1.1
       react:
         specifier: ^18.2.0
         version: 18.3.1

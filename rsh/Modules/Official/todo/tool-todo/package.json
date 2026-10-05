@@ -42,9 +42,9 @@
     "lib/invariant.js",
     "lib/native.js",
     "lib/shared-*.js",
+    "lib/client-native.js",
     "lib/types/**/*.js",
-    "lib/types/**/*.d.ts",
-    "lib/client-native.js"
+    "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "dependencies": {

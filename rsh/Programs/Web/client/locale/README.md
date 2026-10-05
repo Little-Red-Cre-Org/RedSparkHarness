@@ -132,6 +132,8 @@ These limits define where localization is incomplete or frozen at registration t
 <a id="dev-note"></a>
 ### Dev Note
 
+`./dictionary` exports the common English/Chinese dictionaries, typed namespace and shared parameter interpolation without a Cordis registry. Native renderers select their locale explicitly; this export supplies neither a persisted language preference nor a Settings surface.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

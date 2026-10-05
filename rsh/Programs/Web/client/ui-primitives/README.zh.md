@@ -154,6 +154,8 @@ kind: "package-library"
 <a id="dev-note"></a>
 ### 开发备注
 
+完整 Client 源码和公开声明纳入原生依赖策略。此包无需 Cordis peer；React 与 React DOM 保持共享 peer，产物的浏览器导入和样式均声明生产依赖。
+
 <details>
 <summary>维护者的工作上下文——点击展开</summary>
 

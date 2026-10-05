@@ -216,10 +216,16 @@ it('checks a declared Cordis-free subpath in a mixed package', () => {
   mkdirSync(join(dir, 'src'), { recursive: true })
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: '@deepseek-ai/dsh-attachment',
-    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types.js' } },
+    exports: Object.fromEntries(['native', 'types', 'brand', 'error', 'admission', 'request-projection'].map(entry => [
+      `./${entry}`, { types: `./lib/types/${entry}.d.ts`, default: `./lib/${entry}.js` },
+    ])),
   }))
+  writeFileSync(join(dir, 'src/native.ts'), 'export type { Attachment } from "./types.ts"')
   writeFileSync(join(dir, 'src/types.ts'), 'export type { Attachment } from "./safe.ts"')
   writeFileSync(join(dir, 'src/safe.ts'), 'export interface Attachment {}')
+  for (const entry of ['brand', 'error', 'admission', 'request-projection']) {
+    writeFileSync(join(dir, `src/${entry}.ts`), 'export {}')
+  }
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/safe.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Attachment {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
@@ -313,4 +319,19 @@ it.each([
   const errors = collectNativeDependencyViolations(root)
   if (forbidden) expect(errors).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
   else expect(errors).toEqual([])
+})
+
+it('admits existing Client stylesheets while rejecting missing assets and Host stylesheet edges', () => {
+  const root = fixture('export {}')
+  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
+  writeFileSync(join(owner, 'index.ts'), 'import "./card.module.css"')
+  writeFileSync(join(owner, 'card.module.css'), '.card {}')
+  expect(collectNativeDependencyViolations(root)).toEqual([])
+  writeFileSync(join(owner, 'index.ts'), 'import "./missing.module.css"')
+  expect(collectNativeDependencyViolations(root).some(error => error.includes('missing.module.css'))).toBe(true)
+  writeFileSync(join(owner, 'index.ts'), 'export {}')
+  const host = join(root, 'rsh/Core/runtime-diagnostics/native-runtime/src')
+  writeFileSync(join(host, 'index.ts'), 'import "./card.module.css"')
+  writeFileSync(join(host, 'card.module.css'), '.card {}')
+  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./card.module.css'))).toBe(true)
 })

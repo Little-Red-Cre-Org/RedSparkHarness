@@ -39,6 +39,8 @@ kind: "package-library"
 <a id="dev-note"></a>
 ### 开发备注
 
+发布的辅助函数不依赖 Cordis，无框架 peer 或安装器。原生与兼容消费者使用同一套路径语法和展示函数。
+
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 
