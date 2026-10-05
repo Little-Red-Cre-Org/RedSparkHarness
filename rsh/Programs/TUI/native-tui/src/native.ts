@@ -48,7 +48,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
         onCleanupFailure: (error) => { console.error('native-tui: reader cleanup failed', error) },
       }, signal)).events,
     }, context.signal, config, SessionId('session-' + randomUUID()))
-    bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), id => this.ownsSession(id), context,
+    bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), executor, id => this.ownsSession(id), context,
       context.optional('approval'), context.optional('userQuestions'))
   }
   /** Launch Ink after the controller restores the selected Session.

@@ -94,6 +94,7 @@ it('records terminal answers and one-shot allow/deny decisions, then restores th
           .toEqual([text, draft])
         expect(recorded.flatMap(event => event.type === 'native-approval/decided' ? [event.data.outcome] : []))
           .toEqual(['cancelled'])
+        expect(recorded.some(event => event.type === 'turn/end' && event.data.reason.kind === 'aborted')).toBe(true)
       } finally { await reader.close() }
     } finally { await backend.close() }
   } finally { await cancelled.cleanup() }

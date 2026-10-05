@@ -49,6 +49,9 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-fs-local": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@types/react": "^18.2.0",
     "node-pty": "1.2.0-beta.15"
   },
