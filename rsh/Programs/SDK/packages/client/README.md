@@ -107,6 +107,8 @@ Read these pages when the client contract is not enough. They move from the wire
 
 With explicit `profile: "native-sdk"`, `HarnessSession.cancel()` and `HarnessClient.cancel(sessionId)` await cancellation of the admitted turn and return false when none is active. `onNotification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
 
+With explicit `profile: "native-sdk"`, `run` also accepts encoded raster image blocks (`{ type: "image", data, mimeType }`) alongside text; the native attachment Provider owns validation and durable storage.
+
 `HarnessSession.fork(destinationSessionId, atSeq?)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.fork` exposes the wire receipt. The [native server reference](../native-server/README.md#configuration) owns source, workspace and closed-turn admission.
 
 ## Model Experience

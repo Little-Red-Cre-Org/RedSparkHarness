@@ -36,11 +36,14 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 interface CordisManifest { version?: unknown }
 
-/** Require the supported Cordis major version before creating a runtime.
+/** Cordis release verified by the first filesystem compatibility adapter set. */
+const SUPPORTED_CORDIS_VERSION = '4.0.2'
+
+/** Require the verified Cordis release before creating a runtime.
  * @param manifest - manifest read from the installed Cordis package.
  */
 export function validateCordisManifest(manifest: CordisManifest): void {
-  if (typeof manifest.version !== 'string' || !/^4\./u.test(manifest.version)) {
+  if (manifest.version !== SUPPORTED_CORDIS_VERSION) {
     throw new Error(`compat-dsh-runtime: unsupported Cordis version ${String(manifest.version)}`)
   }
 }

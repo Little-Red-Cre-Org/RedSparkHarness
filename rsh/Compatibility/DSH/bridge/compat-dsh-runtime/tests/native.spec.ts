@@ -5,8 +5,9 @@ import { plugin, validateCordisManifest, type CompatDshRuntime } from '../src/na
 
 it('rejects unknown host config and unsupported Cordis versions before activation', () => {
   expect(() => plugin.resolve({ enabled: true })).toThrow('configuration must be empty')
-  expect(() => { validateCordisManifest({ version: '3.9.0' }) }).toThrow('unsupported Cordis version')
-  expect(() => { validateCordisManifest({ version: 4 }) }).toThrow('unsupported Cordis version')
+  for (const version of ['3.9.0', 4, '4.foo', '4.1.0', '4.0.2-beta.1']) {
+    expect(() => { validateCordisManifest({ version }) }).toThrow('unsupported Cordis version')
+  }
   expect(() => { validateCordisManifest({ version: '4.0.2' }) }).not.toThrow()
 })
 
