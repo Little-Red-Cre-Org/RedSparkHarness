@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-todo-session-authority.md
-2026-10-05-native-todo-session-authority.md: 5de5639e537b615d59a4df27b4fd37ef2f69dfd7
-2026-10-05-native-todo-session-authority.zh.md: f1e33afc8d3efed4978f26ceee3ceb5f3e5a4476
+2026-10-05-native-todo-session-authority.md: 0890778f65b9ec193258de0bcb1da89139bf6882
+2026-10-05-native-todo-session-authority.zh.md: 13a7909140513737801acfbcbaf0ac3038a9635c

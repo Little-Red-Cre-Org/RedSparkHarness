@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { expect, it } from 'vitest'
+import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { readTodos } from '@deepseek-ai/dsh-tool-todo/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
@@ -32,7 +33,7 @@ it('commits todo replacement before the next model request and restores the same
   mkdirSync(workspace)
   const packages = [
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-session-execution', 'rsh/Engine/core/native-session-execution'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['dsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
     ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
     ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
     ['dsh-tool-todo', 'rsh/Modules/Official/todo/tool-todo'],
@@ -43,18 +44,23 @@ it('commits todo replacement before the next model request and restores the same
   }
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-headless-profile', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
-  writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-    { id: 'app', plugin: '@deepseek-ai/dsh-native-headless', scope: 'root', config: {
+  const composition = shippedNativeProfileComposition(home, 'native-headless')
+  expect(composition.installations.find(row => row.id === 'session-execution')?.plugin)
+    .toBe('@deepseek-ai/dsh-native-session-execution')
+  // This module scene selects the shipped rows it exercises; other P4 capabilities have separate acceptance owners.
+  const selected = new Set(['app', 'agents', 'session-execution', 'tools', 'model-execution', 'storage', 'fs', 'policy', 'tool-todo', 'pi-ai'])
+  const installations = composition.installations.map((row) => {
+    if (!selected.has(row.id)) return { ...row, disabled: true }
+    if (row.id === 'app') return { ...row, config: {
       cwd: workspace, provider: 'mock', model: 'todo', systemPrompt: 'Maintain the task list.', maxSteps: 3,
-    } },
-    ...[['agents', 'dsh-native-agent'], ['tools', 'dsh-native-tools'], ['execution', 'dsh-native-model-execution'], ['sessions', 'dsh-native-session-execution'],
-      ['policy', 'dsh-fs-observation-policy']].map(([id, pkg]) => ({ id, plugin: '@deepseek-ai/' + pkg, scope: 'root',
-      ...(id === 'tools' ? { config: { mode: 'native' } } : {}) })),
-    { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: 'root', config: { root: sessions, compression: 'none' } },
-    { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
-    { id: 'todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: 'root', config: { allowParallelInProgress: false } },
-    { id: 'model', plugin: 'todo-model', scope: 'root' },
-  ] }))
+    } }
+    if (row.id === 'tools') return { ...row, config: { mode: 'native' } }
+    if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+    if (row.id === 'tool-todo') return { ...row, config: { allowParallelInProgress: false } }
+    if (row.id === 'pi-ai') return { id: row.id, scope: row.scope, plugin: 'todo-model' }
+    return row
+  })
+  writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
   const model = join(modules, 'todo-model'); mkdirSync(model)
   writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'todo-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },

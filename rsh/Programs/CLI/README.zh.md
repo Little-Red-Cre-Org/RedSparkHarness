@@ -42,6 +42,8 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。
 
+显式选择的内置原生 profile 包含原生 Session 执行 Provider，提供选定的执行注册表与活动 Session 所有者。CLI 解析器将该 Provider 声明为直接依赖；旧 profile 的选择保持不变。
+
 Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目录环境层。兼容启动共用同一验证加载器；每个根作用域拥有真实启动快照 Provider。仅 Client 的配置不安装它。
 
 配置树以空根为起点，依次叠加以下配置层：

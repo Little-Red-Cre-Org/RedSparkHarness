@@ -18,4 +18,4 @@ English | [中文](2026-10-05-native-todo-session-authority.md)
 
 ## Consequences
 
-原生入口要求 `tools` 与 `activeSessions`。返回计数发生在持久化之后；注册离开时，原生注册表取消并等待已准入调用结束。兼容 profile 仍可使用旧入口及其 UI 投影。这个决定不切换产品默认装配，也不迁移原生 Client 的任务清单 UI。
+原生入口要求 `tools` 与 `activeSessions`。显式原生模板安装 Session 执行 Provider，使工具准入与持久化写入共享它选定的所有者。返回计数发生在持久化之后；注册离开时，原生注册表取消并等待已准入调用结束。兼容 profile 仍可使用旧入口及其 UI 投影。这个决定不切换产品默认装配，也不迁移原生 Client 的任务清单 UI。
