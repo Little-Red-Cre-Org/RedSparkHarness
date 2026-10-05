@@ -56,4 +56,4 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- Audio/embedded input, question requests, and attachment presentation are outside this carrier slice; unsupported prompt content fail explicitly. Initialization advertises no audio, embedded context. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
+- Audio/embedded input, question requests, and attachment presentation are outside this carrier slice; unsupported prompt content fails explicitly. Initialization advertises no audio or embedded-context support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
