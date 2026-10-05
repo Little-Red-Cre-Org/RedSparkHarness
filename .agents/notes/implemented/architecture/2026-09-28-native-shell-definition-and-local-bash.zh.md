@@ -16,7 +16,7 @@ Status: implemented
 
 [`dsh-bash-sandbox/native`](../../../../rsh/Modules/Official/shell/bash-sandbox/README.zh.md) 要求原生 `subprocess`、`sandbox` 和 `sandboxPolicy` 服务。Cordis 与原生入口共用一个控制器，处理按调用解析策略、runner argv、拒绝分类及 runner 故障报告。受限调用在 runner 选择或执行失败时绝不退回无隔离 Bash；只有显式的 `danger-full-access` 策略绕过 runner。
 
-[`dsh-tool-bash/native`](../../../../rsh/Modules/Official/shell/tool-bash/README.zh.md) 消费选定的原生 shell 与工具注册表。前台结果沿用旧版渲染器。安装原生任务服务后，后台进程归发起调用的 Agent 持有，任务注册表负责取消与保存完成输出。升权先验证模式严格拓宽并请求原生应用审批，再将单次调用策略交给 shell；应用把工具与审批事件写入 Session，并在工具结果元数据中保留带错误码的 runner 故障。
+[`dsh-tool-bash/native`](../../../../rsh/Modules/Official/shell/tool-bash/README.zh.md) 消费选定的原生 shell 与工具注册表。前台结果沿用旧版渲染器。后台执行同时要求 Agent 持有的任务注册表，以及 `job_output`、`job_list`、`job_kill` 注册后发布的 `jobControls` 服务；仅有任务注册表不能暴露无法访问的任务。任务注册表负责取消与保存完成输出。即使封装进程正常退出，沙箱 runner 故障仍将任务结算为失败。升权先验证模式严格拓宽并请求原生应用审批，再将单次调用策略交给 shell；应用把工具与审批事件写入 Session，并在工具结果元数据中保留带错误码的 runner 故障。
 
 [`dsh-shell-env/native`](../../../../rsh/Modules/Official/shell/shell-env/README.zh.md) 为每次原生 Bash 调用提供受管 `DSH_*` 事实。Bash Consumer 导入 `dsh-shell-env/definition`，不依赖其 Provider 类。Cordis 和原生 Provider 共用键所有权校验与按调用收集机制。Cordis effect 与原生 contributor 的安装作用域分别持有释放函数。
 

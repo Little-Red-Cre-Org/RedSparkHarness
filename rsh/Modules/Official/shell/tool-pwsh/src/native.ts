@@ -6,6 +6,7 @@ import type { NativeValueToolContribution, NativeToolExecution } from '@deepseek
 import type { NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-jobs'
+import type {} from '@deepseek-ai/dsh-native-tool-jobs/native'
 import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
 import type {} from '@deepseek-ai/dsh-pwsh-local/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
@@ -172,7 +173,8 @@ function contribution(
           const output = renderProcessRead(proc.readOutput(), proc.sandbox, escalationModes)
           const outcome = processOutcome(proc)
           return {
-            status: proc.status === 'killed' ? signal.aborted ? 'cancelled' : 'failed' : 'completed',
+            status: proc.sandbox?.runnerFailed === true ? 'failed'
+              : proc.status === 'killed' ? signal.aborted ? 'cancelled' : 'failed' : 'completed',
             detail: outcome.detail, output,
           }
         } })
@@ -188,14 +190,14 @@ function contribution(
 /** Register a foreground PowerShell tool after its shell and policy services are selected. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-tool-pwsh', targets: ['host'],
-  requires: ['shell', 'tools', 'shellEnv'], optional: ['sandboxPolicy', 'approval', 'jobs'], provides: [],
+  requires: ['shell', 'tools', 'shellEnv'], optional: ['sandboxPolicy', 'approval', 'jobs', 'jobControls'], provides: [],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input)
       || Object.keys(input).length > 0)) throw new Error('tool-pwsh: native configuration must be empty')
     return (context) => {
       const shell = context.require('shell')
       const policy = context.optional('sandboxPolicy')
-      const jobs = context.optional('jobs')
+      const jobs = context.optional('jobControls') === true ? context.optional('jobs') : undefined
       const approval = context.optional('approval')
       const shellEnv = context.require('shellEnv')
       if (shell.sandboxMode !== undefined && policy === undefined) {

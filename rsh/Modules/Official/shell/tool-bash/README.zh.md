@@ -153,7 +153,7 @@ Check the [exit code: N] marker on every bash result; investigate failures befor
 
 #### 模型看到什么
 
-模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。在原生 profile 中，仅当选定任务注册表时才会出现 `run_in_background`；选定 shell 约束命令且原生审批策略为 `ask` 时才会出现 `sandbox_permissions` 和 `justification`。按 agent 作用域限制工具可以移除该 agent 的定义。
+模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。在原生 profile 中，仅当同时选定任务注册表及其控制工具时才会出现 `run_in_background`；选定 shell 约束命令且原生审批策略为 `ask` 时才会出现 `sandbox_permissions` 和 `justification`。按 agent 作用域限制工具可以移除该 agent 的定义。
 
 #### Token 影响
 

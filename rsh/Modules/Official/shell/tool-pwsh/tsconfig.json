@@ -30,6 +30,9 @@
       "path": "../../../../Engine/core/native-jobs/tsconfig.json"
     },
     {
+      "path": "../../../../Engine/jobs/native-tool-jobs/tsconfig.json"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {

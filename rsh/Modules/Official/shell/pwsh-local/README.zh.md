@@ -51,7 +51,7 @@ kind: "package-reference"
 | `maxOutputBytes` | `64,000` | 每流内存输出上限；溢出后 spill 到临时文件 |
 | `maxSpillBytes` | `67,108,864` | 每流完整输出的 spill 上限 |
 | `graceMs` | `3,000` | 终止升级与退出后管道排空的宽限时间 |
-| `pwshPath` | 自动解析 | 显式 pwsh 可执行文件；否则依次探测常见位置，再查 PATH |
+| `pwshPath` | 自动解析 | 非空的显式 pwsh 可执行文件；否则依次探测常见位置，再查 PATH |
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-pwsh-local)是每个受支持字段及其 JSDoc 的穷尽式真源。
 

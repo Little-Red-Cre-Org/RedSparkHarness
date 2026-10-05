@@ -6873,6 +6873,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/jobs/native-tool-jobs
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-tools
@@ -7007,6 +7010,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/jobs/native-tool-jobs
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-tools
@@ -8122,6 +8128,9 @@ importers:
       '@deepseek-ai/dsh-base':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/base
+      '@deepseek-ai/dsh-bash-sandbox':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/bash-sandbox
       '@deepseek-ai/dsh-client-ui-agent-preset':
         specifier: workspace:^
         version: link:../Web/client/ui-agent-preset

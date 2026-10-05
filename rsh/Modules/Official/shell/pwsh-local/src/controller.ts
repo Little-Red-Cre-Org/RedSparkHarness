@@ -38,8 +38,8 @@ export function resolveConfig(input: unknown): ResolvedConfig {
   const base = resolveLocalConfig(input, 'pwsh-local', ['pwshPath'])
   if (input === undefined) return base
   const values = input as Record<string, unknown>
-  if (values.pwshPath !== undefined && typeof values.pwshPath !== 'string') {
-    throw new Error('pwsh-local: pwshPath must be a string')
+  if (values.pwshPath !== undefined && (typeof values.pwshPath !== 'string' || values.pwshPath.trim().length === 0)) {
+    throw new Error('pwsh-local: pwshPath must be a nonempty executable')
   }
   return { ...base, ...values.pwshPath === undefined ? {} : { pwshPath: values.pwshPath } }
 }

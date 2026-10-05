@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry requires `jobs` and `tools`, and provides no service. It accepts `waitTimeoutMs` (default `30000`) and `maxWaitTimeoutMs` (default `600000`) as positive finite timer delays. The default must not exceed the cap. `maxOutputBytes` (default `16384`, minimum `128`) bounds each model-visible text result. Removing this installation unregisters only its three tool contributions.
+The `./native` entry requires `jobs` and `tools`, and provides `jobControls` after registering all three controls. Native shell consumers require that marker alongside `jobs` before exposing background execution. It accepts `waitTimeoutMs` (default `30000`) and `maxWaitTimeoutMs` (default `600000`) as positive finite timer delays. The default must not exceed the cap. `maxOutputBytes` (default `16384`, minimum `128`) bounds each model-visible text result. Removing this installation unregisters its three tool contributions and marker.
 
 `job_output` reads final output and the current status. With `wait: true`, it waits for a terminal outcome or the configured timeout; the request may supply `timeout_ms`, capped by `maxWaitTimeoutMs`. An aborted tool invocation stops waiting without cancelling the job. `job_kill` requests cooperative cancellation and returns before the runner settles. Every operation is fenced to the exact live Agent that owns the job.
 

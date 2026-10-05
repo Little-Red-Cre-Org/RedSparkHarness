@@ -153,7 +153,7 @@ Prefix-stable while the registration scope and prompt text are unchanged. Plugin
 
 #### What the model sees
 
-The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash). In native profiles, `run_in_background` appears only when a job registry is selected; `sandbox_permissions` and `justification` appear when the selected shell confines commands and native approval policy is `ask`. Agent-scoped tool restrictions can remove the definition for that agent.
+The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash). In native profiles, `run_in_background` appears only when the job registry and its control tools are selected; `sandbox_permissions` and `justification` appear when the selected shell confines commands and native approval policy is `ask`. Agent-scoped tool restrictions can remove the definition for that agent.
 
 #### Token effect
 

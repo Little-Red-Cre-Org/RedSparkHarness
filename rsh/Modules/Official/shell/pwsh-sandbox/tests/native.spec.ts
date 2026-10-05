@@ -49,6 +49,10 @@ it('reports a confined denial and never falls back when the runner fails', async
     { plugin, scope, config: { pwshPath: 'C:\test-pwsh.exe' } },
     { plugin: services, scope, config: undefined },
   ], 'host'))
+  expect(() => resolveInstallation([
+    { plugin, scope, config: { pwshPath: ' ' } },
+    { plugin: services, scope, config: undefined },
+  ], 'host')).toThrow('pwsh-local: pwshPath must be a nonempty executable')
   await host.start()
   try {
     if (shell === undefined) throw new Error('shell was not installed')

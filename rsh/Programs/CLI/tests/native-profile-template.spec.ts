@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createRequire } from 'node:module'
 import { expect, it } from 'vitest'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
@@ -53,6 +54,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
 })
 
 it('ships a complete one-shot shell seam in the native headless profile', () => {
+  const installed = createRequire(new URL('../package.json', import.meta.url))
   for (const [platform, provider, tool] of [
     ['win32', '@deepseek-ai/dsh-pwsh-sandbox', '@deepseek-ai/dsh-tool-pwsh'],
     ['linux', '@deepseek-ai/dsh-bash-sandbox', '@deepseek-ai/dsh-tool-bash'],
@@ -64,6 +66,7 @@ it('ships a complete one-shot shell seam in the native headless profile', () => 
     expect(plugins).toContain('@deepseek-ai/dsh-sandbox-local')
     expect(plugins).toContain('@deepseek-ai/dsh-native-sandbox-policy')
     expect(plugins).toContain(provider)
+    expect(installed.resolve(`${provider}/package.json`)).toBeTruthy()
     expect(plugins).toContain(tool)
   }
 })

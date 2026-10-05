@@ -51,7 +51,7 @@ Load the executor with the budgets you want; every field has a default, so the s
 | `maxOutputBytes` | `64,000` | Per-stream in-memory output cap; overflow spills to a temp file |
 | `maxSpillBytes` | `67,108,864` | Per-stream full-output spill cap |
 | `graceMs` | `3,000` | Grace period for kill escalation and post-exit pipe draining |
-| `pwshPath` | resolved | Explicit pwsh executable; else well-known locations, then PATH |
+| `pwshPath` | resolved | Nonempty explicit pwsh executable; else well-known locations, then PATH |
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-pwsh-local) is the exhaustive source for every accepted field and its JSDoc.
 
