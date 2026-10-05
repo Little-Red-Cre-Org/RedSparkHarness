@@ -122,6 +122,10 @@ Changing `displayName`, `apiKeyEnv`, or `baseURL` without resolving the provider
 
 -----
 
+### Native installation
+
+The `./native` entry publishes one selected Model Provider using the same PiAiAdapter, catalog, image serialization and credential helpers. It requires native credentials and launch environment services and optionally consumes attachments and Fs. Its validated profiles are fixed for the installation; the Cordis entry retains per-request settings and interactive authorization. Native model-directory editing and interactive login registration are not supplied by this entry. Metadata lookup and HTTP stream work use installation cancellation, and removal closes accepted iterators and drains their actual work.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

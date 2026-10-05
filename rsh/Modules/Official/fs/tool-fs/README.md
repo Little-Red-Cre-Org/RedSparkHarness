@@ -75,6 +75,10 @@ Failures are normalized as `Error: <message>` with a structured code preserved f
 
 -----
 
+### Native composition
+
+The `./native` entry publishes the same file operations as NativeTools value tools. It requires selected `fs`, `fsObservationPolicy` and `tools` services; writes and edits always use that observation authority. Optional attachment storage enables `read_image`, which resolves the exact Session model through its selected native Model Provider before admitting image bytes. Scoped prompt sections are visible only to the consuming agent scope. Tool results, image references and presentation metadata pass through the Headless sole Session writer before observer acceptance and later model input.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

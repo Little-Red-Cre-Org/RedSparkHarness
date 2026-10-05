@@ -9,18 +9,14 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DiffCallView, DiffResultView, ToolResult } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
+import { diffsFromMeta } from './diff.ts'
+import { diffPresentationMeta } from './presentation-meta.ts'
 import { remediateFsError } from './error.ts'
 import { sessionResolveOptions } from './session-cwd.ts'
 import type { FsSandboxController } from './sandbox.ts'
+import { EDIT_GUIDANCE, formatEditOutput, parseEditArgs } from './text-operations.ts'
 
-/** Validated `edit` arguments after defaulting. */
-interface EditInput {
-  filePath: string
-  oldString: string
-  newString: string
-  replaceAll: boolean
-}
+export { formatEditOutput, parseEditArgs } from './text-operations.ts'
 
 /**
  * The `edit` tool's validated arguments: the base parameters plus the two
@@ -37,37 +33,6 @@ interface EditToolArgs {
 }
 
 /**
- * Validate value constraints the schema DSL can't express: a non-blank
- * `file_path`, a non-empty `old_string`, and `old_string !== new_string`
- * (an equal pair would be a guaranteed no-op edit).
- * @param args - the schema-validated raw tool arguments.
- * @returns the camelCased input with `replace_all` defaulted to false.
- */
-export function parseEditArgs(args: { file_path: string; old_string: string; new_string: string; replace_all?: boolean }): EditInput {
-  if (args.file_path.trim().length === 0) throw new Error('file_path must be a non-empty string')
-  if (args.old_string.length === 0) throw new Error('old_string must be a non-empty string')
-  if (args.old_string === args.new_string) throw new Error('old_string and new_string must differ')
-  return {
-    filePath: args.file_path,
-    oldString: args.old_string,
-    newString: args.new_string,
-    replaceAll: args.replace_all ?? false,
-  }
-}
-
-/**
- * Format an edit success (single-match or replace-all) as a Claude-style model-facing message.
- * @param displayPath - the backend-resolved path shown to the model.
- * @param replaceAll - selects the all-occurrences wording over the single-replacement one.
- * @returns the confirmation sentence the model sees as the tool result.
- */
-export function formatEditOutput(displayPath: string, replaceAll: boolean): string {
-  return replaceAll
-    ? `The file ${displayPath} has been updated. All occurrences were successfully replaced.`
-    : `The file ${displayPath} has been updated successfully.`
-}
-
-/**
  * Register the `edit` tool and its scope-aware system-prompt guidance.
  * @param ctx - the plugin context; registrations are effects scoped to it, and execution uses its `fs` service.
  * @param sandbox - the shared sandbox-escalation API (advertisement, mode stamping, denial mapping).
@@ -78,7 +43,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
     order: ctx.systemPrompt.getSectionOrder('TOOL_EDIT'),
     text: ({ scope }) => ctx.tools.get('edit', scope) === undefined
       ? ''
-      : 'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first (the default fs-observation-policy requires it), unless you just created or edited it in this session.',
+      : EDIT_GUIDANCE,
   })
 
   ctx.tools.register(defineTool({
@@ -105,10 +70,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
         type: 'text',
         text: formatEditOutput(value.path, args.replace_all ?? false),
       }],
-      presentationMeta: (args, value) => ({
-        diffs: computeHunkDiffs(args.file_path, value.before, value.after)
-          .map(({ path, oldText, newText }) => ({ path, oldText, newText })),
-      }),
+      presentationMeta: (args, value) => diffPresentationMeta(args.file_path, value.before, value.after),
     },
     async execute(args: EditToolArgs, exec) {
       const input = parseEditArgs(args)

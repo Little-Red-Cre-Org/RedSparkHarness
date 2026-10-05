@@ -1,10 +1,18 @@
 /** Native model execution and Session recording for a single Agent step. */
 import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage,
-  type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+  type LlmResolvedModelInfo, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 
 /** Streaming model selected by a native profile. */
 export interface NativeModel {
+  /**
+   * Resolve the exact selected model's input capabilities before file-image admission.
+   * @param provider - configured Provider route.
+   * @param model - exact model id captured in the Session request header.
+   * @param signal - caller cancellation.
+   * @returns metadata from this selected Provider; omission refuses image-tool admission.
+   */
+  resolveModel?(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>
   /**
    * Stream the selected model request through the shared LLM protocol.
    * @param options - model route, durable messages, tool schemas and cancellation.
@@ -73,3 +81,5 @@ export class NativeModelExecution {
     return { message, finish: assembler.finish }
   }
 }
+
+export { NativeAdapterModel } from './adapter-model.ts'

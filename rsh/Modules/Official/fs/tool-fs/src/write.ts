@@ -8,38 +8,16 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DiffCallView, DiffResultView, ToolResult } from '@deepseek-ai/dsh-tools'
-import type { FsWriteOutcome } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs'
-import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
+import type { FsWriteOutcome } from '@deepseek-ai/dsh-fs/native'
+import { diffsFromMeta } from './diff.ts'
+import { diffPresentationMeta } from './presentation-meta.ts'
 import { remediateFsError } from './error.ts'
 import { sessionResolveOptions } from './session-cwd.ts'
 import type { FsSandboxController } from './sandbox.ts'
+import { formatWriteOutput, parseWriteArgs, writeGuidance } from './text-operations.ts'
 
-/**
- * Validate value constraints the schema DSL can't express: only a non-blank
- * `file_path` — an empty `content` is legitimate (it writes an empty file).
- * @param args - the schema-validated raw tool arguments.
- * @returns the camelCased input; `content` passes through untouched.
- */
-export function parseWriteArgs(args: { file_path: string; content: string }): { filePath: string; content: string } {
-  if (args.file_path.trim().length === 0) throw new Error('file_path must be a non-empty string')
-  return { filePath: args.file_path, content: args.content }
-}
-
-/**
- * Format a write outcome as one model-facing text block body.
- * @param displayPath - the backend-resolved path rendered in the envelope's `<path>` element.
- * @param outcome - the write outcome; its `operation` selects the Created/Updated wording.
- * @returns the model-facing confirmation envelope (no file content is echoed back).
- */
-export function formatWriteOutput(displayPath: string, outcome: Pick<FsWriteOutcome, 'operation'>): string {
-  const verb = outcome.operation === 'create' ? 'Created' : 'Updated'
-  return `<path>${displayPath}</path>
-<type>file</type>
-<content>
-${verb} file
-</content>`
-}
+export { formatWriteOutput, parseWriteArgs } from './text-operations.ts'
 
 /**
  * The `write` tool's validated arguments: the base parameters plus the
@@ -64,9 +42,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
     order: ctx.systemPrompt.getSectionOrder('TOOL_WRITE'),
     text: ({ scope }) => ctx.tools.get('write', scope) === undefined
       ? ''
-      : 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it)'
-        + (ctx.tools.get('edit', scope) === undefined ? '' : ' and prefer edit for targeted changes')
-        + '.',
+      : writeGuidance(ctx.tools.get('edit', scope) !== undefined),
   })
 
   ctx.tools.register(defineTool({
@@ -95,12 +71,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
         },
       },
       render: (_args, value) => [{ type: 'text', text: formatWriteOutput(value.path, value) }],
-      presentationMeta: (args, value) => ({
-        diffs: value.before === null
-          ? []
-          : computeHunkDiffs(args.file_path, value.before, value.after)
-            .map(({ path, oldText, newText }) => ({ path, oldText, newText })),
-      }),
+      presentationMeta: (args, value) => diffPresentationMeta(args.file_path, value.before, value.after),
     },
     async execute(args: WriteToolArgs, exec) {
       const input = parseWriteArgs(args)

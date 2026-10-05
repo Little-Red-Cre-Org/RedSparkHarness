@@ -8,17 +8,12 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, ReadResultView, ToolResult } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { buildWindow, formatReadOutput, langFromPath, readMetaFromMeta } from './read-render.ts'
+import { buildWindow, formatReadOutput, readMetaFromMeta } from './read-render.ts'
+import { readPresentationMeta } from './presentation-meta.ts'
 import { resolveRegularReadTarget } from './read-target.ts'
+import { parseReadArgs, READ_GUIDANCE } from './text-operations.ts'
 
-/** Default and maximum number of lines returned by one `read` call (the `readLimit` config). */
-export const READ_LIMIT = 2000
-
-/**
- * Default streaming threshold (the `readStreamMinSize` config): files at or
- * above this size stream; smaller files read whole into memory.
- */
-export const STREAM_MIN_SIZE = 10 * 1024 * 1024
+export { parseReadArgs, READ_LIMIT, STREAM_MIN_SIZE } from './text-operations.ts'
 
 /** Resolved read-tool caps — plugin config after defaulting (see `Config` in index.ts). */
 export interface ReadToolCaps {
@@ -32,34 +27,6 @@ export interface ReadToolCaps {
   streamMinSize: number
 }
 
-/** Validated `read` arguments after defaulting. */
-interface ReadInput {
-  filePath: string
-  offset: number
-  limit: number
-}
-
-function parsePositiveInteger(value: number, name: string): number {
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
-    throw new Error(`${name} must be a positive integer`)
-  }
-  return value
-}
-
-/**
- * Validate value constraints the schema DSL can't express. `maxLimit` is the deployment's line cap.
- * @param args - the schema-validated raw tool arguments; `offset`/`limit` must be positive integers when given.
- * @param maxLimit - the configured line cap: both the default `limit` and the largest one accepted.
- * @returns the validated input with `offset` defaulted to 1 and `limit` to `maxLimit`.
- */
-export function parseReadArgs(args: { file_path: string; offset?: number; limit?: number }, maxLimit: number): ReadInput {
-  if (args.file_path.trim().length === 0) throw new Error('file_path must be a non-empty string')
-  const offset = args.offset === undefined ? 1 : parsePositiveInteger(args.offset, 'offset')
-  const limit = args.limit === undefined ? maxLimit : parsePositiveInteger(args.limit, 'limit')
-  if (limit > maxLimit) throw new Error(`limit must be less than or equal to ${maxLimit}`)
-  return { filePath: args.file_path, offset, limit }
-}
-
 /**
  * Register the `read` tool and its scope-aware system-prompt guidance.
  * @param ctx - the plugin context; registrations are effects scoped to it, and execution uses its `fs` service.
@@ -71,7 +38,7 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
     order: ctx.systemPrompt.getSectionOrder('TOOL_READ'),
     text: ({ scope }) => ctx.tools.get('read', scope) === undefined
       ? ''
-      : 'Use the read tool — not shell commands like cat — to inspect text files. Results include line numbers. Use offset and limit to continue reading large files.',
+      : READ_GUIDANCE,
   })
 
   ctx.tools.register(defineTool({
@@ -118,19 +85,7 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
           }),
         }]
       },
-      // Project the structured window into persisted `meta` so a UI's read card
-      // survives replay: the raw canonical output object is not on the wire, only
-      // the model-facing text, from which the line/lang data cannot be recovered.
-      presentationMeta: (_args, value) => {
-        const lang = langFromPath(value.path)
-        return {
-          path: value.path,
-          offset: value.offset,
-          lines: value.lines.map(({ number, text }) => ({ number, text })),
-          totalLines: value.totalLines,
-          ...lang === undefined ? {} : { lang },
-        }
-      },
+      presentationMeta: (_args, value) => readPresentationMeta(value),
     },
     // Observation races fail closed because guarded mutations re-check the version in-lock.
     isConcurrencySafe: () => true,

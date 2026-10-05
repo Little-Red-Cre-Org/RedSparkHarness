@@ -14,6 +14,50 @@ export interface AttachmentHostPathProvider {
   imageHostPath(ref: ImageAttachmentRef): string | undefined
 }
 
+/** Image reads needed when a model adapter builds request-specific variants. */
+export interface ImageRequestAttachmentStore extends AttachmentHostPathProvider {
+  /**
+   * Read the request variant for one durable image under the selected model policy.
+   * @param ref - durable normalized image reference.
+   * @param policy - model request projection limits.
+   * @param signal - optional cancellation.
+   * @returns verified request bytes and their derived metadata.
+   */
+  readImageRequest(
+    ref: ImageAttachmentRef,
+    policy: ImageRequestPolicy,
+    signal?: AbortSignal,
+  ): Promise<RequestImageAttachment>
+}
+
+/** Durable attachment operations provided by one native Host storage owner. */
+export interface AttachmentOperations extends ImageRequestAttachmentStore {
+  /** Deployment-resolved image admission limits. */
+  readonly imageLimits: ImageAttachmentLimits
+  /** @param input - submitted encoded image. @returns completion after validation. */
+  validateImage(input: SaveImageAttachment): Promise<void>
+  /** @param inputs - submitted images in message order. @returns durable references in the same order. */
+  saveImages(inputs: readonly SaveImageAttachment[]): Promise<readonly ImageAttachmentRef[]>
+  /** @param input - submitted encoded image. @returns its durable normalized reference. */
+  saveImage(input: SaveImageAttachment): Promise<ImageAttachmentRef>
+  /** @param ref - durable image reference. @param signal - optional cancellation. @returns verified bytes. */
+  readImage(ref: ImageAttachmentRef, signal?: AbortSignal): Promise<StoredImageAttachment>
+  /** @param input - exact file bytes. @returns durable file reference. */
+  saveFile(input: SaveFileAttachment): Promise<FileAttachmentRef>
+  /** @param input - bounded file chunks. @returns durable file reference. */
+  saveFileStream(input: SaveFileStreamAttachment): Promise<FileAttachmentRef>
+  /** @param ref - durable file reference. @param signal - optional cancellation. @returns verified chunks. */
+  readFileStream(ref: FileAttachmentRef, signal?: AbortSignal): AsyncIterable<Uint8Array>
+  /** @param ref - durable file reference. @returns provider-owned host path, when available. */
+  fileHostPath(ref: FileAttachmentRef): string | undefined
+  /** @param input - canonical base64 file upload. @returns durable file reference. */
+  admitEncodedFile(input: EncodedFileAttachment): Promise<FileAttachmentRef>
+  /** @param content - ordered wire prompt content. @returns content with durable image references. */
+  admitPromptContent(content: readonly AttachmentAdmissionPart[]): Promise<AdmittedPromptContentPart[]>
+  /** @param error - caught failure. @returns whether it has a stable attachment error code. */
+  isAttachmentError(error: unknown): boolean
+}
+
 /** Raster image formats accepted by the version-one attachment path. */
 export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
 

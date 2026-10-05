@@ -9,8 +9,8 @@
  */
 
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, FinishReason, StreamChunk, TokenUsage, ToolCallId } from '@deepseek-ai/dsh-llm'
+import { EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock, FinishReason, StreamChunk, TokenUsage, ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { DONE } from './sse.ts'
 import type { WireChunk, WireUsage } from './types.ts'
 

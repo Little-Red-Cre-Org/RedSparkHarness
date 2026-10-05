@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口只接受空配置对象并提供 `promptSections`。重复 section 名称会在注册时失败。disposer 只移除创建它的 section，而 Provider 释放会移除所有剩余 section。
+`./native` 入口只接受空配置对象并提供 `promptSections`。同一注册作用域内重复 section 名称会在注册时失败。渲染选择消费作用域可见的贡献；后代同名 section 遮蔽祖先 section，兄弟作用域相互隔离。disposer 只移除创建它的 section，而 Provider 释放会移除所有剩余 section。
 
 应用可以向 `render(scope)` 传入请求 Agent 的 scope。感知 scope 的贡献在选择可见声明时使用该精确 scope；忽略可选参数的贡献保持其行为。应用仍须在模型发送前记录组装后的文本。
 

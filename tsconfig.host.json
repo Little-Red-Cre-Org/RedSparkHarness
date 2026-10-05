@@ -110,6 +110,7 @@
     "snapshots/native-headless/native-headless.snapshot.ts",
     "snapshots/native-headless/tool-results.snapshot.ts",
     "snapshots/native-headless/ptc-jobs.snapshot.ts",
+    "snapshots/native-headless/read-image-native.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",
     "rsh/Programs/Desktop/tests/**/*.ts",
     "rsh/Tests/benchmarks/**/*.ts",

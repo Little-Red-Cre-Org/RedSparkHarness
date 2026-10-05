@@ -1,0 +1,10 @@
+{
+  "name": "native-read-image-profile",
+  "private": true,
+  "dsh": {
+    "profile": {
+      "runtime": "native",
+      "config": "rsh.profile.json"
+    }
+  }
+}
