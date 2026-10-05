@@ -8,6 +8,7 @@ import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
@@ -15,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import type {} from '@deepseek-ai/dsh-native-model-execution/model-directory'
 
 /** Profile-owned model route and turn policy. */
 export interface Config {
@@ -107,8 +109,9 @@ export class NativeAcpApplication implements NativeApplication {
           this.initialized = true
         } finally { this.initializing = false }
         return { protocolVersion: PROTOCOL_VERSION, agentInfo: { name: 'redspark-harness-native-acp', version: '0.0.1' },
-          agentCapabilities: { promptCapabilities: { image: false, audio: false, embeddedContext: false },
-            mcpCapabilities: { http: false }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
+          agentCapabilities: { promptCapabilities: { image: this.context.optional('attachments') !== undefined
+            && this.context.optional('modelDirectory') !== undefined, audio: false, embeddedContext: false },
+          mcpCapabilities: { http: false }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
       })()))
       .onRequest(methods.agent.authenticate, () => ({}))
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
@@ -226,10 +229,16 @@ export class NativeAcpApplication implements NativeApplication {
     const record = this.sessions.get(params.sessionId)
     if (record === undefined) throw RequestError.invalidParams(undefined, 'unknown session')
     if (record.current !== undefined) throw RequestError.invalidRequest(undefined, 'session prompt is already running')
-    if (params.prompt.length === 0 || params.prompt.some(block => block.type !== 'text')) {
-      throw RequestError.invalidParams(undefined, 'native ACP accepts nonempty text prompts only')
-    }
-    const content = params.prompt.map(block => ({ type: 'text' as const, text: (block as { text: string }).text }))
+    if (params.prompt.length === 0) throw RequestError.invalidParams(undefined, 'native ACP prompt must be nonempty')
+    const attachments = this.context.optional('attachments')
+    const parts = params.prompt.map((block): AttachmentAdmissionPart => {
+      if (block.type === 'text') return { type: 'text', text: block.text }
+      if (block.type === 'image') {
+        const mediaType = attachments?.imageLimits.mediaTypes.find(type => type === block.mimeType)
+        if (mediaType !== undefined) return { type: 'image', data: block.data, mediaType }
+      }
+      throw RequestError.invalidParams(undefined, 'native ACP accepts text and configured raster image formats only')
+    })
     const abort = new AbortController()
     const signal = AbortSignal.any([requestSignal, abort.signal, this.lifetime.signal])
     const done = Promise.resolve().then(async (): Promise<PromptResponse> => {
@@ -237,6 +246,29 @@ export class NativeAcpApplication implements NativeApplication {
       let notifications = Promise.resolve()
       let exitCode: number
       try {
+        const hasImage = parts.some(part => part.type === 'image')
+        if (hasImage) {
+          const directory = this.context.optional('modelDirectory')
+          if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
+          await record.executor.executeSessionOperation({ id: SessionId(params.sessionId), resume: true }, async (owner, admitted) => {
+            const check = async (effective: AbortSignal): Promise<void> => {
+              const selection = await this.context.optional('modelSelection')?.state(owner, effective)
+              const route = selection?.next ?? this.config
+              const info = await directory.resolve(route.provider, route.model, effective)
+              if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
+            }
+            const execution = this.context.require('agents').execution(owner.agent)
+            if (execution.status === 'maintenance') await check(admitted)
+            else await execution.runMaintenance(agentSignal => check(AbortSignal.any([agentSignal, admitted])))
+          }, signal)
+        }
+        signal.throwIfAborted()
+        const content = attachments === undefined
+          ? parts.map((part) => {
+            if (part.type !== 'text') throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
+            return part
+          }) : await attachments.admitPromptContent(parts)
+        signal.throwIfAborted()
         const result = await record.executor.executeRootTurn({ id: SessionId(params.sessionId), resume: true,
           message: createUserMessage({ content, source: { kind: 'user' } }), onEvent: (event) => {
             for (const update of updates(event)) {
@@ -250,6 +282,7 @@ export class NativeAcpApplication implements NativeApplication {
           } }, signal)
         exitCode = result.exitCode
       } catch (error: unknown) {
+        if (isImageAdmissionError(error)) throw RequestError.invalidParams(undefined, error.message)
         if (!signal.aborted || error !== signal.reason) throw error
         exitCode = 1
       }
@@ -282,7 +315,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry'], provides: ['application'],
+    'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory'], provides: ['application'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => { context.provide('application', new NativeAcpApplication(context, config)) }

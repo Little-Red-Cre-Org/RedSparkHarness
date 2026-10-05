@@ -20,11 +20,13 @@ Select `dsh --profile native-acp` to create, prompt, cancel, close, list, and re
 
 ## Configuration
 
-The profile sets `provider`, `model`, `systemPrompt`, and positive `maxSteps`. Each Session selects an absolute existing workspace directory through `session/new`; each accepts one text prompt at a time. An overlapping prompt fails explicitly. Empty Sessions are durable before creation returns. Resume checks the stored workspace and lineage and replays committed presentation events before accepting further prompts. Close releases the live executor and retains the stored log. Input EOF and Host cancellation cancel and drain accepted work; ACP has no standard shutdown request.
+The profile sets `provider`, `model`, `systemPrompt`, and positive `maxSteps`. Each Session selects an absolute existing workspace directory through `session/new`; each accepts one ordered text/image prompt at a time. An overlapping prompt fails explicitly. Empty Sessions are durable before creation returns. Resume checks the stored workspace and lineage and replays committed presentation events before accepting further prompts. Close releases the live executor and retains the stored log. Input EOF and Host cancellation cancel and drain accepted work; ACP has no standard shutdown request.
 
 The shipped native composition installs the model adapter, native Agent and model execution, local filesystem, credentials, and Session persistence. Additional native tools may be installed through profile patches. Only the exact execution cancellation reason becomes a cancelled response; cleanup and unrelated execution failures remain protocol errors.
 
 The application declares the shared executor’s optional `modelSelection` service and consumes its Host compiler face.
+
+Image prompts require the selected attachment Provider and model directory. Initialization advertises image admission only when both are installed; each image prompt checks the Session's next selected model under idle Agent maintenance and rejects models without declared image input. The attachment Provider validates configured raster formats, base64, byte and pixel limits, normalizes the batch, and returns durable references in input order before user-message admission. Invalid images never enter the Session inbox. Cancellation and transport drain also cover image preparation.
 
 ## Dev Note
 
@@ -32,20 +34,20 @@ The [native ACP decision](../../../../../.agents/notes/implemented/architecture/
 
 ## Model Experience
 
-### ACP text prompts
+### ACP text and image prompts
 
 #### What the model sees
 
-Text admitted by `session/prompt` enters the durable Session inbox and reaches the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). ACP presentation notifications add no model input.
+Text and normalized image references admitted by `session/prompt` enter the durable Session inbox and reaches the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). ACP presentation notifications add no model input.
 
 #### Token effect
 
-Submitted text adds input tokens on its admitted step and later steps that retain it.
+Submitted text and model image previews add input tokens on their admitted step and later steps that retain them.
 
 #### KV Cache effect
 
-A submitted prompt appends user text after retained history; preceding request content retains its order.
+A submitted prompt appends user content after retained history; preceding request content retains its order.
 
 ## Known Limitations and Deferred Work
 
-- Per-session MCP mounts, image/audio/embedded input, model configuration controls, permission/question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises text-only prompts and no HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
+- Per-session MCP mounts, audio/embedded input, model configuration controls, permission/question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises no audio, embedded context or HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
