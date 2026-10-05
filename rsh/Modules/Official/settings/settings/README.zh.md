@@ -43,6 +43,8 @@ kind: "package-reference"
 
 提供方上线后 `ctx.settings` 即出现。完整配置面由提供方 README 负责；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)列出每个受支持字段。
 
+原生 Host 使用不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 API 不向客户端公开旧版 schema 描述或机密脱敏字段。
+
 ### 注册 namespace
 
 插件用 schemastery schema 注册自己的 namespace，并可选地把组合配置作为 `base` 层传入，让解析值从部署已配置的内容起步：
@@ -98,6 +100,7 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition：namespace 校验、注册、解析、写队列、describe/脱敏、事件、`installSection` |
+| [`src/native.ts`](src/native.ts) | 原生定义：namespace 注册、revision 写入、重载与 owner scope |
 | [`src/redact.ts`](src/redact.ts) | `redactSecrets` 遍历器：剥离 `role('secret')` 字段并枚举其 slot |
 | [`src/types.ts`](src/types.ts) | 客户端安全类型面：事件声明、`SettingsNamespace`、`SettingsUpdateSource` |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`settings/updated` 只对已注册 namespace、只在解析值变化时、且携带权威值触发 |

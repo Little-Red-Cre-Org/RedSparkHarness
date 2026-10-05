@@ -6,6 +6,10 @@
 
 来源：[`rsh/Modules/Official/settings/settings/src/index.ts`](../../Modules/Official/settings/settings/src/index.ts)
 
+## 原生 Host
+
+[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。原生设置不公开 Cordis schema 描述或通用远端编辑 API。
+
 ## 标识
 
 namespace 命名用户文档中一个归插件所有的分节。brand 防止调用方将设置 namespace 与在包或进程之间传递的其他 id 混用；构造时校验小写 kebab-case 语法。
