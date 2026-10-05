@@ -46,7 +46,7 @@ it('cancels a running ACP prompt, rejects overlap and drains an active prompt on
     await transport.flush()
     expect(await prompt).toMatchObject({ stopReason: 'cancelled' })
     entered = Promise.withResolvers<undefined>()
-    const pending = transport.request('session/prompt', params, signal).catch(error => error as unknown)
+    const pending = transport.request('session/prompt', params, signal).catch((error: unknown) => error)
     await entered.promise
     child.stdin.end()
     const exit = await child
@@ -64,7 +64,7 @@ it('cancels a running ACP prompt, rejects overlap and drains an active prompt on
     child.kill('SIGKILL')
     await child
     server.closeAllConnections()
-    await new Promise<void>(resolve => server.close(() => resolve()))
+    await new Promise<void>(resolve => server.close(() => { resolve() }))
     await rm(home, { recursive: true, force: true })
   }
 })
