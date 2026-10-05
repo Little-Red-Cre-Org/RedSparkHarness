@@ -7,7 +7,7 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 为一个 Session 保存模型选择，并在冷恢复后重建。并发选择比较最新持久意图的 revision；过期选择失败，不替换已接受的选择。选定的 Program 在派发前记录模型变更提示与请求参数。
 
@@ -17,7 +17,7 @@ kind: "package-reference"
 - [理解实现](#understand-the-implementation)
 - [模型体验](#model-experience)
 - [已知限制与待完成工作](#known-limitations-and-deferred-work)
-- [开发笔记](#dev-note)
+- [开发备注](#dev-note)
 
 <a id="configuration"></a>
 
@@ -33,6 +33,8 @@ kind: "package-reference"
 
 选择捕获将请求参数与建议默认值分开。[模型执行器](../../core/native-model-execution/README.zh.md) 一起捕获实际元数据与派发；[Headless 消费者](../../core/native-headless/README.zh.md) 在请求响应前记录这些 prepared 参数。旧 header 的有效默认值不会变成人类选择。此服务不拥有另一个 writer 或全局默认值。[决策](../../../../.agents/notes/implemented/architecture/2026-10-05-native-model-selection-and-prepared-dispatch.zh.md)。
 
+[持久选择投影](../../core/native-model-execution/src/model-selection.ts) 与 [选择准入](src/service.ts) 共用完整 Session 历史；Headless 使用 prepared dispatch 记录参数与路由提示。
+
 <a id="model-experience"></a>
 
 ## 模型体验
@@ -41,7 +43,7 @@ kind: "package-reference"
 
 #### 模型看到的内容
 
-选择事实不进入模型历史。Provider 或模型变化会添加已持久化提示，说明前后路由；仅 effort 变化时记录变化后的请求 header，不添加路由提示。
+`model/selection` 事实不进入模型历史。Provider 或模型变化会添加已持久化提示，说明前后路由；仅 effort 变化时记录变化后的请求 header，不添加路由提示。
 
 #### Token 影响
 
@@ -51,18 +53,14 @@ kind: "package-reference"
 
 切换模型可能改变缓存可用性。此包不承诺跨模型保留缓存。
 
-#### 理解实现
-
-[持久选择投影](../../core/native-model-execution/src/model-selection.ts) 与 [选择准入](src/service.ts) 共用完整 Session 历史；Headless 使用 prepared dispatch 记录参数与路由提示。
+## 已知限制与待完成工作
 
 <a id="known-limitations-and-deferred-work"></a>
-
-## 已知限制与待完成工作
 
 - 目录仅供参考；准确解析决定可用性。SDK、ACP 与 Web 选择界面是独立消费者。此包不提供交互登录、设置编辑器或全局默认值。
 
 <a id="dev-note"></a>
 
-### 开发笔记
+### 开发备注
 
 不发布 invariant 配套入口：选择记录使用准确的 Program writer，没有独立的持久观察。Host 与 Client 编译面保持分离。

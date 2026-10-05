@@ -33,6 +33,8 @@ Exact Provider resolution validates the proposed choice. The sole Program writer
 
 Selection capture separates requested controls from advisory defaults. The [model executor](../../core/native-model-execution/README.md) captures actual metadata and dispatch together; the [Headless Consumer](../../core/native-headless/README.md) logs those prepared controls before requesting a response. Effective defaults in an older header do not become a human selection. The service owns neither another writer nor a global default. [Decision](../../../../.agents/notes/implemented/architecture/2026-10-05-native-model-selection-and-prepared-dispatch.md).
 
+The [durable projection](../../core/native-model-execution/src/model-selection.ts) and [selection admission](src/service.ts) use the complete Session history; Headless records controls and route notices from prepared dispatch.
+
 <a id="model-experience"></a>
 
 ## Model Experience
@@ -41,7 +43,7 @@ Selection capture separates requested controls from advisory defaults. The [mode
 
 #### What the model sees
 
-Selection facts stay outside model history. A provider or model change adds a persisted notice naming the old and new routes; an effort-only change records the changed request header without a route notice.
+The `model/selection` facts stay outside model history. A provider or model change adds a persisted notice naming the old and new routes; an effort-only change records the changed request header without a route notice.
 
 #### Token effect
 
@@ -51,13 +53,9 @@ Catalog reads consume no model tokens. A route notice adds one short message to 
 
 Switching models can change cache availability. This package promises no cache preservation across models.
 
-#### Understand the implementation
-
-The [durable projection](../../core/native-model-execution/src/model-selection.ts) and [selection admission](src/service.ts) use the complete Session history; Headless records controls and route notices from prepared dispatch.
+## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
-
-## Known Limitations and Deferred Work
 
 - Catalogs are advisory; exact resolution determines availability. SDK, ACP and Web selection surfaces are separate Consumers. This package supplies no interactive login, settings editor or global default.
 
