@@ -69,4 +69,12 @@ with DeepSeekHarness(config) as forked:
         {"type": "image", "data": data, "mimeType": "image/png"}])
 with DeepSeekHarness(config) as restored:
     result = restored.start_session("sdk-recorded-fork").run("retain the image")
-print(json.dumps({"finalResponse": result.final_response, "events": result.events}))
+    result = restored.start_session("sdk-recorded-fork").run("delegate a native child")
+    assert [item.payload for item in result.notifications if item.method == "subagent.started"] == [
+        {"parentSessionId": "sdk-recorded-fork", "childSessionId": "sdk-recorded-child"}]
+    assert any(item.method == "session.event" and item.payload["sessionId"] == "sdk-recorded-child"
+        and item.payload["event"]["type"] == "turn/end" for item in result.notifications)
+    assert not any(isinstance(value, str) and value.startswith("sdk-foreign-")
+        for item in result.notifications for value in item.payload.values())
+print(json.dumps({"finalResponse": result.final_response, "events": result.events,
+    "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}))

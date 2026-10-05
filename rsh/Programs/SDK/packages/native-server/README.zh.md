@@ -34,6 +34,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 
+此 Program 已接收根任务的委派子会话先发送 `subagent.started` 血缘通知，再发送后端已接收的 `session.event`。两个 SDK 的 `subscribeSessionTree` 与运行订阅包含这些后代；根响应事件仍独立保存。共用相同 Provider 的其它 Program 不会混入。所有者分离及关闭时撤销观察者，不新建 Session 写入者。
+
 <a id="dev-note"></a>
 
 ## 开发备注
@@ -62,4 +64,4 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 ## 已知限制与延后工作
 
-- 子代理通知仍由兼容 SDK profile 提供。
+- 内置 native-sdk profile 未安装生产子代理工具。`subagent.finished` 要求子代理结果权威，仍由兼容 profile 提供；后代事件投影本身不提供 Provider 结果或停止原因。

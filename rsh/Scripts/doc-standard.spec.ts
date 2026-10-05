@@ -82,6 +82,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Tests/test-support/remote-mock': 'Browser-side test infrastructure; mounts nothing into a product composition.',
   'rsh/Core/typert/generator': 'Build-time generator run outside any agent runtime.',
   'rsh/Core/typert/protocol': 'Compiler-independent protocol declarations.',
+  'rsh/Programs/TUI/terminal-ui': 'Pure shared Ink presentation and terminal text helpers.',
   'rsh/Core/util/atomic-write': 'Zero-dependency filesystem write utility.',
   'rsh/Core/util/brand': 'Stateless nominal-string and canonical-key constructors.',
   'rsh/Core/util/crypto': 'Zero-dependency identifier minting utility.',
