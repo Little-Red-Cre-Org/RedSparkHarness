@@ -720,6 +720,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-terminal-ui':
+        specifier: workspace:^
+        version: link:../../../../Programs/TUI/terminal-ui
       ink:
         specifier: ^5.2.1
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
@@ -2219,12 +2222,12 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
-      '@deepseek-ai/dsh-tool-code-runtime':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
 
   rsh/Engine/core/native-jobs:
     dependencies:
@@ -7912,6 +7915,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -7921,9 +7927,9 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../Engine/core/native-tools
-      '@deepseek-ai/dsh-native-session-execution':
+      '@deepseek-ai/dsh-native-tui':
         specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
+        version: link:../TUI/native-tui
       '@deepseek-ai/dsh-native-web-host':
         specifier: workspace:^
         version: link:../Web/host/native-web-host
@@ -8903,6 +8909,65 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
+
+  rsh/Programs/TUI/native-tui:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../../Engine/core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../Engine/core/session
+      '@deepseek-ai/dsh-terminal-ui':
+        specifier: workspace:^
+        version: link:../terminal-ui
+      ink:
+        specifier: ^5.2.1
+        version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
+      ink-text-input:
+        specifier: ^6.0.0
+        version: 6.0.0(ink@5.2.1(@types/react@18.3.31)(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.31
+      node-pty:
+        specifier: 1.2.0-beta.15
+        version: 1.2.0-beta.15(patch_hash=8a6cefc66406ad56588f10a2dbcc22f3ca87ef630849b59b52fbb3ce6ba6f56a)
+
+  rsh/Programs/TUI/terminal-ui:
+    dependencies:
+      ink:
+        specifier: ^5.2.1
+        version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
+      ink-text-input:
+        specifier: ^6.0.0
+        version: 6.0.0(ink@5.2.1(@types/react@18.3.31)(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../Engine/llm/llm
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.31
 
   rsh/Programs/Web/api/gateway:
     dependencies:

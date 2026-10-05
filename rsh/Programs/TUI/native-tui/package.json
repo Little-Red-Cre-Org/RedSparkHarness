@@ -1,0 +1,85 @@
+{
+  "name": "@deepseek-ai/dsh-native-tui",
+  "version": "0.1.5-rc.2",
+  "description": "Native interactive Ink terminal application",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Programs/TUI/native-tui"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-headless": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-terminal-ui": "workspace:^",
+    "ink": "^5.2.1",
+    "react": "^18.2.0",
+    "ink-text-input": "^6.0.0",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "node-pty": "1.2.0-beta.15"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "sessionPersistence",
+        "modelExecution",
+        "agents",
+        "sessionExecution",
+        "activeSessions"
+      ],
+      "optional": [
+        "tools",
+        "promptSections",
+        "sandboxPolicy",
+        "approval",
+        "codeRuntime",
+        "timeContext",
+        "agentPresets",
+        "workspaceRegistry",
+        "agentInstructions"
+      ],
+      "provides": [
+        "application",
+        "rootExecution"
+      ]
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown"
+  }
+}
