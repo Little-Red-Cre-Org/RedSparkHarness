@@ -954,7 +954,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[TodoItem](subsystems/todo.zh.md)
 
-来源：[`rsh/Modules/Official/todo/tool-todo/src/types.ts:31`](../Modules/Official/todo/tool-todo/src/types.ts)
+来源：[`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/Official/todo/tool-todo/src/todo-types.ts)
 
 ### `tool/*`
 
