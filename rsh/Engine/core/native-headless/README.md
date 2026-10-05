@@ -20,7 +20,9 @@ English | [中文](README.zh.md)
 
 ## Configuration
 
-Programs may supply `prepareMessage` instead of `message` for root input admission. The callback receives the next durable model selection and composed cancellation while the original Agent holds execution and its Session writer; preparation completes before inbox append. Rejection admits no input or model request. Delegated turns do not expose this callback.
+Delegated invocations retain the selected sandbox policy and cannot expand permissions through approvals. Required approval requests record asked and decided facts with policy never and outcome rejected; root requests still use the selected approval answerer. Interrupted transient children repair their turn through the existing owner so accepted-event observers and the durable log receive the same cancellation closers.
+
+Continuation observations expose immutable deployment defaults in the exact authorizing workspace. Module Providers reconstruct durable child route and composition independently of those per-activation budgets; the Program retains residency, pending input and the only writer.
 
 The optional `agentInstructions` Provider prepares workspace instructions before each admitted model request. The application records its returned context as `user/message` before dispatch; stored source facts govern resume reconciliation and accepted filesystem results govern nested discovery.
 
@@ -43,6 +45,8 @@ The validated `builtinTools` boolean defaults to `true`. Setting it to `false` r
 One-shot teardown attempts writer closure even when an active-owner observer rejects, preserving execution and cleanup failures together. Agent admission owns borrowed preset leases before lifecycle announcement; failed or cancelled announcement releases them. Resident children persist that selected preset in their creation header and validate restored facts before module preparation.
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
+
+Root `prepareMessage` takes priority over `message`. Preparation runs under the existing execution owner after effective next-model selection and before inbox admission. It returns identified input without access to the Session writer; rejection or cancellation admits no user input.
 
 Root cancellation closes and drains an already retained epoch even when the initial turn fails or the settlement signal is already aborted. Execution and epoch-cleanup failures are reported together; the original execution failure remains observable.
 

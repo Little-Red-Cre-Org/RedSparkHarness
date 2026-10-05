@@ -44,7 +44,7 @@ it('offers background execution only with job controls and reports a failed sand
         context.provide('tools', tools)
         context.provide('shellEnv', shellEnv)
         context.provide('jobs', jobs)
-        if (controls) context.provide('jobControls', true)
+        if (controls) context.provide('jobControls', { jobs })
       },
     }
     const scope = new NativeScope()
@@ -88,7 +88,7 @@ it.skipIf(spawnSync(resolvePwshPath(), ['-NoLogo', '-NoProfile', '-NonInteractiv
         return () => {}
       } } as unknown as NativeToolRegistry)
       context.provide('shellEnv', { collect: () => ({}) } as unknown as ShellEnvironment<NativeToolExecution>)
-      context.provide('jobControls', true)
+      context.provide('jobControls', { jobs: context.require('jobs') })
     },
   }
   const host = new NativeHost(resolveInstallation([

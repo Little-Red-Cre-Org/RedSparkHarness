@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-web-assets` 解析已安装的前端，提供选中的原生 Client 页面及 Host 编译的资源，并将静态文件读取限制在前端分发目录。`listenNativeHttpHost` 增加了无 Cordis 的 node:http 载体：绑定共享 Connection registry，认证 `/api` 与已注册 RPC channel，并负责监听器销毁。现有 Desktop Host 使用相同路由提供可选的原生预览。
+`dsh-native-web-assets` 解析已安装的前端，提供选中的原生 Client 页面及 Host 编译的资源，并将静态文件读取限制在前端分发目录。`listenNativeHttpHost` 增加了无 Cordis 的 node:http 载体：绑定共享 Connection registry，认证 `/api` 与已注册 RPC channel，并负责监听器销毁。Desktop Host 使用这些资源提供显式原生组合与兼容模式下的可选预览。
 
 ## 目录
 
@@ -23,7 +23,7 @@ kind: "package-reference"
 
 `createNativeDesktopAssetHandler(runtimeDir, nativeClient, transportScript)` 要求安装包含 `dist/native.html` 的 `@deepseek-ai/dsh-web-frontend` 分发包，提供已校验的 Client bundle 和 Host 自有浏览器传输脚本；它不要求 `dist/index.html`。它的 `update(bundle)` 会为实时 Host 原子发布完整替换资源表。它在 `/`、`/index.html`、`/native.html` 及未匹配的应用路径提供原生页面；已编译的 Client 资源只来自所给资源表。它支持 `GET` 和 `HEAD`，对旧 `/plugins/` 请求返回 404，并拒绝解码后或经符号链接指向前端分发目录外的静态路径。`listenNativeHttpHost(registry, assets, bridge, config)` 默认绑定回环监听器，将 `/api` 与已注册 channel 交给共享 Connection 策略，并提供 `close()` 做确定性销毁。组合 Host 显式注入原生 Connection bridge。`createDesktopAssetRoutes` 将相同的原生和静态路由提供给兼容 Host，后者还要求 `dist/index.html` 并拥有 `/plugins/` 端点。
 
-`prepareNativeClientBundle` 返回编译资源和仅供 Host 使用的输入目录，以便实时观察。构建失败时会报告这些目录，并为未解析的包导入包含现有的 `node_modules` 位置，使 Host 可以在缺失的导入恢复后重新构建，而不发布不完整的图。
+`prepareNativeClientBundle(projectDir, runtimeDir, installedOnly)` 在 `installedOnly` 为 true 时拒绝工作区源码解析；Desktop 使用此模式。其他调用者省略该参数则保留源码开发解析器。`prepareNativeClientBundle` 返回编译资源和仅供 Host 使用的输入目录，以便实时观察。构建失败时会报告这些目录，并为未解析的包导入包含现有的 `node_modules` 位置，使 Host 可以在缺失的导入恢复后重新构建，而不发布不完整的图。
 
 <a id="model-experience"></a>
 ## 模型体验

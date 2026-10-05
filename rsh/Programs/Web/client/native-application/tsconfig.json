@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Modules/Official/todo/tool-todo"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
@@ -22,6 +25,12 @@
     },
     {
       "path": "../ui-renderer"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
     }
   ]
 }

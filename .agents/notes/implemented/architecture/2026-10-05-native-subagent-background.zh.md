@@ -1,0 +1,21 @@
+# Agent Note: 原生一次性后台 Subagent
+
+Status: implemented
+
+[English](2026-10-05-native-subagent-background.md) | 中文
+
+## 问题
+
+前台委派阻塞发起工具调用。原生 SDK 组合需要能够跨普通父回合继续执行，并由同一父 Agent 观察与取消的真实子任务。
+
+## 决策
+
+选定派生提供者使用既有 NativeJobs 注册表与任务控制，通过既有 Session 执行权威以 Agent 生命周期委派。仅在 onReady 确认初始持久回合事实后发布子 id 与任务句柄。发布前启动取消仍归调用者所有；发布后由 Jobs、父 Agent 释放或提供者卸载负责取消。后台子任务保留前台的权限、预算、深度与作用域工具限制。
+
+## 考虑的替代方案
+
+并行结果注册表或输出缓冲会重复 Jobs 所有权与保留策略。仅保留 UUID 无法证明持久子任务存在。取消后不等待委派清理便返回，会留下活跃的所有执行资源。
+
+## 结果
+
+Jobs 保留有界实时文本，以真实最终输出替换，并仅在委派清理后结算。持久记录为 aborted 的子任务，若原错误是取消原因或由该精确原因引发的 AbortError，则结算为 cancelled；未知失败与清理错误仍结算为 failed。内置 native-sdk 配置安装 Jobs 提供者与工具消费者。一个既有记录场景覆盖两种 SDK、跨父回合存活、真实子输出、取消与持久子关闭。可持续子消息、目录、外部传输、persona 插值与完成结果通知仍为独立能力。 Provider 暴露 backgroundJobs，已安装控制工具暴露 jobControls.jobs；Consumer 在加载时拒绝独立选定的 Jobs 注册表不一致的配置。

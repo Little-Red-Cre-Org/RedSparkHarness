@@ -24,7 +24,11 @@ kind: "package-reference"
 
 安装在 client-connection 之后，必须配置正整数 maxFollowBufferChars，限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
+模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
+
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。
+
+提示上传携带有序的编码光栅图片；Host 在根所有者内准入它们。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
 
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
@@ -33,6 +37,9 @@ kind: "package-reference"
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
 <a id="invariants"></a>
+
+跟随流也传输临时审批与问题批次。answerHuman 只使用本 Consumer 尚未结算的调用标识；Host 校验待答根所有者与输入。审批决定为允许一次或拒绝。问题答案保留所选标签与自定义文本。这些展示不形成第二份持久日志。
+
 ## 不变量
 
 本包没有可与 Host 权威分歧的独立状态，因此不发布不变量安装器。
@@ -49,7 +56,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-只有提交的人工文本通过 Host 执行器进入模型输入；本包不贡献模型工具或提示段。
+提交的人工文本及已准入的持久化图片引用通过 Host 执行器进入模型输入；本包不贡献模型工具或提示段。
 
 #### Token 影响
 
@@ -63,4 +70,4 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 完整产品 UI、附件、审批和问题交互不由该包提供。
+- 完整产品 UI、文件及音频上传不由该包提供。
