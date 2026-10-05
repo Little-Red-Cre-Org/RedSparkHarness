@@ -78,6 +78,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
+  ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],
+  ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
   ['rsh/Engine/context/agent-instructions', 'Native and Cordis instruction Providers share discovery, rendering and durable reconciliation'],
   ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
@@ -114,6 +116,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/spill/spill', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
   ['rsh/Modules/Official/shell/shell', ['host']],
   ['rsh/Modules/Official/attachment/attachment', ['host']],
@@ -131,6 +134,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],

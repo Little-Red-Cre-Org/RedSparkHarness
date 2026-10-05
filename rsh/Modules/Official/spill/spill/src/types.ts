@@ -7,8 +7,8 @@
  */
 
 import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 /**
  * Opaque model-facing handle for one spilled artifact. A local backend may use a

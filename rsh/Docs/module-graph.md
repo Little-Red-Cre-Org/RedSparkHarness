@@ -475,6 +475,7 @@ flowchart TD
   pkg_web_search_perplexity --> pkg_web
   pkg_spill --> pkg_brand
   pkg_spill --> pkg_llm
+  pkg_spill --> pkg_native_runtime
   pkg_spill --> pkg_session
   pkg_api_workspace_controller --> pkg_api_gateway
   pkg_api_workspace_controller --> pkg_client_connection
@@ -520,6 +521,7 @@ flowchart TD
   pkg_fs --> pkg_invariants
   pkg_fs --> pkg_plugin_host
   pkg_fs --> pkg_sandbox
+  pkg_spill_local --> pkg_native_runtime
   pkg_spill_local --> pkg_spill
   pkg_session_log_export --> pkg_session
   pkg_session_log_export --> pkg_session_persistence
@@ -773,6 +775,9 @@ flowchart TD
   pkg_tool_fs --> pkg_tools
   pkg_tool_fs --> pkg_user_approval
   pkg_tool_fs_search --> pkg_llm
+  pkg_tool_fs_search --> pkg_native_prompt
+  pkg_tool_fs_search --> pkg_native_runtime
+  pkg_tool_fs_search --> pkg_native_tools
   pkg_tool_fs_search --> pkg_output_retention
   pkg_tool_fs_search --> pkg_session
   pkg_tool_fs_search --> pkg_spill
@@ -1371,7 +1376,7 @@ flowchart TD
 | [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
 | [`web-search-exa`](../Modules/Official/web/web-search-exa) | `web` | [`launch-environment`](../Core/util/launch-environment), [`web`](../Modules/Official/web/web) |
 | [`web-search-perplexity`](../Modules/Official/web/web-search-perplexity) | `web` | [`launch-environment`](../Core/util/launch-environment), [`web`](../Modules/Official/web/web) |
-| [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
+| [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`api-workspace-controller`](../Programs/Web/api/workspace-controller) | `api` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`host-directory-picker`](../Programs/Web/host/directory-picker), [`session`](../Engine/core/session), [`storage-domain`](../Core/storage/storage-domain), [`typert-protocol`](../Core/typert/protocol), [`workspace`](../Modules/Official/workspace/workspace) |
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
 | [`client-native-application`](../Programs/Web/client/native-application) | `client` | [`session`](../Engine/core/session) |
@@ -1387,7 +1392,7 @@ flowchart TD
 | [`session-snapshot`](../Tests/test-support/session-snapshot) | `test-support` | [`http-proxy`](../Core/util/http-proxy), [`session`](../Engine/core/session) |
 | [`agent`](../Engine/core/agent) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`typert-protocol`](../Core/typert/protocol), [`util-values`](../Core/util/values) |
 | [`fs`](../Modules/Official/fs/fs) | `fs` | [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox) |
-| [`spill-local`](../Modules/Official/spill/spill-local) | `spill` | [`spill`](../Modules/Official/spill/spill) |
+| [`spill-local`](../Modules/Official/spill/spill-local) | `spill` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`spill`](../Modules/Official/spill/spill) |
 | [`session-log-export`](../Engine/session-query/session-log-export) | `session-query` | [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence) |
 | [`session-persistence-jsonl`](../Engine/session/session-persistence-jsonl) | `session` | [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence) |
 | [`session-projection-cache`](../Engine/session/session-projection-cache) | `session` | [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`storage-domain`](../Core/storage/storage-domain) |
@@ -1440,7 +1445,7 @@ flowchart TD
 | [`agent-tool-presentation`](../Engine/core/agent-tool-presentation) | `core` | [`tools`](../Engine/core/tools) |
 | [`tool-goal`](../Engine/goal/tool-goal) | `goal` | [`agent`](../Engine/core/agent), [`goal`](../Engine/goal/goal), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`tool-fs`](../Modules/Official/fs/tool-fs) | `fs` | [`attachment`](../Modules/Official/attachment/attachment), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`native-approval`](../Modules/Official/interaction/native-approval), [`native-model-execution`](../Engine/core/native-model-execution), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy), [`native-tools`](../Engine/core/native-tools), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`session`](../Engine/core/session), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-approval`](../Modules/Official/interaction/user-approval) |
-| [`tool-fs-search`](../Modules/Official/fs/tool-fs-search) | `fs` | [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`subprocess`](../Core/subprocess/subprocess), [`system-prompt`](../Engine/core/system-prompt), [`timeout`](../Core/util/timeout), [`tools`](../Engine/core/tools) |
+| [`tool-fs-search`](../Modules/Official/fs/tool-fs-search) | `fs` | [`llm`](../Engine/llm/llm), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`subprocess`](../Core/subprocess/subprocess), [`system-prompt`](../Engine/core/system-prompt), [`timeout`](../Core/util/timeout), [`tools`](../Engine/core/tools) |
 | [`tool-present`](../Modules/Official/fs/tool-present) | `fs` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`tool-str-replace-editor`](../Modules/Official/fs/tool-str-replace-editor) | `fs` | [`fs`](../Modules/Official/fs/fs), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`tools`](../Engine/core/tools) |
 | [`tool-skill`](../Modules/Official/skill/tool-skill) | `skill` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`skill`](../Modules/Official/skill/skill), [`tools`](../Engine/core/tools) |

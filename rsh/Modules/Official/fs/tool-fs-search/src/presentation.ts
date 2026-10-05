@@ -30,9 +30,9 @@ import type {
   SearchFileMatches,
   SearchLineMatch,
   SearchResultView,
-} from '@deepseek-ai/dsh-tools'
+} from '@deepseek-ai/dsh-native-tools/presentation'
 import type { RetainedItems } from '@deepseek-ai/dsh-output-retention'
-import type { GrepMatch } from './search-core.ts'
+import type { GrepMatch } from './ripgrep-core.ts'
 
 /**
  * The retention fields a meta projection reads: the retained page, whether the

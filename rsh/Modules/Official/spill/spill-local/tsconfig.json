@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../../../Core/vendor/cosmokit"
@@ -17,6 +19,9 @@
     },
     {
       "path": "../spill"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }
