@@ -1,0 +1,8 @@
+version: 1
+scenario: mcp-image-native
+profile: native-headless
+composition: native-mcp-image
+recording: authored
+header:
+  class: native-mcp-image
+  pin: true
