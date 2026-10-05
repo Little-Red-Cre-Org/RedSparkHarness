@@ -10,9 +10,9 @@ The native terminal needs model and reasoning selection without a separate catal
 
 ## Decision
 
-Menus consume the actual `modelDirectory` and `modelSelection` Providers. The existing root executor admits selection through exclusive idle Session maintenance; each complete choice compares its observed intent revision and flushes the existing writer. The controller rejects selection while input drains, and menu cancellation drains accepted maintenance before terminal disposal.
+Menus consume the actual `modelDirectory` and `modelSelection` Providers. The existing root executor supplies the sole Session owner; menus reserve its Agent through exclusive idle maintenance or reuse the cold-open maintenance already admitted; each complete choice compares its observed intent revision and flushes the existing writer. The controller rejects selection while input drains, and menu cancellation drains accepted maintenance before terminal disposal.
 
-## Alternatives
+## Alternatives considered
 
 Embedding a model catalog would drift from configured Providers. Writing directly from Ink would bypass Session maintenance and conflict with turn execution.
 

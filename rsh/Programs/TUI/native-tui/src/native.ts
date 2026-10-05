@@ -33,7 +33,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
     selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     super({
       models: selection !== undefined && directory !== undefined
-        ? terminalModelOperations(executor, selection, directory, config) : undefined,
+        ? terminalModelOperations(executor, selection, directory, config, agent => context.require('agents').execution(agent)) : undefined,
       turn: (request, signal) => executor.executeRootTurn(request, signal),
       open: async (id, resume, signal) => {
         await executor.executeSessionOperation({ id, resume }, () => Promise.resolve(undefined), signal)

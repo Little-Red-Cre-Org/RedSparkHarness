@@ -98,8 +98,9 @@ export function TerminalView({ interaction, locale, model, background }: {
             ...(observed.resolved.reasoning?.efforts.map(effort => ({ ...selected, reasoningEffort: String(effort.id) })) ?? [])]
         const labels = text === '/model' ? observed.catalog.groups.flatMap(group => group.models.map(entry => `${group.name} / ${entry.name} (${entry.id})`))
           : [copy.providerDefault, ...(observed.resolved.reasoning?.efforts.map(effort => effort.name) ?? [])]
-        setMenu({ title: text === '/model' ? copy.models : copy.reasoning, labels, choices, observed })
-        setNotice(observed.catalog.failures.map(failure => `${failure.name}: ${failure.message}`).join('\n'))
+        setMenu(choices.length === 0 ? undefined : { title: text === '/model' ? copy.models : copy.reasoning, labels, choices, observed })
+        setNotice([...(choices.length === 0 ? [copy.noModels] : []),
+          ...observed.catalog.failures.map(failure => `${failure.name}: ${failure.message}`)].join('\n'))
       }, (error: unknown) => { setNotice(String(error)) })
       return
     }
@@ -118,8 +119,9 @@ export function TerminalView({ interaction, locale, model, background }: {
     }
   }
   const width = Math.max(20, stdout.columns - 2)
-  const info = state.model?.resolved
   const choice = state.choice ?? model
+  const observed = state.model?.resolved
+  const info = observed?.provider === choice.provider && observed.id === choice.model ? observed : undefined
   const effort = choice.reasoningEffort ?? info?.reasoning?.defaultEffort
   const calls = new Map(state.events.flatMap(event => event.type === 'assistant/message'
     ? event.data.message.content.filter(block => block.type === 'tool-call').map(block => [block.id, block] as const) : []))

@@ -10,9 +10,9 @@ Status: implemented
 
 ## 决策
 
-菜单消费实际 `modelDirectory` 与 `modelSelection` Provider。既有根执行器通过空闲时的独占 Session 维护接受选择；完整选择比较已观察的意图 revision，并刷新既有 writer。控制器在输入排空期间拒绝选择；菜单取消会等待接受的维护操作排空，再释放终端。
+菜单消费实际 `modelDirectory` 与 `modelSelection` Provider。既有根执行器提供唯一 Session owner；菜单复用其 Agent 的空闲独占维护，冷恢复时沿用已接受的维护操作；完整选择比较已观察的意图 revision，并刷新既有 writer。控制器在输入排空期间拒绝选择；菜单取消会等待接受的维护操作排空，再释放终端。
 
-## 替代方案
+## 考虑的替代方案
 
 内嵌模型目录会偏离已配置 Provider；Ink 直接写日志会绕过 Session 维护并与轮次执行冲突。
 

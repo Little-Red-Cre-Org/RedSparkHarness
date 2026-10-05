@@ -42,7 +42,7 @@ it('owns idle model maintenance, durable revision forwarding and cancelled menu 
       if (metadataFailure) throw new Error('metadata refused')
       return { provider, id: model, name: model }
     },
-  }, config)
+  }, config, () => ({ status: 'maintenance', runMaintenance: () => { throw new Error('already reserved') } }))
   const execution = { turn: async () => ({ exitCode: 0 }), open: async () => undefined, history: async () => [], models }
   const lifetime = new AbortController()
   const controller = new TerminalController(execution, lifetime.signal, config, id)
@@ -102,11 +102,14 @@ it('owns idle model maintenance, durable revision forwarding and cancelled menu 
     await expect(unsupported.models()).rejects.toThrow('idle terminal')
     await unsupported.settle()
   } finally { await unsupported.close() }
+  const reserve = vi.fn(async <T>(operation: (signal: AbortSignal) => Promise<T>) => operation(lifetime.signal))
   const explicitDefaults = terminalModelOperations({
     executeSessionOperation: async (_request, operation, signal) => operation(owner, signal),
   },
   { state: async () => ({ revision: null, lastUsed: null, next: null }), select, capture: async () => { throw new Error('unused capture') } },
   { providers: () => [], catalog: async defaults => ({ default: defaults, groups: [], failures: [], routableProviders: [] }),
-    resolve: async (provider, model) => ({ provider, id: model, name: model }) }, { ...config, reasoningEffort: ReasoningEffortId('high') })
+    resolve: async (provider, model) => ({ provider, id: model, name: model }) }, { ...config, reasoningEffort: ReasoningEffortId('high') },
+  () => ({ status: 'idle', runMaintenance: reserve }))
   expect((await explicitDefaults.read(id, lifetime.signal)).catalog.default.reasoningEffort).toBe('high')
+  expect(reserve).toHaveBeenCalledOnce()
 })

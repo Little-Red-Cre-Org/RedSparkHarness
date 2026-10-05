@@ -9145,6 +9145,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../Engine/core/native-agent
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../Engine/core/native-headless

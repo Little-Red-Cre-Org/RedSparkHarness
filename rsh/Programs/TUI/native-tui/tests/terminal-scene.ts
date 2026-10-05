@@ -33,6 +33,7 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     await terminal.waitFor('Terminal answer 1.')
     await terminal.waitFor('visible file contents')
     await terminal.waitFor('Terminal answer 2.')
+    await vi.waitFor(() => { expect(terminal.output().lastIndexOf('Ready')).toBeGreaterThan(terminal.output().lastIndexOf('Working')) }, { timeout: 30000 })
     if (modelControls) {
       await terminal.submit('/model')
       await terminal.waitFor('2. Fixture Provider / fixture-alt')
