@@ -5,7 +5,7 @@ import type { Branded } from '@deepseek-ai/dsh-brand'
 /** Identity of one pending Web presentation; it carries no execution authority. */
 export type NativeWebHumanId = Branded<'native-web-human'>
 
-const question = z.strictObject({ id: z.string().min(1), question: z.string(), detail: z.string().optional(),
+const question = z.strictObject({ id: z.string(), question: z.string(), detail: z.string().optional(),
   header: z.string().optional(), options: z.array(z.strictObject({ label: z.string(), description: z.string().optional() })).optional(),
   multiSelect: z.boolean().optional(), intent: z.strictObject({ kind: z.literal('plan-review'), approve: z.string() }).optional() })
 

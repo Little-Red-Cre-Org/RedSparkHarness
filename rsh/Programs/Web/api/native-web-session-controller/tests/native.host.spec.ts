@@ -209,7 +209,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
     expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
     humanSteps = [toolCallResponse('allow', 'guarded', {}), toolCallResponse('deny', 'guarded', {}),
-      toolCallResponse('question', 'ask_user_question', { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }), textResponse('human complete')]
+      toolCallResponse('question', 'ask_user_question', { questions: [{ id: '', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }), textResponse('human complete')]
     const interactive = conversation.send('human input')
     await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('approval') })
     const allowed = conversation.getSnapshot().human!
@@ -222,8 +222,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await conversation.answerHuman(conversation.getSnapshot().human!, { kind: 'approval', outcome: 'rejected' })
     await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('questions') })
     const questionPrompt = conversation.getSnapshot().human!
-    await expect(client.answerHuman(sessionId, questionPrompt.id, { kind: 'questions', answer: { answers: [{ id: 'mode', selected: ['invalid'] }] } })).rejects.toThrow('invalid choices')
-    await conversation.answerHuman(questionPrompt, { kind: 'questions', answer: { answers: [{ id: 'mode', selected: ['Two'] }] } })
+    await expect(client.answerHuman(sessionId, questionPrompt.id, { kind: 'questions', answer: { answers: [{ id: '', selected: ['invalid'] }] } })).rejects.toThrow('invalid choices')
+    await conversation.answerHuman(questionPrompt, { kind: 'questions', answer: { answers: [{ id: '', selected: ['Two'] }] } })
     await interactive
     expect(protectedRuns).toBe(1)
     const audited = (await client.history(sessionId)).events
