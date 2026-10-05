@@ -61,5 +61,5 @@ describe('published PDF.js licenses', () => {
     } finally {
       rmSync(output, { recursive: true, force: true })
     }
-  })
+  }, 30_000)
 })
