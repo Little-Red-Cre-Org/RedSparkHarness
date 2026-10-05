@@ -50,7 +50,7 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 #### 模型看到什么
 
-通过 `session/prompt` 接收的文本和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
+通过 `session/prompt` 接收的文本、资源链接引用和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。资源链接使用兼容承载层的方括号文本，名称与 URI 按 JSON 加引号；相邻文本合并，不抓取资源，并保留文本／图片顺序。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
 
 #### Token 影响
 
