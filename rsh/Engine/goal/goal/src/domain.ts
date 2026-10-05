@@ -52,7 +52,7 @@ export interface GoalMessageSource {
   readonly round: number
 }
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@deepseek-ai/dsh-llm/message' {
   interface MessageSourceMap {
     goal: GoalMessageSource
   }
