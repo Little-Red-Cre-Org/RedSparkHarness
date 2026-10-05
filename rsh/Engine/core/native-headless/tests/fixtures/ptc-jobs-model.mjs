@@ -11,27 +11,21 @@ export const plugin = {
       let step = 0
       context.provide('model', { async *stream() {
         if (step++ === 0) {
-          const agent = agents.requireInitiator()
-          jobs.start({ agent, kind: 'task', label: 'Controlled background work', async run(signal) {
-            await new Promise(resolve => {
-              if (signal.aborted) resolve()
-              else signal.addEventListener('abort', resolve, { once: true })
-            })
-            appendFileSync(input.audit, 'cancelled\n')
-            return { status: 'cancelled', output: 'background task cancelled' }
-          } })
           const programs = [
-            ['wait-timeout', 'Hold a real job wait until code execution times out.', `const listed = await tools.job_list({});
+            ['wait-timeout', 'Hold a real job wait until code execution times out.', `await tools.bash({command: "printf 'background task running\\n'; sleep 30", description: 'Produce live background output', run_in_background: true});
+const listed = await tools.job_list({});
 void tools.job_output({job_id: listed.jobs[0].id, wait: true, timeout_ms: 600000});
 while (true) {}`],
             ['cancel-job', 'Cancel the background job and read its terminal output.', `const listed = await tools.job_list({});
+const live = await tools.job_output({job_id: listed.jobs[0].id});
 await tools.job_kill({job_id: listed.jobs[0].id, reason: "finished"});
-return (await tools.job_output({job_id: listed.jobs[0].id, wait: true})).text;`],
+return live.text + "\\n" + (await tools.job_output({job_id: listed.jobs[0].id, wait: true})).text;`],
           ]
           const replay = input.script?.[0]
           if (replay !== undefined) {
             if (replay.kind !== 'chunks') throw new Error('ptc-jobs: expected recorded chunks')
-            for (const chunk of replay.chunks) yield chunk
+            for (const chunk of replay.chunks) yield chunk.type === 'block-end' && chunk.block.type === 'tool-call' && ['wait-timeout', 'cancel-job'].includes(chunk.block.id)
+              ? { ...chunk, block: { ...chunk.block, arguments: JSON.stringify({ code: programs[chunk.block.id === 'wait-timeout' ? 0 : 1][2], description: programs[chunk.block.id === 'wait-timeout' ? 0 : 1][1] }) } } : chunk
             return
           }
           for (const [index, [id, description, code]] of programs.entries()) {
@@ -40,6 +34,9 @@ return (await tools.job_output({job_id: listed.jobs[0].id, wait: true})).text;`]
           }
           yield { type: 'finish', reason: { kind: 'tool-calls' } }
         } else {
+          const agent = agents.requireInitiator()
+          if (jobs.list(agent)[0]?.status !== 'cancelled') throw new Error('ptc-jobs: Shell cancellation pending')
+          appendFileSync(input.audit, 'cancelled\n')
           const replay = input.script?.[step - 1]
           if (input.script !== undefined) {
             if (replay?.kind !== 'chunks') throw new Error('ptc-jobs: recorded chunks exhausted')
