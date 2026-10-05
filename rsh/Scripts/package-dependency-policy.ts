@@ -17,6 +17,11 @@ const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
   '@deepseek-ai/dsh-session',
 ]
 
+/** Type imports retained by public declarations in independently installed packages. */
+const PUBLISHED_TYPE_DEPENDENCIES = {
+  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+} as const satisfies Readonly<Record<string, readonly string[]>>
+
 /** Development-only package relationships not represented by source imports. */
 const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-api-remotes'],
@@ -96,6 +101,7 @@ export interface PackageDependencyPolicy {
   readonly hostPackages: readonly string[]
   readonly configurationOnlyDevDependencies: Readonly<Record<string, readonly string[]>>
   readonly clientRuntimeDependencies: Readonly<Record<string, readonly string[]>>
+  readonly publishedTypeDependencies?: Readonly<Record<string, readonly string[]>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
   readonly peerRequiredHostExports: HostDependencyExports
@@ -109,6 +115,7 @@ export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
   hostPackages: HOST_DEPENDENCY_PACKAGES,
   configurationOnlyDevDependencies: CONFIGURATION_ONLY_DEV_DEPENDENCIES,
   clientRuntimeDependencies: CLIENT_RUNTIME_DEPENDENCIES,
+  publishedTypeDependencies: PUBLISHED_TYPE_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,
   peerRequiredHostExports: PEER_REQUIRED_HOST_EXPORTS,
