@@ -5,6 +5,8 @@ import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeSdkApplication } from '../src/native.ts'
+import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 
 it('drains model initialization after EOF before releasing its Provider', async () => {
   const entered = Promise.withResolvers<undefined>()
@@ -39,13 +41,14 @@ it('drains model initialization after EOF before releasing its Provider', async 
     },
   }
   const carrier: NativePlugin = {
-    apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model'], provides: ['application'],
+    apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model', 'activeSessions'], provides: ['application'],
     resolve: () => (context) => {
       app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
       context.provide('application', app)
     },
   }
   const host = new NativeHost(resolveInstallation([
+    { plugin: agents, scope, config: undefined }, { plugin: execution, scope, config: undefined },
     { plugin: model, scope, config: undefined }, { plugin: carrier, scope, config: undefined },
   ], 'host'))
   await host.start()
