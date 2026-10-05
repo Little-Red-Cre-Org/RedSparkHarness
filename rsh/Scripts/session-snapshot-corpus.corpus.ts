@@ -42,6 +42,7 @@ const snapshotAdapters = [
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-tui/native-tui.snapshot.ts',
   'snapshots/native-tui/model-controls.snapshot.ts',
+  'snapshots/native-tui/preset-controls.snapshot.ts',
   'snapshots/native-tui/human-interaction.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',

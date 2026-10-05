@@ -8200,12 +8200,12 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -9245,6 +9245,12 @@ importers:
 
   rsh/Programs/TUI/native-tui:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm
