@@ -174,7 +174,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
-  '@deepseek-ai/dsh-agent-presets': ['presets'],
+  '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
   '@deepseek-ai/dsh-rsh': ['lib/runtime.js', 'lib/runtime-*.js'],
   // Native filesystem entries share their storage and error implementations
@@ -204,6 +205,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/host-core-*.js', 'lib/rpc-*.js', 'lib/recovery-config-*.js',
   ],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js'],
   '@deepseek-ai/dsh-pwsh-local': ['lib/resolve.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
@@ -211,7 +214,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Legacy Cordis entries and native values share their pure implementations.
   '@deepseek-ai/dsh-session': ['lib/native.js'],
   '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
   '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js'],

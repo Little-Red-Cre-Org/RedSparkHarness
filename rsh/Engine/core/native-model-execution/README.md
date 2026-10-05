@@ -22,6 +22,8 @@ English | [中文](README.zh.md)
 
 The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt.
 
+An optional `onChunk` observer receives accepted stream chunks from this same dispatch. Observer failures interrupt the attempt and preserve its recorded partial stream; the observer creates neither another model request nor another writer.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.

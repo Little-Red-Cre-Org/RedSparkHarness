@@ -27,9 +27,7 @@ function agent(id: string, parent: NativeScope): NativeAgent {
 function lifecycleEvents(host: NativeHost): {
   on(scope: NativeScope, key: 'agent/created' | 'agent/disposed', listener: (agent: NativeAgent) => void): () => Promise<void>
 } {
-  return host.events as unknown as {
-    on(scope: NativeScope, key: 'agent/created' | 'agent/disposed', listener: (agent: NativeAgent) => void): () => Promise<void>
-  }
+  return host.events
 }
 
 describe('NativeAgentRegistry', () => {
@@ -108,22 +106,32 @@ describe('NativeAgentRegistry', () => {
     const owned = agent('owned', root)
     const entered = Promise.withResolvers<undefined>()
     const release = Promise.withResolvers<undefined>()
+    const cancellation = new AbortController()
+    const cancelled = Promise.withResolvers<undefined>()
     const events: string[] = []
     lifecycleEvents(host).on(root, 'agent/disposed', ({ id }) => { events.push(`disposed:${id}`) })
     const unregister = agents.register(owned)
+    const running = agents.execution(owned).run(async () => {
+      await new Promise<undefined>((resolve) => {
+        cancellation.signal.addEventListener('abort', () => { cancelled.resolve(undefined); resolve(undefined) }, { once: true })
+      })
+      await release.promise
+    })
     agents.onDispose(owned, async () => {
       entered.resolve(undefined)
       await release.promise
     })
+    agents.onDispose(owned, () => { cancellation.abort() })
     try {
-      const draining = unregister()
-      await entered.promise
+      const draining = agents.dispose()
+      await Promise.all([entered.promise, cancelled.promise])
       expect(agents.get(owned.id)).toBeUndefined()
       expect(agents.list()).toEqual([])
       expect(events).toEqual([])
-      expect(() => agents.onDispose(owned, () => undefined)).toThrow('not the registered instance')
+      expect(() => agents.onDispose(owned, () => undefined)).toThrow('initiator scope is disposed')
       release.resolve(undefined)
-      await draining
+      await Promise.all([draining, running])
+      await unregister()
       expect(events).toEqual(['disposed:owned'])
     } finally {
       release.resolve(undefined)

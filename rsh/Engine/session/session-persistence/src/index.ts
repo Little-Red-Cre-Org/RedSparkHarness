@@ -3,7 +3,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
 import type { SessionHandle, SessionAccess } from './handle.ts'
 import type { SessionPersistenceCreateOptions, SessionPersistenceListOptions, SessionPersistenceOpenOptions, SessionPersistenceSnapshot, SessionPersistenceStatOptions } from './types.ts'
-import type { NativeSessionPersistenceOperations } from './native.ts'
+import type { NativeSessionDeletionOperations, NativeSessionPersistenceOperations } from './native.ts'
 export * from './native.ts'
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -32,6 +32,9 @@ declare module '@deepseek-ai/cordis' {
  * on this backend instance observe at least that prefix.
  */
 export abstract class SessionPersistence extends Service implements NativeSessionPersistenceOperations {
+  /** Explicit optional physical deletion capability; unsupported adapters leave it absent. */
+  declare readonly deletions?: NativeSessionDeletionOperations
+
   constructor(ctx: Context) {
     super(ctx, 'sessionPersistence')
   }

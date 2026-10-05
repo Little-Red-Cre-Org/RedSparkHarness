@@ -322,6 +322,52 @@ interface SessionPersistenceSnapshot {
 
 可选的 `eventCount`/`sizeBytes` 字段仍是供明确需要它们的 consumer 使用的低成本 backend observation。Session 列表不借助这两个字段打开冷日志，只读取 header 与经过 identity 校验的 projection cache hint，因此 cache 或 Session format 升级不会把启动变成 body scan。
 
+## 可恢复删除
+
+可选的 `deletions` 能力将非活动 Session 文件移入保留空间，仅在原身份尚未占用时恢复原始字节。不支持此能力的 Provider 不提供该属性。取消仅在文件移动获准前生效；获准的移动会完成，不执行回滚。
+
+```ts type-equiv
+/** Identity of one retained physical deletion, distinct from its Session identity. */
+type SessionDeletionId = Branded<'SessionDeletionId'>
+```
+
+```ts type-equiv
+/** Receipt for a removed Session whose original bytes remain recoverable. */
+interface SessionDeletionReceipt { readonly id: SessionDeletionId; readonly sessionId: SessionId }
+```
+
+```ts type-equiv
+/** Explicit capability; absence means this Provider does not support physical recoverable deletion. */
+interface NativeSessionDeletionOperations {
+  /** Move an inactive stored Session out of its live namespace without rewriting generations.
+   * @param id - exact stored Session identity.
+   * @param options - cancellation before namespace-move admission; an accepted move completes
+   * without rollback or caller cancellation.
+   * @returns retained deletion identity after the namespace move completes.
+   */
+  delete(id: SessionId, options?: { readonly signal?: AbortSignal
+    readonly expectedRevision?: SessionPersistenceRevision }): Promise<SessionDeletionReceipt>
+  /** Restore original bytes only when the live identity is still absent.
+   * @param id - retained deletion identity.
+   * @param options - cancellation before namespace-move admission; an accepted move completes
+   * without rollback or caller cancellation.
+   * @returns restored Session identity; conflicting live identities reject.
+   */
+  restore(id: SessionDeletionId, options?: { readonly signal?: AbortSignal; readonly expectedCwd?: string }): Promise<SessionId>
+  /** Read the retained immutable header without restoring or migrating a generation.
+   * @param id - retained deletion identity.
+   * @param options - cancellation during disk validation.
+   * @returns validated original header for route admission.
+   */
+  inspect(id: SessionDeletionId, options?: { readonly signal?: AbortSignal }): Promise<SessionHeader>
+  /** Enumerate completed retained deletions without opening or activating a Session.
+   * @param options - cancellation during receipt scanning.
+   * @returns validated receipts; incomplete preparations are not advertised.
+   */
+  list(options?: { readonly signal?: AbortSignal }): Promise<readonly SessionDeletionReceipt[]>
+}
+```
+
 ## 后端
 
 随产品交付的 provider 实现抽象 `SessionPersistence` 约定（`create`/`open`/`stat`/`list`，逐会话 `SessionHandle` 承载 `read`/`append`/`flush`/`close`，全程可选支持取消），并通过共享的持久化契约套件：

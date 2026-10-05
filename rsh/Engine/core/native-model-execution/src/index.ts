@@ -21,6 +21,8 @@ export interface NativeModelStepRequest {
   readonly options: GenerateOptions
   readonly append: (event: SessionEvent) => void
   readonly persist: () => Promise<void>
+  /** Observe each accepted stream chunk without owning another model dispatch. */
+  readonly onChunk?: (chunk: StreamChunk) => void
 }
 
 /** Recorded assistant message and the model's terminal reason. */
@@ -51,6 +53,7 @@ export class NativeModelExecution {
         if (finished) throw new Error('native-model-execution: model emitted data after terminal finish')
         if (chunk.type === 'finish') finished = true
         assembler.push(accumulator.push({ time: Date.now(), chunk }).chunk)
+        request.onChunk?.(chunk)
       }
       options.signal?.throwIfAborted()
       if (!finished) throw new Error('native-model-execution: model ended without terminal finish')

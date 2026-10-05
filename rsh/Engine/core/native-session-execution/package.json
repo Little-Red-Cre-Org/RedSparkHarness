@@ -1,0 +1,70 @@
+{
+  "name": "@deepseek-ai/dsh-native-session-execution",
+  "description": "Native active Session execution routing with cancellation and drain",
+  "version": "0.1.5-rc.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/core/native-session-execution"
+  },
+  "type": "module",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "agents"
+      ],
+      "optional": [],
+      "provides": [
+        "sessionExecution",
+        "activeSessions"
+      ]
+    }
+  },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json",
+    "./root-route": {
+      "types": "./lib/types/root-route.d.ts",
+      "default": "./lib/root-route.js"
+    },
+    "./read-history": {
+      "types": "./lib/types/read-history.d.ts",
+      "default": "./lib/read-history.js"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/root-route.js",
+    "lib/read-history.js",
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-session-persistence": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
+  }
+}

@@ -2131,6 +2131,13 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+    devDependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
 
   rsh/Engine/core/native-code-runtime:
     dependencies:
@@ -2140,6 +2147,12 @@ importers:
 
   rsh/Engine/core/native-headless:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../preset/agent-presets
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../Modules/Official/fs/fs
@@ -2167,6 +2180,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../../Modules/Official/sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../context/native-time-context
@@ -2182,6 +2198,12 @@ importers:
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/workspace/workspace
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../workspace/workspace-definition
     devDependencies:
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
@@ -2216,6 +2238,33 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+
+  rsh/Engine/core/native-session-execution:
+    dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../preset/agent-presets
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../session/session-persistence
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../workspace/workspace-definition
 
   rsh/Engine/core/native-tools:
     dependencies:
@@ -2901,6 +2950,15 @@ importers:
 
   rsh/Engine/preset/agent-presets:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -2944,9 +3002,6 @@ importers:
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../core/scope
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../core/session
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../session/session-projection
@@ -4546,6 +4601,15 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+
+  rsh/Engine/workspace/workspace-definition:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
 
   rsh/Modules/Community/experimental/agent-team:
     dependencies:
@@ -7566,16 +7630,12 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@deepseek-ai/cordis':
+      '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@deepseek-ai/dsh-invariants':
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/invariants
+        version: link:../../../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -7588,6 +7648,28 @@ importers:
       '@deepseek-ai/dsh-storage-domain':
         specifier: workspace:^
         version: link:../../../../Core/storage/storage-domain
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence-jsonl
+      '@deepseek-ai/dsh-storage-json':
+        specifier: workspace:^
+        version: link:../../../../Core/storage/storage-json
       '@deepseek-ai/dsh-typert-protocol':
         specifier: workspace:^
         version: link:../../../../Core/typert/protocol

@@ -23,6 +23,8 @@ kind: "package-reference"
 
 `./native` Provider 不接受配置。`execute` 调用需要开放的 Session、turn 与 step 编号、`GenerateOptions`，以及由 Session writer 拥有的追加和持久化回调。调用方负责构建请求、执行工具、关闭 turn 及管理存储生命周期。模型流必须以一条终止 `finish` 结束，之后不能再输出 chunk。终止原因为 error 或 aborted 时，服务记录 attempt 后让步骤失败。
 
+可选 `onChunk` 观察者接收同一次 dispatch 已接纳的流块。观察者失败会中断尝试并保留其已记录的部分流；观察者不会创建另一次模型请求或另一个 writer。
+
 <a id="dev-note"></a>
 ## 开发备注
 

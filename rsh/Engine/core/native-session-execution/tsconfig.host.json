@@ -1,0 +1,37 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../session/session-persistence/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../native-agent"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../../Core/util/brand"
+    },
+    {
+      "path": "../../preset/agent-presets/tsconfig.host.json"
+    },
+    {
+      "path": "../../workspace/workspace-definition"
+    }
+  ]
+}

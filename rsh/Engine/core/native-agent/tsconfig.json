@@ -4,6 +4,8 @@
   "include": ["src"],
   "references": [
     { "path": "../../../Core/util/brand" },
-    { "path": "../../../Core/runtime-diagnostics/native-runtime" }
+    { "path": "../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../llm/llm" },
+    { "path": "../session" }
   ]
 }

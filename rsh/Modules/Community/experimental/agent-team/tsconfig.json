@@ -15,7 +15,7 @@
     { "path": "../../../../Engine/core/agent" },
     { "path": "../../../../Core/typert/protocol" },
     { "path": "../../../../Engine/subagent/subagent" },
-    { "path": "../../../../Engine/session/session-persistence" },
+    { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
     { "path": "../../../../Engine/session/session-projection" },
     { "path": "../../../../Core/runtime-diagnostics/invariants" }
   ]

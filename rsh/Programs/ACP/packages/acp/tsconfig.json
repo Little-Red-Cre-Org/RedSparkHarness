@@ -36,7 +36,7 @@
       "path": "../../../../Modules/Official/mcp/mcp-client"
     },
     {
-      "path": "../../../../Engine/session/session-persistence"
+      "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../../../../Modules/Official/interaction/user-approval"

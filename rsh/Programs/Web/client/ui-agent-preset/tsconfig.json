@@ -48,7 +48,7 @@
       "path": "../../api/session-controller/tsconfig.client.json"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets"
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
     },
     {
       "path": "../../../../Engine/core/session"

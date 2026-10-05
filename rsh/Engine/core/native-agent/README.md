@@ -25,6 +25,10 @@ The `./native` entry accepts only an empty configuration object and provides `ag
 
 `withInitiator()` and `withoutInitiator()` preserve their exact synchronous value or returned native Promise. They do not infer identity from an installation or registration owner. `dispose()` rejects new initiator boundaries, waits for returned Promise boundaries, then invalidates initiator reads and releases any remaining registrations. Explicit deregistration emits while the Host event bus accepts delivery; Host shutdown closes that bus before provider cleanup, so its remaining entries release without dispatch. An operation that begins disposal must not wait for that same disposal from inside its own boundary.
 
+`execution(agent)` exposes a FIFO operation owner for that exact registered Agent. Ordinary work queues in admission order; idle maintenance reserves the owner synchronously and refuses busy identities. Disposal cancels queued and active work, waits for accepted bodies, and releases their cleanup registrations. Session writers remain Program-owned.
+
+Agent cleanup starts every registered release before waiting for any completion, so cancellation contributions can unblock active execution. Registry disposal follows the same order and reports all failures after initiator operations and registrations drain.
+
 ## Model Experience
 
 None, as Agent identity and initiator attribution add no model request content.

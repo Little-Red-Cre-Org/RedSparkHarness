@@ -27,7 +27,7 @@
     { "path": "../../../../Core/util/brand" },
     { "path": "../../../../Core/util/crypto" },
     { "path": "../../../../Core/util/workspace-path" },
-    { "path": "../../../../Modules/Official/workspace/workspace" },
+    { "path": "../../../../Modules/Official/workspace/workspace/tsconfig.client.json" },
     { "path": "../../../../Core/typert/protocol" }
   ]
 }

@@ -9,6 +9,8 @@
  * @module
  */
 
+import { stat } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
 import type { Session, SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
 import {
@@ -63,6 +65,8 @@ export interface JsonlHandleStorage {
 export interface StorageHandleState {
   /** The stored next-seq (the logical end this handle knows). */
   cursor: number
+  /** Original physical Session directory identity; a recreated same-id directory cannot replace it. */
+  directoryIdentity?: string
   /** Whether the session has a durable artifact yet. */
   materialized: boolean
   /** Torn-tail truncation point, consumed by the first new append. */
@@ -167,7 +171,19 @@ export class JsonlSessionHandle implements SessionHandle {
     length: number,
     signal?: AbortSignal,
   ): Promise<SessionHandleReadResult> {
+    if (this.state.directoryIdentity !== undefined) {
+      const identity = await stat(dirname(path), { bigint: true })
+      if (`${identity.dev}:${identity.ino}` !== this.state.directoryIdentity) {
+        throw new Error('Session read handle directory identity changed')
+      }
+    }
     const source = await this.storage.readStoredLog(path, this.id, signal)
+    if (this.state.directoryIdentity !== undefined) {
+      const identity = await stat(dirname(path), { bigint: true })
+      if (`${identity.dev}:${identity.ino}` !== this.state.directoryIdentity) {
+        throw new Error('Session read handle directory identity changed during read')
+      }
+    }
     if (source.events.length < this.observedLength) {
       throw new Error(`session "${this.id}": stored log shrank below a previously observed prefix (${source.events.length} < ${this.observedLength})`)
     }
@@ -394,9 +410,40 @@ export class JsonlBackendTracker {
   private readonly writers = new Map<SessionId, JsonlSessionHandle | null>()
   private readonly pending = new Map<SessionId, PendingSession>()
   private counter = 0
+  private readonly mutations = new Set<SessionId>()
+  private readonly openingReads = new Map<SessionId, number>()
 
   /** @param name - backend label used in in-memory revision tokens and teardown errors. */
   constructor(private readonly name: string) {}
+
+  /** Reserve a read admission across its asynchronous construction.
+   * @param id - exact requested Session.
+   * @returns disposer releasing the construction reservation.
+   */
+  reserveRead(id: SessionId): () => void {
+    this.assertNotMutating(id)
+    this.openingReads.set(id, (this.openingReads.get(id) ?? 0) + 1)
+    return () => {
+      const count = (this.openingReads.get(id) ?? 1) - 1
+      if (count === 0) this.openingReads.delete(id)
+      else this.openingReads.set(id, count)
+    }
+  }
+  /** Reserve physical mutation only with no accepted or constructing handles.
+   * @param id - exact stored Session.
+   * @returns disposer releasing mutation admission.
+   */
+  claimMutation(id: SessionId): () => void {
+    this.assertNotMutating(id)
+    if (this.writers.has(id) || this.openingReads.has(id) || [...this.openHandles].some(handle => handle.id === id)) {
+      throw new SessionAlreadyOwnedError(id)
+    }
+    this.mutations.add(id)
+    return () => { this.mutations.delete(id) }
+  }
+  private assertNotMutating(id: SessionId): void {
+    if (this.mutations.has(id)) throw new SessionAlreadyOwnedError(id)
+  }
 
   /**
    * Claim write ownership and record the created session as pending, making
@@ -411,6 +458,7 @@ export class JsonlBackendTracker {
    *   write handle holds the id — for create, the duplicate is the fact.
    */
   registerCreated(header: SessionHeader, inheritedEventCount: SessionLogOffset): void {
+    this.assertNotMutating(header.id)
     if (this.writers.has(header.id)) throw new SessionAlreadyExistsError(header.id)
     this.writers.set(header.id, null)
     this.pending.set(header.id, {
@@ -426,6 +474,7 @@ export class JsonlBackendTracker {
    * @throws {SessionAlreadyOwnedError} when an active write handle exists.
    */
   claimWrite(id: SessionId): void {
+    this.assertNotMutating(id)
     if (this.writers.has(id)) throw new SessionAlreadyOwnedError(id)
     this.writers.set(id, null)
   }

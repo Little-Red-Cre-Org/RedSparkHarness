@@ -27,7 +27,7 @@
       "path": "../../../../Modules/Official/sandbox/sandbox-policy"
     },
     {
-      "path": "../../../../Engine/session/session-persistence"
+      "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../../../../Core/typert/protocol"

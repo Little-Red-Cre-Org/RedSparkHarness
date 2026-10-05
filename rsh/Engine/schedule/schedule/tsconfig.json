@@ -30,7 +30,7 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../../session/session-persistence"
+      "path": "../../session/session-persistence/tsconfig.host.json"
     },
     {
       "path": "../../session/session-persistence-jsonl"
