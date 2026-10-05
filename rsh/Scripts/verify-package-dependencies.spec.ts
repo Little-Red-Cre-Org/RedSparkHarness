@@ -214,8 +214,15 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.clientRuntimeDependencies).toEqual({
+      '@deepseek-ai/dsh-client-ui-primitives': [
+        '@shikijs/langs', 'anser', 'clsx', 'katex', 'mdast-util-from-markdown', 'mdast-util-gfm', 'mdast-util-math',
+        'micromark-core-commonmark', 'micromark-extension-gfm', 'micromark-extension-math', 'micromark-factory-space',
+        'micromark-util-character', 'micromark-util-classify-character', 'micromark-util-sanitize-uri',
+        'micromark-util-symbol', 'shiki',
+      ],
       '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
+      '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
