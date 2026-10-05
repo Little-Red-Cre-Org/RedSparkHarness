@@ -212,6 +212,7 @@ describe('package dependency scope', () => {
     })
     expect(PACKAGE_DEPENDENCY_POLICY.clientRuntimeDependencies).toEqual({
       '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
+      '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
@@ -703,14 +704,14 @@ describe('dependency sections', () => {
     expect(expected.get('immer')?.section).toBe('dependencies')
     expect(expected.get('zustand')?.section).toBe('dependencies')
     expect(collectClientRuntimeDependencyPolicyViolations(
-      [subject], subject.workspaceNames, runtimePolicy,
+      [subject], runtimePolicy,
     )).toEqual([])
     expect(collectPackageDependencyViolations(state)).toEqual([])
     repairPackageDependencyManifest(subject)
     expect(subject.manifest.dependencies).toEqual({ immer: '^10.1.1', zustand: '~4.4.7' })
 
     expect(collectClientRuntimeDependencyPolicyViolations(
-      [subject], subject.workspaceNames, policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
+      [subject], policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
     )).toEqual(['clientRuntimeDependencies lists unused @f/probe dependency missing'])
   })
 
@@ -989,6 +990,47 @@ describe('dependency sections', () => {
       'verify-package-dependencies: 1 Host runtime edge(s) remain in peerDependencies because their exports require shared identity across 1 package(s):',
       '  @deepseek-ai/dsh-probe -> @deepseek-ai/dsh-runtime: @deepseek-ai/dsh-runtime#runtimeValue',
     ])
+  })
+
+  it('preserves exact native optional peers and matching browser peers', () => {
+    const scope = '@deepseek-ai/dsh-scope'
+    const sessionManifest: PackageDependencyManifest = {
+      name: '@deepseek-ai/dsh-session',
+      exports: { './native': './lib/native.js' },
+      peerDependencies: { [CORDIS]: 'workspace:^', [scope]: 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', [scope]: 'workspace:^' },
+      peerDependenciesMeta: { [scope]: { optional: true } },
+    }
+    const session = {
+      ...facts(sessionManifest),
+      allSourceUses: new Map(),
+      hostRuntimeSourceUses: new Map([[scope, ['src/index.ts']]]),
+      hostRuntimeExportUses: [],
+      workspaceNames: new Set([CORDIS, scope]),
+    }
+    const state = (subject: PackageDependencyFacts) => ({
+      facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames,
+    })
+    expect(collectPackageDependencyViolations(state(session))).toEqual([])
+    sessionManifest.peerDependenciesMeta = { [scope]: { optional: false } }
+    expect(collectPackageDependencyViolations(state(session))).toContainEqual(expect.stringContaining(scope))
+
+    const rendererManifest: PackageDependencyManifest = {
+      name: '@deepseek-ai/dsh-client-ui-renderer',
+      peerDependencies: { react: '^18.2.0' },
+      devDependencies: { react: '^18.2.0' },
+    }
+    const renderer = {
+      ...facts(rendererManifest),
+      cordisPeerRequired: false,
+      allSourceUses: new Map(),
+      hostRuntimeSourceUses: new Map([['react', ['src/native.ts']]]),
+      hostRuntimeExportUses: [],
+      workspaceNames: new Set<string>(),
+    }
+    expect(collectPackageDependencyViolations(state(renderer))).toEqual([])
+    rendererManifest.devDependencies = { react: '^17.0.0' }
+    expect(collectPackageDependencyViolations(state(renderer))).toContainEqual(expect.stringContaining('react must be matching'))
   })
 
   it('reports wrong sections, workspace ranges, and stale peer metadata', () => {
