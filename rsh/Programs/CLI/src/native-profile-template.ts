@@ -48,6 +48,8 @@ export function shippedNativeProfileComposition(
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
+      { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,
+        config: { dshHome: home } },
       { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: ROOT },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
