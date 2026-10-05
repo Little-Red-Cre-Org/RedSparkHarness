@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-client-web/src/loader-status
  */
 import type { FiberState } from '@deepseek-ai/cordis'
+import type { BootEntryState } from './boot-page.ts'
 
 /**
  * Value mirror of cordis's `FiberState` const enum: a const enum has no
@@ -22,7 +23,7 @@ export const FIBER_STATE = {
 } as const
 
 /** One entry's projected state label (lower-case face of {@link FiberState}). */
-export type LoaderEntryState = 'pending' | 'loading' | 'active' | 'failed' | 'disposed' | 'unloading'
+export type LoaderEntryState = BootEntryState
 
 /** Label for each fiber state, keyed by member (inlining-safe — no reverse mapping). */
 export const STATE_LABELS: Record<FiberState, LoaderEntryState> = {

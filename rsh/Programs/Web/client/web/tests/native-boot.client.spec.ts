@@ -55,6 +55,30 @@ describe('native browser composition', () => {
     expect(events).toEqual(['activate', 'mount', 'unmount', 'dispose'])
   })
 
+  it('stops a mounted renderer when the progress callback fails after startup', async () => {
+    const events: string[] = []
+    const failure = new Error('progress callback failed')
+    const renderer: NativePlugin = {
+      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientApplication', 'clientRenderer'],
+      resolve: () => (context) => {
+        context.provide('clientApplication', { render: () => null })
+        context.provide('clientRenderer', {
+          mount: () => {
+            events.push('mount')
+            return () => { events.push('unmount') }
+          },
+        })
+        context.own(() => { events.push('dispose') })
+      },
+    }
+    await expect(bootNativeClient({
+      modules: modulesOf({ renderer: { plugin: renderer } }),
+      selections: [{ id: 'renderer', config: {} }], container: document.createElement('div'),
+      onEntryState: (_id, state) => { if (state === 'active') throw failure },
+    })).rejects.toBe(failure)
+    expect(events).toEqual(['mount', 'unmount', 'dispose'])
+  })
+
   it('rejects missing graph rows and missing native plugin exports', async () => {
     const modules = modulesOf({ legacy: { apply: () => {} } })
     const container = document.createElement('div')
