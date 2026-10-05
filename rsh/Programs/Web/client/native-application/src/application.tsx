@@ -49,6 +49,10 @@ function Conversation({ controller, t }: { controller: NativeConversationControl
       <details><summary>{t('facts')}</summary>
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
       </details>
+      {snapshot.liveText === undefined ? null : <article aria-label={t('live')}><strong>{t('assistant')}</strong>
+        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
+        {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
+      </article>}
       <form onSubmit={(event) => {
         event.preventDefault()
         if (!ready || draft.trim().length === 0) return
@@ -72,14 +76,18 @@ export const plugin: NativePlugin = {
   requires: ['clientNativeSession'], provides: ['clientApplication'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
-      || Object.keys(input).some(key => key !== 'locale'))) throw new TypeError('native conversation: invalid configuration')
+      || Object.keys(input).some(key => !['locale', 'maxLiveTextChars', 'maxLiveEvents'].includes(key)))) throw new TypeError('native conversation: invalid configuration')
     const locale = input !== undefined && 'locale' in input ? input.locale : undefined
     if (locale !== undefined && locale !== 'en' && locale !== 'zh') throw new TypeError('native conversation: locale must be en or zh')
+    const maxLiveTextChars = input !== undefined && 'maxLiveTextChars' in input ? input.maxLiveTextChars : undefined
+    const maxLiveEvents = input !== undefined && 'maxLiveEvents' in input ? input.maxLiveEvents : undefined
+    if (typeof maxLiveTextChars !== 'number' || !Number.isSafeInteger(maxLiveTextChars) || maxLiveTextChars < 1
+      || typeof maxLiveEvents !== 'number' || !Number.isSafeInteger(maxLiveEvents) || maxLiveEvents < 1) throw new TypeError('native conversation: invalid live presentation limits')
     return (context) => {
       const selected = locale ?? (globalThis.navigator.languages.some(language => language.toLowerCase().startsWith('zh')) ? 'zh' : 'en')
       const dictionary = selected === 'zh' ? zh : en
       const t: Translate = key => dictionary[key]
-      const controller = new NativeConversationController(context.require('clientNativeSession'))
+      const controller = new NativeConversationController(context.require('clientNativeSession'), { maxLiveTextChars, maxLiveEvents })
       context.own(() => controller.close())
       context.provide('clientApplication', { render: () => <Conversation controller={controller} t={t} /> })
       void controller.load()
