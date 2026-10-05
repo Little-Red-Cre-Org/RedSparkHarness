@@ -10182,6 +10182,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-tool-todo':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/todo/tool-todo
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31

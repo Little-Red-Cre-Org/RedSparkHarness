@@ -161,6 +161,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
@@ -194,6 +195,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo/client-native', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
   ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],

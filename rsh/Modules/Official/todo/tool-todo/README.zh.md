@@ -49,6 +49,8 @@ kind: "package-reference"
 
 原生 `./native` 入口从 profile 选择 `tools` 与 `activeSessions`，并要求相同的显式并行配置。成功调用等待 `todo/write` 持久化后才返回计数。`readTodos(owner, signal)` 通过当前写入权威重建任务清单，包括恢复与 fork 继承的事件；下一个 `turn/start` 清空清单。原生注册表负责 Agent 归属、取消与注册释放。
 
+无 Cordis 的 ./client-native 入口导出 foldTodos(events) 与 TodoItem，供原生 Client 呈现使用。它复用原生 Host 读取器的持久化验证和回合重置规则，不注册服务，并接受包含 fork 继承事件的完整有序历史。
+
 ### 每次调用做什么
 
 agent 每次更新都发送完整列表；新列表替换旧列表，因此没有部分更新或逐项编辑。每个条目是一句简短的任务描述，外加 `pending`、`in_progress` 或 `completed` 状态。成功的更新会返回新的计数——`Updated todo list: <pending> pending, <inProgress> in progress, <completed> completed.`——UI 随即展示新计划。任务描述为空或重复、条目带有描述与状态之外的字段、或（禁用并行时）多个任务被标记为进行中，这些情况下更新都会明确失败。
