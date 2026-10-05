@@ -13,7 +13,9 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
 import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
+import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
@@ -23,12 +25,12 @@ import { plugin as appPlugin } from '../src/native.ts'
 
 async function fixture(
   script: ConstructorParameters<typeof MockAdapter>[0],
-  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number } } = {},
+  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number }; instructions?: boolean; ptc?: boolean; maxSteps?: number; directory?: string } = {},
 ) {
-  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
+  const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
-  await import('node:fs/promises').then(fs => fs.mkdir(workspace))
+  await import('node:fs/promises').then(fs => fs.mkdir(workspace, { recursive: true }))
   const scope = new NativeScope()
   const adapter = new MockAdapter(script)
   let app: NativeApplication | undefined
@@ -54,11 +56,13 @@ async function fixture(
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
-    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: 4 } },
+    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}) } },
     { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: codeRuntimePlugin, scope, config: { computeMs: 2_000, maxWallMs: 2_000 } },
+    ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
     ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
+    ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: policyPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
@@ -454,6 +458,86 @@ it('stops a protected contribution before its executor under the selected approv
     } finally { await storage.close() }
   } finally {
     await dispose()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+
+it('persists native workspace instructions and reconciles an offline edit on resume', async () => {
+  const state = await fixture([textResponse('first'), textResponse('second')], { instructions: true })
+  const fs = await import('node:fs/promises')
+  try {
+    await fs.writeFile(join(state.workspace, 'AGENTS.md'), 'Initial workspace rule.')
+    await state.host.run(state.scope, { kind: 'instructions' }, invocation => state.app.run(['first'], invocation.signal))
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('missing Session id')
+      await fs.writeFile(join(state.workspace, 'AGENTS.md'), 'Updated workspace rule.')
+      await state.host.run(state.scope, { kind: 'instructions-resume' }, invocation => state.app.run(['--resume', id, 'second'], invocation.signal))
+      expect(state.adapter.requests[0]?.messages.some(message => JSON.stringify(message).includes('Initial workspace rule.'))).toBe(true)
+      expect(state.adapter.requests[1]?.messages.some(message => JSON.stringify(message).includes('Updated workspace rule.'))).toBe(true)
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        const contexts = events.filter(event => event.type === 'user/message' && event.data.source.kind === 'agent-instructions')
+        expect(contexts).toHaveLength(2)
+        expect(contexts[1]).toMatchObject({ data: { source: { changes: [{ action: 'replace', path: 'AGENTS.md' }] } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+
+it.each([false, true])('projects nested instruction discovery and removal after accepted file results (PTC %s)', async (ptc) => {
+  let state = await fixture([
+    ptc ? toolCallResponse('code-1', 'run_code', { code: "return await tools.read({ file_path: 'nested/file.txt' })", description: 'Read nested file.' })
+      : toolCallResponse('read-1', 'read', { file_path: 'nested/file.txt' }),
+  ], { instructions: true, maxSteps: 1, ptc })
+  const fs = await import('node:fs/promises')
+  try {
+    await fs.mkdir(join(state.workspace, 'nested'))
+    await fs.writeFile(join(state.workspace, 'AGENTS.md'), 'Baseline rule.')
+    await fs.writeFile(join(state.workspace, 'CLAUDE.md'), '  Baseline rule.  ')
+    await fs.writeFile(join(state.workspace, 'nested', 'AGENTS.md'), 'Nested rule.')
+    const registerRead = (remove: boolean): void => {
+      state.tools.registerValueTool({
+        schema: { name: 'read', description: 'Read fixture.', parameters: { type: 'object', properties: { file_path: { type: 'string' } }, required: ['file_path'], additionalProperties: false } },
+        output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: value as string }], isError: false }) },
+        execute: async () => {
+          if (remove) await fs.unlink(join(state.workspace, 'nested', 'AGENTS.md'))
+          return 'file contents'
+        },
+      }, state.scope)
+    }
+    registerRead(false)
+    await state.host.run(state.scope, { kind: 'nested-instructions' }, invocation => state.app.run(['inspect nested file'], invocation.signal))
+    const initial = JSON.stringify(state.adapter.requests[0]?.messages)
+    expect(initial).toContain('Baseline rule.')
+    expect(initial).not.toContain('Instructions from: CLAUDE.md')
+    expect(initial).not.toContain('Nested rule.')
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const id = (await storage.list())[0]?.header.id
+    await storage.close()
+    if (id === undefined) throw new Error('missing Session id')
+    const directory = state.directory
+    await state.host.stop()
+    state = await fixture([
+      toolCallResponse('read-2', 'read', { file_path: 'nested/file.txt' }),
+      textResponse('done'),
+    ], { instructions: true, maxSteps: 1, directory, ptc })
+    registerRead(true)
+    await state.host.run(state.scope, { kind: 'nested-instructions-cold-resume' }, invocation => state.app.run(['--resume', id, 'continue'], invocation.signal))
+    expect(JSON.stringify(state.adapter.requests[0]?.messages)).toContain('Nested rule.')
+    await state.host.run(state.scope, { kind: 'nested-instructions-removal' }, invocation => state.app.run(['--resume', id, 'finish'], invocation.signal))
+    const final = JSON.stringify(state.adapter.requests[1]?.messages)
+    expect(final).toContain('Instructions removed:')
+    expect(final.match(/Nested rule\./g)).toHaveLength(1)
+  } finally {
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

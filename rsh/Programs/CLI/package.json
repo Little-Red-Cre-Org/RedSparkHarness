@@ -47,7 +47,9 @@
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
     "@deepseek-ai/dsh-attachment-local": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:^"
+    "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
+    "@deepseek-ai/dsh-native-time-context": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -56,7 +58,6 @@
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/cordis-plugin-timer": "workspace:^",
     "@deepseek-ai/dsh-acp-app": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-agent-tool-presentation": "workspace:^",
     "@deepseek-ai/dsh-app-boot": "workspace:^",
