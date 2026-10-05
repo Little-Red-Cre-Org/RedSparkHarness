@@ -68,7 +68,7 @@ export interface WebhookRule<K extends string = string> {
   ): WebhookSessionRequest | null | Promise<WebhookSessionRequest | null>
 }
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@deepseek-ai/dsh-llm/message' {
   interface MessageSourceMap {
     /** Programmatic input admitted from one verified webhook rule. */
     webhook: {
