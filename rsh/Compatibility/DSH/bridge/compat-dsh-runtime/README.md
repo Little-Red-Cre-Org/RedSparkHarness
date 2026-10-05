@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-dsh-runtime` lets a native compatibility bridge share one Cordis Context with selected first-party DSH plugins. It validates the Cordis major version, mounts only an allowlisted plugin set, and disposes each mount with the native runtime. Native installations that do not select this package avoid the compatibility dependency.
+`dsh-compat-dsh-runtime` lets a native compatibility bridge share one Cordis Context with selected first-party DSH plugins. It requires the verified Cordis 4.0.2 release, mounts only an allowlisted plugin set, and disposes each mount with the native runtime. Native installations that do not select this package avoid the compatibility dependency.
 
 ## Table of Contents
 
@@ -38,6 +38,19 @@ The native plugin accepts an empty configuration. It is selected through the nat
 | Field | Default | Meaning |
 |---|---|---|
 | configuration | `{}` | No user-configurable fields are accepted. |
+
+### Supported adapter set
+
+This Host-only set targets the same-version RSH 0.1.5-rc.2 workspace packages and Cordis 4.0.2. Other Cordis releases reject before Context creation. DSH runtime declarations and each adapter's accepted configuration are checked before mounting; arbitrary plugins and application bundles are unsupported.
+
+| Native installer | Legacy mounts | Required native services | Configuration |
+|---|---|---|---|
+| `compat-fs-local` | `fs-local` | `compatDshRuntime`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
+| `compat-fs-policy` | `fs-observation-policy` | `compatDshRuntime`; provides `fsObservationPolicy` | Empty |
+| `compat-fs-sandbox` | `fs-sandbox`, internal `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
+| `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`, internal `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`; optional `sandboxPolicy` | Positive `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
+
+Names in the table use the `@deepseek-ai/dsh-` prefix; internal mounts belong to this runtime's allowlist. Native ownership awaits each Fiber's asynchronous removal and failed activation cleanup. Cordis Loader configuration, HMR and Client adapters are unsupported; native installation removal is supported. None of these installers creates a legacy Agent loop or Session writer.
 
 -----
 

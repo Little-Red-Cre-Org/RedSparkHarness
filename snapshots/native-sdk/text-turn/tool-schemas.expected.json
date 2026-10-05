@@ -35,6 +35,15 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "fixture_delegate_child",
+      "description": "Delegate the fixture task.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
     }
   ],
   "changes": [
@@ -72,6 +81,15 @@
             "path",
             "content"
           ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "fixture_delegate_child",
+        "description": "Delegate the fixture task.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
           "additionalProperties": false
         }
       }

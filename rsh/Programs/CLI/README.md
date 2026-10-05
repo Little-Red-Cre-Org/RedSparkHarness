@@ -14,7 +14,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit. |
 | `dsh --profile rsh` | Open the persistent RedSpark terminal session. |
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
-| `dsh --profile native-sdk` | Serve text SDK turns, live model chunks, Session cancellation and closed-turn forks over JSON-RPC stdio. |
+| `dsh --profile native-sdk` | Serve text and image SDK turns, live model chunks, Session cancellation, next-step steering and closed-turn forks over JSON-RPC stdio. |
 | `dsh --profile sdk-minimal` | Serve SDK clients with the standalone minimal agent tree. |
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |

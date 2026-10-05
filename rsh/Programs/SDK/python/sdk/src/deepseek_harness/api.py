@@ -136,6 +136,14 @@ class Session:
         self.harness = harness
         self.id = session_id
 
+    def steer(self, input: str | list[JsonObject]) -> str:
+        """Queue input for this admitted native SDK root's next step without cancelling dispatch.
+
+        Returns the durable message id; idle Sessions and unsupported profiles reject.
+        """
+        self.harness.start()
+        return self.harness.client.session_steer(self.id, normalize_input(input))
+
     def cancel(self) -> bool:
         """Cancel this Session's admitted native-sdk turn and await owned cleanup.
 
