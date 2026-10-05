@@ -51,6 +51,14 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
       await terminal.waitFor('Model choice saved for the next turn.', accepted)
       await terminal.waitFor('fixture/fixture-alt · high')
     }
+    if (!modelControls) {
+      const start = terminal.output().length
+      terminal.write('\x1b[5~')
+      await terminal.waitFor('Page Up / Page Down to scroll', start)
+      const bottom = terminal.output().length
+      terminal.write('\x1b[6~')
+      await terminal.waitFor('Terminal answer 2.', bottom)
+    }
     await terminal.submit('/exit')
     expect((await terminal.done).exitCode, terminal.output()).toBe(0)
     const storage = new JsonlSessionBackend({ root: fixture.storage, compression: 'none' })
