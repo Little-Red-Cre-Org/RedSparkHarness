@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-terminal-lifecycle.md
-2026-10-05-native-terminal-lifecycle.md: 3d16cc1b29b6a5980e447ac8a9b9384e63b2bb62
-2026-10-05-native-terminal-lifecycle.zh.md: 0bc6f53ddb47775dc8f3daa9f49460e5a0e1d5fe
+2026-10-05-native-terminal-lifecycle.md: 51ce7c2a04ab8bcc6c63e688250726a0965474e5
+2026-10-05-native-terminal-lifecycle.zh.md: e4efc71c37d78b7737fe1440750045d79e8fe3bd

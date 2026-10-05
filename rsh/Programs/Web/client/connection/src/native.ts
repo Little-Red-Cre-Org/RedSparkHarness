@@ -28,3 +28,7 @@ export const plugin: NativePlugin = {
     }
   },
 }
+
+export type { ConnectionHandle } from './client/native-core.ts'
+export type { ClientConnectionRpc } from './rpc.ts'
+export { createWebConnectionRpc } from './client/rpc.ts'

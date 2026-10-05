@@ -1,7 +1,7 @@
 /** Validated configuration for the local PTY backend. */
 
 import z from '@deepseek-ai/schemastery'
-import { resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local'
+import { resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local/native'
 
 /** One supported interactive shell dialect. */
 export type ShellDialect = 'bash' | 'pwsh'
