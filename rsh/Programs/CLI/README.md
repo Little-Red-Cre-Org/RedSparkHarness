@@ -22,6 +22,9 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 
 The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
+The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider; one-shot background children use job_output/job_kill, while continuable Subagent controls remain unsupported.
+
+
 ## App arguments
 
 The launcher parses only its own flags and hands everything after them to the booted profile, where any injected app plugin may parse the shared immutable snapshot ([`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.md)). The first token the launcher does not recognize starts the app's arguments:
@@ -39,6 +42,8 @@ dsh --help                          # the launcher's own help
 ## Profiles
 
 A profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). `patchReload: live` watches the profile and home-level patch files; `startup` applies them once.
+
+The `./native-profile` library export shares validated profile parsing and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
 
 Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
 

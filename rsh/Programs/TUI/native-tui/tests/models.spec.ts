@@ -43,7 +43,8 @@ it('owns idle model maintenance, durable revision forwarding and cancelled menu 
       return { provider, id: model, name: model }
     },
   }, config, () => ({ status: 'maintenance', runMaintenance: () => { throw new Error('already reserved') } }))
-  const execution = { turn: async () => ({ exitCode: 0 }), open: async () => undefined, history: async () => [], models }
+  const execution = { turn: async () => ({ exitCode: 0 }), open: async () => undefined,
+    history: async () => [], sessions: async () => [], models }
   const lifetime = new AbortController()
   const controller = new TerminalController(execution, lifetime.signal, config, id)
   const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'queued' }] })

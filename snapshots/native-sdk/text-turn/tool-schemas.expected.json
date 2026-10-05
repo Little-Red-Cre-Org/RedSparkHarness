@@ -37,6 +37,97 @@
       }
     },
     {
+      "name": "job_output",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "subagent",
+      "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "prompt"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "run_in_background": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "name": "fixture_wait",
+      "description": "Wait until the initiating Session is cancelled.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "fixture_protected",
+      "description": "Write the protected fixture marker.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "fixture_delegate_child",
       "description": "Delegate the fixture task.",
       "parameters": {
@@ -81,6 +172,97 @@
             "path",
             "content"
           ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "fixture_wait",
+        "description": "Wait until the initiating Session is cancelled.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "fixture_protected",
+        "description": "Write the protected fixture marker.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
           "additionalProperties": false
         }
       },

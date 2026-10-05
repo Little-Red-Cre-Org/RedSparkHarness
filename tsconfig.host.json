@@ -367,6 +367,8 @@
     { "path": "./rsh/Modules/Community/experimental/webworker-packer" },
     { "path": "./rsh/Modules/Community/experimental/inspector/tsconfig.host.json" },
     { "path": "./rsh/Engine/subagent/subagent" },
+    { "path": "./rsh/Engine/subagent/subagent-protocol" },
+    { "path": "./rsh/Engine/subagent/native-subagent" },
     { "path": "./rsh/Engine/subagent/tool-subagent" },
     { "path": "./rsh/Engine/subagent/tool-subagent-control" },
     { "path": "./rsh/Engine/subagent/subagent-in-process-driver" },

@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口要求 `jobs` 和 `tools`，在三个控制工具全部注册后提供 `jobControls`。原生 shell 消费方同时检查该标记和 `jobs`，才暴露后台执行。它接受正有限定时器时长 `waitTimeoutMs`（默认 `30000`）与 `maxWaitTimeoutMs`（默认 `600000`）。默认值不得超过上限。`maxOutputBytes`（默认 `16384`，最小 `128`）限制每条模型可见文本结果。移除这一安装时，注销三个工具及该标记。
+`./native` 入口要求 `jobs` 和 `tools`，在三个控制工具全部注册后提供 `jobControls`。`jobControls.jobs` 标识这些工具使用的注册表。原生 shell 和 Subagent Consumer 在暴露后台执行前，于加载时拒绝所选 Jobs 注册表不一致的配置。它接受正有限定时器时长 `waitTimeoutMs`（默认 `30000`）与 `maxWaitTimeoutMs`（默认 `600000`）。默认值不得超过上限。`maxOutputBytes`（默认 `16384`，最小 `128`）限制每条模型可见文本结果。移除这一安装时，注销三个工具及该标记。
 
 `job_output` 读取保留的实时或最终输出与当前状态。设置 `wait: true` 后，它等待终态或配置的超时；请求可以传入 `timeout_ms`，但受 `maxWaitTimeoutMs` 限制。工具调用中止时只停止等待，不取消任务。`job_kill` 请求协作式取消，并在 runner 结束前返回。所有操作都限定为拥有任务的精确存活 Agent。
 

@@ -29,6 +29,10 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     await vi.waitFor(() => { expect(existsSync(join(fixture.home, 'started'))).toBe(true) }, { timeout: 30000 })
     await terminal.submit(tasks[1]!)
     await terminal.waitFor('1 queued')
+    if (!modelControls) {
+      await terminal.submit('/sessions')
+      await terminal.waitFor('Terminal controls require an idle terminal')
+    }
     writeFileSync(join(fixture.home, 'release'), 'release')
     await terminal.waitFor('Terminal answer 1.')
     await terminal.waitFor('visible file contents')
@@ -47,13 +51,34 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
       await terminal.waitFor('Model choice saved for the next turn.', accepted)
       await terminal.waitFor('fixture/fixture-alt · high')
     }
+    if (!modelControls) {
+      const start = terminal.output().length
+      terminal.write('\x1b[5~')
+      await terminal.waitFor('Page Up / Page Down to scroll', start)
+      const bottom = terminal.output().length
+      terminal.write('\x1b[6~')
+      await terminal.waitFor('Terminal answer 2.', bottom)
+    }
     await terminal.submit('/exit')
     expect((await terminal.done).exitCode, terminal.output()).toBe(0)
     const storage = new JsonlSessionBackend({ root: fixture.storage, compression: 'none' })
     let id
     try { id = (await storage.list())[0]?.header.id } finally { await storage.close() }
     if (id === undefined) throw new Error('native-tui: terminal did not persist a Session')
-    const resumed = fixture.launch(['--resume', id])
+    const resumed = fixture.launch(modelControls ? ['--resume', id] : [])
+    if (!modelControls) {
+      await resumed.waitFor('Ready')
+      await resumed.submit('/sessions')
+      await resumed.waitFor('Select Session')
+      const entries = new JsonlSessionBackend({ root: fixture.storage, compression: 'none' })
+      let choices
+      try { choices = (await entries.list()).filter(row => row.header.cwd === fixture.workspace) }
+      finally { await entries.close() }
+      const index = choices.findIndex(row => row.header.id === id)
+      expect(index).toBeGreaterThanOrEqual(0)
+      await resumed.submit(String(index + 1))
+      await resumed.waitFor('Session restored.')
+    }
     await resumed.waitFor('Terminal answer 1.')
     await resumed.waitFor('Terminal answer 2.')
     if (modelControls) {
@@ -70,7 +95,17 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
     })
     const backend = new JsonlSessionBackend({ root: fixture.storage, compression: 'none' })
     try {
-      expect(await backend.list()).toHaveLength(1)
+      const stored = await backend.list()
+      expect(stored).toHaveLength(modelControls ? 1 : 2)
+      if (!modelControls) {
+        const fresh = stored.find(row => row.header.id !== id)
+        if (fresh === undefined) throw new Error('terminal browser fixture did not create its fresh Session')
+        const untouched = await backend.open(fresh.header.id, 'read')
+        try {
+          expect((await untouched.read()).events.filter(event =>
+            event.type === 'user/message' || event.type === 'request/header' || event.type === 'turn/start')).toHaveLength(0)
+        } finally { await untouched.close() }
+      }
       const reader = await backend.open(id, 'read')
       try {
         const events = (await reader.read()).events
@@ -79,18 +114,20 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
         expect(events.filter(event => event.type === 'model/selection')).toHaveLength(modelControls ? 2 : 0)
       } finally { await reader.close() }
     } finally { await backend.close() }
-    verifyTerminalSession(fixture, scenario)
+    verifyTerminalSession(fixture, scenario, id)
   } finally { await fixture.cleanup() }
 }
 
 /** Compare an actual terminal Session and its model input sidecars with its owned recording.
  * @param fixture - settled dsh fixture with closed terminal processes.
  * @param scenario - owning committed scenario directory.
+ * @param id - optional exact persisted Session; absent selects the fixture's only generation.
  */
-export function verifyTerminalSession(fixture: ReturnType<typeof terminalFixture>, scenario: string): void {
+export function verifyTerminalSession(fixture: ReturnType<typeof terminalFixture>, scenario: string, id?: string): void {
   const scene = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
   const name = readdirSync(fixture.storage, { recursive: true }).find(
-    name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)),
+    name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION))
+      && (id === undefined || (JSON.parse(readFileSync(join(fixture.storage, String(name)), 'utf8').split('\n')[0]!) as { id: unknown }).id === id),
   )
   if (name === undefined) throw new Error('native-tui: missing physical Session')
   const raw = readFileSync(join(fixture.storage, String(name)), 'utf8')

@@ -25,6 +25,8 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+共享描述符、助手输出归并与委派权限文本由 subagent-protocol 导出。此兼容服务重新导出这些值；原生前台组合使用 native-subagent 与原生 tool-subagent 入口。
+
 本包是每个委派组合都共享的约定。你通过把服务与一个或多个提供方后端以及面向模型的委派工具一起挂载来启用它；此后 agent 即可委派工作，服务会把每个请求路由到具名提供方。
 
 ### 启用委派

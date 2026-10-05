@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-Program 可通过 `prepareMessage` 代替 `message` 接纳根输入。回调收到下一步持久化模型选择与组合取消信号，原始 Agent 在准备期间持有执行权及其 Session writer；准备完成后才追加收件箱。拒绝时不接纳输入或模型请求。委派 turn 不提供此回调。
+委派调用保留选定沙箱策略，不能通过审批扩张权限。需要审批的请求记录 asked 与 decided 事实，其中策略为 never、结果为 rejected；根请求仍使用选定审批回答者。中断的临时子任务通过既有所有者修复 turn，使已接受事件观察者与持久日志收到相同取消关闭事件。
 
 可选的 `agentInstructions` Provider 在每个获准模型请求之前准备工作区指令。应用在分发前将返回的上下文记录为 `user/message`；持久化来源事实控制恢复协调，已接纳的文件系统结果控制嵌套目录发现。
 
@@ -44,6 +44,8 @@ Program 可通过 `prepareMessage` 代替 `message` 接纳根输入。回调收�
 `rootExecution` 提供带品牌的不可变路由、维护、执行、结算、已关闭 turn 的 fork 及可选可恢复删除。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
+
+根调用的 `prepareMessage` 优先于 `message`。准备过程在既有执行所有者内运行，位于有效下一模型选择之后、inbox 准入之前。它返回带身份的输入，不暴露 Session 写入者；拒绝或取消不会准入用户输入。
 
 根任务取消时，即使初始轮次失败或等待结算的信号已被取消，也会关闭并等待已有驻留 epoch 清理完成。执行失败与 epoch 清理失败会一并报告，保留原执行错误。
 
