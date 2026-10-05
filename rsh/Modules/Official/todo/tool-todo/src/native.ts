@@ -11,7 +11,12 @@ export type { TodoItem } from './todo-types.ts'
 
 const itemSchema: JsonSchemaNode = {
   type: 'object', additionalProperties: false, required: ['content', 'status'],
-  properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed'] } },
+  properties: {
+    content: { type: 'string', description: 'What the task is — a short imperative line.' },
+    status: { type: 'string', enum: ['pending', 'in_progress', 'completed'],
+      description: 'pending (not started) | in_progress (now) | completed (done).',
+    },
+  },
 }
 
 /**

@@ -58,7 +58,8 @@
               ],
               "properties": {
                 "content": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "What the task is — a short imperative line."
                 },
                 "status": {
                   "type": "string",
@@ -66,7 +67,8 @@
                     "pending",
                     "in_progress",
                     "completed"
-                  ]
+                  ],
+                  "description": "pending (not started) | in_progress (now) | completed (done)."
                 }
               }
             }
