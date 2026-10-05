@@ -75,6 +75,8 @@ No direct effect; model requests remain owned by the Agent and LLM packages.
 - File-reference completion uses the shared Agent lookup and can resume a cold Session; the `skills/list` catalog is the non-activating alternative for skill metadata.
 
 
+The public model selection type re-exports the canonical `NativeModelExecution/model-selection` declaration. Compatibility and native readers therefore recognize one durable `model/selection` event; this API adds no second selection writer.
+
 <a id="dev-note"></a>
 ### Dev Note
 

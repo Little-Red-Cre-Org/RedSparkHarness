@@ -261,7 +261,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
