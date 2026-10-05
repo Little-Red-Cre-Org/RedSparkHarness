@@ -10,10 +10,13 @@ import type { TerminalModelOperations, TerminalModelState } from './models.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import { applyModelSelectionProjection, type ModelSelectionProjectionState } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
+import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
+import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
+  readonly presets?: TerminalPresetOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -45,6 +48,7 @@ export class TerminalController implements TerminalInteraction {
   private state: TerminalState = { events: [], chunks: [], busy: false, queued: 0 }
   private active: AbortController | undefined
   private draining: Promise<void> | undefined
+  private cancelling: Promise<void> | undefined
   private closing: Promise<void> | undefined
   private closed = false
   private maintenance = false
@@ -107,7 +111,7 @@ export class TerminalController implements TerminalInteraction {
    */
   submit(message: UserMessage): void {
     if (this.closed || this.ownerSignal.aborted) throw new Error(terminalCopy(this.config.locale).closed)
-    if (this.maintenance) throw new Error(terminalCopy(this.config.locale).modelBusy)
+    if (this.maintenance || this.cancelling !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
     if (this.queue.length >= this.config.maxQueuedInputs) throw new Error(terminalCopy(this.config.locale).queueFull)
     this.queue.push(message)
     this.publish({})
@@ -133,14 +137,15 @@ export class TerminalController implements TerminalInteraction {
           }) },
         }, signal)
         if (result.exitCode !== 0) this.publish({
-          error: signal.aborted ? terminalCopy(this.config.locale).cancelled : terminalCopy(this.config.locale).failed,
+          error: signal.aborted || result.exitCode === 130
+            ? terminalCopy(this.config.locale).cancelled : terminalCopy(this.config.locale).failed,
         })
       } catch (error: unknown) {
         if (error !== signal.reason) this.failure = new Error(terminalCopy(this.config.locale).failed, { cause: error })
         this.publish({ error: error === signal.reason ? terminalCopy(this.config.locale).cancelled : String(error) })
       } finally {
         this.active = undefined
-        this.publish({ busy: false, chunks: [] })
+        this.publish({ busy: this.cancelling !== undefined, chunks: [] })
       }
     }
   }
@@ -180,7 +185,7 @@ export class TerminalController implements TerminalInteraction {
       if (this.state.human !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
       this.selectedId = id
       this.modelProjection = events.reduce(applyModelSelectionProjection, { lastUsed: null, pending: null })
-      this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined,
+      this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined, preset: undefined,
         choice: this.modelProjection.pending ?? this.modelProjection.lastUsed })
     })
   }
@@ -198,10 +203,32 @@ export class TerminalController implements TerminalInteraction {
     })
   }
 
+  /** @returns installed compositions and complete durable selection facts while exclusively idle. */
+  presets(): Promise<TerminalPresetState> { return this.presetOperation((presets, signal) => presets.read(this.selectedId, signal)) }
+
+  /** @param request - installed composition and observed revision. @returns committed blank-Session choice. */
+  selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState> {
+    return this.presetOperation((presets, signal) => presets.select(this.selectedId, request, signal))
+  }
+
+  private presetOperation(
+    operation: (presets: TerminalPresetOperations, signal: AbortSignal) => Promise<TerminalPresetState>,
+  ): Promise<TerminalPresetState> {
+    return this.idleOperation(async (signal) => {
+      const presets = this.execution.presets
+      if (presets === undefined) throw new Error(terminalCopy(this.config.locale).presetUnavailable)
+      const preset = await operation(presets, signal)
+      this.publish({ preset })
+      return preset
+    })
+  }
+
   private async idleOperation<Result>(operation: (signal: AbortSignal) => Promise<Result>): Promise<Result> {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
-    if (this.draining !== undefined || this.queue.length !== 0 || this.state.human !== undefined) throw new Error(copy.modelBusy)
+    if (this.draining !== undefined || this.cancelling !== undefined || this.queue.length !== 0 || this.state.human !== undefined) {
+      throw new Error(copy.modelBusy)
+    }
     const controller = new AbortController()
     this.active = controller
     this.maintenance = true
@@ -215,16 +242,34 @@ export class TerminalController implements TerminalInteraction {
       this.draining = undefined
       this.active = undefined
       this.maintenance = false
-      this.publish({ busy: false })
+      this.publish({ busy: this.hasHumanCancellation() })
     }
   }
 
-  /** Cancel the active turn and discard queued input; writer drain completes before the next admission runs. */
+  /** Cancel displayed human work's root epoch or the local turn; admission waits for actual writer drain. */
   cancel(): void {
     this.queue.length = 0
-    this.active?.abort(new Error(terminalCopy(this.config.locale).cancelled))
+    const reason = new Error(terminalCopy(this.config.locale).cancelled)
+    if (this.cancelling === undefined) {
+      const active = this.active
+      const pending = this.human.cancel((cause) => { active?.abort(cause) })
+      if (pending !== undefined) {
+        let failed = false
+        this.cancelling = pending.catch((error: unknown) => {
+          failed = true
+          this.closed = true
+          this.failure = new Error(terminalCopy(this.config.locale).failed, { cause: error })
+          this.publish({ error: String(error) })
+          this.finish()
+        }).finally(() => { this.cancelling = undefined; this.publish({ busy: failed || this.active !== undefined }) })
+        this.publish({ busy: true })
+      }
+    }
+    if (this.cancelling === undefined) this.active?.abort(reason)
     this.publish({})
   }
+
+  private hasHumanCancellation(): boolean { return this.cancelling !== undefined }
 
   /** Request ordinary exit; application completion follows asynchronous cleanup. */
   exit(): void { this.finish() }
@@ -274,7 +319,7 @@ export class TerminalController implements TerminalInteraction {
   }
 
   /** @returns completion after all currently admitted inputs settle. */
-  async settle(): Promise<void> { await this.draining }
+  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling]) }
 
   /** Close input admission and await the selected executor before resource withdrawal.
    * @returns idempotent completion after accepted work drains.
@@ -282,6 +327,7 @@ export class TerminalController implements TerminalInteraction {
   close(): Promise<void> {
     if (this.closing !== undefined) return this.closing
     this.closed = true
+    this.cancel()
     this.human.close()
     this.listeners.clear()
     this.withdrawLaunch?.()

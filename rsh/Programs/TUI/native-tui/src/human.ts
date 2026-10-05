@@ -1,7 +1,8 @@
 /** Owned terminal presentations; the selected Providers retain authority and audit writes. */
 import type { NativeApprovalAnswererRequest, NativeApprovalService, NativeApprovalOutcome } from '@deepseek-ai/dsh-native-approval'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeAdmittedUserQuestionRequest, NativeUserQuestionRegistry, AskUserQuestionItem,
   AskUserQuestionAnswer, AskUserQuestionAnswerItem } from '@deepseek-ai/dsh-user-questions/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -18,6 +19,7 @@ interface Pending {
   readonly abort: () => void
   readonly resolve: (value: string) => void
   readonly reject: (reason: unknown) => void
+  readonly cancel?: () => Promise<void>
 }
 
 /** Bounded FIFO human input, cancelled synchronously before terminal execution drains. */
@@ -32,12 +34,13 @@ export class TerminalHumanInteraction {
   constructor(private readonly capacity: number, private readonly copy: ReturnType<typeof terminalCopy>,
     private readonly publish: (prompt: TerminalHumanPrompt | undefined) => void) {}
 
-  private ask(prompt: TerminalHumanPrompt, signal: AbortSignal): Promise<string> {
+  private ask(prompt: TerminalHumanPrompt, signal: AbortSignal, cancel?: () => Promise<void>): Promise<string> {
     signal.throwIfAborted()
     if (this.closed) throw new Error(this.copy.closed)
     if (this.pending.length >= this.capacity) throw new Error(this.copy.humanFull)
     return new Promise<string>((resolve, reject) => {
-      const entry: Pending = { prompt, signal, resolve, abort: () => { entry.reject(signal.reason) },
+      const entry: Pending = { prompt, signal, resolve, ...cancel === undefined ? {} : { cancel },
+        abort: () => { entry.reject(signal.reason) },
         reject: (reason) => { this.remove(entry)
           // Preserve the Provider's exact cancellation reason, including non-Error reasons.
           // oxlint-disable-next-line typescript/prefer-promise-reject-errors
@@ -56,22 +59,24 @@ export class TerminalHumanInteraction {
 
   /**
    * @param request - exact Provider-admitted tool approval.
+   * @param cancel - exact root epoch cancellation and drain.
    * @returns one-shot human verdict; cancellation rejects to the existing Provider.
    */
-  async approval(request: NativeApprovalAnswererRequest): Promise<NativeApprovalOutcome> {
+  async approval(request: NativeApprovalAnswererRequest, cancel?: () => Promise<void>): Promise<NativeApprovalOutcome> {
     const answer = await this.ask({ kind: 'approval', toolName: request.toolName,
-      ...request.reason === undefined ? {} : { reason: request.reason } }, request.signal)
+      ...request.reason === undefined ? {} : { reason: request.reason } }, request.signal, cancel)
     return answer === '/allow' ? 'allowed-once' : 'rejected'
   }
 
   /**
    * @param request - exact root Session's questions with Provider-owned cancellation.
+   * @param cancel - exact root epoch cancellation and drain.
    * @returns structured answers after the last presentation releases.
    */
-  async questions(request: NativeAdmittedUserQuestionRequest): Promise<AskUserQuestionAnswer> {
+  async questions(request: NativeAdmittedUserQuestionRequest, cancel?: () => Promise<void>): Promise<AskUserQuestionAnswer> {
     const answers: AskUserQuestionAnswerItem[] = []
     for (const question of request.questions) {
-      const answer = await this.ask({ kind: 'question', question }, request.signal)
+      const answer = await this.ask({ kind: 'question', question }, request.signal, cancel)
       const options = question.options ?? []
       if (answer.startsWith('/other ')) answers.push({ id: question.id, selected: [], custom: answer.slice(7) })
       else if (options.length === 0) answers.push({ id: question.id, selected: [], custom: answer })
@@ -79,6 +84,21 @@ export class TerminalHumanInteraction {
         .filter((_option, index) => answer.split(',').map(Number).includes(index + 1)).map(option => option.label) })
     }
     return { answers }
+  }
+
+  /** Cancel the displayed request's actual root epoch without supplying an answer.
+   * @param aborted - observes the exact Provider cancellation cause for locally admitted input.
+   * @returns exact root drain, or undefined when no cancellable presentation is displayed.
+   */
+  cancel(aborted: (reason: unknown) => void): Promise<void> | undefined {
+    const entry = this.pending[0]
+    if (entry === undefined || entry.cancel === undefined) return undefined
+    const cancel = entry.cancel
+    return Promise.resolve().then(async () => {
+      const onAbort = (): void => { aborted(entry.signal.reason) }
+      entry.signal.addEventListener('abort', onAbort, { once: true })
+      try { await cancel() } finally { entry.signal.removeEventListener('abort', onAbort) }
+    })
   }
 
   /**
@@ -119,18 +139,33 @@ export class TerminalHumanInteraction {
 /** Register scoped answerers only for this terminal's exact active root Session.
  * @param human - terminal-owned input presentations.
  * @param active - existing exact active Session authority.
+ * @param executor - selected Program ownership and root epoch settlement.
  * @param owns - current terminal Session selection.
  * @param context - terminal registration ownership and question visibility scope.
  * @param approval - optional existing approval Provider.
  * @param questions - optional existing question Definition.
  */
 export function bindTerminalHumanAnswerers(human: TerminalHumanInteraction, active: Pick<NativeActiveSessionOperations, 'owners'>,
+  executor: Pick<NativeHeadlessApplication, 'interactionOwner'> & {
+    readonly rootExecution: Pick<NativeRootExecutionOperations, 'capture' | 'cancel'>
+  },
   owns: (id: SessionId) => boolean, context: Pick<NativeContext, 'own' | 'scope'>,
   approval?: Pick<NativeApprovalService, 'registerAnswerer'>, questions?: Pick<NativeUserQuestionRegistry, 'registerAnswerer'>): void {
+  const cancellation = (agent: NativeApprovalAnswererRequest['agent'], session?: NativeAdmittedUserQuestionRequest['session']) => {
+    const recipient = executor.interactionOwner(agent)
+    if (recipient === undefined || recipient.agent !== recipient.displayRootAgent || !owns(recipient.displayRootSessionId)
+      || session !== undefined && session !== recipient.session) return undefined
+    const owner = active.owners().find(owner => owner.agent === recipient.agent && owner.session === recipient.session && owner.invocation === 'root')
+    if (owner === undefined) return undefined
+    executor.rootExecution.capture(owner)
+    return (): Promise<void> => executor.rootExecution.cancel(owner)
+  }
   if (approval !== undefined) context.own(approval.registerAnswerer((request) => {
-    const owner = active.owners().find(owner => owner.agent === request.agent && owner.invocation === 'root' && owns(owner.session.id))
-    return owner === undefined ? undefined : human.approval(request)
+    const cancel = cancellation(request.agent)
+    return cancel === undefined ? undefined : human.approval(request, cancel)
   }))
-  if (questions !== undefined) context.own(questions.registerAnswerer('native-tui', { ask: (request, next) =>
-    owns(request.session.id) ? human.questions(request) : next() }, context.scope))
+  if (questions !== undefined) context.own(questions.registerAnswerer('native-tui', { ask: (request, next) => {
+    const cancel = cancellation(request.agent, request.session)
+    return cancel === undefined ? next() : human.questions(request, cancel)
+  } }, context.scope))
 }

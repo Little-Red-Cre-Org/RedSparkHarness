@@ -39,6 +39,8 @@ The Host-only `./read-history` utility reads through the selected exact live own
 
 `NativeProgramInteractionOwner` describes a Program-selected live requester and its display root. Programs derive this read-only association from actual execution entry and delegation ancestry, independently of stored Session parent headers. Interaction Consumers must verify exact live Agent and Session identity before answering; a display root does not replace the requesting Session or its writer.
 
+The Host `rootExecution.cancel(owner)` closes the exact attached root Agent epoch, including ordinary turns without retained residency. It rejects foreign or released owners and waits for execution, retained work, writer and registration cleanup. Cleanup failure remains visible and retains the closed execution entry, preventing a replacement from opening while resource release is uncertain. Successful cancellation permits a later resume through a new Agent epoch.
+
 Delegation may supply `initialize(append)` to record child-owned facts inside the first turn and `onReady(agent)` to receive the registered child after those facts persist. The executor invokes both before the first model request. Initialization, checkpoint or publication failures reject after owned cleanup; modules do not gain direct writer access.
 
 A Program calls `register()` with the exact registered Agent, matching active Session, resolved workspace/model/prompt/budgets and its existing child execution operation. Only one active contribution is admitted per Agent, including while its release drains. The returned release closes turn admission, cancels turn-owned delegations and waits for their executor settlement. It does not close the Program's writer or dispose its Agent.

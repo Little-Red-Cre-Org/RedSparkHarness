@@ -59,4 +59,23 @@ Tool
   "isError": false
 }
 Assistant
+{
+  "type": "tool-call",
+  "id": "human-3",
+  "name": "todo_write",
+  "arguments": "{\"todos\":[{\"content\":\"Inspect the workspace\",\"status\":\"completed\"},{\"content\":\"Report progress\",\"status\":\"in_progress\"}]}"
+}
+Tool
+{
+  "type": "tool-result",
+  "toolCallId": "human-3",
+  "content": [
+    {
+      "type": "text",
+      "text": "Updated todo list: 0 pending, 1 in progress, 1 completed."
+    }
+  ],
+  "isError": false
+}
+Assistant
 Native browser answer.

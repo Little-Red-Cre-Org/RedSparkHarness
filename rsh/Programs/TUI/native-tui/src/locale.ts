@@ -3,9 +3,12 @@ import { CHINESE_ROWS, ENGLISH_ROWS } from '@deepseek-ai/dsh-terminal-ui'
 
 const english = {
   rows: ENGLISH_ROWS, working: 'Working', idle: 'Ready', queued: 'queued', hint: 'Enter send · Esc stop · Ctrl+C stop/exit',
-  placeholder: 'Ask anything', help: '/help · /sessions · /model · /reasoning · /clear · /retry · /exit; Enter queues input while working.',
+  placeholder: 'Ask anything', help: '/help · /sessions · /mode · /model · /reasoning · /clear · /retry · /exit; Enter queues input while working.',
   sessions: 'Select Session', noSessions: 'No stored Sessions in this workspace.', sessionOpened: 'Session restored.',
   menuInterrupted: 'Selection menu closed for the human request.',
+  history: 'History', scrollHint: 'Page Up / Page Down to scroll',
+  presets: 'Select Agent preset', noPresets: 'No installed Agent presets.', presetSaved: 'Agent preset saved.',
+  presetLocked: 'An Agent preset can only be selected before the first turn.', presetUnavailable: 'Agent preset controls require the installed preset Registry.',
   models: 'Select model', reasoning: 'Select reasoning effort', providerDefault: 'Provider default',
   noModels: 'No models advertised by the configured Providers.',
   approval: 'Tool approval', question: 'User question', approvalHint: '/allow once · /deny · Esc cancel and keep draft',
@@ -20,9 +23,12 @@ const english = {
 }
 const chinese: typeof english = {
   rows: CHINESE_ROWS, working: '运行中', idle: '就绪', queued: '排队', hint: 'Enter 发送 · Esc 停止 · Ctrl+C 停止/退出',
-  placeholder: '输入问题', help: '/help · /sessions · /model · /reasoning · /clear · /retry · /exit；执行时 Enter 将输入排队。',
+  placeholder: '输入问题', help: '/help · /sessions · /mode · /model · /reasoning · /clear · /retry · /exit；执行时 Enter 将输入排队。',
   sessions: '选择会话', noSessions: '此工作区没有已存储的会话。', sessionOpened: '会话已恢复。',
   menuInterrupted: '选择菜单已关闭，请先处理人机请求。',
+  history: '历史', scrollHint: 'Page Up / Page Down 滚动',
+  presets: '选择 Agent 预设', noPresets: '没有已安装的 Agent 预设。', presetSaved: 'Agent 预设已保存。',
+  presetLocked: '只能在首次轮次开始之前选择 Agent 预设。', presetUnavailable: 'Agent 预设控制需要已安装的预设 Registry。',
   models: '选择模型', reasoning: '选择推理强度', providerDefault: '提供方默认值',
   noModels: '已配置的 Provider 没有公布可选模型。',
   approval: '工具审批', question: '用户问题', approvalHint: '/allow 仅允许本次 · /deny 拒绝 · Esc 取消并保留草稿',

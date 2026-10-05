@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { Box, Text, useInput, useStdout } from 'ink'
 import TextInput from 'ink-text-input'
-import { ChatRow, StreamBlock, stripAnsi } from '@deepseek-ai/dsh-terminal-ui'
+import { ChatRow, StreamBlock, computeViewport, stripAnsi } from '@deepseek-ai/dsh-terminal-ui'
 import { createUserMessage, type UserMessage, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { terminalCopy } from './locale.ts'
@@ -11,6 +11,8 @@ import type { TerminalModelState } from './models.ts'
 import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { TerminalHumanPrompt } from './human.ts'
+import type { TerminalPresetState } from './presets.ts'
+import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 
 /** Renderer state; completed rows originate in the durable Session log. */
 export interface TerminalState {
@@ -22,6 +24,7 @@ export interface TerminalState {
   readonly model?: TerminalModelState | undefined
   readonly choice?: ModelSelection | null | undefined
   readonly human?: TerminalHumanPrompt | undefined
+  readonly preset?: TerminalPresetState | undefined
 }
 
 /** An application-owned input queue, without transferable Agent or writer objects. */
@@ -50,6 +53,10 @@ export interface TerminalInteraction {
   sessions(): Promise<readonly SessionId[]>
   /** @param id - selected stored Session. @returns completion of exclusive restore and transcript replacement. */
   selectSession(id: SessionId): Promise<void>
+  /** @returns installed composition metadata and complete durable choice facts. */
+  presets(): Promise<TerminalPresetState>
+  /** @param request - installed composition and observed revision. @returns committed blank-Session selection. */
+  selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
@@ -73,7 +80,9 @@ export function TerminalView({ interaction, locale, model, background }: {
   const [notice, setNotice] = useState('')
   const [last, setLast] = useState('')
   const [first, setFirst] = useState(-1)
+  const [scrollLines, setScrollLines] = useState(0)
   const [sessionMenu, setSessionMenu] = useState<readonly SessionId[]>()
+  const [presetMenu, setPresetMenu] = useState<TerminalPresetState>()
   const [menu, setMenu] = useState<{
     title: string
     labels: readonly string[]
@@ -83,13 +92,18 @@ export function TerminalView({ interaction, locale, model, background }: {
   const { stdout } = useStdout()
   useEffect(() => interaction.subscribe(() => { setState(interaction.snapshot()) }), [interaction])
   useEffect(() => {
-    if (state.human === undefined || menu === undefined && sessionMenu === undefined) return
-    setMenu(undefined); setSessionMenu(undefined); setInput(''); setNotice(copy.menuInterrupted)
-  }, [state.human, menu, sessionMenu, copy.menuInterrupted])
+    if (state.human === undefined || menu === undefined && sessionMenu === undefined && presetMenu === undefined) return
+    setMenu(undefined); setSessionMenu(undefined); setPresetMenu(undefined); setInput(''); setNotice(copy.menuInterrupted)
+  }, [state.human, menu, sessionMenu, presetMenu, copy.menuInterrupted])
   useInput((keyInput, key) => {
+    if (key.pageUp || key.pageDown) {
+      setScrollLines(Math.min(viewport.maxScroll, Math.max(0, viewport.scrollLines + (key.pageUp ? viewport.step : -viewport.step))))
+      return
+    }
     if (key.ctrl && keyInput === 'c') { if (state.busy) interaction.cancel(); else interaction.exit() }
     if (key.escape && menu !== undefined) { setMenu(undefined); setNotice(''); return }
     if (key.escape && sessionMenu !== undefined) { setSessionMenu(undefined); setNotice(''); return }
+    if (key.escape && presetMenu !== undefined) { setPresetMenu(undefined); setNotice(''); return }
     if (key.escape && state.human !== undefined) { interaction.cancel(); setNotice(''); return }
     if (key.escape && state.busy) {
       interaction.cancel()
@@ -101,11 +115,20 @@ export function TerminalView({ interaction, locale, model, background }: {
     if (text === '') return
     if (text === '/exit' || text === '/quit') { interaction.exit(); return }
     if (state.human !== undefined) {
-      if (menu !== undefined || sessionMenu !== undefined) {
-        setMenu(undefined); setSessionMenu(undefined); setNotice(copy.menuInterrupted)
+      if (menu !== undefined || sessionMenu !== undefined || presetMenu !== undefined) {
+        setMenu(undefined); setSessionMenu(undefined); setPresetMenu(undefined); setNotice(copy.menuInterrupted)
         return
       }
       try { interaction.answerHuman(text, state.human); setNotice('') } catch (error: unknown) { setNotice(String(error)) }
+      return
+    }
+    if (presetMenu !== undefined) {
+      const index = Number(text) - 1
+      const selected = Number.isSafeInteger(index) && index >= 0 ? presetMenu.entries[index] : undefined
+      if (selected === undefined) { setNotice(copy.selectNumber); return }
+      void interaction.selectPreset({ preset: selected.id, expectedRevision: presetMenu.facts.revision }).then(() => {
+        setPresetMenu(undefined); setNotice(copy.presetSaved)
+      }, (error: unknown) => { setPresetMenu(undefined); setNotice(String(error)) })
       return
     }
     if (menu !== undefined) {
@@ -122,8 +145,17 @@ export function TerminalView({ interaction, locale, model, background }: {
       const id = Number.isSafeInteger(index) && index >= 0 ? sessionMenu[index] : undefined
       if (id === undefined) { setNotice(copy.selectNumber); return }
       void interaction.selectSession(id).then(() => {
-        setSessionMenu(undefined); setFirst(-1); setLast(''); setNotice(copy.sessionOpened)
+        setSessionMenu(undefined); setFirst(-1); setScrollLines(0); setLast(''); setNotice(copy.sessionOpened)
       }, (error: unknown) => { setSessionMenu(undefined); setNotice(String(error)) })
+      return
+    }
+    if (text === '/mode') {
+      void interaction.presets().then((observed) => {
+        if (interaction.snapshot().human !== undefined) { setNotice(copy.menuInterrupted); return }
+        if (observed.facts.locked) { setNotice(copy.presetLocked); return }
+        setPresetMenu(observed.entries.length === 0 ? undefined : observed)
+        setNotice(observed.entries.length === 0 ? copy.noPresets : '')
+      }, (error: unknown) => { setNotice(String(error)) })
       return
     }
     if (text === '/sessions') {
@@ -150,12 +182,13 @@ export function TerminalView({ interaction, locale, model, background }: {
       return
     }
     if (text === '/help') { setNotice(copy.help); return }
-    if (text === '/clear') { setFirst(state.events.at(-1)?.seq ?? -1); setNotice(''); return }
+    if (text === '/clear') { setFirst(state.events.at(-1)?.seq ?? -1); setScrollLines(0); setNotice(''); return }
     if (text === '/retry') { if (last === '') setNotice(copy.noRetry); else send(last); return }
     if (text.startsWith('/')) { setNotice(`${copy.unknownCommand}: ${text}`); return }
     send(text)
   }
   const send = (text: string): void => {
+    setScrollLines(0)
     setLast(text)
     setNotice('')
     // The shared LLM constructor creates the same identified user input as other Programs.
@@ -183,6 +216,7 @@ export function TerminalView({ interaction, locale, model, background }: {
     return []
   })
   const stream = { text: '', reasoning: '', tool: null as { name: string; args: string } | null }
+  const viewport = computeViewport({ items: rows, rows: stdout.rows - 6, width, scrollLines, busy: state.busy })
   for (const chunk of state.chunks) {
     if (chunk.type === 'text-delta') stream.text += chunk.text
     if (chunk.type === 'reasoning-delta') stream.reasoning += chunk.text
@@ -190,11 +224,12 @@ export function TerminalView({ interaction, locale, model, background }: {
   return React.createElement(Box, { flexDirection: 'column' },
     React.createElement(Text, { bold: true }, `${copy.title} · ${stripAnsi(`${choice.provider}/${choice.model}${effort === undefined ? '' : ' · ' + effort}`)}`),
     info === undefined ? null : React.createElement(Text, { dimColor: true }, stripAnsi(`${copy.capabilities}: ${info.inputModalities?.join(', ') ?? copy.unknown}; ${copy.context}: ${info.context?.contextWindow ?? copy.unknown}`)),
-    ...rows.slice(-Math.max(1, stdout.rows - 8)).map((item, index) => React.createElement(ChatRow, {
+    ...viewport.visible.map((item, index) => React.createElement(ChatRow, {
       key: index, item, width, themeBg: background, copy: copy.rows,
     })),
     React.createElement(StreamBlock, { stream, width, themeBg: background, busy: state.busy, copy: copy.rows }),
     React.createElement(Text, { dimColor: true }, `${state.busy ? copy.working : copy.idle} · ${state.queued} ${copy.queued}`),
+    viewport.atBottom ? null : React.createElement(Text, { dimColor: true }, `${copy.history}: ${viewport.scrollLines} · ${copy.scrollHint}`),
     notice === '' ? null : React.createElement(Text, {}, stripAnsi(notice)),
     state.error === undefined ? null : React.createElement(Text, { color: 'red' }, stripAnsi(state.error)),
     state.human === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
@@ -212,6 +247,10 @@ export function TerminalView({ interaction, locale, model, background }: {
     sessionMenu === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
       React.createElement(Text, { bold: true }, copy.sessions),
       ...sessionMenu.map((id, index) => React.createElement(Text, { key: id }, stripAnsi(`${index + 1}. ${id}`))),
+      React.createElement(Text, { dimColor: true }, copy.menuHint)),
+    presetMenu === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
+      React.createElement(Text, { bold: true }, copy.presets),
+      ...presetMenu.entries.map((preset, index) => React.createElement(Text, { key: preset.id }, stripAnsi(`${index + 1}. ${preset.name} (${preset.id})`))),
       React.createElement(Text, { dimColor: true }, copy.menuHint)),
     React.createElement(TextInput, { value: input, onChange: setInput, placeholder: copy.placeholder,
       onSubmit: (value: string) => { submit(value); setInput('') } }),

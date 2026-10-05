@@ -8190,12 +8190,18 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-headless
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -9371,6 +9377,12 @@ importers:
 
   rsh/Programs/TUI/native-tui:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm
@@ -9417,6 +9429,15 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../Engine/session/session-persistence-jsonl
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.31
@@ -10191,6 +10212,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-tool-todo':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/todo/tool-todo
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
