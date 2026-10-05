@@ -29,7 +29,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       installations: Array<{ id: string; plugin: string }>
     }
     expect(client.installations.map(row => row.id)).toEqual([
-      'application', 'renderer', 'layout', 'sidebar', 'brand', 'theme', 'locale', 'connection', 'session', 'resources',
+      'application', 'renderer', 'connection', 'session',
     ])
     expect(existsSync(join(home, 'profiles', 'native-web', 'rsh.profile.json'))).toBe(true)
   } finally {

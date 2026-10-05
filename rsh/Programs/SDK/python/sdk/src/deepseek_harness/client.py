@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, TypeAlias, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool, StrictStr
 
-from .errors import JsonRpcError, TransportClosedError
+from .errors import JsonRpcError, SdkProtocolError, TransportClosedError
 from .models import IncomingRequest, InitializeResponse, JsonObject, JsonValue, Notification
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -34,6 +34,14 @@ class HarnessConfig:
     initialize_timeout_seconds: float = 30.0
     request_timeout_seconds: float | None = None
     shutdown_timeout_seconds: float | None = 1.0
+
+
+class _SessionCancelResponse(BaseModel):
+    cancelled: StrictBool
+
+
+class _SessionForkResponse(BaseModel):
+    sessionId: StrictStr
 
 
 class HarnessClient:
@@ -187,6 +195,29 @@ class HarnessClient:
             notification_subscription=notification_subscription,
         )
         return response.messageId
+
+    def session_cancel(self, session_id: str) -> bool:
+        """Cancel an admitted native-sdk turn and await cleanup; other Sessions remain running.
+
+        Returns False when no turn was admitted. Unsupported profiles return a protocol error.
+        """
+        return self.request(
+            "session/cancel", {"sessionId": session_id}, response_model=_SessionCancelResponse
+        ).cancelled
+
+    def session_fork(self, session_id: str, destination_session_id: str, at_seq: int | None = None) -> str:
+        """Copy a closed native-sdk turn into a fresh Session without running it.
+
+        The optional source event must belong to a closed turn; omission selects the last closed turn.
+        Existing destinations and unsupported profiles reject the request.
+        """
+        payload: JsonObject = {"sessionId": session_id, "destinationSessionId": destination_session_id}
+        if at_seq is not None:
+            payload["atSeq"] = at_seq
+        result = self.request("session/fork", payload, response_model=_SessionForkResponse)
+        if result.sessionId != destination_session_id:
+            raise SdkProtocolError("session/fork returned a different Session identity")
+        return result.sessionId
 
     def request(
         self,
