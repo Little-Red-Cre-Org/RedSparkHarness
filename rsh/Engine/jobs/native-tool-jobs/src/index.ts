@@ -4,6 +4,10 @@ import { NativeJobId, type NativeJobRegistry, type NativeJobSnapshot } from '@de
 import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices { jobControls: true }
+}
+
 interface Config {
   readonly waitTimeoutMs: number
   readonly maxWaitTimeoutMs: number
@@ -160,13 +164,14 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
 /** Native job controls contribution selected alongside the job and tool registries. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-tool-jobs', targets: ['host'],
-  requires: ['jobs', 'tools'], provides: [],
+  requires: ['jobs', 'tools'], provides: ['jobControls'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
       const jobs = context.require('jobs')
       const tools = context.require('tools')
       for (const contribution of nativeJobTools(jobs, config)) context.effect(tools.registerValueTool(contribution, context.scope))
+      context.provide('jobControls', true)
     }
   },
 }

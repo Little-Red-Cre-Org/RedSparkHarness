@@ -349,6 +349,8 @@ flowchart TD
     pkg_pwsh_sandbox["pwsh-sandbox"]
     pkg_shell["shell"]
     pkg_shell_env["shell-env"]
+    pkg_shell_process_local["shell-process-local"]
+    pkg_shell_sandbox_core["shell-sandbox-core"]
     pkg_tool_bash["tool-bash"]
     pkg_tool_bash_persistent["tool-bash-persistent"]
     pkg_tool_pwsh["tool-pwsh"]
@@ -1315,6 +1317,8 @@ flowchart TD
 | [`session-format-v0-to-v1`](../Engine/session/session-format-v0-to-v1) | `session` | — |
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
 | [`session-format-v2-to-v3`](../Engine/session/session-format-v2-to-v3) | `session` | — |
+| [`shell-process-local`](../Modules/Official/shell/shell-process-local) | `shell` | — |
+| [`shell-sandbox-core`](../Modules/Official/shell/shell-sandbox-core) | `shell` | — |
 | [`storage`](../Core/storage/storage) | `storage` | — |
 | [`storage-json`](../Core/storage/storage-json) | `storage` | — |
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |

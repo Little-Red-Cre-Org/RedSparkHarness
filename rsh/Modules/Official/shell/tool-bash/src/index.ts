@@ -23,6 +23,7 @@ import { ESCALATION_TARGETS, approveEscalation, canonicalPath, validateEscalatio
 import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
 import { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-shell'
 import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
+import { canonicalShellResult } from '@deepseek-ai/dsh-shell/native'
 import { processOutcome } from './background.ts'
 import { parseExitStatus, renderProcessRead, renderResult } from './render.ts'
 
@@ -156,28 +157,7 @@ function resolveWorkdir(
 
 /** Detach the executor DTO from readonly Service Definition types into plain JSON data. */
 function canonicalBashResult(result: ShellRunResult) {
-  const output = (stream: ShellRunResult['stdout']) => ({
-    text: stream.text,
-    truncated: stream.truncated,
-    ...stream.spillPath !== undefined ? { spillPath: stream.spillPath } : {},
-  })
-  return {
-    exitCode: result.exitCode,
-    signal: result.signal,
-    timedOut: result.timedOut,
-    aborted: result.aborted,
-    timeoutMs: result.timeoutMs,
-    stdout: output(result.stdout),
-    stderr: output(result.stderr),
-    ...result.sandbox !== undefined ? {
-      sandbox: {
-        mode: result.sandbox.mode,
-        denied: result.sandbox.denied,
-        ...result.sandbox.enforcement !== undefined ? { enforcement: result.sandbox.enforcement } : {},
-        ...result.sandbox.runnerFailed !== undefined ? { runnerFailed: result.sandbox.runnerFailed } : {},
-      },
-    } : {},
-  }
+  return canonicalShellResult(result)
 }
 
 /** Canonical background-handle properties shared by the bash output union. */

@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用 `ctx.shell` 运行输出有界的前台 shell 命令，或启动立即返回句柄的后台进程。配置文件可选择本地或沙箱化的 Bash 或 PowerShell 执行方式，而无需更改调用方。执行前解析每个请求，以显式确定工作目录、超时和输出上限。命令完成、非零退出、超时和调用方中止都会作为结果返回；只有基础设施故障才会 reject，而模型可见的渲染与沙箱指引由 `bash` 和 `pwsh` 工具负责。
+通过选定的 Bash 或 PowerShell 执行器运行输出有界的前台命令，或启动后台进程。执行前解析每个请求，使工作目录、超时和输出上限明确。非零退出、超时和中止会返回结果；只有基础设施故障才会 reject。`./native` 不依赖 Cordis，提供相同的请求、结果、进程句柄和退出状态定义；原生宿主选择一个 `shell` Provider。面向模型的工具负责输出渲染和沙箱指引。
 
 ## 目录
 
@@ -28,6 +28,8 @@ kind: "package-reference"
 当 agent（智能体）或进程内插件需要运行 shell 命令并读取输出，或启动后台进程并轮询它时，使用 `ctx.shell`。它是每个 shell 执行器与面向模型的 `bash`/`pwsh` 工具共同依赖的约定，因此基于它编写的代码可以运行在任意执行器实现之上。
 
 ### 前台命令
+
+`./native` 的 `canonicalShellResult(result)` 为工具消费者将声明的前台字段复制为独立 JSON 数据。它分别保留退出码、信号、超时、取消、有界输出流和可选沙箱事实，省略缺失的可选字段，并排除提供方自有的额外属性。Bash 和 PowerShell 消费者用此投影提供标准值；模型可见文本由各自的呈现器持有。
 
 用已解析的 spec 调用 `run` 即可在前台执行命令。promise 在命令结束时 resolve：非零退出、执行器超时终止或调用方中止终止都是结果，绝不是 rejection。`run` 只在基础设施失败时 reject，例如工作目录不可用或缺少 shell。结果携带退出码或信号、是超时还是中止截断了运行，以及收集到的 stdout/stderr；流超出预算时还附带 spill 文件路径。
 
@@ -81,6 +83,7 @@ seam 本身不是执行器：每个组合只挂载一个提供方，工具即可
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：抽象 `ShellExecutor` 服务与共享设置命名空间 |
+| [`src/native.ts`](src/native.ts) | 不依赖 Cordis 的 `ShellOperations` 定义与共享导出 |
 | [`src/types.ts`](src/types.ts) | 请求/spec 词汇、`ShellRunResult`、`ShellProcess` 与沙箱事实 |
 | [`src/render.ts`](src/render.ts) | `parseExitStatus`：shell 工具共享的退出状态标记约定 |
 | — | 不发布运行时不变式伴生入口；该无状态 Service Definition 负责请求／结果类型，执行器与策略负责观察。 |

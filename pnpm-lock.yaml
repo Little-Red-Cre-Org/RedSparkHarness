@@ -6737,6 +6737,12 @@ importers:
 
   rsh/Modules/Official/shell/bash-local:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-shell-process-local':
+        specifier: workspace:^
+        version: link:../shell-process-local
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6761,6 +6767,19 @@ importers:
         version: link:../../../../Core/util/timeout
 
   rsh/Modules/Official/shell/bash-sandbox:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-shell-sandbox-core':
+        specifier: workspace:^
+        version: link:../shell-sandbox-core
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -6792,6 +6811,12 @@ importers:
 
   rsh/Modules/Official/shell/pwsh-local:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-shell-process-local':
+        specifier: workspace:^
+        version: link:../shell-process-local
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6816,6 +6841,19 @@ importers:
         version: link:../../../../Core/util/timeout
 
   rsh/Modules/Official/shell/pwsh-sandbox:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-shell-sandbox-core':
+        specifier: workspace:^
+        version: link:../shell-sandbox-core
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -6843,6 +6881,10 @@ importers:
         version: link:../../../../Core/subprocess/subprocess-local
 
   rsh/Modules/Official/shell/shell:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -6859,6 +6901,18 @@ importers:
 
   rsh/Modules/Official/shell/shell-env:
     dependencies:
+      '@deepseek-ai/dsh-home-paths':
+        specifier: workspace:^
+        version: link:../../../../Core/util/home-paths
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../shell
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6869,21 +6923,60 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
-      '@deepseek-ai/dsh-home-paths':
-        specifier: workspace:^
-        version: link:../../../../Core/util/home-paths
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
-      '@deepseek-ai/dsh-shell':
-        specifier: workspace:^
-        version: link:../shell
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
 
+  rsh/Modules/Official/shell/shell-process-local:
+    dependencies:
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../shell
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
+      '@deepseek-ai/dsh-timeout':
+        specifier: workspace:^
+        version: link:../../../../Core/util/timeout
+
+  rsh/Modules/Official/shell/shell-sandbox-core:
+    dependencies:
+      '@deepseek-ai/dsh-sandbox':
+        specifier: workspace:^
+        version: link:../../sandbox/sandbox
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../shell
+
   rsh/Modules/Official/shell/tool-bash:
     dependencies:
+      '@deepseek-ai/dsh-bash-local':
+        specifier: workspace:^
+        version: link:../bash-local
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../interaction/native-approval
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-jobs
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/jobs/native-tool-jobs
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-shell-env':
+        specifier: workspace:^
+        version: link:../shell-env
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6900,9 +6993,6 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/agent-loop-testkit
-      '@deepseek-ai/dsh-bash-local':
-        specifier: workspace:^
-        version: link:../bash-local
       '@deepseek-ai/dsh-jobs':
         specifier: workspace:^
         version: link:../../../../Engine/jobs/jobs
@@ -6930,9 +7020,6 @@ importers:
       '@deepseek-ai/dsh-shell':
         specifier: workspace:^
         version: link:../shell
-      '@deepseek-ai/dsh-shell-env':
-        specifier: workspace:^
-        version: link:../shell-env
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
@@ -7006,6 +7093,30 @@ importers:
 
   rsh/Modules/Official/shell/tool-pwsh:
     dependencies:
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../interaction/native-approval
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-jobs
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/jobs/native-tool-jobs
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-pwsh-local':
+        specifier: workspace:^
+        version: link:../pwsh-local
+      '@deepseek-ai/dsh-shell-env':
+        specifier: workspace:^
+        version: link:../shell-env
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -7034,9 +7145,9 @@ importers:
       '@deepseek-ai/dsh-loader-smoke':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/loader-smoke
-      '@deepseek-ai/dsh-pwsh-local':
+      '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
-        version: link:../pwsh-local
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -7049,9 +7160,6 @@ importers:
       '@deepseek-ai/dsh-shell':
         specifier: workspace:^
         version: link:../shell
-      '@deepseek-ai/dsh-shell-env':
-        specifier: workspace:^
-        version: link:../shell-env
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
@@ -8133,6 +8241,9 @@ importers:
       '@deepseek-ai/dsh-base':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/base
+      '@deepseek-ai/dsh-bash-sandbox':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/bash-sandbox
       '@deepseek-ai/dsh-client-ui-agent-preset':
         specifier: workspace:^
         version: link:../Web/client/ui-agent-preset

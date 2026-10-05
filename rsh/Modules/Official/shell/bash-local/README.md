@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-bash-local` is the default Bash executor for POSIX: every command runs as a fresh, non-login `bash -c` process with no rc files, so no shell state survives between calls. It applies configured budgets — working directory, timeout, output caps — to each command, classifies timeouts and cancellations, and returns bounded output with spill-file recovery when a stream overflows. Commands run with the harness process's own authority: this executor confines nothing, so compose `dsh-bash-sandbox` when commands need the sandbox capability. The model-facing `bash` tool talks to it once it is mounted.
+Run fresh non-login `bash -c` commands on POSIX with configured working directory, timeout, and output caps. Foreground runs classify timeout and cancellation; background handles expose incremental output and managed termination. Select `./native` to use the same controller with a native `subprocess` Provider. Both entries run with harness process authority and do not confine commands; use a confining executor and approval-aware tool before allowing model-authored commands under a restricted policy. Output overflow offers spill-file recovery.
 
 ## Table of Contents
 
@@ -87,9 +87,12 @@ The executor is a Service Provider for the `ctx.shell` seam built on the subproc
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `LocalBashExecutor`, `Config`, settings-section wiring |
+| [`src/controller.ts`](src/controller.ts) | Bash argv, environment defaults, and validated config over the shared process controller |
+| [`src/native.ts`](src/native.ts) | Native `shell` Provider over `subprocess` |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |
 | `tests/executor.spec.ts` | Exercised behavior: budgets, classification, background handles, ownership |
 | `tests/settings.spec.ts` | Settings layering over the composition entry |
+| `tests/native.spec.ts` | Native installation, config rejection, and command mapping |
 
 ### Main flow
 
@@ -148,3 +151,5 @@ These limits define when this executor is a poor fit. They are current package c
 None.
 
 </details>
+
+Native and compatibility configuration accept `bashPath`. The owning resolver explicitly selects `bash` when omitted and rejects empty executable values; an explicit private runtime path is passed directly as argv, without modifying global PATH or replacing a system installation. Shell selection does not authorize filesystem access or change sandbox policy.

@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用 `dsh-bash-sandbox` 运行每条 Bash 命令，使其文件访问受到限制，而不是使用 harness 进程的完整权限。结果会报告所选模式、被拒绝的文件操作，以及 runner 是否完整实施该模式。如果没有 runner 能实施受限模式，命令会以 `SANDBOX_UNAVAILABLE` 失败，绝不会无隔离地运行。部署需要文件隔离时选择它；网络访问和进程可见性不在其保证范围内。
+使用 `dsh-bash-sandbox` 运行每条 Bash 命令，使其文件访问受到限制，而不是使用 harness 进程的完整权限。Cordis 入口与 `./native` Provider 共用隔离和结果分类逻辑。结果会报告所选模式、被拒绝的文件操作，以及 runner 是否完整实施该模式。如果没有 runner 能实施受限模式，命令会以 `SANDBOX_UNAVAILABLE` 失败，绝不会无隔离地运行。部署需要文件隔离时选择它；网络访问和进程可见性不在其保证范围内。
 
 ## 目录
 
@@ -42,6 +42,8 @@ kind: "package-reference"
 ### 最小配置
 
 本执行器自身不携带任何沙箱配置：默认模式与工作区根目录来自 `ctx.sandboxPolicy`，runner 选择属于 `ctx.sandbox` 提供方。它自己的配置就是本地执行器的旋钮，逐字继承；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-bash-sandbox)是穷尽式真源。
+
+原生入口要求原生 `subprocess`、`sandbox` 和 `sandboxPolicy` 服务，并提供 `shell`。将它与 `dsh-subprocess-local/native`、`dsh-sandbox-local/native` 和 `dsh-native-sandbox-policy/native` 组合使用。原生配置沿用本地 Bash 的预算字段；策略 Provider 必须明确指定模式与绝对工作区根目录。原生受限调用将 runner 的精确 argv 交给托管 subprocess；runner 失败后不会改用无隔离 Bash 重试。
 
 ```yaml
 - id: sandbox
@@ -82,6 +84,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`SandboxBashExecutor`、按进程保留事实、run/start 包装 |
+| [`src/controller.ts`](src/controller.ts) | 在共用隔离机制上选择原生 Bash 参数 |
 | [`src/helpers.ts`](src/helpers.ts) | 拒绝、runner 失败与 runner spawn 失败分类 |
 | — | 不发布运行时不变式伴生入口；分类可在结果中观察，且除归属 seam 所强制执行的约定外，本包不公开独立事件序列或可变数据关系。 |
 | `tests/` | 跨 bwrap、Landlock 与 Seatbelt runner 演练的行为 |
