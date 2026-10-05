@@ -545,14 +545,11 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 #### `model/selection` — log-only
 
 ```ts persistence-catalog
-/**
- * Complete validated model selection requested for subsequent prompt
- * assembly. Log-only: it never enters derived model history.
- */
+/** Complete validated selection for subsequent prompt assembly; excluded from model history. */
 'model/selection': ModelSelection
 ```
 
-来源：[`rsh/Programs/Web/api/session-controller/src/types.ts:41`](../Programs/Web/api/session-controller/src/types.ts)
+来源：[`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../Engine/core/native-model-execution/src/model-selection.ts)
 
 ### `native-approval/*`
 
