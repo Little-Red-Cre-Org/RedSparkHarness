@@ -11,6 +11,7 @@
     "directory": "rsh/Modules/Official/shell/pwsh-local"
   },
   "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["subprocess"], "optional": [], "provides": ["shell"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -18,15 +19,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./resolve": { "types": "./lib/types/resolve.d.ts", "default": "./lib/resolve.js" },
     "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./resolve": {
-      "types": "./lib/types/resolve.d.ts",
-      "default": "./lib/resolve.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/resolve.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
@@ -39,7 +42,13 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-settings": { "optional": true }
+  },
   "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-shell-process-local": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^"
   },
   "devDependencies": {
@@ -49,10 +58,5 @@
     "@deepseek-ai/dsh-timeout": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
   }
 }

@@ -128,6 +128,7 @@ flowchart TD
     pkg_api_settings_controller["api-settings-controller"]
     pkg_api_workspace_controller["api-workspace-controller"]
     pkg_api_workspace_files["api-workspace-files"]
+    pkg_native_web_session_controller["native-web-session-controller"]
   end
   subgraph group_attachment["group: attachment"]
     pkg_attachment["attachment"]
@@ -163,6 +164,7 @@ flowchart TD
     pkg_client_hmr["client-hmr"]
     pkg_client_locale["client-locale"]
     pkg_client_modules["client-modules"]
+    pkg_client_native_session["client-native-session"]
     pkg_client_resources["client-resources"]
     pkg_client_store["client-store"]
     pkg_client_ui_agent_preset["client-ui-agent-preset"]
@@ -313,6 +315,7 @@ flowchart TD
     pkg_schedule["schedule"]
   end
   subgraph group_sdk["group: sdk"]
+    pkg_native_sdk_server["native-sdk-server"]
     pkg_sdk_client["sdk-client"]
     pkg_sdk_jsonrpc_server["sdk-jsonrpc-server"]
     pkg_sdk_protocol["sdk-protocol"]
@@ -349,6 +352,8 @@ flowchart TD
     pkg_pwsh_sandbox["pwsh-sandbox"]
     pkg_shell["shell"]
     pkg_shell_env["shell-env"]
+    pkg_shell_process_local["shell-process-local"]
+    pkg_shell_sandbox_core["shell-sandbox-core"]
     pkg_tool_bash["tool-bash"]
     pkg_tool_bash_persistent["tool-bash-persistent"]
     pkg_tool_pwsh["tool-pwsh"]
@@ -477,6 +482,7 @@ flowchart TD
   pkg_app_boot --> pkg_home_paths
   pkg_app_boot --> pkg_launch_environment
   pkg_app_boot --> pkg_system_prompt
+  pkg_client_native_session --> pkg_session
   pkg_code_runtime_worker_thread --> pkg_code_runtime
   pkg_code_runtime_worker_thread --> pkg_session
   pkg_code_runtime_worker_thread --> pkg_timeout
@@ -1225,6 +1231,7 @@ flowchart TD
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |
+| [`native-web-session-controller`](../Programs/Web/api/native-web-session-controller) | `api` | — |
 | [`cmdline`](../Compatibility/DSH/boot/cmdline) | `boot` | — |
 | [`compat-dsh-runtime`](../Compatibility/DSH/bridge/compat-dsh-runtime) | `bridge` | — |
 | [`compat-fs-local`](../Compatibility/DSH/bridge/compat-fs-local) | `bridge` | — |
@@ -1307,10 +1314,13 @@ flowchart TD
 | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) | `runtime-diagnostics` | — |
 | [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy) | `sandbox` | — |
 | [`sandbox-windows-acl`](../Modules/Official/sandbox/sandbox-windows-acl) | `sandbox` | — |
+| [`native-sdk-server`](../Programs/SDK/packages/native-server) | `sdk` | — |
 | [`session-format`](../Engine/session/session-format) | `session` | — |
 | [`session-format-v0-to-v1`](../Engine/session/session-format-v0-to-v1) | `session` | — |
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
 | [`session-format-v2-to-v3`](../Engine/session/session-format-v2-to-v3) | `session` | — |
+| [`shell-process-local`](../Modules/Official/shell/shell-process-local) | `shell` | — |
+| [`shell-sandbox-core`](../Modules/Official/shell/shell-sandbox-core) | `shell` | — |
 | [`storage`](../Core/storage/storage) | `storage` | — |
 | [`storage-json`](../Core/storage/storage-json) | `storage` | — |
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |
@@ -1356,6 +1366,7 @@ flowchart TD
 | [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
 | [`api-workspace-controller`](../Programs/Web/api/workspace-controller) | `api` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`host-directory-picker`](../Programs/Web/host/directory-picker), [`session`](../Engine/core/session), [`storage-domain`](../Core/storage/storage-domain), [`typert-protocol`](../Core/typert/protocol), [`workspace`](../Modules/Official/workspace/workspace) |
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
+| [`client-native-session`](../Programs/Web/client/native-session) | `client` | [`session`](../Engine/core/session) |
 | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread) | `code-runtime` | [`code-runtime`](../Modules/Official/code-runtime/code-runtime), [`session`](../Engine/core/session), [`timeout`](../Core/util/timeout) |
 | [`persona`](../Engine/preset/persona) | `preset` | [`system-prompt`](../Engine/core/system-prompt) |
 | [`sandbox`](../Modules/Official/sandbox/sandbox) | `sandbox` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |

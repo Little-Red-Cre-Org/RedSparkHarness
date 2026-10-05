@@ -4,9 +4,9 @@
  * @module @deepseek-ai/dsh-tool-bash/render
  */
 
-import type { ShellProcessRead, ShellRunResult, ShellSandboxInfo, CollectedOutput } from '@deepseek-ai/dsh-shell'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
-import { escalationHintMarker, sandboxDenialMarker } from '@deepseek-ai/dsh-sandbox'
+import type { ShellProcessRead, ShellRunResult, ShellSandboxInfo, CollectedOutput } from '@deepseek-ai/dsh-shell/native'
+import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
+import { escalationHintMarker, sandboxDenialMarker } from '@deepseek-ai/dsh-sandbox/native'
 
 /** Append the truncation notice (with the full-output spill path) to a stream's text. */
 function streamText(output: CollectedOutput): string {
@@ -100,4 +100,4 @@ export function renderProcessRead(
  * it (its renderer emits the same markers). Re-exported here to keep
  * `render.ts` a single import root for bash-tool consumers.
  */
-export { parseExitStatus, type ParsedExitStatus } from '@deepseek-ai/dsh-shell'
+export { parseExitStatus, type ParsedExitStatus } from '@deepseek-ai/dsh-shell/native'

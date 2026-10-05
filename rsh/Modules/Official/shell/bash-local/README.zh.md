@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-bash-local` 是 POSIX 上的默认 Bash 执行器：每条命令都以全新的非登录 `bash -c` 进程运行，不读取 rc 文件，因此调用之间不会残留任何 shell 状态。它会为每条命令应用已配置的预算——工作目录、超时、输出上限——对超时与取消进行分类，并在流溢出时返回有界输出与 spill 文件恢复。命令以 harness 进程自身的权限运行：本执行器不做任何隔离，需要沙箱能力时请组合 `dsh-bash-sandbox`。挂载后，面向模型的 `bash` 工具会与它对接。
+在 POSIX 上以全新的非登录 `bash -c` 进程运行命令，并配置工作目录、超时与输出上限。前台运行区分超时与取消；后台句柄提供增量输出和受管终止。选择 `./native` 可通过原生 `subprocess` Provider 使用相同控制器。两个入口都以 harness 进程权限运行，不限制命令；在受限策略下允许模型编写的命令之前，必须使用受限执行器与具备审批能力的工具。输出溢出时可通过 spill 文件恢复。
 
 ## 目录
 
@@ -87,9 +87,12 @@ if (result.timedOut) console.log('timed out after', result.timeoutMs)
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`LocalBashExecutor`、`Config`、设置段接线 |
+| [`src/controller.ts`](src/controller.ts) | 在共用进程控制器上定义 Bash 参数、环境默认值和已验证配置 |
+| [`src/native.ts`](src/native.ts) | 基于 `subprocess` 的原生 `shell` Provider |
 | — | 不发布运行时不变式伴生入口；除由所属 seam 强制执行的约定外，本包不公开独立的事件序列或可变数据关系。 |
 | `tests/executor.spec.ts` | 已演练的行为：预算、分类、后台句柄、归属 |
 | `tests/settings.spec.ts` | 设置段叠加在组合条目之上 |
+| `tests/native.spec.ts` | 原生安装、配置拒绝与命令映射 |
 
 ### 主要流程
 
@@ -148,3 +151,5 @@ if (result.timedOut) console.log('timed out after', result.timeoutMs)
 无。
 
 </details>
+
+原生与兼容配置均接受 `bashPath`。拥有者解析器在省略时显式选择 `bash`，并拒绝空可执行文件值；显式私有运行时路径直接作为 argv 传入，不修改全局 PATH 或替换系统安装。Shell 选择不授予文件系统访问权限，也不改变沙箱策略。

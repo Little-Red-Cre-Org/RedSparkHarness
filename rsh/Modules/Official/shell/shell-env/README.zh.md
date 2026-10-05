@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在任何挂载模型 shell 工具（`dsh-tool-bash` 或 `dsh-tool-pwsh`）的组合中加载本插件：此后每次前台或后台 shell 调用都会运行在新收集的受管环境中，而不是进程继承来的任意 `DSH_*` 值。
 
+在原生 profile 中，先安装 `dsh-shell-env/native`，再安装 `dsh-tool-bash/native`。Consumer 使用 `dsh-shell-env/definition` 接口；原生 Provider 沿用相同的键校验和内置事实。contributor 将 `register()` 返回的 disposer 交给 `context.own()`。Bash 工具在前台执行或启动后台任务前按当前 Session 收集取值。
+
 ### 每次 shell 调用都会收到什么
 
 每次调用都会收到 `DSH_HOME`（Harness 主目录的绝对路径）、`DSH_SHELL=1`，agent 调用还会收到 `DSH_SESSION_ID`（调用方会话的 id）。
@@ -86,7 +88,10 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口、`ShellEnvRegistry` 服务与内置事实 |
+| [`src/index.ts`](src/index.ts) | Cordis 服务适配器与按 effect 释放的 contributor 注册 |
+| [`src/definition.ts`](src/definition.ts) | 不依赖 Cordis 的原生注册与收集接口 |
+| [`src/native.ts`](src/native.ts) | 基于当前工具执行的原生 Provider |
+| [`src/controller.ts`](src/controller.ts) | 共享的键所有权、内置事实与按调用收集机制 |
 | — | 不发布运行时不变式伴生入口；环境注册表会在每次注册和收集时校验所有权与收集值，也不发布可供伴生入口交叉检查的独立快照。 |
 
 ### 收集

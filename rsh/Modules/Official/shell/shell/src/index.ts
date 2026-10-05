@@ -6,7 +6,8 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
+import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
+import type { ShellOperations } from './native.ts'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from './types.ts'
 
 /**
@@ -18,7 +19,7 @@ import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } fr
  * registering it twice, and a settings document carried between platforms
  * keeps resolving on both.
  */
-export const SHELL_SETTINGS_NAMESPACE = 'shell'
+export { SHELL_SETTINGS_NAMESPACE } from './native.ts'
 
 export { DSH_ENV_PREFIX } from './types.ts'
 export type {
@@ -61,7 +62,7 @@ declare module '@deepseek-ai/cordis' {
  *   boundary is `ctx.subprocess` disposal, so a background process survives
  *   an executor-only reload.
  */
-export abstract class ShellExecutor extends Service {
+export abstract class ShellExecutor extends Service implements ShellOperations {
   constructor(ctx: Context) {
     super(ctx, 'shell')
   }
