@@ -9374,6 +9374,9 @@ importers:
 
   rsh/Programs/Web/api/native-web-session-controller:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../../client/connection
@@ -9389,6 +9392,9 @@ importers:
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -9401,6 +9407,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
@@ -10038,12 +10047,18 @@ importers:
 
   rsh/Programs/Web/client/native-application:
     devDependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../native-session
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -10062,13 +10077,22 @@ importers:
       eventsource-parser:
         specifier: ^3.1.0
         version: 3.1.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../connection
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime

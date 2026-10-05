@@ -1,5 +1,7 @@
 /** Typed copy owned by the native conversation page. */
 export const zh = {
+  modelControls: '模型与预设', model: '模型', reasoning: '推理强度', preset: '预设', providerDefault: 'Provider 默认',
+  noPreset: '未配置预设', unavailable: '不可用', refreshModels: '刷新模型目录',
   title: 'RedSpark Harness', sessions: '会话', create: '新建会话', choose: '选择会话',
   empty: '新建或选择会话以开始对话。', prompt: '消息', send: '发送', cancel: '停止',
   loading: '正在读取会话…', ready: '就绪', sending: '正在执行…', cancelling: '正在停止并保存…',
@@ -10,6 +12,8 @@ export const zh = {
 
 /** Complete English pair for the native page's Chinese key set. */
 export const en: Record<keyof typeof zh, string> = {
+  modelControls: 'Model and preset', model: 'Model', reasoning: 'Reasoning effort', preset: 'Preset', providerDefault: 'Provider default',
+  noPreset: 'No configured preset', unavailable: 'Unavailable', refreshModels: 'Refresh model catalog',
   title: 'RedSpark Harness', sessions: 'Sessions', create: 'New Session', choose: 'Select a Session',
   empty: 'Create or select a Session to start a conversation.', prompt: 'Message', send: 'Send', cancel: 'Stop',
   loading: 'Loading Session…', ready: 'Ready', sending: 'Running…', cancelling: 'Stopping and saving…',

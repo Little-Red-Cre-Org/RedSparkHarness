@@ -37,6 +37,12 @@
     },
     {
       "path": "../../client/native-session"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     }
   ]
 }

@@ -7,6 +7,10 @@ import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/nat
 import type { SessionId, SessionHeader, SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
+import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
+import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
+import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -27,6 +31,24 @@ export interface NativeSessionClientConfig {
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** Read actual advisory catalogs and installed standing presets.
+   * @param signal - caller cancellation.
+   * @returns current Host capability availability and provider-owned choices.
+   */
+  modelControls(signal?: AbortSignal): Promise<NativeModelControls>
+  /** Persist a Session-local model/effort intent against its last observed revision.
+   * @param sessionId - selected stored Session.
+   * @param request - complete model choice and expected durable intent revision.
+   * @param signal - caller cancellation.
+   * @returns completion after the sole Host writer persists the choice.
+   */
+  selectModel(sessionId: SessionId, request: NativeModelSelectionRequest, signal?: AbortSignal): Promise<void>
+  /** Replace the composition of an idle blank Session through its Program epoch.
+   * @param request - Session, advertised preset and expected durable selection revision.
+   * @param signal - caller cancellation.
+   * @returns completion after old Agent drain and accepted successor activation.
+   */
+  selectPreset(request: NativeAgentPresetSelectionRequest, signal?: AbortSignal): Promise<void>
   /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
@@ -92,12 +114,17 @@ function header(value: unknown): SessionHeader {
 }
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(header)
   }
   const data = fields(value)
   switch (endpoint) {
+    case 'session/select-model':
+    case 'session/select-preset':
+      if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
+      break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
         || !Number.isSafeInteger(data.inheritedEventCount) || data.inheritedEventCount < 0
@@ -225,6 +252,13 @@ export function createNativeSessionClient(
       await Promise.allSettled([...pendingPrompts])
     },
     list: signal => call('session/list', {}, signal),
+    modelControls: signal => call('session/model-controls', {}, signal),
+    async selectModel(sessionId, request, signal) {
+      await call('session/select-model', { sessionId, ...request }, signal)
+    },
+    async selectPreset({ id, ...request }, signal) {
+      await call('session/select-preset', { sessionId: id, ...request }, signal)
+    },
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
     prompt(sessionId, text, resume, signal, observe) {
