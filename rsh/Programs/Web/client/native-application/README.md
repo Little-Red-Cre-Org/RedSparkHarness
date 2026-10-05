@@ -43,7 +43,7 @@ The task-list panel reads canonical todo/write snapshots, including accepted liv
 
 ## Invariants
 
-The view reads the selected Host Consumer and owns no independent execution observations, so it publishes no invariant installer.
+No invariant companion is published because the view reads the selected Host Consumer and owns no independent execution observations.
 
 ## Dev Note
 
@@ -70,5 +70,5 @@ The Host owns resumed context and its existing prefix. Model and composition cha
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
-- Rich tool cards and additional model chunk presentations remain separate work.
+- Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
 - File uploads, full Sidebar, layout and Settings remain separate native Client migrations.

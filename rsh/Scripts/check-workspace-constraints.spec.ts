@@ -326,6 +326,10 @@ describe('package payload constraints', () => {
     ])
   })
 
+  it('includes the separately published Todo Client entry', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-tool-todo' })).toContain('lib/client-native.js')
+  })
+
   it('includes the Cordis-free sandbox policy type entry in the package', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
       'lib/index.js', 'lib/native-types.js', 'lib/types/**/*.d.ts',

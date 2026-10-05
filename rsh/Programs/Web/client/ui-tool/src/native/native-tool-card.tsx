@@ -2,9 +2,9 @@
 import { en, zh } from '@deepseek-ai/dsh-client-ui-conversation/conversation-copy'
 import { en as commonEn, zh as commonZh, formatLocaleTemplate } from '@deepseek-ai/dsh-client-locale/dictionary'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { GenericToolCard } from './client/tool/toolviews/GenericToolCard.tsx'
+import { GenericToolCard } from '../client/tool/toolviews/GenericToolCard.tsx'
 export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
-import type { ToolCallOwnerProps } from './tool-renderer-types.ts'
+import type { ToolCallOwnerProps } from '../tool-renderer-types.ts'
 
 /** Detached Tool record and locale; unavailable Host actions are omitted. */
 export interface NativeToolCardProps extends Omit<ToolCallOwnerProps, 'callId' | 'openFile' | 'loadImage'>, Partial<Pick<ToolCallOwnerProps, 'callId' | 'openFile' | 'loadImage'>> {
