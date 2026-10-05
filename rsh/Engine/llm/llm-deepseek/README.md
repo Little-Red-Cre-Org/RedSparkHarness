@@ -150,6 +150,7 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+
 The native `modelDirectory` uses this installation’s exact adapter and official route. Catalog membership is advisory; exact resolution supplies model capabilities and reasoning controls. Removal drains accepted lookups before releasing the adapter.
 
 ## Model Experience

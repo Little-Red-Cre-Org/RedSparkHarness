@@ -150,6 +150,7 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 -----
 
 <a id="model-experience"></a>
+
 原生 `modelDirectory` 使用此安装准确的适配器与官方路由。目录成员仅供参考；准确解析提供模型能力与 reasoning 参数。移除会先排空已接纳查询，再释放适配器。
 
 ## 模型体验

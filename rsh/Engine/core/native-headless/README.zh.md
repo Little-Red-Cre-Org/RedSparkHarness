@@ -47,6 +47,7 @@ kind: "package-reference"
 不发布 invariant companion：应用没有能够独立核对其自身状态的进程内观测。Session 持久化与文件系统 Provider 保留各自的校验。
 
 <a id="model-experience"></a>
+
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
 
 ## 模型体验
