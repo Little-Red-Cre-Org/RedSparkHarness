@@ -42,7 +42,7 @@ kind: "package-reference"
 
 ## 不变量
 
-本包没有可与 Host 权威分歧的独立状态，因此不发布不变量安装器。
+本包不发布运行时不变量伴生入口，因为 Client 的每 Session 准入映射和待处理 Promise 用精确 Host 准入标识关联传输调用、取消和人工回答；持久 Session 事件与写入者身份仍由 Host 拥有，因此 Client 不保留第二份 Session 投影。
 
 <a id="dev-note"></a>
 ## 开发备注

@@ -178,7 +178,7 @@ function checkBuild(
   const configPath = `${owner.dir}/tsdown.config.ts`
   if (!existsSync(resolve(root, configPath))) return
   const source = readFileSync(resolve(root, configPath), 'utf8')
-  const bundlesCompanion = source.includes('lib/types/invariant.js')
+  const bundlesCompanion = tsdownEntriesIncludeInvariant(source)
   if (hasCompanion && !bundlesCompanion) {
     addViolation(violations, configPath, 'package build override must bundle lib/types/invariant.js')
   } else if (!hasCompanion && bundlesCompanion) {
@@ -188,6 +188,52 @@ function checkBuild(
       'package build override must omit lib/types/invariant.js when src/invariant.ts is absent',
     )
   }
+}
+
+function tsdownEntriesIncludeInvariant(source: string): boolean {
+  const sourceFile = ts.createSourceFile('tsdown.config.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const defaultExport = sourceFile.statements.find(ts.isExportAssignment)
+  if (defaultExport === undefined) return false
+
+  const entries: ts.Expression[] = []
+  const visit = (node: ts.Node): void => {
+    if (ts.isPropertyAssignment(node)
+      && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
+      && node.name.text === 'entry') {
+      entries.push(node.initializer)
+    }
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (node.expression.text === 'entry') entries.push(...node.arguments)
+      if (node.expression.text === 'clientBundle' && node.arguments[1] !== undefined) {
+        entries.push(node.arguments[1])
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(defaultExport.expression)
+
+  return entries.some(entry => stringLiteralValues(entry).some(patternIncludesInvariantEntry))
+}
+
+function stringLiteralValues(expression: ts.Expression): string[] {
+  const values: string[] = []
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) values.push(node.text)
+    ts.forEachChild(node, visit)
+  }
+  visit(expression)
+  return values
+}
+
+function patternIncludesInvariantEntry(pattern: string): boolean {
+  const open = pattern.indexOf('{')
+  if (open < 0) return pattern === 'lib/types/invariant.js'
+  const close = pattern.indexOf('}', open + 1)
+  if (close < 0) return false
+  const prefix = pattern.slice(0, open)
+  const suffix = pattern.slice(close + 1)
+  return pattern.slice(open + 1, close).split(',').some(choice =>
+    patternIncludesInvariantEntry(`${prefix}${choice}${suffix}`))
 }
 
 function checkOmissionReason(

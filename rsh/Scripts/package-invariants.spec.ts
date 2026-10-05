@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -39,7 +39,7 @@ function fixture(options: {
   invariantFile?: boolean
   invariantDependency?: boolean
   invariantReference?: boolean
-  buildEntry?: boolean
+  buildEntry?: boolean | string
   omissionReason?: boolean
 } = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-package-invariants-'))
@@ -94,10 +94,11 @@ function fixture(options: {
   if (companion) {
     writeFileSync(join(dir, 'src/invariant.ts'), options.source ?? handwrittenInvariant(packageName))
   }
-  writeFileSync(
-    join(dir, 'tsdown.config.ts'),
-    buildEntry ? "export default { entry: ['lib/types/index.js', 'lib/types/invariant.js'] }\n" : "export default { entry: ['lib/types/index.js'] }\n",
-  )
+  const buildConfig = typeof buildEntry === 'string'
+    ? buildEntry
+    : buildEntry ? "export default { entry: ['lib/types/index.js', 'lib/types/invariant.js'] }\n"
+      : "export default { entry: ['lib/types/index.js'] }\n"
+  writeFileSync(join(dir, 'tsdown.config.ts'), buildConfig)
   writeFileSync(
     join(dir, 'README.md'),
     options.omissionReason === false ? '# Probe\n' : '# Probe\n\nNo runtime invariant companion is published because this fixture owns no diverging observations.\n',
@@ -199,6 +200,31 @@ describe('package invariant gate', () => {
       expect.stringContaining('TypeScript project references must omit ../../../Core/runtime-diagnostics/invariants'),
       expect.stringContaining('build override must omit lib/types/invariant.js'),
     ]))
+  })
+
+  it.each([
+    {
+      companion: true,
+      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })\n",
+      message: undefined,
+    },
+    {
+      companion: true,
+      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,native,types}.js'] })\n",
+      message: 'package build override must bundle lib/types/invariant.js',
+    },
+    {
+      companion: false,
+      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })\n",
+      message: 'package build override must omit lib/types/invariant.js when src/invariant.ts is absent',
+    },
+  ])('checks brace-list build entries from source without lib output', ({ companion, buildEntry, message }) => {
+    const root = fixture({ companion, buildEntry })
+    expect(existsSync(join(root, 'rsh/Engine/core/probe/lib'))).toBe(false)
+    const buildViolations = collectPackageInvariantViolations(root)
+      .filter(violation => violation.path.endsWith('/tsdown.config.ts'))
+    if (message === undefined) expect(buildViolations).toEqual([])
+    else expect(buildViolations.map(violation => violation.message)).toContain(message)
   })
 
   it('rejects foreign, duplicate, and unresolved registrations', () => {

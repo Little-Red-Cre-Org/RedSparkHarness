@@ -62,6 +62,8 @@ Names in the table use the `@deepseek-ai/dsh-` prefix; internal mounts belong to
 
 The provider creates one Cordis Context, installs `RshPluginHost`, and tracks every mounted Fiber by package name. The allowlist is checked before activation; failed activation disposes the partial Fiber and reports both activation and cleanup errors. Native ownership registers Context and mount cleanup before asynchronous activation settles.
 
+No runtime invariant companion is published because the package-name map only indexes mounts initiated through this provider for duplicate rejection and Fiber disposal; adapter services and events remain owned by the Cordis Context, so the map is not a second projection of their state.
+
 </details>
 
 -----

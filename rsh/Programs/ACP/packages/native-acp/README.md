@@ -36,7 +36,7 @@ Standard stdio and Streamable HTTP MCP declarations are accepted by `session/new
 
 ## Dev Note
 
-The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership. No invariant entry is published because this carrier owns no independent Agent or Session state projection that can diverge from the executor.
+The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership. No runtime invariant companion is published because the ACP session table pairs each protocol session with its executor and MCP resources, while the executor owns Agent execution and durable Session state; ACP records hold transport and resource lifecycle plus transient controls, not a second Session projection.
 
 ## Model Experience
 

@@ -40,7 +40,7 @@ Optional approval and userQuestions Providers receive Web answerers only for exa
 
 ## Invariants
 
-The selected executor owns writer exclusivity and Agent identity. This Program owns only transport admission; it introduces no independent Session state requiring a runtime invariant.
+No runtime invariant companion is published because this Program's turn table, admission IDs and pending human presentations coordinate HTTP requests for exact executor-owned turns; they do not copy Agent identity or durable Session state.
 
 Runtime entry chunks use the shared-* prefix declared by the publication manifest.
 

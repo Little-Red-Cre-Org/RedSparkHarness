@@ -38,6 +38,8 @@ Delegated children of this Program's admitted root emit `subagent.started` linea
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.
 
+No runtime invariant companion is published because the per-Session request tails and active-turn admissions only serialize transport calls and scope notifications; the native executor remains authoritative for Agent identity and durable Session state, and this server keeps no second Session projection.
+
 ## Model Experience
 
 ### SDK prompts

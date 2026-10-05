@@ -26,6 +26,8 @@ A package without a qualifying relationship omits `src/invariant.ts`, the `./inv
 
 `verify-package-invariants` scans every package. It requires a package-specific omission reason in the English README, rejects partial export, publication, or companion build wiring, rejects empty installers, and applies the registration, Loader namespace, reporter-use, dependency, reference, and build checks to every published companion. The Vitest host mounts the current package companion only when one exists, while topology and built-artifact checks enumerate the published set.
 
+The source-plane build check reads each `tsdown.config.ts` entry declaration directly, including brace alternatives such as `lib/types/{index,invariant,native,types}.js`; it does not depend on emitted `lib/` files. The separate built-package check verifies artifact closure after compilation.
+
 ### Audit result
 
 The repository-wide audit removed the 209 explained-empty companions and the synthetic `dsh-host-webserver` companion, leaving 39 checks with independent observations. The retained set includes cross-event protocols such as session, command, approval, workflow, and hook lifecycles; event-to-state checks such as settings, storage-domain, Workspace, client modules, and slots; multi-producer assembly such as system prompt and time context; and durable data consumed by projections or policy state such as todo, plan mode, and sandbox mode.

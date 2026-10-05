@@ -42,7 +42,7 @@ Following also carries transient approvals and question batches. answerHuman use
 
 ## Invariants
 
-No independent state can diverge from the Host authority, so this package publishes no invariant installer.
+No runtime invariant companion is published because the Client's per-session admission map and pending Promises correlate transport calls, cancellation and human answers with the exact Host admission; durable Session events and writer identity remain Host-owned, so the Client holds no second Session projection.
 
 <a id="dev-note"></a>
 ## Dev Note
