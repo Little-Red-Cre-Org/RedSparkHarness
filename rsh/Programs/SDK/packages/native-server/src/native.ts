@@ -42,7 +42,7 @@ export class NativeSdkApplication implements NativeApplication {
   private executor: NativeHeadlessApplication | undefined
   private readonly abort = new AbortController()
   private readonly sessions = new Map<string, Promise<void>>()
-  private readonly pending = new Set<Promise<void>>()
+  private readonly pending = new Set<Promise<unknown>>()
   private closing = false
   private initializing = false
 
@@ -66,7 +66,7 @@ export class NativeSdkApplication implements NativeApplication {
     signal.addEventListener('abort', onAbort, { once: true })
     transport.onRequest(async (method, params) => {
       switch (method) {
-        case 'initialize': return this.initialize(params)
+        case 'initialize': return this.track(this.initialize(params, signal))
         case 'session/prompt': return this.prompt(params, transport, signal)
         case 'shutdown':
           this.closing = true
@@ -92,8 +92,19 @@ export class NativeSdkApplication implements NativeApplication {
     }
   }
 
-  private async initialize(raw: Record<string, unknown>): Promise<{ serverInfo: { name: string; version: string } }> {
+  private assertOpen(): void {
     if (this.closing) throw new Error('native SDK: closing')
+  }
+
+  private track<T>(task: Promise<T>): Promise<T> {
+    this.pending.add(task)
+    void task.then(() => { this.pending.delete(task) }, () => { this.pending.delete(task) })
+    return task
+  }
+
+  private async initialize(raw: Record<string, unknown>, lifetime: AbortSignal):
+  Promise<{ serverInfo: { name: string; version: string } }> {
+    this.assertOpen()
     if (this.executor !== undefined || this.initializing) throw new Error('native SDK: already initialized')
     this.initializing = true
     try {
@@ -105,8 +116,10 @@ export class NativeSdkApplication implements NativeApplication {
       if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isSafeInteger(maxTokens) || maxTokens <= 0)) {
         throw new TypeError('native SDK: maxTokens must be a positive integer')
       }
-      await this.context.require('model').resolveModel?.(provider, model, this.context.signal)
-      if (this.closing) throw new Error('native SDK: closing')
+      const signal = AbortSignal.any([lifetime, this.context.signal, this.abort.signal])
+      await this.context.require('model').resolveModel?.(provider, model, signal)
+      signal.throwIfAborted()
+      this.assertOpen()
       this.executor = createNativeHeadlessApplication(this.context, {
         cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps: this.config.maxSteps,
         ...reasoningEffort === undefined ? {} : { reasoningEffort },
@@ -118,19 +131,23 @@ export class NativeSdkApplication implements NativeApplication {
 
   private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
     lifetime: AbortSignal): Promise<{ messageId: string }> {
-    if (this.closing) throw new Error('native SDK: closing')
+    this.assertOpen()
     const executor = this.executor
     if (executor === undefined) throw new Error('native SDK: initialize first')
     const sessionId = nonempty(raw.sessionId, 'sessionId')
     if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0
-      || raw.contentBlocks.some(block => typeof block !== 'object' || block === null || block.type !== 'text' || typeof block.text !== 'string')) {
+      || raw.contentBlocks.some((block: unknown) => {
+        if (typeof block !== 'object' || block === null) return true
+        const fields = block as Record<string, unknown>
+        return fields.type !== 'text' || typeof fields.text !== 'string'
+      })) {
       throw new TypeError('native SDK: this profile accepts nonempty text contentBlocks only')
     }
     const content = (raw.contentBlocks as Array<{ type: 'text'; text: string }>).map(block => ({ type: 'text' as const, text: block.text }))
     const message = createUserMessage({ content, source: { kind: 'user' } })
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<void>()
-    let admitted = false
+    const admission = { received: false }
     const task = (async () => {
       try {
         if (previous !== undefined) await previous
@@ -139,24 +156,23 @@ export class NativeSdkApplication implements NativeApplication {
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
         await executor.executeRootTurn({ id, resume, message, onEvent: (event) => {
           transport.notify('session.event', { sessionId, event })
-          if (!admitted && event.type === 'agent/inbox/spliced'
+          if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
-            admitted = true
+            admission.received = true
             accepted.resolve()
             transport.notify('session.status', { sessionId, status: 'running' })
           }
         } }, signal)
-        if (!admitted) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
+        if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
       } catch (error: unknown) {
-        if (admitted) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
+        if (admission.received) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
         else accepted.reject(error)
       } finally {
-        if (admitted) transport.notify('session.status', { sessionId, status: 'idle' })
+        if (admission.received) transport.notify('session.status', { sessionId, status: 'idle' })
       }
     })()
     this.sessions.set(sessionId, task)
-    this.pending.add(task)
-    void task.then(() => { this.pending.delete(task) })
+    void this.track(task)
     await accepted.promise
     return { messageId: String(message.id) }
   }

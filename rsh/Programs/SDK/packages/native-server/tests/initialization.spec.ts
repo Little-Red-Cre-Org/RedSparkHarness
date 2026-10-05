@@ -4,7 +4,7 @@ import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { NativeAcpApplication } from '../src/native.ts'
+import { NativeSdkApplication } from '../src/native.ts'
 
 it('drains model initialization after EOF before releasing its Provider', async () => {
   const entered = Promise.withResolvers<undefined>()
@@ -30,7 +30,7 @@ it('drains model initialization after EOF before releasing its Provider', async 
   const output = new PassThrough()
   output.resume()
   const scope = new NativeScope()
-  let app: NativeAcpApplication | undefined
+  let app: NativeSdkApplication | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'deferred-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => {
@@ -41,7 +41,7 @@ it('drains model initialization after EOF before releasing its Provider', async 
   const carrier: NativePlugin = {
     apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model'], provides: ['application'],
     resolve: () => (context) => {
-      app = new NativeAcpApplication(context, { provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1 }, input, output)
+      app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
       context.provide('application', app)
     },
   }
@@ -57,7 +57,7 @@ it('drains model initialization after EOF before releasing its Provider', async 
     return result
   })
   try {
-    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: 1, clientCapabilities: {} } })}\n`)
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: process.cwd(), provider: 'fixture', model: 'fixture' } })}\n`)
     await entered.promise
     input.end()
     await aborted.promise

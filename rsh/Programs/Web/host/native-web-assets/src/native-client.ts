@@ -2,11 +2,12 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, isAbsolute, join, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { parseNativeEntryManifest } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native'
+import { NativeClientBuildError } from './client-build-error.ts'
 
 const PROFILE_FILENAME = 'rsh.client.json'
 const ROUTE_PREFIX = '/.dsh/native-client/'
@@ -22,6 +23,10 @@ export interface NativeClientAsset {
 export interface NativeClientBundle {
   readonly wire: NativeClientBootWire
   readonly assets: ReadonlyMap<string, NativeClientAsset>
+  /** Absolute profile, manifest and transitive source files used to produce this bundle; never sent to Clients. */
+  readonly watchFiles: readonly string[]
+  /** Existing input and relative-import directories, observed without recursive traversal. */
+  readonly watchDirectories: readonly string[]
 }
 
 interface NativeClientInstallation {
@@ -44,6 +49,7 @@ interface PackageManifest {
 interface SelectedEntry {
   readonly id: string
   readonly entryPath: string
+  readonly manifestPath: string
   readonly config: unknown
 }
 
@@ -141,7 +147,7 @@ function selectedEntries(profile: NativeClientProfile, projectDir: string, runti
     const entryPath = createRequire(manifestPath).resolve(`${row.plugin}${entry.entry.slice(1)}`)
     const realEntryPath = realpathSync(entryPath)
     if (!inside(packageRoot, realEntryPath)) throw new Error(`dsh native web: native Client installation ${row.id} entry escapes its package`)
-    return { id: row.id, entryPath: realEntryPath, config: row.config }
+    return { id: row.id, entryPath: realEntryPath, manifestPath, config: row.config }
   })
 }
 
@@ -167,6 +173,17 @@ export async function prepareNativeClientBundle(
   const entries = selectedEntries(profile, projectDir, runtimeDir)
   const importRows = entries.map((entry, index) => `import * as plugin${index} from ${JSON.stringify(entry.entryPath)}`)
   const pluginRows = entries.map((entry, index) => `${JSON.stringify(entry.id)}: plugin${index}`).join(',')
+  const watchDirectories = new Set([resolve(projectDir), ...entries.map(entry => dirname(entry.manifestPath))])
+  const bareImports = new Map<string, Set<string>>()
+  const observeDirectory = (filename: string): void => {
+    let directory = dirname(filename)
+    while (!existsSync(directory)) {
+      const parent = dirname(directory)
+      if (parent === directory) break
+      directory = parent
+    }
+    watchDirectories.add(directory)
+  }
   const result = await build({
     absWorkingDir: projectDir,
     stdin: {
@@ -188,6 +205,38 @@ export async function prepareNativeClientBundle(
     mainFields: ['browser', 'module', 'main'],
     define: { 'process.env.NODE_ENV': '"production"' },
     loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file', '.png': 'file', '.jpg': 'file' },
+    plugins: [{ name: 'native-client-input-observation', setup(builder) {
+      builder.onResolve({ filter: /.*/ }, (args) => {
+        if (args.importer.length > 0 && existsSync(args.importer)) observeDirectory(args.importer)
+        if (args.path.startsWith('.') || isAbsolute(args.path) || args.kind === 'import-rule' || args.kind === 'url-token') {
+          observeDirectory(resolve(args.resolveDir, args.path))
+        } else if (args.resolveDir.length > 0) {
+          const importers = bareImports.get(args.path) ?? new Set<string>()
+          importers.add(args.resolveDir)
+          bareImports.set(args.path, importers)
+        }
+        return undefined
+      })
+    } }],
+  }).catch((error: unknown) => {
+    if (error instanceof Error && 'errors' in error && Array.isArray(error.errors)) {
+      const messages: readonly unknown[] = error.errors
+      for (const message of messages) {
+        if (typeof message !== 'object' || message === null || !('text' in message) || typeof message.text !== 'string') continue
+        const name = /^Could not resolve "([^"]+)"$/u.exec(message.text)?.[1]
+        if (name === undefined) continue
+        const segments = name.split('/')
+        const packageName = name.startsWith('@') ? segments.slice(0, 2).join('/') : (segments[0] ?? name)
+        for (const importerDir of bareImports.get(name) ?? []) {
+          for (let directory = importerDir; ; directory = dirname(directory)) {
+            const modulesDir = resolve(directory, 'node_modules')
+            if (existsSync(modulesDir)) observeDirectory(resolve(modulesDir, packageName))
+            if (dirname(directory) === directory) break
+          }
+        }
+      }
+    }
+    throw new NativeClientBuildError(error, [...watchDirectories].sort())
   })
 
   const cordisInput = Object.keys(result.metafile.inputs).find(path => /cordis/iu.test(path))
@@ -210,7 +259,24 @@ export async function prepareNativeClientBundle(
     else if (extension === '.css') styleUrls.push(`${url}?v=${createHash('sha256').update(output.contents).digest('hex').slice(0, 16)}`)
   }
   if (bundleUrl === undefined) throw new Error('dsh native web: native Client bundle has no JavaScript output')
+  const watchFiles = new Set([resolve(profilePath), ...entries.map(entry => entry.manifestPath)])
+  for (const input of Object.keys(result.metafile.inputs)) {
+    if (input === 'native-client-profile.ts') continue
+    const path = resolve(projectDir, input)
+    watchFiles.add(path)
+    watchDirectories.add(dirname(path))
+    let directory = dirname(path)
+    while (true) {
+      const manifest = join(directory, 'package.json')
+      if (existsSync(manifest)) { watchFiles.add(manifest); break }
+      const parent = dirname(directory)
+      if (parent === directory) break
+      directory = parent
+    }
+  }
   return {
+    watchFiles: [...watchFiles].sort(),
+    watchDirectories: [...watchDirectories].sort(),
     wire: {
       formatVersion: 1,
       bundle: bundleUrl,

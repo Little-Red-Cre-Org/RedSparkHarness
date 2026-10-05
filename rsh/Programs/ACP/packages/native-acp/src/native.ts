@@ -55,7 +55,7 @@ function updates(event: SessionEvent): SessionUpdate[] {
     case 'assistant/message': return event.data.message.content.flatMap((block) => {
       if (block.type !== 'text' && block.type !== 'reasoning') return []
       return [{ sessionUpdate: block.type === 'text' ? 'agent_message_chunk' : 'agent_thought_chunk',
-        messageId: event.data.message.id, content: { type: 'text', text: block.text } } as SessionUpdate]
+        messageId: event.data.message.id, content: { type: 'text', text: block.text } }]
     })
     case 'tool/call': {
       let rawInput: unknown
@@ -259,7 +259,7 @@ export class NativeAcpApplication implements NativeApplication {
       return { stopReason }
     })
     record.current = { abort, done }
-    try { return await done } finally { if (record.current?.done === done) delete record.current }
+    try { return await done } finally { if (record.current.done === done) delete record.current }
   }
 
   private async closeSession(id: string): Promise<Record<string, never>> {

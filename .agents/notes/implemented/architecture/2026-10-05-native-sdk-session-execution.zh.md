@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-原生 SDK 服务是一个由 profile 选择的应用。`initialize` 绑定工作目录和模型路由，`session/prompt` 按 Session ID 将文本排队交给共享的 native-headless 执行器。执行器负责模型请求、持久事件和写入者结算；SDK 应用负责 JSON-RPC 标准输入输出、每个 Session 的提示顺序、状态通知和进程关闭。TypeScript 和 Python 客户端继续默认使用 `sdk`，原生路径需要显式选择。
+原生 SDK 服务是一个由 profile 选择的应用。`initialize` 绑定工作目录和模型路由，`session/prompt` 按 Session ID 将文本排队交给共享的 native-headless 执行器。执行器负责模型请求、持久事件和写入者结算；SDK 应用负责 JSON-RPC 标准输入输出、每个 Session 的提示顺序、状态通知和进程关闭。模型解析接收连接取消信号；关闭时先等待初始化结束，再由 Host 释放其提供方。TypeScript 和 Python 客户端继续默认使用 `sdk`，原生路径需要显式选择。
 
 原生服务保留现有的三个请求方法，发送 `session.event` 与 `session.status`。提示请求仅在持久化的 `agent/inbox/spliced` 回执之后返回；回执之前的失败会拒绝 JSON-RPC 请求。是否恢复 Session 由持久化存储决定，包括进程重启之后。内联图片接纳和子 Agent 通知不属于第一批原生 SDK 范围。不支持的输入会在传输请求处明确失败，不会被静默改写。
 

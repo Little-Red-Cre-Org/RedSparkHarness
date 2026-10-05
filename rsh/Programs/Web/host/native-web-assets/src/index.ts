@@ -6,6 +6,7 @@ import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import type { NativeClientBundle } from './native-client.ts'
 
 export type { NativeClientAsset, NativeClientBundle } from './native-client.ts'
+export { NativeClientBuildError } from './client-build-error.ts'
 
 type NativeClientBundleBuilder = typeof import('./native-client.ts').prepareNativeClientBundle
 
