@@ -12,6 +12,11 @@ import { TerminalView } from './presentation.ts'
 import { TerminalController } from './controller.ts'
 import { resolveNativeTuiConfig, type Config } from './config.ts'
 import { terminalCopy } from './locale.ts'
+import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
+import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import { terminalModelOperations } from './models.ts'
+import type {} from '@deepseek-ai/dsh-user-questions/native'
+import { bindTerminalHumanAnswerers } from './human.ts'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -23,9 +28,14 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
    * @param context - selected native installation authorities.
    * @param executor - selected sole Session execution owner.
    * @param config - resolved terminal settings.
+   * @param selection - optional Session selection Provider.
+   * @param directory - optional actual model directory Provider.
    */
-  constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config) {
+  constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config,
+    selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     super({
+      models: selection !== undefined && directory !== undefined
+        ? terminalModelOperations(executor, selection, directory, config, agent => context.require('agents').execution(agent)) : undefined,
       turn: (request, signal) => executor.executeRootTurn(request, signal),
       open: async (id, resume, signal) => {
         await executor.executeSessionOperation({ id, resume }, () => Promise.resolve(undefined), signal)
@@ -36,6 +46,8 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
         onCleanupFailure: (error) => { console.error('native-tui: reader cleanup failed', error) },
       }, signal)).events,
     }, context.signal, config, SessionId('session-' + randomUUID()))
+    bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), id => this.ownsSession(id), context,
+      context.optional('approval'), context.optional('userQuestions'))
   }
   /** Launch Ink after the controller restores the selected Session.
    * @param args - explicit terminal argv.
@@ -47,7 +59,9 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
     try {
       await this.initialize(args, signal)
       this.ink = render(React.createElement(TerminalView, { interaction: this, locale: this.config.locale,
-        model: this.config.provider + '/' + this.config.model, background: this.config.background }), { exitOnCtrlC: false })
+        model: { provider: this.config.provider, model: this.config.model,
+          ...this.config.reasoningEffort === undefined ? {} : { reasoningEffort: String(this.config.reasoningEffort) } },
+        background: this.config.background }), { exitOnCtrlC: false })
       await this.waitForExit()
     } finally { await this.close() }
     return this.status(signal)
@@ -77,17 +91,17 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeTuiConfig(input)
     return (context) => {
       const { locale: _locale, background: _background, maxQueuedInputs: _queue, maxHistoryEvents: _history,
-        maxTranscriptEvents: _transcript, maxStreamChunks: _stream, ...turn } = config
+        maxTranscriptEvents: _transcript, maxStreamChunks: _stream, maxPendingHumanRequests: _human, ...turn } = config
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
-      const application = new NativeTuiApplication(context, executor, config)
+      const application = new NativeTuiApplication(context, executor, config, context.optional('modelSelection'), context.optional('modelDirectory'))
       context.own(() => application.close())
       context.provide('application', application)
       context.provide('rootExecution', executor.rootExecution)

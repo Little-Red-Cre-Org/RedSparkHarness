@@ -121,6 +121,7 @@ flowchart TD
   end
   subgraph group_acp["group: acp"]
     pkg_acp["acp"]
+    pkg_native_acp["native-acp"]
   end
   subgraph group_api["group: api"]
     pkg_api_gateway["api-gateway"]
@@ -1245,6 +1246,7 @@ flowchart TD
 | [`native-prompt`](../Engine/core/native-prompt) | `core` | — |
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
+| [`native-acp`](../Programs/ACP/packages/native-acp) | `acp` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |
 | [`native-web-session-controller`](../Programs/Web/api/native-web-session-controller) | `api` | — |

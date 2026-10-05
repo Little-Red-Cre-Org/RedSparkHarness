@@ -39,6 +39,7 @@
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-sdk-server": "workspace:^",
+    "@deepseek-ai/dsh-native-acp": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-credentials-local": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
@@ -57,16 +58,17 @@
     "@deepseek-ai/dsh-web-frontend": "workspace:^",
     "@deepseek-ai/dsh-native-web-host": "workspace:^",
     "@deepseek-ai/dsh-native-web-session-controller": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
     "@deepseek-ai/dsh-native-tui": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-client-native-application": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
