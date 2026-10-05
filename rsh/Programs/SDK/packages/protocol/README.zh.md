@@ -33,13 +33,14 @@ kind: "package-library"
 
 ### SDK 方法
 
-兼容 profile 提供原有三个请求方法与四个通知。native-sdk profile 还提供按 Session 取消、已结束轮次分叉与实时模型分块。
+兼容 profile 提供原有三个请求方法与四个通知。native-sdk profile 还提供按 Session 取消、下一步引导、已结束轮次分叉与实时模型分块。
 
 | 方向 | 方法 | 载荷类型 |
 |---|---|---|
 | client→server | `initialize` | `InitializeParams` → `InitializeResult` |
 | client→server | `session/prompt` | `SessionPromptParams` → `SessionPromptResult`（持久入队回执） |
 | 客户端→服务端 | `session/cancel` | `SessionCancelParams` → `SessionCancelResult`（仅 native-sdk） |
+| 客户端→服务端 | `session/steer` | `SessionSteerParams` → `SessionSteerResult`（仅 native-sdk） |
 | client→server | `session/fork` | `SessionForkParams` → `SessionForkResult` (native-sdk only) |
 | client→server | `shutdown` | 无参数 → `{}` |
 | 服务端→客户端 | `session.chunk` | `SessionChunkNotification`（native-sdk 实时模型投影） |

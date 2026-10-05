@@ -11,6 +11,10 @@
     },
     {
       "role": "user",
+      "content": "redirect after cancellation"
+    },
+    {
+      "role": "user",
       "content": "finish after cancellation"
     },
     {

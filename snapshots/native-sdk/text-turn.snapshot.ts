@@ -75,16 +75,23 @@ it('replays a native SDK turn with exact model input, output and durable Session
     } else {
       const session = harness.session('sdk-recorded-turn')
       expect(await session.cancel()).toBe(false)
+      await expect(session.steer('idle steering')).rejects.toThrow()
       const chunk = Promise.withResolvers<void>()
       const pending = session.run(task, { onNotification: notification => {
         if (notification.method === 'session.chunk' && (notification.params.chunk as { type?: string }).type === 'text-delta') chunk.resolve()
       } })
       await chunk.promise
+      await expect(harness.session('unknown-session').steer('foreign steering')).rejects.toThrow()
+      const steering = await session.steer('redirect after cancellation')
+      expect(steering).not.toBe('')
       expect(await harness.session('unknown-session').cancel()).toBe(false)
       expect(await session.cancel()).toBe(true)
       const cancelled = await pending
       expect(cancelled.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted', reason: { kind: 'user' } } } })
       expect(cancelled.events.some(event => event.type === 'assistant/attempt')).toBe(true)
+      expect(cancelled.events.some(event => event.type === 'agent/inbox/spliced' && event.data.target === 'next-step'
+        && event.data.inserted.some(message => message.id === steering))).toBe(true)
+      await expect(session.steer('settled steering')).rejects.toThrow()
       await harness.close()
       const resumed = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
