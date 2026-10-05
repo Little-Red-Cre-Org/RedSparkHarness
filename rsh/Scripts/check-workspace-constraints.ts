@@ -71,10 +71,11 @@ const applicationPackageDirectories = new Set([
 ])
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh': ['lib/*.js'],
+  '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@deepseek-ai/dsh-desktop-host': [
-    'lib/index.js',
+    'lib/*.js',
     'config/desktop.cordis.patch.yml',
+    'lib/types/**/*.d.ts',
   ],
   // Sourcemaps stay out by payload policy; the worker-preview surface
   // (dist/preview.html and dist/preview/) backs private experimental
