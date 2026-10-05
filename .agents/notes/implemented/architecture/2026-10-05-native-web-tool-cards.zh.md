@@ -14,7 +14,7 @@ Tool 记录类型由一个纯 Conversation 导出统一维护。兼容重导出�
 
 混合 Client 包在动态兼容入口旁发布显式纯子路径。静态叶构建保留裸导入并输出真实样式资源，不把整个包分类为静态链接。原生策略追踪完整源码和公开声明依赖图，允许真实存在的 Client 样式及已解析、已声明的 DefinitelyTyped 类型提供者；缺失资源、Host 样式导入和 Cordis 引用仍无效。生产声明与浏览器导入均有显式依赖，React 实例保持共享 peer。
 
-`./controller` ESM 子路径单独导出 `NativeConversationController`，不加载 React 页面安装器。Host 测试引用此纯源码叶文件的仅声明项目；Host 聚合配置不引用安装器依赖 React UI 和 `ui-tool` 的 Client application 项目。Client 聚合配置仍完整构建该应用及其消费者依赖图。
+`./controller` ESM 子路径单独导出 `NativeConversationController`，不加载 React 页面安装器。Host 测试引用此纯源码叶文件的仅声明项目；Host 聚合配置不引用安装器依赖 React UI 和 `ui-tool` 的 Client application 项目。包的 tsdown 配置只在 Client tsc 产出入口后参与 Client 构建。Client 聚合配置仍完整构建该应用及其消费者依赖图。
 
 ## 考虑过的替代方案
 

@@ -14,7 +14,7 @@ Tool record types have one pure Conversation export. Compatibility re-exports pr
 
 Mixed Client packages publish explicit pure subpaths alongside their dynamic compatibility entry. Their static leaf builds preserve bare imports and emit actual stylesheet assets without classifying the entire package as statically linked. The native policy follows the complete source and public declaration graph. It admits existing Client stylesheets and resolved declared DefinitelyTyped providers, while missing assets, Host stylesheet edges and Cordis references remain invalid. Production declarations and browser imports have explicit dependencies; React instances stay shared peers.
 
-The `./controller` ESM subpath exposes `NativeConversationController` without loading the React page installer. Host tests reference a declaration-only project for that pure source leaf; the Host aggregate does not reference the Client application project, whose installer imports React UI and `ui-tool`. The Client aggregate still builds the application and its complete consumer graph.
+The `./controller` ESM subpath exposes `NativeConversationController` without loading the React page installer. Host tests reference a declaration-only project for that pure source leaf; the Host aggregate does not reference the Client application project, whose installer imports React UI and `ui-tool`. The package tsdown config runs only in the Client pass, after Client tsc emits its entries. The Client aggregate still builds the application and its complete consumer graph.
 
 ## Alternatives considered
 
