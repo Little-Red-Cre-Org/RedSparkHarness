@@ -222,7 +222,7 @@ function section(value: unknown): NativeSettingsSection {
   if (value === undefined) return {}
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new TypeError('settings section must be an object')
   const snapshot = snapshotJsonValue(value)
-  if (snapshot === undefined || typeof snapshot !== 'object' || snapshot === null || Array.isArray(snapshot)) {
+  if (snapshot === undefined || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
     throw new TypeError('settings section must contain JSON values')
   }
   return snapshot as NativeSettingsSection
@@ -231,7 +231,7 @@ function section(value: unknown): NativeSettingsSection {
 function resolved<T>(resolver: (value: NativeSettingsSection) => T, value: NativeSettingsSection): T {
   const snapshot = snapshotJsonValue(resolver(value))
   if (snapshot === undefined) throw new TypeError('resolved settings must contain JSON values')
-  return deepFreeze(snapshot) as T
+  return deepFreeze(snapshot)
 }
 
 function merge(base: NativeSettingsSection, patch: NativeSettingsSection): NativeSettingsSection {

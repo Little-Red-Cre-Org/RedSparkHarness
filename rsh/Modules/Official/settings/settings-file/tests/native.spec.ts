@@ -37,7 +37,7 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
     })
     editor.watch(async () => { throw new Error('observer failed') })
     const observed = Promise.withResolvers<boolean>()
-    editor.watch(() => observed.resolve(true))
+    editor.watch(() => { observed.resolve(true) })
     await editor.update({ theme: 'dark' }, 0)
     await Promise.all([warned.promise, observed.promise])
     await expect(editor.update({ theme: 'stale' }, 0)).rejects.toMatchObject({ code: 'SETTINGS_CONFLICT' })
