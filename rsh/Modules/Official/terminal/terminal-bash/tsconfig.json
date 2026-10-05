@@ -37,6 +37,12 @@
     },
     {
       "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../sandbox/native-sandbox-policy"
     }
   ]
 }

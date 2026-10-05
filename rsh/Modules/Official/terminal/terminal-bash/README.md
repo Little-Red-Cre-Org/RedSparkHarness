@@ -25,6 +25,10 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+The native `./native` entry registers a PTY backend using the selected native subprocess and sandbox-policy services. Its profile config explicitly supplies `type`, `shellPath`, `shellArgs`, `rows`, `cols`, and `graceMs`; the subprocess provider resolves the executable and allocates a real terminal session. This entry drains output without retaining or returning it, and reports only top-level process status. A confined policy requires a sandbox Provider; no unconfined fallback is used.
+
+On Windows, the local ConPTY process is outside Job containment. The local subprocess Provider reports weaker descendant cleanup: processes that escape the directly observed tree may survive close. The native backend inherits that limit and does not claim complete cleanup of an unobservable process.
+
 Mount this backend when a composition needs persistent shell sessions — state such as cwd, exported variables, functions, or running interactive children must survive across tool calls. It is the default `shell` type: a composition that mounts `@deepseek-ai/dsh-terminal` without it has no sessions to open.
 
 ### When to choose it

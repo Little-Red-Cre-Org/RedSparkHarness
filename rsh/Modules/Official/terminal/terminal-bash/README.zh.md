@@ -25,6 +25,10 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+原生 `./native` 入口使用选定的原生子进程与沙箱策略服务注册 PTY 后端。Profile 配置必须显式提供 `type`、`shellPath`、`shellArgs`、`rows`、`cols` 和 `graceMs`；子进程提供方解析可执行文件并分配真实终端会话。此入口会排空输出，但不保留或返回输出；它只报告顶层进程状态。受限策略要求沙箱 Provider，不会回退为不受限执行。
+
+在 Windows 上，本地 ConPTY 进程不受 Job 容器约束。本地子进程 Provider 会提示后代清理较弱：逃离直接可观察进程树的进程可能在关闭后继续存活。原生后端继承这一限制，不会声称已完整清理无法观察的进程。
+
 当组合需要持久 shell 会话时挂载此后端——cwd、导出的变量、函数或正在运行的交互式子进程等状态必须跨工具调用存活。它是默认的 `shell` 类型：组合只挂载 `@deepseek-ai/dsh-terminal` 而不挂载它时，将没有任何会话可打开。
 
 ### 何时选择
