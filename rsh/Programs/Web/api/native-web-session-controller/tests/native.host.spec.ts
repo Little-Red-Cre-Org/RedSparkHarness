@@ -219,7 +219,7 @@ it.each([
     Object.assign(reply.events[0]!, { ignorable: true })
     expect((await client.history(header.id as import('@deepseek-ai/dsh-session/types').SessionId)).events[0]?.type).toBe('future/required')
   }
-  rpc.call = vi.fn(async () => ({ ok: true, value: event.type === 'future/required'
+  rpc.call = vi.fn(async () => ({ ok: true as const, value: event.type === 'future/required'
     ? { catalog: null, canSelectModel: 'true', presets: [] }
     : { catalog: null, canSelectModel: true, presets: [{ id: '', name: 'invalid' }] } }))
   await expect(client.modelControls()).rejects.toThrow()
