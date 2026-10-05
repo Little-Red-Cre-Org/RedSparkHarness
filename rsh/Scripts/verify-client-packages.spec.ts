@@ -139,6 +139,23 @@ describe('package modes', () => {
     expect(found.join('\n')).toContain('has no supported client package mode')
   })
 
+  it('classifies explicit native-profile packages outside the Cordis module-table modes', () => {
+    const native = pkg('native-application', {
+      dynamic: false,
+      nativeProfileOnly: true,
+      nativeProfileEntryValid: true,
+    })
+    expect(collectClientPackageViolations(facts([native]))).toEqual([])
+    expect(collectClientPackageViolations(facts([{ ...native, dynamic: true }]))).toEqual([
+      native.manifest + ': ' + native.name + ' must select the native Client target and export ./native, without'
+      + ' declaring dsh.client or using the staticLinked preset',
+    ])
+    expect(collectClientPackageViolations(facts([{ ...native, nativeProfileEntryValid: false }]))).toEqual([
+      native.manifest + ': ' + native.name + ' must select the native Client target and export ./native, without'
+      + ' declaring dsh.client or using the staticLinked preset',
+    ])
+  })
+
   it('requires seeded workspace packages to use staticLinked and preloads to name dynamic rows', () => {
     const slots = declaration('ui-slots', { dynamic: false })
     const bootstrap = declaration('bootstrap', { dynamic: false })

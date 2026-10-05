@@ -20,6 +20,17 @@ const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+  '@deepseek-ai/dsh-client-native-session': [
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-client-connection',
+    '@deepseek-ai/dsh-native-model-selection',
+    '@deepseek-ai/dsh-agent-presets',
+    '@deepseek-ai/dsh-brand',
+  ],
+  '@deepseek-ai/dsh-client-native-application': [
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-client-native-session',
+  ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Development-only package relationships not represented by source imports. */
@@ -49,10 +60,17 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
 }
 
-/** Browser runtime peers that must share the application instance. */
+/** Client runtime peers that must share the application instance. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
-  '@deepseek-ai/dsh-client-native-application': ['react'],
+  '@deepseek-ai/dsh-client-native-application': [
+    'react',
+    '@deepseek-ai/dsh-session',
+    '@deepseek-ai/dsh-native-model-selection',
+    '@deepseek-ai/dsh-agent-presets',
+    '@deepseek-ai/dsh-tool-todo',
+  ],
+  '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
 }
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
@@ -78,17 +96,11 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
-  '@deepseek-ai/dsh-tool-todo/client-native': ['foldTodos'],
-  '@deepseek-ai/dsh-native-model-selection/types': ['foldNativeModelSelectionState'],
-  '@deepseek-ai/dsh-agent-presets/selection': ['foldNativeAgentPresetFacts'],
   '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
   '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
-  '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
-  '@deepseek-ai/dsh-session/event-validation': ['parseSessionEvent'],
-  '@deepseek-ai/dsh-session/surface': ['deriveEventMessage', 'isAppendSurfaceEvent'],
   '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
@@ -105,6 +117,7 @@ export interface PackageDependencyPolicy {
   readonly hostPackages: readonly string[]
   readonly configurationOnlyDevDependencies: Readonly<Record<string, readonly string[]>>
   readonly clientRuntimeDependencies: Readonly<Record<string, readonly string[]>>
+  readonly sharedClientRuntimePeers: Readonly<Record<string, readonly string[]>>
   readonly publishedTypeDependencies?: Readonly<Record<string, readonly string[]>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
@@ -119,6 +132,7 @@ export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
   hostPackages: HOST_DEPENDENCY_PACKAGES,
   configurationOnlyDevDependencies: CONFIGURATION_ONLY_DEV_DEPENDENCIES,
   clientRuntimeDependencies: CLIENT_RUNTIME_DEPENDENCIES,
+  sharedClientRuntimePeers: SHARED_CLIENT_RUNTIME_PEERS,
   publishedTypeDependencies: PUBLISHED_TYPE_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,

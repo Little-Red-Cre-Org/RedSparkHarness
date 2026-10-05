@@ -11,6 +11,8 @@ kind: "package-reference"
 
 此无 Cordis 的 Client 应用为显式 native-web profile 提供对话页面。选定 renderer 挂载 React；client-native-session 提供经过身份验证的 Host 操作。
 
+原生 profile 通过 `dsh.native` 行及 `./native` 导出选择本包；旧 `dsh.client` 模块表不会加载它。生产依赖包含已发布声明引用的包，但安装这些包不会激活其 NativePlugin；profile 会选择实际运行的贡献。包选择与声明依赖的决策记录在[安装说明](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.zh.md)中。
+
 ## 目录
 
 - [参考](#reference)
@@ -30,7 +32,7 @@ kind: "package-reference"
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。页面不提供持久化语言偏好或 Settings UI。
 
-React 与 Session 消息投影通过 peer 依赖共享应用实例；Session Consumer 只作为类型依赖，运行时由选定 capability 提供。
+React、Session、原生模型选择、Agent 预设选择与 todo Client 值通过 peer 依赖共享应用实例。已发布声明也引用 native-runtime 与 client-native-session，因此这些包作为生产依赖安装以供类型解析；只有原生 profile 选择后才会运行它们的 NativePlugin。
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 

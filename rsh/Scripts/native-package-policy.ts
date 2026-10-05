@@ -57,6 +57,12 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/client/ui-slots',
 ])
 
+/** Native-profile Client packages that do not implement the Cordis module-table entry. */
+export const nativeProfileClientDirectories: ReadonlySet<string> = new Set([
+  'rsh/Programs/Web/client/native-session',
+  'rsh/Programs/Web/client/native-application',
+])
+
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Programs/TUI/native-tui', ['host']],

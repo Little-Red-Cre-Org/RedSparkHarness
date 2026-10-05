@@ -58,6 +58,8 @@ export interface PackageDependencyFacts {
   readonly workspaceNames: ReadonlySet<string>
   readonly allSourceUses: ReadonlyMap<string, readonly string[]>
   readonly hostRuntimeSourceUses: ReadonlyMap<string, readonly string[]>
+  /** Runtime package uses from the selected Client source files. */
+  readonly clientRuntimeSourceUses: ReadonlyMap<string, readonly string[]>
   readonly hostRuntimeExportUses: readonly HostRuntimeExportUse[]
   readonly peerRequiredHostDependencies: ReadonlySet<string>
   readonly configurationOnlyDevDependencies: ReadonlySet<string>
@@ -402,24 +404,28 @@ function readHostRuntimeUses(root: string, pkg: WorkspacePackageManifest, genera
 function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishedTypes: ReadonlySet<string>): {
   uses: Map<string, string[]>
   typeUses: Map<string, string[]>
+  runtimeUses: Map<string, string[]>
 } {
   const uses = new Map<string, string[]>()
   const typeUses = new Map<string, string[]>()
+  const runtimeUses = new Map<string, string[]>()
   for (const sourcePath of globSync('src/**/*.{ts,tsx,mts,cts}', { cwd: resolve(root, pkg.dir) }).sort()) {
     const source = readFileSync(resolve(root, pkg.dir, sourcePath), 'utf8')
     const displayPath = `${pkg.dir}/${normalizePath(sourcePath)}`
-    let runtimeUses: Set<string> | undefined
+    const runtimePackageNames = collectRuntimeSourcePackageUses(sourcePath, source)
+    for (const name of runtimePackageNames) addUse(runtimeUses, name, displayPath)
+    let runtimeNames: Set<string> | undefined
     for (const specifier of collectSourcePackageUses(sourcePath, source)) {
       const name = packageNameOf(specifier)
       if (name === undefined) continue
       if (publishedTypes.has(name)) {
-        runtimeUses ??= collectRuntimeSourcePackageUses(sourcePath, source)
-        if (!runtimeUses.has(name)) addUse(typeUses, name, displayPath)
+        runtimeNames ??= runtimePackageNames
+        if (!runtimeNames.has(name)) addUse(typeUses, name, displayPath)
       }
       const typesName = `@types/${name.replace(/^@/, '').replace('/', '__')}`
       if (declaredSections(pkg.manifest, name).length === 0 && declaredSections(pkg.manifest, typesName).length > 0) {
-        runtimeUses ??= collectRuntimeSourcePackageUses(sourcePath, source)
-        if (!runtimeUses.has(name)) {
+        runtimeNames ??= runtimePackageNames
+        if (!runtimeNames.has(name)) {
           addUse(uses, typesName, displayPath)
           continue
         }
@@ -427,7 +433,7 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishe
       addUse(uses, name, displayPath)
     }
   }
-  return { uses, typeUses }
+  return { uses, typeUses, runtimeUses }
 }
 
 /**
@@ -451,6 +457,15 @@ export function readPackageDependencyFacts(
   const inject = pkg.manifest.dsh?.client?.inject ?? []
   const publishedTypes = new Set(policy.publishedTypeDependencies?.[pkg.manifest.name ?? ''] ?? [])
   const source = readAllSourceUses(root, pkg, publishedTypes)
+  const clientRuntimeSourceUses = new Map<string, string[]>()
+  for (const [name, paths] of source.runtimeUses) {
+    const clientPaths = role === 'client-only'
+      ? paths
+      : role === 'client-host'
+        ? paths.filter(path => path.startsWith(`${pkg.dir}/src/client/`))
+        : []
+    if (clientPaths.length > 0) clientRuntimeSourceUses.set(name, clientPaths)
+  }
   const hostRuntime = role === 'client-only'
     ? { packageUses: new Map<string, string[]>(), exportUses: [] }
     : readHostRuntimeUses(root, pkg, generatedHostSource)
@@ -463,6 +478,7 @@ export function readPackageDependencyFacts(
     allSourceUses: source.uses,
     publishedTypeSourceUses: source.typeUses,
     hostRuntimeSourceUses: hostRuntime.packageUses,
+    clientRuntimeSourceUses,
     hostRuntimeExportUses: hostRuntime.exportUses,
     peerRequiredHostDependencies: new Set(hostRuntime.exportUses
       .filter(use => policy.peerRequiredHostExports[use.specifier]?.includes(use.exportName) === true)
@@ -475,10 +491,10 @@ export function readPackageDependencyFacts(
   }
 }
 
-/** Validate runtime dependencies retained by published Client entries. */
+/** Validate production Client runtime dependencies and shared peer identities. */
 export function collectClientRuntimeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
-  policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies'>,
+  policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies' | 'sharedClientRuntimePeers'>,
 ): string[] {
   const violations: string[] = []
   const selectedByName = new Map(facts.map(fact => [fact.manifest.name, fact]))
@@ -500,6 +516,30 @@ export function collectClientRuntimeDependencyPolicyViolations(
       }
       if (!fact.allSourceUses.has(dependency)) {
         violations.push(`clientRuntimeDependencies lists unused ${packageName} dependency ${dependency}`)
+      }
+    }
+  }
+  for (const [packageName, peers] of Object.entries(policy.sharedClientRuntimePeers)) {
+    const fact = selectedByName.get(packageName)
+    if (fact === undefined) {
+      violations.push(`sharedClientRuntimePeers names unmanaged package ${packageName}`)
+      continue
+    }
+    if (fact.role === 'configured-host') {
+      violations.push(`sharedClientRuntimePeers package ${packageName} is not Client-faced`)
+    }
+    for (const peer of duplicates(peers)) {
+      violations.push(`sharedClientRuntimePeers lists ${packageName} peer ${peer} more than once`)
+    }
+    for (const peer of peers) {
+      if (packageNameOf(peer) !== peer) {
+        violations.push(`sharedClientRuntimePeers ${packageName} entry ${peer} must name a package`)
+      }
+      if (!fact.clientRuntimeSourceUses.has(peer)) {
+        violations.push(`sharedClientRuntimePeers lists unused ${packageName} peer ${peer}`)
+      }
+      if (!Object.hasOwn(fact.manifest.peerDependencies ?? {}, peer)) {
+        violations.push(`sharedClientRuntimePeers requires ${packageName} to declare ${peer} as a peer`)
       }
     }
   }
@@ -682,6 +722,10 @@ export function expectedPackageDependencies(
       ? 'peer-dev'
       : 'dependencies'
     for (const path of paths) add(name, expectedSection, path)
+  }
+  for (const [name, paths] of facts.clientRuntimeSourceUses) {
+    if (SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? '']?.includes(name) !== true) continue
+    for (const path of paths) add(name, 'peer-dev', `shared Client runtime peer in ${path}`)
   }
   return new Map([...expected].map(([name, rule]) => [name, {
     section: rule.section,

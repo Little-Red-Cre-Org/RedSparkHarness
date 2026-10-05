@@ -38,10 +38,6 @@
       "provides": [
         "clientApplication"
       ]
-    },
-    "client": {
-      "platform": "web",
-      "immediately": true
     }
   },
   "files": [
@@ -51,7 +47,10 @@
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-native-session": "workspace:^"
+  },
   "scripts": {
     "bundle": "tsdown"
   },
@@ -66,9 +65,7 @@
     "react": "^18.2.0",
     "@types/react": "~18.3.1",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^"

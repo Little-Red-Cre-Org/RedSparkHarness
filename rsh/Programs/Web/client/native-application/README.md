@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 This Cordis-free Client application supplies the conversation page for the explicit native-web profile. The selected renderer mounts React; client-native-session supplies authenticated Host operations.
 
+The native profile selects this package through its `dsh.native` row and `./native` export; the legacy `dsh.client` module table does not load it. Production dependencies include packages referenced by the published declarations, but installing those packages does not activate their NativePlugins; the profile selects the runtime contributions. The package-selection and declaration-dependency decision is recorded in the [installation note](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.md).
+
 ## Table of Contents
 
 - [Reference](#reference)
@@ -29,7 +31,7 @@ The transcript uses the shared Session append-origin and message projection rule
 
 Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
 
-React and Session message projection use shared application peer instances; the Session Consumer is a type-only dependency supplied by the selected runtime capability.
+React, Session, native model selection, agent preset selection and todo Client values use the application's shared peer instances. The published declarations also reference native-runtime and client-native-session, so those packages are production dependencies for type resolution; their NativePlugins run only when selected by the native profile.
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
 
