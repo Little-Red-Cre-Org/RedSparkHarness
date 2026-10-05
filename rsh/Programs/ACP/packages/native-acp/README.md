@@ -26,6 +26,8 @@ The shipped native composition installs the model adapter, native Agent and mode
 
 The application declares the shared executor’s optional `modelSelection` service and consumes its Host compiler face.
 
+New and resumed Sessions return standard `configOptions` from the selected model directory. `session/set_config_option` accepts advertised opaque model values and declared reasoning efforts, persists the complete choice through exclusive Session maintenance, and sends `config_option_update`. Requests received during a prompt wait for its settlement and apply to the next turn; another prompt is refused while configuration is pending. Caller cancellation interrupts queued discovery and mutations; close and EOF cancel and drain accepted controls. Missing directory or selection Providers yield no options and reject mutations. Catalog absence does not erase the current recorded route.
+
 Image prompts require the selected attachment Provider and model directory. Initialization advertises image admission only when both are installed; each image prompt checks the Session's next selected model and prepares attachments within the same root execution admission, rejecting models without declared image input. The attachment Provider validates configured raster formats, base64, byte and pixel limits, normalizes the batch, and returns durable references in input order before user-message admission. Invalid images never enter the Session inbox. Cancellation and transport drain also cover image preparation.
 
 ## Dev Note
@@ -38,7 +40,7 @@ The [native ACP decision](../../../../../.agents/notes/implemented/architecture/
 
 #### What the model sees
 
-Text and normalized image references admitted by `session/prompt` enter the durable Session inbox and reaches the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). ACP presentation notifications add no model input.
+Text and normalized image references admitted by `session/prompt` enter the durable Session inbox and reach the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). Durable model choices affect subsequent request assembly through the selected Provider; protocol configuration notifications add no model input.
 
 #### Token effect
 
@@ -50,4 +52,4 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- Per-session MCP mounts, audio/embedded input, model configuration controls, permission/question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises no audio, embedded context or HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
+- Per-session MCP mounts, audio/embedded input, permission/question requests, and attachment presentation are outside this carrier slice; unsupported prompt content and MCP declarations fail explicitly. Initialization advertises no audio, embedded context or HTTP MCP support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.

@@ -61,24 +61,32 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     const imagePart = user?.content.find(part => part.type === 'image_url')
     expect(imagePart?.image_url).toHaveProperty('url', expect.stringMatching(/^data:image\/png;base64,/))
     await expect(transport.request('session/prompt', params, signal)).rejects.toThrow('session prompt is already running')
+    const configured = transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal)
+    void configured.catch(() => {}) // Its assertion owns the protocol result after prompt drain.
     transport.notify('session/cancel', { sessionId: created.sessionId })
     await transport.flush()
     expect(await prompt).toMatchObject({ stopReason: 'cancelled' })
+    expect(await configured).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model']) }] })
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
     entered = Promise.withResolvers<undefined>()
     const pending = transport.request('session/prompt', params, signal).catch((error: unknown) => error)
     await entered.promise
+    const closingSelection = transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal).catch((error: unknown) => error)
     child.stdin.end()
     const exit = await child
     expect(exit.exitCode, exit.stderr).toBe(0)
     await pending
+    expect(await closingSelection).toBeInstanceOf(Error)
     const paths = await readdir(join(home, 'sessions'), { recursive: true })
     const physical = paths.find(path => path.endsWith('session.v3.jsonl'))
     if (physical === undefined) throw new Error('durable ACP Session missing')
     const events = (await readFile(join(home, 'sessions', physical), 'utf8')).trim().split('\n').slice(1)
       .map(line => JSON.parse(line) as { type: string; data: { reason?: { kind: string } } })
     expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
+    expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)
     expect(events.at(-1)?.type).toBe('turn/end')
   } finally {
     transport.close()

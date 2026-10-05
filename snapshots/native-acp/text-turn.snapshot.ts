@@ -51,7 +51,8 @@ it('replays a native ACP turn with exact model input, output and durable Session
     { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'You are a native ACP fixture.', maxSteps: 1 } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
-      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
+      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] },
+        { id: 'fixture-model-next', input: ['text', 'image'], reasoningEfforts: { off: null, high: 'high' } }] } } } },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
     cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
@@ -67,18 +68,29 @@ it('replays a native ACP turn with exact model input, output and durable Session
   try {
     const initialized = await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
     expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: true } } })
-    const created = await transport.request('session/new', { cwd: workspace, mcpServers: [] }, signal) as { sessionId: string }
+    const created = await transport.request('session/new', { cwd: workspace, mcpServers: [] }, signal) as {
+      sessionId: string; configOptions: { id: string; currentValue: string }[] }
+    expect(created.configOptions[0]?.currentValue).toBe(JSON.stringify(['fixture', 'fixture-model']))
+    await expect(transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: 'not-an-advertised-route' }, signal)).rejects.toThrow()
+    await transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model-next']) }, signal)
+    await transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'reasoning_effort', value: 'high' }, signal)
     const image = readFileSync(join(scene, 'image.png')).toString('base64')
     const result = await transport.request('session/prompt', { sessionId: created.sessionId,
       prompt: [{ type: 'text', text: task }, { type: 'image', mimeType: 'image/png', data: image }] }, signal)
     expect(result).toMatchObject({ stopReason: 'end_turn' })
-    expect(output).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
+    expect(output).toMatchObject([{ sessionUpdate: 'config_option_update' }, { sessionUpdate: 'config_option_update' },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
     const protocol = JSON.stringify(output.map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n'
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     const listed = await transport.request('session/list', { cwd: workspace }, signal) as { sessions: unknown[] }
     expect(listed.sessions).toHaveLength(1)
-    await transport.request('session/resume', { sessionId: created.sessionId, cwd: workspace, mcpServers: [] }, signal)
-    expect(output).toHaveLength(2)
+    expect(await transport.request('session/resume', { sessionId: created.sessionId, cwd: workspace, mcpServers: [] }, signal))
+      .toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model-next']) },
+        { id: 'reasoning_effort', currentValue: 'high' }] })
+    expect(output).toHaveLength(4)
     expect(requests).toHaveLength(1)
     const request = requests[0]
     if (request === undefined) throw new Error('native-acp snapshot: model request missing')
@@ -95,9 +107,11 @@ it('replays a native ACP turn with exact model input, output and durable Session
     expect(`sha256:${createHash('sha256').update(storedImage).digest('hex')}`).toBe(ref.attachmentId)
     const caption = requestImageHandleText(ref, ref, { readonlyPath: attachmentPath })
     const stableCaption = requestImageHandleText(ref, ref, { readonlyPath: '{{attachment}}' })
-    const serialized = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2)
+    expect(request).toMatchObject({ model: 'fixture-model-next', reasoning_effort: 'high' })
+    const serialized = JSON.stringify({ model: request.model, reasoning_effort: request.reasoning_effort,
+      messages: request.messages, tools: request.tools ?? [] }, null, 2)
     expect(serialized.split(JSON.stringify(caption))).toHaveLength(2)
-    expect(request.messages).toMatchObject([{ role: 'system' }, { role: 'user', content: [
+    expect(request.messages).toMatchObject([{ role: 'developer' }, { role: 'user', content: [
       { type: 'text', text: task }, { type: 'text', text: caption },
       { type: 'image_url', image_url: { url: `data:${ref.mediaType};base64,${storedImage.toString('base64')}` } },
     ] }])
