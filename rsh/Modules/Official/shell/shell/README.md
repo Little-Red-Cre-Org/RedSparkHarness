@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `ctx.shell` to run foreground shell commands with bounded output or start background processes that return a handle immediately. A profile can select local or sandboxed Bash or PowerShell execution without changing callers. Resolve each request before execution to make the working directory, timeout, and output limits explicit. Command completion, nonzero exits, timeouts, and caller aborts return results; only infrastructure failures reject, while the `bash` and `pwsh` tools own model-visible rendering and sandbox guidance.
+Run bounded foreground shell commands or start background processes through a selected Bash or PowerShell executor. Resolve each request before execution so the working directory, timeout, and output caps are explicit. Nonzero exits, timeout, and abort return results; only infrastructure failures reject. Use `./native` for the same request, result, process-handle, and exit-status definitions without Cordis; a native host selects one `shell` Provider. Model-facing tools own output rendering and sandbox guidance.
 
 ## Table of Contents
 
@@ -28,6 +28,8 @@ Use `ctx.shell` to run foreground shell commands with bounded output or start ba
 Use `ctx.shell` when an agent or an in-process plugin needs to run a shell command and read its output, or start a background process and poll it. It is the contract every shell executor and the model-facing `bash`/`pwsh` tools build on, so code written against it works over any executor implementation.
 
 ### Foreground commands
+
+`canonicalShellResult(result)` from `./native` copies declared foreground fields into detached JSON data for tool consumers. It retains exit code, signal, timeout, abort, bounded streams and optional sandbox facts independently, omits absent optional fields and excludes provider-owned extra properties. Bash and PowerShell consumers use this projection for their canonical values; their renderers own model-visible text.
 
 Call `run` with a resolved spec to execute a command in the foreground. The promise resolves when the command finishes: a nonzero exit, an executor timeout kill, or a caller abort kill is a result, never a rejection. `run` rejects only for infrastructure failures such as an unusable working directory or a missing shell. The result carries the exit code or signal, whether a timeout or an abort cut the run short, and the collected stdout/stderr with spill-file paths when a stream overflowed its budget.
 
@@ -81,6 +83,7 @@ The package is one role of a standard capability seam: the Service Definition th
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: abstract `ShellExecutor` service and the shared settings namespace |
+| [`src/native.ts`](src/native.ts) | Cordis-free `ShellOperations` definition and shared exports |
 | [`src/types.ts`](src/types.ts) | Request/spec vocabulary, `ShellRunResult`, `ShellProcess`, and sandbox facts |
 | [`src/render.ts`](src/render.ts) | `parseExitStatus`: the exit-status marker contract the shell tools share |
 | — | No runtime invariant companion is published; this stateless Service Definition owns request/result types, while executors and policy own observations. |
