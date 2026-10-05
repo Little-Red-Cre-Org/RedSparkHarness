@@ -1,0 +1,130 @@
+{
+  "initial": [
+    {
+      "name": "terminal_open",
+      "description": "Allocate an owner-scoped PTY process. Input, retained output and foreground signals remain available until terminal_close.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "shell"
+            ],
+            "description": "Configured terminal backend type."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Absolute initial working directory."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional owner-local unique name."
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_list",
+      "description": "List PTY processes owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "terminal_send",
+      "description": "Send input to an owned persistent terminal; wait for stdin readiness, idle, timeout or shell exit. Idle does not prove command exit.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "sessionId",
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "submit": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_read",
+      "description": "Read a bounded newest-relative page of retained terminal output without sending input.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_signal",
+      "description": "Signal the verified foreground process group; shell-targeted SIGKILL is rejected, use terminal_close.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "sessionId",
+          "signal"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "signal": {
+            "type": "string",
+            "enum": [
+              "SIGINT",
+              "SIGTERM",
+              "SIGKILL",
+              "SIGTSTP",
+              "SIGHUP"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_close",
+      "description": "Close one owned PTY process and wait for provider-observed process cleanup.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "changes": []
+}

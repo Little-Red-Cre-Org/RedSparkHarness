@@ -5,7 +5,7 @@
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/jobs/native-tool-jobs" },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["jobs", "tools"], "optional": [], "provides": [] } },
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["jobs", "tools"], "optional": [], "provides": ["jobControls"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

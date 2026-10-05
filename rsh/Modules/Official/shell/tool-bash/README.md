@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-tool-bash` lets an agent run one-shot `bash` commands and receive stdout, stderr, and exit markers. Each call uses a fresh shell, so cwd, variables, and functions do not persist; `run_in_background` starts long-running work that the agent can inspect with `job_output` and stop with `job_kill`. Commands receive the managed `DSH_*` environment, and sandbox denials can be retried once with wider `sandbox_permissions`, a `justification`, and user approval. Non-zero exits are reported as results, so the agent decides how to respond; use an executor such as `dsh-bash-local` or `dsh-bash-sandbox` and load `dsh-shell-env`.
+`dsh-tool-bash` lets an agent run one-shot `bash` commands and inspect stdout, stderr, and exit status. Each call uses a fresh shell and receives managed `DSH_*` facts. Sandbox escalation requires a wider policy, justification, and user approval.
+
+The `./native` entry supports foreground commands and Agent-owned background jobs when native job services are installed. It requests application approval before applying a wider policy to one call.
 
 ## Table of Contents
 
@@ -25,7 +27,13 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+The native entry registers tools in its installation scope. Descendant Agents see these contributions; sibling Agents do not.
+
+The native contribution declares a canonical output union. Foreground results retain `kind: 'foreground'`, exit code, signal, timeout and abort facts, bounded stdout/stderr and optional sandbox facts; background starts return `kind: 'background'` and the native `jobId`. The registry validates these values before rendering the existing text. Both native and Cordis consumers use the shell's shared foreground projection. These declarations do not install PTC bindings or change background job ownership.
+
 Load this plugin in any composition where the agent should run bash commands: it registers the `bash` tool once an executor provider and the `dsh-shell-env` registry are mounted, and stays pending until the `tools`, `shell`, `systemPrompt`, and `shellEnv` services exist.
+
+In a native profile, compose `dsh-tool-bash/native` with native `tools`, `dsh-shell-env/native`, and either `dsh-bash-sandbox/native` plus `dsh-native-sandbox-policy/native`, or `dsh-bash-local/native` for explicitly unconfined commands. Add `dsh-native-jobs` and `dsh-native-tool-jobs` to expose `run_in_background`, `job_output`, `job_list`, and `job_kill`; job output becomes readable after the process settles. The selected native application records each tool call and result in the Session. With a sandboxing shell and an `ask` native approval policy, the schema advertises `sandbox_permissions` and `justification`. An escalation requires a strictly wider mode and the application's native approval path; that path records the question and decision before the command runs. An unavailable or non-granting approval path rejects the retry without launching a command.
 
 ### Minimal configuration
 
@@ -59,7 +67,7 @@ Passing `run_in_background: true` returns a job id immediately and no timeout ap
 
 ### Sandboxed execution and escalation
 
-When the mounted executor confines commands (for example `dsh-bash-sandbox`), a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a command failure. The model may then retry the exact same command once in the same turn with `sandbox_permissions` (the narrowest wider mode that suffices) and a one-sentence `justification`; the approval prompt raised by that retry is how the user consents. Escalation is never speculative: a request with no real prior denial, or one that is not strictly wider than the current mode, fails closed without running anything, and a rejected escalation is final for that command.
+When the mounted executor confines commands (for example `dsh-bash-sandbox`), a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a command failure. The model is instructed to retry the exact same command once in the same turn only after a real denial, with `sandbox_permissions` (the narrowest wider mode that suffices) and a one-sentence `justification`; the approval prompt raised by that retry is how the user consents. The tool enforces strict widening and approval before execution, but does not verify that an earlier call was denied. A rejected escalation is final for that command.
 
 ### What can go wrong
 
@@ -145,7 +153,7 @@ Prefix-stable while the registration scope and prompt text are unchanged. Plugin
 
 #### What the model sees
 
-The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash). `run_in_background` appears only when this producer enables it; `sandbox_permissions` and `justification` appear only when the mounted executor advertises sandboxing. Agent-scoped tool restrictions can remove the definition for that agent.
+The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash). In native profiles, `run_in_background` appears only when the job registry and its control tools are selected; `sandbox_permissions` and `justification` appear when the selected shell confines commands and native approval policy is `ask`. Agent-scoped tool restrictions can remove the definition for that agent.
 
 #### Token effect
 
@@ -207,6 +215,7 @@ These limits define when the tool is a poor fit or needs special care. They are 
 - **Replay exit pills parse from result text** — output whose final line happens to be exactly `[exit code: N]` / `[killed by signal: …]` shows a wrong pill on session replay and loses that line from the card body, because the parse treats it as the marker it consumes; a display-only known residual.
 - **The `bash` tool opts out of `timeout-policy` budgets** — it keeps the executor-owned `BASH_TIMEOUT` path, per [the tool-call timeout-policy Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-07-tool-call-timeout-policy.md).
 - **Background processes have no executor timeout** — callers must use `job_kill`, or rely on owner/service disposal, when work no longer matters.
+- **Native background output is retained at settlement** — `job_output` reports no process output while the job is running; completed output, status, and cancellation are owned by the native job registry.
 
 <a id="dev-note"></a>
 ### Dev Note

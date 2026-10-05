@@ -43,6 +43,23 @@ export function shippedNativeProfileComposition(
   profile: (typeof SHIPPED_NATIVE_PROFILES)[number],
   platform: NodeJS.Platform = process.platform,
 ): NativeProfileConfig {
+  if (profile === 'native-sdk') return {
+    formatVersion: 1,
+    scopes: [{ id: ROOT }],
+    installations: [
+      { id: 'app', plugin: '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
+        config: { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
+      { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
+      { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
+      { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
+        config: { root: join(home, 'sessions'), compression: 'none' } },
+      { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: ROOT },
+      { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
+      { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
+        config: { providers: { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',
+          baseURL: 'https://api.deepseek.com/v1', models: [{ id: 'deepseek-v4-flash' }] } } } },
+    ],
+  }
   const windows = platform === 'win32'
   return {
     formatVersion: 1,
@@ -50,19 +67,15 @@ export function shippedNativeProfileComposition(
     installations: [
       {
         id: 'app',
-        plugin: profile === 'native-sdk'
-          ? '@deepseek-ai/dsh-native-sdk-server'
-          : profile === 'native-web'
-            ? '@deepseek-ai/dsh-native-web-host'
-            : profile === 'native-acp'
-              ? '@deepseek-ai/dsh-native-acp'
-              : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
+        plugin: profile === 'native-web'
+          ? '@deepseek-ai/dsh-native-web-host'
+          : profile === 'native-acp'
+            ? '@deepseek-ai/dsh-native-acp'
+            : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
         scope: ROOT,
-        config: profile === 'native-sdk'
-          ? { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 }
-          : profile === 'native-web'
-            ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live' }
-            : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 1000 } : {}) },
+        config: profile === 'native-web'
+          ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live' }
+          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 1000 } : {}) },
       },
       ...(profile === 'native-web' ? [{
         id: 'session-controller',
@@ -104,10 +117,7 @@ export function shippedNativeProfileComposition(
       { id: 'settings', plugin: '@deepseek-ai/dsh-settings-file', scope: ROOT,
         config: { dshHome: home } },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
-        config: { providers: profile === 'native-sdk'
-          ? { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',
-            baseURL: 'https://api.deepseek.com/v1', models: [{ id: 'deepseek-v4-flash' }] } }
-          : { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' } } } },
+        config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' } } } },
     ],
   }
 }

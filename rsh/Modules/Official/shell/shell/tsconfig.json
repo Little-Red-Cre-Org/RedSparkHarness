@@ -18,10 +18,13 @@
       "path": "../../../../Core/subprocess/subprocess"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../sandbox/sandbox"
     },
     {
-      "path": "../../settings/settings"
+      "path": "../../settings/settings/tsconfig.json"
     }
   ]
 }

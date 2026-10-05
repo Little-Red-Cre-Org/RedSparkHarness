@@ -37,6 +37,18 @@
     },
     {
       "path": "../../../../Engine/jobs/jobs"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-jobs"
+    },
+    {
+      "path": "../../../../Engine/core/native-prompt"
     }
   ]
 }
