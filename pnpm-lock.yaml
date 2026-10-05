@@ -1759,6 +1759,12 @@ importers:
       '@deepseek-ai/dsh-llm-deepseek':
         specifier: workspace:^
         version: link:../../llm/llm-deepseek
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -2152,6 +2158,9 @@ importers:
 
   rsh/Engine/core/native-headless:
     dependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../context/agent-instructions
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../preset/agent-presets
@@ -2210,6 +2219,9 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
@@ -6219,6 +6231,16 @@ importers:
         version: link:../user-approval
 
   rsh/Modules/Official/interaction/tool-ask-user:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../user-questions
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -6226,18 +6248,42 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../fs/fs-local
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence-jsonl
       '@deepseek-ai/dsh-system-prompt':
         specifier: workspace:^
         version: link:../../../../Engine/core/system-prompt
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
-      '@deepseek-ai/dsh-user-questions':
+      '@deepseek-ai/dsh-user-question-broker':
         specifier: workspace:^
-        version: link:../user-questions
+        version: link:../user-question-broker
 
   rsh/Modules/Official/interaction/user-approval:
     dependencies:
@@ -6270,7 +6316,32 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/core/system-prompt
 
+  rsh/Modules/Official/interaction/user-question-broker:
+    dependencies:
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../user-questions
+
   rsh/Modules/Official/interaction/user-questions:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -7839,6 +7910,9 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../Engine/context/agent-instructions
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../Modules/Official/attachment/attachment-local
@@ -7890,6 +7964,9 @@ importers:
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
+      '@deepseek-ai/dsh-native-time-context':
+        specifier: workspace:^
+        version: link:../../Engine/context/native-time-context
       '@deepseek-ai/dsh-native-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/native-tool-jobs
@@ -8078,9 +8155,6 @@ importers:
       '@deepseek-ai/dsh-acp-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/acp-app
-      '@deepseek-ai/dsh-agent-instructions':
-        specifier: workspace:^
-        version: link:../../Engine/context/agent-instructions
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../Engine/preset/agent-presets
@@ -8144,6 +8218,9 @@ importers:
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../Engine/preset/persona
@@ -8252,6 +8329,12 @@ importers:
       '@deepseek-ai/dsh-tool-workflow':
         specifier: workspace:^
         version: link:../../Engine/workflow/tool-workflow
+      '@deepseek-ai/dsh-user-question-broker':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/user-question-broker
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/user-questions
       '@deepseek-ai/dsh-web-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/web-app

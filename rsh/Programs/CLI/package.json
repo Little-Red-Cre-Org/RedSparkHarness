@@ -52,7 +52,9 @@
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
     "@deepseek-ai/dsh-attachment-local": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:^"
+    "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
+    "@deepseek-ai/dsh-native-time-context": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -61,7 +63,6 @@
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/cordis-plugin-timer": "workspace:^",
     "@deepseek-ai/dsh-acp-app": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-agent-tool-presentation": "workspace:^",
     "@deepseek-ai/dsh-app-boot": "workspace:^",
@@ -125,7 +126,10 @@
     "@deepseek-ai/dsh-workflow-worker-thread": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "js-yaml": "^4.2.0",
-    "node-addon-require-builtin": "^0.1.4"
+    "node-addon-require-builtin": "^0.1.4",
+    "@deepseek-ai/dsh-user-questions": "workspace:^",
+    "@deepseek-ai/dsh-user-question-broker": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",

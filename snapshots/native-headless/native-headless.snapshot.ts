@@ -37,9 +37,13 @@ it('executes and restores a native profile through the published dsh command', a
   mkdirSync(workspace, { recursive: true })
   mkdirSync(profileDir, { recursive: true })
   copyFileSync(join(shippedProfile, 'package.json'), join(profileDir, 'package.json'))
-  copyFileSync(join(shippedProfile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
+  const composition = JSON.parse(readFileSync(join(shippedProfile, 'rsh.profile.json'), 'utf8')) as { installations: unknown[] }
+  composition.installations.push({ id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
+  writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify(composition))
+  copyFileSync(join(scenario, 'workspace/AGENTS.md'), join(workspace, 'AGENTS.md'))
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   for (const [name, path] of [
+    ['dsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
     ['dsh-native-code-runtime', 'rsh/Engine/core/native-code-runtime'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
@@ -118,6 +122,7 @@ it('executes and restores a native profile through the published dsh command', a
       messages: { content: { type: string; text?: string; toolCallId?: string; content?: { type: string; text?: string }[] }[] }[]; tools: { name: string }[]
     })
     expect(requests).toHaveLength(3)
+    expect(JSON.stringify(requests[0]?.messages)).toContain('Follow the workspace instruction fixture.')
     expect(requests[0]?.tools.map(tool => tool.name)).toContain('write_file')
     expect(requests[0]?.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['job_output', 'job_list', 'job_kill']))
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'tool-result'))).toBe(true)
@@ -130,12 +135,14 @@ it('executes and restores a native profile through the published dsh command', a
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('native profile did not persist a Session')
+      copyFileSync(join(scenario, 'workspace.expected/AGENTS.md'), join(workspace, 'AGENTS.md'))
       const second = await invoke(['--resume', id, 'continue'])
       expect(second.exitCode, second.stderr).toBe(0)
       const reader = await storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
         expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
+        expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'agent-instructions')).toHaveLength(2)
         expect(events.filter(event => event.type === 'user/message'
           && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-time-context')).toHaveLength(4)
       } finally { await reader.close() }
