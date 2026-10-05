@@ -3,6 +3,8 @@ import { expect, it } from 'vitest'
 import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { NativeModelExecution } from '../src/index.ts'
+import { NativeAdapterModel } from '../src/adapter-model.ts'
+import { LlmAdapter } from '@deepseek-ai/dsh-llm/native'
 
 function fixture(chunks: readonly StreamChunk[]) {
   const id = SessionId('native-model-execution-test')
@@ -48,4 +50,44 @@ it('rejects output after finish and retains the streamed attempt', async () => {
   ])
   await expect(state.execution.execute(state.request)).rejects.toThrow('after terminal finish')
   expect(state.pending.map(event => event.type)).toEqual(['assistant/attempt'])
+})
+
+it('drains adapter cleanup after cancellation at a yielded chunk and retains the request error', async () => {
+  const caller = new AbortController()
+  const primary = new Error('request cancelled after yield')
+  const cleanupFailure = new Error('adapter stream cleanup failed')
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  class Adapter extends LlmAdapter {
+    async * stream(): AsyncIterable<StreamChunk> {
+      try {
+        caller.abort(primary)
+        yield { type: 'text-delta', index: 0, text: 'cancelled' }
+      } finally {
+        entered.resolve(undefined)
+        await release.promise
+        throw cleanupFailure
+      }
+    }
+  }
+  const model = new NativeAdapterModel(new Adapter(), new AbortController().signal)
+  const stream = model.stream({
+    provider: 'fixture', model: 'fixture', messages: [], tools: [], signal: caller.signal,
+  })[Symbol.asyncIterator]()
+  let requestSettled = false
+  const request = expect(stream.next()).rejects.toBe(primary).then(() => { requestSettled = true })
+  await entered.promise
+  let closeSettled = false
+  const closing = model.close()
+  const closed = expect(closing).rejects.toBe(cleanupFailure).then(() => { closeSettled = true })
+  expect(model.close()).toBe(closing)
+  try {
+    await new Promise(resolve => setImmediate(resolve))
+    expect(requestSettled).toBe(false)
+    expect(closeSettled).toBe(false)
+  } finally {
+    release.resolve(undefined)
+  }
+  await request
+  await closed
 })

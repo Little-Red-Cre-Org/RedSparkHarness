@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry accepts only an empty configuration object and provides `promptSections`. A duplicate section name fails at registration. A disposer removes only the section that created it, while Provider teardown removes every remaining section.
+The `./native` entry accepts only an empty configuration object and provides `promptSections`. A duplicate section name fails within its registration scope. Rendering selects contributions visible from the consuming scope, with descendant names shadowing ancestor names and sibling scopes isolated. A disposer removes only the section that created it, while Provider teardown removes every remaining section.
 
 Applications may supply the requesting Agent’s scope to `render(scope)`. Scope-aware contributions use that exact scope when selecting visible declarations; contributions that ignore the optional argument retain their behavior. The application still records the assembled text before model dispatch.
 

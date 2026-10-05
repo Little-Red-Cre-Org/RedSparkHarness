@@ -28,6 +28,8 @@ Resolve user-facing values through the snapshot instead of `process.env` wheneve
 
 Native Hosts and Clients import `./native` for the snapshot types, constructor, and SSH detection without loading Cordis. The root entry additionally supplies `launchEnvironmentOf(ctx)` for Cordis consumers. A native Host passes its launch snapshot directly to providers.
 
+`./layers` exposes `loadLayeredEnv(binName, cwd, warn)` for Node launchers. It validates both discovered files before applying either, preserves inherited > project > home precedence and source attribution, and rejects bootstrap-only variables except home-owned proxy settings. Native `dsh` loads these layers before importing plugins and owns one snapshot Provider in each root scope; Client-only profiles do not receive this Host Provider.
+
 ### Resolving a value
 
 ```ts

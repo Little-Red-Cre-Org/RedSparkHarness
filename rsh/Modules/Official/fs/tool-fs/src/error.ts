@@ -5,10 +5,11 @@
  * @module @deepseek-ai/dsh-tool-fs/src/error
  */
 
-import { FsError } from '@deepseek-ai/dsh-fs'
+import { FsError } from '@deepseek-ai/dsh-fs/native'
 
 /**
  * Render the stable model-facing diagnostic for a guarded-mutation failure.
+ * `FS_SANDBOX_DENIED` uses the supplied shared marker for a native denial.
  * `FS_STALE_VERSION` keeps the provider's reason and appends its re-read
  * remedy. `FS_NOT_OBSERVED` replaces operation-specific policy/provider text
  * with one path-aware reason and read remedy. The original error remains the
@@ -16,10 +17,14 @@ import { FsError } from '@deepseek-ai/dsh-fs'
  * else passes through untouched.
  * @param error - the caught value from a write/edit execution.
  * @param displayPath - the resolved target path shown to the model.
- * @returns a remediated `FsError` for the two guarded-mutation codes, else the original value.
+ * @param denialMarker - shared model-facing marker for a native sandbox denial, when available.
+ * @returns a remediated `FsError` for guarded-mutation codes, else the original value.
  */
-export function remediateFsError(error: unknown, displayPath: string): unknown {
+export function remediateFsError(error: unknown, displayPath: string, denialMarker?: string): unknown {
   if (!(error instanceof FsError)) return error
+  if (error.code === 'FS_SANDBOX_DENIED' && denialMarker !== undefined) {
+    return new FsError(denialMarker, error.code, { cause: error })
+  }
   if (error.code === 'FS_NOT_OBSERVED') {
     return new FsError(
       `cannot modify "${displayPath}": file has not been read — read the file, then retry`,

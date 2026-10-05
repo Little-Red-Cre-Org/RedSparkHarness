@@ -23,6 +23,8 @@ kind: "package-reference"
 
 `./native` Provider 不接受配置。`execute` 调用需要开放的 Session、turn 与 step 编号、`GenerateOptions`，以及由 Session writer 拥有的追加和持久化回调。调用方负责构建请求、执行工具、关闭 turn 及管理存储生命周期。模型流必须以一条终止 `finish` 结束，之后不能再输出 chunk。终止原因为 error 或 aborted 时，服务记录 attempt 后让步骤失败。
 
+已选模型 Provider 可以提供 `resolveModel` 来查询准确路由的元数据；缺少此能力时，图像工具会拒绝执行。`NativeAdapterModel` 使用安装取消信号转发实际 LLM Adapter，保留已接纳的元数据及流操作，并在移除期间关闭暂停的迭代器。失败或取消的 next 调用先关闭并排空其迭代器，再以原请求错误拒绝；迭代器清理失败保留给共享关闭 Promise 报告。此辅助类不提供模型目录或设置权威。
+
 <a id="dev-note"></a>
 ## 开发备注
 

@@ -1,0 +1,112 @@
+{
+  "formatVersion": 1,
+  "scopes": [
+    {
+      "id": "root"
+    }
+  ],
+  "installations": [
+    {
+      "id": "app",
+      "plugin": "@deepseek-ai/dsh-native-headless",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED",
+        "provider": "native-image-fixture",
+        "model": "vision-fixture",
+        "systemPrompt": "Read the requested image using read_image.",
+        "maxSteps": 3,
+        "builtinTools": false
+      }
+    },
+    {
+      "id": "agents",
+      "plugin": "@deepseek-ai/dsh-native-agent",
+      "scope": "root"
+    },
+    {
+      "id": "tools",
+      "plugin": "@deepseek-ai/dsh-native-tools",
+      "scope": "root",
+      "config": {
+        "mode": "native"
+      }
+    },
+    {
+      "id": "model-execution",
+      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "scope": "root"
+    },
+    {
+      "id": "prompt",
+      "plugin": "@deepseek-ai/dsh-native-prompt",
+      "scope": "root"
+    },
+    {
+      "id": "credentials",
+      "plugin": "@deepseek-ai/dsh-credentials-local",
+      "scope": "root",
+      "config": {
+        "watch": false
+      }
+    },
+    {
+      "id": "storage",
+      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "scope": "root",
+      "config": {
+        "root": "PROFILE_PATCH_REQUIRED",
+        "compression": "none"
+      }
+    },
+    {
+      "id": "fs",
+      "plugin": "@deepseek-ai/dsh-fs-local",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED"
+      }
+    },
+    {
+      "id": "policy",
+      "plugin": "@deepseek-ai/dsh-fs-observation-policy",
+      "scope": "root"
+    },
+    {
+      "id": "attachments",
+      "plugin": "@deepseek-ai/dsh-attachment-local",
+      "scope": "root"
+    },
+    {
+      "id": "file-tools",
+      "plugin": "@deepseek-ai/dsh-tool-fs",
+      "scope": "root"
+    },
+    {
+      "id": "model",
+      "plugin": "@deepseek-ai/dsh-llm-pi-ai",
+      "scope": "root",
+      "config": {
+        "providers": {
+          "native-image-fixture": {
+            "apiKeyEnv": "NATIVE_IMAGE_KEY",
+            "api": "openai-completions",
+            "baseURL": "PROFILE_PATCH_REQUIRED",
+            "models": [
+              {
+                "id": "vision-fixture",
+                "name": "Fixture vision",
+                "input": [
+                  "text",
+                  "image"
+                ],
+                "contextWindow": 4096,
+                "maxTokens": 512
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -44,7 +44,7 @@ import {
   LlmAdapter,
   LlmError,
   ReasoningEffortId,
-} from '@deepseek-ai/dsh-llm'
+} from '@deepseek-ai/dsh-llm/native'
 import type {
   GenerateOptions,
   ImageAttachmentAccess,
@@ -55,8 +55,8 @@ import type {
   ReasoningEffortId as ReasoningEffortIdType,
   ResolvedRetryPolicy,
   StreamChunk,
-} from '@deepseek-ai/dsh-llm'
-import type { AttachmentStore, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+} from '@deepseek-ai/dsh-llm/native'
+import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { toPiContext } from './context.ts'
@@ -93,9 +93,9 @@ export interface PiAiAdapterOptions {
    */
   auth: PiAiAuthInjection
   /** Resolve the optional durable attachment service at request time. */
-  resolveAttachments?: () => AttachmentStore | undefined
+  resolveAttachments?: () => AttachmentOperations | undefined
   /** Bridge one attachment reference into the current model-tool execution world. */
-  resolveImageAccess?: (attachments: AttachmentStore, ref: ImageAttachmentRef) => ImageAttachmentAccess | undefined
+  resolveImageAccess?: (attachments: AttachmentOperations, ref: ImageAttachmentRef) => ImageAttachmentAccess | undefined
   /**
    * Observe one assistant history message degrading to provider-neutral
    * conversion because its stored replay state is unusable by this build.

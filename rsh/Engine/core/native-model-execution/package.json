@@ -2,18 +2,50 @@
   "name": "@deepseek-ai/dsh-native-model-execution",
   "description": "Native model stream execution and Session recording",
   "version": "0.1.5-rc.2",
-  "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/core/native-model-execution" },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/core/native-model-execution"
+  },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["model"], "optional": [], "provides": ["modelExecution"] } },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "model"
+      ],
+      "optional": [],
+      "provides": [
+        "modelExecution"
+      ]
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.d.ts"],
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
+  ],
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-llm": "workspace:^",

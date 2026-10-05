@@ -1117,9 +1117,6 @@ importers:
 
   rsh/Core/identity/anonymous-user-id:
     devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../util/brand
@@ -1392,6 +1389,10 @@ importers:
   rsh/Core/util/json-rpc-line: {}
 
   rsh/Core/util/launch-environment:
+    dependencies:
+      '@deepseek-ai/dsh-home-paths':
+        specifier: workspace:^
+        version: link:../home-paths
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -2656,6 +2657,12 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -2726,6 +2733,12 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -4927,6 +4940,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Modules/Official/attachment/attachment-local:
     dependencies:
@@ -4946,6 +4962,9 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../../Core/util/home-paths
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Modules/Official/automation/task-scheduler:
     dependencies:
@@ -5696,6 +5715,27 @@ importers:
       '@deepseek-ai/dsh-llm-deepseek':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm-deepseek
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../interaction/native-approval
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -7649,12 +7689,21 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
+      '@deepseek-ai/dsh-attachment-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/attachment/attachment-local
       '@deepseek-ai/dsh-code-runtime-process-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/code-runtime-process-sandbox
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
+      '@deepseek-ai/dsh-llm-deepseek':
+        specifier: workspace:^
+        version: link:../../Engine/llm/llm-deepseek
+      '@deepseek-ai/dsh-llm-pi-ai':
+        specifier: workspace:^
+        version: link:../../Engine/llm/llm-pi-ai
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../Engine/core/native-agent
@@ -7694,6 +7743,9 @@ importers:
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/tool-code-runtime
+      '@deepseek-ai/dsh-tool-fs':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/tool-fs
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -7713,9 +7765,6 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../Tests/test-support/agent-loop-testkit
-      '@deepseek-ai/dsh-attachment-local':
-        specifier: workspace:^
-        version: link:../../Modules/Official/attachment/attachment-local
       '@deepseek-ai/dsh-bash-local':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/bash-local
@@ -7752,15 +7801,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../Engine/llm/llm
-      '@deepseek-ai/dsh-llm-deepseek':
-        specifier: workspace:^
-        version: link:../../Engine/llm/llm-deepseek
       '@deepseek-ai/dsh-llm-mock-server':
         specifier: workspace:^
         version: link:../../Tests/test-support/llm-mock-server
-      '@deepseek-ai/dsh-llm-pi-ai':
-        specifier: workspace:^
-        version: link:../../Engine/llm/llm-pi-ai
       '@deepseek-ai/dsh-llm-replay':
         specifier: workspace:^
         version: link:../../Tests/test-support/llm-replay
@@ -8011,9 +8054,6 @@ importers:
       '@deepseek-ai/dsh-tool-cordis':
         specifier: workspace:^
         version: link:../../Modules/Official/extensions/tool-cordis
-      '@deepseek-ai/dsh-tool-fs':
-        specifier: workspace:^
-        version: link:../../Modules/Official/fs/tool-fs
       '@deepseek-ai/dsh-tool-fs-search':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs-search

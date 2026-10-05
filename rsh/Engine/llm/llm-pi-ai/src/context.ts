@@ -5,15 +5,15 @@
  */
 
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { contentHasImage, LlmError, offloadedImageText, offloadRequestImagesWithPolicy, requestImageHandleText } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, GenerateOptions, ImageAttachmentAccessResolver, Message, ToolCallId } from '@deepseek-ai/dsh-llm'
+import { contentHasImage, LlmError, offloadedImageText, offloadRequestImagesWithPolicy, requestImageHandleText } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock, GenerateOptions, ImageAttachmentAccessResolver, Message, ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type {
   AttachmentId,
-  AttachmentStore,
+  AttachmentOperations,
   ImageAttachmentRef,
   ImageRequestPolicy,
   RequestImageAttachment,
-} from '@deepseek-ai/dsh-attachment'
+} from '@deepseek-ai/dsh-attachment/types'
 import type { Context as PiContext, ImageContent, Message as PiMessage, TextContent, Tool as PiTool } from '@earendil-works/pi-ai'
 import { toPiAssistant } from './replay.ts'
 import { DEFAULT_REQUEST_IMAGE_MAX_BYTES, DEFAULT_REQUEST_IMAGE_PIXEL_BUDGET } from './config.ts'
@@ -101,7 +101,7 @@ function collectImageRefs(
 
 async function prepareRequestImages(
   messages: readonly Message[],
-  attachments: AttachmentStore,
+  attachments: AttachmentOperations,
   policy: ImageRequestPolicy,
   signal?: AbortSignal,
 ): Promise<Map<AttachmentId, RequestImageAttachment>> {
@@ -216,7 +216,7 @@ function textOnlyContext(options: GenerateOptions, onReplayDegrade?: (reason: st
 /** Inputs that bind deterministic request images to one current tool execution world. */
 export interface PiImageRequestContext {
   /** Durable provider that resolves request-image bytes and provider-owned host objects. */
-  attachments: AttachmentStore
+  attachments: AttachmentOperations
   /** Resolve current tool access separately from deterministic request-image versions. */
   resolveImageAccess: ImageAttachmentAccessResolver
   /** Request-level bound on base64-encoded image payload; omission leaves every image in place. */

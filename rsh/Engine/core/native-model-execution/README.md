@@ -22,6 +22,8 @@ English | [中文](README.zh.md)
 
 The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt.
 
+Selected Model Providers can expose `resolveModel` for exact route metadata; an image tool refuses when that capability is absent. `NativeAdapterModel` forwards an actual LLM adapter with installation cancellation, retains accepted metadata and stream operations, and closes paused iterators during removal. A failed or cancelled next call closes and drains its iterator before rejecting with the original request error; iterator cleanup failures remain recorded for the shared close promise. This helper supplies no model catalog or settings authority.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.

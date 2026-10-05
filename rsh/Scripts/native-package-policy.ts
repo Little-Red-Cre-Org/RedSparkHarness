@@ -2,6 +2,7 @@
 
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Core/identity/anonymous-user-id',
   'rsh/Core/subprocess/win32-process',
   'rsh/Core/util/http-proxy',
   'rsh/Core/util/atomic-write',
@@ -42,6 +43,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Engine/core/native-code-runtime', ['host']],
@@ -54,6 +56,10 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
+  ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
+  ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
+  ['rsh/Engine/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
+  ['rsh/Engine/llm/llm-deepseek', 'Cordis and native official Providers share real HTTP/SSE adapter and static configuration'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
@@ -69,6 +75,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
+  ['rsh/Modules/Official/attachment/attachment', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
   ['rsh/Engine/llm/llm', ['host', 'client']],
@@ -82,12 +89,16 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/util/launch-environment', ['./layers']],
+  ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
+  ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
+  ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
-  ['rsh/Modules/Official/attachment/attachment', ['./types']],
+  ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
   ['rsh/Engine/core/session', ['./types']],
@@ -95,6 +106,15 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/util/launch-environment/layers', ['host']],
+  ['rsh/Modules/Official/fs/tool-fs/image-core', ['host']],
+  ['rsh/Modules/Official/attachment/attachment-local/backend', ['host']],
+  ['rsh/Modules/Official/attachment/attachment-local/request-store', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/admission', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/request-projection', ['host']],
+  ['rsh/Modules/Official/attachment/attachment/brand', ['host', 'client']],
+  ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
+  ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/core/native-tools/presentation', ['host', 'client']],
   ['rsh/Engine/core/native-tools/json-schema', ['host']],

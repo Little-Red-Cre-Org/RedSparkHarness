@@ -8,7 +8,7 @@
  * @module dsh-llm-deepseek/adapter
  */
 
-import { attributionHeaders, contentHasImage, CONTEXT_WINDOW_EXCEEDED_CODE, isContextWindowExceededError, isQuotaExceededError, LlmAdapter, LlmError, offloadedImageText, offloadRequestImagesWithPolicy, ProviderRequestId, QUOTA_EXCEEDED_CODE, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { attributionHeaders, contentHasImage, CONTEXT_WINDOW_EXCEEDED_CODE, isContextWindowExceededError, isQuotaExceededError, LlmAdapter, LlmError, offloadedImageText, offloadRequestImagesWithPolicy, ProviderRequestId, QUOTA_EXCEEDED_CODE, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import type {
   ContentBlock,
   GenerateOptions,
@@ -21,21 +21,21 @@ import type {
   ResolvedRetryPolicy,
   StreamChunk,
   SystemPromptUpdate,
-} from '@deepseek-ai/dsh-llm'
+} from '@deepseek-ai/dsh-llm/native'
 import type {
   AttachmentId,
-  AttachmentStore,
+  AttachmentOperations,
   ImageAttachmentRef,
   RequestImageAttachment,
-} from '@deepseek-ai/dsh-attachment'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
+} from '@deepseek-ai/dsh-attachment/types'
+import type { CredentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { deadline, idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { AnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import type {
   DeepSeekLlmApiExtensionRequest,
   DeepSeekLlmApiJson,
   PreparedDeepSeekLlmApiExtensions,
-} from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
+} from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
 import { serializeRequest, serializeRequestWithImages } from './serialize.ts'
 import type { ImageWireLocation, RequestDefaults } from './serialize.ts'
 import { deepSeekImageRequestPricing, resolveRequestImagePolicy } from './request-pricing.ts'
@@ -132,9 +132,9 @@ export interface DeepSeekAdapterOptions {
   /** Resolve the harness-home anonymous id shared with telemetry and feedback. */
   resolveUserId: () => AnonymousUserId
   /** Resolve the current durable attachment service; absence rejects image input. */
-  resolveAttachments?: () => AttachmentStore | undefined
+  resolveAttachments?: () => AttachmentOperations | undefined
   /** Bridge one attachment reference into the current model-tool execution world. */
-  resolveImageAccess?: (attachments: AttachmentStore, ref: ImageAttachmentRef) => ImageAttachmentAccess | undefined
+  resolveImageAccess?: (attachments: AttachmentOperations, ref: ImageAttachmentRef) => ImageAttachmentAccess | undefined
   /** Resolve the process-wide upload reuse store. */
   resolveFiles?: () => DeepSeekFileStore
   /** Prepare the official API's plugin-contributed top-level fields for one exact wire request. */
@@ -219,7 +219,7 @@ function collectImageRefs(
 
 async function prepareRequestImages(
   options: GenerateOptions,
-  attachments: AttachmentStore,
+  attachments: AttachmentOperations,
   model: DeepSeekCatalogModel,
   signal: AbortSignal,
 ): Promise<Map<AttachmentId, RequestImageAttachment>> {
@@ -459,7 +459,7 @@ export class DeepSeekAdapter extends LlmAdapter {
     // The key resolves *from this snapshot*, so an endpoint and the secret
     // sent to it can never come from different configuration generations.
     const hasImages = options.messages.some(message => contentHasImage(message.content))
-    let attachments: AttachmentStore | undefined
+    let attachments: AttachmentOperations | undefined
     if (hasImages) {
       const model = connection.models.find(entry => entry.id === options.model)
       if (model?.inputModalities?.includes('image') !== true) {
@@ -533,7 +533,7 @@ export class DeepSeekAdapter extends LlmAdapter {
     connection: DeepSeekConnectionOptions,
     apiKey: string,
     userId: AnonymousUserId,
-    attachments: AttachmentStore | undefined,
+    attachments: AttachmentOperations | undefined,
     onActivity: () => void,
   ): AsyncIterable<StreamChunk> {
     const headers = {

@@ -53,6 +53,10 @@ An image can be refused when you attach it — unsupported format, over the size
 
 -----
 
+### Native consumers
+
+The `./native` library declares the selected `attachments` service and exports the same attachment operations and admission types. It creates no store or installer. Native and Cordis consumers share the byte references, image admission and request-image policy; the selected storage Provider owns persistence and teardown.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

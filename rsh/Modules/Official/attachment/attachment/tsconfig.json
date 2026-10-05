@@ -5,6 +5,7 @@
   "references": [
     { "path": "../../../../Core/vendor/cosmokit" },
     { "path": "../../../../Core/vendor/cordis" },
-    { "path": "../../../../Core/util/brand" }
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" }
   ]
 }
