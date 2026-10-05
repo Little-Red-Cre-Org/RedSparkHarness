@@ -117,6 +117,9 @@ kind: "package-reference"
 -----
 
 <a id="model-experience"></a>
+
+原生后台任务向 `job_output` 发布实时 stdout 和带标记的 stderr；结束后使用既有丢失、溢出及沙箱提示替换实时尾部输出。
+
 ## 模型体验
 
 ### 系统提示词

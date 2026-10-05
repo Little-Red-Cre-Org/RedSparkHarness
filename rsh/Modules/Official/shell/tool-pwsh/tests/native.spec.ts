@@ -1,6 +1,11 @@
+import { spawnSync } from 'node:child_process'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeJobOutcome, NativeJobRegistry, NativeJobStart } from '@deepseek-ai/dsh-native-jobs'
+import { NativeAgentId, plugin as agentsPlugin, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { plugin as jobsPlugin } from '@deepseek-ai/dsh-native-jobs'
+import { plugin as subprocessPlugin } from '@deepseek-ai/dsh-subprocess-local/native'
+import { plugin as shellPlugin, resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local/native'
 import { NativeJobId } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolExecution, NativeToolRegistry, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
@@ -27,7 +32,7 @@ it('offers background execution only with job controls and reports a failed sand
       return () => {}
     } } as unknown as NativeToolRegistry
     const jobs = { start(spec: NativeJobStart) {
-      runner = signal => spec.run(signal)
+      runner = (signal, publishOutput) => spec.run(signal, publishOutput)
       return NativeJobId('pwsh-1')
     } } as NativeJobRegistry
     const shellEnv = { collect: () => ({}) } as unknown as ShellEnvironment<NativeToolExecution>
@@ -59,7 +64,7 @@ it('offers background execution only with job controls and reports a failed sand
       } else {
         await expect(contribution.execute(call)).resolves.toEqual({ kind: 'background', jobId: 'pwsh-1' })
         if (runner === undefined) throw new Error('background runner not registered')
-        const outcome: NativeJobOutcome = await runner(new AbortController().signal)
+        const outcome: NativeJobOutcome = await runner(new AbortController().signal, () => {})
         expect(outcome.status).toBe('failed')
         expect(outcome.output).toContain('runner failed')
       }
@@ -68,3 +73,51 @@ it('offers background execution only with job controls and reports a failed sand
     }
   }
 })
+
+it.skipIf(spawnSync(resolvePwshPath(), ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '$true']).status !== 0)('publishes real PowerShell stdout and stderr while running and awaits cancellation', async () => {
+  const scope = new NativeScope()
+  let tools: NativeValueToolContribution | undefined
+  let services: { agents: NativeAgentRegistry; jobs: NativeJobRegistry } | undefined
+  const capture: NativePlugin = {
+    apiVersion: 1, name: 'live-shell-test', targets: ['host'], requires: ['agents', 'jobs'],
+    provides: ['tools', 'shellEnv', 'jobControls'],
+    resolve: () => (context) => {
+      services = { agents: context.require('agents'), jobs: context.require('jobs') }
+      context.provide('tools', { registerValueTool(value: NativeValueToolContribution) {
+        tools = value
+        return () => {}
+      } } as unknown as NativeToolRegistry)
+      context.provide('shellEnv', { collect: () => ({}) } as unknown as ShellEnvironment<NativeToolExecution>)
+      context.provide('jobControls', true)
+    },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin, scope, config: undefined }, { plugin: capture, scope, config: undefined },
+    { plugin: agentsPlugin, scope, config: undefined }, { plugin: jobsPlugin, scope, config: undefined },
+    { plugin: subprocessPlugin, scope, config: undefined }, { plugin: shellPlugin, scope, config: { graceMs: 500 } },
+  ], 'host'))
+  let release: (() => Promise<void>) | undefined
+  try {
+    await host.start()
+    if (services === undefined || tools === undefined) throw new Error('live shell services missing')
+    const selected = services
+    const agent = { id: NativeAgentId('shell-output'), scope: new NativeScope(scope) }
+    release = selected.agents.register(agent)
+    const result = await tools.execute({
+      arguments: { command: "[Console]::Out.WriteLine('RSH_LIVE_你好'); [Console]::Error.WriteLine('RSH_ERROR'); Start-Sleep -Seconds 30",
+        description: 'Produce live output', run_in_background: true },
+      agent, session: { header: {} }, signal: new AbortController().signal,
+    } as NativeToolExecution) as { kind: 'background'; jobId: string }
+    const id = NativeJobId(result.jobId)
+    await expect.poll(() => selected.jobs.read(id, agent).output, { timeout: 5000 }).toContain('RSH_ERROR')
+    const live = selected.jobs.read(id, agent)
+    expect(live.output).toContain('RSH_LIVE_你好')
+    expect(live.output).toContain('[stderr]')
+    expect(selected.jobs.get(id, agent).status).toBe('running')
+    expect(selected.jobs.cancel(id, agent)).toBe('requested')
+    expect((await selected.jobs.wait(id, agent, 5000)).status).toBe('cancelled')
+    expect(selected.jobs.read(id, agent).output.match(/RSH_LIVE_你好/g)).toHaveLength(1)
+  } finally {
+    try { await release?.() } finally { await host.stop() }
+  }
+}, 15_000)

@@ -1,0 +1,8 @@
+version: 1
+scenario: native-session-core
+profile: web
+composition: native-web-session-core
+recording: authored
+header:
+  class: native-web-session-core
+  pin: true

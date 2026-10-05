@@ -99,3 +99,5 @@ The reading is appended after existing history and does not change the reusable 
 - Fixed file tools, `run_code`, and registered tools run serially; SDK protocol and Web UI remain absent.
 - Native model Providers and broader capability adapters live in separate packages.
 - Session and persistence packages still carry Cordis dependencies, although this composition creates no Cordis Context.
+
+Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly.

@@ -53,6 +53,10 @@
     "@deepseek-ai/dsh-attachment-local": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
+    "@deepseek-ai/dsh-web-frontend": "workspace:^",
+    "@deepseek-ai/dsh-native-web-host": "workspace:^",
+    "@deepseek-ai/dsh-native-web-session-controller": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^"
   },
@@ -129,8 +133,7 @@
     "js-yaml": "^4.2.0",
     "node-addon-require-builtin": "^0.1.4",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
-    "@deepseek-ai/dsh-user-question-broker": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@deepseek-ai/dsh-user-question-broker": "workspace:^"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
