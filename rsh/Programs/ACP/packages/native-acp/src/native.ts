@@ -410,14 +410,20 @@ export class NativeAcpApplication implements NativeApplication {
     if (record.controls !== 0) throw RequestError.invalidRequest(undefined, 'session configuration is in progress')
     if (params.prompt.length === 0) throw RequestError.invalidParams(undefined, 'native ACP prompt must be nonempty')
     const attachments = this.context.optional('attachments')
-    const parts = params.prompt.map((block): AttachmentAdmissionPart => {
-      if (block.type === 'text') return { type: 'text', text: block.text }
-      if (block.type === 'image') {
+    const parts: AttachmentAdmissionPart[] = []
+    for (const block of params.prompt) {
+      if (block.type === 'text' || block.type === 'resource_link') {
+        const text = block.type === 'text' ? block.text
+          : `\n[resource_link name=${JSON.stringify(block.name)} uri=${JSON.stringify(block.uri)}]\n`
+        const prior = parts.at(-1)
+        if (prior?.type === 'text') parts[parts.length - 1] = { type: 'text', text: prior.text + text }
+        else parts.push({ type: 'text', text })
+      } else if (block.type === 'image') {
         const mediaType = attachments?.imageLimits.mediaTypes.find(type => type === block.mimeType)
-        if (mediaType !== undefined) return { type: 'image', data: block.data, mediaType }
-      }
-      throw RequestError.invalidParams(undefined, 'native ACP accepts text and configured raster image formats only')
-    })
+        if (mediaType === undefined) throw RequestError.invalidParams(undefined, 'native ACP image format is not configured')
+        parts.push({ type: 'image', data: block.data, mediaType })
+      } else throw RequestError.invalidParams(undefined, 'native ACP accepts text, resource links and configured raster image formats only')
+    }
     const abort = new AbortController()
     const signal = AbortSignal.any([requestSignal, abort.signal, this.lifetime.signal])
     const done = Promise.resolve().then(async (): Promise<PromptResponse> => {

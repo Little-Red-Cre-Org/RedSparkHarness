@@ -11,7 +11,7 @@
         "content": [
           {
             "type": "text",
-            "text": "say hello through native ACP"
+            "text": "say hello through native ACP\n[resource_link name=\"notes \\\"draft\\\"\" uri=\"file:///reference.md\"]\n"
           },
           {
             "type": "text",
@@ -22,6 +22,10 @@
             "image_url": {
               "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
             }
+          },
+          {
+            "type": "text",
+            "text": " Review the linked file."
           }
         ]
       },
@@ -91,7 +95,7 @@
         "content": [
           {
             "type": "text",
-            "text": "say hello through native ACP"
+            "text": "say hello through native ACP\n[resource_link name=\"notes \\\"draft\\\"\" uri=\"file:///reference.md\"]\n"
           },
           {
             "type": "text",
@@ -102,6 +106,10 @@
             "image_url": {
               "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
             }
+          },
+          {
+            "type": "text",
+            "text": " Review the linked file."
           }
         ]
       },
