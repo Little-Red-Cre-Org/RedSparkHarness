@@ -91,3 +91,25 @@ it('drains adapter cleanup after cancellation at a yielded chunk and retains the
   await request
   await closed
 })
+
+it('forwards image pricing until the selected adapter installation closes', async () => {
+  const pricing = { priceImages: () => [] }
+  const calls: [string, string][] = []
+  class Adapter extends LlmAdapter {
+    override imageRequestPricing(provider: string, model: string) {
+      calls.push([provider, model])
+      return pricing
+    }
+
+    async * stream(): AsyncIterable<StreamChunk> {}
+  }
+  const model = new NativeAdapterModel(new Adapter(), new AbortController().signal)
+
+  expect(model.imageRequestPricing('deepseek-official', 'vision')).toBe(pricing)
+  expect(calls).toEqual([['deepseek-official', 'vision']])
+
+  await model.close()
+  expect(() => model.imageRequestPricing('deepseek-official', 'vision'))
+    .toThrow('native-model-execution: adapter Provider removed')
+  expect(calls).toEqual([['deepseek-official', 'vision']])
+})

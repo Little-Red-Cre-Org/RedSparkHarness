@@ -54,7 +54,7 @@
     },
     {
       "name": "job_output",
-      "description": "Read a background job result and status; optionally wait for completion.",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -159,7 +159,7 @@
       },
       {
         "name": "job_output",
-        "description": "Read a background job result and status; optionally wait for completion.",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
         "parameters": {
           "type": "object",
           "properties": {

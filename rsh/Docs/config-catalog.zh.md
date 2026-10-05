@@ -2746,7 +2746,7 @@ export interface Config {
 export type TokenMeterConfig = Record<string, never>
 ```
 
-来源：[`rsh/Engine/llm/token-meter/src/types.ts:13`](../Engine/llm/token-meter/src/types.ts)
+来源：[`rsh/Engine/llm/token-meter/src/types.ts:3`](../Engine/llm/token-meter/src/types.ts)
 
 <a id="deepseek-aidsh-tool-bash"></a>
 
