@@ -577,6 +577,7 @@
       "@deepseek-ai/dsh-sandbox-local/native": ["./rsh/Modules/Official/sandbox/sandbox-local/src/native.ts"],
       "@deepseek-ai/dsh-sandbox/native": ["./rsh/Modules/Official/sandbox/sandbox/src/native.ts"],
       "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
+      "@deepseek-ai/dsh-session/event-validation": ["./rsh/Engine/core/session/src/event-validation.ts"],
       "@deepseek-ai/dsh-storage-domain/native": ["./rsh/Core/storage/storage-domain/src/native.ts"],
       "@deepseek-ai/dsh-storage-json/native": ["./rsh/Core/storage/storage-json/src/native.ts"],
       "@deepseek-ai/dsh-storage/backend": ["./rsh/Core/storage/storage/src/backend.ts"],

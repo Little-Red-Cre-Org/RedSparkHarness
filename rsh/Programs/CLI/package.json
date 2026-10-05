@@ -50,7 +50,8 @@
     "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
     "@deepseek-ai/dsh-web-frontend": "workspace:^",
     "@deepseek-ai/dsh-native-web-host": "workspace:^",
-    "@deepseek-ai/dsh-native-web-session-controller": "workspace:^"
+    "@deepseek-ai/dsh-native-web-session-controller": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

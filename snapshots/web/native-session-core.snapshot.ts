@@ -31,7 +31,6 @@ it('records a native browser Session turn through dsh native-web', async () => {
     ['client-native-session', 'Programs/Web/client/native-session'],
     ['credentials-local', 'Modules/Official/credentials/credentials-local'],
     ['native-agent', 'Engine/core/native-agent'],
-    ['native-session-execution', 'Engine/core/native-session-execution'],
     ['native-model-execution', 'Engine/core/native-model-execution'],
     ['fs-local', 'Modules/Official/fs/fs-local'],
     ['session-persistence-jsonl', 'Engine/session/session-persistence-jsonl'],
@@ -68,12 +67,13 @@ it('records a native browser Session turn through dsh native-web', async () => {
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
       maxSteps: 1, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100 }],
-    ['agents', 'native-agent'], ['execution', 'native-session-execution'], ['model-execution', 'native-model-execution'],
+    ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
     ['fs', 'fs-local', { cwd: workspace }], ['storage', 'session-persistence-jsonl', { root: sessionRoot, compression: 'none' }],
     ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
+    ...shipped.installations.filter(row => row.id === 'session-execution'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {

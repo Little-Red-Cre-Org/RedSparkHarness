@@ -219,7 +219,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
   // Legacy Cordis entries and native values share their pure implementations.
-  '@deepseek-ai/dsh-session': ['lib/native.js'],
+  '@deepseek-ai/dsh-session': ['lib/native.js', 'lib/event-validation.js'],
   '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each

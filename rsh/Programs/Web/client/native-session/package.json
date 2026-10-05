@@ -61,6 +61,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^"
   }
 }

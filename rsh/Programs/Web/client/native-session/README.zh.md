@@ -24,7 +24,11 @@ kind: "package-reference"
 
 以空配置安装在 client-connection 之后。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止对应传输；安装取消也会中止尚未完成的调用。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
+`close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
+
 共享 Session 包是 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
+
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
 <a id="invariants"></a>
 ## 不变量

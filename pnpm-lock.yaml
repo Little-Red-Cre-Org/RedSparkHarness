@@ -7844,6 +7844,9 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../Engine/core/native-tools
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-web-host':
         specifier: workspace:^
         version: link:../Web/host/native-web-host
@@ -8894,6 +8897,9 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
     devDependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session
@@ -9521,6 +9527,9 @@ importers:
 
   rsh/Programs/Web/client/native-session:
     devDependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../connection

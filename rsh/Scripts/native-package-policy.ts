@@ -132,7 +132,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
-  ['rsh/Engine/core/session', ['./types', './surface']],
+  ['rsh/Engine/core/session', ['./types', './surface', './event-validation']],
   ['rsh/Engine/session/session-persistence', ['./deletion']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
   ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],

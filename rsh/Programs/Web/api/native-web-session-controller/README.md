@@ -28,6 +28,8 @@ The Client Consumer owns list, blank creation, history, explicit fresh/resumed p
 
 Attachments, incremental following, questions, approvals, directory policies, title and fork controls are separate Consumers. This package does not provide those operations.
 
+A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
+
 <a id="invariants"></a>
 ## Invariants
 

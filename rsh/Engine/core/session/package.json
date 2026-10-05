@@ -35,6 +35,10 @@
     "./surface": {
       "types": "./lib/types/surface.d.ts",
       "default": "./lib/types/surface.js"
+    },
+    "./event-validation": {
+      "types": "./lib/types/event-validation.d.ts",
+      "default": "./lib/event-validation.js"
     }
   },
   "files": [
@@ -42,7 +46,8 @@
     "lib/invariant.js",
     "lib/native.js",
     "lib/types/**/*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "lib/event-validation.js"
   ],
   "license": "MIT",
   "peerDependencies": {

@@ -25,6 +25,10 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const scope = new NativeScope()
   let web: NativeHttpHost | undefined
   const requests: GenerateOptions[] = []
+  let modelAborted!: () => void
+  let releaseCleanup!: () => void
+  const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
+  const cleanup = new Promise<void>((resolve) => { releaseCleanup = resolve })
   const model: NativePlugin = {
     apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', {
@@ -37,6 +41,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             if (signal.aborted) resolve()
             else signal.addEventListener('abort', () => { resolve() }, { once: true })
           })
+          modelAborted()
+          await cleanup
           throw signal.reason
         }
         const text = requests.length === 1 ? 'first answer' : 'resumed answer'
@@ -88,16 +94,43 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
       .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
-    const pending = client.prompt(sessionId, 'cancel input', true)
+    const early = new AbortController()
+    early.abort(new Error('before admission'))
+    await expect(client.prompt(sessionId, 'not admitted', true, early.signal)).rejects.toThrow('before admission')
+    expect(requests).toHaveLength(2)
+    const caller = new AbortController()
+    let settled = false
+    const pending = client.prompt(sessionId, 'cancel input', true, caller.signal)
+    void pending.then(() => { settled = true }, () => { settled = true })
     await vi.waitFor(() => { expect(requests).toHaveLength(3) })
     // The sole ordinary admission slot is full; control admission must still cancel it.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
-    expect(await client.cancel(sessionId)).toEqual({ cancelled: true })
+    caller.abort(new Error('caller cancelled'))
+    await aborted
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(settled).toBe(false)
+    releaseCleanup()
     expect((await pending).exitCode).not.toBe(0)
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
     expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
   } finally {
+    releaseCleanup()
     await host.stop()
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it.each([
+  { type: 'future/required', data: {}, surfaceOp: undefined },
+  { type: 'user/message', data: null, surfaceOp: 'append' },
+])('refuses unsupported or malformed history event $type', async (event) => {
+  const header = { id: 'wire-session', version: 3, createdAt: 0, isSeeded: false }
+  const reply = { header, events: [{ seq: 0, time: 0, ...event }], inheritedEventCount: 0 }
+  const rpc = { call: vi.fn(async () => ({ ok: true, value: reply })) } as unknown as import('@deepseek-ai/dsh-client-connection/native').ClientConnectionRpc
+  const client = createNativeSessionClient(rpc)
+  await expect(client.history(header.id as import('@deepseek-ai/dsh-session/types').SessionId)).rejects.toThrow()
+  if (event.type === 'future/required') {
+    Object.assign(reply.events[0]!, { ignorable: true })
+    expect((await client.history(header.id as import('@deepseek-ai/dsh-session/types').SessionId)).events[0]?.type).toBe('future/required')
   }
 })

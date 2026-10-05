@@ -1,5 +1,6 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
@@ -12,6 +13,8 @@ import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-sess
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+
+type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
@@ -54,13 +57,20 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
     maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars') }
 }
 
-const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status'])
+const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await'])
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
 export class NativeWebSessionService {
-  private readonly turns = new Map<SessionId, { controller: AbortController; done: Promise<unknown> }>()
+  private readonly turns = new Map<SessionId, {
+    admissionId: NativeSessionAdmissionId
+    controller: AbortController
+    done: Promise<unknown>
+    waiting: boolean
+    settled: boolean
+  }>()
   private readonly requests: NativeConnectionRequestOwner
   private readonly controls: NativeConnectionRequestOwner
+  private readonly settlements: NativeConnectionRequestOwner
 
   /**
    * @param executor - shared Program executor, not another Agent loop.
@@ -72,9 +82,64 @@ export class NativeWebSessionService {
   constructor(private readonly executor: NativeHeadlessApplication,
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
-    private readonly config: Config, lifetime: AbortSignal) {
+    private readonly config: Config, private readonly lifetime: AbortSignal) {
     this.requests = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.controls = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
+    this.settlements = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
+  }
+
+  private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
+    signal.throwIfAborted()
+    const fields = object(payload)
+    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume'].includes(key)) throw new Error('native web session: unexpected prompt field')
+    const id = sessionId(fields.sessionId)
+    if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) throw new TypeError('native web session: text exceeds configured limits or is empty')
+    if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
+    if (this.turns.has(id)) throw new Error('native web session: Session already has a pending turn')
+    if (this.turns.size >= this.config.maxPendingRequests) throw new Error('native web session: turn settlement capacity reached')
+    const controller = new AbortController()
+    const admissionId = randomUUID() as NativeSessionAdmissionId
+    let admitted!: () => void
+    let refused!: (error: unknown) => void
+    const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
+    const done = this.requests.run(this.lifetime, async (accepted) => {
+      admitted()
+      const turnSignal = AbortSignal.any([accepted, controller.signal])
+      try {
+        return await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
+          message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }, turnSignal)
+      } catch (error: unknown) {
+        // Exact execution cancellation is observed after the shared writer has drained.
+        if (turnSignal.aborted && error === turnSignal.reason) return { exitCode: 130 }
+        throw error
+      }
+    })
+    const turn = { admissionId, controller, done, waiting: false, settled: false }
+    this.turns.set(id, turn)
+    // Keep rejected execution attached until the settlement consumer reads the same promise.
+    void done.then(() => { turn.settled = true }, (error: unknown) => { turn.settled = true; refused(error) })
+    try { await acknowledgement } catch (error: unknown) { this.turns.delete(id); throw error }
+    return { admissionId }
+  }
+
+  private async settle(payload: unknown, signal: AbortSignal): Promise<unknown> {
+    const fields = object(payload)
+    for (const key of Object.keys(fields)) if (!['sessionId', 'admissionId'].includes(key)) throw new Error('native web session: unexpected settlement field')
+    const id = sessionId(fields.sessionId)
+    const turn = this.turns.get(id)
+    if (turn === undefined || fields.admissionId !== turn.admissionId || turn.waiting) throw new Error('native web session: unavailable turn settlement')
+    turn.waiting = true
+    try { return await this.settlements.run(signal, async (accepted) => {
+      const abort = (): void => { turn.controller.abort(accepted.reason) }
+      accepted.addEventListener('abort', abort, { once: true })
+      try { return await turn.done } finally {
+        accepted.removeEventListener('abort', abort)
+        if (this.turns.get(id) === turn) this.turns.delete(id)
+      }
+    }) } catch (error: unknown) {
+      if (this.turns.get(id) === turn) turn.waiting = false
+      throw error
+    }
   }
 
   /** Handle an authenticated decoded Connection request.
@@ -85,11 +150,16 @@ export class NativeWebSessionService {
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
+      if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
+      if (endpoint === 'session/prompt') {
+        const acknowledged = await this.start(payload, signal)
+        return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
+      }
       const admission = endpoint === 'session/cancel' || endpoint === 'session/status' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = endpoint === 'session/prompt' ? ['sessionId', 'text', 'resume']
-          : endpoint === 'session/list' || endpoint === 'session/create' ? [] : ['sessionId']
+        const allowed = endpoint === 'session/list' || endpoint === 'session/create' ? [] : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
         if (endpoint === 'session/list') return (await this.persistence.list({ signal: accepted })).map(item => item.header)
         if (endpoint === 'session/create') {
@@ -104,36 +174,18 @@ export class NativeWebSessionService {
         }, accepted)
         if (endpoint === 'session/status') {
           const exists = this.turns.has(id) || await this.persistence.stat(id, { signal: accepted }) !== undefined
-          return { status: this.turns.has(id) ? 'running' : exists ? 'idle' : 'unknown' }
+          return { status: this.turns.get(id)?.settled === false ? 'running' : exists ? 'idle' : 'unknown' }
         }
         if (endpoint === 'session/cancel') {
           const turn = this.turns.get(id)
-          if (turn === undefined) return { cancelled: false }
+          if (turn === undefined || turn.settled || fields.admissionId !== undefined && fields.admissionId !== turn.admissionId) {
+            return { cancelled: false }
+          }
           turn.controller.abort({ kind: 'user' })
           await turn.done
           return { cancelled: true }
         }
-        if (endpoint !== 'session/prompt') throw new Error('native web session: unsupported endpoint')
-        if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) {
-          throw new TypeError('native web session: text exceeds configured limits or is empty')
-        }
-        if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
-        if (this.turns.has(id)) throw new Error('native web session: Session already has a pending turn')
-        const controller = new AbortController()
-        const turnSignal = AbortSignal.any([accepted, controller.signal])
-        const done = Promise.resolve().then(async () => {
-          try {
-            return await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
-              message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }, turnSignal)
-          } catch (error: unknown) {
-            // The executor rejects its exact cancellation reason only after its writer has drained.
-            if (turnSignal.aborted && error === turnSignal.reason) return { exitCode: 130 }
-            throw error
-          }
-        })
-        const turn = { controller, done }
-        this.turns.set(id, turn)
-        try { return await done } finally { if (this.turns.get(id) === turn) this.turns.delete(id) }
+        throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
       return { ok: false, error: { code: 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
@@ -144,7 +196,8 @@ export class NativeWebSessionService {
    * @returns completion including actual reader cleanup failures.
    */
   async close(): Promise<void> {
-    const results = await Promise.allSettled([this.requests.close(), this.controls.close()])
+    const results = await Promise.allSettled([this.requests.close(), this.controls.close(), this.settlements.close()])
+    this.turns.clear()
     const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
     if (errors.length > 0) throw new AggregateError(errors, 'native web session: request cleanup failed')
   }

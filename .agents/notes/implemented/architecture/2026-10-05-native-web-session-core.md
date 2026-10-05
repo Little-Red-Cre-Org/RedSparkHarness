@@ -21,3 +21,5 @@ The shared Client Session implementation is a peer, including native event valid
 ## Alternatives considered
 
 Copying the compatibility controller introduces Cordis dependencies and separate lifecycle ownership; the Program uses shared execution and independent transport admission instead.
+
+Admission and settlement retain separate bounded transport ownership; cancellation identifies the exact admitted turn. The Client retains its settlement request after cancellation so an early Fetch abort cannot hide Host writer drain. Browser history uses a pure leaf of the current Session validators without duplicating message schemas; the CLI directly carries the Session execution Provider selected by its template.
