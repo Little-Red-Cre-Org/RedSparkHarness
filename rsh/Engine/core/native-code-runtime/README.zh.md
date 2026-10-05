@@ -27,6 +27,8 @@ kind: "package-reference"
 
 `nativeCodeRuntimeChildPath()` 解析受进程约束 Provider 使用的私有子进程。子进程将 TypeScript 执行和 binding 序列化交给本包的 worker 实现；它不是应用启动器，也不是公开 package bin。进程 Provider 拥有操作系统约束和完整进程范围的终止职责。
 
+调用方可提供 `CodeRunRequest.onStop`，在程序停止执行时取消自己持有的 binding 调用。Provider 在等待 binding 回复前发出通知；调用方仍负责这些调用的完成与失败。
+
 <a id="model-experience"></a>
 ## 模型体验
 

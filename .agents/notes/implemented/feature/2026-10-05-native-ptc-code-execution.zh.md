@@ -14,6 +14,8 @@ Status: implemented
 
 受限执行采用真实 subprocess Provider 和共享本机沙箱 backend。私有子进程将执行交给既有 worker 实现。原生和 Cordis 沙箱安装器共用执行器选择、文件策略构造和临时授权清理。两个安装器都不会扩大平台 backend 已说明的执行强度。
 
+工具目录选择各包的 Cordis 或原生安装协议。原生 schema 采集使用真实工具 Consumer 及其选定 Provider，采集结束后关闭 Host，并保留对遗漏包和空注册的拒绝。
+
 ## 后果
 
 父应用仍是唯一 Session writer。嵌套调度记录和外层结果使用既有事件 payload。完成、失败和取消都会在外层调用结束前排空已准入调度。受限运行时绝不脱离沙箱重试。明确允许不受限执行的组合仍可选择 worker。

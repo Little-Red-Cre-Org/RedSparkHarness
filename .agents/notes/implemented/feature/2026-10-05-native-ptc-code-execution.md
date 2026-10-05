@@ -14,6 +14,8 @@ The code tool registers `run_code` through NativeTools and uses its ordered PTC 
 
 Confined execution uses a real subprocess Provider and the shared local sandbox backend. A private child delegates execution to the existing worker implementation. Native and Cordis sandbox installers share runner selection, file-policy construction and temporary-grant cleanup. Neither installer widens the platform backend’s documented enforcement strength.
 
+The tool catalog selects each package's Cordis or native installation protocol. Native schema collection uses the actual tool Consumer and its selected Providers, closes its Host after collection, and retains rejection of missing packages and empty registrations.
+
 ## Consequences
 
 The parent application remains the only Session writer. Nested dispatch records and outer results use the existing event payloads. Completion, failure and cancellation drain accepted dispatch before the outer invocation settles. A confined runtime never retries without its sandbox. Worker execution remains available for explicitly unrestricted compositions.

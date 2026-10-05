@@ -46,6 +46,7 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox': { kind: 'indirect', reason: 'The process Provider delegates model-visible run_code schemas and durable results to its consuming application.' },
   'rsh/Core/util/errors': { kind: 'none', reason: 'Shared error representation does not create model requests.' },
   'rsh/Core/runtime-diagnostics/native-runtime': { kind: 'none', reason: 'The native lifecycle library owns no model request content or durable Session events.' },
   'rsh/Engine/core/native-agent': { kind: 'none', reason: 'Native Agent identity and initiator attribution add no model request content.' },

@@ -9,6 +9,13 @@
 import { globSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as nativeAgentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as nativeToolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
+import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import { plugin as nativeCodeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
+import { plugin as nativeCodeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
+import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import type { ToolSchema } from '@deepseek-ai/dsh-llm'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
@@ -146,7 +153,7 @@ async function mountCatalogChildScope(
  * prompt and registry; each recipe supplies only package-specific seams and
  * config, while `dir` participates in the completeness check.
  */
-export interface ToolPackage {
+interface ToolPackageFields {
   /** The npm package name, used as the catalog section heading. */
   pkg: string
   /** The physical package leaf name — matched by the completeness guard. */
@@ -163,9 +170,6 @@ export interface ToolPackage {
   writes: string[]
   /** Additional model-visible names shipped by example/app config. */
   shippedNames?: string[]
-  /** Plug the injected seams + the tool plugin onto a context that already
-   * carries `systemPrompt` + `tools`. */
-  mount: (ctx: Context) => Promise<void>
   /** Agent-like scope key whose tool view is catalogued instead of the global view. */
   scope?: (ctx: Context) => Agent
   /**
@@ -183,6 +187,37 @@ export interface ToolPackage {
    * DEFAULT, and this note records the shipped alternatives the model sees.
    */
   note?: string
+}
+
+/** A tool is harvested through its real Cordis or native installation protocol. */
+export type ToolPackage = ToolPackageFields & (
+  | { mount: (ctx: Context) => Promise<void>; harvest?: never }
+  | { harvest: () => Promise<ToolSchema[]>; mount?: never }
+)
+
+/** Boot the native run_code Consumer with the shipped worker and local filesystem Providers. */
+async function harvestNativeCodeTool(): Promise<ToolSchema[]> {
+  const scope = new NativeScope()
+  let tools: NativeToolRegistry | undefined
+  const observer: NativePlugin = {
+    apiVersion: 1, name: 'tool-catalog-observer', targets: ['host'], requires: ['tools'], provides: [],
+    resolve: () => (context) => { tools = context.require('tools') },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: nativeAgentPlugin, scope, config: undefined },
+    { plugin: nativeToolsPlugin, scope, config: { mode: 'both' } },
+    { plugin: nativeCodeRuntimePlugin, scope, config: undefined },
+    { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
+    { plugin: nativeCodeToolPlugin, scope, config: { sdkPrompt: false } },
+    { plugin: observer, scope, config: undefined },
+  ], 'host'))
+  try {
+    await host.start()
+    if (tools === undefined) throw new Error('gen-tool-catalog: native tool registry was not published')
+    return tools.schemas(scope)
+  } finally {
+    await host.stop()
+  }
 }
 
 /**
@@ -274,6 +309,15 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'The pwsh tool is the PowerShell-dialect consumer of the bash executor seam for Windows compositions (a PowerShell executor such as `@deepseek-ai/dsh-pwsh-local` backs `ctx.shell`); it mirrors the bash tool call-for-call minus sandbox controls — `run_in_background` runs register with the generic `ctx.jobs` runtime and are collected/stopped through the `job_*` tools, and the managed `DSH_*` environment comes from `@deepseek-ai/dsh-shell-env`. Each call runs in a fresh process (no persistent PTY session), with native `C:\\...` paths and `$env:NAME` variables.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-code-runtime',
+    dir: 'tool-code-runtime',
+    source: 'rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts',
+    requires: ['tools', 'codeRuntime', 'fs'],
+    writes: ['tool/call', 'tool/ptc-dispatch-start', 'tool/ptc-dispatch', 'tool/result'],
+    harvest: harvestNativeCodeTool,
+    note: 'Native run_code is registered by the selected code-tool Consumer. This catalog harvest uses the TypeScript worker-thread Provider; selecting the Python Provider changes the code parameter description and SDK language.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-cordis',
@@ -695,16 +739,23 @@ export async function collectToolCatalog(packages: ToolPackage[] = TOOL_PACKAGES
   assertManifestComplete(packages)
   const catalog: ToolCatalog = []
   for (const entry of packages) {
-    const ctx = new Context()
+    const ctx = entry.harvest === undefined ? new Context() : undefined
     // Dispose in `finally` so a throw from `mount`/`schemas()` after earlier
     // plugins mounted still tears the context down (no leaked executor/provider
     // fiber) — the repo's "dispose must reach quiescence" rule.
     try {
-      await ctx.plugin(SessionProjectionRegistry)
-      await ctx.plugin(SystemPrompt)
-      await ctx.plugin(ToolRuntime, entry.toolsConfig ?? {})
-      await entry.mount(ctx)
-      const schemas = ctx.tools.schemas(entry.scope?.(ctx)).sort((a, b) => a.name.localeCompare(b.name))
+      let schemas: ToolSchema[]
+      if (entry.harvest !== undefined) {
+        schemas = await entry.harvest()
+      } else {
+        if (ctx === undefined) throw new Error('gen-tool-catalog: Cordis context was not created')
+        await ctx.plugin(SessionProjectionRegistry)
+        await ctx.plugin(SystemPrompt)
+        await ctx.plugin(ToolRuntime, entry.toolsConfig ?? {})
+        await entry.mount(ctx)
+        schemas = ctx.tools.schemas(entry.scope?.(ctx))
+      }
+      schemas.sort((a, b) => a.name.localeCompare(b.name))
       assertToolsHarvested(entry, schemas.length)
       catalog.push({
         pkg: entry.pkg,
@@ -719,7 +770,7 @@ export async function collectToolCatalog(packages: ToolPackage[] = TOOL_PACKAGES
         ...entry.note !== undefined ? { note: entry.note } : {},
       })
     } finally {
-      await ctx.fiber.dispose()
+      await ctx?.fiber.dispose()
     }
   }
   return catalog
@@ -763,9 +814,9 @@ export function render(catalog: ToolCatalog): string {
     '',
     '# Tool Schema Catalog',
     '',
-    'Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page\'s generated Cordis API region) — this page is the *tools* the agent is offered.',
+    'Every model-facing tool a shipped plugin contributes to the selected tool registry: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page\'s generated Cordis API region) — this page is the *tools* the agent is offered.',
     '',
-    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard scans the RSH package manifests for `tool-*` and `tools` leaves and fails if any package is missing from the generator\'s boot manifest, so a new tool cannot be silently undocumented.',
+    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on its real Cordis Context or NativeHost and reads the selected registry schemas, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard scans the RSH package manifests for `tool-*` and `tools` leaves and fails if any package is missing from the generator\'s boot manifest, so a new tool cannot be silently undocumented.',
     '',
     'Scope: shipped product tools in RSH package leaves named `tool-*` or `tools`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`\'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog\'s packages-only scope.',
     '',
