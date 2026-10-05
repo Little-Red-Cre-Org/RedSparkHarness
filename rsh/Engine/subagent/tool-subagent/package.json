@@ -37,8 +37,8 @@
     "lib/index.js",
     "lib/invariant.js",
     "lib/model-selection-settings.js",
-    "lib/types/**/*.d.ts",
-    "lib/native.js"
+    "lib/native.js",
+    "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
