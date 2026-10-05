@@ -120,6 +120,9 @@ Read these pages when the provider-level contract is not enough. They move from 
 -----
 
 <a id="model-experience"></a>
+
+Collection observers receive bytes from the existing stdout/stderr data listener after capture.
+
 ## Model Experience
 
 Indirectly, through consumer seams such as the bash executor family, which own all model-facing rendering of spawned process output and lifecycle.

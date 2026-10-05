@@ -139,13 +139,14 @@ export const plugin: NativePlugin = {
           if (args.run_in_background === true) {
             if (!enableRunInBackground || jobs === undefined) throw new Error('tool-terminal: background sends are disabled')
             const jobId = jobs.start({ agent: call.agent, kind: 'pty-send', label: `${id}: ${request.text || '(input)'}`,
-              async run(signal) {
-                const operation = terminals.startSend(call.agent, id, { ...request, signal })
+              async run(signal, publishOutput) {
+                const operation = terminals.startSend(call.agent, id, { ...request, signal, onOutput: publishOutput })
                 try {
                   const result = await operation.done
                   return { status: signal.aborted ? 'cancelled' : 'completed',
                     detail: result.sessionStatus.kind === 'running' ? `wait: ${result.waitReason}` : 'session exited',
-                    output: renderSend(result, maxResultBytes) }
+                    output: renderSend(result, maxResultBytes), outputTruncated: result.truncated
+                      || Buffer.byteLength(renderSend(result, Number.MAX_SAFE_INTEGER), 'utf8') > maxResultBytes }
                 } catch (error) { return { status: 'failed', detail: error instanceof Error ? error.message : String(error) } }
               },
             })

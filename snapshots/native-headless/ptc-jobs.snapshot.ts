@@ -41,6 +41,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     { id: 'app', config: { cwd: workspace, provider: 'mock', model: 'fixture',
       systemPrompt: 'Use run_code to inspect and cancel the background job.', maxSteps: 3, builtinTools: false } },
     { id: 'fs', config: { cwd: workspace } },
+    { id: 'shell', config: { graceMs: 500, bashPath: process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash' } },
     { id: 'sandbox-policy', config: { mode: 'read-only', workspaceRoot: workspace } },
     { id: 'storage', config: { root: sessions, compression: 'none' } }, { id: 'model', config: { audit, ...script === undefined ? {} : { script } } },
   ] }))
@@ -60,7 +61,8 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     expect(results).toHaveLength(2)
     expect(results[0]).toMatchObject({ data: { message: { content: [{ type: 'tool-result', isError: true }] } } })
     expect(JSON.stringify(results[0])).toContain('timeout')
-    expect(JSON.stringify(results[1])).toContain('background task cancelled')
+    expect(JSON.stringify(results[1])).toContain('cancelled')
+    expect(JSON.stringify(results[1])).toContain('background task running')
     expect(events.filter(event => event.type === 'tool/ptc-dispatch').length).toBeGreaterThanOrEqual(5)
     const cold = new JsonlSessionBackend({ root: sessions, compression: 'none' })
     try {

@@ -46,6 +46,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 /** Browser runtime peers that must share the application instance. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+  '@deepseek-ai/dsh-client-native-application': ['react'],
 }
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
@@ -78,6 +79,7 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
   '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
   '@deepseek-ai/dsh-session/event-validation': ['parseSessionEvent'],
+  '@deepseek-ai/dsh-session/surface': ['deriveEventMessage', 'isAppendSurfaceEvent'],
   '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
