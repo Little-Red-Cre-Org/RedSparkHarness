@@ -40,6 +40,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-tools',
   'rsh/Engine/subagent/subagent-protocol',
   'rsh/Engine/subagent/native-subagent',
+  'rsh/Engine/subagent/native-tool-subagent-list-agents',
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/interaction/user-question-broker',

@@ -48,6 +48,8 @@ Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工�
 
 [原生 turn 执行器](../native-headless/README.zh.md) 使用已解析配置注册每个活动 Session，并在关闭父 writer 前移除贡献。各 Program 保留分别解析的 Session 配置，不替换为全局路由。替换 Provider 实现相同 Definition，无需替换 Agent 注册表或 Session 存储。
 
+`continuations.catalog()` 从选定 Program 提供只读候选路径。`continuations.inspect()` 检查父子关系并要求末端为 subagent；消费者解释描述符事件。这两个操作都不创建 Agent 或写入器。
+
 接纳时 `lifetime` 解析为 `turn`，除非调用方显式选择 `agent`。Agent 持有的委派会跨普通贡献移除继续执行，下一父级 turn 可注册新的确切 Session。启动仍要求当前活动父级，保留的后台任务不能通过过期 Session 接纳调用。调用方传入后台所有者的取消信号；当最后一个后台操作结束时，结算会移除其 Agent 清理贡献。
 
 委派可通过 `prepare` 在执行器渲染系统文本或选择工具声明前安装子级作用域贡献。回调接收确切的已注册子级与绑定的资源所有者。执行器等待准备、回滚和资源释放后才完成委派；准备与清理失败保留独立原因。`onReady` 仍是在初始事实持久化后的交付回调，不是配置安装窗口。

@@ -79,6 +79,7 @@ flowchart TD
   end
   subgraph group_subagent["group: subagent"]
     pkg_native_subagent["native-subagent"]
+    pkg_native_tool_subagent_list_agents["native-tool-subagent-list-agents"]
     pkg_subagent["subagent"]
     pkg_subagent_acp["subagent-acp"]
     pkg_subagent_claude_code["subagent-claude-code"]
@@ -1253,6 +1254,7 @@ flowchart TD
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
 | [`native-subagent`](../Engine/subagent/native-subagent) | `subagent` | — |
+| [`native-tool-subagent-list-agents`](../Engine/subagent/native-tool-subagent-list-agents) | `subagent` | — |
 | [`subagent-protocol`](../Engine/subagent/subagent-protocol) | `subagent` | — |
 | [`native-acp`](../Programs/ACP/packages/native-acp) | `acp` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |

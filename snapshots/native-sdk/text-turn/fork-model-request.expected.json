@@ -196,6 +196,27 @@
     {
       "type": "function",
       "function": {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "subagent",
         "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
         "parameters": {

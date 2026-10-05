@@ -16,7 +16,8 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as presetsPlugin, type NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
+import { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '../src/native.ts'
@@ -105,6 +106,57 @@ it('routes root maintenance and execution through the original Agent without an 
     expect(state.agents.get(original.agent.id)).toBe(original.agent)
     await state.app.dispose()
     expect(() => state.app.rootExecution.settle({ route: routeId, id }, signal)).toThrow('application is disposed')
+  } finally { await state.close() }
+})
+
+it('catalogs selected descendants through ordinary sessions and rejects foreign inspection paths', async () => {
+  const state = await fixture([])
+  const signal = new AbortController().signal
+  const parent = SessionId('catalog-parent')
+  const ordinary = SessionId('catalog-ordinary')
+  const child = SessionId('catalog-child')
+  const damaged = SessionId('catalog-damaged')
+  const damagedChild = SessionId('catalog-damaged-child')
+  const wrongDepth = SessionId('catalog-wrong-depth')
+  const foreign = SessionId('catalog-foreign')
+  const createdAt = Date.now()
+  try {
+    await state.app.executeSessionOperation({ id: parent, resume: false }, async (owner) => {
+      for (const [id, parentSession, cwd, origin, depth] of [
+        [ordinary, parent, state.root, undefined, 0],
+        [child, ordinary, state.root, 'subagent', 1],
+        [damaged, parent, state.root, undefined, 0],
+        [damagedChild, damaged, state.root, 'subagent', 1],
+        [wrongDepth, parent, state.root, 'subagent', 2],
+        [foreign, ordinary, join(state.root, 'other'), 'subagent', 1],
+      ] as const) {
+        const writer = await state.storage.create({ version: SESSION_FORMAT_VERSION, id, parentSession,
+          createdAt, cwd, isSeeded: false, delegationDepth: depth, ...origin === undefined ? {} : { origin } })
+        await writer.flush()
+        await writer.close()
+      }
+      const operations = state.execution.continuations!(owner.agent, owner.session)
+      expect(await operations.catalog('children', signal)).toEqual([])
+      expect(await operations.catalog('descendants', signal)).toEqual([
+        { path: [damaged, damagedChild], status: 'ready' },
+        { path: [ordinary, child], status: 'ready' },
+      ])
+      expect((await operations.inspect([ordinary, child], signal)).kind).toBe('child')
+      await expect(operations.inspect([ordinary], signal)).rejects.toThrow('subagent endpoint')
+      await expect(operations.inspect([ordinary, foreign], signal)).rejects.toThrow('not authorized')
+      await expect(operations.inspect([wrongDepth], signal)).rejects.toThrow('not authorized')
+      const open = state.storage.open.bind(state.storage)
+      const damagedOpen = vi.spyOn(state.storage, 'open').mockImplementation((id, mode, options) => {
+        if (id === damaged) throw new SessionPersistenceCorruptionError('damaged intermediary', { cause: undefined })
+        return open(id, mode, options)
+      })
+      try {
+        expect(await operations.inspect([damaged, damagedChild], signal)).toEqual({
+          kind: 'diagnostic', id: damagedChild, reason: 'corrupt',
+        })
+        expect((await operations.inspect([ordinary, child], signal)).kind).toBe('child')
+      } finally { damagedOpen.mockRestore() }
+    }, signal)
   } finally { await state.close() }
 })
 

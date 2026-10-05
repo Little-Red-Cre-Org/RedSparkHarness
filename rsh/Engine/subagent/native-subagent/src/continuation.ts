@@ -7,7 +7,7 @@ import { createUserMessage, type ContentBlock, type MessageId } from '@deepseek-
 import { SessionId, type Session } from '@deepseek-ai/dsh-session/native'
 import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
 import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData } from '@deepseek-ai/dsh-subagent-protocol'
-import type { NativeSubagentRequest } from './index.ts'
+import type { NativeSubagentCatalogEntry, NativeSubagentRequest } from './index.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }
 
@@ -114,6 +114,45 @@ export class NativeSubagentContinuations {
       if (materialized) return this.closeAfterFailure(child.handle, error)
       throw error
     }
+  }
+
+  /** Observe continuable descriptors through the Program's selected corpus and authorized lineage.
+   * @param agent - exact initiating identity.
+   * @param session - active parent Session.
+   * @param scope - direct children or complete descendants.
+   * @param signal - listing and inspection cancellation.
+   * @returns continuable rows and read diagnostics; one-shot and ordinary nodes remain traversal nodes.
+   */
+  async list(agent: NativeAgent, session: Session, scope: 'children' | 'descendants',
+    signal: AbortSignal): Promise<readonly NativeSubagentCatalogEntry[]> {
+    const operations = this.operations(agent, session)
+    const candidates = await operations.catalog(scope, signal)
+    const rows: NativeSubagentCatalogEntry[] = []
+    for (const candidate of candidates) {
+      signal.throwIfAborted()
+      const id = candidate.path.at(-1) as SessionId
+      const position = scope === 'children' ? {} : { parent: candidate.path.length === 1 ? session.id
+        : candidate.path[candidate.path.length - 2] as SessionId, depth: candidate.path.length }
+      const inspected = await operations.inspect(candidate.path, signal)
+      if (inspected.kind === 'diagnostic') { rows.push({ ...inspected, ...position }); continue }
+      const observed = inspected.observation
+      const own = observed.events.slice(observed.inheritedEventCount)
+      let descriptor
+      try { descriptor = foldSubagentDescriptor(own) }
+      catch {
+        // Descriptor parsing alone rejects malformed durable fields; storage cleanup has already completed.
+        rows.push({ kind: 'diagnostic', id, reason: 'corrupt', ...position })
+        continue
+      }
+      if (descriptor === undefined && own.some(event => event.type === 'subagent/descriptor')) {
+        rows.push({ kind: 'diagnostic', id, reason: 'unsupported', ...position })
+        continue
+      }
+      if (descriptor?.mode === 'continuable' && descriptor.provider === this.provider) {
+        rows.push({ kind: 'child', id, label: descriptor.label, status: candidate.status, ...position })
+      }
+    }
+    return rows
   }
 
   /** Interrupt live descendants without discarding pending input.
