@@ -7,8 +7,8 @@ import type {
   SubprocessOutcome,
   SubprocessTerminalForeground,
   SubprocessTerminalHandle,
-} from '@deepseek-ai/dsh-subprocess'
-import { TerminalError } from '@deepseek-ai/dsh-terminal'
+} from '@deepseek-ai/dsh-subprocess/native'
+import { TerminalError } from '@deepseek-ai/dsh-terminal/error'
 import type {
   TerminalBackendSession,
   TerminalReadRequest,
@@ -21,7 +21,7 @@ import type {
   TerminalSignal,
   TerminalSignalResult,
   TerminalWaitReason,
-} from '@deepseek-ai/dsh-terminal'
+} from '@deepseek-ai/dsh-terminal/protocol'
 import type { ResolvedConfig } from './config.ts'
 import { CONTROLLED_PROMPT, TerminalSanitizer } from './sanitize.ts'
 

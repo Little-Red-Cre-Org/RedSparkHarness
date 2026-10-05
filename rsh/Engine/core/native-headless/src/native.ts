@@ -135,7 +135,11 @@ function nonempty(value: unknown, name: string): string {
   return value
 }
 
-function resolveConfig(input: unknown): ResolvedConfig {
+/** Validate native Program turn settings.
+ * @param input - profile settings.
+ * @returns explicit workspace, model and execution limits.
+ */
+export function resolveNativeHeadlessConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-headless: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
@@ -666,7 +670,8 @@ export class NativeHeadlessApplication implements NativeApplication {
             track(session.append('request/header', {
               header: { config: { provider: config.provider, model: config.model,
                 ...config.maxTokens === undefined ? {} : { maxTokens: config.maxTokens },
-                ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort } }, tools: schemas },
+                ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort } },
+              ...schemas.length === 0 ? {} : { tools: schemas } },
               reason: priorHeader === undefined ? 'initial' : 'resume',
             }))
           }
@@ -1714,15 +1719,19 @@ export class NativeHeadlessApplication implements NativeApplication {
  * @param context - Host installation that owns these capabilities.
  * @param config - validated Program configuration.
  * @param executionScope - selected descendant scope for Agent contributions.
+ * @param authority - explicit services when a Program requires Session execution and live ownership.
  * @returns the executor released by the installation.
  */
 export function createNativeHeadlessApplication(context: NativeContext, config: Config,
-  executionScope: NativeScope = context.scope): NativeHeadlessApplication {
+  executionScope: NativeScope = context.scope,
+  authority?: { readonly execution: NativeSessionExecutionOperations; readonly active: NativeActiveSessionOperations },
+): NativeHeadlessApplication {
   if (!context.scope.contains(executionScope)) throw new Error('native-headless: execution scope belongs to another installation tree')
   const application = new NativeHeadlessApplication(
-    context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveConfig(config), context.require('agents'),
+    context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveNativeHeadlessConfig(config), context.require('agents'),
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
-    context.optional('codeRuntime'), context.optional('timeContext'), context.optional('sessionExecution'), context.optional('activeSessions'),
+    context.optional('codeRuntime'), context.optional('timeContext'), authority === undefined ? context.optional('sessionExecution') : authority.execution,
+    authority === undefined ? context.optional('activeSessions') : authority.active,
     context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
   )
   context.own(() => application.dispose())
@@ -1736,7 +1745,7 @@ export const plugin: NativePlugin = {
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
-    const config = resolveConfig(input)
+    const config = resolveNativeHeadlessConfig(input)
     return (context) => {
       const application = createNativeHeadlessApplication(context, config)
       context.provide('application', application)
