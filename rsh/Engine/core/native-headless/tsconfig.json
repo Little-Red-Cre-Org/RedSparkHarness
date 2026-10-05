@@ -64,6 +64,9 @@
     },
     {
       "path": "../../workspace/workspace-definition"
+    },
+    {
+      "path": "../../context/agent-instructions"
     }
   ]
 }

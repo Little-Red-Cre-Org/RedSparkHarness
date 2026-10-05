@@ -31,7 +31,7 @@ export interface SessionReferenceSource {
   }[]
 }
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@deepseek-ai/dsh-llm/message' {
   interface MessageSourceMap {
     'session-reference': SessionReferenceSource
   }

@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseDshArgs } from './args.ts'
+import { ensureShippedNativeProfile } from './native-profile-template.ts'
 import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
 // Both the source tree (rsh/Programs/CLI/src) and the bundled bin (rsh/Programs/CLI/lib) sit
@@ -27,6 +28,9 @@ function readVersion(): string {
  */
 export async function runCli(): Promise<void> {
   const invocation = parseDshArgs(process.argv.slice(2), readVersion())
+  if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
+    ensureShippedNativeProfile(invocation.profile)
+  }
 
   switch (invocation.mode) {
     case 'profile': {

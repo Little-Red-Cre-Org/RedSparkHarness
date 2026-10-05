@@ -7,7 +7,7 @@
 import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
-import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@deepseek-ai/dsh-fs'
+import type { FileSystemOperations as FileSystem, FsInfo, FsTarget, FsVersion } from '@deepseek-ai/dsh-fs/native'
 import { dshHomeDisplay } from '@deepseek-ai/dsh-home-paths'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { resolveConfig, resolveDiscoveryConfig, type ResolvedConfig } from './config.ts'
