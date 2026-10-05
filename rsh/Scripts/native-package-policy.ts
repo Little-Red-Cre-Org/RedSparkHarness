@@ -34,6 +34,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-tools',
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
+  'rsh/Modules/Official/interaction/user-question-broker',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/host/native-web-host',
@@ -45,6 +46,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Engine/core/native-code-runtime', ['host']],
@@ -56,6 +58,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
+  ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
@@ -87,6 +91,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
   ['rsh/Engine/core/native-agent', ['./inbox']],
@@ -105,6 +110,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
+  ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],

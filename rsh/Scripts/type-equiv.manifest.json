@@ -919,17 +919,17 @@
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionOption",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionIntent",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionItem",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
@@ -939,17 +939,17 @@
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionAnswerItem",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionAnswer",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/types.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "UserQuestionError",
-      "source": "rsh/Modules/Official/interaction/user-questions/src/index.ts"
+      "source": "rsh/Modules/Official/interaction/user-questions/src/question-error.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/approval.md",

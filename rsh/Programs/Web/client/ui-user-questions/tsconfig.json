@@ -21,7 +21,7 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Modules/Official/interaction/user-questions"
+      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.client.json"
     },
     {
       "path": "../../../../Core/typert/protocol"

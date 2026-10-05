@@ -2,7 +2,8 @@
   "extends": "../../../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib/types"
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo"
   },
   "include": [
     "src"
@@ -30,7 +31,19 @@
       "path": "../../../../Engine/core/tools"
     },
     {
-      "path": "../user-questions"
+      "path": "../user-questions/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-agent"
+    },
+    {
+      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
     }
   ]
 }

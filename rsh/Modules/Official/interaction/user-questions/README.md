@@ -40,6 +40,12 @@ For a single-select question, `custom` overrides the selected choice and `select
 
 When a request carries an agent, `ask()` authenticates its exact identity through the live `AgentRegistry` and admits only a runtime root. Durable lineage is not authority: a session with historical delegation depth may ask after it is resumed as a new runtime root, while a live child owned by another agent is rejected even if its durable depth is zero. The Web answerer receives only Agent-scoped requests; an agentless programmatic request remains available to unscoped local waterfall listeners and fails with `NO_PROVIDER` when none accepts it.
 
+### Native composition
+
+The `./native` entry provides `userQuestions` from the selected `agents` and `activeSessions`. Every request carries the exact executing Agent and Session; only root invocations may ask, including historical child Sessions resumed as roots. Answerers are scoped, delegate through `next()`, and cancel and drain accepted requests when removed. The pure `./protocol` entry owns the shared question and answer values; `./types` retains compatibility events.
+
+Select `@deepseek-ai/dsh-user-question-broker` as the pending-question Provider. Its `userQuestionBroker` service lets an authenticated application subscribe and answer with the original Agent and an opaque request id. It rejects malformed or late answers; removing the last recipient cancels the pending question. Native applications must supply a transport; this capability group does not install SDK, ACP or Web answering.
+
 ### Presentation intent
 
 `intent` declares that a question IS a known kind of decision, so a UI that recognises the tag may present it as such — `plan-review` says `detail` is a plan under review, and `dsh-plan-mode` sets it on the `exit_plan_mode` question. An intent changes presentation only: a UI honouring it answers with the same option labels a generic UI would send, and a UI that does not know the tag renders the generic option list, so callers read the same answer fields either way. `approve` names the label that approves rather than relying on option order. `ask()` rejects with `BAD_INTENT` the two assertions no type can carry: an `approve` naming none of that question's own options, and an intent on a question with no `detail` — the thing it declares itself a review of.
