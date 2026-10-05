@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-tool-todo` 为 agent（智能体）提供一份可用于规划的结构化任务列表：把多步工作拆成具体任务、标记正在进行的任务、完成后逐项勾掉。列表跨轮次、跨重新打开的会话持续存在，agent 与 UI 始终看到最新计划。一个配置开关决定是否允许多个任务同时处于进行中，适用于并行开展工作的 agent。凡是希望 agent 维护可见任务列表的场景都可以使用它；每次更新整体替换列表，只有拥有该列表的 agent 会话才能修改。
+`dsh-tool-todo` 为 agent（智能体）提供一份可用于规划的结构化任务列表：把多步工作拆成具体任务、标记正在进行的任务、完成后逐项勾掉。已结束轮次的列表保留显示直到下一轮次开始；重新打开会话时可以重建它。一个配置开关决定是否允许多个任务同时处于进行中，适用于并行开展工作的 agent。凡是希望 agent 维护可见任务列表的场景都可以使用它；每次更新整体替换列表，只有拥有该列表的 agent 会话才能修改。
 
 ## 目录
 
@@ -47,6 +47,8 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-todo)是每个受支持字段的穷尽式真源。
 
+原生 `./native` 入口从 profile 选择 `tools` 与 `activeSessions`，并要求相同的显式并行配置。成功调用等待 `todo/write` 持久化后才返回计数。`readTodos(owner, signal)` 通过当前写入权威重建任务清单，包括恢复与 fork 继承的事件；下一个 `turn/start` 清空清单。原生注册表负责 Agent 归属、取消与注册释放。
+
 ### 每次调用做什么
 
 agent 每次更新都发送完整列表；新列表替换旧列表，因此没有部分更新或逐项编辑。每个条目是一句简短的任务描述，外加 `pending`、`in_progress` 或 `completed` 状态。成功的更新会返回新的计数——`Updated todo list: <pending> pending, <inProgress> in progress, <completed> completed.`——UI 随即展示新计划。任务描述为空或重复、条目带有描述与状态之外的字段、或（禁用并行时）多个任务被标记为进行中，这些情况下更新都会明确失败。
@@ -81,7 +83,10 @@ agent 每次更新都发送完整列表；新列表替换旧列表，因此没�
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、工具注册、`todos` 投影单元 |
-| [`src/types.ts`](src/types.ts) | `todos` 投影键声明及其载荷类型的唯一归属地 |
+| [`src/types.ts`](src/types.ts) | 兼容投影键声明与任务类型再导出 |
+| [`src/todo-types.ts`](src/todo-types.ts) | 共享任务载荷与持久化事件声明 |
+| [`src/todo-core.ts`](src/todo-core.ts) | 共享指令、规范化与持久化校验 |
+| [`src/native.ts`](src/native.ts) | 原生工具消费者与异步任务清单读取 |
 | [`src/client.ts`](src/client.ts) | 客户端命名空间对类型出口的再导出 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：校验持久整表快照与开放轮次归属 |
 

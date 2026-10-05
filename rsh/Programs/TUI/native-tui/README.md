@@ -58,7 +58,7 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 <a id="known-limitations-and-deferred-work"></a>
 
 - Preset and permission selectors, Plan/Todo panels, contributed commands are not connected.
-- The view shows recent message rows without history scrolling; large streamed output is presentation-limited while complete accepted output remains in Session.
+- Page Up and Page Down browse retained transcript rows using the shared rendered-line estimate. Sending input, restoring a Session or clearing the view returns to the bottom. Large individual messages and streamed output remain presentation-limited while complete accepted output stays in Session.
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 
 <a id="dev-note"></a>
