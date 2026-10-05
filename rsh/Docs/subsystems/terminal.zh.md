@@ -2,7 +2,7 @@
 
 [English](terminal.md) | 中文
 
-PTY 后端、`ctx.terminals` 与面向模型的消费方共享的类型。[持久 PTY Agent Note](../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.zh.md) 负责记录决策依据；本页记录来自 [`rsh/Modules/Official/terminal/terminal/src/types.ts`](../../Modules/Official/terminal/terminal/src/types.ts) 的跨包词汇。
+PTY 后端、`ctx.terminals` 与面向模型的消费方共享的类型。[持久 PTY Agent Note](../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.zh.md) 负责记录决策依据；本页记录来自 [`rsh/Modules/Official/terminal/terminal/src/protocol.ts`](../../Modules/Official/terminal/terminal/src/protocol.ts) 的跨包词汇。
 
 ## 标识与就绪
 

@@ -7578,6 +7578,12 @@ importers:
 
   rsh/Modules/Official/terminal/tool-terminal:
     dependencies:
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-jobs
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -7612,6 +7618,12 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
       '@deepseek-ai/dsh-output-retention':
         specifier: workspace:^
         version: link:../../../../Core/util/output-retention

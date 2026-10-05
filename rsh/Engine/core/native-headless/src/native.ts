@@ -687,7 +687,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           const priorHeader = session.requestHeader()
           if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
             track(session.append('request/header', {
-              header: { config: { ...stepConfig }, tools: schemas },
+              header: { config: { ...stepConfig }, ...schemas.length === 0 ? {} : { tools: schemas } },
               reason: priorHeader === undefined ? 'initial' : 'resume',
             }))
           }
