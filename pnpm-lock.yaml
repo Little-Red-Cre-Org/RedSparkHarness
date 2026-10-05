@@ -2672,9 +2672,6 @@ importers:
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../Core/util/timeout
-      '@deepseek-ai/dsh-typert-protocol':
-        specifier: workspace:^
-        version: link:../../../Core/typert/protocol
       '@deepseek-ai/dsh-util-crypto':
         specifier: workspace:^
         version: link:../../../Core/util/crypto
@@ -2700,6 +2697,9 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: workspace:^
+        version: link:../../../Core/typert/protocol
 
   rsh/Engine/llm/llm-deepseek:
     dependencies:

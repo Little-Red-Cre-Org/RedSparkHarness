@@ -87,7 +87,7 @@ This section explains how the package realizes the behavior above; the observabl
 
 The package is built on event sourcing: a `Session` is an append-only log of typed `SessionEvent`s, and everything else — model history, transcripts, telemetry, titles, persistence — derives from that stream. The surface is a derived projection: an incremental manager validates append candidates, advances the ordered view from committed events, and tracks a `replaceGeneration` that bumps on every committed rewrite. Model-visible means logged: anything that reaches a model request must be reconstructable from the log. Each model attempt that reaches settlement commits one event: `assistant/message` carries the assembled model-visible message plus its compact timed stream, while `assistant/attempt` retains a failed, retried, cancelled, or stream-error attempt without adding model history. A hard process loss before settlement leaves no durable attempt stream.
 
-The `./native` entry exports the Session object, event types, validation, and projections without loading the Cordis `SessionStore`. The package root retains the `ctx.sessions` service, scoped event publication, and existing exports; both entries use the same Session class.
+The `./native` entry exports the Session object, event types, validation, and projections without loading the Cordis `SessionStore`. The package root retains the `ctx.sessions` service, scoped event publication, and existing exports; both entries use the same Session class. `dsh-scope` is an optional peer used by the Cordis entry; native Session imports do not load it.
 
 ### Request headers
 

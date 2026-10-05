@@ -29,7 +29,7 @@ Use `dsh-fs` for consistent host, confined, or remote filesystem operations. Con
 
 You rarely load `dsh-fs` directly: you mount a backend that registers as `ctx.fs`, then either call the service from your own plugin or let the `dsh-tool-fs` tools call it for you. This page serves the two audiences that do touch it — deployments choosing a backend, and developers implementing or consuming the contract.
 
-`@deepseek-ai/dsh-fs/native` declares the native `fs` service and scoped decision/observation events; it installs no provider. Native consumers use `FileSystemOperations`, while the root Cordis entry retains `FileSystem` registration. The operations declarations still reference sandbox policy types from the current compatibility-bound package.
+`@deepseek-ai/dsh-fs/native` declares the native `fs` service and scoped decision/observation events; it installs no provider. Native consumers use `FileSystemOperations`, while the root Cordis entry retains `FileSystem` registration. The operations declarations still reference sandbox policy types from the current compatibility-bound package. `dsh-invariants` and `dsh-plugin-host` are optional peers required by their selected compatibility invariant/runtime entries; `./native` loads neither.
 
 ### Choosing and mounting a backend
 
