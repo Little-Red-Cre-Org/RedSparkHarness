@@ -25,6 +25,8 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+原生 `./native` 入口要求显式配置与所选后端匹配的 `type`，且只注册 `terminal_open`、`terminal_list` 与 `terminal_close`。打开工具的 schema 会公开该类型，并返回 PTY id、类型、顶层进程状态和 pid（Windows PTY 异步启动尚未报告时为 `0`）。原生工具不发送输入、读取输出、向前台进程组传递信号或推断提示符就绪。需要交互式终端工作的应用使用 Cordis 组合。
+
 当组合挂载了终端后端、且模型应当能跨调用使用终端状态时启用这些工具——使用调试器单步调试、在 REPL 中探索，或中断前台命令后回到 shell。指引章节会引导模型对有界操作使用单次 bash、read、write 与 edit 工具。
 
 ### 六个工具

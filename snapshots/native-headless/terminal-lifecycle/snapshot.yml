@@ -1,0 +1,8 @@
+version: 1
+scenario: terminal-lifecycle
+profile: native-headless
+composition: native-terminal-lifecycle
+recording: authored
+header:
+  class: native-terminal-lifecycle
+  pin: true
