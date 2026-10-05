@@ -44,7 +44,7 @@ kind: "package-reference"
 
 #### Token 影响
 
-子任务与提示消耗子模型 token。返回最终或部分输出、后台启动确认及任务输出会增加父历史。
+子任务与提示消耗子模型 token。返回最终或部分输出、后台启动确认、任务输出和结束通知会增加父历史。
 
 #### KV Cache 影响
 
@@ -66,3 +66,5 @@ kind: "package-reference"
 [后台所有权](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-background.zh.md)。
 
 [可持续所有权](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-continuation.zh.md)。
+
+[结束通知准入](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-settlement.zh.md)。

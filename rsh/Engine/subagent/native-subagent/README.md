@@ -33,6 +33,8 @@ Background execution copies the same resolved child permissions and budgets. The
 
 Continuable starts commit the descriptor and initial inbox acceptance through the Program before returning. sendMessage permits direct-parent/child adjacency, restores closed direct children from their durable descriptor, and returns the accepted message id independently of an answer. Cold resume preserves route, persona, tool restrictions and workspace; activation budgets use the selected deployment defaults. interrupt stops current work and parks unclaimed input until another message wakes it. Parent disposal and Provider unload drain resident children; execution and cleanup failures reject.
 
+After a continuable child releases its writer and Agent, the Provider delivers one subagent-settled notice through its exact parent's inbox. The ending and closing content come only from this residency's durable suffix; cleanup failure reports error without an earlier answer. Root parents consume the queued notice on their next user turn; resident continuable parents use the existing wake path. Provider shutdown suppresses new notices while draining children.
+
 <a id="model-experience"></a>
 ## Model Experience
 
@@ -44,7 +46,7 @@ The child receives its task, deployment persona, delegation permissions and filt
 
 #### Token effect
 
-The child task and prompt consume child tokens. Returning final or partial output, background acknowledgements and job output adds parent history.
+The child task and prompt consume child tokens. Returning final or partial output, background acknowledgements, job output and settlement notices add parent history.
 
 #### KV Cache effect
 
@@ -66,3 +68,5 @@ The child starts a fresh conversation; its request does not reuse the parent con
 [Background ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-background.md).
 
 [Continuation ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-continuation.md).
+
+[Settlement admission](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-settlement.md).

@@ -40,11 +40,16 @@
     "./inbox": {
       "types": "./lib/types/inbox.d.ts",
       "default": "./lib/inbox.js"
+    },
+    "./consumed-work": {
+      "types": "./lib/types/consumed-work.d.ts",
+      "default": "./lib/consumed-work.js"
     }
   },
   "files": [
     "lib/index.js",
     "lib/inbox.js",
+    "lib/consumed-work.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

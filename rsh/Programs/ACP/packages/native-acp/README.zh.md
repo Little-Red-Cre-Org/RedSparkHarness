@@ -36,6 +36,8 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 <a id="dev-note"></a>
 
+安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会停止工具准入，并协作排空执行器与连接。MCP 撤销随取消开始。关闭失败会保留已关闭的 Session 记录，拒绝恢复、提示和配置修改；仅清理成功才移除该记录。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。
+
 ## 开发备注
 
 [原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权。此承载层没有可与执行器分歧的独立 Agent 或 Session 状态投影，因此不发布 invariant 入口。
@@ -48,7 +50,7 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 #### 模型看到什么
 
-通过 `session/prompt` 接收的文本和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
+通过 `session/prompt` 接收的文本、资源链接引用和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。资源链接使用兼容承载层的方括号文本，名称与 URI 按 JSON 加引号；相邻文本合并，不抓取资源，并保留文本／图片顺序。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
 
 #### Token 影响
 
@@ -62,4 +64,4 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 ## 已知限制与延后工作
 
-- Session 专属 MCP 挂载、音频／嵌入式输入、提问请求和附件展示不属于此承载批次；不支持的提示内容与 MCP 声明显式失败。初始化声明不支持音频、嵌入上下文与 HTTP MCP。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
+- 音频／嵌入式输入、提问请求和附件展示不属于此承载批次；不支持的提示内容显式失败。初始化声明不支持音频、嵌入上下文。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。

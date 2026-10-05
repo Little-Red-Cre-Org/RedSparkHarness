@@ -179,7 +179,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-launch-environment': ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-mcp-client': ['lib/native.js', 'lib/types.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-mcp-client': ['lib/native.js', 'lib/types.js', 'lib/acp-config.js', 'lib/shared-*.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
@@ -231,7 +231,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js'],
+  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
   '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
   '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],

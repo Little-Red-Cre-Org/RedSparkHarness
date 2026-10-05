@@ -54,6 +54,8 @@ Root cancellation closes and drains an already retained epoch even when the init
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.
 
+Continuation input to a busy recipient uses its actual active owner as soon as that owner attaches. A queued idle fallback and live inbox admission claim the message once; selecting the live owner cancels and drains the still-queued fallback. Admission failures preserve their original causes.
+
 ## Model Experience
 
 ### System prompt

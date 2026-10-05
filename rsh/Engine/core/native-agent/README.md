@@ -29,6 +29,8 @@ The `./native` entry accepts only an empty configuration object and provides `ag
 
 Agent cleanup starts every registered release before waiting for any completion, so cancellation contributions can unblock active execution. Registry disposal follows the same order and reports all failures after initiator operations and registrations drain.
 
+`./consumed-work` folds accepted turn, step and inbox events into the ending that accounts for consumed work. Compatibility Agent consumers forward this pure leaf; it owns no Session or writer.
+
 `./inbox` owns the shared Host and Client InboxTarget and agent/inbox/spliced declarations; the compatibility Agent forwards these types. The Client program includes only this declaration and does not load the native registry implementation.
 
 ## Model Experience

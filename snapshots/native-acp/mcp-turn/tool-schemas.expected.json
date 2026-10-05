@@ -1,0 +1,219 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_output",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "send_message",
+      "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "message"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "interrupt_agent",
+      "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "subagent",
+      "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "prompt"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "run_in_background": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "name": "mcp__fixture__add",
+      "description": "Adds two numbers.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number",
+            "description": "First number"
+          },
+          "b": {
+            "type": "number",
+            "description": "Second number"
+          }
+        },
+        "required": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "mcp__fixture__greet",
+      "description": "Greets a person by name.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name to greet"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "mcp__fixture__fail",
+      "description": "Always returns an error.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "mcp__fixture__image",
+      "description": "Returns an image content block.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "mcp__fixture__crash",
+      "description": "Replies, then exits the server process (crash-recovery test).",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "mcp__fixture__admin_reset_2d9bb2dfe9aa",
+      "description": "Tool with a dotted name (normalization test).",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "changes": []
+}
