@@ -1636,6 +1636,9 @@ export function estimateItemLines(item, width) {
  * Compute the visible transcript slice for a scroll position.
  * `scrollLines` is the offset in rendered lines from the bottom (0 = bottom
  * anchored, i.e. the latest messages are visible).
+ * @template {Record<string, unknown>} Row
+ * @param {{ items: readonly Row[], rows: number, width: number, scrollLines: number, busy: boolean, todos?: readonly unknown[] }} options - transcript rows and current terminal viewport.
+ * @returns {{ visible: Row[], scrollLines: number, maxScroll: number, atBottom: boolean, atTop: boolean, step: number }} visible rows and bounded line position.
  */
 export function computeViewport({
   items,
@@ -1659,6 +1662,7 @@ export function computeViewport({
   const maxScroll = Math.max(0, totalLines - 1);
   const lines = Math.min(Math.max(0, scrollLines), maxScroll);
 
+  /** @type {Row[]} */
   let visible = [];
   if (items.length > 0) {
     // Window bottom = the item that contains the `lines`-th line from bottom.

@@ -164,6 +164,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
@@ -177,7 +178,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions', ['./types']],
-  ['rsh/Modules/Official/mcp/mcp-client', ['./types']],
+  ['rsh/Modules/Official/mcp/mcp-client', ['./types', './acp-config']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history']],
   ['rsh/Engine/core/native-agent', ['./inbox', './consumed-work']],
@@ -197,6 +198,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo/client-native', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
   ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
@@ -217,6 +219,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/attachment/attachment/error', ['host', 'client']],
   ['rsh/Engine/llm/deepseek-llm-api-extensions/types', ['host']],
   ['rsh/Modules/Official/mcp/mcp-client/types', ['host']],
+  ['rsh/Modules/Official/mcp/mcp-client/acp-config', ['host']],
   ['rsh/Engine/core/native-tools/types', ['host', 'client']],
   ['rsh/Engine/session/session-persistence/deletion', ['host', 'client']],
   ['rsh/Engine/core/native-session-execution/root-route', ['host', 'client']],

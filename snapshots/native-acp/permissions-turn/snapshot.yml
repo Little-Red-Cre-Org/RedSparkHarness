@@ -1,0 +1,11 @@
+version: 1
+scenario: permissions-turn
+profile: native-acp
+composition: native-acp-text-turn
+recording: authored
+header:
+  class: native-acp-text-turn
+  systemPromptSource: native-acp/text-turn
+  toolSchemasSource: native-acp/text-turn
+workspace:
+  final: true

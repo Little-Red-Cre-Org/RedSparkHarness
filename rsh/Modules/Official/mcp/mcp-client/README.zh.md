@@ -29,6 +29,8 @@ kind: "package-reference"
 
 `./native` 入口在选定 NativeTools 作用域注册 MCP 值工具。原生与 Cordis 入口共用传输监督、分页发现、规范原始结果及图片投影。只有 Cordis 入口使用可选的 `dsh-scope` 和 `dsh-tools` 对等依赖。原生配置显式提供所有传输字段、`toolCallTimeoutMs` 和 `failOnStartupError`；`reconnect` 使用下表相同的经验证默认值。按配置要求，首次启动失败会拒绝激活。关闭停止重连、关闭传输、排空同步及所有工具注册，并报告清理失败。图片结果要求选定附件 Provider 及当前 Session 的精确模型路由声明图片输入能力；拒绝时保留规范原始值并呈现诊断文本。取消保留调用信号的错误身份，并阻止之后的工具结果接纳。
 
+`./acp-config` 叶入口为两种承载转换标准 ACP stdio／HTTP 声明，共用命名空间、环境与请求头校验；调用方提供配置解析器和超时。`installNativeMcpClient` 接收实际 Consumer 的作用域、资源所有者与诊断 logger；[原生 ACP 承载](../../../../Programs/ACP/packages/native-acp/README.zh.md) 独立拥有每个 Session，并将诊断写入 stderr。
+
 ### 最小配置
 
 每台服务器添加一条配置项即可，无需其他内容。harness 启动后，服务器的工具会出现在模型的工具列表中。

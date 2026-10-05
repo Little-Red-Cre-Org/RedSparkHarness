@@ -1,0 +1,8 @@
+version: 1
+scenario: preset-controls
+profile: native-tui
+composition: native-terminal-preset-controls
+recording: authored
+header:
+  class: native-terminal-preset-controls
+  pin: true

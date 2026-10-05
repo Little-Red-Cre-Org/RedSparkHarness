@@ -1,5 +1,6 @@
 /** Shared model instructions and whole-list normalization. */
 import type { TodoItem } from './todo-types.ts'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 
 const DESCRIPTION_HEAD =
   'Record and update a structured task list for the current work. Send the ENTIRE '
@@ -71,6 +72,26 @@ export function toTodoList(raw: { content: string; status: string }[], allowPara
 
 
 const TODO_STATUSES = new Set(['pending', 'in_progress', 'completed'])
+
+/**
+ * Reconstruct the standing plan from canonical history, including inherited events.
+ * @param events - ordered Session events; each turn start clears the previous plan.
+ * @returns latest whole list, or null before a write in the current turn.
+ */
+export function foldTodos(events: readonly SessionEvent[]): readonly TodoItem[] | null {
+  let todos: readonly TodoItem[] | null = null
+  let open = false
+  for (const event of events) {
+    if (event.type === 'turn/start') { todos = null; open = true }
+    if (event.type === 'turn/end') open = false
+    if (event.type === 'todo/write') {
+      if (!open) throw new Error('todo/write appended outside any open turn')
+      validateTodos(event.data.todos, (message) => { throw new Error(message) })
+      todos = event.data.todos
+    }
+  }
+  return todos
+}
 
 /**
  * Validate one whole-list todo snapshot before durable acceptance or projection.

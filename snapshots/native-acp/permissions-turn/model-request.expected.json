@@ -1,0 +1,435 @@
+[
+  {
+    "model": "fixture-model-next",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "You are a native ACP fixture."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "say hello through native ACP"
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "native ACP snapshot reply"
+      },
+      {
+        "role": "user",
+        "content": "write permission-proof.txt after one-shot approval"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_output",
+          "description": "Read retained live or final background job output and status; optionally wait for completion.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "wait": {
+                "type": "boolean"
+              },
+              "timeout_ms": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_list",
+          "description": "List background jobs owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_kill",
+          "description": "Request cancellation of one background job owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "send_message",
+          "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id",
+              "message"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "interrupt_agent",
+          "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "fixture-model-next",
+    "messages": [
+      {
+        "role": "developer",
+        "content": "You are a native ACP fixture."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "say hello through native ACP"
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{attachment}}\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "native ACP snapshot reply"
+      },
+      {
+        "role": "user",
+        "content": "write permission-proof.txt after one-shot approval"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "permission-proof-call",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"permission-proof.txt\",\"content\":\"approved\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "create: permission-proof.txt",
+        "tool_call_id": "permission-proof-call"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_output",
+          "description": "Read retained live or final background job output and status; optionally wait for completion.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "wait": {
+                "type": "boolean"
+              },
+              "timeout_ms": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_list",
+          "description": "List background jobs owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_kill",
+          "description": "Request cancellation of one background job owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "send_message",
+          "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id",
+              "message"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "interrupt_agent",
+          "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+]

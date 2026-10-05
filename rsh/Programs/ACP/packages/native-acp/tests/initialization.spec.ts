@@ -39,9 +39,10 @@ it('drains model initialization after EOF before releasing its Provider', async 
     },
   }
   const carrier: NativePlugin = {
-    apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model'], provides: ['application'],
+    apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model'], optional: ['approval'], provides: ['application'],
     resolve: () => (context) => {
-      app = new NativeAcpApplication(context, { provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1 }, input, output)
+      app = new NativeAcpApplication(context, { provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1,
+        maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output)
       context.provide('application', app)
     },
   }

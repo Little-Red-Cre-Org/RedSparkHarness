@@ -207,7 +207,7 @@ interface ContinuableStart {
 /**
  * Durable attribution for the runtime's own account of a continuable child
  * settling. Deliberately a different kind from
- * {@link AgentMessageSource}: an Agent message is content the sender chose,
+ * `AgentMessageSource`: an Agent message is content the sender chose,
  * while this message is the manager stating what became of the child, and a
  * transcript that merged them would credit the child with words it never wrote.
  */

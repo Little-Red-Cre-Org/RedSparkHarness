@@ -369,6 +369,7 @@
     { "path": "./rsh/Engine/subagent/subagent" },
     { "path": "./rsh/Engine/subagent/subagent-protocol" },
     { "path": "./rsh/Engine/subagent/native-subagent" },
+    { "path": "./rsh/Engine/subagent/native-tool-subagent-list-agents" },
     { "path": "./rsh/Engine/subagent/tool-subagent" },
     { "path": "./rsh/Engine/subagent/tool-subagent-control" },
     { "path": "./rsh/Engine/subagent/subagent-in-process-driver" },

@@ -40,6 +40,8 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 
 图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
 
+任务面板读取权威 todo/write 快照，包括已接受的实时与恢复历史。每次替换完整列表，只在 turn/start 清空；turn/end 保留最后的计划。状态文案由 locale 提供，面板不修改任务。
+
 ## 不变量
 
 视图读取选定 Host Consumer，不拥有独立执行观察，因此不发布不变量安装器。

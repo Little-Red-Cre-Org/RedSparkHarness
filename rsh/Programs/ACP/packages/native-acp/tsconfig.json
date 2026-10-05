@@ -9,6 +9,12 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../../Modules/Official/mcp/mcp-client"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
@@ -40,6 +46,12 @@
     },
     {
       "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/native-approval"
     }
   ]
 }
