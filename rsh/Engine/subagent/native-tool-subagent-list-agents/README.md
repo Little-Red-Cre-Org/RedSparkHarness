@@ -17,6 +17,7 @@ The `list_agents` tool lets a running native agent recall its continuable childr
 - [Ownership](#ownership)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
 
 <a id="configuration"></a>
 ## Configuration

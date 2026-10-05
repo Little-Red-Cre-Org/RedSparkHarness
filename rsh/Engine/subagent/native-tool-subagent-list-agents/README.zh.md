@@ -17,6 +17,7 @@ kind: "package-reference"
 - [Ownership](#ownership)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 <a id="configuration"></a>
 ## 配置
@@ -45,13 +46,13 @@ schema 增加请求 token；每次结果留在后续模型历史中。
 
 安装或移除此工具会改变 schema 前缀。列举本身不创建模型请求。
 
-## 已知限制与延期工作
+## 已知限制与延期工作 <a id="known-limitations-and-deferred-work"></a>
 
 - 选定存储的列举不分页；大型 Session 集合需要扫描全部头信息。
 - 观察到的状态可能在后续控制调用前改变。
 - 不发布 invariant 配套模块：Program 拥有目录与 Agent 驻留状态，Provider 拥有描述符解释。
 
 <a id="dev-note"></a>
-### Dev Note
+### 开发备注
 
 [原生目录所有权](../../../../.agents/notes/implemented/architecture/2026-10-06-native-subagent-catalog.zh.md)。
