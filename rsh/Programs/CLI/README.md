@@ -21,7 +21,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 
 The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, and `native-sdk` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
-The native-sdk profile also composes native-tools, native-prompt, native-subagent and the foreground tool-subagent Consumer. Its child execution uses the same selected Program executor, Session storage and model Provider; it does not install background or continuable Subagent controls.
+The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider; one-shot background children use job_output/job_kill, while continuable Subagent controls remain unsupported.
 
 
 ## App arguments

@@ -1,16 +1,17 @@
-/** Native foreground Subagent Definition and in-process spawn Provider. */
+/** Native one-shot Subagent Definition and in-process spawn Provider. */
 import { randomUUID } from 'node:crypto'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import { createUserMessage, type ContentBlock, type ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import type { NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeJobId } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
 import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 import type {} from '@deepseek-ai/dsh-native-prompt'
 import type {} from '@deepseek-ai/dsh-native-tools'
 
-/** Explicit deployment choices for one fresh foreground child. */
+/** Explicit deployment choices for one fresh child. */
 export interface NativeSubagentOptions {
   readonly maxDepth: number
   readonly maxSteps?: number
@@ -42,7 +43,14 @@ export interface NativeSubagentResult {
   readonly stopReason: 'completed' | 'max-tokens' | 'aborted' | 'refusal' | 'error'
 }
 
-/** Replaceable foreground Provider; Programs retain Agent execution and Session writing. */
+/** Published Agent-owned child after its first durable turn facts are committed. */
+export interface NativeSubagentBackground {
+  readonly id: SessionId
+  readonly jobId: NativeJobId
+  readonly provider: string
+}
+
+/** Replaceable one-shot Provider; Programs retain Agent execution and Session writing. */
 export interface NativeSubagentOperations {
   /**
    * Resolve the latest logged parent route, budgets and scoped deployment choices.
@@ -63,6 +71,13 @@ export interface NativeSubagentOperations {
    * @returns actual output and terminal reason after writer and resource release.
    */
   run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult>
+  /**
+   * Start an Agent-owned child under the selected Jobs registry.
+   * @param request - resolved child request with the foreground permission restrictions.
+   * @param signal - startup cancellation, relinquished only after actual child readiness.
+   * @returns real child identity and job handle after its initial durable facts are committed; startup failures reject after cleanup.
+   */
+  startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground>
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -81,7 +96,7 @@ function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['st
   }
 }
 
-/** One in-process foreground Provider without a second Agent loop, registry or writer. */
+/** One in-process Provider without a second Agent loop, result registry or writer. */
 export class NativeSpawnSubagents implements NativeSubagentOperations {
   private readonly pending = new Map<Promise<NativeSubagentResult>, AbortSignal>()
   private readonly cancellation = new AbortController()
@@ -115,7 +130,57 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
     const task = this.execute(request, effective)
-    this.pending.set(task, effective)
+    return this.track(task, effective)
+  }
+
+  /** @inheritdoc */
+  async startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground> {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    const jobs = this.context.optional('jobs')
+    if (jobs === undefined) throw new Error('native-subagent: background execution requires jobs')
+    signal.throwIfAborted()
+    const id = SessionId(randomUUID())
+    const ready = Promise.withResolvers<void>()
+    const startup = new AbortController()
+    const cancelStartup = (): void => { startup.abort(signal.reason) }
+    signal.addEventListener('abort', cancelStartup, { once: true })
+    const publication = { ready: false }
+    let task: Promise<NativeSubagentResult> | undefined
+    try {
+      const jobId = jobs.start({ agent: request.agent, kind: 'subagent', label: request.label,
+        run: async (jobSignal, publishOutput) => {
+          const effective = AbortSignal.any([jobSignal, startup.signal, this.context.signal, this.cancellation.signal])
+          task = this.track(this.execute(request, effective, { id, onReady: () => {
+            if (publication.ready) return
+            effective.throwIfAborted()
+            publication.ready = true
+            signal.removeEventListener('abort', cancelStartup)
+            ready.resolve()
+          }, isPublished: () => publication.ready, publishOutput }), effective)
+          try {
+            const result = await task
+            return { status: result.stopReason === 'completed' ? 'completed'
+              : result.stopReason === 'aborted' ? 'cancelled' : 'failed', detail: result.stopReason,
+            output: result.output.filter(block => block.type === 'text').map(block => block.text).join('\n') }
+          } finally {
+            if (!publication.ready) ready.resolve()
+          }
+        },
+      })
+      await ready.promise
+      // Readiness failures settle only after delegation has drained its owned resources.
+      if (!publication.ready) {
+        await task
+        throw new Error('native-subagent: child ended before readiness')
+      }
+      return { id, jobId, provider: this.providerName }
+    } finally {
+      signal.removeEventListener('abort', cancelStartup)
+    }
+  }
+
+  private track(task: Promise<NativeSubagentResult>, signal: AbortSignal): Promise<NativeSubagentResult> {
+    this.pending.set(task, signal)
     const settled = (): void => { this.pending.delete(task) }
     void task.then(settled, settled)
     return task
@@ -134,14 +199,23 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (errors.length > 0) throw new AggregateError(errors, 'native-subagent: accepted run cleanup failed')
   }
 
-  private async execute(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult> {
-    const id = SessionId(randomUUID())
+  private async execute(request: NativeSubagentRequest, signal: AbortSignal, background?: {
+    readonly id: SessionId
+    readonly onReady: () => void
+    readonly isPublished: () => boolean
+    readonly publishOutput: (text: string) => void
+  }): Promise<NativeSubagentResult> {
+    const id = background?.id ?? SessionId(randomUUID())
     const output = new AssistantOutputFold()
     let end: TurnEndReason | undefined
     const descriptor = snapshotSubagentDescriptor({ mode: 'one-shot', provider: this.providerName, label: request.label })
     try {
       await this.context.require('sessionExecution').delegate(request.agent, request.session, {
         id, config: request.config, maxDepth: request.maxDepth,
+        ...background === undefined ? {} : { lifetime: 'agent' as const,
+          onReady: background.onReady, onChunk: (chunk: StreamChunk) => {
+            if (chunk.type === 'text-delta') background.publishOutput(chunk.text)
+          } },
         message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
         prepare: ({ agent, own }) => {
           const prompt = this.context.require('promptSections')
@@ -163,8 +237,10 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
         },
       }, signal)
     } catch (error: unknown) {
-      // A recorded model failure has a result; cancellation and owned cleanup failures remain rejections.
-      if (signal.aborted || error instanceof AggregateError || end?.kind !== 'error') throw error
+      // Node cancellation adapters retain the original signal reason as AbortError.cause.
+      const cancelled = background?.isPublished() === true && signal.aborted && end?.kind === 'aborted'
+        && (error === signal.reason || error instanceof Error && error.name === 'AbortError' && error.cause === signal.reason)
+      if (!cancelled && (signal.aborted || error instanceof AggregateError || end?.kind !== 'error')) throw error
     }
     return { id, provider: this.providerName, output: output.collect() ?? [], stopReason: stopReason(end) }
   }
@@ -173,7 +249,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
 /** Native in-process spawn Provider; deployment selects its advertised name. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-subagent', targets: ['host'],
-  requires: ['sessionExecution', 'promptSections'], optional: ['tools'], provides: ['subagents'],
+  requires: ['sessionExecution', 'promptSections'], optional: ['tools', 'jobs'], provides: ['subagents'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-subagent: configuration must be an object')
     const fields = input as Record<string, unknown>

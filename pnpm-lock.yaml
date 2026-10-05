@@ -3892,6 +3892,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../core/native-jobs
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../../core/native-prompt
@@ -4443,12 +4446,18 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-jobs':
+        specifier: workspace:^
+        version: link:../../core/native-jobs
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-native-subagent':
         specifier: workspace:^
         version: link:../native-subagent
+      '@deepseek-ai/dsh-native-tool-jobs':
+        specifier: workspace:^
+        version: link:../../jobs/native-tool-jobs
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../core/native-tools

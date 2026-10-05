@@ -44,6 +44,8 @@ export function shippedNativeProfileComposition(
       { id: 'app', plugin: '@deepseek-ai/dsh-native-sdk-server', scope: ROOT,
         config: { systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 } },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
+      { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
+      { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },
       { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT, config: { providerName: 'spawn' } },
