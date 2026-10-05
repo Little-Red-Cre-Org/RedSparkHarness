@@ -16,6 +16,8 @@ Tool 记录类型由一个纯 Conversation 导出统一维护。兼容重导出�
 
 `./controller` ESM 子路径单独导出 `NativeConversationController`，不加载 React 页面安装器。Host 测试引用此纯源码叶文件的仅声明项目；Host 聚合配置不引用安装器依赖 React UI 和 `ui-tool` 的 Client application 项目。包的 tsdown 配置只在 Client tsc 产出入口后参与 Client 构建。Client 聚合配置仍完整构建该应用及其消费者依赖图。
 
+生成的事件生产者/消费者矩阵会在独立 TypeScript Program 中读取 Host 与 Client 聚合配置，再按事件合并关系。这样各自的 Cordis `Context` 声明合并保持隔离，同时保留仅存在于 Client 的监听方。
+
 ## 考虑过的替代方案
 
 另写一套卡片会重复元数据解析和界面行为。导入兼容 Client 入口会保留 Cordis 声明依赖。把整个包转成静态装配会改变兼容组合。无操作的文件或检查回调会显示不可用功能。仅呈现根卡片使本批范围保持精简，同时不丢弃原始嵌套事实。

@@ -16,6 +16,8 @@ Mixed Client packages publish explicit pure subpaths alongside their dynamic com
 
 The `./controller` ESM subpath exposes `NativeConversationController` without loading the React page installer. Host tests reference a declaration-only project for that pure source leaf; the Host aggregate does not reference the Client application project, whose installer imports React UI and `ui-tool`. The package tsdown config runs only in the Client pass, after Client tsc emits its entries. The Client aggregate still builds the application and its complete consumer graph.
 
+The generated event producer/consumer matrix reads the Host and Client aggregates in separate TypeScript Programs, then unions their relations by event. This keeps each face's Cordis `Context` merges independent while retaining Client-only listeners.
+
 ## Alternatives considered
 
 A second card implementation would duplicate metadata parsing and UI behavior. Importing compatibility Client entries would retain Cordis declaration dependencies. Converting entire packages to static assembly would change compatibility composition. No-op file or inspection callbacks would advertise unavailable actions. Root-only cards preserve this batch's narrow scope without discarding the raw nested facts.

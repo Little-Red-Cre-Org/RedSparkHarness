@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { collectPackageSources, EventRelationCollector } from './gen-doc-graphs.ts'
+import { collectEventRelations, collectPackageSources, EventRelationCollector } from './gen-doc-graphs.ts'
 import { TypeScriptProject } from './ts-project.ts'
 
 const FIXTURE: Record<string, string> = {
@@ -23,9 +23,40 @@ const FIXTURE: Record<string, string> = {
       skipLibCheck: true,
       types: [],
     },
-    include: ['rsh/Core/vendor/**/*.ts', 'rsh/**/*.ts'],
+    include: [
+      'rsh/Core/vendor/**/*.ts',
+      'rsh/Engine/core/agent/src/**/*.ts',
+      'rsh/fix/pkga/**/*.ts',
+      'rsh/fix/pkgb/**/*.ts',
+      'rsh/fix/pkgc/**/*.ts',
+      'rsh/fix/pkghost/**/*.ts',
+    ],
   }),
-  'rsh/Core/vendor/cordis/src/context.ts': 'export class Context { private brand!: void }\n',
+  'tsconfig.client.json': JSON.stringify({
+    compilerOptions: {
+      target: 'es2022',
+      module: 'esnext',
+      moduleResolution: 'bundler',
+      allowImportingTsExtensions: true,
+      noEmit: true,
+      skipLibCheck: true,
+      types: [],
+    },
+    include: [
+      'rsh/Core/vendor/**/*.ts',
+      'rsh/Engine/core/agent/src/**/*.ts',
+      'rsh/fix/pkgclient/**/*.ts',
+    ],
+  }),
+  'rsh/Core/vendor/cordis/src/context.ts': [
+    'export class Context {',
+    '  private brand!: void',
+    '  emit(_event: string): void {}',
+    '  parallel(_event: string): void {}',
+    '  on(_event: string, _listener: () => void): void {}',
+    '}',
+    '',
+  ].join('\n'),
   'rsh/Core/vendor/cordis/src/events.ts': [
     'export class EventsService {',
     '  dispatch(type: string, args: unknown[]): unknown[] { return [type, args] }',
@@ -61,6 +92,20 @@ const FIXTURE: Record<string, string> = {
   'rsh/fix/pkgc/src/helper.ts':
     "function scriptFire(args: [string]): void { void gEvents.dispatch('emit', args) }\n",
   'rsh/fix/pkgc/src/caller.ts': "scriptFire(['pkgc/script-event'])\n",
+  'rsh/fix/pkghost/src/index.ts': [
+    "import { Context } from '../../../Core/vendor/cordis/src/context.ts'",
+    'declare const ctx: Context',
+    "ctx.emit('face/shared-event')",
+    "ctx.on('face/shared-event', () => {})",
+    '',
+  ].join('\n'),
+  'rsh/fix/pkgclient/src/index.ts': [
+    "import { Context } from '../../../Core/vendor/cordis/src/context.ts'",
+    'declare const ctx: Context',
+    "ctx.parallel('face/shared-event')",
+    "ctx.on('face/shared-event', () => {})",
+    '',
+  ].join('\n'),
 }
 
 const root = mkdtempSync(join(tmpdir(), 'gen-doc-graphs-'))
@@ -94,5 +139,15 @@ describe('event relation call-site indexing', () => {
     // pkgc alone: the script helper is the first demand, so a wrongly passing
     // proof would index helper.ts only and lose the caller.ts call site.
     expect(dispatchersOf(['pkgc'], 'pkgc/script-event')).toEqual(['pkgc'])
+  })
+
+  it('unions dispatcher methods and listeners from independent Host and Client programs', () => {
+    const relation = collectEventRelations(root).get('face/shared-event')
+    if (!relation) throw new Error('separate-face collection dropped the shared event')
+    expect([...relation.dispatchers].map(([pkg, methods]) => [pkg, [...methods].sort()]).sort()).toEqual([
+      ['pkgclient', ['parallel']],
+      ['pkghost', ['emit']],
+    ])
+    expect([...relation.listeners].sort()).toEqual(['pkgclient', 'pkghost'])
   })
 })
