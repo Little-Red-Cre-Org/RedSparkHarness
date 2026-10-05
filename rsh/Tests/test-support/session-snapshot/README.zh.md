@@ -31,6 +31,8 @@ kind: "package-library"
 
 ### 编写快照套件
 
+封闭的 profile manifest 接受 `native-acp`，用于基于共享会话记录的原生 ACP 协议场景。
+
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
 
 消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外：

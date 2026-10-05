@@ -123,6 +123,7 @@ flowchart TD
   end
   subgraph group_acp["group: acp"]
     pkg_acp["acp"]
+    pkg_native_acp["native-acp"]
   end
   subgraph group_api["group: api"]
     pkg_api_gateway["api-gateway"]
@@ -814,6 +815,10 @@ flowchart TD
   pkg_spill_policy --> pkg_tools
   pkg_tool_todo --> pkg_agent
   pkg_tool_todo --> pkg_invariants
+  pkg_tool_todo --> pkg_native_agent
+  pkg_tool_todo --> pkg_native_runtime
+  pkg_tool_todo --> pkg_native_session_execution
+  pkg_tool_todo --> pkg_native_tools
   pkg_tool_todo --> pkg_session
   pkg_tool_todo --> pkg_session_projection
   pkg_tool_todo --> pkg_tools
@@ -1247,6 +1252,7 @@ flowchart TD
 | [`native-prompt`](../Engine/core/native-prompt) | `core` | — |
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
+| [`native-acp`](../Programs/ACP/packages/native-acp) | `acp` | — |
 | [`api-gateway`](../Programs/Web/api/gateway) | `api` | — |
 | [`api-workspace-files`](../Programs/Web/api/workspace-files) | `api` | — |
 | [`native-web-session-controller`](../Programs/Web/api/native-web-session-controller) | `api` | — |
@@ -1457,7 +1463,7 @@ flowchart TD
 | [`tool-skill`](../Modules/Official/skill/tool-skill) | `skill` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`skill`](../Modules/Official/skill/skill), [`tools`](../Engine/core/tools) |
 | [`tool-web`](../Modules/Official/web/tool-web) | `web` | [`llm`](../Engine/llm/llm), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`web`](../Modules/Official/web/web) |
 | [`spill-policy`](../Modules/Official/spill/spill-policy) | `spill` | [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`tools`](../Engine/core/tools) |
-| [`tool-todo`](../Modules/Official/todo/tool-todo) | `todo` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
+| [`tool-todo`](../Modules/Official/todo/tool-todo) | `todo` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`plan-mode`](../Modules/Official/plan/plan-mode) | `plan` | [`agent`](../Engine/core/agent), [`commands`](../Modules/Official/interaction/commands), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-questions`](../Modules/Official/interaction/user-questions) |
 | [`hooks-codex`](../Modules/Official/hooks/hooks-codex) | `hooks` | [`agent`](../Engine/core/agent), [`hook-protocol`](../Modules/Official/hooks/hook-protocol), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`task-scheduler`](../Modules/Official/automation/task-scheduler) | `automation` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools) |

@@ -18,6 +18,8 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
     expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
+    expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
+    expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
@@ -39,7 +41,7 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-acp', 'native-acp', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
     plugin: '@deepseek-ai/dsh-native-acp',
-    config: { provider: 'deepseek', model: 'deepseek-v4-flash', maxSteps: 8 },
+    config: { provider: 'deepseek-official', model: 'deepseek-v4-flash', maxSteps: 8 },
   })
   expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
 })

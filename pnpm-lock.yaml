@@ -7721,6 +7721,18 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -8089,6 +8101,46 @@ importers:
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-approval
 
+  rsh/Programs/ACP/packages/native-acp:
+    dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: 1.4.0
+        version: 1.4.0(zod@4.4.3)
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence
+    devDependencies:
+      '@deepseek-ai/dsh-json-rpc-line':
+        specifier: workspace:^
+        version: link:../../../../Core/util/json-rpc-line
+
   rsh/Programs/CLI:
     dependencies:
       '@deepseek-ai/dsh-agent-instructions':
@@ -8127,9 +8179,15 @@ importers:
       '@deepseek-ai/dsh-llm-pi-ai':
         specifier: workspace:^
         version: link:../../Engine/llm/llm-pi-ai
+      '@deepseek-ai/dsh-native-acp':
+        specifier: workspace:^
+        version: link:../ACP/packages/native-acp
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../Engine/core/native-code-runtime
@@ -8154,12 +8212,12 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
-      '@deepseek-ai/dsh-native-sdk-server':
-        specifier: workspace:^
-        version: link:../SDK/packages/native-server
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-sdk-server':
+        specifier: workspace:^
+        version: link:../SDK/packages/native-server
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -9202,12 +9260,21 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../Engine/core/native-headless
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
@@ -9220,6 +9287,9 @@ importers:
       '@deepseek-ai/dsh-terminal-ui':
         specifier: workspace:^
         version: link:../terminal-ui
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/user-questions
       ink:
         specifier: ^5.2.1
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
