@@ -10,7 +10,7 @@ A running native Web turn can require a tool approval or a human answer. Durable
 
 ## Decision
 
-The Web Program registers answerers on the selected approval and user-question Providers. Only its exact active root turns with a follow stream receive presentations. Per-turn FIFO input is globally bounded by profile configuration. Answers carry authenticated Session, admission and presentation identities and recheck the live root writer. Cancellation withdraws pending input before execution settlement; stale answers cannot apply to successor owners.
+The Web Program registers answerers on the selected approval and user-question Providers. Only its exact active root turns with a follow stream receive presentations. Root capture verifies application ownership before presentation and answer, including while another Web admission is pending for the same Session. Per-turn FIFO input is globally bounded by profile configuration. Answers carry authenticated Session, admission and presentation identities and recheck the live root writer. Cancellation withdraws pending input before execution settlement; stale answers cannot apply to successor owners.
 
 Question-answer JSON validation is shared with the existing broker. The browser holds transient presentation data, choices and submission state. It does not append Session events. Existing tool consumers persist approval decisions and question results through the sole writer; cold restore renders those facts.
 

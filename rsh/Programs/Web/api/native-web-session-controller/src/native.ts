@@ -134,6 +134,11 @@ export class NativeWebSessionService {
   private humanFeed(agent: NativeAgent): NativeSessionFeed | undefined {
     const owner = this.active.owners().find(owner => owner.agent === agent && owner.invocation === 'root' && owner.writerAvailable)
     if (owner === undefined) return undefined
+    try { this.executor.rootExecution.capture(owner) }
+    catch {
+      // The shared registry also exposes other Programs' roots; their answerers retain those requests.
+      return undefined
+    }
     const turn = this.turns.get(owner.session.id)
     return turn === undefined || turn.settled || turn.controller.signal.aborted ? undefined : turn.feed
   }
@@ -329,6 +334,7 @@ export class NativeWebSessionService {
           const owner = this.active.owners().find(owner => owner.session.id === id && owner.invocation === 'root' && owner.writerAvailable)
           if (turn === undefined || turn.settled || turn.controller.signal.aborted || fields.admissionId !== turn.admissionId
             || owner === undefined || typeof fields.id !== 'string' || fields.id.length === 0) throw new Error('native Web human answer has no matching active root admission')
+          this.executor.rootExecution.capture(owner)
           this.human.answer(brandString<NativeWebHumanId>(fields.id), owner.agent, fields.answer)
           return { answered: true }
         }

@@ -7,7 +7,7 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
-import type { NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
+import { NativeAgentId, type NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelection } from '@deepseek-ai/dsh-native-model-selection/native'
@@ -17,7 +17,10 @@ import { plugin as questions } from '@deepseek-ai/dsh-user-questions/native'
 import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
 import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
@@ -34,6 +37,16 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   await mkdir(cwd)
   const scope = new NativeScope()
   let web: NativeHttpHost | undefined
+  let foreign: NativeHeadlessApplication | undefined
+  let persistence: NativeSessionPersistenceOperations | undefined
+  const foreignId = SessionId('foreign-human')
+  const foreignModelReady = Promise.withResolvers<undefined>()
+  const releaseForeignModel = Promise.withResolvers<undefined>()
+  const webReadReady = Promise.withResolvers<undefined>()
+  const releaseWebRead = Promise.withResolvers<undefined>()
+  const foreignAbort = new AbortController()
+  let foreignStep = 0
+  let foreignApprovals = 0
   const requests: GenerateOptions[] = []
   const firstContinue = Promise.withResolvers<undefined>()
   const resolving = Promise.withResolvers<undefined>()
@@ -75,6 +88,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('model', {
         async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
           requests.push(request)
+          if (request.model === 'foreign') {
+            if (foreignStep++ === 0) {
+              foreignModelReady.resolve(undefined)
+              await releaseForeignModel.promise
+              yield* toolCallResponse('foreign-guard', 'guarded', {})
+            } else yield* textResponse('foreign complete')
+            return
+          }
           if (humanSteps !== undefined) { yield* humanSteps.shift() ?? textResponse('human complete'); return }
           if (requests.length > 2) {
             const signal = request.signal
@@ -109,11 +130,29 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('hostConnection', web.connection)
     },
   }
+  const foreignProgram: NativePlugin = {
+    apiVersion: 1, name: 'foreign-program', targets: ['host'],
+    requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'], provides: [],
+    resolve: () => (context) => {
+      persistence = context.require('sessionPersistence')
+      foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',
+        systemPrompt: 'Foreign.', maxSteps: 3, builtinTools: false })
+      const approvals = context.optional('approval')
+      if (approvals === undefined) throw new Error('missing approval Provider')
+      context.own(approvals.registerAnswerer((request) => {
+        if (request.agent.id !== NativeAgentId(foreignId)) return undefined
+        foreignApprovals++
+        return 'allowed-once'
+      }))
+    },
+  }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2 } },
-    ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser, model, carrier].map(plugin =>
+    ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
+      model, carrier, foreignProgram].map(plugin =>
       ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
@@ -238,9 +277,36 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(conversation.getSnapshot().human).toBeUndefined()
     await expect(client.answerHuman(sessionId, stale.id, { kind: 'approval', outcome: 'allowed-once' })).rejects.toThrow('no owned turn')
     expect(protectedRuns).toBe(1)
+    if (foreign === undefined || persistence === undefined) throw new Error('missing foreign Program')
+    const foreignTurn = foreign.executeRootTurn({ id: foreignId, resume: false,
+      message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'foreign input' }] }) }, foreignAbort.signal)
+    await foreignModelReady.promise
+    const open = persistence.open.bind(persistence)
+    const readSpy = vi.spyOn(persistence, 'open').mockImplementation(async (id, access, options) => {
+      if (id === foreignId && access === 'read') { webReadReady.resolve(undefined); await releaseWebRead.promise }
+      return open(id, access, options)
+    })
+    try {
+      const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true }, new AbortController().signal)
+      if (!started.ok) throw new Error(started.error.message)
+      await webReadReady.promise
+      const admission = started.value as { admissionId: string }
+      const denied = await rpc.call('/api', 'session/answer-human', { sessionId: foreignId, admissionId: admission.admissionId,
+        id: 'foreign-presentation', answer: { kind: 'approval', outcome: 'allowed-once' } }, new AbortController().signal)
+      expect(denied).toMatchObject({ ok: false, error: { message: 'native-headless: root route requires the exact attached root owner' } })
+      releaseForeignModel.resolve(undefined)
+      await vi.waitFor(() => { expect(foreignApprovals).toBe(1) })
+      await foreignTurn
+      releaseWebRead.resolve(undefined)
+      const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
+      expect(settlement.ok).toBe(false)
+    } finally { releaseWebRead.resolve(undefined); readSpy.mockRestore(); foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
     await conversation.close()
     await client.close()
   } finally {
+    foreignAbort.abort(new Error('foreign fixture cleanup'))
+    releaseForeignModel.resolve(undefined)
+    releaseWebRead.resolve(undefined)
     releaseResolution.resolve(undefined)
     releaseRetainedRoot?.()
     firstContinue.resolve(undefined)

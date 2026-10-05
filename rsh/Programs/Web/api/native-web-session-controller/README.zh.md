@@ -36,7 +36,7 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 <a id="invariants"></a>
 
-可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。
+可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。执行器在展示或回答前捕获精确应用所有者；仅 Session 标识相同不会准入其他 Program 的请求。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。
 
 ## 不变量
 

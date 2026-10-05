@@ -36,7 +36,7 @@ A prompt first receives its exact admission identity and then awaits settlement.
 
 <a id="invariants"></a>
 
-Optional approval and userQuestions Providers receive Web answerers only for exact active root turns owned by this Program. Human presentations are transient FIFO requests per turn with a global maxPendingHumanRequests limit. Answers require the authenticated Session, admission and presentation identities; stale or cancelled answers refuse. Existing Providers and tool consumers retain decision audit and result persistence. Teardown withdraws pending input before draining execution.
+Optional approval and userQuestions Providers receive Web answerers only for exact active root turns owned by this Program. The executor captures that exact application owner before presentation or answer; matching Session ids alone never admit another Program's request. Human presentations are transient FIFO requests per turn with a global maxPendingHumanRequests limit. Answers require the authenticated Session, admission and presentation identities; stale or cancelled answers refuse. Existing Providers and tool consumers retain decision audit and result persistence. Teardown withdraws pending input before draining execution.
 
 ## Invariants
 
