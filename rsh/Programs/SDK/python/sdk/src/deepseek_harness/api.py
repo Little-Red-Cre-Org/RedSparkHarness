@@ -136,6 +136,20 @@ class Session:
         self.harness = harness
         self.id = session_id
 
+    def cancel(self) -> bool:
+        """Cancel this Session's admitted native-sdk turn and await owned cleanup.
+
+        Returns False when no turn was admitted; unsupported profiles reject the request.
+        """
+        self.harness.start()
+        return self.harness.client.session_cancel(self.id)
+
+    def fork(self, destination_session_id: str, at_seq: int | None = None) -> Session:
+        """Fork a closed native-sdk turn into a fresh handle; its next run resumes copied history."""
+        self.harness.start()
+        session_id = self.harness.client.session_fork(self.id, destination_session_id, at_seq)
+        return self.harness.start_session(session_id)
+
     def run(
         self,
         input: str | list[JsonObject],
