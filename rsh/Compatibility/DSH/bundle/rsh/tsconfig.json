@@ -10,6 +10,7 @@
     "src"
   ],
   "references": [
+    { "path": "../../../../Programs/TUI/terminal-ui" },
     {
       "path": "../../../../Core/vendor/cordis"
     },

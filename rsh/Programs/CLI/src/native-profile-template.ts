@@ -72,7 +72,7 @@ export function shippedNativeProfileComposition(
         scope: ROOT,
         config: profile === 'native-web'
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live' }
-          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8 },
+          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 1000 } : {}) },
       },
       ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{
@@ -81,7 +81,7 @@ export function shippedNativeProfileComposition(
         scope: ROOT,
         config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32 },
       }] : []),
-      ...(profile === 'native-web' ? [{ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT }] : []),
+      ...(profile === 'native-web' || profile === 'native-tui' ? [{ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT }] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },

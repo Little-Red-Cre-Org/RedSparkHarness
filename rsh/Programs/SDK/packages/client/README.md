@@ -49,7 +49,7 @@ The subprocess starts lazily on first use and stays owned by the instance across
 
 ### Lower-level control with HarnessClient
 
-`HarnessClient` is the protocol client under the run API: explicit `start()`, `initialize()`, `prompt()`, `request()`, and `close()`, plus notification subscriptions. `prompt()` returns the queued message id as soon as the runtime accepts it and never waits for agent activity. `subscribe(filter?)` returns a `NotificationSubscription` (awaitable `next()`, non-blocking `tryNext()`, async iteration); `subscribeSessionTree(id)` scopes to one session and the descendants discovered from `subagent.started` lineage edges — the runtime notifies for every session in its context, and scoping is client-side, exactly like the Python SDK.
+`HarnessClient` is the protocol client under the run API: explicit `start()`, `initialize()`, `prompt()`, `request()`, and `close()`, plus notification subscriptions. `prompt()` returns the queued message id as soon as the runtime accepts it and never waits for agent activity. `subscribe(filter?)` returns a `NotificationSubscription` (awaitable `next()`, non-blocking `tryNext()`, async iteration); `subscribeSessionTree(id)` scopes to one session and the descendants discovered from `subagent.started` lineage edges — the selected runtime defines which Sessions are published, and scoping is client-side, exactly like the Python SDK.
 
 The client exports typed errors for every failure mode: `JsonRpcResponseError` (a wire error response, code and data preserved), `RequestTimeoutError` (a configured bound elapsed), `SdkProtocolError` (a response outside the documented protocol), and `TransportClosedError` (the runtime is gone — the message carries the exit code and a bounded stderr tail). `close()` requests protocol `shutdown` (bounded by `shutdownTimeoutMs`, default 1000 ms), then walks a stdin-EOF → SIGTERM → SIGKILL ladder until the process has exited; it is idempotent, and a closed client refuses reuse. `HarnessClientOptions.env` replaces the child environment entirely when given (`undefined` inherits the parent's); callers own credential policy — `scrubbedParentEnv` from `dsh-subprocess` is the shared scrub base for isolation-minded launches.
 
@@ -65,7 +65,7 @@ This section explains the design behind the client; the observable behavior is f
 
 ### Design concept
 
-The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context, so it spawns the runtime directly rather than through the `dsh-subprocess` service — the seam's documented exception for SDK-managed transports — and its teardown ladder lives in this package. The runtime notifies for every session in its context; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
+The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context, so it spawns the runtime directly rather than through the `dsh-subprocess` service — the seam's documented exception for SDK-managed transports — and its teardown ladder lives in this package. The selected runtime defines which Sessions are published; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
 
 ### Source map
 

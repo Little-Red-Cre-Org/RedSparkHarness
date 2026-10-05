@@ -62,6 +62,7 @@ export interface PackageDependencyFacts {
   readonly peerRequiredHostDependencies: ReadonlySet<string>
   readonly configurationOnlyDevDependencies: ReadonlySet<string>
   readonly clientRuntimeDependencies: ReadonlySet<string>
+  readonly publishedTypeSourceUses: ReadonlyMap<string, readonly string[]>
   readonly clientInject: ReadonlySet<string>
 }
 
@@ -398,8 +399,12 @@ function readHostRuntimeUses(root: string, pkg: WorkspacePackageManifest, genera
   }
 }
 
-function readAllSourceUses(root: string, pkg: WorkspacePackageManifest): Map<string, string[]> {
+function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishedTypes: ReadonlySet<string>): {
+  uses: Map<string, string[]>
+  typeUses: Map<string, string[]>
+} {
   const uses = new Map<string, string[]>()
+  const typeUses = new Map<string, string[]>()
   for (const sourcePath of globSync('src/**/*.{ts,tsx,mts,cts}', { cwd: resolve(root, pkg.dir) }).sort()) {
     const source = readFileSync(resolve(root, pkg.dir, sourcePath), 'utf8')
     const displayPath = `${pkg.dir}/${normalizePath(sourcePath)}`
@@ -407,6 +412,10 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest): Map<str
     for (const specifier of collectSourcePackageUses(sourcePath, source)) {
       const name = packageNameOf(specifier)
       if (name === undefined) continue
+      if (publishedTypes.has(name)) {
+        runtimeUses ??= collectRuntimeSourcePackageUses(sourcePath, source)
+        if (!runtimeUses.has(name)) addUse(typeUses, name, displayPath)
+      }
       const typesName = `@types/${name.replace(/^@/, '').replace('/', '__')}`
       if (declaredSections(pkg.manifest, name).length === 0 && declaredSections(pkg.manifest, typesName).length > 0) {
         runtimeUses ??= collectRuntimeSourcePackageUses(sourcePath, source)
@@ -418,7 +427,7 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest): Map<str
       addUse(uses, name, displayPath)
     }
   }
-  return uses
+  return { uses, typeUses }
 }
 
 /**
@@ -440,6 +449,8 @@ export function readPackageDependencyFacts(
   generatedHostSource?: string,
 ): PackageDependencyFacts {
   const inject = pkg.manifest.dsh?.client?.inject ?? []
+  const publishedTypes = new Set(policy.publishedTypeDependencies?.[pkg.manifest.name ?? ''] ?? [])
+  const source = readAllSourceUses(root, pkg, publishedTypes)
   const hostRuntime = role === 'client-only'
     ? { packageUses: new Map<string, string[]>(), exportUses: [] }
     : readHostRuntimeUses(root, pkg, generatedHostSource)
@@ -449,7 +460,8 @@ export function readPackageDependencyFacts(
     cordisPeerRequired: !policy.cordisFreePackageDirectories.has(normalizePath(pkg.dir)),
     manifest: pkg.manifest,
     workspaceNames,
-    allSourceUses: readAllSourceUses(root, pkg),
+    allSourceUses: source.uses,
+    publishedTypeSourceUses: source.typeUses,
     hostRuntimeSourceUses: hostRuntime.packageUses,
     hostRuntimeExportUses: hostRuntime.exportUses,
     peerRequiredHostDependencies: new Set(hostRuntime.exportUses
@@ -488,6 +500,36 @@ export function collectClientRuntimeDependencyPolicyViolations(
       }
       if (!fact.allSourceUses.has(dependency)) {
         violations.push(`clientRuntimeDependencies lists unused ${packageName} dependency ${dependency}`)
+      }
+    }
+  }
+  return violations.sort()
+}
+
+/** Reject stale or unknown published declaration dependencies.
+ * @param facts - source-derived package observations.
+ * @param policy - reviewed declaration dependency relationships.
+ * @returns stable errors for unknown owners, dependencies and absent type imports.
+ */
+export function collectPublishedTypeDependencyPolicyViolations(
+  facts: readonly PackageDependencyFacts[],
+  policy: Pick<PackageDependencyPolicy, 'publishedTypeDependencies'>,
+): string[] {
+  const violations: string[] = []
+  const byName = new Map(facts.map(fact => [fact.manifest.name, fact]))
+  for (const [name, dependencies] of Object.entries(policy.publishedTypeDependencies ?? {})) {
+    const fact = byName.get(name)
+    if (fact === undefined) {
+      violations.push(`publishedTypeDependencies names unmanaged package ${name}`)
+      continue
+    }
+    for (const dependency of duplicates(dependencies)) {
+      violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} more than once`)
+    }
+    for (const dependency of dependencies) {
+      if (!fact.workspaceNames.has(dependency)) violations.push(`publishedTypeDependencies names unknown workspace package ${dependency}`)
+      if (!fact.publishedTypeSourceUses.has(dependency)) {
+        violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} without a source type import`)
       }
     }
   }
@@ -580,6 +622,7 @@ export function readPackageDependencyState(
       ...discovered.violations,
       ...collectHostDependencyExportPolicyViolations(facts, workspaceNames, policy),
       ...collectClientRuntimeDependencyPolicyViolations(facts, policy),
+      ...collectPublishedTypeDependencyPolicyViolations(facts, policy),
       ...Object.keys(policy.configurationOnlyDevDependencies)
         .filter(name => !selectedNames.has(name))
         .map(name => `configurationOnlyDevDependencies names unmanaged package ${name}`),
@@ -608,7 +651,8 @@ export function expectedPackageDependencies(
     expected.set(CORDIS, { section: 'peer-dev', origins: new Set(['shared Cordis runtime']) })
   }
   for (const [name, paths] of facts.allSourceUses) {
-    const section = facts.clientRuntimeDependencies.has(name) ? 'dependencies' : 'devDependencies'
+    const section = facts.clientRuntimeDependencies.has(name) || facts.publishedTypeSourceUses.has(name)
+      ? 'dependencies' : 'devDependencies'
     for (const path of paths) add(name, section, path)
   }
   if (facts.role !== 'configured-host') {

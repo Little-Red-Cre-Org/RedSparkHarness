@@ -29,6 +29,8 @@ Any composition that calls a model provider — an agent loop, a session-title g
 
 `dsh-errors` is a required peer of this package so the re-exported `HarnessError` constructor has one identity across consumers.
 
+The published content declarations reference Attachment types, so `dsh-attachment` is an installed dependency even though authored Llm imports use it only as a type. The dependency policy retains this exact reviewed declaration relationship and rejects it when its source type import disappears.
+
 ### When to choose it
 
 Choose this package whenever a plugin or composition needs to call a model: it is the only supported path into provider adapters, and it keeps one vocabulary across the loop, the session log, and every consumer. Do not reach for it when you need provider-specific wire behavior (that belongs in an adapter such as `dsh-llm-deepseek` or `dsh-llm-pi-ai`) or retry execution (that belongs in `dsh-llm-retry`).
