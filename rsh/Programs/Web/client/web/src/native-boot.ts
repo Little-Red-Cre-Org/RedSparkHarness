@@ -61,7 +61,10 @@ export interface NativeClientBootOptions {
   readonly container: HTMLElement
   /** Skip activation after pending imports settle or stop the composition after it starts. */
   readonly signal?: AbortSignal
-  /** Report initial module import and completed installation without exposing plugin configuration. */
+  /**
+   * Report initial module import and completed installation without exposing plugin configuration.
+   * Callback failure stops the composition.
+   */
   readonly onEntryState?: (id: string, state: NativeClientEntryState) => void
 }
 
@@ -169,8 +172,7 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
     }
     for (const selection of options.selections) options.onEntryState?.(selection.id, 'active')
   } catch (error) {
-    signal?.removeEventListener('abort', stopOnAbort)
-    await stopping?.catch(() => undefined)
+    await stop().catch(() => undefined)
     throw error
   }
   return {
