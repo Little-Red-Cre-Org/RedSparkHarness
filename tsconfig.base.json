@@ -264,6 +264,7 @@
       "@deepseek-ai/dsh-client-ui-session": ["./rsh/Programs/Web/client/ui-session/src"],
       "@deepseek-ai/dsh-client-ui-session/client": ["./rsh/Programs/Web/client/ui-session/src/client"],
       "@deepseek-ai/dsh-client-native-application": ["./rsh/Programs/Web/client/native-application/src"],
+      "@deepseek-ai/dsh-client-native-application/controller": ["./rsh/Programs/Web/client/native-application/src/controller.ts"],
       "@deepseek-ai/dsh-client-native-session": ["./rsh/Programs/Web/client/native-session/src"],
       "@deepseek-ai/dsh-client-connection": ["./rsh/Programs/Web/client/connection/src"],
       "@deepseek-ai/dsh-client-connection/native": ["./rsh/Programs/Web/client/connection/src/native.ts"],

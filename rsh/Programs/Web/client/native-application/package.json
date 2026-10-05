@@ -22,6 +22,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./controller": {
+      "types": "./lib/types/controller.d.ts",
+      "default": "./lib/controller.js"
+    },
     "./package.json": "./package.json"
   },
   "dsh": {
@@ -47,6 +51,7 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/controller.js",
     "lib/native-*.js",
     "lib/types/**/*.d.ts"
   ],

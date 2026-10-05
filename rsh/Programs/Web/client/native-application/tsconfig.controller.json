@@ -1,0 +1,25 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/controller-types",
+    "emitDeclarationOnly": true
+  },
+  "include": [
+    "src/controller.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../native-session"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
+    }
+  ]
+}

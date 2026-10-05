@@ -29,7 +29,7 @@ import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-nati
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application'
+import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
