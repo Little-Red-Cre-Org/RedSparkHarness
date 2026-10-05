@@ -67,6 +67,9 @@
     },
     {
       "path": "../../llm/native-model-selection/tsconfig.host.json"
+    },
+    {
+      "path": "../../context/agent-instructions"
     }
   ]
 }

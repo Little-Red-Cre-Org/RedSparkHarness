@@ -39,6 +39,7 @@ import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import { NativeApprovalRequestId, type NativeApprovalOutcome, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
+import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
@@ -282,6 +283,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly agentPresets?: NativeAgentPresetOperations,
     workspaceRegistry?: WorkspaceRegistryRuntime,
     private readonly executionScope: NativeScope = context.scope,
+    private readonly agentInstructions?: NativeAgentInstructions,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -507,6 +509,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         seedResident = !this.seededContinuations.has(resident)
         if (seedResident) {
           this.timeContext?.seed(session, stored.events)
+          this.agentInstructions?.seed(session, stored.events)
           this.seededContinuations.add(resident)
         }
       } else if (fresh !== undefined) {
@@ -517,6 +520,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         const lastTurn = restoredPrefix.findLast(event => event.type === 'turn/end')
         turn = lastTurn?.type === 'turn/end' ? lastTurn.data.turn + 1 : 1
         this.timeContext?.seed(session, restoredPrefix)
+        this.agentInstructions?.seed(session, restoredPrefix)
       } else {
         const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
         const closers = interruptedTurnClosers(stored.events)
@@ -527,6 +531,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         session = Session.fromRestore(id, repaired, writer.header, writer.inheritedEventCount, stored.eventState,
           (event) => { pending.push(event) })
         this.timeContext?.seed(session, repaired)
+        this.agentInstructions?.seed(session, stored.events)
         restoredPrefix = [...repaired, ...pending]
         acceptedPreset = foldNativeAgentPresetFacts(session.header, restoredPrefix).preset
       }
@@ -656,6 +661,8 @@ export class NativeHeadlessApplication implements NativeApplication {
           if (admitted === undefined) break
           const { inputs, selection, preparedStep } = admitted
           const stepConfig = preparedStep.config
+          const instructionContext = await this.agentInstructions?.prepare(session, inputs, signal)
+          signal.throwIfAborted()
           track(session.append('step/start', { turn, step }))
           if (step === 1) {
             if (session.deriveMessages().every(message => message.role !== 'system')) {
@@ -666,6 +673,9 @@ export class NativeHeadlessApplication implements NativeApplication {
             track(session.append('user/message', input, { surfaceOp: 'append' }))
           }
           if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
+          if (instructionContext !== undefined) {
+            track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
+          }
           const timeContext = this.timeContext?.prepare({ session, turn, step })
           if (timeContext !== undefined) {
             track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
@@ -1711,7 +1721,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveConfig(config), context.require('agents'),
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
     context.optional('codeRuntime'), context.optional('timeContext'), context.optional('sessionExecution'), context.optional('activeSessions'), context.optional('modelSelection'),
-    context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope,
+    context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
   )
   context.own(() => application.dispose())
   return application
@@ -1721,7 +1731,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)

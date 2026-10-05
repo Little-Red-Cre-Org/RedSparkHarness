@@ -35,7 +35,8 @@
         "activeSessions",
         "modelSelection",
         "agentPresets",
-        "workspaceRegistry"
+        "workspaceRegistry",
+        "agentInstructions"
       ],
       "provides": [
         "application",
@@ -64,6 +65,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^"
   },
   "dependencies": {
@@ -86,6 +88,7 @@
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-model-selection": "workspace:^"
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^"
   }
 }

@@ -1759,6 +1759,12 @@ importers:
       '@deepseek-ai/dsh-llm-deepseek':
         specifier: workspace:^
         version: link:../../llm/llm-deepseek
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -2152,6 +2158,9 @@ importers:
 
   rsh/Engine/core/native-headless:
     dependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../context/agent-instructions
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../preset/agent-presets
@@ -2213,6 +2222,9 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-tool-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
@@ -7904,6 +7916,9 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../Engine/context/agent-instructions
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../Modules/Official/attachment/attachment-local
@@ -7946,6 +7961,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-time-context':
+        specifier: workspace:^
+        version: link:../../Engine/context/native-time-context
       '@deepseek-ai/dsh-native-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/native-tool-jobs
@@ -8137,9 +8155,6 @@ importers:
       '@deepseek-ai/dsh-acp-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/acp-app
-      '@deepseek-ai/dsh-agent-instructions':
-        specifier: workspace:^
-        version: link:../../Engine/context/agent-instructions
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../Engine/preset/agent-presets
