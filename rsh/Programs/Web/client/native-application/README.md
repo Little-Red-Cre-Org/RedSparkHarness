@@ -23,6 +23,8 @@ This Cordis-free Client application supplies the conversation page for the expli
 
 The page lists stored Sessions, creates blank Sessions, selects durable history and sends human text with explicit resume. Cancellation keeps the page busy until the Host reply confirms settlement and history has refreshed. Installation disposal cancels outstanding calls and awaits their settlement before releasing the view controller. The controller holds presentation state, not a second Session writer, Agent registry or connection loop.
 
+Model and reasoning choices come from the Host model directory, including provider failures; the catalog is advisory, not an allow-list. The current recorded route remains visible when absent from discovery. Mutations carry the displayed durable revision, refresh history after settlement and expose stale-selection failures. Installed presets use the existing blank-root lock and epoch transition; a locked Session cannot change composition.
+
 The transcript uses the shared Session append-origin and message projection rules. Replacement copies remain model-only; raw Session records remain available in a disclosure, including tool results, permissions, interruptions and opaque ignorable facts. Transport and history failures remain visible; failed submission retains its draft.
 
 Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
@@ -30,6 +32,12 @@ Configuration requires positive integers maxLiveTextChars and maxLiveEvents and 
 React and Session message projection use shared application peer instances; the Session Consumer is a type-only dependency supplied by the selected runtime capability.
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
+
+Pending tool approvals offer allow-once and reject actions. Question cards preserve headings, detail, choices, multiple selection and custom text. Submission failures retain the request; cancellation disables input and keeps execution busy until Host settlement. Reload restores durable decision and tool-result facts, not obsolete pending presentations.
+
+Image uploads use the advertised attachment limits and the selected Session's next model. The renderer displays only durable image references and owns each fetch, Blob URL and unmount cleanup. Reload fetches images again from the recorded Session. Upload errors retain the input for correction.
+
+The task-list panel reads canonical todo/write snapshots, including accepted live and restored history. It replaces the entire list and clears it only on turn/start; turn/end retains the last plan. Status copy is locale-owned and the panel offers no task mutation.
 
 ## Invariants
 
@@ -45,7 +53,7 @@ Lifecycle ownership is described in the [conversation decision](../../../../../.
 
 #### What the model sees
 
-Only submitted human text, recorded as `user/message`, reaches the existing Host executor. Viewing history or raw records contributes no model input.
+Submitted human text and admitted image references are recorded as `user/message`. Model intent changes are durable `model/selection` facts; installed composition changes use `agent-preset/selected`. Discovery and viewing history contribute no model input.
 
 #### Token effect
 
@@ -53,11 +61,12 @@ Submitted text adds ordinary user-message tokens. This application contributes n
 
 #### KV Cache effect
 
-The Host owns resumed context and its existing prefix; UI selection changes no Session events.
+The Host owns resumed context and its existing prefix. Model and composition changes follow their owning Providers' recorded resolution and context rules.
 
 ## Known Limitations and Deferred Work
 
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
 
+- The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Rich tool cards and additional model chunk presentations remain separate work.
-- Attachment upload, approval and question responses, full Sidebar, layout and Settings remain separate native Client migrations.
+- File uploads, full Sidebar, layout and Settings remain separate native Client migrations.

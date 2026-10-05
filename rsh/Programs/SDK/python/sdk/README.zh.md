@@ -8,6 +8,8 @@
 python -m pip install deepseek-harness-sdk
 ```
 
+native-sdk 配置组合生产一次性 subagent 工具。Session 树订阅收到已接受子事件，包括取消关闭事件；运行结果仍仅投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。原生目录与 subagent.finished 通知仍不支持。
+
 ## 启动运行时
 
 Python SDK 没有独立的应用入口。它以 `--profile sdk` 启动内置的 `dsh` CLI（命令行界面）；所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。

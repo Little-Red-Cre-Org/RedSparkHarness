@@ -22,7 +22,7 @@ This library renders user messages, assistant streams and tool results. Native a
 <a id="configuration"></a>
 ## Use and configuration
 
-The dependency entry exports `ChatRow`, `StreamBlock` and text helpers. `./presentation` also exports the compatibility terminal’s `App`, `ResumePicker` and existing helpers; `./utilities` exports terminal color and control-character helpers. This library is not a profile plugin; callers own Ink mounting and disposal. Transcript rows receive [typed copy](src/copy.ts) through `copy`, with English compatibility copy when omitted.
+The dependency entry exports `ChatRow`, `StreamBlock`, the typed `computeViewport` line estimate and text helpers. `./presentation` also exports the compatibility terminal’s `App`, `ResumePicker` and existing helpers; `./utilities` exports terminal color and control-character helpers. This library is not a profile plugin; callers own Ink mounting and disposal. Transcript rows receive [typed copy](src/copy.ts) through `copy`, with English compatibility copy when omitted.
 
 <a id="implementation"></a>
 ## Implementation

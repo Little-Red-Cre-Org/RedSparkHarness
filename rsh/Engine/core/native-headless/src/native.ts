@@ -305,6 +305,15 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
       return this.workspaceRoutes.resolve(id)
     }
+    const captureRoot = (owner: NativeActiveSessionOwner) => {
+      const resident = this.continuationOwners.get(owner.session.id)
+      const owned = this.executions.get(owner.session.id)
+      if (owned?.execution.agent !== owner.agent || owner.invocation !== 'root' || !owner.writerAvailable || resident === undefined
+        || this.activeOwners.get(resident)?.owner !== owner || this.agents.get(owner.agent.id) !== owner.agent) {
+        throw new Error('native-headless: root route requires the exact attached root owner')
+      }
+      return owned
+    }
     this.rootExecution = Object.freeze({
       ...storage.deletions === undefined ? {} : { deletions: {
         list: (request: { readonly route: NativeRootRouteId; readonly limit: number }, signal: AbortSignal) =>
@@ -323,15 +332,8 @@ export class NativeHeadlessApplication implements NativeApplication {
       workspaceRoutes: () => this.workspaceRoutes.list(),
       selectWorkspace: (request, signal) => this.workspaceRoutes.select(request.baseRoute, request.workspaceId, signal),
       releaseWorkspace: (id, signal) => Promise.resolve().then(() => { signal.throwIfAborted(); this.workspaceRoutes.release(id) }),
-      capture: (owner: NativeActiveSessionOwner) => {
-        const resident = this.continuationOwners.get(owner.session.id)
-        const owned = this.executions.get(owner.session.id)
-        if (owned?.execution.agent !== owner.agent || owner.invocation !== 'root' || !owner.writerAvailable || resident === undefined
-          || this.activeOwners.get(resident)?.owner !== owner || this.agents.get(owner.agent.id) !== owner.agent) {
-          throw new Error('native-headless: root route requires the exact attached root owner')
-        }
-        return owned.route
-      },
+      capture: (owner: NativeActiveSessionOwner) => captureRoot(owner).route,
+      cancel: (owner: NativeActiveSessionOwner) => captureRoot(owner).unregister(),
       execute: (request, signal) => {
         resolveRoute(request.route)
         return this.executeRootTurn(request, signal)
@@ -755,11 +757,13 @@ export class NativeHeadlessApplication implements NativeApplication {
                 await persist()
                 await writer.flush()
                 const approvalSignal = AbortSignal.any([signal, requested.signal])
-                const decision = await service.request({
-                  id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
-                  ...requested.reason === undefined ? {} : { reason: requested.reason },
-                  signal: approvalSignal,
-                })
+                const decision = invocation === 'delegated'
+                  ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
+                  : await service.request({
+                    id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
+                    ...requested.reason === undefined ? {} : { reason: requested.reason },
+                    signal: approvalSignal,
+                  })
                 track(session.append('native-approval/decided', decision))
                 await persist()
                 await writer.flush()
@@ -854,19 +858,8 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {
           track(session.append('turn/end', { turn, reason }))
           await persist()
-        } else if (resident !== undefined || this.rootEpochs.has(id)) {
-          await owner.repair(reason)
         } else {
-          await persist()
-          const stored = await writer.read(0, Number.MAX_SAFE_INTEGER)
-          const closers = interruptedTurnClosers(stored.events)
-          const repaired = closers.map(event => event.type === 'turn/end' ? {
-            ...event, data: { ...event.data, reason },
-          } : event)
-          if (repaired.length > 0) {
-            await writer.append(repaired)
-            for (const event of repaired) notifyEvent(event)
-          }
+          await owner.repair(reason)
         }
         await writer.flush()
         await activeOwner?.settled(reason)
@@ -1517,25 +1510,26 @@ export class NativeHeadlessApplication implements NativeApplication {
         let cleanup: Promise<void> | undefined
         let abort: (() => void) | undefined
         const release = (): Promise<void> => cleanup ??= (async () => {
+          const resident = this.continuationOwners.get(id)
+          const active = resident === undefined ? undefined : this.activeOwners.get(resident)
           const drained = await Promise.allSettled([execution.dispose(),
             this.rootEpochs.get(id)?.activation.close() ?? Promise.resolve()])
           const failures = drained.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
+          const resources = await Promise.allSettled([resident?.close(), active?.release(), active?.owner.dispose()])
+          failures.push(...resources.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : []))
           try { await registered() } catch (error: unknown) { failures.push(error) }
           if (abort !== undefined) lease?.signal.removeEventListener('abort', abort)
           const failure = failures.length === 0 ? undefined : new AggregateError(failures, 'native-headless: preset Agent cleanup failed')
-          if (this.executions.get(id)?.execution === execution) this.executions.delete(id)
           await lease?.release(failure)
           if (failure !== undefined) throw failure
+          if (this.executions.get(id)?.execution === execution) this.executions.delete(id)
         })()
         owned = { execution, unregister: release, route: route ?? parentExecution?.route ?? resolveRootRoute(this.config),
           interactionRoot: parentExecution?.interactionRoot ?? agent,
           ...lease === undefined ? {} : { presetLease: lease } }
         if (lease !== undefined) {
-          const selected = owned
           abort = () => {
-            const pending = release().finally(() => {
-              if (this.executions.get(id) === selected) this.executions.delete(id)
-            })
+            const pending = release()
             this.presetCleanups.add(pending)
             void pending.then(() => { this.presetCleanups.delete(pending) }, (error: unknown) => {
               this.presetCleanups.delete(pending)

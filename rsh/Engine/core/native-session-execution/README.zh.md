@@ -23,6 +23,8 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
+NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的选择传递给 Program 执行器；省略时保留该 Program 解析后的选择。受限子组合必须禁用内置能力，并在首次请求前安装注册工具限制。
+
 `./native` 入口要求 `agents`、提供 `sessionExecution` 与 `activeSessions`，并接收空配置。未知字段使激活失败。Profile 显式选择此 Provider；本次变更不修改应用默认组合。
 
 <a id="execution-ownership"></a>
@@ -37,6 +39,8 @@ kind: "package-reference"
 仅供 Host 使用的 `./read-history` 工具通过选定的精确存活所有者或既有持久化 reader 读取，不激活 Agent。明确的历史上限额外请求一个事件，以检测超限并拒绝截断。读取后重新检查存活所有权；等待冷 reader 关闭，清理失败保留原读取失败并报告给调用请求的所有者。
 
 `NativeProgramInteractionOwner` 描述 Program 选定的存活请求者及显示根。Program 从实际执行入口和委派关系派生这一只读归属，不依赖持久 Session parent header。交互 Consumer 回答前必须验证确切存活的 Agent 和 Session；显示根不会替代请求 Session 或其 writer。
+
+Host 的 `rootExecution.cancel(owner)` 关闭确切附着的根 Agent epoch，包括未保留驻留的普通轮次。它拒绝外来或已释放的所有者，并等待执行、保留工作、writer 与注册清理。清理失败保留错误及已关闭的执行条目，防止在资源释放状态不明时建立替代执行。取消成功后，后续恢复通过新的 Agent epoch 继续。
 
 委派可提供 `initialize(append)`，在首个 turn 内记录子级自有事实，并通过 `onReady(agent)` 在这些事实持久化后接收已注册子级。执行器在首次模型请求前调用两者。初始化、持久化或交付失败会在自有清理结束后拒绝，模块不会获得 writer 的直接访问权。
 

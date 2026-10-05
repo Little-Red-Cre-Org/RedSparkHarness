@@ -16,10 +16,11 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param cleanupFailure - inject a controller teardown rejection after its real drain.
  * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
  * @param humanInteractions - install existing question, tool and approval Providers.
+ * @param installedPresets - publish two explicit standing compositions from the fixture installation.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
-  modelControls = false, humanInteractions = false) {
+  modelControls = false, humanInteractions = false, installedPresets = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -28,12 +29,14 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   mkdirSync(profile, { recursive: true })
   writeFileSync(join(workspace, 'input.data'), 'visible file contents\n')
   const model = join(profile, 'node_modules/fixture-tui-model')
+  const modelProvides = ['model', ...modelControls ? ['modelDirectory'] : [], ...installedPresets ? ['agentPresets'] : []]
   mkdirSync(model, { recursive: true })
   writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: modelControls ? ['model', 'modelDirectory'] : ['model'] } } }))
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: modelProvides } } }))
   writeFileSync(join(model, 'native.mjs'), `import { writeFile, access } from 'node:fs/promises';
     import { setTimeout as wait } from 'node:timers/promises';
+    ${installedPresets ? `import { NativeAgentPresetRegistry } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Engine/preset/agent-presets/lib/native.js')).href)};` : ''}
     ${modelControls ? `import { NativeAdapterModelDirectory } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Engine/core/native-model-execution/lib/adapter-directory.js')).href)};` : ''}
     ${cleanupFailure ? `import { NativeTuiApplication } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Programs/TUI/native-tui/lib/native.js')).href)};
     const controller = Object.getPrototypeOf(NativeTuiApplication.prototype);
@@ -41,7 +44,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     controller.close = async function () { await close.call(this); throw new Error('fixture executor cleanup failed'); };` : ''}
     const home = ${JSON.stringify(home)};
     const script = ${JSON.stringify(script ?? [])};
-    export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ${JSON.stringify(modelControls ? ['model', 'modelDirectory'] : ['model'])},
+    export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ${JSON.stringify(modelProvides)},
       resolve: () => context => { const adapter = { async *stream(request) {
         if (${String(cancellation)}) {
           await writeFile(home + '/started', 'started');
@@ -66,6 +69,9 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
       resolveModel: async (provider, id) => ({ provider, id, name: id, inputModalities: ['text'], context: { contextWindow: 4096 },
         reasoning: { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' } }) } : {}) };
       context.provide('model', adapter);
+      ${installedPresets ? `const registry = new NativeAgentPresetRegistry('standard', context.scope); context.own(() => registry.dispose());
+      for (const id of ['standard', 'alternate']) context.effect(registry.register({ id, name: id, scope: context.scope }));
+      context.provide('agentPresets', registry);` : ''}
       ${modelControls ? 'const directory = new NativeAdapterModelDirectory(adapter, () => [\'fixture\'], context.signal); context.own(() => directory.dispose()); context.provide(\'modelDirectory\', directory);' : ''}
       } };`)
   const shipped = shippedNativeProfileComposition(home, 'native-tui')

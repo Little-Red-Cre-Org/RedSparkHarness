@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Mount this package in any composition with continuable children the model should message, interrupt, or list. The root plugin needs only the subagent service; the list tool is a separate plugin a deployment can omit.
 
+The ./native entry requires tools and subagents, and provides subagentControls identifying the actual selected Provider and its continuationTools registry; a divergent registry fails loading. It installs send_message and interrupt_agent through NativeTools, retaining canonical tool/call and tool/result audit. send_message rejects non-adjacent recipients and empty input; direct-child cold activation preserves durable composition. interrupt_agent affects only live descendants in the authorizing Agent scope. Native list_agents and automatic finished-result notifications are not supplied by this entry.
+
 ### Minimal configuration
 
 Load the subagent service, a backend, the delegation tool, and this package. Adding the separate list plugin exposes all three tools:

@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在模型需要对可继续子级发消息、中断或列出的任何组合中挂载本包。根插件只需要 subagent 服务；列表工具是独立插件，部署方可以省略。
 
+./native 入口要求 tools 与 subagents，并提供 subagentControls，标识实际选定 Provider 与其 continuationTools 注册表；注册表分歧使加载失败。它通过 NativeTools 安装 send_message 和 interrupt_agent，保留标准 tool/call 与 tool/result 审计。send_message 拒绝非相邻接收方与空输入；直接子任务的冷激活保留持久组合。interrupt_agent 仅影响授权 Agent 作用域内的活跃后代。此入口不提供原生 list_agents 与自动完成结果通知。
+
 ### 最小配置
 
 先加载 subagent 服务、一个后端、委派工具与本包。加上独立的列表插件即可公开全部三个工具：

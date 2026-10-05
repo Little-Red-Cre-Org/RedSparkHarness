@@ -22,7 +22,7 @@ kind: "package-library"
 <a id="configuration"></a>
 ## 使用与配置
 
-依赖入口导出 `ChatRow`、`StreamBlock` 与文本工具。`./presentation` 还导出兼容终端的 `App`、`ResumePicker` 及原有辅助函数；`./utilities` 导出终端颜色和控制字符过滤工具。该库不是配置插件；调用者负责挂载与释放 Ink。消息行通过 `copy` 属性接收[类型化文本](src/copy.ts)，缺省使用英文兼容文本。
+依赖入口导出 `ChatRow`、`StreamBlock`、类型化的 `computeViewport` 行数估算与文本工具。`./presentation` 还导出兼容终端的 `App`、`ResumePicker` 及原有辅助函数；`./utilities` 导出终端颜色和控制字符过滤工具。该库不是配置插件；调用者负责挂载与释放 Ink。消息行通过 `copy` 属性接收[类型化文本](src/copy.ts)，缺省使用英文兼容文本。
 
 <a id="implementation"></a>
 ## 实现

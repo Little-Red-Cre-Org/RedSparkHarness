@@ -80,6 +80,133 @@
             "additionalProperties": false
           }
         }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_output",
+          "description": "Read retained live or final background job output and status; optionally wait for completion.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "wait": {
+                "type": "boolean"
+              },
+              "timeout_ms": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_list",
+          "description": "List background jobs owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_kill",
+          "description": "Request cancellation of one background job owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "send_message",
+          "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id",
+              "message"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "interrupt_agent",
+          "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
       }
     ]
   },
@@ -181,6 +308,133 @@
               "content"
             ],
             "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_output",
+          "description": "Read retained live or final background job output and status; optionally wait for completion.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "wait": {
+                "type": "boolean"
+              },
+              "timeout_ms": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_list",
+          "description": "List background jobs owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "job_kill",
+          "description": "Request cancellation of one background job owned by this Agent.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "send_message",
+          "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id",
+              "message"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "interrupt_agent",
+          "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }

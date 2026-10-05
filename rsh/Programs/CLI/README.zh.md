@@ -22,6 +22,9 @@
 
 运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp`、`native-sdk` 和 `native-acp` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
+native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者；一次性后台子任务使用 job_output/job_kill；可持续 Subagent 控制仍不支持。
+
+
 ## 应用参数
 
 启动器只解析自身的 flag，并将其后的所有内容交给已启动的 profile；注入该 profile 的任意应用插件都可以解析这份共享的不可变快照（[`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.zh.md)）。启动器无法识别的第一个 token 标志着应用参数的开始：
@@ -39,6 +42,8 @@ dsh --help                          # the launcher's own help
 ## Profile
 
 profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。`patchReload: live` 监视 profile 与 home 级 patch 文件，`startup` 则只应用一次。
+
+`./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。
 
 选择内置 `native-*` profile 会在首次使用时创建原生 profile 文件；已有 profile 保留其配置。
 

@@ -19,6 +19,12 @@
     },
     {
       "path": "../connection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
     }
   ]
 }

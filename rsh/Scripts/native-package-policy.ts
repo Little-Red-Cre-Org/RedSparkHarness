@@ -38,6 +38,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/llm/native-model-selection',
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
+  'rsh/Engine/subagent/subagent-protocol',
+  'rsh/Engine/subagent/native-subagent',
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/interaction/user-question-broker',
@@ -81,6 +83,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
+  ['rsh/Engine/subagent/tool-subagent-control', 'Native and Cordis controls route adjacent messages and interruption through their selected Subagent Provider'],
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
   ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
@@ -138,6 +142,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
@@ -158,9 +163,13 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
+  ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
-  ['rsh/Programs/Web/client/native-session', ['./follow-types']],
+  ['rsh/Programs/CLI', ['./native-profile']],
+  ['rsh/Programs/DesktopHost', ['./native-host']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
@@ -188,10 +197,13 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo/client-native', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
   ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
   ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
+  ['rsh/Programs/CLI/native-profile', ['host']],
+  ['rsh/Programs/DesktopHost/native-host', ['host']],
   ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
   ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],

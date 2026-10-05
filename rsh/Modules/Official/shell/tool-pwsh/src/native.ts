@@ -200,7 +200,9 @@ export const plugin: NativePlugin = {
     return (context) => {
       const shell = context.require('shell')
       const policy = context.optional('sandboxPolicy')
-      const jobs = context.optional('jobControls') === true ? context.optional('jobs') : undefined
+      const controls = context.optional('jobControls')
+      const jobs = controls === undefined ? undefined : context.optional('jobs')
+      if (controls !== undefined && controls.jobs !== jobs) throw new Error('tool-pwsh: jobControls and jobs must select the same Jobs registry')
       const approval = context.optional('approval')
       const shellEnv = context.require('shellEnv')
       if (shell.sandboxMode !== undefined && policy === undefined) {
