@@ -45,6 +45,18 @@ export interface NativeSubagentResult {
   readonly stopReason: 'completed' | 'max-tokens' | 'aborted' | 'refusal' | 'error'
 }
 
+/** One completed one-shot run or settled continuable residency epoch associated with its exact caller. */
+export interface NativeSubagentFinished {
+  readonly parentAgent: NativeAgent
+  readonly parentSession: Session
+  readonly result: NativeSubagentResult
+}
+
+/** Synchronous observer of settled in-process child results.
+ * @param finished - exact parent and child result.
+ */
+export type NativeSubagentFinishedListener = (finished: NativeSubagentFinished) => void
+
 /** Published Agent-owned child after its first durable turn facts are committed. */
 export interface NativeSubagentBackground {
   readonly id: SessionId
@@ -83,6 +95,12 @@ export interface NativeSubagentOperations {
   readonly backgroundJobs: NativeJobRegistry | undefined
   /** Tools registry selected for child permissions and continuation controls; absent in tool-free assemblies. */
   readonly continuationTools: NativeToolRegistry | undefined
+  /**
+   * Observe in-process results after cleanup; an interrupted turn does not finish a still-resident continuation.
+   * @param listener - exact parent and completed result observer.
+   * @returns idempotent observer removal; listener failures are reported and do not change child settlement.
+   */
+  onFinished(listener: NativeSubagentFinishedListener): () => void
   /**
    * Resolve the latest logged parent route, budgets and scoped deployment choices.
    * @param request - exact active initiating parent, prompt and deployment policy.
@@ -157,11 +175,13 @@ function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['st
 /** One in-process Provider without a second Agent loop, result registry or writer. */
 export class NativeSpawnSubagents implements NativeSubagentOperations {
   private readonly pending = new Map<Promise<unknown>, AbortSignal>()
+  private readonly finished = new Set<NativeSubagentFinishedListener>()
   private readonly continuations: NativeSubagentContinuations
   private readonly cancellation = new AbortController()
   private closing = false
   constructor(private readonly context: NativeContext, readonly providerName: string) {
-    this.continuations = new NativeSubagentContinuations(context, providerName, (request, setup) => { this.prepare(request, setup) })
+    this.continuations = new NativeSubagentContinuations(context, providerName, (request, setup) => { this.prepare(request, setup) },
+      (event) => { this.publishFinished(event) })
   }
 
   /** @inheritdoc */
@@ -169,6 +189,13 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
 
   /** @inheritdoc */
   get continuationTools(): NativeToolRegistry | undefined { return this.context.optional('tools') }
+
+  /** @inheritdoc */
+  onFinished(listener: NativeSubagentFinishedListener): () => void {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.finished.add(listener)
+    return () => { this.finished.delete(listener) }
+  }
 
   /** @inheritdoc */
   resolve(request: Parameters<NativeSubagentOperations['resolve']>[0]): NativeSubagentRequest {
@@ -280,6 +307,16 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     return task
   }
 
+  private publishFinished(finished: NativeSubagentFinished): void {
+    const reportFailure = (error: unknown): void => {
+      console.warn('native-subagent: finished observer failed', error)
+    }
+    for (const listener of this.finished) {
+      try { void Promise.resolve(listener(finished)).catch(reportFailure) }
+      catch (error: unknown) { reportFailure(error) }
+    }
+  }
+
   /** Close new starts, cancel accepted execution and await its owned cleanup.
    * @returns settlement after every accepted run releases its resources; cleanup failures reject.
    */
@@ -336,9 +373,17 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       // Node cancellation adapters retain the original signal reason as AbortError.cause.
       const cancelled = background?.isPublished() === true && signal.aborted && end?.kind === 'aborted'
         && (error === signal.reason || error instanceof Error && error.name === 'AbortError' && error.cause === signal.reason)
-      if (!cancelled && (signal.aborted || error instanceof AggregateError || end?.kind !== 'error')) throw error
+      const failed = !cancelled && (signal.aborted || error instanceof AggregateError || end?.kind !== 'error')
+      if (failed && end !== undefined) {
+        this.publishFinished({ parentAgent: request.agent, parentSession: request.session,
+          result: { id, provider: this.providerName, output: error instanceof AggregateError ? [] : output.collect() ?? [],
+            stopReason: error instanceof AggregateError ? 'error' : stopReason(end) } })
+      }
+      if (failed) throw error
     }
-    return { id, provider: this.providerName, output: output.collect() ?? [], stopReason: stopReason(end) }
+    const result = { id, provider: this.providerName, output: output.collect() ?? [], stopReason: stopReason(end) }
+    this.publishFinished({ parentAgent: request.agent, parentSession: request.session, result })
+    return result
   }
 }
 

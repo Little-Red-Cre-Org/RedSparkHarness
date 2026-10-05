@@ -18,4 +18,4 @@ Mirroring a Session catalog in the Provider creates another persistence authorit
 
 ## Consequences
 
-The list is read-only and unpaginated. Direct children are message candidates; deeper entries require the control operation's independent authorization. A corrupt or unsupported candidate has a diagnostic row, while ordinary and one-shot intermediaries stay hidden. A stored status is an observation, not a promise that a later delivery succeeds. The shipped SDK and ACP profiles install the tool explicitly; settlement notices and a future `subagent.finished` wire event remain separate.
+The list is read-only and unpaginated. Direct children are message candidates; deeper entries require the control operation's independent authorization. A corrupt or unsupported candidate has a diagnostic row, while ordinary and one-shot intermediaries stay hidden. A stored status is an observation, not a promise that a later delivery succeeds. The shipped SDK and ACP profiles install the tool explicitly. The native SDK separately projects actual Subagent Provider settlement as `subagent.finished`; ACP wire projection and parent settlement notices remain separate.

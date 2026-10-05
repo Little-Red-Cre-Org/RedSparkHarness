@@ -16,6 +16,22 @@ const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-sdk/text-turn')
 const fixture = join(scene, 'session.v3.jsonl')
 
+function expectFinished(notifications: HarnessNotification[], childId: string, stopReason: string): void {
+  const ended = notifications.findIndex(notification => notification.method === 'session.event'
+    && notification.params.sessionId === childId
+    && (notification.params.event as { type?: string }).type === 'turn/end')
+  const matches = notifications.map((notification, index) => ({ notification, index }))
+    .filter(({ notification }) => notification.method === 'subagent.finished'
+      && notification.params.childSessionId === childId)
+  expect(ended).toBeGreaterThanOrEqual(0)
+  expect(matches).toHaveLength(1)
+  const finished = matches[0]
+  if (finished === undefined) throw new Error(`native-sdk snapshot: missing result for child ${childId}`)
+  expect(finished.index).toBeGreaterThan(ended)
+  expect(finished.notification.params).toMatchObject({ provider: 'spawn', agentId: childId, childSessionId: childId,
+    parentSessionId: 'sdk-recorded-fork', status: stopReason === 'completed' ? 'ok' : 'error', stopReason })
+}
+
 it('replays a native SDK turn with exact model input, output and durable Session events', async () => {
   const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
   const input = recorded?.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
@@ -260,8 +276,18 @@ it('replays a native SDK turn with exact model input, output and durable Session
         result = await restored.session('sdk-recorded-fork').run('spawn a production child')
         result = { ...result, notifications: [...delegated.notifications, ...result.notifications] }
         const production = result
+        const spawnedId = String(production.notifications.filter(notification => notification.method === 'subagent.started').at(-1)?.params.childSessionId)
+        expectFinished(production.notifications, spawnedId, 'completed')
+        expect(production.notifications.find(notification => notification.method === 'subagent.finished'
+          && notification.params.childSessionId === spawnedId)?.params.lastAssistantMessage)
+          .toEqual([{ type: 'text', text: 'production child reply' }])
         const session = restored.session('sdk-recorded-fork')
         const failed = await session.run('fail a production child')
+        const failedId = String(failed.notifications.find(notification => notification.method === 'subagent.started')?.params.childSessionId)
+        expectFinished(failed.notifications, failedId, 'error')
+        expect(failed.notifications.find(notification => notification.method === 'subagent.finished'
+          && notification.params.childSessionId === failedId)?.params.lastAssistantMessage)
+          .toEqual([{ type: 'text', text: 'partial failed child output' }])
         expect(failed.events.find(event => event.type === 'tool/result')?.data.message.content)
           .toMatchObject([{ type: 'tool-result', isError: true, content: [
             { type: 'text', text: 'Subagent ended: error. Partial output follows.' },
@@ -274,11 +300,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
           expect(started.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
           const start = started.events.find(event => event.type === 'tool/result')?.data.message.content[0]
           expect(start).toMatchObject({ type: 'tool-result', isError: false, content: [{ type: 'text', text: expect.stringContaining('Job: subagent-1') }] })
+          const backgroundNotifications: HarnessNotification[] = []
           for (;;) {
             const notification = await backgroundEvents.next()
+            backgroundNotifications.push(notification)
             if (notification.method === 'session.event' && notification.params.sessionId !== session.id
               && (notification.params.event as { type?: string }).type === 'tool/call') break
           }
+          const backgroundId = String(started.notifications.find(notification => notification.method === 'subagent.started')?.params.childSessionId)
           const stopped = await session.run('stop the background child')
           const outputs = stopped.events.filter(event => event.type === 'tool/result').map(event => event.data.message.content[0])
           expect(outputs[0]).toMatchObject({ type: 'tool-result', isError: false, content: [{ type: 'text', text: expect.stringContaining('background child live output') }] })
@@ -286,6 +315,12 @@ it('replays a native SDK turn with exact model input, output and durable Session
           expect(JSON.stringify(outputs[1])).toContain('requested cancellation')
           expect(JSON.stringify(outputs[2])).toContain('cancelled')
           expect(stopped.finalResponse).toBe(reply)
+          for (;;) {
+            const notification = await backgroundEvents.next()
+            backgroundNotifications.push(notification)
+            if (notification.method === 'subagent.finished' && notification.params.childSessionId === backgroundId) break
+          }
+          expectFinished(backgroundNotifications, backgroundId, 'aborted')
         } finally { backgroundEvents.close() }
         const childChunk = Promise.withResolvers<void>()
         const pending = session.run('cancel a production child', { onNotification: notification => {
@@ -296,6 +331,8 @@ it('replays a native SDK turn with exact model input, output and durable Session
         expect(await session.cancel()).toBe(true)
         const cancelledChild = await pending
         expect(cancelledChild.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+        const cancelledId = String(cancelledChild.notifications.find(notification => notification.method === 'subagent.started')?.params.childSessionId)
+        expectFinished(cancelledChild.notifications, cancelledId, 'aborted')
         expect(cancelledChild.notifications.some(notification => notification.method === 'session.event'
           && notification.params.sessionId !== session.id && (notification.params.event as { type: string; data: unknown }).type === 'turn/end')).toBe(true)
         result = production
@@ -323,14 +360,34 @@ it('replays a native SDK turn with exact model input, output and durable Session
           const controlled = await session.run('message and interrupt the continuable child')
           expect(controlled.events.filter(event => event.type === 'tool/result').every(event =>
             event.data.message.content[0]?.type === 'tool-result' && !event.data.message.content[0].isError)).toBe(true)
+          const cancelledEpoch: HarnessNotification[] = []
           for (;;) {
             const notification = await tree.next()
+            cancelledEpoch.push(notification)
             if (notification.method === 'session.event' && notification.params.sessionId === continuationId
               && (notification.params.event as { type?: string }).type === 'turn/end') {
               expect(notification.params.event).toMatchObject({ data: { reason: { kind: 'aborted' } } })
               break
             }
           }
+          expect(cancelledEpoch.some(notification => {
+            if (notification.method !== 'session.event' || notification.params.sessionId !== continuationId) return false
+            const event = notification.params.event as { type?: string; data?: { inserted?: Array<{
+              source?: { kind?: string }; content?: Array<{ type?: string; text?: string }>
+            }> } }
+            return event.type === 'agent/inbox/spliced' && event.data?.inserted?.some(message =>
+              message.source?.kind === 'agent-message' && message.content?.some(block =>
+                block.type === 'text' && block.text === 'parked continuation follow-up')) === true
+          })).toBe(true)
+          expect(cancelledEpoch.some(notification => notification.method === 'subagent.finished'
+            && notification.params.childSessionId === continuationId)).toBe(false)
+
+          await recovered.close()
+          const shutdownNotifications: HarnessNotification[] = []
+          for (let notification = tree.tryNext(); notification !== undefined; notification = tree.tryNext()) {
+            shutdownNotifications.push(notification)
+          }
+          expectFinished([...cancelledEpoch, ...shutdownNotifications], continuationId!, 'aborted')
         } finally { tree.close() }
 
       }
@@ -356,6 +413,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
             if (notification.method === 'session.event' && notification.params.sessionId === continuationId
               && (notification.params.event as { type?: string }).type === 'turn/end') {
               expect(notification.params.event).toMatchObject({ data: { reason: { kind: 'completed' } } })
+              break
+            }
+          }
+          for (;;) {
+            const notification = await tree.next()
+            if (notification.method === 'subagent.finished' && notification.params.childSessionId === continuationId) {
+              expect(notification.params).toMatchObject({ provider: 'spawn', agentId: continuationId,
+                parentSessionId: session.id, status: 'ok', stopReason: 'completed' })
               break
             }
           }
@@ -416,6 +481,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
     expect(continuationEvents.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
     expect(continuationEvents.some(event => event.type === 'user/message' && event.data.source.kind === 'agent-message'
       && event.data.content.some(block => block.type === 'text' && block.text === 'cold continuation follow-up'))).toBe(true)
+    expect(continuationEvents.some(event => event.type === 'agent/inbox/spliced'
+      && event.data.inserted.some(message => message.source.kind === 'agent-message'
+        && message.content.some(block => block.type === 'text' && block.text === 'parked continuation follow-up')))).toBe(true)
+    expect(continuationEvents.some(event => event.type === 'agent/inbox/spliced' && event.data.outcome === 'canceled')).toBe(true)
     const notices = parseSessionLog(forkRaw).filter(event => event.type === 'agent/inbox/spliced'
       && event.data.inserted.some(message => message.source.kind === 'subagent-settled'))
     expect(notices.some(event => JSON.stringify(event.data).includes('Its closing message:'))).toBe(true)

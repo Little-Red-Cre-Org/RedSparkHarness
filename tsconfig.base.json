@@ -88,6 +88,7 @@
       "@deepseek-ai/dsh-settings-file/native": ["./rsh/Modules/Official/settings/settings-file/src/native.ts"],
       "@deepseek-ai/dsh-launch-environment/native": ["./rsh/Core/util/launch-environment/src/native.ts"],
       "@deepseek-ai/dsh-launch-environment/layers": ["./rsh/Core/util/launch-environment/src/layers.ts"],
+      "@deepseek-ai/dsh-client-web/boot-page": ["./rsh/Programs/Web/client/web/src/boot-page.ts"],
       "@deepseek-ai/dsh-client-web/native": ["./rsh/Programs/Web/client/web/src/native-boot.ts"],
       "@deepseek-ai/dsh-native-jobs": ["./rsh/Engine/core/native-jobs/src/index.ts"],
       "@deepseek-ai/dsh-native-jobs/native": ["./rsh/Engine/core/native-jobs/src/index.ts"],

@@ -14,6 +14,7 @@
     { "path": "../../../../Modules/Official/fs/fs" },
     { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
     { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" },
-    { "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json" }
+    { "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json" },
+    { "path": "../../../../Engine/subagent/native-subagent" }
   ]
 }

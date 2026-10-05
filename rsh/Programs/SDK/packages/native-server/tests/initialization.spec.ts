@@ -1,22 +1,37 @@
-/** Initialization remains owned until asynchronous model lookup has settled. */
+/** The SDK initializes and admits a prompt without installing subagent capabilities, then drains on EOF. */
+import { mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { setImmediate } from 'node:timers/promises'
 import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { NativeSdkApplication } from '../src/native.ts'
+import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { NativeSdkApplication, plugin as sdkServer } from '../src/native.ts'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
+import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
+import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
+import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { plugin as attachments } from '@deepseek-ai/dsh-attachment-local/native'
 
-it('drains model initialization after EOF before releasing its Provider', async () => {
+it('runs without the optional subagent Provider and drains admitted model work after EOF', async () => {
+  expect(sdkServer.requires).not.toContain('subagents')
+  expect(sdkServer.optional).toContain('subagents')
   const entered = Promise.withResolvers<undefined>()
   const aborted = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
+  const idle = Promise.withResolvers<undefined>()
+  const sessionEvents: unknown[] = []
   let modelSettled = false
   let modelReleased = false
   let runReturned = false
   class DeferredModel extends LlmAdapter {
+    private calls = 0
     override async resolveModel(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo> {
+      if (this.calls++ < 2) return { provider, id: model, name: model }
       signal?.addEventListener('abort', () => { aborted.resolve(undefined) }, { once: true })
       entered.resolve(undefined)
       try {
@@ -26,12 +41,50 @@ it('drains model initialization after EOF before releasing its Provider', async 
       } finally { modelSettled = true }
     }
 
-    override stream(): AsyncIterable<StreamChunk> { throw new Error('this fixture performs no model request') }
+    override async *stream(): AsyncIterable<StreamChunk> {
+      yield { type: 'block-start', index: 0, blockType: 'text' }
+      yield { type: 'text-delta', index: 0, text: 'minimal model reply' }
+      yield { type: 'block-end', index: 0, block: { type: 'text', text: 'minimal model reply' } }
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    }
   }
   const input = new PassThrough()
   const output = new PassThrough()
-  output.resume()
   const scope = new NativeScope()
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-sdk-minimal-'))
+  const workspace = join(home, 'workspace')
+  const sessions = join(home, 'sessions')
+  await mkdir(workspace)
+  const replies = new Map<number, ReturnType<typeof Promise.withResolvers<{ id: number; result?: unknown; error?: unknown }>>>()
+  let outputBuffer = ''
+  output.on('data', (chunk) => {
+    outputBuffer += chunk.toString()
+    for (;;) {
+      const newline = outputBuffer.indexOf('\n')
+      if (newline < 0) break
+      const line = outputBuffer.slice(0, newline)
+      outputBuffer = outputBuffer.slice(newline + 1)
+      if (line.length === 0) continue
+      const message = JSON.parse(line) as {
+        id?: number
+        result?: unknown
+        error?: unknown
+        method?: string
+        params?: { sessionId?: string; status?: string; event?: unknown }
+      }
+      if (message.id !== undefined) replies.get(message.id)?.resolve(message as { id: number; result?: unknown; error?: unknown })
+      if (message.method === 'session.event' && message.params?.sessionId === 'minimal-sdk-session') {
+        sessionEvents.push(message.params.event)
+      }
+      if (message.method === 'session.status' && message.params?.sessionId === 'minimal-sdk-session'
+        && message.params.status === 'idle') idle.resolve(undefined)
+    }
+  })
+  const response = (id: number) => {
+    const deferred = Promise.withResolvers<{ id: number; result?: unknown; error?: unknown }>()
+    replies.set(id, deferred)
+    return deferred.promise
+  }
   let app: NativeSdkApplication | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'deferred-model', targets: ['host'], requires: [], provides: ['model'],
@@ -41,7 +94,10 @@ it('drains model initialization after EOF before releasing its Provider', async 
     },
   }
   const carrier: NativePlugin = {
-    apiVersion: 1, name: 'initialization-carrier', targets: ['host'], requires: ['model', 'activeSessions'], provides: ['application'],
+    apiVersion: 1, name: 'minimal-sdk-carrier', targets: ['host'],
+    requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
+    optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions',
+      'modelSelection', 'agentPresets', 'workspaceRegistry'], provides: ['application'],
     resolve: () => (context) => {
       app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
       context.provide('application', app)
@@ -49,19 +105,40 @@ it('drains model initialization after EOF before releasing its Provider', async 
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: agents, scope, config: undefined }, { plugin: execution, scope, config: undefined },
-    { plugin: model, scope, config: undefined }, { plugin: carrier, scope, config: undefined },
+    { plugin: modelExecution, scope, config: undefined }, { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
+    { plugin: storage, scope, config: { root: sessions, compression: 'none' } },
+    { plugin: attachments, scope, config: { dshHome: home } }, { plugin: model, scope, config: undefined },
+    { plugin: carrier, scope, config: undefined },
   ], 'host'))
-  await host.start()
-  if (app === undefined) throw new Error('fixture carrier did not activate')
-  const application = app
-  const done = host.run(scope, { kind: 'test' }, invocation => application.run([], invocation.signal)).then(async (result) => {
-    runReturned = true
-    await host.stop()
-    return result
-  })
+  let done: Promise<unknown> | undefined
   try {
-    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: process.cwd(), provider: 'fixture', model: 'fixture' } })}\n`)
+    await host.start()
+    if (app === undefined) throw new Error('minimal SDK carrier did not activate')
+    const application = app
+    done = host.run(scope, { kind: 'test' }, invocation => application.run([], invocation.signal)).then(async (result) => {
+      runReturned = true
+      await host.stop()
+      return result
+    }, error => ({ error }))
+    const initialized = response(1)
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: workspace, provider: 'fixture', model: 'fixture' } })}\n`)
+    const initialization = await initialized
+    expect(initialization.result, JSON.stringify(initialization)).toMatchObject({ serverInfo: { name: 'deepseek-harness-sdk-runtime' } })
+    const firstPrompt = response(2)
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
+      sessionId: 'minimal-sdk-session', contentBlocks: [{ type: 'text', text: 'Run without subagents.' }],
+    } })}\n`)
+    expect((await firstPrompt).result).toMatchObject({ messageId: expect.any(String) })
+    await idle.promise
+    expect(sessionEvents).toContainEqual(expect.objectContaining({ type: 'assistant/message', data: expect.objectContaining({
+      message: expect.objectContaining({ content: [{ type: 'text', text: 'minimal model reply' }] }),
+    }) }))
+    const acceptedPrompt = response(3)
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'session/prompt', params: {
+      sessionId: 'minimal-sdk-session', contentBlocks: [{ type: 'text', text: 'Wait for model cancellation.' }],
+    } })}\n`)
     await entered.promise
+    expect((await acceptedPrompt).result).toMatchObject({ messageId: expect.any(String) })
     input.end()
     await aborted.promise
     await setImmediate()
@@ -69,6 +146,18 @@ it('drains model initialization after EOF before releasing its Provider', async 
     release.resolve(undefined)
     expect(await done).toBe(0)
     expect({ modelReleased, modelSettled }).toEqual({ modelReleased: true, modelSettled: true })
+    const persistence = new JsonlSessionBackend({ root: sessions, compression: 'none' })
+    try {
+      const reader = await persistence.open(SessionId('minimal-sdk-session'), 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'turn/end').map(event => event.data.reason.kind))
+          .toEqual(['completed', 'aborted'])
+        expect(events.find(event => event.type === 'assistant/message')).toMatchObject({ data: {
+          message: { content: [{ type: 'text', text: 'minimal model reply' }] },
+        } })
+      } finally { await reader.close() }
+    } finally { await persistence.close() }
   } finally {
     release.resolve(undefined)
     input.end()
@@ -76,5 +165,6 @@ it('drains model initialization after EOF before releasing its Provider', async 
     await host.stop()
     input.destroy()
     output.destroy()
+    await rm(home, { recursive: true, force: true })
   }
 })
