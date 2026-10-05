@@ -15,11 +15,12 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh --profile rsh` | Open the persistent RedSpark terminal session. |
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
 | `dsh --profile native-sdk` | Serve text SDK turns through the native Session executor over the same JSON-RPC stdio protocol. |
+| `dsh --profile native-acp` | Drive native text Sessions, cancellation, and durable resume over standard ACP stdio. |
 | `dsh --profile sdk-minimal` | Serve SDK clients with the standalone minimal agent tree. |
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
-The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, and `native-sdk` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
+The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
 ## App arguments
 

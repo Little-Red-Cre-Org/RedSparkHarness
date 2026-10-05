@@ -15,11 +15,12 @@
 | `dsh --profile rsh` | 打开持久化 RedSpark 终端会话。 |
 | `dsh --profile sdk` | 通过 JSON-RPC stdio 为 SDK 客户端提供服务，直至关闭或断开连接。 |
 | `dsh --profile native-sdk` | 通过同一 JSON-RPC stdio 协议，使用原生 Session 执行器处理文本 SDK 轮次。 |
+| `dsh --profile native-acp` | 通过标准 ACP 标准输入输出驱动原生文本 Session、取消与持久恢复。 |
 | `dsh --profile sdk-minimal` | 以独立极简 agent（智能体）配置树为 SDK 客户端提供服务。 |
 | `dsh web` | `--profile web` 的别名。 |
 | `dsh plugin --profile <name> <pnpm args>` | 通过在 profile 目录中转发给 pnpm 来管理该 profile 的插件。 |
 
-运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp` 和 `native-sdk` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
+运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp`、`native-sdk` 和 `native-acp` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
 ## 应用参数
 

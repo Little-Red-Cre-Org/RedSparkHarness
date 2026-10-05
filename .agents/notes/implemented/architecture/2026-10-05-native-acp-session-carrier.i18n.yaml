@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md
+2026-10-05-native-acp-session-carrier.md: a31e4dbfe684f461df0c8c0957d2f00539ee8235
+2026-10-05-native-acp-session-carrier.zh.md: cd122108eaa8ff8b8abb56df5ce7db7c53db63f3

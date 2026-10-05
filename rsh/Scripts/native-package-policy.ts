@@ -38,6 +38,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/host/native-web-host',
+  'rsh/Programs/ACP/packages/native-acp',
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
@@ -54,6 +55,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
+  ['rsh/Programs/ACP/packages/native-acp', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])

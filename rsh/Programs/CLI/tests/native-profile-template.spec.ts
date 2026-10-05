@@ -38,7 +38,7 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-acp', 'native-acp', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
     plugin: '@deepseek-ai/dsh-native-acp',
-    config: { provider: 'deepseek', model: 'deepseek-v4-flash', maxSteps: 8 },
+    config: { provider: 'deepseek-official', model: 'deepseek-v4-flash', maxSteps: 8 },
   })
   expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
 })
