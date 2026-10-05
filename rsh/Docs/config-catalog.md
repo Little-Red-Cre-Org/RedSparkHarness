@@ -3601,6 +3601,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-base` ([`rsh/Compatibility/DSH/bundle/base/src/index.ts`](../Compatibility/DSH/bundle/base/src/index.ts))
 - `@deepseek-ai/dsh-brand` ([`rsh/Core/util/brand/src/index.ts`](../Core/util/brand/src/index.ts))
 - `@deepseek-ai/dsh-chunked-list` ([`rsh/Core/util/chunked-list/src/index.ts`](../Core/util/chunked-list/src/index.ts))
+- `@deepseek-ai/dsh-client-native-application` ([`rsh/Programs/Web/client/native-application/src/index.ts`](../Programs/Web/client/native-application/src/index.ts))
 - `@deepseek-ai/dsh-client-native-session` ([`rsh/Programs/Web/client/native-session/src/index.ts`](../Programs/Web/client/native-session/src/index.ts))
 - `@deepseek-ai/dsh-client-store` ([`rsh/Programs/Web/client/store/src/index.ts`](../Programs/Web/client/store/src/index.ts))
 - `@deepseek-ai/dsh-client-test-runtime` ([`rsh/Tests/test-support/client-runtime/src/index.ts`](../Tests/test-support/client-runtime/src/index.ts))

@@ -172,6 +172,27 @@ export class HarnessSession {
   constructor(readonly harness: DeepSeekHarness, readonly id: string) {}
 
   /**
+   * Cancel this Session's admitted native-sdk turn and await owned cleanup.
+   * @returns false when no admitted turn was active; rejects on unsupported profiles.
+   */
+  async cancel(): Promise<boolean> {
+    await this.harness.start()
+    return this.harness.client.cancel(this.id)
+  }
+
+  /**
+   * Fork a closed native-sdk turn into a fresh Session handle without running it.
+   * @param destinationSessionId - fresh destination identity under this harness.
+   * @param atSeq - source event in a closed turn; omitted selects its last closed turn.
+   * @returns a handle whose next run resumes the durable copied history.
+   */
+  async fork(destinationSessionId: string, atSeq?: number): Promise<HarnessSession> {
+    await this.harness.start()
+    const id = await this.harness.client.fork(this.id, destinationSessionId, atSeq)
+    return this.harness.session(id)
+  }
+
+  /**
    * Queue one prompt, then observe the whole session through its next idle.
    * @param input - prompt text, or content blocks sent verbatim.
    * @param options - optional per-notification observer.
