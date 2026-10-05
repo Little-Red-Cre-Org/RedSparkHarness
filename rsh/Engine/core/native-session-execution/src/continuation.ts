@@ -18,6 +18,12 @@ export type NativeContinuationInspection =
   | { readonly kind: 'child'; readonly observation: NativeContinuationObservation }
   | { readonly kind: 'diagnostic'; readonly id: SessionId; readonly reason: 'corrupt' | 'unsupported' | 'unavailable' }
 
+/** Read-only catalog position; listing grants no message delivery or interruption permission. */
+export interface NativeContinuationCandidate {
+  readonly path: readonly [SessionId, ...SessionId[]]
+  readonly status: 'running' | 'idle' | 'ready'
+}
+
 /** Fresh or cold child residency with declared composition and no independent turn loop. */
 export interface NativeContinuationRequest extends Omit<NativeSessionDelegation, 'lifetime' | 'message' | 'onReady'> {
   readonly resume: boolean
@@ -76,8 +82,15 @@ export interface NativeSessionContinuations {
    */
   observe(id: SessionId, signal: AbortSignal): Promise<NativeContinuationObservation>
   /**
+   * Enumerate subagent candidates through the selected durable corpus, including ordinary traversal nodes.
+   * @param scope - direct children or stable pre-order descendants.
+   * @param signal - listing cancellation.
+   * @returns authorized lineage paths and actual Program residency observations; no Agent is loaded.
+   */
+  catalog(scope: 'children' | 'descendants', signal: AbortSignal): Promise<readonly NativeContinuationCandidate[]>
+  /**
    * Read one descendant along an explicit lineage authorized by its initiating parent.
-   * @param path - direct-child identities from the initiating Session to the candidate.
+   * @param path - durable direct-parent identities through ordinary or subagent intermediaries to a subagent candidate.
    * @param signal - validation and read cancellation.
    * @returns validated candidate or its per-item durable read diagnostic.
    */

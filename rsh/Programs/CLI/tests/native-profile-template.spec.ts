@@ -46,6 +46,13 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
 })
 
+it.each(['native-sdk', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
+  const profile = shippedNativeProfileComposition('C:/rsh-native-subagent', profileName, 'win32')
+  expect(profile.installations.filter(row => row.id === 'subagent-directory')).toEqual([{
+    id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: 'root',
+  }])
+})
+
 it('defines a native-tui composition over the shared headless Providers', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({

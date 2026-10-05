@@ -31,7 +31,7 @@ Resolve captures the exact parent owner, latest logged provider/model/effort, wo
 
 Background execution copies the same resolved child permissions and budgets. The Provider exposes its selected registry as backgroundJobs. continuationTools identifies the selected registry for child permission restrictions; continuation controls must select that same registry. Jobs owns bounded live text and final output; job_kill requests cancellation and job_output with wait waits for terminal cleanup. Caller cancellation owns startup until actual child readiness; after publication, the parent Agent, Jobs cancellation and Provider unload own the child independently of ordinary parent turns.
 
-Continuable starts commit the descriptor and initial inbox acceptance through the Program before returning. sendMessage permits direct-parent/child adjacency, restores closed direct children from their durable descriptor, and returns the accepted message id independently of an answer. Cold resume preserves route, persona, tool restrictions and workspace; activation budgets use the selected deployment defaults. interrupt stops current work and parks unclaimed input until another message wakes it. Parent disposal and Provider unload drain resident children; execution and cleanup failures reject.
+Continuable starts commit the descriptor and initial inbox acceptance through the Program before returning. sendMessage permits direct-parent/child adjacency, restores closed direct children from their durable descriptor, and returns the accepted message id independently of an answer. list reads the selected Program's durable catalog without loading Agents, traverses ordinary and one-shot intermediaries, and returns only this Provider's continuable descriptors with actual resident status or per-item read diagnostics. Cold resume preserves route, persona, tool restrictions and workspace; activation budgets use the selected deployment defaults. interrupt stops current work and parks unclaimed input until another message wakes it. Parent disposal and Provider unload drain resident children; execution and cleanup failures reject.
 
 After a continuable child releases its writer and Agent, the Provider delivers one subagent-settled notice through its exact parent's inbox. The ending and closing content come only from this residency's durable suffix; cleanup failure reports error without an earlier answer. Root parents consume the queued notice on their next user turn; resident continuable parents use the existing wake path. Provider shutdown suppresses new notices while draining children.
 
@@ -57,7 +57,7 @@ The child starts a fresh conversation; its request does not reuse the parent con
 <a id="known-limitations-and-deferred-work"></a>
 
 - Persona is literal scoped text; template-variable interpolation is unsupported.
-- External backends, catalogs and subagent.finished result notifications are not provided by this entry.
+- External backends and subagent.finished result notifications are not provided by this entry.
 - No invariant companion is published: the Program retains Agent, Session and writer authority; the Provider owns only its accepted calls and scoped setup.
 
 <a id="dev-note"></a>

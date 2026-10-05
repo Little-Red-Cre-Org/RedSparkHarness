@@ -10,7 +10,7 @@ Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subag
 
 `subagentCatalog` projection 通过 Session 观察和客户端快照暴露按父会话事件排序的 `SubagentCatalogEntry[]`。每个条目包含子级 id、创建时间、模式和依模式确定的标签；fork 继承的目录事实不在其中。[subagent 包](../../Engine/subagent/subagent/README.zh.md) 定义目录创建和持久化语义。
 
-原生一次性组合使用 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 作为可替换服务定义与选定派生提供者，以 [tool-subagent 的原生入口](../../Engine/subagent/tool-subagent/README.zh.md) 为消费者。NativeSubagentOperations 解析精确活跃父配置，并通过 sessionExecution 委派；Program 保留 Agent 执行与唯一 Session 写入器。共享 [subagent-protocol](../../Engine/subagent/subagent-protocol/README.zh.md) 拥有描述符载荷、输出归并与委派权限文本。原生 Agent 所有的后台执行使用 NativeJobs 与既有 job_output/job_kill 消费者；可持续子任务复用 Program 可持续权威，通过[原生控制工具](../../Engine/subagent/tool-subagent-control/README.zh.md)实现相邻消息、打断与基于描述符的冷恢复。目录与完成结果投影仍为兼容能力。
+原生一次性组合使用 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 作为可替换服务定义与选定派生提供者，以 [tool-subagent 的原生入口](../../Engine/subagent/tool-subagent/README.zh.md) 为消费者。NativeSubagentOperations 解析精确活跃父配置，并通过 sessionExecution 委派；Program 保留 Agent 执行与唯一 Session 写入器。共享 [subagent-protocol](../../Engine/subagent/subagent-protocol/README.zh.md) 拥有描述符载荷、输出归并与委派权限文本。原生 Agent 所有的后台执行使用 NativeJobs 与既有 job_output/job_kill 消费者；可持续子任务复用 Program 可持续权威，通过[原生控制工具](../../Engine/subagent/tool-subagent-control/README.zh.md)实现相邻消息、打断与基于描述符的冷恢复。Program 还向独立的[原生 list_agents 工具](../../Engine/subagent/native-tool-subagent-list-agents/README.zh.md)提供选定的持久目录。完成结果投影仍为兼容能力。
 
 ## 两类能力，两种发现方式
 

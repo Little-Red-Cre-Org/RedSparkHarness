@@ -3913,6 +3913,18 @@ importers:
         specifier: workspace:^
         version: link:../subagent-protocol
 
+  rsh/Engine/subagent/native-tool-subagent-list-agents:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../native-subagent
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+
   rsh/Engine/subagent/subagent:
     dependencies:
       '@deepseek-ai/dsh-brand':
@@ -8316,6 +8328,9 @@ importers:
       '@deepseek-ai/dsh-native-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/native-tool-jobs
+      '@deepseek-ai/dsh-native-tool-subagent-list-agents':
+        specifier: workspace:^
+        version: link:../../Engine/subagent/native-tool-subagent-list-agents
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../Engine/core/native-tools

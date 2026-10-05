@@ -66,6 +66,11 @@ export interface NativeSubagentControlRequest {
   readonly target: SessionId
 }
 
+/** Continuable catalog row or a per-item durable inspection diagnostic. */
+export type NativeSubagentCatalogEntry =
+  | { readonly kind: 'child'; readonly id: SessionId; readonly label: string; readonly status: 'running' | 'idle' | 'ready'; readonly parent?: SessionId; readonly depth?: number }
+  | { readonly kind: 'diagnostic'; readonly id: SessionId; readonly reason: 'corrupt' | 'unsupported' | 'unavailable'; readonly parent?: SessionId; readonly depth?: number }
+
 /** Actual control tools bound to the selected Provider and registry. */
 export interface NativeSubagentControlTools {
   readonly subagents: NativeSubagentOperations
@@ -117,6 +122,13 @@ export interface NativeSubagentOperations {
    */
   sendMessage(request: NativeSubagentControlRequest & { readonly content: readonly ContentBlock[] },
     signal: AbortSignal): Promise<MessageId>
+  /** List continuable children without loading Agents or granting control permissions.
+   * @param request - exact initiating Agent, active Session and resolved listing scope.
+   * @param signal - corpus and per-item read cancellation.
+   * @returns stable direct-child or pre-order descendant rows and per-item diagnostics.
+   */
+  list(request: { readonly agent: NativeAgent; readonly session: Session; readonly scope: 'children' | 'descendants' },
+    signal: AbortSignal): Promise<readonly NativeSubagentCatalogEntry[]>
   /** Interrupt a live descendant's current turn while retaining pending input.
    * @param request - exact active ancestor and addressed child; absent targets are a no-op.
    */
@@ -247,6 +259,13 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
     return this.track(this.continuations.send(request.agent, request.session, request.target, request.content, effective), effective)
+  }
+
+  /** @inheritdoc */
+  list(request: Parameters<NativeSubagentOperations['list']>[0], signal: AbortSignal): Promise<readonly NativeSubagentCatalogEntry[]> {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
+    return this.track(this.continuations.list(request.agent, request.session, request.scope, effective), effective)
   }
 
   /** @inheritdoc */
