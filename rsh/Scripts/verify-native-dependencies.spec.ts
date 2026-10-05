@@ -99,6 +99,10 @@ it('allows resolved native owners without scanning comments or ordinary string d
     const label = '@deepseek-ai/cordis'
   `, ts.ScriptTarget.Latest, true)
   expect(nativeSourceViolations(source, specifier => specifier === './scope.ts')).toEqual([])
+  const loader = '/rsh/Programs/CLI/src/native-profile-loader.ts'
+  expect(nativeSourceViolations(ts.createSourceFile(loader, 'import(pathToFileURL(entryPath).href)', ts.ScriptTarget.Latest, true), () => false)).toEqual([])
+  expect(nativeSourceViolations(ts.createSourceFile(loader, 'import(pathToFileURL(otherPath).href)', ts.ScriptTarget.Latest, true), () => false)).toHaveLength(1)
+  expect(nativeSourceViolations(ts.createSourceFile('entry.ts', 'import(pathToFileURL(entryPath).href)', ts.ScriptTarget.Latest, true), () => false)).toHaveLength(1)
 })
 
 it.each([

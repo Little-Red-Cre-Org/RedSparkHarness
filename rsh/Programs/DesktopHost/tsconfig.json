@@ -16,6 +16,9 @@
     { "path": "../Web/client/modules" },
     { "path": "../Web/client/web" },
     { "path": "../Web/host/webserver" },
-    { "path": "../../Core/util/launch-environment" }
+    { "path": "../../Core/util/launch-environment" },
+    { "path": "../CLI" },
+    { "path": "../Web/host/native-web-assets" },
+    { "path": "../Web/api/native-web-session-controller" }
   ]
 }

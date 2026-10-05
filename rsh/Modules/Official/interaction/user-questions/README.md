@@ -83,3 +83,5 @@ None.
 </details>
 
 **Runtime invariant:** No companion is published. The answerer waterfall is resolved per request and returns directly to its caller; the seam publishes no independent request/answer audit stream.
+
+parseUserQuestionAnswer validates application wire answers against the exact presented questions. The pending question broker and Web transport reuse this parser for choice membership, cardinality, duplicate ids and complete batch answers.
