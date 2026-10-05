@@ -55,6 +55,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
   'rsh/Programs/Web/client/ui-slots',
+  'rsh/Programs/Web/client/ui-primitives',
+  'rsh/Core/util/workspace-path',
 ])
 
 /** Native-profile Client packages that do not implement the Cordis module-table entry. */
@@ -65,6 +67,7 @@ export const nativeProfileClientDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/client/ui-primitives', ['client']],
   ['rsh/Programs/TUI/native-tui', ['host']],
   ['rsh/Programs/TUI/terminal-ui', ['host']],
   ['rsh/Core/identity/anonymous-user-id', ['host']],
@@ -90,6 +93,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
   ['rsh/Engine/subagent/tool-subagent-control', 'Native and Cordis controls route adjacent messages and interruption through their selected Subagent Provider'],
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
@@ -150,6 +154,8 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
+  ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
+  ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
@@ -172,6 +178,10 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy']],
+  ['rsh/Programs/Web/client/ui-tool', ['./tool-renderer']],
+  ['rsh/Programs/Web/client/locale', ['./dictionary']],
+  ['rsh/Modules/Official/spill/spill-policy', ['./notice']],
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
@@ -206,6 +216,11 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/client/ui-conversation/tool-records', ['client']],
+  ['rsh/Programs/Web/client/ui-conversation/conversation-copy', ['client']],
+  ['rsh/Programs/Web/client/ui-tool/tool-renderer', ['client']],
+  ['rsh/Programs/Web/client/locale/dictionary', ['client']],
+  ['rsh/Modules/Official/spill/spill-policy/notice', ['client']],
   ['rsh/Modules/Official/todo/tool-todo/client-native', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],

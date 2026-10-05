@@ -5,10 +5,10 @@
  * @module @deepseek-ai/dsh-token-meter/route-pricing
  */
 
-import type { ContentBlock, LlmImageRequestPricing } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, LlmImageRequestPricing } from '@deepseek-ai/dsh-llm/native'
 import { estimateContent } from './estimate.ts'
 import type { MeterSurfaceNode } from './surface-fold.ts'
-import type { TokenSurfaceNode } from './types.ts'
+import type { TokenSurfaceNode } from './meter-types.ts'
 
 type FileAttachmentRef = Extract<ContentBlock, { type: 'file' }>['attachment']
 

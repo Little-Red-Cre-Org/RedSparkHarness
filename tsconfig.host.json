@@ -158,7 +158,7 @@
   "references": [
     { "path": "./rsh/Programs/TUI/terminal-ui" },
     { "path": "./rsh/Programs/TUI/native-tui" },
-    { "path": "./rsh/Programs/Web/client/native-application/tsconfig.json" },
+    { "path": "./rsh/Programs/Web/client/native-application/tsconfig.controller.json" },
     { "path": "./rsh/Modules/Official/code-runtime/tool-code-runtime" },
     { "path": "./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox" },
     { "path": "./rsh/Programs/Web/client/ui-deliverables/tsconfig.host.json" },

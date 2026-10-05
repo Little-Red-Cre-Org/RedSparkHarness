@@ -1,3 +1,4 @@
+import { formatLocaleTemplate } from '../dictionary.ts'
 /**
  * Browser-side locale registry. Bound translation functions retain stable
  * identity for injected consumers. The plugin also registers the Language
@@ -18,7 +19,7 @@ import {
   LOCALE_ID_PATTERN, LOCALE_IDS, LOCALE_PREFERENCE_FIELD, LOCALE_SETTINGS_NAMESPACE,
   type BuiltInLocaleId, type LocaleId, type LocaleSettings,
 } from '../locale-settings.ts'
-import { en, zh, type CommonKey } from '../locales/index.ts'
+import { en, zh } from '../locales/index.ts'
 import {
   en as settingsEn, zh as settingsZh, type SettingsLocaleKey,
 } from '../locales/settings.ts'
@@ -28,7 +29,7 @@ import { createLanguageRowStore } from './settings-store.ts'
 
 export type { LanguageRowComponentProps, LanguageRowInjected } from './LanguageRow.tsx'
 export type { LanguageOptionRow, LanguageRowState } from './settings-store.ts'
-export type { CommonKey } from '../locales/index.ts'
+export type { CommonKey } from '../dictionary.ts'
 export type { BuiltInLocaleId, LocaleId, LocaleSettings } from '../locale-settings.ts'
 
 // The translate currency lives in ui-slots (the render machinery synthesizes
@@ -38,8 +39,6 @@ export type { Translate, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** Shared cross-feature vocabulary, consulted by the lookup chain after the entry's own namespace misses. */
-    common: CommonKey
     /** This feature's own settings-row copy (the Language row). */
     'settings.locale': SettingsLocaleKey
   }
@@ -449,9 +448,7 @@ export class LocaleRuntime {
     const template = this.lookup(ns, key, chain)
       ?? (ns !== COMMON_NS ? this.lookup(COMMON_NS, key, chain) : undefined)
       ?? key
-    if (!params) return template
-    return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-      name in params ? String(params[name]) : match)
+    return formatLocaleTemplate(template, params)
   }
 
   private lookup(ns: string, key: string, chain: readonly LocaleId[]): string | undefined {

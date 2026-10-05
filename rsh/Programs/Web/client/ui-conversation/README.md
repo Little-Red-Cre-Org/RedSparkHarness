@@ -125,6 +125,8 @@ None; Conversation assembly and browser input state do not alter provider-side p
 <a id="dev-note"></a>
 ### Dev Note
 
+The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

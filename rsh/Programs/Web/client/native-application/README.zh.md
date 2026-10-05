@@ -13,6 +13,8 @@ kind: "package-reference"
 
 原生 profile 通过 `dsh.native` 行及 `./native` 导出选择本包；旧 `dsh.client` 模块表不会加载它。生产依赖包含已发布声明引用的包，但安装这些包不会激活其 NativePlugin；profile 会选择实际运行的贡献。包选择与声明依赖的决策记录在[安装说明](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.zh.md)中。
 
+根 Tool 调用与持久化结果、失败标识及呈现元数据配对，通过共享 Tool 卡片模型呈现。冷历史使用相同投影；不呈现尚不可用的文件打开和轨迹操作。嵌套分派记录保留在原始 Session 披露中，不建立独立的嵌套卡片层级。
+
 ## 目录
 
 - [参考](#reference)
@@ -25,6 +27,8 @@ kind: "package-reference"
 ## 参考
 
 页面列出已存储 Session、创建空白 Session、选择持久化历史，并通过显式 resume 发送用户文本。取消期间页面保持忙碌，直至 Host 回复确认执行结算且历史刷新完成。安装释放会取消未完成调用，并等待其结算后释放视图控制器。控制器只保留呈现状态，不建立第二个 Session writer、Agent registry 或连接循环。
+
+只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。
 
 模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
@@ -46,7 +50,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 
 ## 不变量
 
-视图读取选定 Host Consumer，不拥有独立执行观察，因此不发布不变量安装器。
+此视图读取选定的 Host Consumer，且不拥有独立执行观察，因此不发布不变量伴生包。
 
 <a id="dev-note"></a>
 ## 开发备注
@@ -76,5 +80,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 持久化事件在执行期间更新转录。临时助手输出独立显示，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
-- 丰富工具卡片及其他模型片段呈现仍属于独立工作。
+- 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
 - 文件上传、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。

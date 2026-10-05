@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当消费方需要为压缩决策、占用显示或遥测获取 token 或上下文压力时挂载本插件。估算器没有任何配置，也不添加模型可见表面；模型容量属于拥有精确提供方／模型路由的适配器，可通过 `ctx.llm.resolveModelInfo().context` 获取。
 
+不依赖 Cordis 的 `./native` 安装器通过相同回放估算器提供 `tokenMeter`，不接受设置。它要求选定的 `model` Provider，转发已声明图片定价，不创建 writer 或模型请求。`baseline.kind` 区分提供方锚定测量与估算。兼容 Session 投影仍由 Cordis 安装器拥有。选定运行时尚未提供实际文件句柄投影时，原生文件节点保留结构估算。
+
 ### 何时选择
 
 当多个插件应该就同一种基于回放的测量达成一致时选择它——压缩规划、占用 UI 与压力检查都读取同一个 fold。测量回放持久会话日志，因此确定、无需模型调用，并精确反映已记录内容。文本和未声明图片定价的路由使用固定启发式规则；当部署需要精确到计费级别的计数时，使用提供方分词器。
@@ -83,7 +85,9 @@ const price = ctx.tokenMeter.estimateMessage(message)
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `TokenMeter` 服务：回放状态、fold、`measure()` 与 `estimateMessage()` |
+| [`src/index.ts`](src/index.ts) | Cordis `TokenMeter` 服务及投影注册 |
+| [`src/native.ts`](src/native.ts) | 原生 token-meter Provider |
+| [`src/meter-core.ts`](src/meter-core.ts) | 共享回放状态、fold、`measure()` 与 `estimateMessage()` |
 | [`src/estimate.ts`](src/estimate.ts) | 固定启发式规则：每 token 四字符加块与角色开销 |
 | [`src/surface-fold.ts`](src/surface-fold.ts) | 与 `measure()` 共享的位置表面 fold |
 | [`src/surface-projection.ts`](src/surface-projection.ts) | O(1) 投影单元的影价协议 |

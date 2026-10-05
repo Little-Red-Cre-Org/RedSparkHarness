@@ -39,6 +39,8 @@ A resource address is `dsh-resource://<type>/…`, and the type — the URI host
 <a id="dev-note"></a>
 ### Dev Note
 
+The published helpers are Cordis-free and have no framework peer or installer. Native and compatibility consumers use the same path grammar and display functions.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

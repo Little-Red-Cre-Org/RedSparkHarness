@@ -161,6 +161,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // them through its own CSS pipeline, so the sheets are published artifacts.
   // The glob covers whichever sheets a package emits; sourcemaps stay
   // unpublished, as everywhere else in the repository.
+  '@deepseek-ai/dsh-client-ui-tool': ['lib/tool-renderer.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
+  '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js'],
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
@@ -181,7 +184,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
   '@deepseek-ai/dsh-native-tui': ['lib/native.js', 'lib/shared-*.js'],
@@ -211,7 +214,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/native-*.js'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
@@ -230,6 +233,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
+  '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
   '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],

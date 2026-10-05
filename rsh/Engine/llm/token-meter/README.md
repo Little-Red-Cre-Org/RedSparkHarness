@@ -27,6 +27,8 @@ Use `ctx.tokenMeter` to estimate a session's current request and context pressur
 
 Mount this plugin when a consumer needs token or context pressure for compaction decisions, occupancy displays, or telemetry. The estimator has no settings and adds no model-visible surface; model capacity belongs to the adapter that owns the exact provider/model route and is available through `ctx.llm.resolveModelInfo().context`.
 
+The Cordis-free `./native` installer provides `tokenMeter` from the same replay estimator and accepts no settings. It requires the selected `model` Provider, forwards declared image pricing and creates no writer or model requests. `baseline.kind` distinguishes provider-anchored measurements from estimates. Compatibility Session projections remain owned by the Cordis installer. Native file nodes retain structural estimation until the selected runtime exposes its actual file-handle projection.
+
 ### When to choose it
 
 Choose it when several plugins should agree on one replay-based measurement — compaction planning, occupancy UIs, and pressure checks all read the same fold. The measurements replay the durable session log, so they are deterministic, cost no model calls, and reflect exactly what is logged. Text and undeclared image routes use a fixed heuristic; reach for a provider tokenizer when a deployment needs exact billing-grade counts.
@@ -83,7 +85,9 @@ The service is built on one fold and one anchor. Each session gets an isolated r
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | The `TokenMeter` service: replay state, fold, `measure()` and `estimateMessage()` |
+| [`src/index.ts`](src/index.ts) | The Cordis `TokenMeter` service and projection registrations |
+| [`src/native.ts`](src/native.ts) | The native token-meter Provider |
+| [`src/meter-core.ts`](src/meter-core.ts) | Shared replay state, fold, `measure()` and `estimateMessage()` |
 | [`src/estimate.ts`](src/estimate.ts) | The fixed heuristic: four characters per token plus block and role overhead |
 | [`src/surface-fold.ts`](src/surface-fold.ts) | The positional surface fold shared with `measure()` |
 | [`src/surface-projection.ts`](src/surface-projection.ts) | Shadow-price protocol for the O(1) projection units |

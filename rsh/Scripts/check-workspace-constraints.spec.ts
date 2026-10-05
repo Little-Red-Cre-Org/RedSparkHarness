@@ -318,12 +318,17 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([
       'lib/index.js',
       ...extras,
       'lib/types/**/*.d.ts',
     ])
+  })
+
+  it('includes the separately published Todo Client entry', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-tool-todo' })).toContain('lib/client-native.js')
   })
 
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {

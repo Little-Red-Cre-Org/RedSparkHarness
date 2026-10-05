@@ -13,6 +13,8 @@ This Cordis-free Client application supplies the conversation page for the expli
 
 The native profile selects this package through its `dsh.native` row and `./native` export; the legacy `dsh.client` module table does not load it. Production dependencies include packages referenced by the published declarations, but installing those packages does not activate their NativePlugins; the profile selects the runtime contributions. The package-selection and declaration-dependency decision is recorded in the [installation note](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.md).
 
+Root Tool calls pair with their durable result, failure identity and presentation metadata and render through the shared Tool card models. Cold history uses the same projection; unavailable file-opening and trajectory actions are omitted. Nested dispatch records remain available in the raw Session disclosure rather than a separate nested card hierarchy.
+
 ## Table of Contents
 
 - [Reference](#reference)
@@ -24,6 +26,8 @@ The native profile selects this package through its `dsh.native` row and `./nati
 ## Reference
 
 The page lists stored Sessions, creates blank Sessions, selects durable history and sends human text with explicit resume. Cancellation keeps the page busy until the Host reply confirms settlement and history has refreshed. Installation disposal cancels outstanding calls and awaits their settlement before releasing the view controller. The controller holds presentation state, not a second Session writer, Agent registry or connection loop.
+
+Consumers that need only the view-state controller can import `NativeConversationController` from `@deepseek-ai/dsh-client-native-application/controller`; this ESM entry does not load the React page installer. Its declaration uses the `client-native-session` Consumer required by the native profile.
 
 Model and reasoning choices come from the Host model directory, including provider failures; the catalog is advisory, not an allow-list. The current recorded route remains visible when absent from discovery. Mutations carry the displayed durable revision, refresh history after settlement and expose stale-selection failures. Installed presets use the existing blank-root lock and epoch transition; a locked Session cannot change composition.
 
@@ -43,7 +47,7 @@ The task-list panel reads canonical todo/write snapshots, including accepted liv
 
 ## Invariants
 
-The view reads the selected Host Consumer and owns no independent execution observations, so it publishes no invariant installer.
+No invariant companion is published because the view reads the selected Host Consumer and owns no independent execution observations.
 
 ## Dev Note
 
@@ -70,5 +74,5 @@ The Host owns resumed context and its existing prefix. Model and composition cha
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
-- Rich tool cards and additional model chunk presentations remain separate work.
+- Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
 - File uploads, full Sidebar, layout and Settings remain separate native Client migrations.

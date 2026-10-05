@@ -253,7 +253,7 @@ export default defineConfig({
         'rsh/Programs/Web/client/ui-chat/src/client/contract/snapshot.ts',
         'rsh/Programs/Web/client/ui-chat/src/client/historical-images.ts',
         'rsh/Programs/Web/client/ui-primitives/src/DisclosureRow.tsx',
-        'rsh/Programs/Web/client/ui-tool/src/*',
+        'rsh/Programs/Web/client/ui-tool/src/index.ts',
         'rsh/Programs/Web/client/ui-slots/src/*',
         'rsh/Programs/Web/client/ui-layout/src/*',
         'rsh/Programs/Web/client/web/src/*',
