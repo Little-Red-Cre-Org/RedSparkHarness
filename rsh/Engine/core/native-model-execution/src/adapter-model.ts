@@ -42,6 +42,13 @@ export class NativeAdapterModel implements NativeModel {
     return work
   }
 
+  /**
+   * Resolve metadata through the selected adapter with composed cancellation.
+   * @param provider - selected Provider route.
+   * @param model - model identity within that route.
+   * @param caller - optional request cancellation.
+   * @returns the adapter's resolved model metadata.
+   */
   async resolveModel(provider: string, model: string, caller?: AbortSignal): Promise<LlmResolvedModelInfo> {
     const signal = this.signal(caller)
     return this.run(signal, async () => {

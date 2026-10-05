@@ -5,7 +5,11 @@ import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { authContextFrom as createAuthContext, credentialStoreFrom as createCredentialStore } from './auth-core.ts'
 export { RECORD_SCOPE, recordKeyFor } from './auth-core.ts'
 
-/** @param ctx - current credential service scope. @returns pi-ai storage with current service lookup on each operation. */
+/**
+ * Forward pi-ai credential operations to the current scoped service.
+ * @param ctx - current credential service scope.
+ * @returns pi-ai storage with current service lookup on each operation.
+ */
 export function credentialStoreFrom(ctx: Context): CredentialStore {
   return {
     read: id => createCredentialStore(ctx.get('credentials')).read(id),
@@ -15,7 +19,11 @@ export function credentialStoreFrom(ctx: Context): CredentialStore {
   }
 }
 
-/** @param ctx - current credential and launch environment scope. @returns provider ambient auth queries. */
+/**
+ * Resolve pi-ai ambient auth through the current credentials and launch snapshot.
+ * @param ctx - current credential and launch environment scope.
+ * @returns provider ambient auth queries.
+ */
 export function authContextFrom(ctx: Context): AuthContext {
   return {
     env: name => createAuthContext(ctx.get('credentials'), launchEnvironmentOf(ctx)).env(name),

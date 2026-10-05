@@ -17,6 +17,7 @@ This package owns the WorkspaceId brand, its stateless constructor and the Works
 - [Use this package](#use-this-package)
 - [Implementation](#implementation)
 - [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
 
@@ -42,9 +43,19 @@ No ./invariant installer is needed: the constructor has no state or independentl
 - [Official Workspace Provider](../../../Modules/Official/workspace/workspace/README.md)
 - [Native root execution](../../core/native-session-execution/README.md)
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+
+## Model Experience
+
+None, as the Workspace identity constructor and consumer types contribute no model-visible text.
+
+#### KV Cache effect
+
+The package constructs no model request and does not change request prefixes or KV-cache reuse.
 
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - WorkspaceId does not validate record existence or directory status. Callers must use the selected Workspace Provider before routing execution.
 

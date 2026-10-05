@@ -6,6 +6,7 @@
  * @module @deepseek-ai/dsh-llm
  */
 
+import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import { Context } from '@deepseek-ai/cordis'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
@@ -35,7 +36,7 @@ import {
 } from './content.ts'
 import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** A draft provider interrogation refused or failed. */
     'llm/model-discovery-rejected': {
