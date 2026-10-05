@@ -11,22 +11,38 @@ launcher, home, workspace, patch, task = sys.argv[1:]
 config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key"})
+def refuse_steering(session, text):
+    try:
+        session.steer(text)
+    except JsonRpcError:
+        return
+    raise AssertionError("inactive steering accepted")
+
+
 with DeepSeekHarness(config) as harness:
     session = harness.start_session("sdk-recorded-turn")
     assert session.cancel() is False
+    refuse_steering(session, "idle steering")
     cancelled = False
+    steering = None
 
     def observe(notification):
-        global cancelled
+        global cancelled, steering
         if notification.method == "session.chunk" and notification.payload["chunk"]["type"] == "text-delta" and not cancelled:
             cancelled = True
             assert harness.start_session("unknown-session").cancel() is False
+            refuse_steering(harness.start_session("unknown-session"), "foreign steering")
+            steering = session.steer("redirect after cancellation")
+            assert steering
             assert session.cancel() is True
 
     result = session.run(task, on_notification=observe)
     assert cancelled
     assert result.events[-1]["data"]["reason"] == {"kind": "aborted", "reason": {"kind": "user"}}
     assert any(event["type"] == "assistant/attempt" for event in result.events)
+    assert any(event["type"] == "agent/inbox/spliced" and event["data"]["target"] == "next-step"
+        and any(message["id"] == steering for message in event["data"]["inserted"]) for event in result.events)
+    refuse_steering(session, "settled steering")
 with DeepSeekHarness(config) as resumed:
     result = resumed.run("finish after cancellation", session_id="sdk-recorded-turn")
     source = resumed.start_session("sdk-recorded-turn")

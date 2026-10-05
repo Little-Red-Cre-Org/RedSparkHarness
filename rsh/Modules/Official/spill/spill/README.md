@@ -136,6 +136,8 @@ These limits define when the spill storage service is incomplete on its own. The
 - **No retrieval or deletion API** — consumers can only render the backend's locator and guidance; lifecycle and access semantics remain backend-specific.
 - **Storage is not access control** — the owner session namespaces writes but does not authorize reads of a locator; each backend and retrieval consumer must enforce its own boundary.
 
+Native producers import `SpillOperations` and the same owner, source and locator types from `./native`. The selected `spillStore` Provider persists full text before returning a retrieval reference and drains accepted writes during disposal. Cancellation may leave an accepted artifact on disk, but the caller receives no successful reference after cancellation. This Definition supplies no retention policy or second artifact registry.
+
 <a id="dev-note"></a>
 ### Dev Note
 
