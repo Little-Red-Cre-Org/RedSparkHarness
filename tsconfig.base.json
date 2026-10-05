@@ -335,6 +335,7 @@
       "@deepseek-ai/dsh-chunked-list": ["./rsh/Core/util/chunked-list/src"],
       "@deepseek-ai/dsh-cmdline": ["./rsh/Compatibility/DSH/boot/cmdline/src"],
       "@deepseek-ai/dsh-code-runtime": ["./rsh/Modules/Official/code-runtime/code-runtime/src"],
+      "@deepseek-ai/dsh-code-runtime-process-sandbox": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src"],
       "@deepseek-ai/dsh-code-runtime-worker-thread": ["./rsh/Modules/Official/code-runtime/code-runtime-worker-thread/src"],
       "@deepseek-ai/dsh-command-compact": ["./rsh/Engine/compaction/command-compact/src"],
       "@deepseek-ai/dsh-command-feedback": ["./rsh/Modules/Official/feedback/command-feedback/src"],
@@ -488,6 +489,7 @@
       "@deepseek-ai/dsh-tool-ask-user": ["./rsh/Modules/Official/interaction/tool-ask-user/src"],
       "@deepseek-ai/dsh-tool-bash": ["./rsh/Modules/Official/shell/tool-bash/src"],
       "@deepseek-ai/dsh-tool-bash-persistent": ["./rsh/Modules/Official/shell/tool-bash-persistent/src"],
+      "@deepseek-ai/dsh-tool-code-runtime": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src"],
       "@deepseek-ai/dsh-tool-cordis": ["./rsh/Modules/Official/extensions/tool-cordis/src"],
       "@deepseek-ai/dsh-tool-fs": ["./rsh/Modules/Official/fs/tool-fs/src"],
       "@deepseek-ai/dsh-tool-fs-search": ["./rsh/Modules/Official/fs/tool-fs-search/src"],
@@ -529,6 +531,7 @@
       "@deepseek-ai/dsh-workflow-worker-thread": ["./rsh/Engine/workflow/workflow-worker-thread/src"],
       "@deepseek-ai/dsh-workspace": ["./rsh/Modules/Official/workspace/workspace/src"],
       "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
+      "@deepseek-ai/dsh-code-runtime-process-sandbox/native": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/native.ts"],
       "@deepseek-ai/dsh-native-tools/code-output": ["./rsh/Engine/core/native-tools/src/code-output.ts"],
       "@deepseek-ai/dsh-native-tools/json-schema": ["./rsh/Engine/core/native-tools/src/json-schema.ts"],
       "@deepseek-ai/dsh-native-tools/ordered-dispatch": ["./rsh/Engine/core/native-tools/src/ordered-dispatch.ts"],
@@ -537,11 +540,15 @@
       "@deepseek-ai/dsh-native-tools/sdk-typescript": ["./rsh/Engine/core/native-tools/src/ts-types.ts"],
       "@deepseek-ai/dsh-native-tools/types": ["./rsh/Engine/core/native-tools/src/types.ts"],
       "@deepseek-ai/dsh-native-web-assets/native-client": ["./rsh/Programs/Web/host/native-web-assets/src/native-client.ts"],
+      "@deepseek-ai/dsh-pwsh-local/resolve": ["./rsh/Modules/Official/shell/pwsh-local/src/resolve.ts"],
+      "@deepseek-ai/dsh-sandbox-local/native": ["./rsh/Modules/Official/sandbox/sandbox-local/src/native.ts"],
+      "@deepseek-ai/dsh-sandbox/native": ["./rsh/Modules/Official/sandbox/sandbox/src/native.ts"],
       "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
       "@deepseek-ai/dsh-storage-domain/native": ["./rsh/Core/storage/storage-domain/src/native.ts"],
       "@deepseek-ai/dsh-storage-json/native": ["./rsh/Core/storage/storage-json/src/native.ts"],
       "@deepseek-ai/dsh-storage/backend": ["./rsh/Core/storage/storage/src/backend.ts"],
-      "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"]
+      "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"],
+      "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"]
       // END generated package aliases
     }
   }

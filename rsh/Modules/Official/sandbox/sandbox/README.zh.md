@@ -120,6 +120,8 @@ kind: "package-reference"
 
 -----
 
+仅供 Host 使用的 `./native` 出口为原生组合声明 `ProcessSandbox`，并导出与 Cordis 服务共用的策略、升级授权、路径规则、执行器诊断和不可用错误。它是 Definition，不是安装器；组合必须选择提供 `sandbox` 的 backend。
+
 <a id="model-experience"></a>
 ## 模型体验
 

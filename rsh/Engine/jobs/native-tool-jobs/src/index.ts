@@ -1,7 +1,7 @@
 /** Model-facing controls for native Agent-owned background jobs. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeJobId, type NativeJobRegistry, type NativeJobSnapshot } from '@deepseek-ai/dsh-native-jobs'
-import type { NativeToolContribution } from '@deepseek-ai/dsh-native-tools'
+import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 
 interface Config {
@@ -67,6 +67,32 @@ function bounded(text: string, maxBytes: number, suffix = ''): string {
   return result.truncated ? `${result.text}${marker}${suffix}` : `${result.text}${suffix}`
 }
 
+function jobValue(job: NativeJobSnapshot) {
+  return { id: job.id, kind: job.kind, label: job.label, status: job.status, startedAt: job.startedAt,
+    ...job.finishedAt === undefined ? {} : { finishedAt: job.finishedAt },
+    ...job.detail === undefined ? {} : { detail: job.detail },
+  }
+}
+
+const output: NativeValueToolContribution['output'] = {
+  schema: {
+    type: 'object', properties: {
+      text: { type: 'string' },
+      jobs: { type: 'array', items: { type: 'object', properties: {
+        id: { type: 'string' }, kind: { type: 'string' }, label: { type: 'string' },
+        status: { type: 'string', enum: ['running', 'stopping', 'completed', 'failed', 'cancelled'] },
+        startedAt: { type: 'number' }, finishedAt: { type: 'number' }, detail: { type: 'string' },
+      }, required: ['id', 'kind', 'label', 'status', 'startedAt'], additionalProperties: false } },
+      outcome: { type: 'string', enum: ['requested', 'already-finished'] },
+    }, required: ['text', 'jobs'], additionalProperties: false,
+  },
+  render(_call, value) {
+    // The registry validates this schema before rendering its text field.
+    const result = value as { text: string }
+    return { content: [{ type: 'text', text: result.text }], isError: false }
+  },
+}
+
 /**
  * Build controls over a selected native registry. The application records their
  * results once in its authoritative Session; this package owns no job runners.
@@ -74,8 +100,9 @@ function bounded(text: string, maxBytes: number, suffix = ''): string {
  * @param config - validated wait defaults and cap.
  * @returns three tool contributions for registration in one native scope.
  */
-export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonly NativeToolContribution[] {
+export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonly NativeValueToolContribution[] {
   return [{
+    output,
     schema: {
       name: 'job_output',
       description: 'Read a background job result and status; optionally wait for completion.',
@@ -96,9 +123,10 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
       }
       const result = jobs.read(id, call.agent)
       const body = result.output.length > 0 ? result.output : '(no output yet)'
-      return { content: [{ type: 'text', text: bounded(body, config.maxOutputBytes, `\n${status(result.snapshot)}`) }], isError: false }
+      return { text: bounded(body, config.maxOutputBytes, `\n${status(result.snapshot)}`), jobs: [jobValue(result.snapshot)] }
     },
   }, {
+    output,
     schema: {
       name: 'job_list', description: 'List background jobs owned by this Agent.',
       parameters: { type: 'object', properties: {}, additionalProperties: false },
@@ -106,11 +134,12 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
     execute(call) {
       argumentsObject(call.arguments, [])
       const owned = jobs.list(call.agent)
-      return Promise.resolve({ content: [{ type: 'text', text: bounded(owned.length === 0
+      return Promise.resolve({ text: bounded(owned.length === 0
         ? '(no background jobs)'
-        : owned.map(job => `${job.id} [${job.kind}] ${job.status} — ${job.label}`).join('\n'), config.maxOutputBytes) }], isError: false })
+        : owned.map(job => `${job.id} [${job.kind}] ${job.status} — ${job.label}`).join('\n'), config.maxOutputBytes), jobs: owned.map(jobValue) })
     },
   }, {
+    output,
     schema: {
       name: 'job_kill', description: 'Request cancellation of one background job owned by this Agent.',
       parameters: { type: 'object', properties: { job_id: { type: 'string' }, reason: { type: 'string' } },
@@ -121,9 +150,9 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
       const id = jobId(args.job_id)
       if (args.reason !== undefined && typeof args.reason !== 'string') throw new Error('native-tool-jobs: reason must be a string')
       const outcome = jobs.cancel(id, call.agent, args.reason)
-      return Promise.resolve({ content: [{ type: 'text', text: outcome === 'requested'
+      return Promise.resolve({ text: outcome === 'requested'
         ? `requested cancellation of job ${id}`
-        : `job ${id} had already finished ${status(jobs.get(id, call.agent))}` }], isError: false })
+        : `job ${id} had already finished ${status(jobs.get(id, call.agent))}`, jobs: [jobValue(jobs.get(id, call.agent))], outcome })
     },
   }]
 }
@@ -137,7 +166,7 @@ export const plugin: NativePlugin = {
     return (context) => {
       const jobs = context.require('jobs')
       const tools = context.require('tools')
-      for (const contribution of nativeJobTools(jobs, config)) context.own(tools.register(contribution))
+      for (const contribution of nativeJobTools(jobs, config)) context.effect(tools.registerValueTool(contribution, context.scope))
     }
   },
 }

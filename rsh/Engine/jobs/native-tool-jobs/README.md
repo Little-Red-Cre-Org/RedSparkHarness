@@ -25,6 +25,8 @@ The `./native` entry requires `jobs` and `tools`, and provides no service. It ac
 
 `job_output` reads final output and the current status. With `wait: true`, it waits for a terminal outcome or the configured timeout; the request may supply `timeout_ms`, capped by `maxWaitTimeoutMs`. An aborted tool invocation stops waiting without cancelling the job. `job_kill` requests cooperative cancellation and returns before the runner settles. Every operation is fenced to the exact live Agent that owns the job.
 
+The controls register canonical value tools. Program consumers receive the bounded model text plus serializable job summaries and, for cancellation, its outcome; summaries omit the live Agent object. Model presentations retain the same text, and the authoritative Session records the selected result once through the native registry.
+
 <a id="model-experience"></a>
 ## Model Experience
 

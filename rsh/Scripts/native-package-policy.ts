@@ -23,6 +23,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/context/native-time-context',
   'rsh/Engine/core/native-agent',
   'rsh/Engine/core/native-code-runtime',
+  'rsh/Modules/Official/code-runtime/tool-code-runtime',
+  'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox',
   'rsh/Engine/core/native-headless',
   'rsh/Engine/core/native-jobs',
   'rsh/Engine/core/native-model-execution',
@@ -31,6 +33,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/jobs/native-tool-jobs',
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
+  'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/host/native-web-host',
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
@@ -40,12 +43,17 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
+  ['rsh/Engine/core/native-code-runtime', ['host']],
+  ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
+  ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
@@ -60,6 +68,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/sandbox/sandbox', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
   ['rsh/Engine/llm/llm', ['host', 'client']],
@@ -77,6 +86,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
+  ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
   ['rsh/Modules/Official/attachment/attachment', ['./types']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
@@ -96,4 +106,5 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Programs/Web/client/connection/native-http-bridge', ['host']],
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],
   ['rsh/Core/storage/storage/backend', ['host']],
+  ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
 ])

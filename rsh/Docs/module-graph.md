@@ -212,7 +212,9 @@ flowchart TD
   end
   subgraph group_code_runtime["group: code-runtime"]
     pkg_code_runtime["code-runtime"]
+    pkg_code_runtime_process_sandbox["code-runtime-process-sandbox"]
     pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
+    pkg_tool_code_runtime["tool-code-runtime"]
   end
   subgraph group_compaction["group: compaction"]
     pkg_command_compact["command-compact"]
@@ -442,6 +444,7 @@ flowchart TD
   pkg_host_frontend_static --> pkg_host_webserver
   pkg_lsp --> pkg_brand
   pkg_lsp --> pkg_llm
+  pkg_sandbox_local --> pkg_llm
   pkg_subprocess_local --> pkg_native_runtime
   pkg_subprocess_local --> pkg_subprocess
   pkg_subprocess_local --> pkg_timeout
@@ -493,9 +496,6 @@ flowchart TD
   pkg_spill_local --> pkg_spill
   pkg_session_log_export --> pkg_session
   pkg_session_log_export --> pkg_session_persistence
-  pkg_sandbox_local --> pkg_llm
-  pkg_sandbox_local --> pkg_sandbox
-  pkg_sandbox_local --> pkg_session
   pkg_session_persistence_jsonl --> pkg_session
   pkg_session_persistence_jsonl --> pkg_session_persistence
   pkg_session_projection_cache --> pkg_session
@@ -1281,6 +1281,8 @@ flowchart TD
 | [`client-ui-workspace`](../Programs/Web/client/ui-workspace) | `client` | — |
 | [`client-web`](../Programs/Web/client/web) | `client` | — |
 | [`code-runtime`](../Modules/Official/code-runtime/code-runtime) | `code-runtime` | — |
+| [`code-runtime-process-sandbox`](../Modules/Official/code-runtime/code-runtime-process-sandbox) | `code-runtime` | — |
+| [`tool-code-runtime`](../Modules/Official/code-runtime/tool-code-runtime) | `code-runtime` | — |
 | [`native-time-context`](../Engine/context/native-time-context) | `context` | — |
 | [`client-ui-cordis`](../Modules/Official/extensions/ui-cordis) | `extensions` | — |
 | [`cordis-client-runner`](../Modules/Official/extensions/cordis-client-runner) | `extensions` | — |
@@ -1335,6 +1337,7 @@ flowchart TD
 | [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
+| [`sandbox-local`](../Modules/Official/sandbox/sandbox-local) | `sandbox` | [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |
 | [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
@@ -1355,7 +1358,6 @@ flowchart TD
 | [`fs`](../Modules/Official/fs/fs) | `fs` | [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox) |
 | [`spill-local`](../Modules/Official/spill/spill-local) | `spill` | [`spill`](../Modules/Official/spill/spill) |
 | [`session-log-export`](../Engine/session-query/session-log-export) | `session-query` | [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence) |
-| [`sandbox-local`](../Modules/Official/sandbox/sandbox-local) | `sandbox` | [`llm`](../Engine/llm/llm), [`sandbox`](../Modules/Official/sandbox/sandbox), [`session`](../Engine/core/session) |
 | [`session-persistence-jsonl`](../Engine/session/session-persistence-jsonl) | `session` | [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence) |
 | [`session-projection-cache`](../Engine/session/session-projection-cache) | `session` | [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`storage-domain`](../Core/storage/storage-domain) |
 | [`session-stats`](../Engine/session/session-stats) | `session` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |

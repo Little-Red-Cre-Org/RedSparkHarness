@@ -15,7 +15,7 @@
 
 import { realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import type { SandboxExecutionPolicy } from './index.ts'
+import type { SandboxExecutionPolicy } from './native-types.ts'
 
 /**
  * Resolve a granted root to the path the enforcement layer actually compares:

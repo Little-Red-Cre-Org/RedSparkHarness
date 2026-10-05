@@ -1814,7 +1814,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-sandbox-local`
 
 ```ts config-catalog
-/** Plugin config. All optional — `static Config` supplies the defaults. */
+/** Local runner configuration. Omitted fields use the shipped selection defaults. */
 export interface Config {
   /**
    * Override the runner argv; bwrap-compatible profile arguments are appended. A
@@ -1839,7 +1839,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/sandbox/sandbox-local/src/index.ts:44`](../Modules/Official/sandbox/sandbox-local/src/index.ts)
+来源：[`rsh/Modules/Official/sandbox/sandbox-local/src/backend.ts:42`](../Modules/Official/sandbox/sandbox-local/src/backend.ts)
 
 <a id="deepseek-aidsh-sandbox-policy"></a>
 
@@ -3623,6 +3623,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-slots`（[`rsh/Programs/Web/client/ui-slots/src/index.ts`](../Programs/Web/client/ui-slots/src/index.ts)）
 - `@deepseek-ai/dsh-client-web`（[`rsh/Programs/Web/client/web/src/index.ts`](../Programs/Web/client/web/src/index.ts)）
 - `@deepseek-ai/dsh-cmdline`（[`rsh/Compatibility/DSH/boot/cmdline/src/index.ts`](../Compatibility/DSH/boot/cmdline/src/index.ts)）
+- `@deepseek-ai/dsh-code-runtime-process-sandbox`（[`rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts`](../Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts)）
 - `@deepseek-ai/dsh-compat-dsh-runtime`（[`rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-compat-fs-local`（[`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts)）
 - `@deepseek-ai/dsh-compat-fs-policy`（[`rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-policy/src/index.ts)）
@@ -3674,6 +3675,7 @@ export interface Config {
 - `@deepseek-ai/dsh-session-title-llm`（[`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts)）
 - `@deepseek-ai/dsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
 - `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
+- `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）
 - `@deepseek-ai/dsh-typert-protocol`（[`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts)）
 - `@deepseek-ai/dsh-typert-registry`（[`rsh/Core/typert/registry/src/index.ts`](../Core/typert/registry/src/index.ts)）

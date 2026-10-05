@@ -109,6 +109,8 @@ Start with the subsystem reference for the shared vocabulary, then the seam cont
 
 -----
 
+The Host `./native` entry provides `sandbox` using the same local backend and configuration as the Cordis service. Each installation owns its private temporary grants; removal revokes them and reports cleanup failures. Workspace grants retain their documented process-lifetime cache. Neither entry changes the selected backend’s enforcement strength.
+
 <a id="model-experience"></a>
 ## Model Experience
 

@@ -408,7 +408,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
       stderr: true,
     })
 
-    return new Promise<CodeRunResult>((resolve) => {
+    return new Promise<CodeRunResult>((resolve, reject) => {
       let settled = false
       const answered = new Set<number>()
       const logs: string[] = []
@@ -443,7 +443,6 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
         clearInterval(eluTimer)
         clearTimeout(wallTimer)
         request.signal?.removeEventListener('abort', onAbort)
-        this.live.delete(live)
         // Let the poll phase deliver pipe bytes already queued independently
         // of the terminal port message before termination closes the streams.
         void new Promise<void>((resume) => { setImmediate(resume) }).then(async () => {
@@ -451,8 +450,14 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
           const stderrDrained = waitForPipeDrain(worker.stderr)
           await Promise.all([worker.terminate(), stdoutDrained, stderrDrained])
           const result = terminalOverride ?? (typeof finalize === 'function' ? finalize() : finalize)
+          try {
+            request.onStop?.(result.error)
+            resolve(result)
+          } finally { this.live.delete(live); finishResolve() }
+        }).catch((error: unknown) => {
+          this.live.delete(live)
           finishResolve()
-          resolve(result)
+          reject(error instanceof Error ? error : new Error(messageOf(error), { cause: error }))
         })
       }
 

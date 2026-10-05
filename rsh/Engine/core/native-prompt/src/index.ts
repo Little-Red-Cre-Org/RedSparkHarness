@@ -1,10 +1,13 @@
 /** Ordered, reversible prompt-section contributions for native applications. */
 
+import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
+
 /** One named section whose text is resolved before the model-visible message is logged. */
 export interface NativePromptSection {
   readonly name: string
   readonly order: number
-  text(): string | Promise<string>
+  /** @param scope - requesting Agent scope when supplied by the application. @returns model-visible section text. */
+  text(scope?: NativeScope): string | Promise<string>
 }
 
 /** Native system-prompt registry; applications own final assembly and Session logging. */
@@ -25,12 +28,13 @@ export class NativePromptRegistry {
 
   /**
    * Render current sections in stable order, omitting empty text.
+   * @param scope - requesting Agent scope used by scoped contributions.
    * @returns assembled system-prompt additions.
    */
-  async render(): Promise<string> {
+  async render(scope?: NativeScope): Promise<string> {
     const ordered = [...this.sections.values()].sort((left, right) => left.order - right.order
       || (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
-    const text = await Promise.all(ordered.map(async section => section.text()))
+    const text = await Promise.all(ordered.map(async section => section.text(scope)))
     return text.filter(part => part.length > 0).join('\n\n')
   }
 

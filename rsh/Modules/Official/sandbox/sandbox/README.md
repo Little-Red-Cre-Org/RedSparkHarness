@@ -120,6 +120,8 @@ Start with the subsystem reference for the exhaustive contract, then the backend
 
 -----
 
+The Host-only `./native` export declares `ProcessSandbox` for native compositions and exports the same policy, escalation, path rules, runner diagnostics, and unavailable error used by the Cordis service. It is a Definition, not an installer; select a backend that provides `sandbox`.
+
 <a id="model-experience"></a>
 ## Model Experience
 

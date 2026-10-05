@@ -1,0 +1,122 @@
+{
+  "formatVersion": 1,
+  "scopes": [
+    {
+      "id": "root"
+    }
+  ],
+  "installations": [
+    {
+      "id": "app",
+      "plugin": "@deepseek-ai/dsh-native-headless",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED",
+        "provider": "mock",
+        "model": "fixture",
+        "systemPrompt": "Use run_code to inspect and cancel the background job.",
+        "maxSteps": 3,
+        "builtinTools": false
+      }
+    },
+    {
+      "id": "agents",
+      "plugin": "@deepseek-ai/dsh-native-agent",
+      "scope": "root"
+    },
+    {
+      "id": "jobs",
+      "plugin": "@deepseek-ai/dsh-native-jobs",
+      "scope": "root"
+    },
+    {
+      "id": "tools",
+      "plugin": "@deepseek-ai/dsh-native-tools",
+      "scope": "root",
+      "config": {
+        "mode": "ptc"
+      }
+    },
+    {
+      "id": "tool-jobs",
+      "plugin": "@deepseek-ai/dsh-native-tool-jobs",
+      "scope": "root"
+    },
+    {
+      "id": "model-execution",
+      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "scope": "root"
+    },
+    {
+      "id": "prompt",
+      "plugin": "@deepseek-ai/dsh-native-prompt",
+      "scope": "root"
+    },
+    {
+      "id": "code-tool",
+      "plugin": "@deepseek-ai/dsh-tool-code-runtime",
+      "scope": "root",
+      "config": {
+        "maxParallelSubCalls": 2,
+        "sdkPrompt": true
+      }
+    },
+    {
+      "id": "code-runtime",
+      "plugin": "@deepseek-ai/dsh-code-runtime-process-sandbox",
+      "scope": "root",
+      "config": {
+        "computeMs": 2000,
+        "maxWallMs": 10000,
+        "maxOutputBytes": 1048576,
+        "maxOldGenerationSizeMb": 128
+      }
+    },
+    {
+      "id": "subprocess",
+      "plugin": "@deepseek-ai/dsh-subprocess-local",
+      "scope": "root"
+    },
+    {
+      "id": "sandbox",
+      "plugin": "@deepseek-ai/dsh-sandbox-local",
+      "scope": "root"
+    },
+    {
+      "id": "sandbox-policy",
+      "plugin": "@deepseek-ai/dsh-native-sandbox-policy",
+      "scope": "root",
+      "config": {
+        "mode": "read-only",
+        "workspaceRoot": "PROFILE_PATCH_REQUIRED"
+      }
+    },
+    {
+      "id": "storage",
+      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "scope": "root",
+      "config": {
+        "root": "PROFILE_PATCH_REQUIRED",
+        "compression": "none"
+      }
+    },
+    {
+      "id": "fs",
+      "plugin": "@deepseek-ai/dsh-fs-local",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED"
+      }
+    },
+    {
+      "id": "policy",
+      "plugin": "@deepseek-ai/dsh-fs-observation-policy",
+      "scope": "root"
+    },
+    {
+      "id": "model",
+      "plugin": "native-ptc-model",
+      "scope": "root"
+    }
+  ]
+}

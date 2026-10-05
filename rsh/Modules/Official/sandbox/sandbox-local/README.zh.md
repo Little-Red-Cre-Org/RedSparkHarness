@@ -109,6 +109,8 @@ Windows 档为每个工作区保留一个确定性写入 SID 和常驻 ACE，同
 
 -----
 
+Host `./native` 入口通过与 Cordis 服务相同的本机 backend 和配置提供 `sandbox`。每次安装拥有其私有临时授权；移除会撤销这些授权并报告清理失败。工作区授权保留已说明的进程生命周期缓存。两个入口都不会改变所选 backend 的执行强度。
+
 <a id="model-experience"></a>
 ## 模型体验
 

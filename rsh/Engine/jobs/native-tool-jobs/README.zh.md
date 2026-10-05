@@ -25,6 +25,8 @@ kind: "package-reference"
 
 `job_output` 读取最终输出与当前状态。设置 `wait: true` 后，它等待终态或配置的超时；请求可以传入 `timeout_ms`，但受 `maxWaitTimeoutMs` 限制。工具调用中止时只停止等待，不取消任务。`job_kill` 请求协作式取消，并在 runner 结束前返回。所有操作都限定为拥有任务的精确存活 Agent。
 
+这些控制注册为标准值工具。程序消费者收到有界模型文本、可序列化的 job 摘要，以及取消操作的结果；摘要不包含 live Agent 对象。模型呈现保留相同文本，权威 Session 通过原生注册表记录一次所选结果。
+
 <a id="model-experience"></a>
 ## 模型体验
 

@@ -86,6 +86,12 @@ export interface CodeRunRequest {
    * binding calls are the CALLER's to settle — the runtime only stops asking.
    */
   signal?: AbortSignal
+  /**
+   * Notify the caller when program execution stops, before waiting for its binding calls.
+   * The callback starts cancellation of caller-owned bindings without waiting for
+   * this run to return. Successful completion supplies no failure.
+   */
+  onStop?: (failure?: CodeRunFailure) => void
 }
 
 /**

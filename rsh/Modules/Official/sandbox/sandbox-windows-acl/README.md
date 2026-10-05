@@ -7,6 +7,8 @@ kind: "package-library"
 
 English | [中文](README.zh.md)
 
+The ACL functions are Cordis-free Host capabilities. Native and compatibility sandbox Providers use the same implementation; this package has no service installer or Cordis peer requirement.
+
 ## Summary
 
 On Windows, this package confines child-process writes to the workspace and a private temporary directory. `workspace-write` grants both locations, while `read-only` grants neither. Mounting `dsh-sandbox-local` selects this behavior automatically for confined bash and PowerShell commands, or callers can use the public `AclSandbox` API directly with captured standard streams. Any failed Win32 operation prevents the child from starting unrestricted. The guarantee is intentionally partial because process startup retains Everyone access and NTFS hard links can expose the same file through another path; callers can detect this limitation through the reported `partial` enforcement level.

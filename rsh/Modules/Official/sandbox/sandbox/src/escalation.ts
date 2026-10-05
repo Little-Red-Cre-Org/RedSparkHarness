@@ -17,7 +17,7 @@
  */
 
 import { assertNever } from '@deepseek-ai/dsh-util-values'
-import type { SandboxMode } from './index.ts'
+import type { SandboxMode } from './native-types.ts'
 
 /**
  * The strictly-wider table: what a call whose effective mode is the key may
