@@ -11,6 +11,11 @@ import type { NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelection } from '@deepseek-ai/dsh-native-model-selection/native'
+import { plugin as tools } from '@deepseek-ai/dsh-native-tools/native'
+import { plugin as approval } from '@deepseek-ai/dsh-native-approval/native'
+import { plugin as questions } from '@deepseek-ai/dsh-user-questions/native'
+import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
+import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -36,15 +41,21 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let holdResolution = false
   let releaseRetainedRoot: (() => void) | undefined
   let retainedExecution: NativeAgentExecution | undefined
+  let humanSteps: StreamChunk[][] | undefined
+  let protectedRuns = 0
   let followFields: unknown
   let modelAborted!: () => void
   let releaseCleanup!: () => void
   const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
   const cleanup = new Promise<void>((resolve) => { releaseCleanup = resolve })
   const model: NativePlugin = {
-    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets', 'activeSessions', 'agents'], provides: ['model', 'modelDirectory'],
+    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets', 'activeSessions', 'agents', 'tools'], provides: ['model', 'modelDirectory'],
     resolve: () => (context) => {
       for (const id of ['standard', 'alternate']) context.own(context.require('agentPresets').register({ id, name: id, scope }))
+      context.effect(context.require('tools').register({ schema: { name: 'guarded', description: 'Guarded fixture.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } }, approval: { reason: 'Protect this action.' },
+      execute: async () => { protectedRuns++; return { isError: false, content: [{ type: 'text', text: 'guarded allowed' }] } },
+      }, scope))
       const reasoning = { efforts: [{ id: ReasoningEffortId('high'), name: 'High' }] }
       context.provide('modelDirectory', { providers: () => [{ id: 'fixture', name: 'Fixture' }],
         resolve: async (provider, id) => {
@@ -64,6 +75,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('model', {
         async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
           requests.push(request)
+          if (humanSteps !== undefined) { yield* humanSteps.shift() ?? textResponse('human complete'); return }
           if (requests.length > 2) {
             const signal = request.signal
             if (signal === undefined) throw new Error('missing model cancellation')
@@ -98,9 +110,11 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     },
   }
   const host = new NativeHost(resolveInstallation([
-    { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
-      maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000, maxFollowers: 2 } },
-    ...[agents, execution, modelExecution, modelSelection, model, carrier].map(plugin => ({ plugin, scope, config: undefined })),
+    { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
+      maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
+      maxFollowers: 2, maxPendingHumanRequests: 2 } },
+    ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser, model, carrier].map(plugin =>
+      ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
@@ -108,7 +122,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   try {
     for (const key of ['maxFollowBufferBytes', 'maxFollowers']) expect(() => resolveNativeWebSessionConfig({ cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100,
-      maxFollowBufferBytes: 1000000, maxFollowers: 2, [key]: 0 })).toThrow(key)
+      maxFollowBufferBytes: 1000000, maxFollowers: 2, maxPendingHumanRequests: 2, [key]: 0 })).toThrow(key)
     await host.start()
     if (web === undefined) throw new Error('missing HTTP Host')
     const login = await fetch(web.connection.authenticatedUrl(web.url), { redirect: 'manual' })
@@ -194,6 +208,36 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
     expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
+    humanSteps = [toolCallResponse('allow', 'guarded', {}), toolCallResponse('deny', 'guarded', {}),
+      toolCallResponse('question', 'ask_user_question', { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }), textResponse('human complete')]
+    const interactive = conversation.send('human input')
+    await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('approval') })
+    const allowed = conversation.getSnapshot().human!
+    const humanAdmission = followFields as { sessionId: string; admissionId: string }
+    await expect(rpc.call('/api', 'session/answer-human', { ...humanAdmission, admissionId: 'stale', id: allowed.id,
+      answer: { kind: 'approval', outcome: 'allowed-once' } }, new AbortController().signal)).resolves.toMatchObject({ ok: false })
+    await conversation.answerHuman(allowed, { kind: 'approval', outcome: 'allowed-once' })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('approval'); expect(conversation.getSnapshot().human?.id).not.toBe(allowed.id) })
+    await expect(client.answerHuman(sessionId, allowed.id, { kind: 'approval', outcome: 'allowed-once' })).rejects.toThrow('stale')
+    await conversation.answerHuman(conversation.getSnapshot().human!, { kind: 'approval', outcome: 'rejected' })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('questions') })
+    const questionPrompt = conversation.getSnapshot().human!
+    await expect(client.answerHuman(sessionId, questionPrompt.id, { kind: 'questions', answer: { answers: [{ id: 'mode', selected: ['invalid'] }] } })).rejects.toThrow('invalid choices')
+    await conversation.answerHuman(questionPrompt, { kind: 'questions', answer: { answers: [{ id: 'mode', selected: ['Two'] }] } })
+    await interactive
+    expect(protectedRuns).toBe(1)
+    const audited = (await client.history(sessionId)).events
+    expect(audited.filter(event => event.type === 'native-approval/decided').map(event => event.data.outcome)).toEqual(['allowed-once', 'rejected'])
+    expect(audited.filter(event => event.type === 'tool/result').some(event => JSON.stringify(event.data).includes('Two'))).toBe(true)
+    humanSteps = [toolCallResponse('cancel-human', 'guarded', {})]
+    const unanswered = conversation.send('cancel human input')
+    await vi.waitFor(() => { expect(conversation.getSnapshot().human?.kind).toBe('approval') })
+    const stale = conversation.getSnapshot().human!
+    conversation.cancel()
+    await unanswered
+    expect(conversation.getSnapshot().human).toBeUndefined()
+    await expect(client.answerHuman(sessionId, stale.id, { kind: 'approval', outcome: 'allowed-once' })).rejects.toThrow('no owned turn')
+    expect(protectedRuns).toBe(1)
     await conversation.close()
     await client.close()
   } finally {

@@ -35,6 +35,9 @@ The shared Session package is a peer because event validation and format interpr
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 
 <a id="invariants"></a>
+
+Following also carries transient approvals and question batches. answerHuman uses only this Consumer’s outstanding admission identity; the Host validates the pending root owner and input. Approval verdicts are one-shot allow or reject. Question answers preserve selected labels and custom text. These presentations do not become a second durable log.
+
 ## Invariants
 
 No independent state can diverge from the Host authority, so this package publishes no invariant installer.

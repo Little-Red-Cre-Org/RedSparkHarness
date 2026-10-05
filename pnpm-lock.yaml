@@ -8154,12 +8154,18 @@ importers:
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../Core/subprocess/subprocess-local
+      '@deepseek-ai/dsh-tool-ask-user':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/tool-ask-user
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/tool-code-runtime
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/user-questions
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
@@ -8456,9 +8462,6 @@ importers:
       '@deepseek-ai/dsh-token-meter':
         specifier: workspace:^
         version: link:../../Engine/llm/token-meter
-      '@deepseek-ai/dsh-tool-ask-user':
-        specifier: workspace:^
-        version: link:../../Modules/Official/interaction/tool-ask-user
       '@deepseek-ai/dsh-tool-bash':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/tool-bash
@@ -8513,9 +8516,6 @@ importers:
       '@deepseek-ai/dsh-user-question-broker':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/user-question-broker
-      '@deepseek-ai/dsh-user-questions':
-        specifier: workspace:^
-        version: link:../../Modules/Official/interaction/user-questions
       '@deepseek-ai/dsh-web-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/web-app
@@ -9209,6 +9209,9 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-headless
@@ -9230,6 +9233,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-user-questions':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/user-questions
       zod:
         specifier: ^4.4.3
         version: 4.4.3

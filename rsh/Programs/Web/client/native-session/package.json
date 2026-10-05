@@ -30,6 +30,10 @@
     "./model-controls": {
       "types": "./lib/types/model-controls.d.ts",
       "default": "./lib/model-controls.js"
+    },
+    "./human": {
+      "types": "./lib/types/human.d.ts",
+      "default": "./lib/human.js"
     }
   },
   "dsh": {
@@ -57,6 +61,7 @@
     "lib/native.js",
     "lib/follow-types.js",
     "lib/model-controls.js",
+    "lib/human.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],

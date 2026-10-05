@@ -43,6 +43,12 @@
     },
     {
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/native-approval"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
     }
   ]
 }
