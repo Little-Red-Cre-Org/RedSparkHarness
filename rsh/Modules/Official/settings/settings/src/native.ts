@@ -21,8 +21,20 @@ export interface NativeSettingsScope<T> {
   readonly revision: number
   update(patch: NativeSettingsSection, expectedRevision?: number): Promise<void>
   replace(section: NativeSettingsSection, expectedRevision?: number): Promise<void>
-  watch(callback: (next: T, previous: T) => void): () => void
+  /**
+   * Observe committed values in order for this callback. Rejections are logged.
+   * Disposal skips queued invocations and waits for started ones to settle.
+   * @param callback - receives the next and previous resolved values.
+   * @returns a disposer that prevents further invocations from starting.
+   */
+  watch(callback: (next: T, previous: T) => void | Promise<void>): () => void
   dispose(): void
+}
+
+interface NativeSettingsWatcher<T> {
+  callback: (next: T, previous: T) => void | Promise<void>
+  tail: Promise<void>
+  active: boolean
 }
 
 interface Registration<T> {
@@ -30,7 +42,7 @@ interface Registration<T> {
   readonly base: NativeSettingsSection
   readonly resolve: (value: NativeSettingsSection) => T
   readonly validateWrite?: (next: T, previous: T) => void
-  readonly listeners: Set<(next: T, previous: T) => void>
+  readonly listeners: Set<NativeSettingsWatcher<T>>
   section: NativeSettingsSection
   value: T
   revision: number
@@ -50,6 +62,7 @@ export class NativeSettingsConflictError extends Error {
 export class NativeSettings {
   private document: NativeSettingsSection = {}
   private readonly registrations = new Map<string, Registration<unknown>>()
+  private readonly pendingNotifications = new Set<Promise<void>>()
   private tail: Promise<void> = Promise.resolve()
   private started = false
   private closed = false
@@ -96,11 +109,16 @@ export class NativeSettings {
       replace: (replacement, expectedRevision) => this.write(registration, replacement, true, expectedRevision),
       watch: (callback) => {
         if (!registration.active) throw new Error('settings registration is disposed')
-        registration.listeners.add(callback)
-        return () => registration.listeners.delete(callback)
+        const watcher: NativeSettingsWatcher<T> = { callback, tail: Promise.resolve(), active: true }
+        registration.listeners.add(watcher)
+        return () => {
+          watcher.active = false
+          registration.listeners.delete(watcher)
+        }
       },
       dispose: () => {
         registration.active = false
+        for (const watcher of registration.listeners) watcher.active = false
         registration.listeners.clear()
         if (this.registrations.get(namespace) === registration) this.registrations.delete(namespace)
       },
@@ -116,12 +134,14 @@ export class NativeSettings {
     })
   }
 
-  /** Refuse new work and drain accepted operations before Host teardown. */
+  /** Refuse new work and drain accepted operations and started observers before Host teardown. */
   async dispose(): Promise<void> {
     this.closed = true
     await this.tail
+    await Promise.all(this.pendingNotifications)
     for (const registration of this.registrations.values()) {
       registration.active = false
+      for (const watcher of registration.listeners) watcher.active = false
       registration.listeners.clear()
     }
     this.registrations.clear()
@@ -169,9 +189,18 @@ export class NativeSettings {
       registration.value = next
       registration.revision += 1
       if (!deepEqualJson(previous, next)) {
-        for (const listener of registration.listeners) {
-          try { listener(next, previous) }
-          catch { console.warn(`settings: change listener failed for namespace "${registration.namespace}"`) }
+        for (const watcher of registration.listeners) {
+          const notification = watcher.tail
+            .then(() => {
+              if (!watcher.active || this.closed) return
+              return watcher.callback(next, previous)
+            })
+            .then(() => undefined, () => {
+              console.warn(`settings: change listener failed for namespace "${registration.namespace}"`)
+            })
+          watcher.tail = notification
+          this.pendingNotifications.add(notification)
+          void notification.then(() => this.pendingNotifications.delete(notification))
         }
       }
     }

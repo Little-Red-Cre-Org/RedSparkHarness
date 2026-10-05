@@ -8,7 +8,7 @@
 
 ## 原生 Host
 
-[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。原生设置不公开 Cordis schema 描述或通用远端编辑 API。
+[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。原生设置不公开 Cordis schema 描述或通用远端编辑 API。
 
 ## 标识
 

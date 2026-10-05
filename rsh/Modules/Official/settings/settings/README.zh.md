@@ -43,7 +43,7 @@ kind: "package-reference"
 
 提供方上线后 `ctx.settings` 即出现。完整配置面由提供方 README 负责；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)列出每个受支持字段。
 
-原生 Host 使用不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 API 不向客户端公开旧版 schema 描述或机密脱敏字段。
+原生 Host 使用不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。原生 API 不向客户端公开旧版 schema 描述或机密脱敏字段。
 
 ### 注册 namespace
 

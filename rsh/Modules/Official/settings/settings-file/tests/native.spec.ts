@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
@@ -24,6 +24,10 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
     { plugin: consumer, scope, config: undefined },
     { plugin: fileSettings, scope, config: { path: filename, watch: false } },
   ], 'host'))
+  const warned = Promise.withResolvers<boolean>()
+  const warning = vi.spyOn(console, 'warn').mockImplementation((message: unknown) => {
+    if (String(message).includes('change listener failed for namespace "editor"')) warned.resolve(true)
+  })
   try {
     await host.start()
     if (settings === undefined) throw new Error('native settings service missing')
@@ -31,7 +35,11 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
       if (typeof value['theme'] !== 'string') throw new Error('theme must be a string')
       return { theme: value['theme'] }
     })
+    editor.watch(async () => { throw new Error('observer failed') })
+    const observed = Promise.withResolvers<boolean>()
+    editor.watch(() => observed.resolve(true))
     await editor.update({ theme: 'dark' }, 0)
+    await Promise.all([warned.promise, observed.promise])
     await expect(editor.update({ theme: 'stale' }, 0)).rejects.toMatchObject({ code: 'SETTINGS_CONFLICT' })
     await expect(editor.update({ theme: 3 })).rejects.toThrow('theme must be a string')
     const text = await readFile(filename, 'utf8')
@@ -43,6 +51,7 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
     await expect(editor.update({ theme: 'blocked' })).rejects.toThrow('invalid YAML document')
     expect(editor.get()).toEqual({ theme: 'dark' })
   } finally {
+    warning.mockRestore()
     await host.stop()
     await rm(root, { recursive: true, force: true })
   }

@@ -8,7 +8,7 @@ Source: [`rsh/Modules/Official/settings/settings/src/index.ts`](../../Modules/Of
 
 ## Native Host
 
-The [native definition](../../Modules/Official/settings/settings/src/native.ts) exposes `NativeSettings.register(namespace, base, resolve)` after its Provider loads the document. The returned owner scope reads a deep-frozen value, merges or replaces only its raw user section, accepts an optional expected revision, watches valid resolved changes and unregisters on disposal. The [file Provider](../../Modules/Official/settings/settings-file/src/native.ts) reads and writes the same YAML/JSON document under a cross-process lock; `llm-pi-ai` consumes its namespace on the next model request. Native settings does not publish the Cordis schema descriptor or generic wire editing API.
+The [native definition](../../Modules/Official/settings/settings/src/native.ts) exposes `NativeSettings.register(namespace, base, resolve)` after its Provider loads the document. The returned owner scope reads a deep-frozen value, merges or replaces only its raw user section, accepts an optional expected revision, watches valid resolved changes and unregisters on disposal. Native watcher callbacks run serially per callback in commit order; their sync throws and async rejections are logged. A watcher disposer skips queued invocations, and Host teardown waits for started callbacks. The [file Provider](../../Modules/Official/settings/settings-file/src/native.ts) reads and writes the same YAML/JSON document under a cross-process lock; `llm-pi-ai` consumes its namespace on the next model request. Native settings does not publish the Cordis schema descriptor or generic wire editing API.
 
 ## Identity
 
