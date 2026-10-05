@@ -1,4 +1,6 @@
 """Python twin of the native SDK recorded-session scenario through the public dsh profile."""
+import base64
+from pathlib import Path
 import json
 import sys
 
@@ -38,5 +40,17 @@ with DeepSeekHarness(config) as resumed:
     fork = source.fork("sdk-recorded-fork", result.events[-1]["seq"])
     assert fork.id == "sdk-recorded-fork"
 with DeepSeekHarness(config) as forked:
-    result = forked.start_session("sdk-recorded-fork").run("finish the cold fork")
+    session = forked.start_session("sdk-recorded-fork")
+    data = base64.b64encode(Path(__file__).with_name("image.png").read_bytes()).decode("ascii")
+    for encoded, mime in [("invalid", "image/png"), (data, "image/jpeg")]:
+        try:
+            session.run([{"type": "image", "data": encoded, "mimeType": mime}])
+        except JsonRpcError:
+            pass
+        else:
+            raise AssertionError("invalid image accepted")
+    result = session.run([{"type": "text", "text": "finish the cold fork"},
+        {"type": "image", "data": data, "mimeType": "image/png"}])
+with DeepSeekHarness(config) as restored:
+    result = restored.start_session("sdk-recorded-fork").run("retain the image")
 print(json.dumps({"finalResponse": result.final_response, "events": result.events}))

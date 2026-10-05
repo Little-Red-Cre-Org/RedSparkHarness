@@ -9,6 +9,7 @@ import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-executio
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
+import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
@@ -174,24 +175,31 @@ export class NativeSdkApplication implements NativeApplication {
     const executor = this.executor
     if (executor === undefined) throw new Error('native SDK: initialize first')
     const sessionId = nonempty(raw.sessionId, 'sessionId')
-    if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0
-      || raw.contentBlocks.some((block: unknown) => {
-        if (typeof block !== 'object' || block === null) return true
-        const fields = block as Record<string, unknown>
-        return fields.type !== 'text' || typeof fields.text !== 'string'
-      })) {
-      throw new TypeError('native SDK: this profile accepts nonempty text contentBlocks only')
+    if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0) {
+      throw new TypeError('native SDK: contentBlocks must be a nonempty array')
     }
-    const content = (raw.contentBlocks as Array<{ type: 'text'; text: string }>).map(block => ({ type: 'text' as const, text: block.text }))
-    const message = createUserMessage({ content, source: { kind: 'user' } })
+    const attachments = this.context.require('attachments')
+    const parts = raw.contentBlocks.map((block: unknown): AttachmentAdmissionPart => {
+      const fields = record(block, 'content block')
+      if (fields.type === 'text' && typeof fields.text === 'string') return { type: 'text', text: fields.text }
+      if (fields.type === 'image' && typeof fields.data === 'string') {
+        const mediaType = attachments.imageLimits.mediaTypes.find(type => type === fields.mimeType)
+        if (mediaType !== undefined) return { type: 'image', data: fields.data, mediaType }
+      }
+      throw new TypeError('native SDK: content blocks must be text or encoded raster images')
+    })
     const previous = this.sessions.get(sessionId)
-    const accepted = Promise.withResolvers<void>()
+    const accepted = Promise.withResolvers<string>()
     const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
     const task = (async () => {
       try {
         if (previous !== undefined) await previous
         this.activeTurns.set(sessionId, admission)
         const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
+        signal.throwIfAborted()
+        const content = await attachments.admitPromptContent(parts)
+        signal.throwIfAborted()
+        const message = createUserMessage({ content, source: { kind: 'user' } })
         const id = SessionId(sessionId)
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
         await executor.executeRootTurn({ id, resume, message,
@@ -200,7 +208,7 @@ export class NativeSdkApplication implements NativeApplication {
             if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
               admission.received = true
-              accepted.resolve()
+              accepted.resolve(String(message.id))
               transport.notify('session.status', { sessionId, status: 'running' })
             }
           } }, signal)
@@ -217,15 +225,14 @@ export class NativeSdkApplication implements NativeApplication {
     admission.settled = task
     this.sessions.set(sessionId, task)
     void this.track(task)
-    await accepted.promise
-    return { messageId: String(message.id) }
+    return { messageId: await accepted.promise }
   }
 }
 
 /** Host installation selected by the shipped native-sdk profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
+  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions',
     'agentPresets', 'workspaceRegistry'],
   provides: ['application'],
