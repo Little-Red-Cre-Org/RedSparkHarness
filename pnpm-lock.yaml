@@ -9429,6 +9429,15 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../Engine/session/session-persistence-jsonl
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.31

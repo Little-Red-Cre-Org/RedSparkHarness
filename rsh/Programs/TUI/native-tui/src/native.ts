@@ -68,7 +68,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
       },
       history: async (id, signal) => (await history(id, signal)).events,
     }, context.signal, config, SessionId('session-' + randomUUID()))
-    bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), id => this.ownsSession(id), context,
+    bindTerminalHumanAnswerers(this.human, context.require('activeSessions'), executor, id => this.ownsSession(id), context,
       context.optional('approval'), context.optional('userQuestions'))
   }
   /** Launch Ink after the controller restores the selected Session.
