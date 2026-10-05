@@ -7999,6 +7999,12 @@ importers:
       '@deepseek-ai/dsh-code-runtime-process-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/code-runtime-process-sandbox
+      '@deepseek-ai/dsh-credentials-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/credentials-local
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
@@ -8035,6 +8041,9 @@ importers:
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-sdk-server':
+        specifier: workspace:^
+        version: link:../SDK/packages/native-server
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -8053,6 +8062,9 @@ importers:
       '@deepseek-ai/dsh-sandbox-local':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-local
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-persistence-jsonl
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../Core/subprocess/subprocess-local
@@ -8093,9 +8105,6 @@ importers:
       '@deepseek-ai/dsh-bash-local':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/bash-local
-      '@deepseek-ai/dsh-credentials-local':
-        specifier: workspace:^
-        version: link:../../Modules/Official/credentials/credentials-local
       '@deepseek-ai/dsh-deepseek-llm-api-extensions':
         specifier: workspace:^
         version: link:../../Engine/llm/deepseek-llm-api-extensions
@@ -8156,9 +8165,6 @@ importers:
       '@deepseek-ai/dsh-session-log-deepseek':
         specifier: workspace:^
         version: link:../../Engine/session/session-log-deepseek
-      '@deepseek-ai/dsh-session-persistence-jsonl':
-        specifier: workspace:^
-        version: link:../../Engine/session/session-persistence-jsonl
       '@deepseek-ai/dsh-session-query':
         specifier: workspace:^
         version: link:../../Engine/session-query/session-query
@@ -8283,9 +8289,6 @@ importers:
       '@deepseek-ai/dsh-cordis-client-runner':
         specifier: workspace:^
         version: link:../../Modules/Official/extensions/cordis-client-runner
-      '@deepseek-ai/dsh-fs-local':
-        specifier: workspace:^
-        version: link:../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-goal':
         specifier: workspace:^
         version: link:../../Engine/goal/goal
@@ -8571,6 +8574,36 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+
+  rsh/Programs/SDK/packages/native-server:
+    dependencies:
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs
+      '@deepseek-ai/dsh-json-rpc-line':
+        specifier: workspace:^
+        version: link:../../../../Core/util/json-rpc-line
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence
 
   rsh/Programs/SDK/packages/protocol:
     dependencies:
