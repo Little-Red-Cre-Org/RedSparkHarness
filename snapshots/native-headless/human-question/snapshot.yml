@@ -1,0 +1,8 @@
+version: 1
+scenario: human-question
+profile: native-headless
+composition: native-human-question
+recording: authored
+header:
+  class: native-human-question
+  pin: true

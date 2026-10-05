@@ -102,24 +102,25 @@ export class NativeUserQuestionRegistry {
     })
     const signal = AbortSignal.any([owned.signal, this.cancellation.signal, ...request.signal === undefined ? [] : [request.signal]])
     const visible = [...this.answerers.visible(request.agent.scope).values()]
-    const invoke = (index: number): Promise<AskUserQuestionAnswer> => {
+    const invoke = (index: number, inheritedSignal: AbortSignal): Promise<AskUserQuestionAnswer> => {
       const entry = visible[index]
       if (entry === undefined) return Promise.reject(new UserQuestionError('no user-questions answerer accepted the request', 'NO_PROVIDER'))
-      if (entry.cancellation.signal.aborted) return invoke(index + 1)
+      if (entry.cancellation.signal.aborted) return invoke(index + 1, inheritedSignal)
+      const invocationSignal = AbortSignal.any([inheritedSignal, entry.cancellation.signal])
       let delegated = false
       const work = Promise.resolve().then(() => entry.answerer.ask({ ...request,
-        signal: AbortSignal.any([signal, entry.cancellation.signal]),
+        signal: invocationSignal,
       }, () => {
         if (delegated) throw new Error('user-questions: next called more than once')
         delegated = true
-        return invoke(index + 1)
+        return invoke(index + 1, invocationSignal)
       }))
       entry.pending.add(work)
       const settled = (): void => { entry.pending.delete(work) }
       void work.then(settled, settled)
       return work
     }
-    const operation = invoke(0)
+    const operation = invoke(0, signal)
     this.pending.add(operation)
     try {
       const answer = await operation

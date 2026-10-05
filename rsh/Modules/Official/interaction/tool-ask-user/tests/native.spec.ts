@@ -19,7 +19,7 @@ import type { NativeQuestionBroker, NativePendingQuestion } from '@deepseek-ai/d
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin } from '../src/native.ts'
 
-it('persists a human answer and drains a pending question when its broker is removed', async () => {
+it('persists a human answer and drains its broker presentation when the delegating answerer is removed', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-native-question-'))
   const workspace = join(directory, 'workspace')
   const storageRoot = join(directory, 'sessions')
@@ -41,12 +41,19 @@ it('persists a human answer and drains a pending question when its broker is rem
   const applicationRequest = { plugin: applicationPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture',
     systemPrompt: 'Ask the human before continuing.', maxSteps: 3 } }
   const brokerRequest = { plugin: brokerPlugin, scope, config: undefined }
+  const delegate: NativePlugin = {
+    apiVersion: 1, name: 'question-test-delegate', targets: ['host'], requires: ['userQuestions'], provides: [],
+    resolve: () => (context) => { context.effect(context.require('userQuestions').registerAnswerer('delegate', {
+      ask: (_request, next) => next(),
+    }, context.scope)) },
+  }
+  const delegateRequest = { plugin: delegate, scope, config: undefined }
   const host = new NativeHost(resolveInstallation([
     { plugin: agentsPlugin, scope, config: undefined }, { plugin: sessionsPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: toolsPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
     { plugin: persistencePlugin, scope, config: { root: storageRoot, compression: 'none' } },
-    { plugin: questionsPlugin, scope, config: undefined }, brokerRequest, { plugin, scope, config: undefined },
+    { plugin: questionsPlugin, scope, config: undefined }, delegateRequest, brokerRequest, { plugin, scope, config: undefined },
     { plugin: model, scope, config: undefined }, { plugin: capture, scope, config: undefined },
     applicationRequest,
   ], 'host'))
@@ -69,7 +76,7 @@ it('persists a human answer and drains a pending question when its broker is rem
     broker.onRequest((question) => { second.resolve(question) })
     const cancelling = host.runOwned(applicationRequest, { kind: 'question-test' }, invocation => application.run(['ask again'], invocation.signal))
     const unanswered = await second.promise
-    const settled = await Promise.allSettled([host.remove(brokerRequest), cancelling])
+    const settled = await Promise.allSettled([host.remove(delegateRequest), cancelling])
     expect(settled.map(item => item.status)).toEqual(['fulfilled', 'fulfilled'])
     expect(() => { questionBroker.answer(unanswered.id, unanswered.request.agent, { answers: [] }) }).toThrow(/no pending question/)
     const stored = await storage.list()

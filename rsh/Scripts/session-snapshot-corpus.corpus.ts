@@ -28,10 +28,11 @@ const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
+  'snapshots/native-headless/human-question.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
-  'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
+  'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',
 ] as const

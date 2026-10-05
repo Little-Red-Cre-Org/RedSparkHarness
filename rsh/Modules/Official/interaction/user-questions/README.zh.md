@@ -42,7 +42,7 @@ kind: "package-reference"
 
 ### 原生组合
 
-`./native` 入口通过选定的 `agents` 与 `activeSessions` 提供 `userQuestions`。每个请求必须携带当前执行的准确 Agent 与 Session；仅根调用可以提问，包括恢复为根的历史子 Session。回答者按 scope 选择，通过 `next()` 委托；移除时取消并排空已接受的请求。纯 `./protocol` 入口拥有共享问题与回答值；`./types` 保留兼容事件。
+`./native` 入口通过选定的 `agents` 与 `activeSessions` 提供 `userQuestions`。每个请求必须携带当前执行的准确 Agent 与 Session；仅根调用可以提问，包括恢复为根的历史子 Session。回答者按 scope 选择，通过 `next()` 委托并保留上游取消信号。移除时取消下游呈现并等待其释放。纯 `./protocol` 入口拥有共享问题与回答值；`./types` 保留兼容事件。
 
 选择 `@deepseek-ai/dsh-user-question-broker` 作为待回答问题的 Provider。认证应用通过其 `userQuestionBroker` 服务订阅，使用原 Agent 与不透明请求 id 回答。格式错误或过期回答会被拒绝；移除最后一个接收者会取消待回答问题。原生应用必须提供传输；此能力组不装配 SDK、ACP 或 Web 回答端。
 

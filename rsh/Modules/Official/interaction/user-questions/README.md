@@ -42,7 +42,7 @@ When a request carries an agent, `ask()` authenticates its exact identity throug
 
 ### Native composition
 
-The `./native` entry provides `userQuestions` from the selected `agents` and `activeSessions`. Every request carries the exact executing Agent and Session; only root invocations may ask, including historical child Sessions resumed as roots. Answerers are scoped, delegate through `next()`, and cancel and drain accepted requests when removed. The pure `./protocol` entry owns the shared question and answer values; `./types` retains compatibility events.
+The `./native` entry provides `userQuestions` from the selected `agents` and `activeSessions`. Every request carries the exact executing Agent and Session; only root invocations may ask, including historical child Sessions resumed as roots. Answerers are scoped and delegate through `next()` with ancestor cancellation preserved. Removal cancels delegated presentations and waits for their release. The pure `./protocol` entry owns the shared question and answer values; `./types` retains compatibility events.
 
 Select `@deepseek-ai/dsh-user-question-broker` as the pending-question Provider. Its `userQuestionBroker` service lets an authenticated application subscribe and answer with the original Agent and an opaque request id. It rejects malformed or late answers; removing the last recipient cancels the pending question. Native applications must supply a transport; this capability group does not install SDK, ACP or Web answering.
 
