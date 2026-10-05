@@ -161,6 +161,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // them through its own CSS pipeline, so the sheets are published artifacts.
   // The glob covers whichever sheets a package emits; sourcemaps stay
   // unpublished, as everywhere else in the repository.
+  '@deepseek-ai/dsh-client-ui-tool': ['lib/tool-renderer.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
+  '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js'],
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
@@ -181,7 +184,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
   '@deepseek-ai/dsh-native-tui': ['lib/native.js', 'lib/shared-*.js'],

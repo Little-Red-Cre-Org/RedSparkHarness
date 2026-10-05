@@ -19,7 +19,11 @@ const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
 
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
+  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+  '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
+  '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
+  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Development-only package relationships not represented by source imports. */
@@ -38,6 +42,7 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
 
 /** Runtime dependencies retained by published Client packages. */
 const CLIENT_RUNTIME_DEPENDENCIES = {
+  '@deepseek-ai/dsh-client-ui-primitives': ['@shikijs/langs','anser','clsx','katex','mdast-util-from-markdown','mdast-util-gfm','mdast-util-math','micromark-core-commonmark','micromark-extension-gfm','micromark-extension-math','micromark-factory-space','micromark-util-character','micromark-util-classify-character','micromark-util-sanitize-uri','micromark-util-symbol','shiki'],
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
   '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
@@ -51,6 +56,8 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 
 /** Browser runtime peers that must share the application instance. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-client-ui-tool': ['react'],
+  '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
   '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
   '@deepseek-ai/dsh-client-native-application': ['react'],
 }
@@ -78,6 +85,12 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
+  '@deepseek-ai/dsh-client-ui-primitives': ['CodeBlock','DiffBlock','DisclosureRow','IconApiOutline14','IconBrowseOutline16','IconCodeOutline16','IconEditOutline16','IconInspectOutline12','IconSearchOutline16','IconSparkle16','ReadBlock','SearchBlock','StateDot','TerminalBlock','WebBlock','diffTotals'],
+  '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
+  '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
+  '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],
+  '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
+  '@deepseek-ai/dsh-client-ui-tool/tool-renderer': ['NativeToolCard'],
   '@deepseek-ai/dsh-tool-todo/client-native': ['foldTodos'],
   '@deepseek-ai/dsh-native-model-selection/types': ['foldNativeModelSelectionState'],
   '@deepseek-ai/dsh-agent-presets/selection': ['foldNativeAgentPresetFacts'],

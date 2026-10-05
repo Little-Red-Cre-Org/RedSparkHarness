@@ -11,6 +11,8 @@ kind: "package-reference"
 
 当过大的纯文本工具结果不应进入模型上下文时，挂载本包。超过 `maxInlineBytes` 的结果会变成有界的首尾预览，并附带定位信息与取回指引；完整文本仍可通过已配置的 spill 后端访问。spill 失败时原始结果仍然可见，省略 `maxInlineBytes` 则会禁用该策略。同一上限也约束 `run_code` 子调用的持久日志副本，但不会改变程序收到的值。
 
+`./notice` 是基于原生 spill 引用类型的无 Cordis 格式化与识别库，不注册保留策略或服务；兼容的根安装器保持独立。
+
 ## 目录
 
 - [使用本包](#use-this-package)
