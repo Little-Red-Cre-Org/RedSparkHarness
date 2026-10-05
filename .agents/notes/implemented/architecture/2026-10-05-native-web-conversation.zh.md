@@ -22,10 +22,10 @@ Status: implemented
 
 ## 考虑过的替代方案
 
-**轮询历史或状态。** 轮询无法证明流式执行进度，并添加独立调度生命周期；此批次等待 Host 结算后读取持久化记录，实时传输留待其专属能力完成。
+**轮询历史或状态。** 轮询无法证明流式执行进度，并添加独立调度生命周期；结算刷新读取持久化记录；实时发送由[跟随决策](2026-10-05-native-web-session-follow.zh.md)定义。
 
 ## 后果
 
-页面在结算后刷新持久化转录。实时事件传输属于独立能力；轮询历史或状态会把推测误当成执行流。支持的交互限制归 [包参考](../../../../rsh/Programs/Web/client/native-application/README.zh.md) 所有。
+页面在结算后刷新持久化转录。[实时跟随](2026-10-05-native-web-session-follow.zh.md)复用同一准入与结算权威；轮询历史或状态会把推测误当成执行流。支持的交互限制归 [包参考](../../../../rsh/Programs/Web/client/native-application/README.zh.md) 所有。
 
 既有认证 HTTP 用例通过对话控制器验证延迟模型清理下的取消。无密钥 native-web 场景通过已发布 Client roster 驱动构建页面、记录用户可见转录，并在重载后恢复该转录。定向编译与原生依赖检查覆盖变更的 Client 和 resolver 声明。

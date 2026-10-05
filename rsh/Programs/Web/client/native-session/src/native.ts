@@ -1,4 +1,5 @@
 /** Browser Session Consumer over the selected native Connection transport. */
+import { EventSourceParserStream } from 'eventsource-parser/stream'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
@@ -14,6 +15,14 @@ declare module '@deepseek-ai/dsh-native-runtime' {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
   }
+}
+
+import type { NativeSessionFollowFrame } from './follow-types.ts'
+export type { NativeSessionFollowFrame } from './follow-types.ts'
+
+/** Browser parser capacity, resolved by the native Client profile. */
+export interface NativeSessionClientConfig {
+  readonly maxFollowBufferChars: number
 }
 
 /** Lifecycle results shared by the native browser composition. */
@@ -47,9 +56,11 @@ export interface NativeSessionClient {
    * @param text - human input.
    * @param resume - explicit existing-Session selection.
    * @param signal - abort cancels and drains this turn.
+   * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @returns durable turn settlement.
    */
-  prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal): Promise<{
+  prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
+    observe?: (frame: NativeSessionFollowFrame) => void): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -115,12 +126,34 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   return data
 }
 
+function followFrame(value: unknown): NativeSessionFollowFrame {
+  const data = fields(value)
+  if (data.type === 'event' && Object.keys(data).length === 2) {
+    const event = fields(data.event)
+    if (typeof event.seq !== 'number') throw new TypeError('native Session follow: event has no sequence')
+    return { type: 'event', event: parseSessionEvent(event, event.seq) }
+  }
+  if (data.type === 'text' && typeof data.text === 'string' && Object.keys(data).length === 2) return { type: 'text', text: data.text }
+  if ((data.type === 'text-start' || data.type === 'settled') && Object.keys(data).length === 1) return { type: data.type }
+  throw new TypeError('native Session follow: invalid frame')
+}
+
+function objectConfig(input: unknown): Record<string, unknown> {
+  const data = fields(input)
+  if (Object.keys(data).some(key => key !== 'maxFollowBufferChars') || typeof data.maxFollowBufferChars !== 'number'
+    || !Number.isSafeInteger(data.maxFollowBufferChars) || data.maxFollowBufferChars < 1) throw new TypeError('native Session Client: invalid follow parser capacity')
+  return data
+}
+
 /** Create a lifecycle Consumer without another transport or Session cache.
  * @param rpc - selected Connection's generic RPC caller.
+ * @param config - explicit SSE parser capacity.
  * @param installationSignal - optional installation cancellation.
  * @returns typed Session operations; Host failures reject the call.
  */
-export function createNativeSessionClient(rpc: ClientConnectionRpc, installationSignal?: AbortSignal): NativeSessionClient {
+export function createNativeSessionClient(
+  rpc: ClientConnectionRpc, config: NativeSessionClientConfig, installationSignal?: AbortSignal,
+): NativeSessionClient {
   const shutdown = new AbortController()
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
@@ -130,13 +163,19 @@ export function createNativeSessionClient(rpc: ClientConnectionRpc, installation
     if (!result.ok) throw new Error(result.error.message)
     return decodeReply(endpoint, result.value) as T
   }
-  async function prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal) {
+  async function prompt(
+    sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
+  ) {
     const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     accepted.throwIfAborted()
+    const responseOperation = rpc.response
+    if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+    const following = new AbortController()
     // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume }, undefined, false)
+    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined }, undefined, false)
     let cancellation: Promise<unknown> | undefined
     const abort = (): void => {
+      following.abort(accepted.reason)
       cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
       // Settlement reports cancellation failures after the original turn's response has drained.
       void cancellation.then(() => undefined, () => undefined)
@@ -144,9 +183,36 @@ export function createNativeSessionClient(rpc: ClientConnectionRpc, installation
     accepted.addEventListener('abort', abort, { once: true })
     if (accepted.aborted) abort()
     try {
+      let followFailure: { error: unknown } | undefined
+      if (observe !== undefined && responseOperation !== undefined) {
+        try {
+          const response = await responseOperation('/api', 'native-session/follow', { sessionId, admissionId }, following.signal)
+          if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+            throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
+          }
+          let terminal = false
+          const events = response.body.pipeThrough(new TextDecoderStream())
+            .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+          let nextSeq: number | undefined
+          for await (const { data } of events) {
+            const frame = followFrame(JSON.parse(data))
+            if (terminal) throw new Error('native Session follow: output after settlement')
+            if (frame.type === 'event') {
+              if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
+              nextSeq = frame.event.seq + 1
+            }
+            if (frame.type === 'settled') terminal = true
+            observe(frame)
+          }
+          if (!terminal) throw new Error('native Session follow: EOF before settlement')
+        } catch (error: unknown) {
+          if (!accepted.aborted) { followFailure = { error }; abort() }
+        }
+      }
       const [settlement] = await Promise.allSettled([call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)])
       const controls = await Promise.allSettled(cancellation === undefined ? [] : [cancellation])
       const errors = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason as unknown] : [])
+      if (followFailure !== undefined) errors.unshift(followFailure.error)
       if (errors.length === 1) throw errors[0]
       if (errors.length > 1) throw new AggregateError(errors, 'native Session settlement and cancellation failed')
       if (settlement.status === 'rejected') throw settlement.reason
@@ -161,8 +227,8 @@ export function createNativeSessionClient(rpc: ClientConnectionRpc, installation
     list: signal => call('session/list', {}, signal),
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
-    prompt(sessionId, text, resume, signal) {
-      const pending = prompt(sessionId, text, resume, signal)
+    prompt(sessionId, text, resume, signal, observe) {
+      const pending = prompt(sessionId, text, resume, signal, observe)
       pendingPrompts.add(pending)
       const settled = (): void => { pendingPrompts.delete(pending) }
       void pending.then(settled, settled)
@@ -178,11 +244,10 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
   requires: ['clientConnection'], provides: ['clientNativeSession'],
   resolve(input) {
-    if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length > 0)) {
-      throw new TypeError('client native session: configuration must be empty')
-    }
+    const fields = objectConfig(input)
+    const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const client = createNativeSessionClient(context.require('clientConnection').rpc, context.signal)
+      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
       context.own(() => client.close())
       context.provide('clientNativeSession', client)
     }

@@ -22,10 +22,10 @@ The first-use native Client roster contains installed Providers and Consumers on
 
 ## Alternatives considered
 
-**Polling history or status.** Polling cannot prove execution progress and adds an independent scheduling lifecycle. This slice reads durable records after Host settlement; live transport remains its own capability.
+**Polling history or status.** Polling cannot prove execution progress and adds an independent scheduling lifecycle. Settlement refresh reads durable records; realtime delivery is defined by the [following decision](2026-10-05-native-web-session-follow.md).
 
 ## Consequences
 
-The page refreshes durable transcript after settlement. Real-time event transport is a separate capability; polling history or status would falsely present a guessed execution stream. The [package reference](../../../../rsh/Programs/Web/client/native-application/README.md) owns the supported interaction limits.
+The page refreshes durable transcript after settlement. [Realtime following](2026-10-05-native-web-session-follow.md) uses the same admission and settlement authority; polling history or status would falsely present a guessed execution stream. The [package reference](../../../../rsh/Programs/Web/client/native-application/README.md) owns the supported interaction limits.
 
 The existing authenticated HTTP case exercises cancellation with delayed model cleanup through the conversation controller. The keyless native-web scenario exercises the built page through its shipped Client roster, records its user-visible transcript and restores that transcript after reload. Focused compiler and native dependency checks cover the changed Client and resolver declarations.

@@ -2185,6 +2185,9 @@ importers:
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../llm/native-model-selection
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../native-prompt
@@ -2252,6 +2255,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../session
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
 
   rsh/Engine/core/native-prompt:
     dependencies:
@@ -2911,6 +2917,49 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  rsh/Engine/llm/native-model-selection:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
+    devDependencies:
+      '@deepseek-ai/dsh-agent-instructions':
+        specifier: workspace:^
+        version: link:../../context/agent-instructions
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../core/native-headless
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../session/session-persistence-jsonl
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   rsh/Engine/llm/plugin-package-inventory-deepseek:
     dependencies:
@@ -8063,6 +8112,9 @@ importers:
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../../Engine/core/native-model-execution
+      '@deepseek-ai/dsh-native-model-selection':
+        specifier: workspace:^
+        version: link:../../Engine/llm/native-model-selection
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../../Engine/core/native-prompt
@@ -8072,12 +8124,12 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
@@ -8611,6 +8663,9 @@ importers:
 
   rsh/Programs/SDK/packages/native-server:
     dependencies:
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
@@ -9297,6 +9352,9 @@ importers:
       '@deepseek-ai/dsh-deque':
         specifier: workspace:^
         version: link:../../../../Core/util/deque
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -9832,6 +9890,10 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/native-session:
+    dependencies:
+      eventsource-parser:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^

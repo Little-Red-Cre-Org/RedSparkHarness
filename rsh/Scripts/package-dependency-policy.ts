@@ -40,6 +40,7 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
 const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
+  '@deepseek-ai/dsh-client-native-session': ['eventsource-parser'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Legacy Host peers omitted by the separately published native entry. */

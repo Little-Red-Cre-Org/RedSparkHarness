@@ -54,6 +54,8 @@ An ended `$events` stream, a Remote stream error, a non-ready opening item, or a
 Set the Host Connection row's `config.recovery` to override retry caps, the growth factor, or handshake warning and cancellation times; the [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-client-connection) lists accepted fields. The Host validates these values and injects them into each served page. The Client validates the bootstrap data before providing Connection and uses those defaults when Gateway starts its loop; explicit `start()` timing overrides take precedence. The growth factor must be finite and at least one. Readiness, failure, cancellation, or a hard deadline that occurs before the warning cancels that warning. Reload the page after changing Host recovery configuration.
 
 
+The RPC Provider optionally supplies authenticated Fetch responses for feature-owned streaming endpoints. The selected carrier resolves the Host address and token; feature Consumers own response decoding, cancellation and terminal settlement. This operation does not replace the existing WebSocket generation or introduce a reconnect loop.
+
 <a id="model-experience"></a>
 ## Model Experience
 

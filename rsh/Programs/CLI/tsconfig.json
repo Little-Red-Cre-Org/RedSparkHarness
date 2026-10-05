@@ -73,6 +73,9 @@
     },
     {
       "path": "../../Modules/Official/shell/tool-bash"
+    },
+    {
+      "path": "../../Engine/llm/native-model-selection/tsconfig.host.json"
     }
   ]
 }

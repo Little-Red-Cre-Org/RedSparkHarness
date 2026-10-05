@@ -163,6 +163,8 @@ for await (const chunk of ctx.llm.stream({
 - **`BlockAssembler` 只处理核心块类型**——插件添加块类型的流若从未由 `block-end` 关闭，`blocks()` 会抛出异常。
 - **`GenerateOptions.sessionId` 是本地声明的品牌类型**——导入 dsh-session 的 `SessionId` 会产生依赖循环。
 
+`resolveCallConfigWithModel` 根据已捕获的 Provider 元数据解析显式请求参数。预备派发将同一结果用于持久请求头和实际模型调用；目录中的建议默认值不能替代显式参数。
+
 <a id="dev-note"></a>
 ### 开发备注
 
