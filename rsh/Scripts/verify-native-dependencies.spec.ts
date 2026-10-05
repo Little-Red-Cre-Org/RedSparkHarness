@@ -314,3 +314,18 @@ it.each([
   if (forbidden) expect(errors).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
   else expect(errors).toEqual([])
 })
+
+it('admits existing Client stylesheets while rejecting missing assets and Host stylesheet edges', () => {
+  const root = fixture('export {}')
+  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
+  writeFileSync(join(owner, 'index.ts'), 'import "./card.module.css"')
+  writeFileSync(join(owner, 'card.module.css'), '.card {}')
+  expect(collectNativeDependencyViolations(root)).toEqual([])
+  writeFileSync(join(owner, 'index.ts'), 'import "./missing.module.css"')
+  expect(collectNativeDependencyViolations(root).some(error => error.includes('missing.module.css'))).toBe(true)
+  writeFileSync(join(owner, 'index.ts'), 'export {}')
+  const host = join(root, 'rsh/Core/runtime-diagnostics/native-runtime/src')
+  writeFileSync(join(host, 'index.ts'), 'import "./card.module.css"')
+  writeFileSync(join(host, 'card.module.css'), '.card {}')
+  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./card.module.css'))).toBe(true)
+})

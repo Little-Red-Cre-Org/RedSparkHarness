@@ -214,8 +214,15 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.clientRuntimeDependencies).toEqual({
+      '@deepseek-ai/dsh-client-ui-primitives': [
+        '@shikijs/langs', 'anser', 'clsx', 'katex', 'mdast-util-from-markdown', 'mdast-util-gfm', 'mdast-util-math',
+        'micromark-core-commonmark', 'micromark-extension-gfm', 'micromark-extension-math', 'micromark-factory-space',
+        'micromark-util-character', 'micromark-util-classify-character', 'micromark-util-sanitize-uri',
+        'micromark-util-symbol', 'shiki',
+      ],
       '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
+      '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
@@ -520,6 +527,15 @@ describe('face-aware source classification', () => {
 
     expect(subject.allSourceUses.has(name)).toBe(true)
     expect(() => { repairPackageDependencyManifest(subject) }).toThrow(`undeclared third-party dependency ${name}`)
+  })
+
+  it('keeps explicit shared browser runtimes as peers for a pure Client package', () => {
+    const subject = sourceFacts({ 'src/index.tsx': "import { useState } from 'react'; export const view = <div />" }, {
+      name: '@deepseek-ai/dsh-client-ui-primitives', devDependencies: { react: '^18.2.0' },
+    }, 'client-only')
+    expect([...subject.hostRuntimeSourceUses]).toEqual([])
+    expect(expectedPackageDependencies(subject).get('react')?.section).toBe('peer-dev')
+    expect(expectedPackageDependencies(subject).has('react-dom')).toBe(false)
   })
 
   it('does not treat static browser library entries as Host modules', () => {
@@ -1107,6 +1123,17 @@ describe('dependency sections', () => {
     )
     repairPackageDependencyManifest(subject)
     expect(manifest.peerDependenciesMeta).toBeUndefined()
+
+    manifest.exports = { './tool-renderer': './lib/tool-renderer.js' }
+    manifest.peerDependenciesMeta = { [CORDIS]: { optional: true } }
+    const leaf = { ...subject, manifestPath: 'rsh/Programs/Web/client/ui-tool/package.json' }
+    expect(collectPackageDependencyViolations({ ...state, facts: [leaf] })).toEqual([])
+    repairPackageDependencyManifest(leaf)
+    expect(manifest.peerDependenciesMeta).toEqual({ [CORDIS]: { optional: true } })
+    const foreign = { ...subject, manifestPath: 'rsh/Programs/Web/client/unregistered/package.json' }
+    expect(collectPackageDependencyViolations({ ...state, facts: [foreign] })).toContainEqual(
+      expect.stringContaining(`${CORDIS} must be matching peerDependencies + devDependencies`),
+    )
   })
 
   it('repairs owned relationships without changing unrelated dependencies', () => {

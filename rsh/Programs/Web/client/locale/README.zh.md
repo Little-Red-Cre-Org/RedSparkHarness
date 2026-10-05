@@ -132,6 +132,8 @@ Host 通过 settings 服务为 loopback 页面持久化偏好。Client 会刻意
 <a id="dev-note"></a>
 ### 开发备注
 
+`./dictionary` 导出公共英文／中文字典、类型化命名空间和共享参数插值，不建立 Cordis 注册表。原生呈现器显式选择语言；此导出不提供持久化语言偏好或 Settings 界面。
+
 <details>
 <summary>维护者的工作上下文——点击展开</summary>
 

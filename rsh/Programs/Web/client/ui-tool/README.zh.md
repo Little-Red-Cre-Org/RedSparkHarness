@@ -105,6 +105,8 @@ terminal model 使用浏览器安全入口 `@deepseek-ai/dsh-spill-policy/notice
 <a id="dev-note"></a>
 ### 开发备注
 
+`./tool-renderer` 提供无 Cordis 的 `NativeToolCard`，共用原始调用／结果类型、英文／中文类型化文案以及既有文件、终端、搜索、差异和通用模型。它读取已记录的结果元数据，不注册 Tool 或 Session 服务。未提供 `openFile` 和 `inspect` 时不呈现对应操作。其 ESM 和样式产物独立于兼容 `./client` 的模块表入口。
+
 <details>
 <summary>维护者的工作上下文——点击展开</summary>
 

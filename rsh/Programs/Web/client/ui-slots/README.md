@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `dsh-client-ui-slots` lets web client plugins define and compose typed UI regions. Callers can add components, declare nested regions, attach scoped state, and supply business props through one compile-time-checked API. It supports single, ordered-list, keyed, and self-selecting chain composition, and reports conflicting compositions during plugin loading. Slot contracts and scope-generation cleanup are independent of the runtime framework; pair the package with `ui-renderer` when the client needs React rendering.
 
+Published slot declarations depend on the pure Store definitions; `dsh-client-store` is an installation dependency so independent consumers can resolve these public types.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

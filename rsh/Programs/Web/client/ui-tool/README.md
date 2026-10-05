@@ -105,6 +105,8 @@ These limits define the dispatch depth and the view ownership; they are current 
 <a id="dev-note"></a>
 ### Dev Note
 
+`./tool-renderer` exposes the Cordis-free `NativeToolCard` with the shared raw call/result types, typed English/Chinese copy and existing file, terminal, search, diff and generic models. It reads recorded result metadata; it registers no Tool or Session service. Missing `openFile` and `inspect` props omit those actions. Its ESM and stylesheet artifacts are independent of the compatibility `./client` module-table entry.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

@@ -1,3 +1,5 @@
+import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+export type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
 /** Chat-owned Slot declarations and composed component props. */
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
@@ -29,12 +31,6 @@ export type UseChatNode = KeyedSnapshotSelectorHook<ChatConversationViewNode | u
 
 /** Per-key selector hook over one Chat Node's Turn-process presentation. */
 export type UseChatNodeProcess = KeyedSnapshotSelectorHook<ChatTurnProcessPresentation | undefined>
-
-/** Where in a file an open should land. */
-export interface OpenFileOptions {
-  /** 1-based line to reveal; absent = the file's beginning. */
-  readonly line?: number
-}
 
 /** Owner currency of the completed-Turn extension chain. */
 export interface TurnTailOwnerProps {

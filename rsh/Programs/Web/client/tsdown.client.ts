@@ -162,6 +162,17 @@ export function staticLinked(id: string, libEntry: readonly string[]): BuildFace
 }
 
 /**
+ * Build pure browser subpaths while keeping a package's compatibility Client entry dynamic.
+ * The native package policy verifies each subpath's complete source and declaration graph.
+ * @param id - package name used in diagnostics.
+ * @param libEntry - pure emitted entries; each owns one JavaScript artifact and its styles.
+ * @returns configs selected only during the Client pass.
+ */
+export function staticLinkedLeaf(id: string, libEntry: readonly string[]): BuildFaceConfig {
+  return clientOnly(libEntry.map(entry => staticLinkedConfig(id, entry, basename(entry, '.js'), 'dsh-static-linked-leaf')))
+}
+
+/**
  * Whether a package's tsdown configs put it in the static assembly channel.
  * The roster has no separate list: gates load each package's own
  * `tsdown.config.ts`, call it for the Client face, and ask this.
@@ -253,7 +264,7 @@ interface AssetEmitter {
   }): string
 }
 
-function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js')): UserConfig {
+function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js'), pluginName = STATIC_LINKED_PLUGIN): UserConfig {
   const emitted = new Set<string>()
   return {
     name: id,
@@ -274,7 +285,7 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
       // resolve and inline every specifier missing from the npm production
       // sections, which is the coupling this preset exists to remove. The name
       // is also the roster marker {@link isStaticLinkedConfig} reads.
-      name: STATIC_LINKED_PLUGIN,
+      name: pluginName,
       resolveId: {
         order: 'pre' as const,
         handler(source: string, importer: string | undefined) {

@@ -2,7 +2,10 @@ import type { ReactNode } from 'react'
 import {
   IconApiOutline14, IconBrowseOutline16, IconCodeOutline16, IconEditOutline16, IconSearchOutline16, IconSparkle16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ToolCallOwnerProps, ToolTreeProps } from '../../contract/slots.ts'
+import type { ToolCallOwnerProps } from '../../../tool-renderer-types.ts'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/conversation-copy'
+import type {} from '@deepseek-ai/dsh-client-locale/dictionary'
 import { readCardModel } from '../models/read-card-model.ts'
 import { diffCardModel } from '../models/diff-card-model.ts'
 import { searchCardModel } from '../models/search-card-model.ts'
@@ -23,8 +26,8 @@ const VARIANT_ICONS: Record<ToolRowVariant, ReactNode> = {
 }
 
 /** Card props: the owner payload plus the render site's locale seat (plain prop). */
-export interface GenericToolCardProps extends ToolCallOwnerProps {
-  t: ToolTreeProps['t']
+export interface GenericToolCardProps extends Omit<ToolCallOwnerProps, 'callId' | 'openFile' | 'loadImage'>, Partial<Pick<ToolCallOwnerProps, 'callId' | 'openFile' | 'loadImage'>> {
+  t: TranslateNS<'conversation'>
 }
 
 export function GenericToolCard({ toolName, block, cwd, home, openFile, inspect, t }: GenericToolCardProps) {
