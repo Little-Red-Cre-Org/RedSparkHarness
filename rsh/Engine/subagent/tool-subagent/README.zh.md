@@ -25,6 +25,8 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+原生 ./native 入口消费 native-subagent 的前台能力。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。模型仅提供 description 与 prompt。NativeTools 校验参数并记录子任务 id、提供者、停止原因和真实输出。后台与可持续参数会被拒绝；这些能力仍由兼容入口提供。
+
 每个委派目标挂载一个实例，且每个实例的 `toolName` 必须不同。工具与其提供方同时存在、同时消失，因此同级加载顺序与提供方重新加载都不会让工具悬空。
 
 ### 最小配置

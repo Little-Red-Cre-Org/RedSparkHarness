@@ -8,6 +8,7 @@
  * @module @deepseek-ai/dsh-subagent/child-agent
  */
 
+import { SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, AgentOptions, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
@@ -168,11 +169,7 @@ export interface ChildComposition {
  * runtime-context contribution rather than a system-prompt section, so the
  * deployment's system prompt stays uniform across parents and children.
  */
-export const SUBAGENT_DELEGATION_CONTEXT
-  = 'You are a delegated subagent: your permission scope was fixed when you were started and cannot be '
-    + 'widened from inside this session — operations that require approval are rejected automatically. '
-    + 'When the task needs access beyond that scope, do not retry the denied operation; state the '
-    + 'limitation in your reply so the delegating agent can handle it.'
+export { SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 
 /**
  * Compose one child inside its creation window: join its parent's preset,

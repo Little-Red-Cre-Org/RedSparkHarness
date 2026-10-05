@@ -70,11 +70,36 @@ with DeepSeekHarness(config) as forked:
 with DeepSeekHarness(config) as restored:
     result = restored.start_session("sdk-recorded-fork").run("retain the image")
     result = restored.start_session("sdk-recorded-fork").run("delegate a native child")
-    assert [item.payload for item in result.notifications if item.method == "subagent.started"] == [
-        {"parentSessionId": "sdk-recorded-fork", "childSessionId": "sdk-recorded-child"}]
+    delegated = result
+    result = restored.start_session("sdk-recorded-fork").run("spawn a production child")
+    result.notifications[:0] = delegated.notifications
+    started = [item.payload for item in result.notifications if item.method == "subagent.started"]
+    assert len(started) == 2 and started[0] == {"parentSessionId": "sdk-recorded-fork", "childSessionId": "sdk-recorded-child"}
+    assert started[1]["parentSessionId"] == "sdk-recorded-fork" and isinstance(started[1]["childSessionId"], str)
     assert any(item.method == "session.event" and item.payload["sessionId"] == "sdk-recorded-child"
         and item.payload["event"]["type"] == "turn/end" for item in result.notifications)
     assert not any(isinstance(value, str) and value.startswith("sdk-foreign-")
         for item in result.notifications for value in item.payload.values())
+    production = result
+    session = restored.start_session("sdk-recorded-fork")
+    child_cancelled = False
+
+    def cancel_child(notification):
+        global child_cancelled
+        if notification.method == "session.event" and notification.payload["sessionId"] != session.id \
+            and notification.payload["event"]["type"] == "tool/call" and not child_cancelled:
+            child_cancelled = True
+            assert session.cancel() is True
+
+    cancelled_child = session.run("cancel a production child", on_notification=cancel_child)
+    assert child_cancelled
+    assert cancelled_child.events[-1]["data"]["reason"]["kind"] == "aborted"
+    assert any(item.method == "session.event" and item.payload["sessionId"] != session.id
+        and item.payload["event"]["type"] == "turn/end" for item in cancelled_child.notifications)
+    result = production
+with DeepSeekHarness(config) as recovered:
+    resumed = recovered.start_session("sdk-recorded-fork").run("recover after child cancellation")
+    assert resumed.events[-1]["data"]["reason"]["kind"] == "completed"
+    assert resumed.final_response == result.final_response
 print(json.dumps({"finalResponse": result.final_response, "events": result.events,
     "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}))

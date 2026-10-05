@@ -21,6 +21,9 @@
 
 运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp` 和 `native-sdk` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
+native-sdk 配置还组合 native-tools、native-prompt、native-subagent 与前台 tool-subagent 消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者；它不安装后台或可持续 Subagent 控制。
+
+
 ## 应用参数
 
 启动器只解析自身的 flag，并将其后的所有内容交给已启动的 profile；注入该 profile 的任意应用插件都可以解析这份共享的不可变快照（[`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.zh.md)）。启动器无法识别的第一个 token 标志着应用参数的开始：

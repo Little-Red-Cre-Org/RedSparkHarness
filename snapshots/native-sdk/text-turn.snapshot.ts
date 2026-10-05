@@ -38,6 +38,27 @@ it('replays a native SDK turn with exact model input, output and durable Session
         return
       }
       const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
+      if (last?.role === 'user' && last.content === 'hold production child') {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'child-wait', type: 'function',
+            function: { name: 'fixture_wait', arguments: '{}' } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
+      if (last?.role === 'user' && ['spawn a production child', 'cancel a production child', 'production child task'].includes(String(last.content))) {
+        const calls = last.content !== 'production child task'
+          ? [{ name: 'subagent', arguments: JSON.stringify({ description: 'production child',
+              prompt: last.content === 'spawn a production child' ? 'production child task' : 'hold production child' }) }]
+          : [{ name: 'fixture_delegate_child', arguments: '{}' }, { name: 'fixture_protected', arguments: '{}' },
+              { name: 'subagent', arguments: JSON.stringify({ description: 'forbidden grandchild', prompt: 'grandchild task' }) }]
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: calls.map((call, index) => ({ index,
+            id: `production-call-${index}`, type: 'function', function: call })) } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (last?.role === 'user' && ['delegate a native child', 'foreign root task'].includes(String(last.content))) {
         response.end([
           { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'fixture-delegate', type: 'function',
@@ -46,7 +67,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
         ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
         return
       }
-      const responseText = last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
+      const productionChild = (modelRequest.messages as Array<{ role: string; content: unknown }>)
+        .some(message => message.role === 'user' && message.content === 'production child task')
+      const responseText = productionChild ? 'production child reply'
+        : last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
       response.end([
         { choices: [{ delta: { role: 'assistant', content: responseText } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
@@ -77,11 +101,13 @@ it('replays a native SDK turn with exact model input, output and durable Session
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
     ...composition.installations,
-    { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: 'root' },
+    { id: 'fixture-approval', plugin: '@deepseek-ai/dsh-native-approval', scope: 'root', config: { policy: 'ask' } },
     { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants' },
   ] }))
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
     { id: 'app', config: { systemPrompt: 'You are a native SDK fixture.', maxSteps: 2 } },
+    { id: 'subagent-tool', config: { toolName: 'subagent', maxDepth: 1, maxTokens: 128,
+      persona: 'Only the production child receives this persona.', toolFilter: { deny: ['fixture_delegate_child'] } } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
@@ -152,14 +178,43 @@ it('replays a native SDK turn with exact model input, output and durable Session
       try {
         result = await restored.session('sdk-recorded-fork').run('retain the image')
         result = await restored.session('sdk-recorded-fork').run('delegate a native child')
+        const delegated = result
+        result = await restored.session('sdk-recorded-fork').run('spawn a production child')
+        result = { ...result, notifications: [...delegated.notifications, ...result.notifications] }
+        const production = result
+        const session = restored.session('sdk-recorded-fork')
+        const childChunk = Promise.withResolvers<void>()
+        const pending = session.run('cancel a production child', { onNotification: notification => {
+          if (notification.method === 'session.event' && notification.params.sessionId !== session.id
+            && (notification.params.event as { type?: string }).type === 'tool/call') childChunk.resolve()
+        } })
+        await childChunk.promise
+        expect(await session.cancel()).toBe(true)
+        const cancelledChild = await pending
+        expect(cancelledChild.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+        expect(cancelledChild.notifications.some(notification => notification.method === 'session.event'
+          && notification.params.sessionId !== session.id && (notification.params.event as { type: string; data: unknown }).type === 'turn/end')).toBe(true)
+        result = production
       }
       finally { await restored.close() }
+      const recovered = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try {
+        const resumed = await recovered.session('sdk-recorded-fork').run('recover after child cancellation')
+        expect(resumed.finalResponse).toBe(reply)
+        expect(resumed.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+      }
+      finally { await recovered.close() }
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(10)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(17)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
-      .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' }])
+      .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
+        { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])
+    const spawned = result.notifications.filter(notification => notification.method === 'subagent.started').at(-1)?.params.childSessionId
+    expect(typeof spawned).toBe('string')
+    expect(existsSync(join(workspace, 'protected-marker'))).toBe(false)
+    expect(existsSync(join(workspace, 'answerer-called'))).toBe(false)
     expect(result.notifications.some(notification => notification.method === 'session.event'
       && notification.params.sessionId === 'sdk-recorded-child'
       && (notification.params.event as { type: string }).type === 'turn/end')).toBe(true)
@@ -177,7 +232,35 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     const raw = findLog('sdk-recorded-turn')
     const forkRaw = findLog('sdk-recorded-fork')
-    expect(logs).toHaveLength(5)
+    expect(logs).toHaveLength(7)
+    const cancelledChildLog = logs.find(log => log.includes('hold production child'))
+    if (cancelledChildLog === undefined) throw new Error('native-sdk snapshot: cancelled child missing')
+    expect(parseSessionLog(cancelledChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+    const normalizedCancelled = normalizeSessionSnapshot(redactSessionSnapshotIds([cancelledChildLog])[0] ?? cancelledChildLog,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    const cancelledFixture = join(scene, 'session.3.v3.jsonl')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cancelledFixture, normalizedCancelled)
+    else expect(normalizedCancelled).toBe(readFileSync(cancelledFixture, 'utf8'))
+    const productionRaw = findLog(String(spawned))
+    const productionEvents = parseSessionLog(productionRaw)
+    expect(productionEvents.find(event => event.type === 'subagent/descriptor')?.data)
+      .toMatchObject({ version: 3, mode: 'one-shot', provider: 'spawn', label: 'production child' })
+    expect(productionEvents.find(event => event.type === 'native-approval/decided')?.data)
+      .toMatchObject({ policy: 'never', outcome: 'rejected' })
+    expect(productionEvents.filter(event => event.type === 'tool/result').every(event => event.data.message.content[0]?.type === 'tool-result'
+      && event.data.message.content[0].isError)).toBe(true)
+    const childRequest = requests[11]
+    expect((childRequest?.tools as Array<{ function: { name: string } }>).map(tool => tool.function.name))
+      .not.toContain('fixture_delegate_child')
+    expect(JSON.stringify(childRequest?.tools)).not.toContain('read_file')
+    expect(JSON.stringify(childRequest?.messages)).toContain('Only the production child receives this persona.')
+    expect(JSON.stringify(requests[10]?.messages)).not.toContain('Only the production child receives this persona.')
+    expect(childRequest?.max_completion_tokens, JSON.stringify(childRequest)).toBe(128)
+    const productionFixture = join(scene, 'session.2.v3.jsonl')
+    const normalizedProduction = normalizeSessionSnapshot(redactSessionSnapshotIds([productionRaw])[0] ?? productionRaw,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(productionFixture, normalizedProduction)
+    else expect(normalizedProduction).toBe(readFileSync(productionFixture, 'utf8'))
     const childRaw = findLog('sdk-recorded-child')
     expect(JSON.parse(childRaw.split('\n')[0] ?? '{}')).toMatchObject({ parentSession: 'sdk-recorded-fork', origin: 'subagent' })
     const normalizedChild = normalizeSessionSnapshot(redactSessionSnapshotIds([childRaw])[0] ?? childRaw,
