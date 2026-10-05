@@ -22,7 +22,7 @@ This Cordis-free Client Consumer exposes the native Web Session lifecycle throug
 <a id="reference"></a>
 ## Reference
 
-Install after client-connection with an empty configuration. The clientNativeSession service supports list, create, history, prompt, cancel and status. A prompt requires an explicit resume boolean and completes after Host settlement. Caller cancellation aborts its transport; installation cancellation also aborts outstanding calls. Host errors reject; decoded results validate their endpoint fields before reaching Consumers. The Consumer keeps no second Session cache or connection loop.
+Install after client-connection with an empty configuration. The clientNativeSession service supports list, create, history, prompt, cancel and status. A prompt requires an explicit resume boolean and completes after Host settlement. Caller cancellation aborts non-prompt requests; prompt cancellation awaits Host settlement. Host errors reject; decoded results validate their endpoint fields before reaching Consumers. The Consumer keeps no second Session cache or connection loop.
 
 `close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.
 

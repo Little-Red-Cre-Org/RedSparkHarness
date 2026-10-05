@@ -22,7 +22,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-以空配置安装在 client-connection 之后。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止对应传输；安装取消也会中止尚未完成的调用。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
+以空配置安装在 client-connection 之后。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
