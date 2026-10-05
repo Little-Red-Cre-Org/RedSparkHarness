@@ -125,6 +125,8 @@ selector 必须是 owner currency 的纯函数。非 null 返回值作为 `match
 <a id="dev-note"></a>
 ### 开发备注
 
+无 Cordis 的 `./tool-records` 导出统一维护两种呈现方式共用的 Tool 调用／结果及图片加载器类型。`./conversation-copy` 导出既有类型化字典和命名空间声明，不创建 Conversation 服务。兼容的根入口和 `./client` 入口保留既有安装器。
+
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 

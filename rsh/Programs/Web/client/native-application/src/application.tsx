@@ -1,5 +1,5 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
@@ -8,6 +8,7 @@ import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import { HumanInteraction } from './human.tsx'
+import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 
@@ -49,11 +50,13 @@ function Message({ event, t, sessionId, controller }: {
   controller: NativeConversationController
 }) {
   const message = isAppendSurfaceEvent(event) ? deriveEventMessage(event) : null
-  if (message === null || message.role === 'system') return null
-  const role = message.role === 'assistant' ? 'assistant' : event.type === 'tool/result' ? 'tool' : 'user'
+  if (message === null || message.role === 'system' || event.type === 'tool/result') return null
+  const content = message.content.filter(block => block.type !== 'tool-call')
+  if (content.length === 0) return null
+  const role = message.role === 'assistant' ? 'assistant' : 'user'
   return <article data-event-seq={event.seq}>
     <strong>{t(role)}</strong>
-    {message.content.map((block, index) => block.type === 'image'
+    {content.map((block, index) => block.type === 'image'
       ? <Image key={index} image={block.attachment} sessionId={sessionId} controller={controller} t={t} />
       : <pre key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
         {block.type === 'text' ? block.text : JSON.stringify(block, null, 2)}
@@ -61,8 +64,9 @@ function Message({ event, t, sessionId, controller }: {
   </article>
 }
 
-function Conversation({ controller, t }: { controller: NativeConversationController; t: Translate }) {
+function Conversation({ controller, t, locale }: { controller: NativeConversationController; t: Translate; locale: 'en' | 'zh' }) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
+  const toolCards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
@@ -87,7 +91,12 @@ function Conversation({ controller, t }: { controller: NativeConversationControl
     {selected === undefined ? <p>{t('empty')}</p> : <>
       <ModelControls controller={controller} t={t} />
       <section aria-label={t('facts')}>
-        {snapshot.events.map(event => <Message key={event.seq} event={event} t={t} sessionId={selected} controller={controller} />)}
+        {snapshot.events.map((event) => {
+          const card = toolCards.get(event.seq)
+          return card === undefined
+            ? <Message key={event.seq} event={event} t={t} sessionId={selected} controller={controller} />
+            : <ToolCard key={event.seq} block={card} locale={locale} cwd={snapshot.header?.cwd} />
+        })}
       </section>
       <details><summary>{t('facts')}</summary>
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
@@ -138,7 +147,7 @@ export const plugin: NativePlugin = {
       const t: Translate = key => dictionary[key]
       const controller = new NativeConversationController(context.require('clientNativeSession'), { maxLiveTextChars, maxLiveEvents })
       context.own(() => controller.close())
-      context.provide('clientApplication', { render: () => <Conversation controller={controller} t={t} /> })
+      context.provide('clientApplication', { render: () => <Conversation controller={controller} t={t} locale={selected} /> })
       void controller.load()
     }
   },

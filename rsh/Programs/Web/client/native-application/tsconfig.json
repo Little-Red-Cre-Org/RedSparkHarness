@@ -28,6 +28,9 @@
     },
     {
       "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-tool"
     }
   ]
 }

@@ -341,3 +341,10 @@ export const en = {
   'terminal.sendInput': '(send input)',
   'terminal.session': 'Terminal {sessionId}',
 } satisfies Record<ConversationKey, string>
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    /** Conversation shell, composer, queue, and dock copy. */
+    conversation: ConversationKey
+  }
+}

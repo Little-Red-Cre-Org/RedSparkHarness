@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 Mount this package when oversized plain-text tool results should stay out of model context. Results above `maxInlineBytes` become a bounded head/tail preview with a locator and retrieval guidance, while the full text remains available through the configured spill backend. Spill failures leave the original result visible, and omitting `maxInlineBytes` disables the policy. The same limit bounds durable `run_code` sub-call log copies without changing the value returned to the program.
 
+`./notice` is a Cordis-free formatting and recognition library over native spill reference types. It contributes no retention policy or service; the compatibility root installer remains separate.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

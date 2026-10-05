@@ -70,7 +70,7 @@
 | `tools/ptc-dispatch-log` | `waterfall` | [`rsh/Engine/core/tools/src/index.ts:181`](../Engine/core/tools/src/index.ts) | [`tools`](../Engine/core/tools) (`waterfall`) | [`spill-policy`](../Modules/Official/spill/spill-policy) |
 | `tools/result` | `emit` | [`rsh/Engine/core/tools/src/index.ts:189`](../Engine/core/tools/src/index.ts) | [`tools`](../Engine/core/tools) (`events.dispatch`) | [`agent-instructions`](../Engine/context/agent-instructions), [`subagent-in-process-driver`](../Engine/subagent/subagent-in-process-driver), [`tool-present`](../Modules/Official/fs/tool-present) |
 | `user-questions/request` | `waterfall` | [`rsh/Modules/Official/interaction/user-questions/src/types.ts:28`](../Modules/Official/interaction/user-questions/src/types.ts) | [`user-questions`](../Modules/Official/interaction/user-questions) (`waterfall`) | [`api-remotes`](../Programs/Web/api/remotes) |
-| `webserver/index-inject` | `emit` | [`rsh/Programs/Web/host/webserver/src/index.ts:34`](../Programs/Web/host/webserver/src/index.ts) | `DesktopHost` (`emit`), [`host-webserver`](../Programs/Web/host/webserver) (`emit`) | [`client-connection`](../Programs/Web/client/connection), `inspector`, [`client-modules`](../Programs/Web/client/modules) |
+| `webserver/index-inject` | `emit` | [`rsh/Programs/Web/host/webserver/src/index.ts:34`](../Programs/Web/host/webserver/src/index.ts) | `DesktopHost` (`emit`), [`host-webserver`](../Programs/Web/host/webserver) (`emit`) | [`client-connection`](../Programs/Web/client/connection), `inspector`, [`client-modules`](../Programs/Web/client/modules), [`client-ui-theme`](../Programs/Web/client/ui-theme) |
 | `workflow/agent-end` | `emit` | [`rsh/Engine/workflow/workflow/src/index.ts:79`](../Engine/workflow/workflow/src/index.ts) | [`workflow`](../Engine/workflow/workflow) (`events.dispatch`) | [`tool-workflow`](../Engine/workflow/tool-workflow), [`workflow`](../Engine/workflow/workflow) |
 | `workflow/agent-start` | `emit` | [`rsh/Engine/workflow/workflow/src/index.ts:68`](../Engine/workflow/workflow/src/index.ts) | [`workflow`](../Engine/workflow/workflow) (`events.dispatch`) | [`tool-workflow`](../Engine/workflow/tool-workflow), [`workflow`](../Engine/workflow/workflow) |
 | `workflow/end` | `emit` | [`rsh/Engine/workflow/workflow/src/index.ts:89`](../Engine/workflow/workflow/src/index.ts) | [`workflow`](../Engine/workflow/workflow) (`events.dispatch`) | [`workflow`](../Engine/workflow/workflow) |
@@ -82,6 +82,7 @@
 
 | 事件字符串 | 派发方 | 监听方 |
 | --- | --- | --- |
+| `connection/reset` | [`api-gateway`](../Programs/Web/api/gateway) (`emit`) | [`api-session-controller`](../Programs/Web/api/session-controller), [`client-ui-settings`](../Programs/Web/client/ui-settings), [`client-ui-tool`](../Programs/Web/client/ui-tool), [`client-ui-workspace`](../Programs/Web/client/ui-workspace) |
 | `hmr/change` | [`client-hmr`](../Programs/Web/client/hmr) (`emit`) | - |
 | `hmr/config-update-failed` | [`client-hmr`](../Programs/Web/client/hmr) (`parallel`) | - |
 | `hmr/reload` | [`client-hmr`](../Programs/Web/client/hmr) (`emit`) | - |
@@ -95,6 +96,12 @@
 | `loader/entry-init` | [`typert-loader`](../Core/typert/loader) (`emit`) | [`typert-loader`](../Core/typert/loader) |
 | `loader/partial-dispose` | [`typert-loader`](../Core/typert/loader) (`emit`) | [`typert-loader`](../Core/typert/loader) |
 | `loader/patch-context` | [`typert-loader`](../Core/typert/loader) (`waterfall`) | [`typert-loader`](../Core/typert/loader) |
+| `locale/change` | [`client-locale`](../Programs/Web/client/locale) (`emit`) | [`client-ui-input-trigger`](../Programs/Web/client/ui-input-trigger) |
+| `slash/input-begin-command` | - | [`client-ui-conversation`](../Programs/Web/client/ui-conversation) |
+| `slash/input-consume-token` | - | [`client-ui-conversation`](../Programs/Web/client/ui-conversation) |
+| `slash/input-insert-reference` | - | [`client-ui-conversation`](../Programs/Web/client/ui-conversation) |
+| `slash/input-insert-text` | - | [`client-ui-conversation`](../Programs/Web/client/ui-conversation) |
 | `slots/changed` | [`client-ui-renderer`](../Programs/Web/client/ui-renderer) (`emit`) | - |
+| `theme/change` | [`client-ui-theme`](../Programs/Web/client/ui-theme) (`emit`) | [`client-ui-layout`](../Programs/Web/client/ui-layout), [`client-ui-theme`](../Programs/Web/client/ui-theme) |
 
 Maintenance mode: generated: Cordis event declarations and producer/listener edges are resolved from the repository TypeScript Program.

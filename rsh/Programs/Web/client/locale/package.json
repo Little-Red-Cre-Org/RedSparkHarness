@@ -23,7 +23,11 @@
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./dictionary": {
+      "types": "./lib/types/dictionary.d.ts",
+      "default": "./lib/dictionary.js"
+    }
   },
   "dsh": {
     "client": {
@@ -49,22 +53,28 @@
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-slots": "workspace:^"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/dictionary.js",
     "lib/types/**/*.d.ts"
   ],
   "scripts": {
     "bundle": "tsdown",
     "watch": "tsdown --watch"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   }
 }

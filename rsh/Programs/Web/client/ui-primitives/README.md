@@ -154,6 +154,8 @@ These limits define how the atoms behave at the edges; they are current package 
 <a id="dev-note"></a>
 ### Dev Note
 
+The complete Client source and public declarations are admitted by the native dependency policy. The package requires no Cordis peer; React and React DOM remain shared peers, while emitted browser imports and styles have declared production dependencies.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
