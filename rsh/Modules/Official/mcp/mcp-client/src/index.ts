@@ -46,56 +46,10 @@ const activeServerNames = new WeakMap<object, Set<string>>()
 
 // ---- Config ----
 
-/** Config for connecting to an MCP server via a spawned child process over stdio. */
-export interface StdioConfig {
-  /** Selects child-process stdio transport. */
-  transport: 'stdio'
-  /**
-   * Stable local namespace for this server's model-facing tool names
-   * (`mcp__<serverName>__<rawName>`). Must match `[A-Za-z0-9_-]{1,32}` and be
-   * unique across live mcp-client instances.
-   */
-  serverName: string
-  /** Executable used to start the server. */
-  command: string
-  /** Arguments passed directly, without shell interpolation. */
-  args: string[]
-  /** Extra env vars merged on top of scrubbed ambient env. */
-  env: Record<string, string>
-  /** Working directory for the child process. */
-  cwd: string
-  /** Per-tool-call timeout in milliseconds. */
-  toolCallTimeoutMs: number
-  /** Fail plugin activation when the initial connection or tool synchronization fails. */
-  failOnStartupError: boolean
-  /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
-  reconnect?: ReconnectConfig
-}
-
-/** Config for connecting to an MCP server over Streamable HTTP (SSE). */
-export interface StreamableHttpConfig {
-  /** Selects Streamable HTTP transport. */
-  transport: 'streamable-http'
-  /**
-   * Stable local namespace for this server's model-facing tool names
-   * (`mcp__<serverName>__<rawName>`). Must match `[A-Za-z0-9_-]{1,32}` and be
-   * unique across live mcp-client instances.
-   */
-  serverName: string
-  /** MCP endpoint URL. */
-  url: string
-  /** Additional headers attached to MCP requests. */
-  headers: Record<string, string>
-  /** Per-tool-call timeout in milliseconds. */
-  toolCallTimeoutMs: number
-  /** Fail plugin activation when the initial connection or tool synchronization fails. */
-  failOnStartupError: boolean
-  /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
-  reconnect?: ReconnectConfig
-}
-
-/** Configuration for one stdio or Streamable HTTP MCP server. */
-export type Config = StdioConfig | StreamableHttpConfig
+export type { StdioConfig, StreamableHttpConfig } from './types.ts'
+import type { McpClientConfig, StdioConfig, StreamableHttpConfig } from './types.ts'
+/** Configuration for one selected MCP transport. */
+export type Config = McpClientConfig
 
 type StdioConfigInput = Omit<StdioConfig, 'args' | 'env' | 'cwd' | 'toolCallTimeoutMs' | 'failOnStartupError'>
   & Partial<Pick<StdioConfig, 'args' | 'env' | 'cwd' | 'toolCallTimeoutMs' | 'failOnStartupError'>>

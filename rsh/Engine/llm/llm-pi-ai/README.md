@@ -35,6 +35,8 @@ Choose this adapter when the same composition serves several providers, when a r
 
 Each profile may set a `retryPolicy`; omission uses normal mode with five retries. `apiKeyEnv` is a credential reference resolved per request through the harness credential seam, so no secret enters the configuration file; a reference that resolves to nothing fails the request with `MISSING_CREDENTIAL`. Omitting it leaves the route configured-but-keyless, which for an installed catalog route defers to pi-ai's provider-native ambient discovery.
 
+In a native Host with a settings Provider, the `llm-pi-ai` namespace overlays the profile's provider routes. Valid file edits reach the next model request; a Host without settings keeps its configured routes.
+
 ```yaml
 - name: '@deepseek-ai/dsh-llm-pi-ai'
   config:

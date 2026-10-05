@@ -31,10 +31,22 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
-/** Third-party imports retained by published Client library ESM at runtime. */
+/** Runtime dependencies retained by published Client packages. */
 const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
+  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
+
+/** Legacy Host peers omitted by the separately published native entry. */
+export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
+  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
+}
+
+/** Browser runtime peers that must share the application instance. */
+export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+}
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
 const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
@@ -51,7 +63,6 @@ const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
  * prominent heading in the pull request description.
  */
 const SAFE_HOST_DEPENDENCY_EXPORTS = {
-  '@deepseek-ai/dsh-credentials': ['credentialKey'],
   '@deepseek-ai/dsh-deque': ['Deque'],
   '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
   '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
@@ -60,6 +71,7 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
+  '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],

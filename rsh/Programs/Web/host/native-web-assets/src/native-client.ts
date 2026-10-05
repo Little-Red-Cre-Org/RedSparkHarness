@@ -220,8 +220,9 @@ export async function prepareNativeClientBundle(
     } }],
   }).catch((error: unknown) => {
     if (error instanceof Error && 'errors' in error && Array.isArray(error.errors)) {
-      for (const message of error.errors) {
-        if (typeof message?.text !== 'string') continue
+      const messages: readonly unknown[] = error.errors
+      for (const message of messages) {
+        if (typeof message !== 'object' || message === null || !('text' in message) || typeof message.text !== 'string') continue
         const name = /^Could not resolve "([^"]+)"$/u.exec(message.text)?.[1]
         if (name === undefined) continue
         const segments = name.split('/')

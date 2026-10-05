@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Engine/core/native-agent/README.md
 README.md: 65ce96c0dd31e83c73e6110141da7f854fec57e4
-README.zh.md: 7a8ba747e37027b8e272a355fe08e5880e88e5d4
+README.zh.md: 047dbbdc70c67536f3c35830c995f03f0f0b2804

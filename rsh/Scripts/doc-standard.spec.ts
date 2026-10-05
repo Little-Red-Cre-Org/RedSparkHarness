@@ -58,6 +58,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Programs/Web/client/ui-slots': 'Browser-side slot-map declarations; plain type exports.',
   'rsh/Programs/Web/client/web': 'Browser application boot library; exports the app entry and static module table.',
   'rsh/Engine/core/scope': 'Scoped-context primitives; exports functions and types without a plugin entry.',
+  'rsh/Engine/workspace/workspace-definition': 'Workspace identity and consumer types without a plugin entry.',
   'rsh/Modules/Community/experimental/webworker-packer': 'Build-time VFS image packer and command library.',
   'rsh/Modules/Community/experimental/webworker-runtime': 'Browser worker runtime library with explicit host entry points.',
   'rsh/Modules/Official/hooks/hook-protocol': 'Shared wire-protocol library between the hook bridges.',
