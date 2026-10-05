@@ -312,6 +312,7 @@ flowchart TD
     pkg_schedule["schedule"]
   end
   subgraph group_sdk["group: sdk"]
+    pkg_native_sdk_server["native-sdk-server"]
     pkg_sdk_client["sdk-client"]
     pkg_sdk_jsonrpc_server["sdk-jsonrpc-server"]
     pkg_sdk_protocol["sdk-protocol"]
@@ -400,12 +401,11 @@ flowchart TD
   end
   pkg_launch_environment --> pkg_native_runtime
   pkg_llm --> pkg_errors
+  pkg_llm --> pkg_typert_protocol
   pkg_scope --> pkg_invariants
   pkg_attachment --> pkg_brand
   pkg_attachment --> pkg_native_runtime
-  pkg_client_connection --> pkg_native_runtime
   pkg_client_ui_renderer --> pkg_client_ui_slots
-  pkg_client_ui_renderer --> pkg_native_runtime
   pkg_credentials --> pkg_invariants
   pkg_credentials --> pkg_native_runtime
   pkg_e2b --> pkg_http_proxy
@@ -414,6 +414,8 @@ flowchart TD
   pkg_host_directory_picker_auto --> pkg_host_directory_picker_browse
   pkg_host_directory_picker_auto --> pkg_host_directory_picker_native
   pkg_host_directory_picker_auto --> pkg_host_webserver
+  pkg_host_frontend_static --> pkg_client_connection
+  pkg_host_frontend_static --> pkg_host_webserver
   pkg_anonymous_user_id --> pkg_brand
   pkg_anonymous_user_id --> pkg_home_paths
   pkg_storage_domain --> pkg_invariants
@@ -446,8 +448,6 @@ flowchart TD
   pkg_subprocess_e2b --> pkg_e2b
   pkg_subprocess_e2b --> pkg_subprocess
   pkg_subprocess_e2b --> pkg_timeout
-  pkg_host_frontend_static --> pkg_client_connection
-  pkg_host_frontend_static --> pkg_host_webserver
   pkg_lsp --> pkg_brand
   pkg_lsp --> pkg_llm
   pkg_sandbox_local --> pkg_llm
@@ -1238,6 +1238,7 @@ flowchart TD
 | [`rsh`](../Compatibility/DSH/bundle/rsh) | `bundle` | — |
 | [`sdk-app`](../Compatibility/DSH/bundle/sdk-app) | `bundle` | — |
 | [`sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal) | `bundle` | — |
+| [`client-connection`](../Programs/Web/client/connection) | `client` | — |
 | [`client-hmr`](../Programs/Web/client/hmr) | `client` | — |
 | [`client-locale`](../Programs/Web/client/locale) | `client` | — |
 | [`client-modules`](../Programs/Web/client/modules) | `client` | — |
@@ -1306,6 +1307,7 @@ flowchart TD
 | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) | `runtime-diagnostics` | — |
 | [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy) | `sandbox` | — |
 | [`sandbox-windows-acl`](../Modules/Official/sandbox/sandbox-windows-acl) | `sandbox` | — |
+| [`native-sdk-server`](../Programs/SDK/packages/native-server) | `sdk` | — |
 | [`session-format`](../Engine/session/session-format) | `session` | — |
 | [`session-format-v0-to-v1`](../Engine/session/session-format-v0-to-v1) | `session` | — |
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
@@ -1320,14 +1322,14 @@ flowchart TD
 | [`typert-registry`](../Core/typert/registry) | `typert` | — |
 | [`workspace-definition`](../Engine/workspace/workspace-definition) | `workspace` | — |
 | [`launch-environment`](../Core/util/launch-environment) | `util` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
-| [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors) |
+| [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors), [`typert-protocol`](../Core/typert/protocol) |
 | [`scope`](../Engine/core/scope) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`attachment`](../Modules/Official/attachment/attachment) | `attachment` | [`brand`](../Core/util/brand), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
-| [`client-connection`](../Programs/Web/client/connection) | `client` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
-| [`client-ui-renderer`](../Programs/Web/client/ui-renderer) | `client` | [`client-ui-slots`](../Programs/Web/client/ui-slots), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
+| [`client-ui-renderer`](../Programs/Web/client/ui-renderer) | `client` | [`client-ui-slots`](../Programs/Web/client/ui-slots) |
 | [`credentials`](../Modules/Official/credentials/credentials) | `credentials` | [`invariants`](../Core/runtime-diagnostics/invariants), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`e2b`](../Modules/Official/e2b/e2b) | `e2b` | [`http-proxy`](../Core/util/http-proxy) |
 | [`host-directory-picker-auto`](../Programs/Web/host/directory-picker-auto) | `host` | [`client-ui-directory-picker-browse`](../Programs/Web/client/ui-directory-picker-browse), [`client-ui-directory-picker-native`](../Programs/Web/client/ui-directory-picker-native), [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse), [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native), [`host-webserver`](../Programs/Web/host/webserver) |
+| [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`anonymous-user-id`](../Core/identity/anonymous-user-id) | `identity` | [`brand`](../Core/util/brand), [`home-paths`](../Core/util/home-paths) |
 | [`storage-domain`](../Core/storage/storage-domain) | `storage` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`storage-sqlite`](../Core/storage/storage-sqlite) | `storage` | [`storage`](../Core/storage/storage) |
@@ -1344,7 +1346,6 @@ flowchart TD
 | [`authorization`](../Modules/Official/credentials/authorization) | `credentials` | [`credentials`](../Modules/Official/credentials/credentials), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm) |
 | [`credentials-local`](../Modules/Official/credentials/credentials-local) | `credentials` | [`atomic-write`](../Core/util/atomic-write), [`credentials`](../Modules/Official/credentials/credentials), [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
-| [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`host-webserver`](../Programs/Web/host/webserver) |
 | [`lsp`](../Modules/Official/lsp/lsp) | `lsp` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm) |
 | [`sandbox-local`](../Modules/Official/sandbox/sandbox-local) | `sandbox` | [`llm`](../Engine/llm/llm) |
 | [`subprocess-local`](../Core/subprocess/subprocess-local) | `subprocess` | [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
