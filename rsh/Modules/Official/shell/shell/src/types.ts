@@ -36,6 +36,11 @@ export interface ShellSandboxInfo {
  * fully-resolved {@link ShellExecSpec}.
  */
 export interface ShellExecRequest {
+  /** Observe decoded captured output without consuming it; the callback must not throw.
+   * @param stream - stdout or stderr.
+   * @param text - UTF-8 text delivered before cancellation or settlement.
+   */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   /** Working directory override (default: implementation-configured). */
   workdir?: string | undefined
@@ -84,6 +89,8 @@ export interface ShellExecRequest {
  * background processes have no executor timeout.
  */
 export interface ShellExecSpec {
+  /** Output observer carried through from {@link ShellExecRequest.onOutput}. */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   workdir: string
   timeoutMs: number
@@ -167,8 +174,9 @@ export interface ShellProcess {
   /** Terminating signal name, when signal-killed. */
   signal: NodeJS.Signals | null
   /**
-   * Resolves when the underlying process settles (never rejects — provider
-   * rejection settles as `killed` with a stage-neutral error on stderr).
+   * Resolves after process settlement and, on cancellation or provider failure,
+   * managed-range exit. Provider rejection settles as `killed` with an error
+   * on stderr; failure to observe managed-range cleanup rejects.
    */
   readonly done: Promise<void>
   /** Sandbox facts, stamped once a confined process settles. */

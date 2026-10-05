@@ -114,6 +114,9 @@ Read these pages when the seam contract is not enough. They move from the shared
 -----
 
 <a id="model-experience"></a>
+
+Trusted callers may pass `onOutput` through `resolve()` to observe UTF-8 text without consuming background reads.
+
 ## Model Experience
 
 Indirectly, through `dsh-tool-bash`, which turns executor output and sandbox facts into guidance and retained tool-result tokens.
