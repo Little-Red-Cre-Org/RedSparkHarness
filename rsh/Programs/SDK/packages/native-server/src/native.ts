@@ -37,13 +37,20 @@ function resolveConfig(input: unknown): Config {
   return { systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps }
 }
 
+interface NativeSdkTurnAdmission {
+  controller: AbortController
+  received: boolean
+  settled: Promise<void>
+  failure?: AggregateError
+}
+
 /** One native executor and one JSON-RPC connection owned by the profile. */
 export class NativeSdkApplication implements NativeApplication {
   private executor: NativeHeadlessApplication | undefined
   private readonly abort = new AbortController()
   private readonly sessions = new Map<string, Promise<void>>()
   private readonly pending = new Set<Promise<unknown>>()
-  private readonly activeTurns = new Map<string, { controller: AbortController; received: boolean; settled: Promise<void> }>()
+  private readonly activeTurns = new Map<string, NativeSdkTurnAdmission>()
   private closing = false
   private initializing = false
 
@@ -138,6 +145,7 @@ export class NativeSdkApplication implements NativeApplication {
     if (active === undefined || !active.received) return { cancelled: false }
     active.controller.abort({ kind: 'user' })
     await active.settled
+    if (active.failure !== undefined) throw active.failure
     return { cancelled: true }
   }
 
@@ -159,7 +167,7 @@ export class NativeSdkApplication implements NativeApplication {
     const message = createUserMessage({ content, source: { kind: 'user' } })
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<void>()
-    const admission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
+    const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
     const task = (async () => {
       try {
         if (previous !== undefined) await previous
@@ -179,6 +187,7 @@ export class NativeSdkApplication implements NativeApplication {
           } }, signal)
         if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
       } catch (error: unknown) {
+        if (error instanceof AggregateError) admission.failure = error
         if (admission.received) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
         else accepted.reject(error)
       } finally {
