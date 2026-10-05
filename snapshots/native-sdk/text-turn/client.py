@@ -82,6 +82,13 @@ with DeepSeekHarness(config) as restored:
         for item in result.notifications for value in item.payload.values())
     production = result
     session = restored.start_session("sdk-recorded-fork")
+    failed = session.run("fail a production child")
+    tool_result = next(event for event in failed.events if event["type"] == "tool/result")
+    assert tool_result["data"]["message"]["content"][0]["isError"] is True
+    assert tool_result["data"]["message"]["content"][0]["content"] == [
+        {"type": "text", "text": "Subagent ended: error. Partial output follows."},
+        {"type": "text", "text": "partial failed child output"}]
+    assert failed.final_response == result.final_response
     child_cancelled = False
 
     def cancel_child(notification):

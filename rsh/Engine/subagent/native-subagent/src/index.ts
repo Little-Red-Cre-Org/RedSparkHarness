@@ -139,28 +139,33 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     const output = new AssistantOutputFold()
     let end: TurnEndReason | undefined
     const descriptor = snapshotSubagentDescriptor({ mode: 'one-shot', provider: this.providerName, label: request.label })
-    await this.context.require('sessionExecution').delegate(request.agent, request.session, {
-      id, config: request.config, maxDepth: request.maxDepth,
-      message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
-      prepare: ({ agent, own }) => {
-        const prompt = this.context.require('promptSections')
-        own(prompt.register({ name: 'subagent:delegation', order: 100, text: () => SUBAGENT_DELEGATION_CONTEXT }, agent.scope))
-        if (request.toolFilter !== undefined) {
-          const tools = this.context.optional('tools')
-          if (tools === undefined) throw new Error('native-subagent: toolFilter requires tools')
-          own(tools.restrict(request.toolFilter, agent.scope))
-        }
-        const persona = request.persona
-        if (persona !== undefined) {
-          own(prompt.register({ name: 'deployment:persona-prefix', order: 0, text: () => persona }, agent.scope))
-        }
-      },
-      initialize: (append) => { append('subagent/descriptor', descriptor) },
-      onEvent: (event) => {
-        output.push(event)
-        if (event.type === 'turn/end') end = event.data.reason
-      },
-    }, signal)
+    try {
+      await this.context.require('sessionExecution').delegate(request.agent, request.session, {
+        id, config: request.config, maxDepth: request.maxDepth,
+        message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
+        prepare: ({ agent, own }) => {
+          const prompt = this.context.require('promptSections')
+          own(prompt.register({ name: 'subagent:delegation', order: 100, text: () => SUBAGENT_DELEGATION_CONTEXT }, agent.scope))
+          if (request.toolFilter !== undefined) {
+            const tools = this.context.optional('tools')
+            if (tools === undefined) throw new Error('native-subagent: toolFilter requires tools')
+            own(tools.restrict(request.toolFilter, agent.scope))
+          }
+          const persona = request.persona
+          if (persona !== undefined) {
+            own(prompt.register({ name: 'deployment:persona-prefix', order: 0, text: () => persona }, agent.scope))
+          }
+        },
+        initialize: (append) => { append('subagent/descriptor', descriptor) },
+        onEvent: (event) => {
+          output.push(event)
+          if (event.type === 'turn/end') end = event.data.reason
+        },
+      }, signal)
+    } catch (error: unknown) {
+      // A recorded model failure has a result; cancellation and owned cleanup failures remain rejections.
+      if (signal.aborted || error instanceof AggregateError || end?.kind !== 'error') throw error
+    }
     return { id, provider: this.providerName, output: output.collect() ?? [], stopReason: stopReason(end) }
   }
 }
