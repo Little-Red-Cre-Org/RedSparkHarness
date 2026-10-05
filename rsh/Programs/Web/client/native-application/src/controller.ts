@@ -1,5 +1,5 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Settled durable history and the Client's outstanding operation. */
@@ -7,8 +7,16 @@ export interface ConversationSnapshot {
   readonly sessions: readonly SessionHeader[]
   readonly selected?: SessionId
   readonly events: readonly SessionEvent[]
+  readonly liveText?: string | undefined
+  readonly liveTruncated?: boolean | undefined
   readonly state: 'loading' | 'ready' | 'sending' | 'cancelling' | 'closed'
   readonly error?: string | undefined
+}
+
+/** Explicit retained presentation limits, supplied by the Client profile. */
+export interface NativeConversationLimits {
+  readonly maxLiveTextChars: number
+  readonly maxLiveEvents: number
 }
 
 /** Own one interactive Session selection and await all requests before disposal. */
@@ -20,8 +28,11 @@ export class NativeConversationController {
   private turn: AbortController | undefined
   private closing: Promise<void> | undefined
 
-  /** @param client - selected Host Session Consumer; this controller does not close the shared Provider. */
-  constructor(private readonly client: NativeSessionClient) {}
+  /**
+   * @param client - selected Host Session Consumer; this controller does not close the shared Provider.
+   * @param limits - maximum retained live presentation.
+   */
+  constructor(private readonly client: NativeSessionClient, private readonly limits: NativeConversationLimits) {}
 
   /** Read the current conversation view.
    * @returns immutable view snapshot, stable until an operation publishes a change. */
@@ -107,18 +118,37 @@ export class NativeConversationController {
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const turn = new AbortController()
     this.turn = turn
-    this.publish({ state: 'sending', error: undefined })
+    this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
       try {
-        const result = await this.client.prompt(id, text, true, AbortSignal.any([turn.signal, this.lifetime.signal]))
+        const result = await this.client.prompt(id, text, true, AbortSignal.any([turn.signal, this.lifetime.signal]),
+          (frame) => { this.observe(frame) })
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }
       } finally {
         this.turn = undefined
+        this.publish({ liveText: undefined, liveTruncated: false })
         if (!this.lifetime.signal.aborted) await this.restore(id)
       }
     })
+  }
+
+  private observe(frame: NativeSessionFollowFrame): void {
+    if (frame.type === 'event') {
+      const last = this.snapshot.events.at(-1)?.seq
+      if (last !== undefined && frame.event.seq <= last) return
+      if (last !== undefined && frame.event.seq !== last + 1) throw new Error('native conversation: live history sequence gap')
+      if (this.snapshot.events.length >= this.limits.maxLiveEvents) throw new Error('native conversation: live history exceeds configured limit')
+      this.publish({ events: [...this.snapshot.events, frame.event],
+        ...frame.event.type === 'assistant/message' || frame.event.type === 'assistant/attempt' ? { liveText: undefined, liveTruncated: false } : {} })
+    } else if (frame.type === 'text-start') {
+      this.publish({ liveText: '', liveTruncated: false })
+    } else if (frame.type === 'text') {
+      const text = (this.snapshot.liveText ?? '') + frame.text
+      this.publish({ liveText: text.slice(-this.limits.maxLiveTextChars),
+        liveTruncated: this.snapshot.liveTruncated === true || text.length > this.limits.maxLiveTextChars })
+    }
   }
 
   /** Request cancellation; readiness is published only by the settled send operation. */

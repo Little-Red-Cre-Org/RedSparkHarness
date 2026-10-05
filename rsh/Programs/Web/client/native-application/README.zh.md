@@ -26,7 +26,7 @@ kind: "package-reference"
 
 转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。传输和历史错误会显示；发送失败时保留草稿。
 
-配置仅接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。页面不提供持久化语言偏好或 Settings UI。
+配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。页面不提供持久化语言偏好或 Settings UI。
 
 React 与 Session 消息投影通过 peer 依赖共享应用实例；Session Consumer 只作为类型依赖，运行时由选定 capability 提供。
 
@@ -40,7 +40,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 <a id="dev-note"></a>
 ## 开发备注
 
-生命周期所有权与持久化转录刷新、流式呈现的区别见 [Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)。
+生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -62,5 +62,7 @@ Host 拥有恢复后的上下文和既有前缀；UI 选择不修改 Session 事
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-- 转录在执行结算后刷新；实时模型输出仍属于独立 P4 工作。
+持久化事件在执行期间更新转录。临时助手输出独立显示，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
+
+- 丰富工具卡片及其他模型片段呈现仍属于独立工作。
 - 附件上传、审批与问题回复、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。
