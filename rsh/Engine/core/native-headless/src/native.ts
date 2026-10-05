@@ -36,6 +36,12 @@ export interface Config {
   model: string
   systemPrompt: string
   maxSteps: number
+  /** Enable fixed file/code tools independently of registry tools; defaults to true. */
+  builtinTools?: boolean
+}
+
+interface ResolvedConfig extends Config {
+  builtinTools: boolean
 }
 
 const TOOL_SCHEMAS: ToolSchema[] = [
@@ -59,11 +65,11 @@ function nonempty(value: unknown, name: string): string {
   return value
 }
 
-function resolveConfig(input: unknown): Config {
+function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-headless: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['cwd', 'provider', 'model', 'systemPrompt', 'maxSteps'].includes(key)) throw new Error(`native-headless: unknown configuration field ${key}`)
+    if (!['cwd', 'provider', 'model', 'systemPrompt', 'maxSteps', 'builtinTools'].includes(key)) throw new Error(`native-headless: unknown configuration field ${key}`)
   }
   const cwd = nonempty(fields.cwd, 'cwd')
   if (!isAbsolute(cwd)) throw new Error('native-headless: cwd must be absolute')
@@ -71,9 +77,11 @@ function resolveConfig(input: unknown): Config {
   if (typeof maxSteps !== 'number' || !Number.isSafeInteger(maxSteps) || maxSteps <= 0) {
     throw new Error('native-headless: maxSteps must be a positive integer')
   }
+  const builtinTools = fields.builtinTools === undefined ? true : fields.builtinTools
+  if (typeof builtinTools !== 'boolean') throw new Error('native-headless: builtinTools must be a boolean')
   return {
     cwd: resolve(cwd), provider: nonempty(fields.provider, 'provider'), model: nonempty(fields.model, 'model'),
-    systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps,
+    systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps, builtinTools,
   }
 }
 
@@ -127,7 +135,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly fs: import('@deepseek-ai/dsh-fs/native').FileSystemOperations,
     private readonly storage: NativeSessionPersistenceOperations,
     private readonly modelExecution: NativeModelExecution,
-    private readonly config: Config,
+    private readonly config: ResolvedConfig,
     private readonly agents: NativeAgentRegistry,
     private readonly tools: NativeToolRegistry | undefined,
     private readonly promptSections: NativePromptRegistry | undefined,
@@ -198,10 +206,11 @@ export class NativeHeadlessApplication implements NativeApplication {
     agent: NativeAgent,
     signal: AbortSignal,
   ): Promise<number> {
-    const additions = await this.promptSections?.render() ?? ''
+    const additions = await this.promptSections?.render(agent.scope) ?? ''
     const systemPrompt = additions === '' ? this.config.systemPrompt : `${this.config.systemPrompt}\n\n${additions}`
     const schemas = [
-      ...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA]), ...(this.tools?.modelSchemas(agent.scope) ?? []),
+      ...(this.config.builtinTools ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])] : []),
+      ...(this.tools?.modelSchemas(agent.scope) ?? []),
     ]
     if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
       throw new Error('native-headless: duplicate tool schema')
@@ -341,12 +350,12 @@ export class NativeHeadlessApplication implements NativeApplication {
                 const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal, ...requested })
                 if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
               }
-              if (call.name === 'read_file' || call.name === 'write_file') {
+              if (this.config.builtinTools && (call.name === 'read_file' || call.name === 'write_file')) {
                 if (call.name === 'write_file' && this.approval !== undefined) {
                   await authorize({ reason: 'Writing a file changes the selected workspace.' })
                 }
                 content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal) }]
-              } else if (call.name === 'run_code' && this.codeRuntime !== undefined) {
+              } else if (this.config.builtinTools && call.name === 'run_code' && this.codeRuntime !== undefined) {
                 const outcome = await this.executeCode(call, signal)
                 content = [{ type: 'text', text: outcome.text }]
                 if (outcome.error !== undefined) {

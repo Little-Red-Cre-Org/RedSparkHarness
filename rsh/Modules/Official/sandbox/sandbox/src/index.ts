@@ -6,8 +6,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
-import type { ConfinedSandboxMode, ConfinedArgv, SandboxPolicy } from './native-types.ts'
+import type { ConfinedArgv, SandboxPolicy } from './native-types.ts'
 
 export {
   ESCALATION_TARGETS,
@@ -29,33 +28,7 @@ export type {
   SandboxPolicy,
 } from './native-types.ts'
 
-/**
- * Error code for a requested confined mode when no backend is usable. The
- * provider fails closed, and `HarnessError` carries the code through
- * `tool/result` so callers can distinguish missing confinement from command
- * failure.
- */
-export const SANDBOX_UNAVAILABLE = 'SANDBOX_UNAVAILABLE'
-
-/**
- * Thrown when {@link SandboxProvider.confine} cannot enforce the requested
- * mode. Carries {@link SANDBOX_UNAVAILABLE} through the structured error
- * channel.
- */
-export class SandboxUnavailableError extends HarnessError {
-  constructor(mode: ConfinedSandboxMode, detail?: string) {
-    super(
-      `sandbox mode "${mode}" is requested but no sandbox backend is usable on this host; `
-      + 'refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing '
-      + 'kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL '
-      + 'restricted-token runner can start (Windows) — otherwise switch the consumer to '
-      + 'danger-full-access.'
-      + (detail === undefined ? '' : ` Runner failure: ${detail}`),
-      SANDBOX_UNAVAILABLE,
-    )
-    this.name = 'SandboxUnavailableError'
-  }
-}
+export { SANDBOX_UNAVAILABLE, SandboxUnavailableError } from './native.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {

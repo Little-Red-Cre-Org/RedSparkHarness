@@ -31,7 +31,19 @@
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-subprocess-local": "workspace:^",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-code-runtime-process-sandbox": "workspace:^",
+    "@deepseek-ai/dsh-sandbox-local": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-headless": "workspace:^",
+    "@deepseek-ai/dsh-native-jobs": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-tool-jobs": "workspace:^",
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

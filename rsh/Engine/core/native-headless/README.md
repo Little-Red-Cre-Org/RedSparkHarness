@@ -30,6 +30,8 @@ The application consumes `NativeSessionPersistenceOperations` from `dsh-session-
 
 Registered tools use the registry's model transport selection and exact Agent scope. Tool-owned events append through the same Session writer; concurrent append callbacks serialize persistence. The application accepts the final result, including presentation metadata, before notifying result observers, then appends sourced additional messages before another model request. A successful tool conclusion ends the turn only after every call in the current batch settles. Cancellation prevents a removed contribution's late successful result from being accepted.
 
+The validated `builtinTools` boolean defaults to `true`. Setting it to `false` removes both fixed file schemas and the built-in `{program}` code tool, and dispatches only registry contributions. An opt-in PTC profile selects this value explicitly so its registry-owned `run_code` is the sole transport. Prompt sections receive the exact requesting Agent scope before their rendered text enters the persisted system message.
+
 ## Dev Note
 
 No invariant companion is published: the application has no independent in-process observation of its own state. Session persistence and filesystem Providers retain their own validation.

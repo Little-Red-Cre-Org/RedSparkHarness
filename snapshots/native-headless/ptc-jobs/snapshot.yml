@@ -1,0 +1,8 @@
+version: 1
+scenario: ptc-jobs
+profile: native-headless
+composition: native-ptc-jobs
+recording: authored
+header:
+  class: native-ptc-jobs
+  pin: true

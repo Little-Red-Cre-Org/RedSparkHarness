@@ -25,6 +25,10 @@ The `./native` entry provides `codeRuntime` and accepts an optional object with 
 
 Each `run()` type-strips erasable TypeScript, starts a fresh worker with an empty environment, and bridges declared binding calls through lossless JSON. The result resolves with `exception`, `timeout`, `abort`, `worker-exit`, `invalid-output`, or `output-limit` where a program cannot complete. Calling after `dispose()` or providing invalid binding namespaces rejects as caller misuse. Host shutdown disposes the service, terminates each live worker, and waits for its exit.
 
+`nativeCodeRuntimeChildPath()` resolves the private child used by process-confined Providers. The child delegates TypeScript execution and binding serialization to this package’s worker implementation; it is not an application launcher or a public package bin. The process Provider owns OS confinement and complete process-range termination.
+
+The caller may provide `CodeRunRequest.onStop` to cancel its own binding calls when program execution stops. Providers notify before awaiting binding replies; the caller still owns their completion and failures.
+
 <a id="model-experience"></a>
 ## Model Experience
 

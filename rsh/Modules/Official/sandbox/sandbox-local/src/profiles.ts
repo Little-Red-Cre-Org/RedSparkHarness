@@ -5,8 +5,8 @@
  */
 
 import { grantArgs as landlockGrantArgs } from '@deepseek-ai/node-addon-system/landlock-run'
-import { writableRoots } from '@deepseek-ai/dsh-sandbox'
-import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
+import { writableRoots } from '@deepseek-ai/dsh-sandbox/native'
+import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
 
 /**
  * Build the bwrap profile arguments for one file-effect policy.
