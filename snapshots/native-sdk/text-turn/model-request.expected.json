@@ -8,6 +8,10 @@
     {
       "role": "user",
       "content": "say hello through native SDK"
+    },
+    {
+      "role": "user",
+      "content": "finish after cancellation"
     }
   ],
   "tools": [
