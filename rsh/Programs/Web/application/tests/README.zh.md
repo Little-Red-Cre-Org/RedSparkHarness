@@ -8,7 +8,7 @@
 
 依赖状态的用例使用 Workspace、接纳、附件和模型流屏障，区分可见中间状态与已完成操作。详情关闭等待框架过渡结束；归档验证为 seed Session 设置显式标题，并跨重载跟踪该身份。参见 [CI fixture 同步决策](../../../../../.agents/notes/implemented/testing/2026-09-08-ci-completion-observations.zh.md)。
 
-原生页面测试覆盖 Host 注入缺失、启动取消、pagehide 清理以及构建后的 `native.html` 入口。Desktop Host 单元测试验证 profile 校验、已安装包解析、单图打包、Cordis 拒绝、启动数据注入和原生资源路由。生产浏览器冒烟仍使用合成的 Host 路由 renderer bundle，因此它验证浏览器启动和生命周期，不启动 Desktop Host 进程本身。
+原生页面测试覆盖 Host 注入缺失、模块加载进度、启动取消、pagehide 清理以及构建后的 `native.html` 入口。Desktop Host 单元测试验证 profile 校验、已安装包解析、单图打包、Cordis 拒绝、启动数据注入和原生资源路由。生产浏览器冒烟仍使用合成的 Host 路由 renderer bundle，因此它验证无 Cordis 启动页、浏览器交接与生命周期，不启动 Desktop Host 进程本身。
 
 ## 这些是 Host 面的测试
 

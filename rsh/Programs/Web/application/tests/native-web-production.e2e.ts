@@ -12,13 +12,16 @@ const PLUGIN_SOURCE = `export const plugins = { renderer: { plugin: {
   name: 'renderer',
   targets: ['client'],
   requires: [],
-  provides: ['clientRenderer'],
-  resolve: () => (context) => context.provide('clientRenderer', {
-    mount: (container) => {
-      container.textContent = 'native-client-ready'
-      return () => { container.dataset.unmounted = 'true' }
-    },
-  }),
+  provides: ['clientApplication', 'clientRenderer'],
+  resolve: () => (context) => {
+    context.provide('clientApplication', { render: () => null })
+    context.provide('clientRenderer', {
+      mount: (container) => {
+        container.textContent = 'native-client-ready'
+        return () => { container.dataset.unmounted = 'true' }
+      },
+    })
+  },
 } } }
 `
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -97,7 +100,8 @@ it('shows a visible error when Host profile data is absent', async () => {
   try {
     await page.goto('https://dsh.example/native.html')
     await page.waitForFunction(() => document.querySelector('#root')?.getAttribute('data-native-boot-state') === 'failed')
-    expect(await page.getByRole('alert').textContent()).toBe('native web: Host did not inject Client profile data')
+    const expected = await readFile(fileURLToPath(new URL('./snapshots/native-boot/failure.expected.md', import.meta.url)), 'utf8')
+    expect((await page.getByRole('alert').innerText()).replace(/\r\n/gu, '\n')).toBe(expected.trimEnd())
     expect(requests.some(path => path.startsWith('/.dsh/native-client/'))).toBe(false)
   } finally {
     await page.close()
