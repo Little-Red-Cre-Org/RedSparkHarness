@@ -54,6 +54,8 @@ API Gateway Client 把内部 `$events` 逻辑流注册为唯一 generation sourc
 可通过 Host Connection 行的 `config.recovery` 覆盖重试上限、增长因子或握手告警与取消时间；[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-client-connection)列出接受的字段。Host 校验这些值，并将其注入所提供的每个页面。Client 在提供 Connection 前校验启动数据，并在 Gateway 启动循环时采用这些默认值；显式传给 `start()` 的时序覆盖优先。增长因子必须是至少为一的有限数。若就绪、失败、取消或硬期限先于告警发生，该告警会被取消。修改 Host 恢复配置后需重新加载页面。
 
 
+RPC Provider 可选提供经过身份验证的 Fetch 响应，用于功能自身拥有的流式端点。选定载体解析 Host 地址和令牌；功能 Consumer 拥有响应解码、取消与终止结算。此操作不替换既有 WebSocket 连接代次，也不引入重连循环。
+
 <a id="model-experience"></a>
 ## 模型体验
 

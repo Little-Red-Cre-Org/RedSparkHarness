@@ -22,7 +22,11 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./follow-types": {
+      "types": "./lib/types/follow-types.d.ts",
+      "default": "./lib/follow-types.js"
+    }
   },
   "dsh": {
     "native": {
@@ -47,11 +51,14 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/follow-types.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "eventsource-parser": "^3.1.0"
+  },
   "scripts": {
     "bundle": "tsdown"
   },

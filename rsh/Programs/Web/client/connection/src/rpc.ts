@@ -234,6 +234,16 @@ export interface ClientConnectionRpc {
   ): Promise<ConnectionRpcResult<unknown>>
 
   /**
+   * Request an exact authenticated Fetch route through the selected carrier.
+   * @param channel - absolute logical channel.
+   * @param endpoint - channel-relative exact route.
+   * @param payload - route-owned JSON request fields.
+   * @param signal - response-body cancellation.
+   * @returns the Fetch response; the feature owns content decoding and EOF semantics.
+   */
+  readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => Promise<Response>
+
+  /**
    * Open an in-process logical stream when the selected carrier supplies one.
    * Browser transports omit this method; API Gateway owns their WebSocket mux.
    * @param channel - absolute logical channel such as `/api`.
