@@ -67,6 +67,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Modules/Official/attachment/attachment': { kind: 'indirect', reason: 'The storage seam delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/attachment/attachment-local': { kind: 'indirect', reason: 'The local backend delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/shell/shell': { kind: 'indirect', reason: 'The service interface delegates all model rendering to dsh-tool-bash.' },
+  'rsh/Modules/Official/shell/shell-process-local': { kind: 'indirect', reason: 'Process results reach a model only through a shell tool consumer.' },
+  'rsh/Modules/Official/shell/shell-sandbox-core': { kind: 'indirect', reason: 'Confinement results reach a model only through a shell tool consumer.' },
   'rsh/Modules/Official/shell/shell-env': { kind: 'indirect', reason: 'The env service exposes managed DSH_* facts through the shell tools (dsh-tool-bash/dsh-tool-pwsh); it registers no prompt or schema of its own.' },
   'rsh/Modules/Official/shell/bash-local': { kind: 'indirect', reason: 'The executor backend delegates model rendering to dsh-tool-bash.' },
   'rsh/Modules/Official/shell/pwsh-local': { kind: 'indirect', reason: 'The executor backend delegates model rendering to dsh-tool-pwsh.' },

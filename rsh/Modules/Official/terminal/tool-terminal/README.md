@@ -25,6 +25,8 @@ Use `dsh-tool-terminal` when an agent needs persistent terminal state or interac
 <a id="use-this-package"></a>
 ## Use this package
 
+The native `./native` entry requires an explicit `type` matching the selected backend and registers only `terminal_open`, `terminal_list`, and `terminal_close`. The open schema advertises that type and returns a PTY id, type, top-level process state, and pid (`0` while asynchronous Windows PTY startup has not reported it). No native tool sends input, reads output, signals the foreground group, or infers prompt readiness. Applications that need interactive terminal work use the Cordis composition.
+
 Enable these tools when the composition mounts a terminal backend and the model should be able to use terminal state across calls — stepping a debugger, exploring in a REPL, or returning to a shell after interrupting a foreground command. The guidance section steers the model toward the one-shot bash, read, write, and edit tools for bounded operations.
 
 ### The six tools

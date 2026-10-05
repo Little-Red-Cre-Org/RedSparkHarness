@@ -21,7 +21,7 @@ import { assertSnapshotCorpusPolicy } from './session-snapshot-corpus-policy.ts'
 
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const corpusRoot = join(repoRoot, 'snapshots')
-const profiles = ['acp', 'compat', 'native-headless', 'native-tui', 'sdk', 'session', 'web'] as const
+const profiles = ['acp', 'compat', 'native-headless', 'native-sdk', 'native-tui', 'sdk', 'session', 'web'] as const
 const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/message-feedback-protocol.snapshot.ts',
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
@@ -31,11 +31,14 @@ const snapshotAdapters = [
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
   'snapshots/native-headless/mcp-image-native.snapshot.ts',
+  'snapshots/native-headless/model-choice-native.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
+  'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
   'snapshots/native-headless/tool-results.snapshot.ts',
   'snapshots/native-tui/native-tui.snapshot.ts',
+  'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',
 ] as const

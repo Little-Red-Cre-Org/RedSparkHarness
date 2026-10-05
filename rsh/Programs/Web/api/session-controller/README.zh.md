@@ -75,6 +75,8 @@ Session 对象还承载本地提交回显：`session.beginSubmission` 在调用�
 - 文件引用补全使用共享 Agent lookup，因此可能恢复冷 Session；`skills/list` 目录是不激活 Agent 的 skill 元数据读取路径。
 
 
+公开模型选择类型重新导出 `NativeModelExecution/model-selection` 中的唯一声明。兼容与原生读取器因此识别同一个持久 `model/selection` 事件；此 API 不增加第二个选择写入者。
+
 <a id="dev-note"></a>
 ### 开发备注
 

@@ -34,6 +34,7 @@ flowchart TD
     pkg_llm_deepseek["llm-deepseek"]
     pkg_llm_pi_ai["llm-pi-ai"]
     pkg_llm_retry["llm-retry"]
+    pkg_native_model_selection["native-model-selection"]
     pkg_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek"]
     pkg_token_meter["token-meter"]
   end
@@ -317,6 +318,7 @@ flowchart TD
     pkg_schedule["schedule"]
   end
   subgraph group_sdk["group: sdk"]
+    pkg_native_sdk_server["native-sdk-server"]
     pkg_sdk_client["sdk-client"]
     pkg_sdk_jsonrpc_server["sdk-jsonrpc-server"]
     pkg_sdk_protocol["sdk-protocol"]
@@ -353,6 +355,8 @@ flowchart TD
     pkg_pwsh_sandbox["pwsh-sandbox"]
     pkg_shell["shell"]
     pkg_shell_env["shell-env"]
+    pkg_shell_process_local["shell-process-local"]
+    pkg_shell_sandbox_core["shell-sandbox-core"]
     pkg_tool_bash["tool-bash"]
     pkg_tool_bash_persistent["tool-bash-persistent"]
     pkg_tool_pwsh["tool-pwsh"]
@@ -1226,6 +1230,7 @@ flowchart TD
 | [`util-values`](../Core/util/values) | `util` | — |
 | [`util-workspace-path`](../Core/util/workspace-path) | `util` | — |
 | [`deepseek-llm-api-extensions`](../Engine/llm/deepseek-llm-api-extensions) | `llm` | — |
+| [`native-model-selection`](../Engine/llm/native-model-selection) | `llm` | — |
 | [`native-code-runtime`](../Engine/core/native-code-runtime) | `core` | — |
 | [`native-headless`](../Engine/core/native-headless) | `core` | — |
 | [`native-jobs`](../Engine/core/native-jobs) | `core` | — |
@@ -1318,10 +1323,13 @@ flowchart TD
 | [`native-runtime`](../Core/runtime-diagnostics/native-runtime) | `runtime-diagnostics` | — |
 | [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy) | `sandbox` | — |
 | [`sandbox-windows-acl`](../Modules/Official/sandbox/sandbox-windows-acl) | `sandbox` | — |
+| [`native-sdk-server`](../Programs/SDK/packages/native-server) | `sdk` | — |
 | [`session-format`](../Engine/session/session-format) | `session` | — |
 | [`session-format-v0-to-v1`](../Engine/session/session-format-v0-to-v1) | `session` | — |
 | [`session-format-v1-to-v2`](../Engine/session/session-format-v1-to-v2) | `session` | — |
 | [`session-format-v2-to-v3`](../Engine/session/session-format-v2-to-v3) | `session` | — |
+| [`shell-process-local`](../Modules/Official/shell/shell-process-local) | `shell` | — |
+| [`shell-sandbox-core`](../Modules/Official/shell/shell-sandbox-core) | `shell` | — |
 | [`storage`](../Core/storage/storage) | `storage` | — |
 | [`storage-json`](../Core/storage/storage-json) | `storage` | — |
 | [`win32-process`](../Core/subprocess/win32-process) | `subprocess` | — |

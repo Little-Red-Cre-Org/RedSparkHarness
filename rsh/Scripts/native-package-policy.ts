@@ -5,6 +5,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/TUI/native-tui',
   'rsh/Programs/TUI/terminal-ui',
   'rsh/Core/identity/anonymous-user-id',
+  'rsh/Modules/Official/shell/shell-process-local',
+  'rsh/Modules/Official/shell/shell-sandbox-core',
   'rsh/Core/subprocess/win32-process',
   'rsh/Core/util/http-proxy',
   'rsh/Core/util/atomic-write',
@@ -33,6 +35,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-headless',
   'rsh/Engine/core/native-jobs',
   'rsh/Engine/core/native-model-execution',
+  'rsh/Engine/llm/native-model-selection',
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
   'rsh/Engine/jobs/native-tool-jobs',
@@ -43,6 +46,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/api/native-web-session-controller',
   'rsh/Programs/Web/client/native-session',
   'rsh/Programs/Web/host/native-web-host',
+  'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
   'rsh/Programs/Web/client/ui-slots',
@@ -53,7 +57,11 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/TUI/native-tui', ['host']],
   ['rsh/Programs/TUI/terminal-ui', ['host']],
   ['rsh/Core/identity/anonymous-user-id', ['host']],
+  ['rsh/Modules/Official/shell/shell-process-local', ['host']],
+  ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
+  ['rsh/Engine/core/native-model-execution', ['host']],
+  ['rsh/Engine/llm/native-model-selection', ['host']],
   ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
@@ -63,6 +71,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/Web/api/native-web-session-controller', ['host']],
   ['rsh/Programs/Web/client/native-session', ['client']],
   ['rsh/Programs/Web/host/native-web-host', ['host']],
+  ['rsh/Programs/SDK/packages/native-server', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])
 
@@ -73,6 +82,16 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
   ['rsh/Modules/Official/mcp/mcp-client', 'Cordis and native MCP Consumers share connection supervision and protocol tool projection'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
+  ['rsh/Modules/Official/shell/shell-env', 'Cordis and native installers share managed command environment facts'],
+  ['rsh/Modules/Official/shell/bash-local', 'Cordis and native installers share managed process operations'],
+  ['rsh/Modules/Official/shell/bash-sandbox', 'Cordis and native installers share confined process operations'],
+  ['rsh/Modules/Official/shell/pwsh-local', 'Cordis and native installers share managed process operations'],
+  ['rsh/Modules/Official/shell/pwsh-sandbox', 'Cordis and native installers share confined process operations'],
+  ['rsh/Modules/Official/shell/tool-bash', 'Cordis and native Consumers share Bash tool presentation'],
+  ['rsh/Modules/Official/shell/tool-pwsh', 'Cordis and native Consumers share PowerShell tool presentation'],
+  ['rsh/Modules/Official/terminal/terminal', 'Cordis and native Definitions share Agent-owned PTY lifecycle'],
+  ['rsh/Modules/Official/terminal/terminal-bash', 'Cordis and native Providers share the subprocess terminal primitive'],
+  ['rsh/Modules/Official/terminal/tool-terminal', 'Cordis and native Consumers share terminal lifecycle tools'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
   ['rsh/Engine/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
@@ -95,6 +114,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
+  ['rsh/Modules/Official/shell/shell', ['host']],
   ['rsh/Modules/Official/attachment/attachment', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
@@ -128,6 +148,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
+  ['rsh/Engine/llm/native-model-selection', ['./types']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
@@ -142,6 +164,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
+  ['rsh/Modules/Official/shell/shell-env', ['./definition']],
   ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
@@ -153,6 +176,11 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+
+  ['rsh/Engine/core/native-model-execution/model-selection', ['host', 'client']],
+  ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
+  ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
+  ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],
   ['rsh/Modules/Official/interaction/user-questions/broker', ['host']],
   ['rsh/Core/util/launch-environment/layers', ['host']],
@@ -181,5 +209,6 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],
   ['rsh/Core/storage/storage/backend', ['host']],
   ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
+  ['rsh/Modules/Official/shell/shell-env/definition', ['host']],
   ['rsh/Engine/preset/agent-presets/native-definition', ['host']],
 ])

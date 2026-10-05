@@ -25,6 +25,8 @@ shell 组为 agent（智能体）提供命令执行能力：运行前台命令�
 | 包 | 职责 | ctx key |
 |---|---|---|
 | [`shell`](shell/README.zh.md) | 定义执行器约定：前台运行、后台句柄与请求解析 | `ctx.shell` |
+| [`shell-process-local`](shell-process-local/README.zh.md) | 在原生与 Cordis 执行器之间共用进程预算、输出收集和取消处理 | 内部辅助包 |
+| [`shell-sandbox-core`](shell-sandbox-core/README.zh.md) | 在原生与 Cordis 执行器之间共用隔离选择和结果分类 | 内部辅助包 |
 | [`bash-local`](bash-local/README.zh.md) | 在 POSIX 上以全新 `bash -c` 进程运行 Bash 命令 | 注册 `ctx.shell` |
 | [`bash-sandbox`](bash-sandbox/README.zh.md) | 通过沙箱能力限制 Bash 命令运行，并把拒绝报告为事实 | 注册 `ctx.shell` |
 | [`pwsh-local`](pwsh-local/README.zh.md) | 在 Windows 上以全新 `pwsh -Command` 进程运行 PowerShell 命令 | 注册 `ctx.shell` |
@@ -35,7 +37,7 @@ shell 组为 agent（智能体）提供命令执行能力：运行前台命令�
 | [`tool-pwsh`](tool-pwsh/README.zh.md) | 以 `pwsh` 工具向模型公开 PowerShell 执行 | 注册到 `ctx.tools` |
 | [`tool-pwsh-persistent`](tool-pwsh-persistent/README.zh.md) | 在单个限定所有者范围的持久 PowerShell 会话中运行模型的 shell 调用 | 注册到 `ctx.tools` |
 
-profile 层恰好选择一个执行器实现（win32 层会把 POSIX 行换成 pwsh 行；同时挂载两个会因服务重复注册而在加载期失败）以及所需的面向模型工具。沙箱化组合还会选择一个 `ctx.sandbox` 提供方与 `ctx.sandboxPolicy`；[base 组合包](../../../Compatibility/DSH/bundle/base/cordis.patch.yml)负责随产品交付的接线配置。
+profile 层恰好选择一个执行器实现（win32 层会把 POSIX 行换成 pwsh 行；同时挂载两个会因服务重复注册而在加载期失败）以及所需的面向模型工具。沙箱化组合还会选择沙箱提供方和策略提供方；[base 组合包](../../../Compatibility/DSH/bundle/base/cordis.patch.yml)与随附的 `native-headless` profile 分别负责接线配置。
 
 -----
 

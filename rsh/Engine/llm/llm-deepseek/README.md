@@ -150,6 +150,9 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+
+The native `modelDirectory` uses this installation’s exact adapter and official route. Catalog membership is advisory; exact resolution supplies model capabilities and reasoning controls. Removal drains accepted lookups before releasing the adapter.
+
 ## Model Experience
 
 ### DeepSeek request
@@ -183,7 +186,6 @@ Loop-retained response blocks append to the next request and preserve its earlie
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
-
 
 These limits define where the adapter stops and future work begins. They are current package constraints, not a general DeepSeek comparison or a task backlog.
 

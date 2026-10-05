@@ -29,6 +29,7 @@ SDK 家族让另一进程通过按换行分帧的 JSON-RPC 驱动完整的 DeepS
 | [`protocol/`](protocol/README.zh.md) | 协议格式（wire format）：按换行分帧的 JSON-RPC 传输，以及具名的请求、结果与通知类型 |
 | [`client/`](client/README.zh.md) | TypeScript 客户端：启动运行时子进程，通过高层与协议层 API 驱动 agent 轮次 |
 | [`server/`](server/README.zh.md) | `jsonrpc` 插件：通过 stdio 为进程外 SDK 客户端提供服务 |
+| [`native-server/`](native-server/README.zh.md) | 显式选择的原生 SDK profile 应用：使用共享 Session 执行器 |
 
 -----
 

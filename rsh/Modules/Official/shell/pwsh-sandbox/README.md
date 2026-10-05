@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-pwsh-sandbox` is the sandbox-consuming PowerShell executor: every command runs as a fresh `pwsh -Command` process confined through the `ctx.sandbox` capability, with the selected mode, enforcement, and denial facts stamped on each settled result. On Windows the sandbox seam resolves to the ACL restricted-token runner chain; on Linux and macOS it uses bwrap, Landlock, or Seatbelt. When no runner can enforce a confined mode, the call fails closed with a structured `SANDBOX_UNAVAILABLE` error rather than running unconfined. It is the pwsh twin of `dsh-bash-sandbox`, mirroring it call-for-call.
+`dsh-pwsh-sandbox` is the sandbox-consuming PowerShell executor: every command runs as a fresh `pwsh -Command` process confined through the selected sandbox capability, with the mode, enforcement, and denial facts stamped on each settled result. Its `./native` entry composes native subprocess, runner, and policy Providers. On Windows the sandbox seam resolves to the ACL restricted-token runner chain; on Linux and macOS it uses bwrap, Landlock, or Seatbelt. When no runner can enforce a confined mode, the call fails closed with a structured `SANDBOX_UNAVAILABLE` error rather than running unconfined. It is the pwsh twin of `dsh-bash-sandbox`, mirroring it call-for-call.
 
 ## Table of Contents
 
@@ -82,6 +82,8 @@ The executor is the pwsh twin of `dsh-bash-sandbox`: it inherits `dsh-pwsh-local
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `SandboxPwshExecutor`, per-process fact retention, run/start wrapping |
+| [`src/controller.ts`](src/controller.ts) | Native PowerShell argv selection over shared confinement mechanics |
+| [`src/native.ts`](src/native.ts) | Native `shell` Provider requiring subprocess, sandbox, and policy |
 | [`src/helpers.ts`](src/helpers.ts) | Denial, runner-failure, and runner-spawn-failure classification |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seams. Classification is observable in results. |
 | `tests/` | Exercised behavior across the ACL and platform runners |
