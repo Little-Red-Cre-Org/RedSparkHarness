@@ -58,6 +58,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
@@ -94,6 +95,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
   ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],

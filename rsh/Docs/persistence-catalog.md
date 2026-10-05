@@ -955,7 +955,7 @@ Source: [`rsh/Modules/Community/experimental/agent-team/src/types.ts:223`](../Mo
 
 Types: [TodoItem](subsystems/todo.md)
 
-Source: [`rsh/Modules/Official/todo/tool-todo/src/types.ts:31`](../Modules/Official/todo/tool-todo/src/types.ts)
+Source: [`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/Official/todo/tool-todo/src/todo-types.ts)
 
 ### `tool/*`
 
