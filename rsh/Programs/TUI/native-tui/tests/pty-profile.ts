@@ -14,9 +14,12 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param cancellation - whether the fixture model waits for cancellation and explicit cleanup release.
  * @param script - committed assistant responses for replay; omitted only by the cancellation fixture.
  * @param cleanupFailure - inject a controller teardown rejection after its real drain.
+ * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
+ * @param humanInteractions - install existing question, tool and approval Providers.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
-export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false) {
+export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
+  modelControls = false, humanInteractions = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -28,17 +31,18 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   mkdirSync(model, { recursive: true })
   writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } } }))
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: modelControls ? ['model', 'modelDirectory'] : ['model'] } } }))
   writeFileSync(join(model, 'native.mjs'), `import { writeFile, access } from 'node:fs/promises';
     import { setTimeout as wait } from 'node:timers/promises';
+    ${modelControls ? `import { NativeAdapterModelDirectory } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Engine/core/native-model-execution/lib/adapter-directory.js')).href)};` : ''}
     ${cleanupFailure ? `import { NativeTuiApplication } from ${JSON.stringify(pathToFileURL(join(root, 'rsh/Programs/TUI/native-tui/lib/native.js')).href)};
     const controller = Object.getPrototypeOf(NativeTuiApplication.prototype);
     const close = controller.close;
     controller.close = async function () { await close.call(this); throw new Error('fixture executor cleanup failed'); };` : ''}
     const home = ${JSON.stringify(home)};
     const script = ${JSON.stringify(script ?? [])};
-    export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ['model'],
-      resolve: () => context => context.provide('model', { async *stream(request) {
+    export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ${JSON.stringify(modelControls ? ['model', 'modelDirectory'] : ['model'])},
+      resolve: () => context => { const adapter = { async *stream(request) {
         if (${String(cancellation)}) {
           await writeFile(home + '/started', 'started');
           await new Promise(resolve => { if (request.signal.aborted) resolve(); else request.signal.addEventListener('abort', resolve, { once: true }); });
@@ -52,15 +56,24 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
           for (;;) { try { await access(home + '/release'); break; } catch (error) { if (error.code !== 'ENOENT') throw error; await wait(10); } }
         }
         await writeFile(home + '/request.json', JSON.stringify(request.messages));
+        await writeFile(home + '/config.json', JSON.stringify({ provider: request.provider, model: request.model, reasoningEffort: request.reasoningEffort }));
         const index = request.messages.filter(message => message.role === 'assistant').length;
         const entry = script[index];
         if (entry?.kind !== 'chunks') throw new Error('terminal replay exhausted');
         for (const chunk of entry.chunks) yield chunk;
-      } }) };`)
+      }, ...(${String(modelControls)} ? { providerInfo: id => ({ id, name: 'Fixture Provider' }),
+      listModels: async provider => ['fixture', 'fixture-alt'].map(id => ({ provider, id, name: id })),
+      resolveModel: async (provider, id) => ({ provider, id, name: id, inputModalities: ['text'], context: { contextWindow: 4096 },
+        reasoning: { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' } }) } : {}) };
+      context.provide('model', adapter);
+      ${modelControls ? 'const directory = new NativeAdapterModelDirectory(adapter, () => [\'fixture\'], context.signal); context.own(() => directory.dispose()); context.provide(\'modelDirectory\', directory);' : ''}
+      } };`)
   const shipped = shippedNativeProfileComposition(home, 'native-tui')
   const selected = new Set(['app', 'session-execution', 'agents', 'tools', 'model-execution', 'storage'])
+  if (modelControls) selected.add('model-selection')
+  if (humanInteractions) for (const id of ['approval', 'user-questions', 'ask-user-tool']) { selected.add(id) }
   const installations = shipped.installations.filter(row => selected.has(row.id)).map(row => row.id === 'app'
-    ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: 3 } }
+    ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: humanInteractions ? 5 : 3 } }
     : row.id === 'storage' ? { ...row, config: { root: storage, compression: 'none' } } : row)
   installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })
@@ -93,7 +106,9 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
           child!.write('\r')
         },
         output: () => output,
-        async waitFor(text: string) { await vi.waitFor(() => { if (!output.includes(text)) throw new Error(`terminal missing ${text}: ${output.slice(-3000)}`) }, { timeout: 30000 }) },
+        async waitFor(text: string, start = 0) { await vi.waitFor(() => {
+          if (!output.slice(start).includes(text)) throw new Error(`terminal missing ${text}: ${output.slice(-3000)}`)
+        }, { timeout: 30000 }) },
         done: completion,
       }
     },

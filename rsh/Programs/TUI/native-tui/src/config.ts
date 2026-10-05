@@ -10,11 +10,13 @@ export interface Config extends TurnConfig {
   readonly maxHistoryEvents: number
   readonly maxTranscriptEvents: number
   readonly maxStreamChunks: number
+  readonly maxPendingHumanRequests: number
 }
 const positive = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 const terminalSettings = z.looseObject({
   locale: z.enum(['en', 'zh']), background: z.string().regex(/^#[0-9a-f]{6}$/i),
-  maxQueuedInputs: positive, maxHistoryEvents: positive, maxTranscriptEvents: positive, maxStreamChunks: positive,
+  maxQueuedInputs: positive, maxHistoryEvents: positive, maxTranscriptEvents: positive,
+  maxStreamChunks: positive, maxPendingHumanRequests: positive,
 })
 
 /** Validate terminal settings and resolve the shared executor configuration.
@@ -22,10 +24,10 @@ const terminalSettings = z.looseObject({
  * @returns resolved terminal and turn settings.
  */
 export function resolveNativeTuiConfig(input: unknown): Config {
-  const { locale, background, maxQueuedInputs, maxHistoryEvents, maxTranscriptEvents, maxStreamChunks, ...turn }
+  const { locale, background, maxQueuedInputs, maxHistoryEvents, maxTranscriptEvents, maxStreamChunks, maxPendingHumanRequests, ...turn }
     = terminalSettings.parse(input)
   return { ...resolveNativeHeadlessConfig(turn), locale, background,
-    maxQueuedInputs, maxHistoryEvents, maxTranscriptEvents, maxStreamChunks }
+    maxQueuedInputs, maxHistoryEvents, maxTranscriptEvents, maxStreamChunks, maxPendingHumanRequests }
 }
 
 const terminalArgs = z.union([z.tuple([]), z.tuple([z.literal('--resume'), z.string().regex(/\S/)])])
