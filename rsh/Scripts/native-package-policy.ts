@@ -162,9 +162,11 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
-  ['rsh/Programs/Web/client/native-session', ['./follow-types']],
+  ['rsh/Programs/CLI', ['./native-profile']],
+  ['rsh/Programs/DesktopHost', ['./native-host']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
@@ -196,6 +198,8 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
   ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
   ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
+  ['rsh/Programs/CLI/native-profile', ['host']],
+  ['rsh/Programs/DesktopHost/native-host', ['host']],
   ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
   ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],

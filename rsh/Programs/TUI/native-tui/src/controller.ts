@@ -14,6 +14,8 @@ import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
+  /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
+  sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
   /**
    * @param id - exact Session identity.
@@ -63,7 +65,10 @@ export class TerminalController implements TerminalInteraction {
     this.selectedId = id
     this.lifetime = AbortSignal.any([ownerSignal, this.shutdown.signal])
     this.human = new TerminalHumanInteraction(config.maxPendingHumanRequests, terminalCopy(config.locale),
-      (human) => { this.publish({ human }) })
+      (human) => {
+        if (human !== undefined && this.maintenance) this.active?.abort(new Error(terminalCopy(config.locale).modelBusy))
+        this.publish({ human })
+      })
   }
 
   /** @returns the current immutable renderer observation. */
@@ -159,26 +164,53 @@ export class TerminalController implements TerminalInteraction {
     return this.modelOperation((models, signal) => models.select(this.selectedId, request, signal))
   }
 
+  /** @returns stored Session identities while terminal input is exclusively idle. */
+  sessions(): Promise<readonly SessionId[]> { return this.idleOperation(signal => this.execution.sessions(signal)) }
+
+  /**
+   * Restore another stored Session without submitting a model request.
+   * @param id - selected persistence identity.
+   * @returns completion after its validated history replaces terminal observations.
+   */
+  selectSession(id: SessionId): Promise<void> {
+    return this.idleOperation(async (signal) => {
+      await this.execution.open(id, true, signal)
+      const events = await this.execution.history(id, signal)
+      signal.throwIfAborted()
+      if (this.state.human !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
+      this.selectedId = id
+      this.modelProjection = events.reduce(applyModelSelectionProjection, { lastUsed: null, pending: null })
+      this.publish({ events: events.slice(-this.config.maxTranscriptEvents), chunks: [], model: undefined,
+        choice: this.modelProjection.pending ?? this.modelProjection.lastUsed })
+    })
+  }
+
   private async modelOperation(
     operation: (models: TerminalModelOperations, signal: AbortSignal) => Promise<TerminalModelState>,
   ): Promise<TerminalModelState> {
+    const models = this.execution.models
+    return this.idleOperation(async (signal) => {
+      if (models === undefined) throw new Error(terminalCopy(this.config.locale).modelUnavailable)
+      const model = await operation(models, signal)
+      this.modelProjection = { lastUsed: model.state.lastUsed, pending: model.state.next }
+      this.publish({ model, choice: model.state.next ?? this.state.choice })
+      return model
+    })
+  }
+
+  private async idleOperation<Result>(operation: (signal: AbortSignal) => Promise<Result>): Promise<Result> {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
-    if (this.draining !== undefined || this.queue.length !== 0) throw new Error(copy.modelBusy)
-    const models = this.execution.models
-    if (models === undefined) throw new Error(copy.modelUnavailable)
+    if (this.draining !== undefined || this.queue.length !== 0 || this.state.human !== undefined) throw new Error(copy.modelBusy)
     const controller = new AbortController()
     this.active = controller
     this.maintenance = true
     this.publish({ busy: true, error: undefined })
     const signal = AbortSignal.any([controller.signal, this.lifetime])
-    const pending = Promise.resolve().then(() => operation(models, signal))
+    const pending = Promise.resolve().then(() => operation(signal))
     this.draining = pending.then(() => undefined, () => undefined)
     try {
-      const model = await pending
-      this.modelProjection = { lastUsed: model.state.lastUsed, pending: model.state.next }
-      this.publish({ model, choice: model.state.next ?? this.state.choice })
-      return model
+      return await pending
     } finally {
       this.draining = undefined
       this.active = undefined

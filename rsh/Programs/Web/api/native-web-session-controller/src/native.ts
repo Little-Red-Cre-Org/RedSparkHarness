@@ -1,5 +1,7 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import { z } from 'zod'
+import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
@@ -13,7 +15,19 @@ import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@deepsee
 import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
+import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
+import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
+import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+
+import { NativeWebHumanInteraction } from './human.ts'
+import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import type { NativeUserQuestionRegistry } from '@deepseek-ai/dsh-user-questions/native'
+import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -31,6 +45,7 @@ export interface Config extends TurnConfig {
   readonly maxPromptChars: number
   readonly maxFollowBufferBytes: number
   readonly maxFollowers: number
+  readonly maxPendingHumanRequests: number
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -55,13 +70,29 @@ function sessionId(value: unknown): SessionId {
  * @returns validated native Session configuration.
  */
 export function resolveNativeWebSessionConfig(input: unknown): Config {
-  const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers, ...turn } = object(input)
+  const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers,
+    maxPendingHumanRequests, ...turn } = object(input)
   return { ...resolveNativeHeadlessConfig(turn), maxPendingRequests: positive(maxPendingRequests, 'maxPendingRequests'),
     maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars'), maxFollowBufferBytes: positive(maxFollowBufferBytes, 'maxFollowBufferBytes'),
-    maxFollowers: positive(maxFollowers, 'maxFollowers') }
+    maxFollowers: positive(maxFollowers, 'maxFollowers'),
+    maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests') }
 }
 
-const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await'])
+const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
+  'session/select-model', 'session/select-preset', 'session/answer-human'])
+const modelSelectionInput = z.strictObject({
+  provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
+})
+
+/** Optional selected authorities; no fallback catalog or composition registry is created. */
+export interface NativeWebSelectionProviders {
+  readonly directory?: NativeModelDirectory | undefined
+  readonly models?: {
+    readonly selection: NativeModelSelectionOperations
+    readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
+  } | undefined
+  readonly presets?: NativeAgentPresetOperations | undefined
+}
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
 export class NativeWebSessionService {
@@ -74,6 +105,7 @@ export class NativeWebSessionService {
     feed: NativeSessionFeed | undefined
     following: boolean
   }>()
+  private readonly human: NativeWebHumanInteraction
   private followers = 0
   private readonly shutdown = new AbortController()
   private readonly requests: NativeConnectionRequestOwner
@@ -86,14 +118,45 @@ export class NativeWebSessionService {
    * @param active - selected exact live writer registry.
    * @param config - validated execution and wire limits.
    * @param lifetime - installation cancellation.
+   * @param selections - selected catalog, model intent and standing composition authorities.
    */
   constructor(private readonly executor: NativeHeadlessApplication,
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
-    private readonly config: Config, private readonly lifetime: AbortSignal) {
+    private readonly config: Config, private readonly lifetime: AbortSignal,
+    private readonly selections: NativeWebSelectionProviders = {}) {
+    this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests)
     this.requests = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.controls = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.settlements = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
+  }
+
+  private humanFeed(agent: NativeAgent): NativeSessionFeed | undefined {
+    const owner = this.active.owners().find(owner => owner.agent === agent && owner.invocation === 'root' && owner.writerAvailable)
+    if (owner === undefined) return undefined
+    try { this.executor.rootExecution.capture(owner) }
+    catch {
+      // The shared registry also exposes other Programs' roots; their answerers retain those requests.
+      return undefined
+    }
+    const turn = this.turns.get(owner.session.id)
+    return turn === undefined || turn.settled || turn.controller.signal.aborted ? undefined : turn.feed
+  }
+
+  /** Register answerers only for this Program's exact active root turns.
+   * @param context - effect ownership and contribution visibility.
+   * @param approval - selected approval Provider.
+   * @param questions - selected question Definition.
+   */
+  bindHuman(context: Pick<NativeContext, 'own' | 'scope'>, approval?: NativeApprovalService, questions?: NativeUserQuestionRegistry): void {
+    if (approval !== undefined) context.own(approval.registerAnswerer((request) => {
+      const feed = this.humanFeed(request.agent)
+      return feed === undefined ? undefined : this.human.approval(request, feed)
+    }))
+    if (questions !== undefined) context.own(questions.registerAnswerer('native-web', { ask: (request, next) => {
+      const feed = this.humanFeed(request.agent)
+      return feed === undefined ? next() : this.human.questions(request, feed)
+    } }, context.scope))
   }
 
   private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
@@ -209,11 +272,24 @@ export class NativeWebSessionService {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
       }
-      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' ? this.controls : this.requests
+      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = endpoint === 'session/list' || endpoint === 'session/create' ? [] : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
+        const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
+          : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
+            : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
+              : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
+                : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
+        if (endpoint === 'session/model-controls') return {
+          catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog({
+            provider: this.config.provider, model: this.config.model,
+            ...this.config.reasoningEffort === undefined ? {} : { reasoningEffort: this.config.reasoningEffort },
+          }, accepted),
+          canSelectModel: this.selections.models !== undefined,
+          presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
+            ...description === undefined ? {} : { description } })) ?? [],
+        }
         if (endpoint === 'session/list') return (await this.persistence.list({ signal: accepted })).map(item => item.header)
         if (endpoint === 'session/create') {
           const id = SessionId(randomUUID())
@@ -221,10 +297,47 @@ export class NativeWebSessionService {
           return { sessionId: id }
         }
         const id = sessionId(fields.sessionId)
+        if (endpoint === 'session/select-model' || endpoint === 'session/select-preset') {
+          if (this.turns.has(id)) throw new Error('native web session: selection requires an idle Session')
+          const expectedRevision = fields.expectedRevision === null ? null
+            : typeof fields.expectedRevision === 'number' ? SessionSeq(fields.expectedRevision)
+              : (() => { throw new TypeError('native web session: invalid selection revision') })()
+          if (endpoint === 'session/select-model') {
+            const selection = this.selections.models
+            if (selection === undefined) throw new Error('native web session: model selection is unavailable')
+            const parsed = modelSelectionInput.parse(fields.selected)
+            const selected = { provider: parsed.provider, model: parsed.model,
+              ...parsed.reasoningEffort === undefined ? {} : { reasoningEffort: parsed.reasoningEffort } }
+            await this.executor.executeSessionOperation({ id, resume: true },
+              (owner, effective) => {
+                const execution = selection.executionFor(owner.agent)
+                const commit = (signal: AbortSignal) => selection.selection.select(owner, { selected, expectedRevision }, signal)
+                // Cold operations hold maintenance already; retained owners need idle admission.
+                return execution.status === 'maintenance' ? commit(effective)
+                  : execution.runMaintenance(signal => commit(AbortSignal.any([effective, signal])))
+              }, accepted)
+          } else {
+            if (this.selections.presets === undefined) throw new Error('native web session: preset selection is unavailable')
+            if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid preset')
+            await this.executor.rootExecution.selectPreset({ id, preset: fields.preset, expectedRevision,
+              route: this.config.rootRouteId ?? brandString<NativeRootRouteId>('root') }, accepted)
+          }
+          return { changed: true }
+        }
         if (endpoint === 'session/history') return readNativeSessionHistory(id, {
           active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
           label: 'native web session', onCleanupFailure: (error) =>{  this.requests.recordCleanupFailure(error) },
         }, accepted)
+        if (endpoint === 'session/answer-human') {
+          accepted.throwIfAborted()
+          const turn = this.turns.get(id)
+          const owner = this.active.owners().find(owner => owner.session.id === id && owner.invocation === 'root' && owner.writerAvailable)
+          if (turn === undefined || turn.settled || turn.controller.signal.aborted || fields.admissionId !== turn.admissionId
+            || owner === undefined || typeof fields.id !== 'string' || fields.id.length === 0) throw new Error('native Web human answer has no matching active root admission')
+          this.executor.rootExecution.capture(owner)
+          this.human.answer(brandString<NativeWebHumanId>(fields.id), owner.agent, fields.answer)
+          return { answered: true }
+        }
         if (endpoint === 'session/status') {
           const exists = this.turns.has(id) || await this.persistence.stat(id, { signal: accepted }) !== undefined
           return { status: this.turns.get(id)?.settled === false ? 'running' : exists ? 'idle' : 'unknown' }
@@ -249,6 +362,7 @@ export class NativeWebSessionService {
    * @returns completion including actual reader cleanup failures.
    */
   async close(): Promise<void> {
+    this.human.close()
     this.shutdown.abort(new Error('native Session follow: disposed'))
     const results = await Promise.allSettled([this.requests.close(), this.controls.close(), this.settlements.close()])
     this.turns.clear()
@@ -261,17 +375,21 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
     return (context) => {
       const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt,
-        maxFollowBufferBytes: _buffer, maxFollowers: _followers, ...turn } = config
+        maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human, ...turn } = config
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
-      const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal)
+      const models = context.optional('modelSelection')
+      const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
+        { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'),
+          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
+      service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
         (endpoint, payload, signal) => service.handle(endpoint, payload, signal)))

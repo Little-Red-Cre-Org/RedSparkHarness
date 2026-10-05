@@ -1,4 +1,6 @@
 /** Browser Session Consumer over the selected native Connection transport. */
+import { nativeWebHumanSchema, type NativeWebHumanAnswer, type NativeWebHumanId, type NativeWebHumanPrompt } from './human.ts'
+export type { NativeWebHumanAnswer, NativeWebHumanId, NativeWebHumanPrompt } from './human.ts'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
@@ -7,6 +9,10 @@ import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/nat
 import type { SessionId, SessionHeader, SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
+import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
+import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
+import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -27,6 +33,32 @@ export interface NativeSessionClientConfig {
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** Answer a presentation belonging to this Consumer's exact outstanding turn.
+   * @param sessionId - selected Session.
+   * @param id - observed pending presentation identity.
+   * @param answer - structured allow/reject or question answers.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host accepts the exact pending answer.
+   */
+  answerHuman(sessionId: SessionId, id: NativeWebHumanId, answer: NativeWebHumanAnswer, signal?: AbortSignal): Promise<void>
+  /** Read actual advisory catalogs and installed standing presets.
+   * @param signal - caller cancellation.
+   * @returns current Host capability availability and provider-owned choices.
+   */
+  modelControls(signal?: AbortSignal): Promise<NativeModelControls>
+  /** Persist a Session-local model/effort intent against its last observed revision.
+   * @param sessionId - selected stored Session.
+   * @param request - complete model choice and expected durable intent revision.
+   * @param signal - caller cancellation.
+   * @returns completion after the sole Host writer persists the choice.
+   */
+  selectModel(sessionId: SessionId, request: NativeModelSelectionRequest, signal?: AbortSignal): Promise<void>
+  /** Replace the composition of an idle blank Session through its Program epoch.
+   * @param request - Session, advertised preset and expected durable selection revision.
+   * @param signal - caller cancellation.
+   * @returns completion after old Agent drain and accepted successor activation.
+   */
+  selectPreset(request: NativeAgentPresetSelectionRequest, signal?: AbortSignal): Promise<void>
   /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
@@ -92,12 +124,20 @@ function header(value: unknown): SessionHeader {
 }
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(header)
   }
   const data = fields(value)
   switch (endpoint) {
+    case 'session/answer-human':
+      if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')
+      break
+    case 'session/select-model':
+    case 'session/select-preset':
+      if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
+      break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
         || !Number.isSafeInteger(data.inheritedEventCount) || data.inheritedEventCount < 0
@@ -128,6 +168,8 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'human' && Object.keys(data).length === 2) return { type: 'human', prompt: nativeWebHumanSchema.parse(data.prompt) as NativeWebHumanPrompt }
+  if (data.type === 'human-removed' && typeof data.id === 'string' && data.id.length > 0 && Object.keys(data).length === 2) return { type: 'human-removed', id: data.id as NativeWebHumanId }
   if (data.type === 'event' && Object.keys(data).length === 2) {
     const event = fields(data.event)
     if (typeof event.seq !== 'number') throw new TypeError('native Session follow: event has no sequence')
@@ -154,6 +196,7 @@ function objectConfig(input: unknown): Record<string, unknown> {
 export function createNativeSessionClient(
   rpc: ClientConnectionRpc, config: NativeSessionClientConfig, installationSignal?: AbortSignal,
 ): NativeSessionClient {
+  const admissions = new Map<SessionId, NativeSessionAdmissionId>()
   const shutdown = new AbortController()
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
@@ -173,6 +216,7 @@ export function createNativeSessionClient(
     const following = new AbortController()
     // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
     const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined }, undefined, false)
+    admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
     const abort = (): void => {
       following.abort(accepted.reason)
@@ -217,14 +261,26 @@ export function createNativeSessionClient(
       if (errors.length > 1) throw new AggregateError(errors, 'native Session settlement and cancellation failed')
       if (settlement.status === 'rejected') throw settlement.reason
       return settlement.value
-    } finally { accepted.removeEventListener('abort', abort) }
+    } finally { if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId); accepted.removeEventListener('abort', abort) }
   }
   return {
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
       await Promise.allSettled([...pendingPrompts])
     },
+    async answerHuman(sessionId, id, answer, signal) {
+      const admissionId = admissions.get(sessionId)
+      if (admissionId === undefined) throw new Error('native Session Client: human answer has no owned turn')
+      await call('session/answer-human', { sessionId, admissionId, id, answer }, signal)
+    },
     list: signal => call('session/list', {}, signal),
+    modelControls: signal => call('session/model-controls', {}, signal),
+    async selectModel(sessionId, request, signal) {
+      await call('session/select-model', { sessionId, ...request }, signal)
+    },
+    async selectPreset({ id, ...request }, signal) {
+      await call('session/select-preset', { sessionId: id, ...request }, signal)
+    },
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
     prompt(sessionId, text, resume, signal, observe) {
