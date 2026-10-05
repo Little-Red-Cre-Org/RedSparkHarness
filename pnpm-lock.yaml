@@ -7356,6 +7356,10 @@ importers:
         version: link:../../../../Engine/core/tools
 
   rsh/Modules/Official/terminal/terminal:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -7369,12 +7373,18 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/terminal/terminal-bash:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-pwsh-local':
         specifier: workspace:^
         version: link:../../shell/pwsh-local
@@ -7397,6 +7407,9 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/agent-loop-testkit
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -7418,6 +7431,12 @@ importers:
 
   rsh/Modules/Official/terminal/tool-terminal:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery

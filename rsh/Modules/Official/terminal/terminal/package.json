@@ -11,6 +11,7 @@
     "directory": "rsh/Modules/Official/terminal/terminal"
   },
   "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["agents"], "optional": [], "provides": ["terminals"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -18,11 +19,14 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -31,11 +35,15 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": { "@deepseek-ai/cordis": { "optional": true } },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
-  }
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^"
+  },
+  "dependencies": { "@deepseek-ai/dsh-native-runtime": "workspace:^" }
 }

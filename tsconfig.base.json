@@ -582,9 +582,12 @@
       "@deepseek-ai/dsh-storage-json/native": ["./rsh/Core/storage/storage-json/src/native.ts"],
       "@deepseek-ai/dsh-storage/backend": ["./rsh/Core/storage/storage/src/backend.ts"],
       "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"],
+      "@deepseek-ai/dsh-terminal-bash/native": ["./rsh/Modules/Official/terminal/terminal-bash/src/native.ts"],
+      "@deepseek-ai/dsh-terminal/native": ["./rsh/Modules/Official/terminal/terminal/src/native.ts"],
       "@deepseek-ai/dsh-tool-bash/native": ["./rsh/Modules/Official/shell/tool-bash/src/native.ts"],
       "@deepseek-ai/dsh-tool-code-runtime/native": ["./rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts"],
-      "@deepseek-ai/dsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"]
+      "@deepseek-ai/dsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"],
+      "@deepseek-ai/dsh-tool-terminal/native": ["./rsh/Modules/Official/terminal/tool-terminal/src/native.ts"]
       // END generated package aliases
     }
   }
