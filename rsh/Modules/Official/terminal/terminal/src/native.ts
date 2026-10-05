@@ -1,9 +1,10 @@
-/** Native owner-scoped terminal lifecycle without interactive send or read operations. */
+/** Native owner-scoped terminal allocation, interaction and awaited cleanup. */
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { Session } from '@deepseek-ai/dsh-session/native'
+import type { TerminalBackendSession, TerminalReadRequest, TerminalReadResult, TerminalSendOperation, TerminalSendRequest, TerminalSignal, TerminalSignalResult } from './protocol.ts'
 
 /** Opaque identity minted for one native terminal session. */
 export type NativeTerminalId = Branded<'NativeTerminalId'>
@@ -21,6 +22,8 @@ export function NativeTerminalId(value: string): NativeTerminalId {
 export interface NativeTerminalSession {
   /** Zero while a provider has allocated a PTY but has not learned its process id. */
   readonly pid: number
+  /** Interactive Provider retaining the shared PTY implementation, when supported. */
+  readonly interaction?: TerminalBackendSession
   /** Top-level process state; this does not describe child commands. */
   status(): 'running' | 'exited' | 'failed'
   /** Terminate the process range visible to the selected Provider and await its cleanup. */
@@ -30,6 +33,7 @@ export interface NativeTerminalSession {
 /** Unpublished terminal allocation. */
 export interface NativeTerminalSpawnSpec {
   readonly owner: NativeAgent
+  readonly sessionId: NativeTerminalId
   readonly session: Session
   readonly cwd?: string
   readonly signal: AbortSignal
@@ -49,6 +53,8 @@ export interface NativeTerminalSnapshot {
   /** Zero until an asynchronous terminal provider learns the process id. */
   readonly pid: number
   readonly status: 'running' | 'exited' | 'failed'
+  readonly name?: string
+  readonly motd?: string
 }
 
 interface BackendRegistration {
@@ -59,16 +65,19 @@ interface BackendRegistration {
 }
 
 interface OwnerState {
+  readonly names: Set<string>
   readonly controller: AbortController
   readonly pending: Set<Promise<void>>
   readonly detach: () => void
 }
 
 interface RecordEntry {
+  readonly name?: string
   readonly owner: NativeAgent
   readonly backend: BackendRegistration
   readonly session: NativeTerminalSession
   closing?: Promise<void>
+  active?: TerminalSendOperation
 }
 
 /** Native terminal registry; all open and close operations use exact Agent identity. */
@@ -108,30 +117,40 @@ export class NativeTerminalRegistry {
    * @param type - registered backend type.
    * @param cwd - optional explicit working directory.
    * @param signal - caller cancellation during allocation.
+   * @param name - optional owner-local unique name.
    * @returns published terminal snapshot.
    */
-  async open(owner: NativeAgent, session: Session, type: string, cwd?: string, signal?: AbortSignal): Promise<NativeTerminalSnapshot> {
+  async open(owner: NativeAgent, session: Session, type: string, cwd?: string, signal?: AbortSignal,
+    name?: string): Promise<NativeTerminalSnapshot> {
     if (this.closing) throw new Error('terminal: registry is closing')
     signal?.throwIfAborted()
     const registration = this.backends.get(type)
     if (registration === undefined) throw new Error(`terminal: no backend registered for ${type}`)
     const state = this.ownerState(owner)
+    if (name !== undefined) {
+      if (name.trim().length === 0) throw new Error('terminal: name must be nonempty')
+      if (state.names.has(name)) throw new Error(`terminal: duplicate name ${name}`)
+      state.names.add(name)
+    }
     const pending = Promise.withResolvers<void>()
     state.pending.add(pending.promise)
     registration.pending.add(pending.promise)
     const allocationSignal = AbortSignal.any([
       state.controller.signal, registration.controller.signal, ...(signal === undefined ? [] : [signal]),
     ])
+    const id = NativeTerminalId(`pty-${++this.nextId}`)
     let terminal: NativeTerminalSession | undefined
     try {
       allocationSignal.throwIfAborted()
-      terminal = await registration.backend.spawn({ owner, session, ...(cwd === undefined ? {} : { cwd }), signal: allocationSignal })
+      terminal = await registration.backend.spawn({
+        owner, sessionId: id, session, ...(cwd === undefined ? {} : { cwd }), signal: allocationSignal,
+      })
       allocationSignal.throwIfAborted()
-      const id = NativeTerminalId(`pty-${++this.nextId}`)
-      const record: RecordEntry = { owner, backend: registration, session: terminal }
+      const record: RecordEntry = { owner, backend: registration, session: terminal, ...name === undefined ? {} : { name } }
       this.sessions.set(id, record)
       return this.snapshot(id, record)
     } catch (error) {
+      if (name !== undefined) state.names.delete(name)
       if (terminal !== undefined) {
         try { await terminal.close() } catch (cleanup: unknown) {
           throw new AggregateError([error, cleanup], 'terminal: open and cleanup failed')
@@ -169,6 +188,60 @@ export class NativeTerminalRegistry {
     return !alreadyClosing
   }
 
+  /** Start one exclusive interaction.
+   * @param owner - exact live Agent.
+   * @param id - owned terminal identity.
+   * @param request - input, Enter selection and request cancellation.
+   * @returns backend-owned operation; disposal interrupts and drains it.
+   */
+  startSend(owner: NativeAgent, id: NativeTerminalId, request: TerminalSendRequest): TerminalSendOperation {
+    const record = this.owned(owner, id)
+    if (record.active !== undefined) throw new Error(`terminal: send already active on ${id}`)
+    const state = this.ownerState(owner)
+    const signal = AbortSignal.any([state.controller.signal, record.backend.controller.signal,
+      ...(request.signal === undefined ? [] : [request.signal])])
+    signal.throwIfAborted()
+    const operation = this.interaction(record).startSend({ ...request, signal })
+    record.active = operation
+    void operation.done.then(() => { delete record.active }, () => { delete record.active })
+    return operation
+  }
+
+  /** Read retained output.
+   * @param owner - exact live Agent.
+   * @param id - owned terminal identity.
+   * @param request - newest-relative page selection.
+   * @returns bounded output and retention facts.
+   */
+  read(owner: NativeAgent, id: NativeTerminalId, request: TerminalReadRequest): TerminalReadResult {
+    return this.interaction(this.owned(owner, id)).read(request)
+  }
+
+  /** Signal the verified foreground process group.
+   * @param owner - exact live Agent.
+   * @param id - owned terminal identity.
+   * @param signal - allowed process signal.
+   * @returns delivered target facts.
+   */
+  signal(owner: NativeAgent, id: NativeTerminalId, signal: TerminalSignal): Promise<TerminalSignalResult> {
+    return this.interaction(this.owned(owner, id)).signal(signal)
+  }
+
+  private owned(owner: NativeAgent, id: NativeTerminalId): RecordEntry {
+    this.assertOwner(owner)
+    if (this.closing) throw new Error('terminal: registry is closing')
+    const record = this.sessions.get(id)
+    if (record === undefined) throw new Error(`terminal: unknown session ${id}`)
+    if (record.owner !== owner) throw new Error(`terminal: session ${id} belongs to another Agent`)
+    if (record.closing !== undefined) throw new Error(`terminal: session ${id} is closing`)
+    return record
+  }
+
+  private interaction(record: RecordEntry): TerminalBackendSession {
+    if (record.session.interaction === undefined) throw new Error('terminal: backend does not support interaction')
+    return record.session.interaction
+  }
+
   /** Abort unpublished opens and await every terminal before disposing the registry. */
   dispose(): Promise<void> {
     return this.disposal ??= this.disposeInternal()
@@ -179,7 +252,7 @@ export class NativeTerminalRegistry {
     const existing = this.owners.get(owner)
     if (existing !== undefined) return existing
     const state: OwnerState = {
-      controller: new AbortController(), pending: new Set(),
+      names: new Set(), controller: new AbortController(), pending: new Set(),
       detach: this.agents.onDispose(owner, () => this.disposeOwner(owner)),
     }
     this.owners.set(owner, state)
@@ -191,7 +264,10 @@ export class NativeTerminalRegistry {
   }
 
   private snapshot(id: NativeTerminalId, record: RecordEntry): NativeTerminalSnapshot {
-    return { sessionId: id, type: record.backend.backend.type, pid: record.session.pid, status: record.session.status() }
+    return { sessionId: id, type: record.backend.backend.type, pid: record.session.pid, status: record.session.status(),
+      ...record.name === undefined ? {} : { name: record.name },
+      ...record.session.interaction === undefined ? {} : { motd: record.session.interaction.motd },
+    }
   }
 
   private async closeRecord(id: NativeTerminalId, record: RecordEntry): Promise<void> {
@@ -199,6 +275,7 @@ export class NativeTerminalRegistry {
     try {
       await closing
       this.sessions.delete(id)
+      if (record.name !== undefined) this.owners.get(record.owner)?.names.delete(record.name)
     } catch (error) {
       if (record.closing === closing) delete record.closing
       throw error

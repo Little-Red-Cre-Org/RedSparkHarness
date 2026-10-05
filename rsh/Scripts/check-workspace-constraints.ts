@@ -226,7 +226,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-pwsh-sandbox': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-bash': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-pwsh': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-terminal': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-terminal': ['lib/native.js', 'lib/protocol.js', 'lib/error.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-terminal-bash': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-terminal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],

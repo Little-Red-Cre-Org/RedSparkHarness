@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 `./native` 入口提供独立的 `terminals` 服务，用于真实 PTY 进程的生命周期管理。它只在分配成功后发布限定确切 Agent 所有者的 id；关闭、Agent 释放、后端卸载或 Host 关闭时都会等待 Provider 可观察到的进程完成清理。原生会话不提供交互式发送、读取、信号、启动输出或就绪接口；这些操作属于 Cordis 的 `.` 入口。范围原因见[原生终端生命周期决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-lifecycle.zh.md)。
+原生 `./native` 入口通过 `terminals` 提供限定所有者的分配、列出、交互发送、保留输出读取、前台信号及等待清理。后端通过 `./protocol` 持有共享终端协议；`./error` 发布错误而不加载 Cordis。Agent 释放、后端卸载与 Host 关闭会中止接纳并等待 Provider 可观察到的清理。会话仍只存在于进程内。[原生交互决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-interaction.zh.md)记录所有权及实现复用。
 
 当组合需要状态跨工具调用存活的终端会话时，挂载 `@deepseek-ai/dsh-terminal`。单独的服务本身没有用处：请与 `@deepseek-ai/dsh-terminal-bash` 之类的后端、`@deepseek-ai/dsh-tool-terminal` 之类的工具包配对，并在同一个组合中一起加载。
 
