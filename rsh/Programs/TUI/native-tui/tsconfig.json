@@ -1,0 +1,30 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../Engine/core/native-headless"
+    },
+    {
+      "path": "../../../Engine/core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Engine/core/session"
+    },
+    {
+      "path": "../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../Programs/TUI/terminal-ui"
+    }
+  ]
+}

@@ -3647,6 +3647,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
+- `@deepseek-ai/dsh-native-tui` ([`rsh/Programs/TUI/native-tui/src/index.ts`](../Programs/TUI/native-tui/src/index.ts))
 - `@deepseek-ai/dsh-native-web-assets`（[`rsh/Programs/Web/host/native-web-assets/src/index.ts`](../Programs/Web/host/native-web-assets/src/index.ts)）
 - `@deepseek-ai/dsh-native-web-host`（[`rsh/Programs/Web/host/native-web-host/src/index.ts`](../Programs/Web/host/native-web-host/src/index.ts)）
 - `@deepseek-ai/dsh-native-web-session-controller` ([`rsh/Programs/Web/api/native-web-session-controller/src/index.ts`](../Programs/Web/api/native-web-session-controller/src/index.ts))
@@ -3669,6 +3670,7 @@ export interface Config {
 - `@deepseek-ai/dsh-shell-process-local`（[`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts)）
 - `@deepseek-ai/dsh-shell-sandbox-core`（[`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts)）
 - `@deepseek-ai/dsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
+- `@deepseek-ai/dsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
 - `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
 - `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）

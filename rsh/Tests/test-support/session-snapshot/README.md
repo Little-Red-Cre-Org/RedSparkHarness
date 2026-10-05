@@ -25,6 +25,8 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+Scenario manifests accept the explicit `native-tui` profile; its real-terminal adapter drives the public `dsh` launcher and uses the same Session as replay input and durable expected output.
+
 This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
 ### Writing a snapshot suite

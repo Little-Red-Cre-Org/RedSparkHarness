@@ -52,7 +52,8 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "ink": "^5.2.1",
     "ink-text-input": "^6.0.0",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "@deepseek-ai/dsh-terminal-ui": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"

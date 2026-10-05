@@ -32,6 +32,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
 
+Delegated children of this Program's admitted root emit `subagent.started` lineage before their backend-accepted `session.event` notifications. Both SDKs' `subscribeSessionTree` and run subscriptions include these descendants; root response events remain separate. Other Programs sharing the same Providers are excluded. Owner detachment and shutdown release the observers without creating another Session writer.
+
 ## Dev Note
 
 The [native SDK decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.md) records the process and Session ownership choice.
@@ -54,4 +56,4 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- Subagent notifications remain on the compatibility SDK profile.
+- The shipped native-sdk profile does not install a production Subagent tool. `subagent.finished` requires the Subagent result authority and remains on the compatibility profile; descendant event projection alone supplies neither a Provider result nor a stop reason.
