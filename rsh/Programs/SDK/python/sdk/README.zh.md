@@ -40,6 +40,8 @@ print(result.final_response)
 
 `Session.fork(destination_session_id, at_seq=None)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.session_fork` 提供协议回执。分叉不调用模型。
 
+原生会话树订阅观察已接收根任务及其委派后代；[原生服务端参考](../../packages/native-server/README.zh.md#configuration)定义所有权与通知限制。
+
 ## 自定义插件
 
 持久自定义属于 `dsh` profile。使用运行时 wheel 包提供的 `dsh` 命令初始化随附的 SDK profile，并安装外部 bundle：

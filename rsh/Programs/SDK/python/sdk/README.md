@@ -40,6 +40,8 @@ With explicit `profile="native-sdk"`, `run` also accepts encoded raster image di
 
 `Session.fork(destination_session_id, at_seq=None)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.session_fork` exposes the wire receipt. Forking does not invoke a model.
 
+Native session-tree subscriptions observe admitted roots and their delegated descendants; the [native server reference](../../packages/native-server/README.md#configuration) defines ownership and notification limits.
+
 ## Customize plugins
 
 Persistent customization belongs to a `dsh` profile. Initialize the shipped SDK profile and install an external bundle with the runtime wheel's `dsh` command:

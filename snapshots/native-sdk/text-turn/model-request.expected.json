@@ -60,6 +60,18 @@
           "additionalProperties": false
         }
       }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "fixture_delegate_child",
+        "description": "Delegate the fixture task.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
     }
   ]
 }

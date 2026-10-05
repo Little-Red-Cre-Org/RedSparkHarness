@@ -4,10 +4,11 @@ import { execa } from 'execa'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
+import { DeepSeekHarness, type HarnessNotification } from '@deepseek-ai/dsh-sdk-client'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
   normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
 
@@ -29,14 +30,25 @@ it('replays a native SDK turn with exact model input, output and durable Session
     request.setEncoding('utf8')
     request.on('data', (chunk: string) => { body += chunk })
     request.on('end', () => {
-      requests.push(JSON.parse(body) as Record<string, unknown>)
+      const modelRequest = JSON.parse(body) as Record<string, unknown>
+      requests.push(modelRequest)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
       if (requests.length === 1) {
         response.write(`data: ${JSON.stringify({ choices: [{ delta: { role: 'assistant', content: reply } }] })}\n\n`)
         return
       }
+      const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
+      if (last?.role === 'user' && ['delegate a native child', 'foreign root task'].includes(String(last.content))) {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'fixture-delegate', type: 'function',
+            function: { name: 'fixture_delegate_child', arguments: '{}' } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
+      const responseText = last?.role === 'user' && last.content === 'child task' ? 'native SDK child reply' : reply
       response.end([
-        { choices: [{ delta: { role: 'assistant', content: reply } }] },
+        { choices: [{ delta: { role: 'assistant', content: responseText } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
       ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
     })
@@ -49,8 +61,27 @@ it('replays a native SDK turn with exact model input, output and durable Session
   const sessions = join(home, 'sessions')
   const patch = join(home, 'model.patch.json')
   mkdirSync(workspace)
+  const profile = join(home, 'profiles', 'native-sdk')
+  const fixturePackage = join(profile, 'node_modules', 'fixture-sdk-descendants')
+  mkdirSync(fixturePackage, { recursive: true })
+  const fixtureUrl = pathToFileURL(join(root, 'rsh/Programs/SDK/packages/native-server/tests/fixtures/descendants.mjs')).href
+  const { plugin } = await import(fixtureUrl) as { plugin: { apiVersion: number; targets: string[];
+    requires: string[]; optional: string[]; provides: string[] } }
+  writeFileSync(join(fixturePackage, 'native.mjs'), `export { plugin } from ${JSON.stringify(fixtureUrl)}\n`)
+  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-descendants', type: 'module',
+    exports: { './package.json': './package.json', './native': './native.mjs' },
+    dsh: { native: { apiVersion: plugin.apiVersion, entry: './native', targets: plugin.targets,
+      requires: plugin.requires, optional: plugin.optional, provides: plugin.provides } } }))
+  const composition = shippedNativeProfileComposition(home, 'native-sdk')
+  writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-sdk-fixture', private: true,
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
+  writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
+    ...composition.installations,
+    { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: 'root' },
+    { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants' },
+  ] }))
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
-    { id: 'app', config: { systemPrompt: 'You are a native SDK fixture.', maxSteps: 1 } },
+    { id: 'app', config: { systemPrompt: 'You are a native SDK fixture.', maxSteps: 2 } },
     { id: 'storage', config: { root: sessions, compression: 'none' } },
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
@@ -71,7 +102,8 @@ it('replays a native SDK turn with exact model input, output and durable Session
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'), NATIVE_SDK_FIXTURE_KEY: 'fixture-key' },
         timeout: 30000,
       })
-      result = JSON.parse(python.stdout) as { finalResponse: string; events: Array<{type: string; data: unknown}> }
+      result = JSON.parse(python.stdout) as { finalResponse: string; events: Array<{type: string; data: unknown}>;
+        notifications: HarnessNotification[] }
     } else {
       const session = harness.session('sdk-recorded-turn')
       expect(await session.cancel()).toBe(false)
@@ -117,12 +149,22 @@ it('replays a native SDK turn with exact model input, output and durable Session
       }
       finally { await forked.close() }
       const restored = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
-      try { result = await restored.session('sdk-recorded-fork').run('retain the image') }
+      try {
+        result = await restored.session('sdk-recorded-fork').run('retain the image')
+        result = await restored.session('sdk-recorded-fork').run('delegate a native child')
+      }
       finally { await restored.close() }
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests).toHaveLength(4)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(10)
+    expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
+      .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' }])
+    expect(result.notifications.some(notification => notification.method === 'session.event'
+      && notification.params.sessionId === 'sdk-recorded-child'
+      && (notification.params.event as { type: string }).type === 'turn/end')).toBe(true)
+    expect(result.notifications.some(notification => Object.values(notification.params).some(value =>
+      typeof value === 'string' && value.startsWith('sdk-foreign-')))).toBe(false)
     const request = requests[1]
     if (request === undefined) throw new Error('native-sdk snapshot: model request missing')
     const modelInput = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2) + '\n'
@@ -135,7 +177,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     const raw = findLog('sdk-recorded-turn')
     const forkRaw = findLog('sdk-recorded-fork')
-    expect(logs).toHaveLength(2)
+    expect(logs).toHaveLength(5)
+    const childRaw = findLog('sdk-recorded-child')
+    expect(JSON.parse(childRaw.split('\n')[0] ?? '{}')).toMatchObject({ parentSession: 'sdk-recorded-fork', origin: 'subagent' })
+    const normalizedChild = normalizeSessionSnapshot(redactSessionSnapshotIds([childRaw])[0] ?? childRaw,
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
+    const childFixture = join(scene, 'session.1.v3.jsonl')
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(childFixture, normalizedChild)
+    else expect(normalizedChild).toBe(readFileSync(childFixture, 'utf8'))
     const context = { cwd: workspace, sessionIds: [] }
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
     const forkContext = { cwd: workspace, sessionIds: [] }
