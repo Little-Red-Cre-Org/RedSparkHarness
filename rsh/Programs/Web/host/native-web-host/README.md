@@ -35,7 +35,7 @@ The native profile selects this package with `projectDir` and `runtimeDir`. `pro
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-Activation prepares the Client graph through `dsh-native-web-assets`, creates one Host Connection registry through `dsh-client-connection/native-host`, and binds its Fetch-shaped routes through the native `node:http` bridge. Live reload watches the profile directory so atomic replacement is observed, serializes candidate preparation, and updates the asset map and revision together; invalid candidates retain the current page. The browser loads candidate styles and modules before asking `NativeClientHost.replace`, so replacement or import failure leaves the current UI mounted. Later native Host providers use the published `nativeWebHost` service to register RPC channels or exact Fetch routes. NativeHost owns the listener disposer, so route contributions drain before the socket closes. The package imports no Cordis Loader, legacy Web Server, or second Agent, Session, or Tools authority.
+Activation prepares the Client graph through `dsh-native-web-assets`, creates one Host Connection registry through `dsh-client-connection/native-host`, and binds its Fetch-shaped routes through the native `node:http` bridge. Domain providers register RPC channels and exact Fetch routes on `hostConnection`, the same handle used by the listener. `nativeWebHost` exposes the HTTP carrier; neither service creates a second registry. Live reload observes Client source dependencies and publishes complete rebuilt assets and revisions together. Failed builds retain the current page. NativeHost drains the watcher, routes and listener during shutdown. The package imports no Cordis Loader or legacy Web Server.
 
 </details>
 
@@ -70,7 +70,7 @@ No model request content is created here.
 <a id="known-limitations-and-deferred-work"></a>
 
 - This package provides the HTTP carrier and Client boot only; native domain providers must still expose the Session, Agent, tools, and other product API channels.
-- New `native-web` profiles enable `clientReload: live`; other profiles default to `startup`. This reload covers the selected native Client profile and its compiled module graph. It does not provide source-level module HMR or arbitrary legacy plugin support. The CLI's live configuration monitoring separately replaces the Host application when its native installation graph changes. See [native CLI profiles](../../../CLI/README.md#profiles).
+- `clientReload: live` observes compiled input, relative-import and unresolved package locations without following symlinks. A failed rebuild retains the published assets, wire and revision; shutdown drains watchers and accepted builds. This is Client graph replacement, not legacy plugin HMR. The CLI separately replaces the Host installation graph when its profile changes. See [native CLI profiles](../../../CLI/README.md#profiles).
 - Non-loopback binding requires explicit trusted authorities and does not make the listener suitable for an untrusted network by itself.
 
 <a id="dev-note"></a>

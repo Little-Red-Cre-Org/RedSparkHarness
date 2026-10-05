@@ -23,7 +23,7 @@
       "targets": ["host"],
       "requires": ["credentials"],
       "optional": [],
-      "provides": ["nativeWebHost", "application"]
+      "provides": ["nativeWebHost", "hostConnection", "application"]
     }
   },
   "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.d.ts"],
@@ -32,6 +32,7 @@
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-web-assets": "workspace:^"
+    "@deepseek-ai/dsh-native-web-assets": "workspace:^",
+    "chokidar": "^5.0.0"
   }
 }

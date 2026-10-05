@@ -29,6 +29,8 @@ kind: "package-reference"
 
 `./native` 浏览器入口在原生 `clientConnection` 服务下安装与 Cordis Client 适配器相同的 Connection 实现。它接受空配置，选择页面提供的 RPC 载体或 Web 传输，并发布可观察的 generation 与恢复状态。原生组合仍需要 Host API 路由和 generation source 才能接收实时 Session 事件。原生 Host 释放时会中止连接循环并等待 generation source 结束；此适配器不安装 Host `/api` 路由或浏览器认证。
 
+`./native-host` 入口为已认证的 Host Consumer 提供一个有上限的请求所有者。Consumer 提供请求上限，在获取资源前接收回调，组合载体与安装生命周期的取消信号，并在关闭时等待已接收的回调结束。容量不足与停止接收是显式错误；Consumer 自己分类 RPC 错误，并保留独立资源清理失败。Web 与 Desktop 载体可以发布同一个 `hostConnection` 服务，而不持有 Session 或 Agent 状态。
+
 -----
 
 <a id="browser-authentication-and-request-trust"></a>
