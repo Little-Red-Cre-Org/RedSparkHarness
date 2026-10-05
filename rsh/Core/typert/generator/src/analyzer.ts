@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
-import { dirname, extname, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import ts from 'typescript'
 import type {
   CrossFaceLink,
@@ -108,7 +108,7 @@ export interface PackageRegistration {
   readonly config: ParsedConfig
   /** The parsed package.json content. */
   readonly manifest: Record<string, unknown>
-  /** Export subpaths owned by this face for dual-face packages. */
+  /** Export subpaths compiled by this face when a package splits its projects. */
   readonly exportSubpaths?: readonly string[]
 }
 
@@ -498,7 +498,16 @@ export class WorkspaceAnalyzer {
           manifest,
         }
         if (!isDualFacePackage(manifest)) {
-          registrations.push(registration)
+          if (face === 'client' && basename(configPath) === 'tsconfig.client.json') {
+            const clientRoots = new Set(registration.config.parsed.fileNames.map(realPath))
+            const exportSubpaths = packageExportTargets(manifest)
+              .filter(([, target]) => !target.includes('*')
+                && clientRoots.has(realPath(sourcePathForExport(packageRoot, target))))
+              .map(([subpath]) => subpath)
+            registrations.push({ ...registration, exportSubpaths })
+          } else {
+            registrations.push(registration)
+          }
         } else if (configPath === join(packageRoot, 'tsconfig.json')) {
           registrations.push(
             { ...registration, face: 'host', exportSubpaths: hostExportSubpaths(manifest) },
