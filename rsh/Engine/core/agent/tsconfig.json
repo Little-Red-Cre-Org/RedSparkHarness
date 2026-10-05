@@ -36,7 +36,7 @@
       "path": "../../../Core/typert/protocol"
     },
     {
-      "path": "../native-agent/tsconfig.client.json"
+      "path": "../native-agent/tsconfig.host.json"
     }
   ]
 }
