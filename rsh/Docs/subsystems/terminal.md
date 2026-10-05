@@ -2,7 +2,7 @@
 
 English | [中文](terminal.zh.md)
 
-Types shared by PTY backends, `ctx.terminals`, and the model-facing consumer. The [persistent PTY Agent Note](../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.md) owns the rationale; this page records the cross-package vocabulary from [`rsh/Modules/Official/terminal/terminal/src/types.ts`](../../Modules/Official/terminal/terminal/src/types.ts).
+Types shared by PTY backends, `ctx.terminals`, and the model-facing consumer. The [persistent PTY Agent Note](../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.md) owns the rationale; this page records the cross-package vocabulary from [`rsh/Modules/Official/terminal/terminal/src/protocol.ts`](../../Modules/Official/terminal/terminal/src/protocol.ts).
 
 ## Identity and readiness
 

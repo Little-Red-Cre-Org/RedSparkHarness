@@ -11,7 +11,7 @@
     "directory": "rsh/Modules/Official/terminal/tool-terminal"
   },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["terminals", "tools"], "optional": [], "provides": [] } },
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["terminals", "tools"], "optional": ["jobs", "promptSections"], "provides": [] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -33,7 +33,9 @@
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^"
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-jobs": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
@@ -48,13 +50,14 @@
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-agent": { "optional": true },
     "@deepseek-ai/dsh-llm": { "optional": true },
-    "@deepseek-ai/dsh-output-retention": { "optional": true },
     "@deepseek-ai/dsh-system-prompt": { "optional": true },
     "@deepseek-ai/dsh-jobs": { "optional": true },
     "@deepseek-ai/dsh-tools": { "optional": true },
     "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
     "@deepseek-ai/cordis-plugin-include": "workspace:^",
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",

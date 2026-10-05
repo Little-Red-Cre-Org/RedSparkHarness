@@ -32,4 +32,14 @@ export default defineConfig([
     dts: false,
     clean: false,
   },
+  {
+    entry: ['lib/types/event-validation.js'],
+    outDir: 'lib',
+    format: ['esm'],
+    platform: 'browser',
+    target: 'es2024',
+    fixedExtension: false,
+    dts: false,
+    clean: false,
+  },
 ])

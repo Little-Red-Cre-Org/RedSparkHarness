@@ -18,4 +18,4 @@ A separate mutable native list would create another state authority and require 
 
 ## Consequences
 
-The native entry requires `tools` and `activeSessions`. Explicit native templates install the Session execution Provider so tool admission and durable writes share its selected owner. Its returned counts follow durable acceptance; the native registry cancels and drains admitted calls when the registration leaves. The legacy entry and its UI projection remain available for compatibility profiles. This choice does not switch product defaults or migrate the native Client task-list UI.
+The native entry requires `tools` and `activeSessions`. Explicit native templates install exactly one Session execution Provider so tool admission and durable writes share its selected owner, including native-web. Its returned counts follow durable acceptance; the native registry cancels and drains admitted calls when the registration leaves. The legacy entry and its UI projection remain available for compatibility profiles. This choice does not switch product defaults or migrate the native Client task-list UI.

@@ -7,51 +7,34 @@ import type {} from '@deepseek-ai/dsh-subprocess/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-sandbox/native'
 
-interface Config {
-  readonly type: string
-  readonly shellPath: string
-  readonly shellArgs: readonly string[]
-  readonly rows: number
-  readonly cols: number
-  readonly graceMs: number
-}
+import { Config, resolveConfig, validateConfig, type ResolvedConfig } from './config.ts'
+import { LocalPtySession } from './session.ts'
+import { childEnvironment, startupSession } from './startup.ts'
+import { TerminalBackendCleanupError } from '@deepseek-ai/dsh-terminal/protocol'
 
-function positiveInteger(value: unknown, field: string): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`terminal-bash: ${field} must be a positive safe integer`)
-  }
-  return value
-}
-
-/** Validate explicit PTY command and sizing before installation.
- * @param input - untrusted native profile configuration.
- * @returns exact shell command and terminal allocation budgets.
+/** Resolve the shared shell, startup and output budgets for a native installation.
+ * @param input - native profile configuration; type and graceMs retain their lifecycle spellings.
+ * @returns validated configuration used by the existing PTY implementation.
  */
-export function resolveNativeConfig(input: unknown): Config {
+export function resolveNativeConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     throw new Error('terminal-bash: native configuration must be an object')
   }
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['type', 'shellPath', 'shellArgs', 'rows', 'cols', 'graceMs'].includes(key)) {
-      throw new Error(`terminal-bash: unsupported configuration field ${key}`)
-    }
+    if (!['type', 'shellPath', 'shellArgs', 'rows', 'cols', 'graceMs', 'shellDialect', 'scrollbackLines',
+      'scrollbackMaxBytes', 'maxReadBytes', 'pollIntervalMs', 'exactProbeAfterMs', 'idleSilenceMs',
+      'handoffGraceMs', 'timeoutMs'].includes(key)) throw new Error(`terminal-bash: unsupported configuration field ${key}`)
   }
   if (typeof fields.type !== 'string' || fields.type.trim().length === 0) throw new Error('terminal-bash: type must be nonempty')
-  if (typeof fields.shellPath !== 'string' || fields.shellPath.trim().length === 0) {
-    throw new Error('terminal-bash: shellPath must be a nonempty executable')
-  }
-  if (!Array.isArray(fields.shellArgs) || fields.shellArgs.some(value => typeof value !== 'string')) {
-    throw new Error('terminal-bash: shellArgs must be an array of strings')
-  }
-  return {
-    type: fields.type, shellPath: fields.shellPath, shellArgs: fields.shellArgs as string[],
-    rows: positiveInteger(fields.rows, 'rows'), cols: positiveInteger(fields.cols, 'cols'),
-    graceMs: positiveInteger(fields.graceMs, 'graceMs'),
-  }
+  const { type, graceMs, ...options } = fields
+  const config = resolveConfig(Config({ ...options, backendType: type,
+    ...graceMs === undefined ? {} : { disposeGraceMs: graceMs } } as Config))
+  validateConfig(config)
+  return config
 }
 
-/** Register a real PTY process backend without exposing interactive I/O yet. */
+/** Register the existing interactive shell implementation over native selected Providers. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-terminal-bash', targets: ['host'],
   requires: ['terminals', 'subprocess', 'sandboxPolicy'], optional: ['sandbox'], provides: [],
@@ -66,7 +49,7 @@ export const plugin: NativePlugin = {
         throw new Error('terminal-bash: confined PTY requires a sandbox Provider')
       }
       const backend: NativeTerminalBackend = {
-        type: config.type,
+        type: config.backendType,
         async spawn(spec): Promise<NativeTerminalSession> {
           const selected = policy.resolve({ session: spec.session })
           const executable = await subprocess.resolveExecutable(config.shellPath, undefined, spec.signal)
@@ -78,15 +61,22 @@ export const plugin: NativePlugin = {
           const cwd = spec.cwd ?? selected.workspaceRoot
           if (!isAbsolute(cwd)) throw new Error('terminal-bash: cwd must be absolute')
           const terminal = await subprocess.spawnTerminal({
-            argv: confined, cwd, rows: config.rows, cols: config.cols, graceMs: config.graceMs, signal: spec.signal,
+            argv: confined, cwd, rows: config.rows, cols: config.cols, graceMs: config.disposeGraceMs, signal: spec.signal,
+            env: childEnvironment({ sessionId: spec.session.id, terminalId: spec.sessionId }, config.shellDialect),
           })
-          let state: 'running' | 'exited' | 'failed' = 'running'
-          terminal.output.resume()
-          void terminal.done.then(
-            () => { state = 'exited' },
-            () => { state = 'failed' },
-          )
-          return { get pid() { return terminal.pid }, status: () => state, close: () => terminal.terminate() }
+          const session = new LocalPtySession(terminal, config)
+          try {
+            await startupSession(session, config.shellDialect, config.timeoutMs, spec.signal)
+          } catch (error) {
+            try { await session.close('PTY startup failed') }
+            catch (cleanup: unknown) { throw new TerminalBackendCleanupError(error, cleanup) }
+            throw error
+          }
+          return {
+            get pid() { return session.pid }, interaction: session,
+            status: () => session.status().kind === 'running' ? 'running' : 'exited',
+            close: () => session.close('native terminal closed'),
+          }
         },
       }
       context.effect(terminals.registerBackend(backend))

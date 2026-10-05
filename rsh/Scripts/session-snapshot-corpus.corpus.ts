@@ -26,6 +26,7 @@ const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/message-feedback-protocol.snapshot.ts',
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
+  'snapshots/web/native-session-core.snapshot.ts',
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
@@ -110,7 +111,7 @@ async function snapshotNamedTests(): Promise<string[]> {
 }
 
 it('reserves the snapshot test suffix for recorded-session adapters', async () => {
-  expect(await snapshotNamedTests()).toEqual([...snapshotAdapters])
+  expect(await snapshotNamedTests()).toEqual([...snapshotAdapters].sort())
 })
 
 it('keeps every recorded session owned, pinned, redacted, and header-scrubbed', async () => {

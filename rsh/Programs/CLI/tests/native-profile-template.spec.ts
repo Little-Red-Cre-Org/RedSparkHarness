@@ -18,6 +18,8 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
     expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
+    expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
+    expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
