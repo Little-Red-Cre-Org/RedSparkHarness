@@ -116,7 +116,8 @@ export class NativeSdkApplication implements NativeApplication {
     } finally { this.initializing = false }
   }
 
-  private prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport, lifetime: AbortSignal): { messageId: string } {
+  private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
+    lifetime: AbortSignal): Promise<{ messageId: string }> {
     if (this.closing) throw new Error('native SDK: closing')
     const executor = this.executor
     if (executor === undefined) throw new Error('native SDK: initialize first')
@@ -128,22 +129,35 @@ export class NativeSdkApplication implements NativeApplication {
     const content = (raw.contentBlocks as Array<{ type: 'text'; text: string }>).map(block => ({ type: 'text' as const, text: block.text }))
     const message = createUserMessage({ content, source: { kind: 'user' } })
     const previous = this.sessions.get(sessionId)
+    const accepted = Promise.withResolvers<void>()
+    let admitted = false
     const task = (async () => {
-      if (previous !== undefined) await previous
-      transport.notify('session.status', { sessionId, status: 'running' })
       try {
-        await executor.executeRootTurn({ id: SessionId(sessionId), resume: previous !== undefined, message,
-          onEvent: (event) => { transport.notify('session.event', { sessionId, event }) },
-        }, AbortSignal.any([lifetime, this.abort.signal]))
+        if (previous !== undefined) await previous
+        const signal = AbortSignal.any([lifetime, this.abort.signal])
+        const id = SessionId(sessionId)
+        const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
+        await executor.executeRootTurn({ id, resume, message, onEvent: (event) => {
+          transport.notify('session.event', { sessionId, event })
+          if (!admitted && event.type === 'agent/inbox/spliced'
+            && event.data.inserted.some(input => input.id === message.id)) {
+            admitted = true
+            accepted.resolve()
+            transport.notify('session.status', { sessionId, status: 'running' })
+          }
+        } }, signal)
+        if (!admitted) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
       } catch (error: unknown) {
-        process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
+        if (admitted) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
+        else accepted.reject(error)
       } finally {
-        transport.notify('session.status', { sessionId, status: 'idle' })
+        if (admitted) transport.notify('session.status', { sessionId, status: 'idle' })
       }
-    })().catch((error: unknown) => { process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`) })
+    })()
     this.sessions.set(sessionId, task)
     this.pending.add(task)
     void task.then(() => { this.pending.delete(task) })
+    await accepted.promise
     return { messageId: String(message.id) }
   }
 }

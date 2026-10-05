@@ -12,7 +12,7 @@ The shipped `native-sdk` profile names an application package that has no instal
 
 The native SDK server is one profile-selected application. `initialize` binds the workspace and model route, and `session/prompt` queues text on the shared native-headless executor by Session id. The executor owns model requests, durable events, and writer settlement; the SDK application owns JSON-RPC stdio, per-Session prompt ordering, status notifications, and process shutdown. The TypeScript and Python client defaults remain `sdk`, so this native path is explicitly selected.
 
-The native server keeps the existing three request methods and emits `session.event` and `session.status`. Inline image admission and subagent notifications stay outside this first native SDK slice. Unsupported input fails at the wire request rather than being silently altered.
+The native server keeps the existing three request methods and emits `session.event` and `session.status`. A prompt response follows its durable `agent/inbox/spliced` receipt; failures before that receipt reject the JSON-RPC request. Persistent storage determines whether a Session resumes, including after a process restart. Inline image admission and subagent notifications stay outside this first native SDK slice. Unsupported input fails at the wire request rather than being silently altered.
 
 ## Alternatives considered
 

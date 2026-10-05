@@ -13,7 +13,7 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前进程选择一个工作目录、提供方、模型，以及可选的推理强度和输出 token 上限。每个 Session ID 同时只运行一个轮次；后续提示从该 Session 的持久日志恢复。此阶段原生 SDK 仅接收非空文本内容块；内联图片输入和子 Agent 通知仍由兼容 SDK profile 提供。
+Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前进程选择一个工作目录、提供方、模型，以及可选的推理强度和输出 token 上限。每个 Session ID 同时只运行一个轮次；后续提示从该 Session 的持久日志恢复，包括进程重启之后。`session/prompt` 仅在收件箱回执持久化后返回消息 ID；在此之前的失败以 JSON-RPC 错误返回给两个 SDK 客户端。此阶段原生 SDK 仅接收非空文本内容块；内联图片输入和子 Agent 通知仍由兼容 SDK profile 提供。
 
 ## 开发备注
 

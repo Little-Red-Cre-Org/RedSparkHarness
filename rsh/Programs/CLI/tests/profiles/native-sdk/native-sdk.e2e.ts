@@ -33,22 +33,30 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
     providers: { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'sdk-fixture' }] } },
   } }] }))
-  const child = execa(process.execPath, ['--import', 'tsx/esm', bin, '--profile', 'native-sdk', '--patch', patch], {
+  const spawn = () => execa(process.execPath, ['--import', 'tsx/esm', bin, '--profile', 'native-sdk', '--patch', patch], {
     cwd: root, env: { DSH_HOME: home, DEEPSEEK_API_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
+  let child = spawn()
   let stderr = ''
   let exited = false
-  const frames: Record<string, unknown>[] = []
+  let frames: Record<string, unknown>[] = []
   let buffer = ''
-  child.stdout.on('data', (chunk: Buffer) => {
-    buffer += chunk.toString('utf8')
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-    for (const line of lines) if (line.trim()) frames.push(JSON.parse(line) as Record<string, unknown>)
-  })
-  child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
-  void child.then(() => { exited = true }, () => { exited = true })
+  const listen = () => {
+    stderr = ''
+    exited = false
+    frames = []
+    buffer = ''
+    child.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString('utf8')
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) if (line.trim()) frames.push(JSON.parse(line) as Record<string, unknown>)
+    })
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    void child.then(() => { exited = true }, () => { exited = true })
+  }
+  listen()
   const receive = async (predicate: (frame: Record<string, unknown>) => boolean): Promise<Record<string, unknown>> => {
     const deadline = Date.now() + 20_000
     for (;;) {
@@ -89,6 +97,39 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
     expect(await receive(frame => frame.id === 3)).toMatchObject({ result: {} })
     const exit = await child
     expect(exit.exitCode, stderr).toBe(0)
+
+    child = spawn()
+    listen()
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 6, method: 'initialize',
+      params: { cwd: home, provider: 'deepseek-official', model: 'sdk-fixture' } })}\n`)
+    expect(await receive(frame => frame.id === 6)).toHaveProperty('result')
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 7, method: 'session/prompt',
+      params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'text', text: 'wrong workspace' }] } })}\n`)
+    expect(await receive(frame => frame.id === 7)).toMatchObject({ error: {
+      message: expect.stringContaining('restored workspace differs') as unknown,
+    } })
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 8, method: 'shutdown' })}\n`)
+    await receive(frame => frame.id === 8)
+    expect((await child).exitCode, stderr).toBe(0)
+
+    child = spawn()
+    listen()
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'initialize',
+      params: { cwd: root, provider: 'deepseek-official', model: 'sdk-fixture' } })}\n`)
+    expect(await receive(frame => frame.id === 9)).toHaveProperty('result')
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 10, method: 'session/prompt',
+      params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'text', text: 'after restart' }] } })}\n`)
+    expect(await receive(frame => frame.id === 10)).toMatchObject({ result: { messageId: expect.any(String) as unknown } })
+    await receive(frame => frame.method === 'session.event'
+      && (frame.params as { event?: { type?: string } }).event?.type === 'turn/end')
+    await receive(frame => frame.method === 'session.status'
+      && (frame.params as { status?: string }).status === 'idle')
+    expect(requests).toHaveLength(3)
+    expect(JSON.stringify(requests[2])).toContain('say hello')
+    expect(JSON.stringify(requests[2])).toContain('continue')
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 11, method: 'shutdown' })}\n`)
+    await receive(frame => frame.id === 11)
+    expect((await child).exitCode, stderr).toBe(0)
   } finally {
     child.kill('SIGKILL')
     await child
