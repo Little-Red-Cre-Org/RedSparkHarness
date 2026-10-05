@@ -22,6 +22,11 @@ The seam separates the **model-/plugin-facing request** (optional `workdir`/`tim
  * fully-resolved {@link ShellExecSpec}.
  */
 interface ShellExecRequest {
+  /** Observe decoded captured output without consuming it; the callback must not throw.
+   * @param stream - stdout or stderr.
+   * @param text - UTF-8 text delivered before cancellation or settlement.
+   */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   /** Working directory override (default: implementation-configured). */
   workdir?: string | undefined
@@ -72,6 +77,8 @@ interface ShellExecRequest {
  * background processes have no executor timeout.
  */
 interface ShellExecSpec {
+  /** Output observer carried through from {@link ShellExecRequest.onOutput}. */
+  onOutput?: (stream: 'stdout' | 'stderr', text: string) => void
   command: string
   workdir: string
   timeoutMs: number
@@ -167,7 +174,7 @@ The `SANDBOX_UNAVAILABLE` error code (owned by the [sandbox seam](sandbox.md)) i
 
 ## Background processes: `ShellProcess`
 
-`start()` returns a handle with no id or owner. `dsh-tool-bash` adapts it into `ctx.jobs.start()` hooks; the generic runtime then owns job identity and lifecycle. `done` resolves when the underlying process settles and never rejects; a subprocess provider rejection becomes a `killed` process with a stage-neutral error on stderr. Reads remain valid after settlement, and sandbox facts are stamped before `done` resolves.
+`start()` returns a handle with no id or owner. `dsh-tool-bash` adapts it into `ctx.jobs.start()` hooks; the generic runtime then owns job identity and lifecycle. `done` awaits managed-range cleanup after cancellation or provider failure; failure to observe cleanup rejects. A subprocess provider rejection becomes a `killed` process with a stage-neutral error on stderr. Reads remain valid after settlement, and sandbox facts are stamped before `done` resolves.
 
 ```ts type-equiv
 /**
@@ -184,8 +191,9 @@ interface ShellProcess {
   /** Terminating signal name, when signal-killed. */
   signal: NodeJS.Signals | null
   /**
-   * Resolves when the underlying process settles (never rejects — provider
-   * rejection settles as `killed` with a stage-neutral error on stderr).
+   * Resolves after process settlement and, on cancellation or provider failure,
+   * managed-range exit. Provider rejection settles as `killed` with an error
+   * on stderr; failure to observe managed-range cleanup rejects.
    */
   readonly done: Promise<void>
   /** Sandbox facts, stamped once a confined process settles. */
@@ -241,7 +249,7 @@ Abstract bash execution service. Subclass, implement the abstract methods, and l
 Implementations must honor these semantics:
 
 - run rejects only for infrastructure failures. Nonzero exits, timeout kills, and abort kills resolve with a ShellRunResult.
-- start returns immediately; no timeout applies to background processes. `done` settles at process close and never rejects; spawn failures settle as `killed` with the error on stderr.
+- start returns immediately; no timeout applies to background processes. `done` awaits managed-range cleanup after cancellation or provider failure; cleanup observation failure rejects. Spawn failures settle as `killed` with the error on stderr.
 - ShellProcess.readOutput is incremental: consecutive reads never repeat output. Lossy reads report truncation and available spill files.
 - A still-running background process is stopped and awaited when its owning composition tears down. With the subprocess seam that boundary is `ctx.subprocess` disposal, so a background process survives an executor-only reload.
 

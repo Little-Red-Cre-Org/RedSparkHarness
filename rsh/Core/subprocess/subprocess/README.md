@@ -126,6 +126,9 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+
+Collected streams accept a trusted `onData` observer without consuming or replacing retained output. Observers must not throw.
+
 ## Model Experience
 
 Indirectly, through consumer seams such as the bash executor family, which own all model-facing rendering of process output and lifecycle.

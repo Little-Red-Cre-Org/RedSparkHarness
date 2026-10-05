@@ -126,6 +126,9 @@ Read these pages when the package-level contract is not enough. They move from t
 -----
 
 <a id="model-experience"></a>
+
+Collection observers receive live decoded remote output frames; spill recovery remains a retained-output operation.
+
 ## Model Experience
 
 Indirectly, through consumer seams such as the bash executor family, which render remote output, exit facts, background deltas, and spill paths.

@@ -478,7 +478,7 @@ export function bindManagedProcess(
   const collectStream = (mode: SubprocessOutputMode, stream: Readable | null, label: string): OutputCollector | undefined => {
     if (!isCollect(mode) || stream === null) return undefined
     const collector = new OutputCollector(mode.maxBytes, mode.spill?.maxBytes, label, spillDir)
-    stream.on('data', (chunk: Buffer) => { collector.push(chunk) })
+    stream.on('data', (chunk: Buffer) => { collector.push(chunk); mode.onData?.(chunk) })
     return collector
   }
   const stdoutCollector = collectStream(outMode, stdout, 'stdout')
