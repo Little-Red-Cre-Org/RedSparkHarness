@@ -1,5 +1,6 @@
 /** One recorded native SDK text turn through the shipped dsh profile and TypeScript client. */
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, chmodSync } from 'node:fs'
+import { execa } from 'execa'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -30,6 +31,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
     request.on('end', () => {
       requests.push(JSON.parse(body) as Record<string, unknown>)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
+      if (requests.length === 1) {
+        response.write(`data: ${JSON.stringify({ choices: [{ delta: { role: 'assistant', content: reply } }] })}\n\n`)
+        return
+      }
       response.end([
         { choices: [{ delta: { role: 'assistant', content: reply } }] },
         { choices: [{ delta: {}, finish_reason: 'stop' }] },
@@ -55,11 +60,40 @@ it('replays a native SDK turn with exact model input, output and durable Session
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
   try {
-    const result = await harness.run(task, { sessionId: 'sdk-recorded-turn' })
+    let result
+    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+      const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
+      writeFileSync(launcher, process.platform === 'win32'
+        ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
+        : `#!/bin/sh\nexec "${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" "$@"\n`)
+      if (process.platform !== 'win32') chmodSync(launcher, 0o700)
+      const python = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(scene, 'client.py'), launcher, home, workspace, patch, task], {
+        env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'), NATIVE_SDK_FIXTURE_KEY: 'fixture-key' },
+        timeout: 30000,
+      })
+      result = JSON.parse(python.stdout) as { finalResponse: string; events: Array<{type: string; data: unknown}> }
+    } else {
+      const session = harness.session('sdk-recorded-turn')
+      expect(await session.cancel()).toBe(false)
+      const chunk = Promise.withResolvers<void>()
+      const pending = session.run(task, { onNotification: notification => {
+        if (notification.method === 'session.chunk' && (notification.params.chunk as { type?: string }).type === 'text-delta') chunk.resolve()
+      } })
+      await chunk.promise
+      expect(await harness.session('unknown-session').cancel()).toBe(false)
+      expect(await session.cancel()).toBe(true)
+      const cancelled = await pending
+      expect(cancelled.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted', reason: { kind: 'user' } } } })
+      expect(cancelled.events.some(event => event.type === 'assistant/attempt')).toBe(true)
+      await harness.close()
+      const resumed = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try { result = await resumed.run('finish after cancellation', { sessionId: 'sdk-recorded-turn' }) }
+      finally { await resumed.close() }
+    }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests).toHaveLength(1)
-    const request = requests[0]
+    expect(requests).toHaveLength(2)
+    const request = requests[1]
     if (request === undefined) throw new Error('native-sdk snapshot: model request missing')
     const modelInput = JSON.stringify({ model: request.model, messages: request.messages, tools: request.tools ?? [] }, null, 2) + '\n'
     const physical = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))

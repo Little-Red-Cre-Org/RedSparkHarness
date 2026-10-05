@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, TypeAlias, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool
 
 from .errors import JsonRpcError, TransportClosedError
 from .models import IncomingRequest, InitializeResponse, JsonObject, JsonValue, Notification
@@ -34,6 +34,10 @@ class HarnessConfig:
     initialize_timeout_seconds: float = 30.0
     request_timeout_seconds: float | None = None
     shutdown_timeout_seconds: float | None = 1.0
+
+
+class _SessionCancelResponse(BaseModel):
+    cancelled: StrictBool
 
 
 class HarnessClient:
@@ -187,6 +191,15 @@ class HarnessClient:
             notification_subscription=notification_subscription,
         )
         return response.messageId
+
+    def session_cancel(self, session_id: str) -> bool:
+        """Cancel an admitted native-sdk turn and await cleanup; other Sessions remain running.
+
+        Returns False when no turn was admitted. Unsupported profiles return a protocol error.
+        """
+        return self.request(
+            "session/cancel", {"sessionId": session_id}, response_model=_SessionCancelResponse
+        ).cancelled
 
     def request(
         self,

@@ -178,9 +178,8 @@ class NotificationSubscriptionImpl implements NotificationSubscription {
  *
  * The subprocess starts lazily on {@link start} and is owned by this instance
  * until {@link close}, which requests protocol `shutdown` and then walks the
- * shared EOF → SIGTERM → SIGKILL dispose ladder to quiescence. There is no
- * wire-level cancel: a timed-out request stays running server-side until the
- * runtime is closed.
+ * shared EOF → SIGTERM → SIGKILL dispose ladder to quiescence. A timed-out request stays running server-side; the explicit native-sdk
+ * profile supports Session cancellation separately from request timeouts.
  */
 export class HarnessClient {
   /** Original public dsh launch and timeout options for this client. */
@@ -295,6 +294,19 @@ export class HarnessClient {
       throw new SdkProtocolError(`session/prompt returned no message id: ${JSON.stringify(result)}`)
     }
     return result.messageId
+  }
+
+  /**
+   * Cancel an admitted turn on the explicit native-sdk profile and await cleanup.
+   * @param sessionId - Session whose active turn to cancel; other Sessions remain running.
+   * @returns false when no admitted turn was active; rejects on unsupported profiles.
+   */
+  async cancel(sessionId: string): Promise<boolean> {
+    const result = await this.request('session/cancel', { sessionId })
+    if (!isRecord(result) || typeof result.cancelled !== 'boolean') {
+      throw new SdkProtocolError(`session/cancel returned no cancellation result: ${JSON.stringify(result)}`)
+    }
+    return result.cancelled
   }
 
   /**
