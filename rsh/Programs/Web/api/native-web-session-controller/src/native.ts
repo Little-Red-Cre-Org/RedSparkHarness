@@ -1,5 +1,6 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import { NativeSessionFeed } from './follow.ts'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -28,6 +29,8 @@ export interface Config extends TurnConfig {
   readonly maxPendingRequests: number
   readonly maxHistoryEvents: number
   readonly maxPromptChars: number
+  readonly maxFollowBufferBytes: number
+  readonly maxFollowers: number
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -52,9 +55,10 @@ function sessionId(value: unknown): SessionId {
  * @returns validated native Session configuration.
  */
 export function resolveNativeWebSessionConfig(input: unknown): Config {
-  const { maxPendingRequests, maxHistoryEvents, maxPromptChars, ...turn } = object(input)
+  const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers, ...turn } = object(input)
   return { ...resolveNativeHeadlessConfig(turn), maxPendingRequests: positive(maxPendingRequests, 'maxPendingRequests'),
-    maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars') }
+    maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars'), maxFollowBufferBytes: positive(maxFollowBufferBytes, 'maxFollowBufferBytes'),
+    maxFollowers: positive(maxFollowers, 'maxFollowers') }
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await'])
@@ -67,7 +71,11 @@ export class NativeWebSessionService {
     done: Promise<unknown>
     waiting: boolean
     settled: boolean
+    feed: NativeSessionFeed | undefined
+    following: boolean
   }>()
+  private followers = 0
+  private readonly shutdown = new AbortController()
   private readonly requests: NativeConnectionRequestOwner
   private readonly controls: NativeConnectionRequestOwner
   private readonly settlements: NativeConnectionRequestOwner
@@ -91,35 +99,77 @@ export class NativeWebSessionService {
   private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
     signal.throwIfAborted()
     const fields = object(payload)
-    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume'].includes(key)) throw new Error('native web session: unexpected prompt field')
+    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow'].includes(key)) throw new Error('native web session: unexpected prompt field')
     const id = sessionId(fields.sessionId)
     if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) throw new TypeError('native web session: text exceeds configured limits or is empty')
+    if (fields.follow !== undefined && typeof fields.follow !== 'boolean') throw new TypeError('native web session: follow must be boolean')
     if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
     if (this.turns.has(id)) throw new Error('native web session: Session already has a pending turn')
     if (this.turns.size >= this.config.maxPendingRequests) throw new Error('native web session: turn settlement capacity reached')
     const controller = new AbortController()
     const admissionId = randomUUID() as NativeSessionAdmissionId
+    const feed = fields.follow === true
+      ? new NativeSessionFeed(this.config.maxFollowBufferBytes, (error) => { controller.abort(error) }) : undefined
     let admitted!: () => void
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
-    const done = this.requests.run(this.lifetime, async (accepted) => {
+    const execution = this.requests.run(this.lifetime, async (accepted) => {
       admitted()
       const turnSignal = AbortSignal.any([accepted, controller.signal])
       try {
-        return await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
-          message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }, turnSignal)
+        const result = await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
+          message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }),
+          ...feed === undefined ? {} : { onEvent: (event) => { feed.push({ type: 'event', event }) }, onChunk: (chunk) => {
+            if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
+            if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
+          } } }, turnSignal)
+        const failure = feed?.failure()
+        if (failure !== undefined) throw failure
+        return result
       } catch (error: unknown) {
+        const failure = feed?.failure()
+        if (failure !== undefined) throw failure
         // Exact execution cancellation is observed after the shared writer has drained.
         if (turnSignal.aborted && error === turnSignal.reason) return { exitCode: 130 }
         throw error
       }
     })
-    const turn = { admissionId, controller, done, waiting: false, settled: false }
+    const done = execution.then((result) => {
+      feed?.finish()
+      const failure = feed?.failure()
+      if (failure !== undefined) throw failure
+      return result
+    }, (error: unknown) => {
+      feed?.finish()
+      if (error instanceof Error) throw error
+      throw new Error(String(error), { cause: error })
+    })
+    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
     void done.then(() => { turn.settled = true }, (error: unknown) => { turn.settled = true; refused(error) })
     try { await acknowledgement } catch (error: unknown) { this.turns.delete(id); throw error }
     return { admissionId }
+  }
+
+  /**
+   * Follow the exact admitted turn without acquiring another writer or Agent.
+   * @param request - authenticated Fetch route request.
+   * @returns SSE response, or a failure before any stream is admitted.
+   */
+  async follow(request: Request): Promise<Response> {
+    const fields = object(await request.json())
+    for (const key of Object.keys(fields)) if (!['sessionId', 'admissionId'].includes(key)) throw new Error('native web session: unexpected follow field')
+    const turn = this.turns.get(sessionId(fields.sessionId))
+    if (turn === undefined || fields.admissionId !== turn.admissionId || turn.feed === undefined || turn.following) {
+      return new Response('native Session follow: unavailable admission', { status: 409 })
+    }
+    const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
+    signal.throwIfAborted()
+    if (this.followers >= this.config.maxFollowers) return new Response('native Session follow: capacity reached', { status: 429 })
+    turn.following = true
+    this.followers++
+    return turn.feed.response(signal, () => { this.followers-- })
   }
 
   private async settle(payload: unknown, signal: AbortSignal): Promise<unknown> {
@@ -196,6 +246,7 @@ export class NativeWebSessionService {
    * @returns completion including actual reader cleanup failures.
    */
   async close(): Promise<void> {
+    this.shutdown.abort(new Error('native Session follow: disposed'))
     const results = await Promise.allSettled([this.requests.close(), this.controls.close(), this.settlements.close()])
     this.turns.clear()
     const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
@@ -212,7 +263,8 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
     return (context) => {
-      const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt, ...turn } = config
+      const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt,
+        maxFollowBufferBytes: _buffer, maxFollowers: _followers, ...turn } = config
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
@@ -220,6 +272,8 @@ export const plugin: NativePlugin = {
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
         (endpoint, payload, signal) => service.handle(endpoint, payload, signal)))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.follow(request) }))
       context.provide('nativeWebSession', service)
       context.provide('rootExecution', executor.rootExecution)
     }

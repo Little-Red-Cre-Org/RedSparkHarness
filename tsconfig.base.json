@@ -570,6 +570,7 @@
       "@deepseek-ai/dsh-bash-local/native": ["./rsh/Modules/Official/shell/bash-local/src/native.ts"],
       "@deepseek-ai/dsh-bash-sandbox/native": ["./rsh/Modules/Official/shell/bash-sandbox/src/native.ts"],
       "@deepseek-ai/dsh-client-native-application/native": ["./rsh/Programs/Web/client/native-application/src/native.ts"],
+      "@deepseek-ai/dsh-client-native-session/follow-types": ["./rsh/Programs/Web/client/native-session/src/follow-types.ts"],
       "@deepseek-ai/dsh-client-native-session/native": ["./rsh/Programs/Web/client/native-session/src/native.ts"],
       "@deepseek-ai/dsh-code-runtime-process-sandbox/native": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/native.ts"],
       "@deepseek-ai/dsh-mcp-client/native": ["./rsh/Modules/Official/mcp/mcp-client/src/native.ts"],
