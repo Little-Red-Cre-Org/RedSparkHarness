@@ -1094,12 +1094,12 @@
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
       "symbol": "TerminalWaitReason",
-      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+      "source": "rsh/Modules/Official/terminal/terminal/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
       "symbol": "TerminalSessionStatus",
-      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+      "source": "rsh/Modules/Official/terminal/terminal/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
@@ -1109,17 +1109,17 @@
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
       "symbol": "TerminalBackendSession",
-      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+      "source": "rsh/Modules/Official/terminal/terminal/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
       "symbol": "TerminalSendOperation",
-      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+      "source": "rsh/Modules/Official/terminal/terminal/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/terminal.md",
       "symbol": "TerminalSendResult",
-      "source": "rsh/Modules/Official/terminal/terminal/src/types.ts"
+      "source": "rsh/Modules/Official/terminal/terminal/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/sandbox.md",
