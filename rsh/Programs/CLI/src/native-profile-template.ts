@@ -13,14 +13,8 @@ export const SHIPPED_NATIVE_PROFILES = ['native-headless', 'native-sdk', 'native
 const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application' },
   { id: 'renderer', plugin: '@deepseek-ai/dsh-client-ui-renderer' },
-  { id: 'layout', plugin: '@deepseek-ai/dsh-client-ui-layout' },
-  { id: 'sidebar', plugin: '@deepseek-ai/dsh-client-ui-sidebar' },
-  { id: 'brand', plugin: '@deepseek-ai/dsh-client-ui-brand-official' },
-  { id: 'theme', plugin: '@deepseek-ai/dsh-client-ui-theme' },
-  { id: 'locale', plugin: '@deepseek-ai/dsh-client-locale' },
   { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
   { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session' },
-  { id: 'resources', plugin: '@deepseek-ai/dsh-client-resources' },
 ] as const
 
 function cliRuntimeRoot(): string {

@@ -16,6 +16,7 @@ import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-nati
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application'
 import { plugin } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
@@ -86,10 +87,15 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       return fetch(new URL(input.pathname, url), { ...init, headers })
     })
     const client = createNativeSessionClient(rpc)
-    const { sessionId } = await client.create()
+    const conversation = new NativeConversationController(client)
+    await conversation.load()
+    await conversation.create()
+    const sessionId = conversation.getSnapshot().selected!
     expect((await client.list()).map(header => header.id)).toEqual([sessionId])
-    expect(await client.prompt(sessionId, 'first input', true)).toEqual({ exitCode: 0, answer: 'first answer' })
-    expect(await client.prompt(sessionId, 'second input', true)).toEqual({ exitCode: 0, answer: 'resumed answer' })
+    await conversation.send('first input')
+    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
+    await conversation.select(sessionId)
+    await conversation.send('second input')
     const history = await client.history(sessionId)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
       .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
@@ -98,21 +104,25 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     early.abort(new Error('before admission'))
     await expect(client.prompt(sessionId, 'not admitted', true, early.signal)).rejects.toThrow('before admission')
     expect(requests).toHaveLength(2)
-    const caller = new AbortController()
     let settled = false
-    const pending = client.prompt(sessionId, 'cancel input', true, caller.signal)
+    const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
     await vi.waitFor(() => { expect(requests).toHaveLength(3) })
     // The sole ordinary admission slot is full; control admission must still cancel it.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
-    caller.abort(new Error('caller cancelled'))
+    conversation.cancel()
+    expect(conversation.getSnapshot().state).toBe('cancelling')
     await aborted
     await new Promise<void>(resolve => setImmediate(resolve))
     expect(settled).toBe(false)
     releaseCleanup()
-    expect((await pending).exitCode).not.toBe(0)
+    await pending
+    expect(conversation.getSnapshot().state).toBe('ready')
+    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
     expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
+    await conversation.close()
+    await client.close()
   } finally {
     releaseCleanup()
     await host.stop()
