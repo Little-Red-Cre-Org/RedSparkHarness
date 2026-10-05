@@ -16,6 +16,7 @@ import {
   render,
   tierExternalDeps,
   virtualManifest,
+  virtualStoreDirectories,
 } from './gen-third-party-notices.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
@@ -178,6 +179,24 @@ describe('virtualManifest', () => {
       expect(virtualManifest(store, '@scope/missing')).toBeUndefined()
     } finally {
       rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('virtualStoreDirectories', () => {
+  it('finds an external pnpm store and rejects malformed install metadata', () => {
+    const fixture = mkdtempSync(join(tmpdir(), 'dsh-notices-store-'))
+    try {
+      const nodeModules = join(fixture, 'node_modules')
+      const external = join(fixture, 'short-store')
+      mkdirSync(nodeModules)
+      writeFileSync(join(nodeModules, '.modules.yaml'), `virtualStoreDir: ${JSON.stringify(external)}\n`)
+      expect(virtualStoreDirectories(nodeModules)).toEqual([external, join(nodeModules, '.pnpm')])
+
+      writeFileSync(join(nodeModules, '.modules.yaml'), 'virtualStoreDir: []\n')
+      expect(() => virtualStoreDirectories(nodeModules)).toThrow('invalid virtualStoreDir')
+    } finally {
+      rmSync(fixture, { recursive: true, force: true })
     }
   })
 })

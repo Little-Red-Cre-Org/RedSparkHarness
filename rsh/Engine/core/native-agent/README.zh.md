@@ -30,6 +30,7 @@ Agent 清理会先启动全部已注册的释放操作，再等待完成，使�
 `./inbox` 是 Host 与 Client 共享的 InboxTarget 和 agent/inbox/spliced 唯一声明；兼容 Agent 转发这些类型。Client 编译面只包含该纯声明，不加载原生 registry 实现。
 
 <a id="model-experience"></a>
+
 `execution(agent)` 为该精确注册 Agent 提供 FIFO 操作所有者。普通工作按准入顺序排队；空闲维护同步预留所有者并拒绝忙碌身份。释放会取消排队和活动工作，等待已接纳的函数结束，并释放其清理注册。Session writer 仍由 Program 持有。
 
 ## 模型体验

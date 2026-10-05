@@ -9,7 +9,9 @@ import { WorkspaceTypertGenerator } from '../Core/typert/generator/src/workspace
 import { writeModuleGraph } from './gen-module-graph.ts'
 import {
   hasClientDeclaration,
+  OPTIONAL_NATIVE_HOST_PEERS,
   PACKAGE_DEPENDENCY_POLICY,
+  SHARED_CLIENT_RUNTIME_PEERS,
   type PackageDependencyPolicy,
 } from './package-dependency-policy.ts'
 import {
@@ -461,10 +463,9 @@ export function readPackageDependencyFacts(
   }
 }
 
-/** Validate third-party dependencies retained by published Client library entries. */
+/** Validate runtime dependencies retained by published Client entries. */
 export function collectClientRuntimeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
-  workspaceNames: ReadonlySet<string>,
   policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies'>,
 ): string[] {
   const violations: string[] = []
@@ -482,8 +483,8 @@ export function collectClientRuntimeDependencyPolicyViolations(
       violations.push(`clientRuntimeDependencies lists ${packageName} dependency ${dependency} more than once`)
     }
     for (const dependency of dependencies) {
-      if (packageNameOf(dependency) !== dependency || workspaceNames.has(dependency)) {
-        violations.push(`clientRuntimeDependencies ${packageName} entry ${dependency} must name a third-party package`)
+      if (packageNameOf(dependency) !== dependency) {
+        violations.push(`clientRuntimeDependencies ${packageName} entry ${dependency} must name a package`)
       }
       if (!fact.allSourceUses.has(dependency)) {
         violations.push(`clientRuntimeDependencies lists unused ${packageName} dependency ${dependency}`)
@@ -578,7 +579,7 @@ export function readPackageDependencyState(
     policyViolations: [
       ...discovered.violations,
       ...collectHostDependencyExportPolicyViolations(facts, workspaceNames, policy),
-      ...collectClientRuntimeDependencyPolicyViolations(facts, workspaceNames, policy),
+      ...collectClientRuntimeDependencyPolicyViolations(facts, policy),
       ...Object.keys(policy.configurationOnlyDevDependencies)
         .filter(name => !selectedNames.has(name))
         .map(name => `configurationOnlyDevDependencies names unmanaged package ${name}`),
@@ -630,7 +631,10 @@ export function expectedPackageDependencies(
     if (name !== CORDIS) add(name, 'devDependencies', 'existing non-Cordis peer')
   }
   for (const [name, paths] of facts.hostRuntimeSourceUses) {
-    const expectedSection = facts.workspaceNames.has(name) && facts.peerRequiredHostDependencies.has(name)
+    const sharedPeer = SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? '']?.includes(name) === true
+    const optionalPeer = OPTIONAL_NATIVE_HOST_PEERS[facts.manifest.name ?? '']?.includes(name) === true
+    const expectedSection = sharedPeer || optionalPeer
+      || (facts.workspaceNames.has(name) && facts.peerRequiredHostDependencies.has(name))
       ? 'peer-dev'
       : 'dependencies'
     for (const path of paths) add(name, expectedSection, path)
@@ -713,6 +717,18 @@ function optionalNativeCordisPeer(manifest: PackageDependencyManifest): boolean 
     && (metadata as { optional?: unknown }).optional === true
 }
 
+/** Whether an exact legacy Host peer is optional for a separate native entry. */
+function optionalNativeHostPeer(manifest: PackageDependencyManifest, name: string): boolean {
+  const exports = manifest.exports
+  const metadata = manifest.peerDependenciesMeta?.[name]
+  return OPTIONAL_NATIVE_HOST_PEERS[manifest.name ?? '']?.includes(name) === true
+    && exports !== null && typeof exports === 'object' && !Array.isArray(exports)
+    && Object.hasOwn(exports, './native')
+    && metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
+    && Object.keys(metadata).length === 1
+    && (metadata as { optional?: unknown }).optional === true
+}
+
 /** Return all manifest and policy violations in stable order. */
 export function collectPackageDependencyViolations(state: PackageDependencyState): string[] {
   const violations = [...state.policyViolations]
@@ -727,12 +743,16 @@ export function collectPackageDependencyViolations(state: PackageDependencyState
         if (actual.length === 2
           && actual.includes('peerDependencies')
           && actual.includes('devDependencies')
-          && section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE
-          && section(facts.manifest, 'devDependencies')[name] === WORKSPACE_RANGE
+          && section(facts.manifest, 'peerDependencies')[name] === section(facts.manifest, 'devDependencies')[name]
+          && (!facts.workspaceNames.has(name)
+            || section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE)
           && (facts.manifest.peerDependenciesMeta?.[name] === undefined
-            || (name === CORDIS && optionalNativeCordisPeer(facts.manifest)))) continue
+            || (name === CORDIS && optionalNativeCordisPeer(facts.manifest))
+            || optionalNativeHostPeer(facts.manifest, name))) continue
         violations.push(
-          `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies at ${WORKSPACE_RANGE}; found ${describeSections(actual)}`,
+          `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies`
+          + (facts.workspaceNames.has(name) ? ` at ${WORKSPACE_RANGE}` : '')
+          + `; found ${describeSections(actual)}`,
         )
         continue
       }
@@ -820,9 +840,10 @@ export function repairPackageDependencyManifest(facts: PackageDependencyFacts): 
       for (const sectionName of ['dependencies', 'optionalDependencies'] as const) {
         deleteDependency(facts.manifest, sectionName, name)
       }
-      mutableSection(facts.manifest, 'peerDependencies')[name] = WORKSPACE_RANGE
-      mutableSection(facts.manifest, 'devDependencies')[name] = WORKSPACE_RANGE
-      if (name !== CORDIS || !optionalNativeCordisPeer(facts.manifest)) deletePeerMeta(facts.manifest, name)
+      mutableSection(facts.manifest, 'peerDependencies')[name] = range
+      mutableSection(facts.manifest, 'devDependencies')[name] = range
+      if (!(name === CORDIS && optionalNativeCordisPeer(facts.manifest))
+        && !optionalNativeHostPeer(facts.manifest, name)) deletePeerMeta(facts.manifest, name)
       continue
     }
     for (const sectionName of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const) {

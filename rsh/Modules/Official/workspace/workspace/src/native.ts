@@ -63,13 +63,13 @@ export const plugin: NativePlugin = {
           signal.throwIfAborted()
           const before = await persistence.stat(id, { signal })
           if (before === undefined) return undefined
-          if (before?.sizeBytes !== undefined && before.sizeBytes > config.maxArchiveSessionBytes) throw new Error('Archive target exceeds the configured byte limit')
+          if (before.sizeBytes !== undefined && before.sizeBytes > config.maxArchiveSessionBytes) throw new Error('Archive target exceeds the configured byte limit')
           await using handle = await persistence.open(id, 'read', { signal })
           const result = await handle.read(0, config.maxArchiveSessionEvents + 1, { signal })
           if (result.events.length > config.maxArchiveSessionEvents) throw new Error('Archive target exceeds the configured event limit')
           const after = await persistence.stat(id, { signal })
           if (after?.sizeBytes !== undefined && after.sizeBytes > config.maxArchiveSessionBytes) throw new Error('Archive target exceeds the configured byte limit')
-          if (before?.revision !== after?.revision) throw new Error('Archive target changed during validation')
+          if (before.revision !== after?.revision) throw new Error('Archive target changed during validation')
           signal.throwIfAborted()
           return handle.header
         },

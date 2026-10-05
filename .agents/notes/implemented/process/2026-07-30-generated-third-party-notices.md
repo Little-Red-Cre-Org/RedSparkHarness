@@ -54,7 +54,7 @@ The Claude distribution tests prove that only the exact direct SDK identity bypa
 
 A dependency edit now carries a regenerated notices file into the same commit. Contributors pay one generator run — about a second — on commits that touch a manifest, and nothing on any other commit. Committing with hooks disabled defers the cost to a test-lane failure that names the command.
 
-The generator needs an installed tree, which makes it heavier than a pure-source generator, and a new package with unusable published metadata needs an `OVERRIDES` entry rather than silently rendering a blank license. Both failures are loud and name the remedy.
+The generator needs an installed tree, which makes it heavier than a pure-source generator, and a new package with unusable published metadata needs an `OVERRIDES` entry rather than silently rendering a blank license. It reads pnpm's `node_modules/.modules.yaml` to find an external `virtualStoreDir` when installation uses a short shared store. Both missing metadata failures are loud and name the remedy.
 
 The tiering rule is a policy encoded in one constant. Adding a workspace area that never ships — a second test-infrastructure tier, another site — requires extending `DEV_ONLY_AREAS`, or its dependencies will be disclosed as runtime.
 
