@@ -31,6 +31,8 @@ This package turns a shipped profile scenario into a keyless snapshot suite: wri
 
 ### Writing a snapshot suite
 
+The closed profile manifest accepts `native-acp` for native ACP protocol scenarios backed by shared Session recordings.
+
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.
 
 A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, `configPath`, and `tsconfigPath` paths, because the subprocess cwd sits outside the repository:
