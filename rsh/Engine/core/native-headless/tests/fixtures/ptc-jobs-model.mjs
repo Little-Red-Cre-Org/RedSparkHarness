@@ -12,7 +12,8 @@ export const plugin = {
       context.provide('model', { async *stream() {
         if (step++ === 0) {
           const agent = agents.requireInitiator()
-          jobs.start({ agent, kind: 'task', label: 'Controlled background work', async run(signal) {
+          jobs.start({ agent, kind: 'task', label: 'Controlled background work', async run(signal, publishOutput) {
+            publishOutput('background task running')
             await new Promise(resolve => {
               if (signal.aborted) resolve()
               else signal.addEventListener('abort', resolve, { once: true })
@@ -25,13 +26,15 @@ export const plugin = {
 void tools.job_output({job_id: listed.jobs[0].id, wait: true, timeout_ms: 600000});
 while (true) {}`],
             ['cancel-job', 'Cancel the background job and read its terminal output.', `const listed = await tools.job_list({});
+const live = await tools.job_output({job_id: listed.jobs[0].id});
 await tools.job_kill({job_id: listed.jobs[0].id, reason: "finished"});
-return (await tools.job_output({job_id: listed.jobs[0].id, wait: true})).text;`],
+return live.text + "\\n" + (await tools.job_output({job_id: listed.jobs[0].id, wait: true})).text;`],
           ]
           const replay = input.script?.[0]
           if (replay !== undefined) {
             if (replay.kind !== 'chunks') throw new Error('ptc-jobs: expected recorded chunks')
-            for (const chunk of replay.chunks) yield chunk
+            for (const chunk of replay.chunks) yield chunk.type === 'block-end' && chunk.block.type === 'tool-call' && chunk.block.id === 'cancel-job'
+              ? { ...chunk, block: { ...chunk.block, arguments: JSON.stringify({ code: programs[1][2], description: programs[1][1] }) } } : chunk
             return
           }
           for (const [index, [id, description, code]] of programs.entries()) {
