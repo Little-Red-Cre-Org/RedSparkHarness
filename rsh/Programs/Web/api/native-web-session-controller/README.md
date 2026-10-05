@@ -39,6 +39,8 @@ A prompt first receives its exact admission identity and then awaits settlement.
 
 The selected executor owns writer exclusivity and Agent identity. This Program owns only transport admission; it introduces no independent Session state requiring a runtime invariant.
 
+Runtime entry chunks use the shared-* prefix declared by the publication manifest.
+
 The CLI carries the native Web Host, Session controller and frontend static artifact package directly. The shipped native-web Host runtime directory resolves the frontend through that exact CLI installation. The frontend package publishes static dist files without runtime dependencies; its development Cordis graph is not installed as a runtime dependency.
 
 <a id="dev-note"></a>

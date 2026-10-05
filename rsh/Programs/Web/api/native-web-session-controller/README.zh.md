@@ -39,6 +39,8 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 选定执行器拥有写入独占与 Agent 身份。本 Program 只拥有传输准入，不引入需要运行时不变量检查的独立 Session 状态。
 
+运行时入口分块使用发布 manifest 声明的 shared-* 前缀。
+
 CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。随附 native-web Host 的运行时目录通过该确切 CLI 安装解析前端。前端包发布静态 dist 文件，不声明运行时依赖；其开发用 Cordis 图不作为运行时依赖安装。
 
 <a id="dev-note"></a>
