@@ -21,7 +21,7 @@
     "entry": "./native",
     "targets": ["host"],
     "requires": ["fs", "sessionPersistence", "model", "modelExecution", "agents"],
-    "optional": ["tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext",
+    "optional": ["tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext", "agentInstructions",
       "sessionExecution", "activeSessions", "agentPresets", "workspaceRegistry"],
     "provides": ["application"]
   } },
