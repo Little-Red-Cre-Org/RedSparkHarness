@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-published-type-dependencies.md
-2026-10-05-published-type-dependencies.md: fd87a667b7b7ebfac66ac1bb3816e73577b9d34a
-2026-10-05-published-type-dependencies.zh.md: 64dfea1814e33a0350c7cdfa331b210fc0422ff7
+2026-10-05-published-type-dependencies.md: f326e6c6da55bae94110a2086d992067a3a15a73
+2026-10-05-published-type-dependencies.zh.md: a0e6bc86da5e9e0963f55366815faea39c1ff51c
