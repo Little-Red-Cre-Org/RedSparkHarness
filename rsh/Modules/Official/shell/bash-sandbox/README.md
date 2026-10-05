@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-bash-sandbox` to run each Bash command with file-access confinement instead of the harness process's full authority. Results report the selected mode, denied file operations, and whether the runner fully enforced that mode. If no runner can enforce a confined mode, the command fails with `SANDBOX_UNAVAILABLE` rather than running unconfined. Choose it when deployments need file isolation; network access and process visibility remain outside its guarantees.
+Use `dsh-bash-sandbox` to run each Bash command with file-access confinement instead of the harness process's full authority. The Cordis entry and `./native` Provider share confinement and result classification. Results report the selected mode, denied file operations, and whether the runner fully enforced that mode. If no runner can enforce a confined mode, the command fails with `SANDBOX_UNAVAILABLE` rather than running unconfined. Choose it when deployments need file isolation; network access and process visibility remain outside its guarantees.
 
 ## Table of Contents
 
@@ -42,6 +42,8 @@ Choose it when a deployment needs file-level confinement for Bash commands: the 
 ### Minimal configuration
 
 The executor takes no sandbox configuration of its own: the default mode and workspace root come from `ctx.sandboxPolicy`, and the runner choice belongs to the `ctx.sandbox` provider. Its own config is the local executor's knobs verbatim; the generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-bash-sandbox) is the exhaustive source.
+
+The native entry requires native `subprocess`, `sandbox`, and `sandboxPolicy` services and provides `shell`. Compose it with `dsh-subprocess-local/native`, `dsh-sandbox-local/native`, and `dsh-native-sandbox-policy/native`. Native configuration uses the local Bash budget fields; the policy Provider requires an explicit mode and absolute workspace root. A restricted native call sends the runner's exact argv to the managed subprocess service and never retries with bare Bash after runner failure.
 
 ```yaml
 - id: sandbox
@@ -82,6 +84,7 @@ The executor is the sandboxing Service Provider for the `ctx.shell` seam: it inh
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `SandboxBashExecutor`, per-process fact retention, run/start wrapping |
+| [`src/controller.ts`](src/controller.ts) | Native Bash argv selection over shared confinement mechanics |
 | [`src/helpers.ts`](src/helpers.ts) | Denial, runner-failure, and runner-spawn-failure classification |
 | — | No runtime invariant companion is published; classification is observable in results, and this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |
 | `tests/` | Exercised behavior across the bwrap, Landlock, and Seatbelt runners |

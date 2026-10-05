@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-tool-pwsh` gives the agent a `pwsh` tool that runs PowerShell commands through the mounted shell executor — the Windows counterpart of `dsh-tool-bash`, mirroring it call-for-call. Each call runs in a fresh pwsh process, so no state survives; `run_in_background` turns long-running commands into background jobs. Commands are PowerShell-dialect: native `C:\...` paths and `$env:NAME` variables, with no dialect translation. Every call runs with the managed `DSH_*` environment, and under a sandboxing executor the tool teaches and enforces the Windows-specific language-mode and named-pipe contracts. Mount it with a PowerShell executor such as `dsh-pwsh-local` and the `dsh-shell-env` plugin.
+`dsh-tool-pwsh` runs PowerShell commands through the mounted shell executor. Its `./native` entry registers the same tool over native shell, job, approval, and environment services. Each call starts a fresh pwsh process; `run_in_background` creates a managed job. Commands use native `C:\...` paths and `$env:NAME` variables. Every call receives the managed `DSH_*` environment. Under a sandboxing executor, the tool describes Windows language-mode and named-pipe restrictions. Mount it with a PowerShell executor and `dsh-shell-env`.
 
 ## Table of Contents
 
@@ -24,6 +24,10 @@ English | [中文](README.zh.md)
 
 <a id="use-this-package"></a>
 ## Use this package
+
+The native entry registers tools in its installation scope. Descendant Agents see these contributions; sibling Agents do not.
+
+The native contribution declares the same canonical foreground/background result fields as Bash. Foreground values retain independent exit, timeout, abort, stream and sandbox facts; background starts retain the native `jobId`. Native background execution requires both the job registry and its control tools. The registry validates the value before the PowerShell renderer produces its existing text. Both native and Cordis consumers use `canonicalShellResult` from the shell definition. These declarations do not install PTC bindings or change background job ownership.
 
 Load this plugin in any composition where the agent should run PowerShell commands — typically a Windows composition whose `ctx.shell` is backed by a PowerShell executor. It registers the `pwsh` tool once the executor provider and the `dsh-shell-env` registry are mounted.
 
@@ -83,6 +87,7 @@ This section explains the design decisions behind the tool and points at the cod
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: tool registration, prompt section, arg validation, escalation, request assembly |
+| [`src/native.ts`](src/native.ts) | Native `pwsh` contribution over shell, environment, jobs, and approval |
 | [`src/background.ts`](src/background.ts) | Map a settled background process onto generic job outcome vocabulary |
 | [`src/render.ts`](src/render.ts) | Model-facing result text: streams, markers, truncation notices (bash twin) |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |

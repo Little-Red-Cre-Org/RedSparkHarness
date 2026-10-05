@@ -30,7 +30,22 @@
       "path": "../../sandbox/sandbox-policy"
     },
     {
+      "path": "../../sandbox/sandbox-local"
+    },
+    {
+      "path": "../../sandbox/native-sandbox-policy/tsconfig.json"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../shell"
+    },
+    {
+      "path": "../shell-sandbox-core"
     },
     {
       "path": "../bash-local"
