@@ -30,6 +30,18 @@
       "path": "../shell"
     },
     {
+      "path": "../shell-sandbox-core"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../sandbox/native-sandbox-policy/tsconfig.json"
+    },
+    {
       "path": "../pwsh-local"
     }
   ]

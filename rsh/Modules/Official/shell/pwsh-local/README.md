@@ -7,11 +7,9 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
-The Host-only `./resolve` export exposes the existing PowerShell executable resolver without loading the Cordis executor. The package root continues to re-export the same functions.
-
 ## Summary
 
-`dsh-pwsh-local` is the PowerShell executor: every command runs as a fresh, non-interactive `pwsh -Command` process with no profile files, so no shell state survives between calls. It mirrors `dsh-bash-local`'s semantics call-for-call and adds PowerShell-shaped concerns: executable resolution, UTF-8 output pinning, and the model-friendly terminal environment. Commands run with the harness process's own authority — this executor confines nothing; compose `dsh-pwsh-sandbox` when commands need the sandbox capability. The model-facing `pwsh` tool talks to it once it is mounted.
+`dsh-pwsh-local` is the PowerShell executor: every command runs as a fresh, non-interactive `pwsh -Command` process with no profile files, so no shell state survives between calls. It mirrors `dsh-bash-local`'s semantics call-for-call and adds PowerShell-shaped concerns: executable resolution, UTF-8 output pinning, and the model-friendly terminal environment. Its `./native` entry provides `shell` over a native `subprocess` Provider. Commands run with the harness process's own authority — this executor confines nothing; compose `dsh-pwsh-sandbox` when commands need the sandbox capability. The model-facing `pwsh` tool talks to it once it is mounted.
 
 ## Table of Contents
 
@@ -94,6 +92,8 @@ The executor is the PowerShell Service Provider for the `ctx.shell` seam built o
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `PwshLocalExecutor`, `Config`, settings wiring, argv seam |
+| [`src/controller.ts`](src/controller.ts) | Native executable resolution, PowerShell argv, and environment defaults over the shared process controller |
+| [`src/native.ts`](src/native.ts) | Native `shell` Provider over `subprocess` |
 | [`src/resolve.ts`](src/resolve.ts) | Pure `resolvePwshPath`/`candidatePwshPaths` executable resolution |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |
 | `tests/` | Exercised behavior: budgets, classification, resolution, background handles |

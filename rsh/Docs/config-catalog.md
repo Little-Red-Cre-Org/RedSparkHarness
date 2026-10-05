@@ -320,24 +320,16 @@ Source: [`rsh/Modules/Official/attachment/attachment-local/src/config.ts:27`](..
 Requires: `subprocess`
 
 ```ts config-catalog
-/** Plugin config (all optional — `static Config` supplies the defaults). */
-export interface Config {
-  /** Default working directory for commands (default: process.cwd()). */
-  cwd?: string
-  /** Default foreground timeout in milliseconds. */
-  timeoutMs?: number
-  /** Upper bound for per-call timeout overrides. */
-  maxTimeoutMs?: number
-  /** Per-stream in-memory output cap; overflow spills to a temp file. */
-  maxOutputBytes?: number
-  /** Per-stream spill-file cap; larger streams retain only their in-memory tail. */
-  maxSpillBytes?: number
-  /** Grace period for kill escalation and inherited pipes; at most `MAX_TIMER_DELAY_MS`. */
-  graceMs?: number
+/** Configurable Bash execution budgets. */
+export interface Config extends LocalConfig {
+  /** Explicit Bash executable; omitted configuration selects bash in the execution world. */
+  bashPath?: string
 }
 ```
 
-Source: [`rsh/Modules/Official/shell/bash-local/src/index.ts:41`](../Modules/Official/shell/bash-local/src/index.ts)
+Depends on: [`LocalConfig`](../Modules/Official/shell/shell-process-local/src/index.ts)
+
+Source: [`rsh/Modules/Official/shell/bash-local/src/controller.ts:15`](../Modules/Official/shell/bash-local/src/controller.ts)
 
 <a id="deepseek-aidsh-bash-sandbox"></a>
 
@@ -346,19 +338,13 @@ Source: [`rsh/Modules/Official/shell/bash-local/src/index.ts:41`](../Modules/Off
 Requires: `subprocess` · `sandbox` · `sandboxPolicy`
 
 ```ts config-catalog
-/**
- * Plugin config: the local executor's knobs, verbatim. The sandbox policy —
- * the default mode and fallback `workspace-write` root — is NOT here: it lives
- * on `ctx.sandboxPolicy` (`@deepseek-ai/dsh-sandbox-policy`), which resolves
- * each calling session's mode and cwd for every enforcing capability. The runner
- * choice is likewise the `ctx.sandbox` provider's config, not this executor's.
- */
+/** Local Bash budgets; sandbox policy and runner selection belong to their providers. */
 export type Config = LocalConfig
 ```
 
 Depends on: [`LocalConfig`](#deepseek-aidsh-bash-local)
 
-Source: [`rsh/Modules/Official/shell/bash-sandbox/src/index.ts:36`](../Modules/Official/shell/bash-sandbox/src/index.ts)
+Source: [`rsh/Modules/Official/shell/bash-sandbox/src/index.ts:14`](../Modules/Official/shell/bash-sandbox/src/index.ts)
 
 <a id="deepseek-aidsh-client-connection"></a>
 
@@ -1963,7 +1949,7 @@ export interface Config {
 export type JsonlCompression = 'zstd' | 'none'
 ```
 
-Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:87`](../Engine/session/session-persistence-jsonl/src/backend.ts)
+Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:88`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 
@@ -2186,7 +2172,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/shell/shell-env/src/index.ts:28`](../Modules/Official/shell/shell-env/src/index.ts)
+Source: [`rsh/Modules/Official/shell/shell-env/src/index.ts:27`](../Modules/Official/shell/shell-env/src/index.ts)
 
 <a id="deepseek-aidsh-skill"></a>
 
@@ -2771,7 +2757,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/shell/tool-bash/src/index.ts:33`](../Modules/Official/shell/tool-bash/src/index.ts)
+Source: [`rsh/Modules/Official/shell/tool-bash/src/index.ts:34`](../Modules/Official/shell/tool-bash/src/index.ts)
 
 <a id="deepseek-aidsh-tool-bash-persistent"></a>
 
@@ -2952,7 +2938,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/shell/tool-pwsh/src/index.ts:51`](../Modules/Official/shell/tool-pwsh/src/index.ts)
+Source: [`rsh/Modules/Official/shell/tool-pwsh/src/index.ts:52`](../Modules/Official/shell/tool-pwsh/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh-persistent"></a>
 
@@ -3648,6 +3634,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-prompt` ([`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-sandbox-policy` ([`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts))
+- `@deepseek-ai/dsh-native-session-execution` ([`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts))
 - `@deepseek-ai/dsh-native-time-context` ([`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts))
 - `@deepseek-ai/dsh-native-tool-jobs` ([`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-tools` ([`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts))
@@ -3669,6 +3656,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-session-snapshot` ([`rsh/Tests/test-support/session-snapshot/src/index.ts`](../Tests/test-support/session-snapshot/src/index.ts))
 - `@deepseek-ai/dsh-session-telemetry` ([`rsh/Engine/session/session-telemetry/src/index.ts`](../Engine/session/session-telemetry/src/index.ts))
 - `@deepseek-ai/dsh-session-title-llm` ([`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts))
+- `@deepseek-ai/dsh-shell-process-local` ([`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts))
+- `@deepseek-ai/dsh-shell-sandbox-core` ([`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts))
 - `@deepseek-ai/dsh-subagent-in-process-driver` ([`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts))
 - `@deepseek-ai/dsh-timeout` ([`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts))
 - `@deepseek-ai/dsh-tool-code-runtime` ([`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts))
@@ -3680,3 +3669,4 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-util-values` ([`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts))
 - `@deepseek-ai/dsh-util-workspace-path` ([`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts))
 - `@deepseek-ai/dsh-win32-process` ([`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts))
+- `@deepseek-ai/dsh-workspace-definition` ([`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts))

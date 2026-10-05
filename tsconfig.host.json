@@ -275,6 +275,8 @@
     { "path": "./rsh/Modules/Official/e2b/e2b" },
     { "path": "./rsh/Modules/Official/e2b/subprocess-e2b" },
     { "path": "./rsh/Modules/Official/shell/shell" },
+    { "path": "./rsh/Modules/Official/shell/shell-process-local" },
+    { "path": "./rsh/Modules/Official/shell/shell-sandbox-core" },
     { "path": "./rsh/Modules/Official/terminal/terminal" },
     { "path": "./rsh/Modules/Official/terminal/terminal-bash" },
     { "path": "./rsh/Modules/Official/shell/tool-bash-persistent" },

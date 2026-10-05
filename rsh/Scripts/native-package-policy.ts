@@ -3,6 +3,8 @@
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/identity/anonymous-user-id',
+  'rsh/Modules/Official/shell/shell-process-local',
+  'rsh/Modules/Official/shell/shell-sandbox-core',
   'rsh/Core/subprocess/win32-process',
   'rsh/Core/util/http-proxy',
   'rsh/Core/util/atomic-write',
@@ -46,6 +48,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Core/identity/anonymous-user-id', ['host']],
+  ['rsh/Modules/Official/shell/shell-process-local', ['host']],
+  ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
   ['rsh/Engine/core/native-tools', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
@@ -59,6 +63,13 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox-local', 'Cordis and native Providers share local confinement and grant ownership'],
+  ['rsh/Modules/Official/shell/shell-env', 'Cordis and native installers share managed command environment facts'],
+  ['rsh/Modules/Official/shell/bash-local', 'Cordis and native installers share managed process operations'],
+  ['rsh/Modules/Official/shell/bash-sandbox', 'Cordis and native installers share confined process operations'],
+  ['rsh/Modules/Official/shell/pwsh-local', 'Cordis and native installers share managed process operations'],
+  ['rsh/Modules/Official/shell/pwsh-sandbox', 'Cordis and native installers share confined process operations'],
+  ['rsh/Modules/Official/shell/tool-bash', 'Cordis and native Consumers share Bash tool presentation'],
+  ['rsh/Modules/Official/shell/tool-pwsh', 'Cordis and native Consumers share PowerShell tool presentation'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
   ['rsh/Engine/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
@@ -80,6 +91,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
+  ['rsh/Modules/Official/shell/shell', ['host']],
   ['rsh/Modules/Official/attachment/attachment', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
   ['rsh/Modules/Official/fs/fs', ['host', 'client']],
@@ -120,6 +132,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
+  ['rsh/Modules/Official/shell/shell-env', ['./definition']],
   ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
@@ -156,5 +169,6 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Programs/Web/host/native-web-assets/native-client', ['host']],
   ['rsh/Core/storage/storage/backend', ['host']],
   ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
+  ['rsh/Modules/Official/shell/shell-env/definition', ['host']],
   ['rsh/Engine/preset/agent-presets/native-definition', ['host']],
 ])

@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-tool-bash/background
  */
 
-import type { ShellProcess } from '@deepseek-ai/dsh-shell'
+import type { ShellProcess } from '@deepseek-ai/dsh-shell/native'
 
 /**
  * Map a settled background process onto the generic task-outcome vocabulary:

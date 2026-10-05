@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-tool-pwsh` 为 agent（智能体）提供 `pwsh` 工具，通过已挂载的 shell 执行器运行 PowerShell 命令——它是 `dsh-tool-bash` 的 Windows 对应物，逐调用镜像。每次调用都运行在全新 pwsh 进程中，因此状态不会保留；`run_in_background` 把长时间运行的命令变成后台任务。命令是 PowerShell 方言：原生 `C:\...` 路径与 `$env:NAME` 变量，不做方言翻译。每次调用都运行在受管 `DSH_*` 环境中；在沙箱执行器下，工具会向模型说明并强制执行 Windows 特有的语言模式与命名管道约定。请与 `dsh-pwsh-local` 等 PowerShell 执行器以及 `dsh-shell-env` 插件一起挂载。
+`dsh-tool-pwsh` 通过已挂载的 shell 执行器运行 PowerShell 命令。`./native` 入口基于原生 shell、任务、审批和环境服务注册同一工具。每次调用都启动全新 pwsh 进程；`run_in_background` 创建受管理的后台任务。命令使用原生 `C:\...` 路径与 `$env:NAME` 变量。每次调用都接收受管 `DSH_*` 环境。在沙箱执行器下，工具向模型说明 Windows 语言模式和命名管道限制。请与 PowerShell 执行器及 `dsh-shell-env` 一起挂载。
 
 ## 目录
 
@@ -24,6 +24,10 @@ kind: "package-reference"
 
 <a id="use-this-package"></a>
 ## 使用本包
+
+原生入口在自己的安装作用域注册工具。后代 Agent 可以看到这些贡献，兄弟 Agent 看不到。
+
+原生贡献声明与 Bash 相同的标准前台/后台结果字段。前台值分别保留退出、超时、取消、输出流与沙箱事实；后台启动保留原生 `jobId`。注册表先校验值，再由 PowerShell 呈现器生成现有文本。原生与 Cordis 消费者均使用 shell 定义中的 `canonicalShellResult`。这些声明不安装 PTC 绑定，也不改变后台任务所有权。
 
 在 agent 需要运行 PowerShell 命令的任何组合中加载本插件——通常是 `ctx.shell` 由 PowerShell 执行器支撑的 Windows 组合。一旦挂载执行器提供方与 `dsh-shell-env` 注册表，它就注册 `pwsh` 工具。
 
@@ -83,6 +87,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：工具注册、提示词区段、参数校验、升权、请求组装 |
+| [`src/native.ts`](src/native.ts) | 基于 shell、环境、任务与审批的原生 `pwsh` 贡献 |
 | [`src/background.ts`](src/background.ts) | 把已结算的后台进程映射为通用任务结果词汇 |
 | [`src/render.ts`](src/render.ts) | 模型侧结果文本：流、标记、截断通知（bash 孪生） |
 | — | 不发布运行时不变式伴生入口；除所属 seam 强制执行的约定外，本包不公开独立的事件序列或可变数据关系。 |

@@ -9,7 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-tool-bash` 让 agent（智能体）运行一次性 `bash` 命令，并接收 stdout、stderr 与退出标记。每次调用都使用全新 shell，因此 cwd、变量和函数不会保留；`run_in_background` 可启动长时间运行的工作，agent 能用 `job_output` 检查、用 `job_kill` 停止。命令会收到受管 `DSH_*` 环境；沙箱拒绝后，可携带更宽的 `sandbox_permissions`、一句 `justification` 并经用户批准重试一次。非零退出会作为结果报告，因此由 agent 决定如何响应；请使用 `dsh-bash-local` 或 `dsh-bash-sandbox` 等执行器，并加载 `dsh-shell-env`。
+`dsh-tool-bash` 让 agent 运行一次性 `bash` 命令，并查看 stdout、stderr 与退出状态。每次调用都使用全新 shell，并收到受管 `DSH_*` 事实。沙箱升权需要更宽策略、理由和用户批准。
+
+`./native` 入口通过原生 shell 执行前台命令；安装原生任务服务后，也支持由 Agent 持有的后台任务。它在为单次调用应用更宽策略前请求应用审批。
 
 ## 目录
 
@@ -25,7 +27,13 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+原生入口在自己的安装作用域注册工具。后代 Agent 可以看到这些贡献，兄弟 Agent 看不到。
+
+原生贡献声明标准输出联合类型。前台结果保留 `kind: 'foreground'`、退出码、信号、超时及取消事实、有界 stdout/stderr 和可选沙箱事实；后台启动返回 `kind: 'background'` 与原生 `jobId`。注册表先校验这些值，再呈现现有文本。原生与 Cordis 消费者均使用 shell 的共享前台投影。这些声明不安装 PTC 绑定，也不改变后台任务所有权。
+
 在 agent 需要运行 bash 命令的任何组合中加载本插件：一旦挂载执行器提供方与 `dsh-shell-env` 注册表，它就注册 `bash` 工具，并在 `tools`、`shell`、`systemPrompt` 与 `shellEnv` 服务就绪之前保持等待。
+
+在原生 profile 中，将 `dsh-tool-bash/native` 与原生 `tools`、`dsh-shell-env/native` 组合，再选择 `dsh-bash-sandbox/native` 加 `dsh-native-sandbox-policy/native`，或在明确允许无隔离命令时选 `dsh-bash-local/native`。添加 `dsh-native-jobs` 与 `dsh-native-tool-jobs` 后，才会暴露 `run_in_background`、`job_output`、`job_list` 与 `job_kill`；进程结束后才能读取任务输出。选定的原生应用会把每次工具调用及结果写入 Session。使用沙箱 shell 且原生审批策略为 `ask` 时，schema 才会提供 `sandbox_permissions` 与 `justification`。升权必须严格拓宽模式并经过应用的原生审批路径；该路径会在命令运行前记录请求与决定。审批路径不可用或未授权时，重试会被拒绝，命令不会启动。
 
 ### 最小配置
 
@@ -59,7 +67,7 @@ kind: "package-reference"
 
 ### 沙箱执行与升权
 
-当已挂载的执行器约束命令（例如 `dsh-bash-sandbox`）时，被阻止的文件操作会报告为 `[sandbox: file access denied under <mode> mode]`——这是策略拒绝，不是命令失败。模型随后可以在同一轮次中用 `sandbox_permissions`（满足需要的最窄更宽模式）与一句 `justification` 重试完全相同的命令一次；该重试引发的审批提示就是用户同意的方式。升权绝不能预先推测：没有真实拒绝依据的请求，或没有严格宽于当前模式的请求，都会直接失败且不执行任何操作；被拒绝的升权对该命令即为最终结果。
+当已挂载的执行器约束命令（例如 `dsh-bash-sandbox`）时，被阻止的文件操作会报告为 `[sandbox: file access denied under <mode> mode]`——这是策略拒绝，不是命令失败。模型被指示只在真实拒绝后，于同一轮次中用 `sandbox_permissions`（满足需要的最窄更宽模式）与一句 `justification` 重试完全相同的命令一次；该重试引发的审批提示就是用户同意的方式。工具会在执行前强制检查模式严格拓宽并取得批准，但不会验证此前是否发生过拒绝。被拒绝的升权对该命令即为最终结果。
 
 ### 可能出什么问题
 
@@ -145,7 +153,7 @@ Check the [exit code: N] marker on every bash result; investigate failures befor
 
 #### 模型看到什么
 
-模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。仅当本生产方启用 `run_in_background` 时，该字段才会出现；仅当已挂载执行器声明支持沙箱时，`sandbox_permissions` 和 `justification` 才会出现。按 agent 作用域限制工具可以移除该 agent 的定义。
+模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。在原生 profile 中，仅当选定任务注册表时才会出现 `run_in_background`；选定 shell 约束命令且原生审批策略为 `ask` 时才会出现 `sandbox_permissions` 和 `justification`。按 agent 作用域限制工具可以移除该 agent 的定义。
 
 #### Token 影响
 
@@ -207,6 +215,7 @@ renderer 输出依数据而定的 stdout 尾部，再输出可选的 `[stderr]` 
 - **回放的退出 pill 从结果文本解析**——输出最后一行恰好是 `[exit code: N]` / `[killed by signal: …]` 时，会话回放会显示错误的 pill 并从卡片正文丢失该行，因为解析把它当作要消费的标记；这是仅影响显示的已知残留。
 - **`bash` 工具不参与 `timeout-policy` 预算**——它保留执行器自有的 `BASH_TIMEOUT` 路径，见[工具调用超时策略 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-07-tool-call-timeout-policy.zh.md)。
 - **后台进程没有执行器超时**——工作不再需要时，调用方必须使用 `job_kill`，或依赖持有者／服务的释放。
+- **原生后台输出在任务结束时保存**——任务运行期间，`job_output` 不报告进程输出；原生任务注册表持有完成输出、状态与取消操作。
 
 <a id="dev-note"></a>
 ### 开发备注

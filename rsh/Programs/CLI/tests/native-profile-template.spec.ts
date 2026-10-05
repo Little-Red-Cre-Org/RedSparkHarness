@@ -51,3 +51,19 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   })
   expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
 })
+
+it('ships a complete one-shot shell seam in the native headless profile', () => {
+  for (const [platform, provider, tool] of [
+    ['win32', '@deepseek-ai/dsh-pwsh-sandbox', '@deepseek-ai/dsh-tool-pwsh'],
+    ['linux', '@deepseek-ai/dsh-bash-sandbox', '@deepseek-ai/dsh-tool-bash'],
+  ] as const) {
+    const profile = shippedNativeProfileComposition('/tmp/rsh-shell', 'native-headless', platform)
+    const plugins = profile.installations.map(row => row.plugin)
+    expect(plugins).toContain('@deepseek-ai/dsh-shell-env')
+    expect(plugins).toContain('@deepseek-ai/dsh-subprocess-local')
+    expect(plugins).toContain('@deepseek-ai/dsh-sandbox-local')
+    expect(plugins).toContain('@deepseek-ai/dsh-native-sandbox-policy')
+    expect(plugins).toContain(provider)
+    expect(plugins).toContain(tool)
+  }
+})
