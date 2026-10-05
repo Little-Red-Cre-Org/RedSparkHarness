@@ -58,7 +58,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - 预设与权限选择器、Plan／Todo 面板和命令贡献尚未接入。
-- 视图显示最近的消息行，不提供历史滚动；大段流式输出受展示上限约束，完整已接受输出保留在 Session。
+- Page Up 与 Page Down 使用共享的渲染行估算浏览保留的对话行。发送输入、恢复 Session 或清理视图后回到底部。单条大型消息与流式输出仍受展示限制，完整已接受输出保留在 Session 中。
 - 完整 `native-tui` 模板仍依赖其他模块的原生入口；独立终端证据使用显式文件系统与外部模型 Provider。
 
 <a id="dev-note"></a>
