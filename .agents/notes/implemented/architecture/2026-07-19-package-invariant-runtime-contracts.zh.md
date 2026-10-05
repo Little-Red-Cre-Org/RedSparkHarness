@@ -57,7 +57,7 @@ Status: implemented
 
 ### 仓库门禁与测试
 
-`verify-package-invariants` 发现每个 workspace 包。它接受完整省略，拒绝陈旧或不完整的 companion 接线，并对已发布 companion 强制完整名称注册、仅含具名 export 的 Loader 形状、`./invariant` export、发布文件、依赖、TypeScript reference 和 bundle entry 完整。其 AST 规则拒绝生成标记、默认导出和空 installer。每个 installer 都必须接收并使用失败报告器，注册时还必须传入该经检查的本地 `install` 函数。门禁不会通过方法名或 helper 调用推断语义质量。
+`verify-package-invariants` 发现每个 workspace 包。它接受完整省略，拒绝陈旧或不完整的 companion 接线，并对已发布 companion 强制完整名称注册、仅含具名 export 的 Loader 形状、`./invariant` export、发布文件、依赖、TypeScript reference 和 bundle entry 完整。其 AST 规则拒绝生成标记、默认导出和空 installer。每个 installer 都必须接收并使用失败报告器，注册时还必须传入经检查的本地 `install` 函数。对每个 `tsdown.config.ts`，门禁只识别从 `tsdown` 或共享客户端构建模块具名导入的 helper，并接受显式入口字符串、字符串数组和键唯一的字面对象映射。未知或动态配置工厂、计算或重复入口键、通配符路径以及无法解析的入口声明都会失败，即使该包不发布 companion。可识别的客户端包装器必须保留静态声明的入口；文档预览映射只能为每个现有配置添加名称为字面文本的非入口属性。门禁不会通过方法名或 helper 调用推断语义质量。
 
 Vitest 为每个包测试拓扑使用 `{ enabled: true }` 挂载 `InvariantRegistry`，并在所有者发布 companion 时加载它。不变量 subpath 的 path mapping 会解析源 companion，而不是陈旧的构建输出。聚焦 suite 覆盖每个已发布 companion 的有效和无效观测；穷举拓扑通过真实 Loader 命名空间归一化运行每个源 companion。结构门禁验证每个包的发布映射后，产物门禁会暂存其 manifest（元数据清单）声明的 `lib/` 文件，在 plain Node 下导入已编译的 `./invariant` 自引用，并重复执行该 Loader 形状检查；这样，若 companion 导入未声明的运行时分片，门禁就会在发布前失败。合成事件流的测试必须构造有效的外围生命周期，除非测试本身就是在断言违规。
 

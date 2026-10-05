@@ -106,6 +106,10 @@ function fixture(options: {
   return root
 }
 
+function configSource(...lines: string[]): string {
+  return lines.join(String.fromCharCode(10)) + String.fromCharCode(10)
+}
+
 describe('package invariant gate', () => {
   it('accepts a hand-owned checking companion with publication metadata', () => {
     expect(collectPackageInvariantViolations(fixture())).toEqual([])
@@ -204,58 +208,93 @@ describe('package invariant gate', () => {
 
   it.each([
     {
+      name: 'supported brace entry list',
       companion: true,
-      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })"),
       message: undefined,
     },
     {
+      name: 'missing companion entry',
       companion: true,
-      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,native,types}.js'] })\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,native,types}.js'] })"),
       message: 'package build override must bundle lib/types/invariant.js',
     },
     {
+      name: 'omitted companion entry',
       companion: false,
-      buildEntry: "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })"),
       message: 'package build override must omit lib/types/invariant.js when src/invariant.ts is absent',
     },
     {
+      name: 'supported entry helper',
       companion: true,
-      buildEntry: "export default clientBundle('@deepseek-ai/dsh-probe', ['lib/types/index.js', 'lib/types/invariant.js'])\n",
+      buildEntry: configSource("import { defineConfig, entry } from 'tsdown'", "export default defineConfig([entry('lib/types/index.js'), entry('lib/types/invariant.js')])"),
       message: undefined,
     },
     {
+      name: 'dynamic callback config without companion',
+      companion: false,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "function configFactory(){ return { entry: ['lib/types/invariant.js'] } }; export default defineConfig(() => configFactory())"),
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'unknown identifier config without companion',
+      companion: false,
+      buildEntry: "const config = { entry: ['lib/types/invariant.js'] }; export default config",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'computed entry map key collision',
       companion: true,
-      buildEntry: "export default defineConfig([entry('lib/types/index.js'), entry('lib/types/invariant.js')])\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "const collision = String('index'); export default defineConfig({ entry: {[collision]: 'lib/types/invariant.js', index: 'lib/types/index.js'} })"),
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'local clientBundle helper decoy',
+      companion: true,
+      buildEntry: "function clientBundle(_name: string, _entries: readonly string[]){return {entry:['lib/types/index.js']}}; export default clientBundle('@deepseek-ai/dsh-probe',['lib/types/invariant.js'])",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'imported clientBundle wrapper preserves entry',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/ui-sidebar-documentpreview',
+      packageName: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview',
+      buildEntry: configSource(
+        "import { clientBundle } from '../tsdown.client.ts'",
+        "const bundle = clientBundle('@deepseek-ai/dsh-client-ui-sidebar-documentpreview', ['lib/types/index.js'])",
+        'const pdfWorker = []',
+        "function pdfLicenseBanner() { return 'license' }",
+        "function pdfAssets() { return '{}' }",
+        'export default (options) => bundle(options).map(config =>',
+        "  config.name?.endsWith('/client') === true ? { ...config,",
+        '    banner: pdfLicenseBanner(), plugins: [config.plugins, pdfWorker],',
+        '    define: { ...config.define, __DSH_PDFJS_ASSETS__: pdfAssets() },',
+        '  } : config,',
+        ')',
+      ),
       message: undefined,
     },
     {
+      name: 'entry map records emitted paths',
       companion: true,
-      buildEntry: "export default defineConfig({ entry: condition ? ['lib/types/invariant.js'] : ['lib/types/index.js'] })\n",
-      message: 'package build override has an unsupported entry declaration',
-    },
-    {
-      companion: true,
-      buildEntry: "export default condition ? defineConfig({ entry: ['lib/types/invariant.js'] }) : defineConfig({ entry: ['lib/types/index.js'] })\n",
-      message: 'package build override has an unsupported entry declaration',
-    },
-    {
-      companion: true,
-      buildEntry: "export default defineConfig(() => ({ note: { entry: ['lib/types/invariant.js'] } }))\n",
-      message: 'package build override has an unsupported entry declaration',
-    },
-    {
-      companion: true,
-      buildEntry: "export default defineConfig({ entry: { invariant: 'lib/types/index.js' } })\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: { invariant: 'lib/types/index.js' } })"),
       message: 'package build override must bundle lib/types/invariant.js',
     },
     {
+      name: 'nested entry metadata is unsupported',
       companion: true,
-      buildEntry: "export default defineConfig({ entry: { index: 'lib/types/index.js', metadata: { note: 'lib/types/invariant.js' } } })\n",
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: { index: 'lib/types/index.js', metadata: { note: 'lib/types/invariant.js' } } })"),
       message: 'package build override has an unsupported entry declaration',
     },
-  ])('checks only supported build-entry forms from source without lib output', ({ companion, buildEntry, message }) => {
-    const root = fixture({ companion, buildEntry })
-    expect(existsSync(join(root, 'rsh/Engine/core/probe/lib'))).toBe(false)
+  ])('$name', ({ companion, packageDirectory, packageName, buildEntry, message }) => {
+    const root = fixture({
+      companion,
+      ...(packageDirectory === undefined ? {} : { packageDirectory }),
+      ...(packageName === undefined ? {} : { packageName }),
+      buildEntry,
+    })
+    expect(existsSync(join(root, packageDirectory ?? 'rsh/Engine/core/probe', 'lib'))).toBe(false)
     const buildViolations = collectPackageInvariantViolations(root)
       .filter(violation => violation.path.endsWith('/tsdown.config.ts'))
     if (message === undefined) expect(buildViolations).toEqual([])
