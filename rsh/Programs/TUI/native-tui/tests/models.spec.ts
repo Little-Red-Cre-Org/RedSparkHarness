@@ -102,7 +102,11 @@ it('owns idle model maintenance, durable revision forwarding and cancelled menu 
     await expect(unsupported.models()).rejects.toThrow('idle terminal')
     await unsupported.settle()
   } finally { await unsupported.close() }
-  const reserve = vi.fn(async <T>(operation: (signal: AbortSignal) => Promise<T>) => operation(lifetime.signal))
+  const reserved = vi.fn()
+  const reserve = async <T>(operation: (signal: AbortSignal) => Promise<T>): Promise<T> => {
+    reserved()
+    return operation(lifetime.signal)
+  }
   const explicitDefaults = terminalModelOperations({
     executeSessionOperation: async (_request, operation, signal) => operation(owner, signal),
   },
@@ -111,5 +115,5 @@ it('owns idle model maintenance, durable revision forwarding and cancelled menu 
     resolve: async (provider, model) => ({ provider, id: model, name: model }) }, { ...config, reasoningEffort: ReasoningEffortId('high') },
   () => ({ status: 'idle', runMaintenance: reserve }))
   expect((await explicitDefaults.read(id, lifetime.signal)).catalog.default.reasoningEffort).toBe('high')
-  expect(reserve).toHaveBeenCalledOnce()
+  expect(reserved).toHaveBeenCalledOnce()
 })
