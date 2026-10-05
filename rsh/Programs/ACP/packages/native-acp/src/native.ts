@@ -250,7 +250,7 @@ export class NativeAcpApplication implements NativeApplication {
           } }, signal)
         exitCode = result.exitCode
       } catch (error: unknown) {
-        if (!abort.signal.aborted && !requestSignal.aborted) throw error
+        if (!signal.aborted || error !== signal.reason) throw error
         exitCode = 1
       }
       await notifications

@@ -24,7 +24,7 @@ kind: "package-reference"
 
 Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个文本提示。重叠的提示显式失败。创建返回之前，空 Session 已持久化。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
 
-原生预设组合安装模型适配器、原生 Agent 与模型执行、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。
+原生预设组合安装模型适配器、原生 Agent 与模型执行、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。只有精确的执行取消原因会转换为取消响应；清理失败及无关的执行失败仍作为协议错误上报。
 
 <a id="dev-note"></a>
 

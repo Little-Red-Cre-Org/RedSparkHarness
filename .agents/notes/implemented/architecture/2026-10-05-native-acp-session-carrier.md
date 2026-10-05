@@ -22,4 +22,4 @@ The shipped native ACP profile uses the proven SDK carrier providers and keeps c
 
 ## Consequences
 
-ACP clients can exercise native persistent Session turns through the supported `dsh` launcher without Cordis boot. A recorded Session protocol snapshot verifies ordered replies and durable replay; focused lifecycle verification covers prompt cancellation and transport drain. Default switching belongs to the later parity milestone.
+ACP clients can exercise native persistent Session turns through the supported `dsh` launcher without Cordis boot. Only an executor rejection equal to the aborted execution signal's reason becomes a cancelled reply; cleanup failures remain protocol errors. A recorded Session protocol snapshot verifies ordered replies and durable replay; focused lifecycle verification covers prompt cancellation and transport drain. Default switching belongs to the later parity milestone.
