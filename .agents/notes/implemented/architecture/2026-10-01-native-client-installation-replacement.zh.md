@@ -24,7 +24,7 @@
 
 ## 结果
 
-Client 内核可以替换配置及显式传入的模块导出。Native Web Host 的 live 模式现在监视 profile 目录，通过认证的 Connection Fetch 路由发布带版本的 wire，并且只有完整候选 bundle 成功后才更新资源表。浏览器在提交替换前加载候选样式并导入模块；候选失败会保留当前 UI 和样式。启动作用域仍为单一根；源码级模块 HMR、任意旧插件重载和完整 Client 迁移仍不属于本决策。
+Client 内核可以替换配置及显式传入的模块导出。Native Web Host 的 live 模式观察 profile 与已编译输入目录，通过认证的 Connection Fetch 路由发布带版本的 wire，并且只有完整候选 bundle 成功后才更新资源表。浏览器在提交替换前加载候选样式并导入模块；候选失败会保留当前 UI 和样式。启动作用域仍为单一根；任意旧插件重载和完整 Client 迁移仍不属于本决策。
 
 ## 验证
 
