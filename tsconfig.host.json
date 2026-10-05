@@ -342,6 +342,7 @@
     { "path": "./rsh/Compatibility/DSH/bridge/compat-fs-policy" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-tool-fs" },
     { "path": "./rsh/Programs/SDK/packages/server" },
+    { "path": "./rsh/Programs/SDK/packages/native-server" },
     { "path": "./rsh/Tests/test-support/llm-replay" },
     { "path": "./rsh/Core/typert/generator" },
     { "path": "./rsh/Tests/test-support/session-snapshot" },

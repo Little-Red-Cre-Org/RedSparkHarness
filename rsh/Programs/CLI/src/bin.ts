@@ -30,6 +30,11 @@ export async function runCli(): Promise<void> {
 
   switch (invocation.mode) {
     case 'profile': {
+      const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
+      if (invocation.fromDefaultProfile !== undefined && (SHIPPED_NATIVE_PROFILES as readonly string[]).includes(invocation.profile)) {
+        throw new Error('native profile cannot use --from-default-profile')
+      }
+      ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
         if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
@@ -56,6 +61,12 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'dump-config': {
+      const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
+      if ((SHIPPED_NATIVE_PROFILES as readonly string[]).includes(invocation.profile)) {
+        if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
+        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
+      }
+      ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
         if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
