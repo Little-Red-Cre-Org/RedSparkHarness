@@ -70,6 +70,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@deepseek-ai/dsh-native-subagent": "workspace:^",
+    "@deepseek-ai/dsh-native-tool-subagent-list-agents": "workspace:^",
     "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-tool-ask-user": "workspace:^",

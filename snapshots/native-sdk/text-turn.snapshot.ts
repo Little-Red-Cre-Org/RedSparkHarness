@@ -64,6 +64,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
         ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
         return
       }
+      if (continuationCommand === 'catalog descendants through fork') {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'catalog-descendants', type: 'function',
+            function: { name: 'list_agents', arguments: JSON.stringify({ scope: 'descendants' }) } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (['start a continuable child', 'message and interrupt the continuable child', 'cold resume the continuable child'].includes(continuationCommand)) {
         const prior = JSON.stringify(modelRequest.messages).match(/started subagent ([a-f0-9-]{36})/)
         const calls = continuationCommand === 'start a continuable child'
@@ -354,10 +362,22 @@ it('replays a native SDK turn with exact model input, output and durable Session
         } finally { tree.close() }
       } finally { await cold.close() }
 
+      const catalog = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      try {
+        const listed = await catalog.session('sdk-recorded-turn').run('catalog descendants through fork')
+        const content = listed.events.find(event => event.type === 'tool/result')?.data.message.content[0]
+        expect(content).toMatchObject({ type: 'tool-result', isError: false })
+        if (content?.type !== 'tool-result' || content.content[0]?.type !== 'text') {
+          throw new Error('native-sdk snapshot: missing catalog text')
+        }
+        expect(JSON.parse(content.content[0].text)).toEqual([{ kind: 'child', id: continuationId,
+          label: 'continuable child', status: 'ready', parent: 'sdk-recorded-fork', depth: 2 }])
+      } finally { await catalog.close() }
+
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(38)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(40)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
       .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
         { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])
@@ -463,7 +483,9 @@ it('replays a native SDK turn with exact model input, output and durable Session
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(childFixture, normalizedChild)
     else expect(normalizedChild).toBe(readFileSync(childFixture, 'utf8'))
     const context = { cwd: workspace, sessionIds: [] }
-    const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
+    const catalogChildId = (JSON.parse(continuationLog.split('\n')[0] ?? '{}') as { id: string }).id
+    const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context,
+      { identityMode: 'preserve' }).replaceAll(catalogChildId, '{{session:2}}')
     const forkContext = { cwd: workspace, sessionIds: [] }
     const normalizedFork = normalizeSessionSnapshot(redactSessionSnapshotIds([forkRaw])[0] ?? forkRaw,
       forkContext, { identityMode: 'preserve' })

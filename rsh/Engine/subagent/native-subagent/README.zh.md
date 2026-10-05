@@ -31,7 +31,7 @@ kind: "package-reference"
 
 后台执行复制相同的已解析子权限与预算。Jobs 保留有界实时文本及最终输出；job_kill 请求取消，带 wait 的 job_output 等待终止清理。调用者取消在真实子任务就绪前拥有启动；发布后，父 Agent、Jobs 取消与提供者卸载拥有子任务，其生命周期独立于普通父回合。 Provider 通过 backgroundJobs 暴露选定的注册表。 continuationTools 标识子权限限制所用注册表；可持续控制必须选择同一注册表。
 
-可持续启动通过 Program 提交描述符与首次收件箱准入后返回。sendMessage 只允许直接父子相邻关系，从持久描述符恢复已关闭的直接子任务，并返回已接受消息 id，不等待回答。冷恢复保留路由、persona、工具限制与工作区；激活预算采用选定部署的默认值。interrupt 停止当前工作，把未认领输入停放至另一消息唤醒。父级销毁和提供者卸载等待驻留子任务清理；执行与清理失败使操作拒绝。
+可持续启动通过 Program 提交描述符与首次收件箱准入后返回。sendMessage 只允许直接父子相邻关系，从持久描述符恢复已关闭的直接子任务，并返回已接受消息 id，不等待回答。list 读取选定 Program 的持久目录而不加载 Agent，穿过普通 Session 与一次性子任务，只返回此 Provider 的可持续描述符及实际驻留状态或逐项读取诊断。冷恢复保留路由、persona、工具限制与工作区；激活预算采用选定部署的默认值。interrupt 停止当前工作，把未认领输入停放至另一消息唤醒。父级销毁和提供者卸载等待驻留子任务清理；执行与清理失败使操作拒绝。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -55,7 +55,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - persona 是作用域内的字面文本；不支持模板变量插值。
-- 此入口不提供外部后端、目录与 subagent.finished 结果通知。
+- 此入口不提供外部后端与 subagent.finished 结果通知。
 - 不发布 invariant 配套模块：Program 保留 Agent、Session 与写入器权威；提供者仅拥有已接受调用与作用域安装。
 
 <a id="dev-note"></a>
