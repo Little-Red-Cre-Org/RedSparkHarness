@@ -28,6 +28,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 `session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。随附 native-sdk profile 安装 Session-execution Provider；应用显式要求其执行与活动所有者服务。
 
+`session/prompt` 接受有序文本块及编码栅格图片（`{ type: "image", data, mimeType }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
+
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 
 <a id="dev-note"></a>
@@ -40,22 +42,22 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 ## 模型体验
 
-### SDK 文本提示
+### SDK 提示
 
 #### 模型看到什么
 
-通过 `contentBlocks` 提交的文本进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。JSON-RPC 状态通知不添加模型输入。
+通过 `contentBlocks` 提交的文本和已准入的图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。JSON-RPC 状态通知不添加模型输入。
 
 #### Token 影响
 
-提交的文本在获准执行的步骤以及保留它的后续步骤中增加输入 token。
+提交的文本与图片在获准执行的步骤以及保留它们的后续步骤中增加输入 token。
 
 #### KV Cache 影响
 
-提交的提示在保留的历史后追加用户文本；此前请求内容保留其顺序。
+提交的提示在保留的历史后追加用户内容；此前请求内容保留其顺序。
 
 <a id="known-limitations-and-deferred-work"></a>
 
 ## 已知限制与延后工作
 
-- 此原生 SDK 路径仅接收非空文本内容块。内联图片输入和子 Agent 通知仍由兼容 SDK profile 提供。
+- 子代理通知仍由兼容 SDK profile 提供。

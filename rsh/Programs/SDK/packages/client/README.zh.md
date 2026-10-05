@@ -107,6 +107,8 @@ console.log(result.finalResponse)
 
 显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
+显式选择 `profile: "native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
+
 `HarnessSession.fork(destinationSessionId, atSeq?)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.fork` 提供协议回执。[原生服务端参考](../native-server/README.zh.md#configuration)定义源、工作区与已结束轮次的准入。
 
 ## 模型体验
