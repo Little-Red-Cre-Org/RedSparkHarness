@@ -49,7 +49,7 @@ console.log(result.finalResponse)
 
 ### 用 HarnessClient 做低层控制
 
-`HarnessClient` 是运行 API 之下的协议客户端：显式 `start()`、`initialize()`、`prompt()`、`request()` 与 `close()`，外加通知订阅。`prompt()` 在运行时接受排队消息后立即返回该消息的 id，绝不等待 agent 活动。`subscribe(filter?)` 返回 `NotificationSubscription`（可等待的 `next()`、非阻塞 `tryNext()`、异步迭代）；`subscribeSessionTree(id)` 把范围限定到一个会话及从 `subagent.started` 血缘边发现的后代——运行时对上下文内每个会话都发通知，范围限定在客户端完成，与 Python SDK 完全一致。
+`HarnessClient` 是运行 API 之下的协议客户端：显式 `start()`、`initialize()`、`prompt()`、`request()` 与 `close()`，外加通知订阅。`prompt()` 在运行时接受排队消息后立即返回该消息的 id，绝不等待 agent 活动。`subscribe(filter?)` 返回 `NotificationSubscription`（可等待的 `next()`、非阻塞 `tryNext()`、异步迭代）；`subscribeSessionTree(id)` 把范围限定到一个会话及从 `subagent.started` 血缘边发现的后代——所选运行时决定公布哪些 Session，范围限定在客户端完成，与 Python SDK 完全一致。
 
 本客户端为每种失败模式导出类型化错误：`JsonRpcResponseError`（协议错误响应，保留 code 与 data）、`RequestTimeoutError`（配置的时限已到）、`SdkProtocolError`（响应超出文档化协议）、`TransportClosedError`（运行时已消失——消息携带退出码与有界 stderr 尾部）。`close()` 先请求协议 `shutdown`（受 `shutdownTimeoutMs` 约束，默认 1000 毫秒），然后走 stdin-EOF → SIGTERM → SIGKILL 阶梯直到进程退出；幂等，已关闭的客户端拒绝复用。`HarnessClientOptions.env` 给定时整体替换子进程环境（`undefined` 原样继承父进程环境）；凭据策略归调用方——`dsh-subprocess` 的 `scrubbedParentEnv` 是面向隔离启动的共享擦除基底。
 
@@ -65,7 +65,7 @@ console.log(result.finalResponse)
 
 ### 设计理念
 
-客户端是同一协议上的两层：`DeepSeekHarness`（自有运行）叠加在 `HarnessClient`（协议客户端）之上，与 Python SDK 的分层一致。它运行在任何 harness 上下文之外，因此直接 spawn 运行时而非经由 `dsh-subprocess` 服务——即该 seam 记录的 SDK 托管传输例外——其关闭阶梯也位于本包。运行时对上下文内每个会话都发通知；会话树范围限定是客户端对 `subagent.started` 血缘边的过滤。
+客户端是同一协议上的两层：`DeepSeekHarness`（自有运行）叠加在 `HarnessClient`（协议客户端）之上，与 Python SDK 的分层一致。它运行在任何 harness 上下文之外，因此直接 spawn 运行时而非经由 `dsh-subprocess` 服务——即该 seam 记录的 SDK 托管传输例外——其关闭阶梯也位于本包。所选运行时决定公布哪些 Session；会话树范围限定是客户端对 `subagent.started` 血缘边的过滤。
 
 ### 源码地图
 
@@ -106,6 +106,10 @@ console.log(result.finalResponse)
 <a id="model-experience"></a>
 
 显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
+
+显式选择 `profile: "native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
+
+`HarnessSession.steer(input)` 与 `HarnessClient.steer(sessionId, contentBlocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发；空闲或未知 Session 及兼容 profile 拒绝该请求。
 
 `HarnessSession.fork(destinationSessionId, atSeq?)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.fork` 提供协议回执。[原生服务端参考](../native-server/README.zh.md#configuration)定义源、工作区与已结束轮次的准入。
 

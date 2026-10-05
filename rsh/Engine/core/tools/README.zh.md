@@ -232,6 +232,8 @@ Program-only SDK bindings:
 
 旧工具包的 JSON Schema 出口转发原生校验器与 schema 类型，使模型 API 目录为每个 schema 类型保留唯一声明。
 
+搜索卡片结果类型从 `dsh-native-tools/presentation` 重新导出，兼容和原生搜索共用一份与 Provider 无关的类型定义。
+
 <a id="dev-note"></a>
 ### 开发备注
 

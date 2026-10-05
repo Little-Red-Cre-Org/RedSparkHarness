@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-dsh-runtime` 让原生兼容 bridge 与选定的一方 DSH 插件共用一个 Cordis Context。它验证 Cordis 主版本，只挂载允许列表中的插件，并随原生 runtime 释放每个挂载。原生安装未选择此包时，不会引入兼容依赖。
+`dsh-compat-dsh-runtime` 让原生兼容 bridge 与选定的一方 DSH 插件共用一个 Cordis Context。它要求已验证的 Cordis 4.0.2，只挂载允许列表中的插件，并随原生 runtime 释放每个挂载。原生安装未选择此包时，不会引入兼容依赖。
 
 ## 目录
 
@@ -38,6 +38,19 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | configuration | `{}` | 不接受用户可配置字段。 |
+
+### 支持的适配器集合
+
+这组仅面向 Host 的适配器对应同版本 RSH 0.1.5-rc.2 工作区包及 Cordis 4.0.2。其他 Cordis 版本在创建 Context 前拒绝。DSH runtime 声明及各适配器接受的配置在挂载前检查；不支持任意插件和应用 bundle。
+
+| 原生安装器 | 旧插件挂载 | 所需原生服务 | 配置 |
+|---|---|---|---|
+| `compat-fs-local` | `fs-local` | `compatDshRuntime`；提供 `fs` | 本地后端 `cwd`, `diffBasisMaxBytes` |
+| `compat-fs-policy` | `fs-observation-policy` | `compatDshRuntime`；提供 `fsObservationPolicy` | 空配置 |
+| `compat-fs-sandbox` | `fs-sandbox`、内部 `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`；提供 `fs` | 本地后端 `cwd`, `diffBasisMaxBytes` |
+| `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`、内部 `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`；可选 `sandboxPolicy` | 正整数 `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
+
+表内名称使用 `@deepseek-ai/dsh-` 前缀；内部挂载属于该 runtime 的允许列表。原生所有权等待各 Fiber 的异步移除及激活失败清理。不支持 Cordis Loader 配置、HMR 和 Client 适配器；支持原生安装移除。这些安装器都不创建旧 Agent loop 或 Session writer。
 
 -----
 

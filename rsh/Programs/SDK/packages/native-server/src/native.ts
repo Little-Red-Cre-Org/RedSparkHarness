@@ -5,10 +5,11 @@ import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
+import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
@@ -70,6 +71,7 @@ export class NativeSdkApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     if (args.length > 0) throw new Error('native SDK: task arguments are unsupported')
     const transport = new JsonRpcLineTransport(this.input, this.output)
+    const releaseDescendants = this.observeDescendants(transport)
     let finish!: () => void
     const done = new Promise<void>((resolveDone) => { finish = resolveDone })
     const onEnd = (): void => { finish() }
@@ -81,6 +83,7 @@ export class NativeSdkApplication implements NativeApplication {
         case 'initialize': return this.track(this.initialize(params, signal))
         case 'session/prompt': return this.prompt(params, transport, signal)
         case 'session/cancel': return this.cancel(params)
+        case 'session/steer': return this.track(this.steer(params, signal))
         case 'session/fork': return this.track(this.fork(params, signal))
         case 'shutdown':
           this.closing = true
@@ -101,13 +104,48 @@ export class NativeSdkApplication implements NativeApplication {
     } finally {
       this.input.off('end', onEnd)
       signal.removeEventListener('abort', onAbort)
-      transport.close()
-      this.input.pause()
+      try { await releaseDescendants() }
+      finally { transport.close(); this.input.pause() }
     }
   }
 
   private assertOpen(): void {
     if (this.closing) throw new Error('native SDK: closing')
+  }
+
+  private observeDescendants(transport: JsonRpcLineTransport): () => Promise<void> {
+    const active = this.context.require('activeSessions')
+    const observed = new Map<NativeActiveSessionOwner, () => void>()
+    const releaseAttached = active.onAttached((owner) => {
+      if (this.closing || owner.invocation !== 'delegated') return Promise.resolve()
+      const executor = this.executor
+      const interaction = executor?.interactionOwner(owner.agent)
+      if (interaction === undefined || executor === undefined) return Promise.resolve()
+      const root = active.owners().find(candidate => candidate.agent === interaction.displayRootAgent)
+      if (root === undefined || !this.activeTurns.get(String(root.session.id))?.received
+        || executor.rootExecution.capture(root).id !== SDK_ROOT_ROUTE) return Promise.resolve()
+      const parentSession = owner.session.header.parentSession
+      const parent = active.owners().find(candidate => candidate.session.id === parentSession)
+      if (parent === undefined || parent !== root && !observed.has(parent)) return Promise.resolve()
+      const childSessionId = String(owner.session.id)
+      observed.set(owner, owner.onEvent((event) => {
+        transport.notify('session.event', { sessionId: childSessionId, event })
+      }))
+      transport.notify('subagent.started', { parentSessionId: String(parentSession), childSessionId })
+      return Promise.resolve()
+    })
+    const releaseDetached = active.onDetached((owner) => {
+      observed.get(owner)?.()
+      observed.delete(owner)
+      return Promise.resolve()
+    })
+    return async () => {
+      try { await Promise.all([releaseAttached(), releaseDetached()]) }
+      finally {
+        for (const release of observed.values()) release()
+        observed.clear()
+      }
+    }
   }
 
   private track<T>(task: Promise<T>): Promise<T> {
@@ -168,30 +206,67 @@ export class NativeSdkApplication implements NativeApplication {
     return { cancelled: true }
   }
 
+  private promptParts(raw: Record<string, unknown>): AttachmentAdmissionPart[] {
+    if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0) {
+      throw new TypeError('native SDK: contentBlocks must be a nonempty array')
+    }
+    const attachments = this.context.require('attachments')
+    return raw.contentBlocks.map((block: unknown): AttachmentAdmissionPart => {
+      const fields = record(block, 'content block')
+      if (fields.type === 'text' && typeof fields.text === 'string') return { type: 'text', text: fields.text }
+      if (fields.type === 'image' && typeof fields.data === 'string') {
+        const mediaType = attachments.imageLimits.mediaTypes.find(type => type === fields.mimeType)
+        if (mediaType !== undefined) return { type: 'image', data: fields.data, mediaType }
+      }
+      throw new TypeError('native SDK: content blocks must be text or encoded raster images')
+    })
+  }
+
+  private async steer(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<{ messageId: string }> {
+    this.assertOpen()
+    const executor = this.executor
+    if (executor === undefined) throw new Error('native SDK: initialize first')
+    const sessionId = nonempty(raw.sessionId, 'sessionId')
+    const admission = this.activeTurns.get(sessionId)
+    if (admission === undefined || !admission.received) throw new Error('native SDK: steering requires an admitted turn')
+    const active = this.context.require('activeSessions')
+    const owner = active.owners().find(candidate => candidate.session.id === sessionId)
+    if (owner === undefined || executor.rootExecution.capture(owner).id !== SDK_ROOT_ROUTE) {
+      throw new Error("native SDK: steering requires this application's live root owner")
+    }
+    const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
+    signal.throwIfAborted()
+    const content = await this.context.require('attachments').admitPromptContent(this.promptParts(raw))
+    signal.throwIfAborted()
+    this.assertOpen()
+    if (this.activeTurns.get(sessionId) !== admission || active.owner(owner.agent, owner.session) !== owner) {
+      throw new Error('native SDK: steering owner settled during attachment admission')
+    }
+    const message = createUserMessage({ content, source: { kind: 'user' } })
+    const messageId = await owner.enqueue(message, 'next-step', false, signal)
+    return { messageId: String(messageId) }
+  }
+
   private async prompt(raw: Record<string, unknown>, transport: JsonRpcLineTransport,
     lifetime: AbortSignal): Promise<{ messageId: string }> {
     this.assertOpen()
     const executor = this.executor
     if (executor === undefined) throw new Error('native SDK: initialize first')
     const sessionId = nonempty(raw.sessionId, 'sessionId')
-    if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0
-      || raw.contentBlocks.some((block: unknown) => {
-        if (typeof block !== 'object' || block === null) return true
-        const fields = block as Record<string, unknown>
-        return fields.type !== 'text' || typeof fields.text !== 'string'
-      })) {
-      throw new TypeError('native SDK: this profile accepts nonempty text contentBlocks only')
-    }
-    const content = (raw.contentBlocks as Array<{ type: 'text'; text: string }>).map(block => ({ type: 'text' as const, text: block.text }))
-    const message = createUserMessage({ content, source: { kind: 'user' } })
+    const parts = this.promptParts(raw)
+    const attachments = this.context.require('attachments')
     const previous = this.sessions.get(sessionId)
-    const accepted = Promise.withResolvers<void>()
+    const accepted = Promise.withResolvers<string>()
     const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
     const task = (async () => {
       try {
         if (previous !== undefined) await previous
         this.activeTurns.set(sessionId, admission)
         const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
+        signal.throwIfAborted()
+        const content = await attachments.admitPromptContent(parts)
+        signal.throwIfAborted()
+        const message = createUserMessage({ content, source: { kind: 'user' } })
         const id = SessionId(sessionId)
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
         await executor.executeRootTurn({ id, resume, message,
@@ -200,7 +275,7 @@ export class NativeSdkApplication implements NativeApplication {
             if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
               admission.received = true
-              accepted.resolve()
+              accepted.resolve(String(message.id))
               transport.notify('session.status', { sessionId, status: 'running' })
             }
           } }, signal)
@@ -217,15 +292,14 @@ export class NativeSdkApplication implements NativeApplication {
     admission.settled = task
     this.sessions.set(sessionId, task)
     void this.track(task)
-    await accepted.promise
-    return { messageId: String(message.id) }
+    return { messageId: await accepted.promise }
   }
 }
 
 /** Host installation selected by the shipped native-sdk profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
+  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
     'agentPresets', 'workspaceRegistry'],
   provides: ['application'],
