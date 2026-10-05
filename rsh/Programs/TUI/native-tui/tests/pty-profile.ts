@@ -15,9 +15,11 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param script - committed assistant responses for replay; omitted only by the cancellation fixture.
  * @param cleanupFailure - inject a controller teardown rejection after its real drain.
  * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
+ * @param humanInteractions - install existing question, tool and approval Providers.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
-export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false, modelControls = false) {
+export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
+  modelControls = false, humanInteractions = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -69,8 +71,9 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   const shipped = shippedNativeProfileComposition(home, 'native-tui')
   const selected = new Set(['app', 'session-execution', 'agents', 'tools', 'model-execution', 'storage'])
   if (modelControls) selected.add('model-selection')
+  if (humanInteractions) for (const id of ['approval', 'user-questions', 'ask-user-tool']) { selected.add(id) }
   const installations = shipped.installations.filter(row => selected.has(row.id)).map(row => row.id === 'app'
-    ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: 3 } }
+    ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: humanInteractions ? 5 : 3 } }
     : row.id === 'storage' ? { ...row, config: { root: storage, compression: 'none' } } : row)
   installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })

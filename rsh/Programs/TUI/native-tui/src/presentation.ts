@@ -9,6 +9,7 @@ import { terminalCopy } from './locale.ts'
 import type { TerminalModelState } from './models.ts'
 import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
+import type { TerminalHumanPrompt } from './human.ts'
 
 /** Renderer state; completed rows originate in the durable Session log. */
 export interface TerminalState {
@@ -19,6 +20,7 @@ export interface TerminalState {
   readonly error?: string | undefined
   readonly model?: TerminalModelState | undefined
   readonly choice?: ModelSelection | null | undefined
+  readonly human?: TerminalHumanPrompt | undefined
 }
 
 /** An application-owned input queue, without transferable Agent or writer objects. */
@@ -43,6 +45,11 @@ export interface TerminalInteraction {
    * @returns accepted durable choice and metadata.
    */
   selectModel(request: NativeModelSelectionRequest): Promise<TerminalModelState>
+  /**
+   * @param value - entered response to the currently displayed human request.
+   * @param expected - exact rendered request; stale responses refuse.
+   */
+  answerHuman(value: string, expected: TerminalHumanPrompt): void
 }
 
 /** Render the input composer and the shared safe transcript rows.
@@ -72,6 +79,7 @@ export function TerminalView({ interaction, locale, model, background }: {
   useInput((keyInput, key) => {
     if (key.ctrl && keyInput === 'c') { if (state.busy) interaction.cancel(); else interaction.exit() }
     if (key.escape && menu !== undefined) { setMenu(undefined); setNotice(''); return }
+    if (key.escape && state.human !== undefined) { interaction.cancel(); setNotice(''); return }
     if (key.escape && state.busy) {
       interaction.cancel()
       if (input.trim() !== '') { submit(input); setInput('') }
@@ -81,6 +89,10 @@ export function TerminalView({ interaction, locale, model, background }: {
     const text = value.trim()
     if (text === '') return
     if (text === '/exit' || text === '/quit') { interaction.exit(); return }
+    if (state.human !== undefined) {
+      try { interaction.answerHuman(text, state.human); setNotice('') } catch (error: unknown) { setNotice(String(error)) }
+      return
+    }
     if (menu !== undefined) {
       const index = Number(text) - 1
       const selected = Number.isSafeInteger(index) && index >= 0 ? menu.choices[index] : undefined
@@ -152,6 +164,14 @@ export function TerminalView({ interaction, locale, model, background }: {
     React.createElement(Text, { dimColor: true }, `${state.busy ? copy.working : copy.idle} · ${state.queued} ${copy.queued}`),
     notice === '' ? null : React.createElement(Text, {}, stripAnsi(notice)),
     state.error === undefined ? null : React.createElement(Text, { color: 'red' }, stripAnsi(state.error)),
+    state.human === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
+      React.createElement(Text, { bold: true }, state.human.kind === 'approval' ? copy.approval : copy.question),
+      React.createElement(Text, {}, stripAnsi(state.human.kind === 'approval'
+        ? `${state.human.toolName}${state.human.reason === undefined ? '' : '\n' + state.human.reason}`
+        : `${state.human.question.header === undefined ? '' : state.human.question.header + '\n'}${state.human.question.question}${state.human.question.detail === undefined ? '' : '\n' + state.human.question.detail}`)),
+      ...(state.human.kind === 'question' ? state.human.question.options?.map((option, index) => React.createElement(Text, { key: index },
+        stripAnsi(`${index + 1}. ${option.label}${option.description === undefined ? '' : ' — ' + option.description}`))) ?? [] : []),
+      React.createElement(Text, { dimColor: true }, state.human.kind === 'approval' ? copy.approvalHint : copy.answerHint)),
     menu === undefined ? null : React.createElement(Box, { flexDirection: 'column' },
       React.createElement(Text, { bold: true }, menu.title),
       ...menu.labels.map((label, index) => React.createElement(Text, { key: index }, stripAnsi(`${index + 1}. ${label}`))),

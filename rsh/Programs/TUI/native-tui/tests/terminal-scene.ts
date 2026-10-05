@@ -79,21 +79,30 @@ export async function terminalScene(scenario: string, modelControls = false): Pr
         expect(events.filter(event => event.type === 'model/selection')).toHaveLength(modelControls ? 2 : 0)
       } finally { await reader.close() }
     } finally { await backend.close() }
-    const name = readdirSync(fixture.storage, { recursive: true }).find(
-      name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)),
-    )
-    if (name === undefined) throw new Error('native-tui: missing physical Session')
-    const raw = readFileSync(join(fixture.storage, String(name)), 'utf8')
-    const context = { sessionIds: [], cwd: fixture.workspace }
-    const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
-    const prompts = normalizedSystemPrompts(raw, context)
-    const schemas = normalizedToolSchemas(raw, context)
-    if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-tui: missing model request headers')
-    const outputs = [[scene, normalized], [join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1))],
-      [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1))]] as const
-    for (const [path, contents] of outputs) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, contents)
-      else expect(contents).toBe(readFileSync(path, 'utf8'))
-    }
+    verifyTerminalSession(fixture, scenario)
   } finally { await fixture.cleanup() }
+}
+
+/** Compare an actual terminal Session and its model input sidecars with its owned recording.
+ * @param fixture - settled dsh fixture with closed terminal processes.
+ * @param scenario - owning committed scenario directory.
+ */
+export function verifyTerminalSession(fixture: ReturnType<typeof terminalFixture>, scenario: string): void {
+  const scene = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
+  const name = readdirSync(fixture.storage, { recursive: true }).find(
+    name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)),
+  )
+  if (name === undefined) throw new Error('native-tui: missing physical Session')
+  const raw = readFileSync(join(fixture.storage, String(name)), 'utf8')
+  const context = { sessionIds: [], cwd: fixture.workspace }
+  const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
+  const prompts = normalizedSystemPrompts(raw, context)
+  const schemas = normalizedToolSchemas(raw, context)
+  if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-tui: missing model request headers')
+  const outputs = [[scene, normalized], [join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1))],
+    [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1))]] as const
+  for (const [path, contents] of outputs) {
+    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, contents)
+    else expect(contents).toBe(readFileSync(path, 'utf8'))
+  }
 }

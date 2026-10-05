@@ -9,6 +9,7 @@ import { terminalCopy } from './locale.ts'
 import type { TerminalModelOperations, TerminalModelState } from './models.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import { applyModelSelectionProjection, type ModelSelectionProjectionState } from '@deepseek-ai/dsh-native-model-execution/model-selection'
+import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
@@ -33,6 +34,8 @@ const completedAssistantEvents = new Set(['assistant/message', 'assistant/attemp
 
 /** The terminal owns input admission and observations; the selected executor owns every durable write. */
 export class TerminalController implements TerminalInteraction {
+  /** Pending presentation owner; Providers retain the Agent and Session audit authority. */
+  readonly human: TerminalHumanInteraction
   private readonly shutdown = new AbortController()
   private readonly queue: UserMessage[] = []
   private readonly listeners = new Set<() => void>()
@@ -59,10 +62,24 @@ export class TerminalController implements TerminalInteraction {
     protected readonly config: Config, id: SessionId) {
     this.selectedId = id
     this.lifetime = AbortSignal.any([ownerSignal, this.shutdown.signal])
+    this.human = new TerminalHumanInteraction(config.maxPendingHumanRequests, terminalCopy(config.locale),
+      (human) => { this.publish({ human }) })
   }
 
   /** @returns the current immutable renderer observation. */
   snapshot(): TerminalState { return this.state }
+
+  /**
+   * @param id - existing active Session identity supplied by an answerer authority.
+   * @returns whether the open terminal owns this selected Session presentation.
+   */
+  ownsSession(id: SessionId): boolean { return !this.closed && !this.ownerSignal.aborted && id === this.selectedId }
+
+  /**
+   * @param value - human response for the currently displayed request.
+   * @param expected - exact renderer observation; stale answers refuse.
+   */
+  answerHuman(value: string, expected: TerminalHumanPrompt): void { this.human.answer(value, expected) }
 
   /**
    * @param listener - renderer state notification.
@@ -233,6 +250,7 @@ export class TerminalController implements TerminalInteraction {
   close(): Promise<void> {
     if (this.closing !== undefined) return this.closing
     this.closed = true
+    this.human.close()
     this.listeners.clear()
     this.withdrawLaunch?.()
     this.queue.length = 0
