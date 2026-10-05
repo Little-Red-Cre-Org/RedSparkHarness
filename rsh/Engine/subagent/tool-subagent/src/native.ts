@@ -61,7 +61,12 @@ export const plugin: NativePlugin = {
     return (context) => {
       const subagents = context.require('subagents')
       const tools = context.require('tools')
-      const background = context.optional('jobs') !== undefined && context.optional('jobControls') === true
+      const controls = context.optional('jobControls')
+      const jobs = context.optional('jobs')
+      if (controls !== undefined && (controls.jobs !== jobs || subagents.backgroundJobs !== jobs)) {
+        throw new Error('native tool-subagent: Provider, jobs and jobControls must select the same Jobs registry')
+      }
+      const background = controls !== undefined
       const contribution: NativeValueToolContribution = {
         schema: { name: config.toolName, description: 'Delegate one task to a fresh child without your conversation. '
           + (background ? 'By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.'

@@ -18,4 +18,4 @@ Status: implemented
 
 ## 结果
 
-Jobs 保留有界实时文本，以真实最终输出替换，并仅在委派清理后结算。持久记录为 aborted 的子任务，若原错误是取消原因或由该精确原因引发的 AbortError，则结算为 cancelled；未知失败与清理错误仍结算为 failed。内置 native-sdk 配置安装 Jobs 提供者与工具消费者。一个既有记录场景覆盖两种 SDK、跨父回合存活、真实子输出、取消与持久子关闭。可持续子消息、目录、外部传输、persona 插值与完成结果通知仍为独立能力。
+Jobs 保留有界实时文本，以真实最终输出替换，并仅在委派清理后结算。持久记录为 aborted 的子任务，若原错误是取消原因或由该精确原因引发的 AbortError，则结算为 cancelled；未知失败与清理错误仍结算为 failed。内置 native-sdk 配置安装 Jobs 提供者与工具消费者。一个既有记录场景覆盖两种 SDK、跨父回合存活、真实子输出、取消与持久子关闭。可持续子消息、目录、外部传输、persona 插值与完成结果通知仍为独立能力。 Provider 暴露 backgroundJobs，已安装控制工具暴露 jobControls.jobs；Consumer 在加载时拒绝独立选定的 Jobs 注册表不一致的配置。

@@ -5,7 +5,7 @@ import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtim
 import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import type { NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeJobId } from '@deepseek-ai/dsh-native-jobs'
+import type { NativeJobId, NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
 import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 import type {} from '@deepseek-ai/dsh-native-prompt'
@@ -52,6 +52,8 @@ export interface NativeSubagentBackground {
 
 /** Replaceable one-shot Provider; Programs retain Agent execution and Session writing. */
 export interface NativeSubagentOperations {
+  /** Jobs registry selected by this Provider for background starts; absent in foreground-only assemblies. */
+  readonly backgroundJobs: NativeJobRegistry | undefined
   /**
    * Resolve the latest logged parent route, budgets and scoped deployment choices.
    * @param request - exact active initiating parent, prompt and deployment policy.
@@ -104,6 +106,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   constructor(private readonly context: NativeContext, readonly providerName: string) {}
 
   /** @inheritdoc */
+  get backgroundJobs(): NativeJobRegistry | undefined { return this.context.optional('jobs') }
+
+  /** @inheritdoc */
   resolve(request: Parameters<NativeSubagentOperations['resolve']>[0]): NativeSubagentRequest {
     const { agent, session, options } = request
     const parent = this.context.require('sessionExecution').configuration(agent, session)
@@ -136,7 +141,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   /** @inheritdoc */
   async startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
-    const jobs = this.context.optional('jobs')
+    const jobs = this.backgroundJobs
     if (jobs === undefined) throw new Error('native-subagent: background execution requires jobs')
     signal.throwIfAborted()
     const id = SessionId(randomUUID())
