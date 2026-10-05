@@ -16,7 +16,7 @@
 
 ### Native profile 重载
 
-随附的 `native-web` profile 设置 `dsh.profile.configReload: live`；它监视该 profile 的 `rsh.profile.json` 和通过 `--patch` 显式传入的 JSON 文件。CLI 会先校验候选组合，再替换正在运行的 Native Host；未变的安装身份会复用，受影响的应用运行会排空，然后从当前代际启动应用。格式错误或无法解析的候选会保留当前运行图。Host 激活、清理或 watcher 失败会终止进程，不会复活旧运行图。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` profile 仍只在启动时加载。此机制监视 profile 数据，不监视包源码；它独立于 Cordis patch 重载和 Web Client 资源重建。
+随附的 `native-web` profile 设置 `dsh.profile.configReload: live`；它监视该 profile 的 `rsh.profile.json` 和通过 `--patch` 显式传入的 JSON 文件。CLI 会先校验候选组合，再替换正在运行的 Native Host；未变的安装身份会复用，受影响的应用运行会排空，然后从当前代际启动应用。格式错误或无法解析的候选会保留当前运行图。独立的应用故障即使与候选预检重叠，也会保留原诊断并终止进程；只有 invocation 自身完全匹配的 abort reason，或替换期间在应用回调开始前发生的 Host admission 拒绝，才会被视为运行代际已替换。Host 激活、清理或 watcher 失败会终止进程，不会复活旧运行图。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` profile 仍只在启动时加载。此机制监视 profile 数据，不监视包源码；它独立于 Cordis patch 重载和 Web Client 资源重建。
 
 `dsh --profile <name> --from-default-profile <template>` 会在启动前，从上述五个随附模板之一初始化新的自定义目标。目标名称不能是随附 profile 名称，并且完整的目标 profile 目录必须不存在。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它把模板当前的组合包列表和 `patchReload` 值复制进一份依赖为空、用户 patch 为空的新 manifest。它不会读取 `<template>` 指定的本地同名 profile，不会复制其依赖或 patch，也不会持久化继承字段；模板列表之后的变化不会改写新 profile。复制列表中指名的内置组合包仍从当前 dsh 安装目录解析。初始化成功不会增加 launcher 输出。
 

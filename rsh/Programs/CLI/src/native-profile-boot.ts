@@ -33,6 +33,13 @@ function watchProfileFiles(files: readonly string[], changed: () => void, failed
   return () => { for (const watcher of watchers) watcher.close() }
 }
 
+// NativeHost has no typed admission result: these are its current pre-callback interruption forms.
+function isNativeRunAdmissionInterruption(error: unknown): boolean {
+  return error instanceof Error && (
+    error.name === 'AbortError' || error.message === 'native-runtime: host is changing installations'
+  )
+}
+
 /** Launch the selected native application and await complete host teardown. */
 export async function runNativeProfile(options: {
   profile: string
@@ -130,18 +137,20 @@ export async function runNativeProfile(options: {
       if (selected === undefined) throw new Error('native profile lost its application')
       const selectedApplication = application
       let result: { kind: 'exit'; code: number } | { kind: 'replaced' }
+      const runState = { started: false }
       try {
         result = await host.run(selected.scope, { kind: 'dsh-cli' }, async (invocation) => {
+          runState.started = true
           try {
             const code = await selectedApplication.run(options.args, invocation.signal)
             return invocation.signal.aborted ? { kind: 'replaced' as const } : { kind: 'exit' as const, code }
           } catch (error) {
-            if (invocation.signal.aborted) return { kind: 'replaced' as const }
+            if (invocation.signal.aborted && error === invocation.signal.reason) return { kind: 'replaced' as const }
             throw error
           }
         })
       } catch (error) {
-        if (!hostIsAborted() && reloadIsPending()) {
+        if (!runState.started && !hostIsAborted() && reloadIsPending() && isNativeRunAdmissionInterruption(error)) {
           await reloadWork
           continue
         }
