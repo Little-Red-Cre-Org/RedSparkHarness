@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-`fs/` 组为 agent（智能体）提供持久、受策略约束的文件访问：`fs/` 定义 `ctx.fs` 服务约定，`fs-local/` 与 `fs-sandbox/` 提供宿主文件系统与沙箱强制后端，`fs-observation-policy/` 提供编辑前读取策略，`tool-fs/`（`read`、`read_image`、`write`、`edit`）与 `tool-fs-search/`（`glob`、`grep`）提供面向模型的工具。部署挂载一个后端，加载策略以获得新鲜度防护的变更，并注册模型应看到的工具包；后端可以更换，无需改动工具或策略。文件 I/O 有意不设超时：deadline 只会杀掉操作系统仍会完成的工作，因此取消只是系统调用边界的尽力而为信号。
+`fs/` 组为 agent（智能体）提供持久、受策略约束的文件访问：`fs/` 定义文件系统服务约定，`fs-local/` 与 `fs-sandbox/` 提供宿主文件系统与沙箱强制后端，`fs-observation-policy/` 提供编辑前读取策略，`tool-fs/`（`read`、`read_image`、`write`、`edit`）与 `tool-fs-search/`（`glob`、`grep`）提供面向模型的工具。`fs-sandbox/` 同时提供 Cordis 与 Native 提供方入口。部署需选择一个后端、加载对应沙箱策略，并注册模型应看到的工具包；工具及其策略不依赖后端入口。文件 I/O 不设超时；取消会在系统调用边界尽力生效。
 
 ## 目录
 
@@ -28,7 +28,7 @@ kind: "package-group"
 |---|---|---|
 | [`fs/`](fs/README.zh.md) | `ctx.fs` 服务约定：执行世界路径、有界文本 I/O，以及带可选版本防护的原子变更 | `ctx.fs` |
 | [`fs-local/`](fs-local/README.zh.md) | 宿主文件系统后端：读取、写入并编辑本机上的真实文件 | 注册到 `ctx.fs` |
-| [`fs-sandbox/`](fs-sandbox/README.zh.md) | 沙箱强制后端：按每次调用的沙箱模式约束写入与编辑，读取直接通过 | 注册到 `ctx.fs` |
+| [`fs-sandbox/`](fs-sandbox/README.zh.md) | Cordis 与 Native 沙箱强制提供方：按每次调用的模式约束写入与编辑，读取直接通过 | `ctx.fs` 或 Native `fs` 服务 |
 | [`e2b/fs-e2b`](../e2b/fs-e2b/README.zh.md) | 以 E2B 为后端：文件状态位于与 E2B 子进程提供方共享的远程执行世界 | 注册到 `ctx.fs` |
 | [`fs-observation-policy/`](fs-observation-policy/README.zh.md) | 编辑前读取策略：记录观测到的存在或缺失，并通过 `fs/*` 事件防护写入/编辑 | `fs/*` 监听器 |
 | [`tool-fs/`](tool-fs/README.zh.md) | 面向模型的 `read`、`read_image`、`write` 与 `edit` 工具及其执行器 | 注册到 `ctx.tools` |
@@ -36,7 +36,7 @@ kind: "package-group"
 | [`tool-str-replace-editor/`](tool-str-replace-editor/README.zh.md) | 独立的 `str_replace_editor` 工具：基于 `ctx.fs` 的 `view`、`create`、`str_replace` 与 `insert` | 注册到 `ctx.tools` |
 | [`tool-present/`](tool-present/README.zh.md) | 显式保存交付文件的不可变快照 | 注册到 `ctx.tools` |
 
-策略是插件，不是工具注入的服务：移除它会留下裸提供方的无条件变更行为，而不会破坏工具。`fs-sandbox` 的模式围栏与编辑前读取门禁可以组合。`tool-fs-search` 有意不扩展提供方约定——搜索是由进程支持的 ripgrep 工作流，因此文件系统后端无需承担通用搜索 API。
+策略与工具分离。Cordis `fs-sandbox` 提供方及其 Native 入口分别要求匹配的策略提供方，缺失时会拒绝加载；需要不受约束写入的部署必须显式选择 `fs-local`。沙箱围栏可与编辑前读取门禁组合。`tool-fs-search` 有意不扩展提供方约定——搜索是由进程支持的 ripgrep 工作流，因此文件系统后端无需承担通用搜索 API。
 
 -----
 

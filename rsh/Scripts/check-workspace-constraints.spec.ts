@@ -339,7 +339,7 @@ describe('package payload constraints', () => {
 
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
-      'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+      'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 })
