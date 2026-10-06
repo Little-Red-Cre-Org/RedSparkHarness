@@ -8,7 +8,11 @@ type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
 
-class UnsupportedSettingsArrayEdit extends TypeError {}
+class UnsupportedSettingsEdit extends TypeError {
+  constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported', message: string) {
+    super(message)
+  }
+}
 
 function requestError(error: unknown, t: Translate, code: 'native/settings' | 'native/credentials'): string {
   if (error instanceof NativeSessionRpcError && error.code === code) {
@@ -25,12 +29,13 @@ function secretAtOrBelow(path: readonly string[], secrets: readonly (readonly st
   return secrets.some(secret => path.every((part, index) => secret[index] === part))
 }
 
-/** Build minimal writes from the displayed redacted layer without replacing secret-bearing parents.
+/** Build minimal path edits from the displayed redacted layer.
+ * Non-secret objects use the path where their value changes; secret-bearing ancestors keep visible edits at their leaves.
  * @param before - user layer currently projected by the Host.
  * @param after - parsed user-layer draft.
  * @param secretPaths - schema-declared secret locations never returned by the Host.
- * @returns path operations for visible edits only.
- * @throws {TypeError} when an array changes length or visibly moves an existing row.
+ * @returns path operations for changes the Host can apply without replacing a hidden secret.
+ * @throws {TypeError} when arrays resize or move, or a hidden secret makes a structural edit unsafe.
  */
 export function nativeSettingsDiff(
   before: JsonObject,
@@ -42,25 +47,53 @@ export function nativeSettingsDiff(
     if (JSON.stringify(previous) === JSON.stringify(next)) return
     if (Array.isArray(previous) || Array.isArray(next)) {
       if (!Array.isArray(previous) || !Array.isArray(next) || previous.length !== next.length) {
-        throw new UnsupportedSettingsArrayEdit('Settings arrays must keep their existing row count and order.')
+        throw new UnsupportedSettingsEdit('settingsArrayStructureUnsupported', 'Settings arrays must keep their existing row count and order.')
       }
       const moved = next.some((entry, index) => {
         const matches = previous.flatMap((old, oldIndex) => JSON.stringify(old) === JSON.stringify(entry) ? [oldIndex] : [])
         return matches.length === 1 && matches[0] !== index
       })
-      if (moved) throw new UnsupportedSettingsArrayEdit('Settings arrays must keep their existing row count and order.')
+      if (moved) throw new UnsupportedSettingsEdit('settingsArrayStructureUnsupported', 'Settings arrays must keep their existing row count and order.')
       for (let index = 0; index < next.length; index += 1) visit(previous[index], next[index], [...path, String(index)])
       return
     }
-    if (isObject(previous) || isObject(next)) {
-      const left = isObject(previous) ? previous : {}
-      const right = isObject(next) ? next : {}
-      for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) {
-        visit(left[key], right[key], [...path, key])
+    if (isObject(previous) && isObject(next)) {
+      for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) {
+        visit(previous[key], next[key], [...path, key])
       }
       return
     }
-    if (path.length === 0 || secretAtOrBelow(path, secretPaths)) return
+    if ((previous === undefined && isObject(next) || next === undefined && isObject(previous))
+      && secretAtOrBelow(path, secretPaths)) {
+      throw new UnsupportedSettingsEdit('settingsSecretStructureUnsupported',
+        'Settings objects containing hidden secret fields cannot be added or removed as a whole.')
+    }
+    if (path.length > 0 && !secretAtOrBelow(path, secretPaths)) {
+      if (next === undefined) operations.push({ op: 'unset', path })
+      else operations.push({ op: 'set', path, value: next })
+      return
+    }
+    if (isObject(previous) || isObject(next)) {
+      if (previous !== undefined && next !== undefined) {
+        throw new UnsupportedSettingsEdit('settingsSecretStructureUnsupported',
+          'Settings objects containing hidden secret fields cannot be replaced as a whole.')
+      }
+      const left = isObject(previous) ? previous : {}
+      const right = isObject(next) ? next : {}
+      const start = operations.length
+      for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) {
+        visit(left[key], right[key], [...path, key])
+      }
+      if (operations.length === start) {
+        throw new UnsupportedSettingsEdit('settingsSecretStructureUnsupported',
+          'Settings objects containing hidden secret fields cannot be added or removed as a whole.')
+      }
+      return
+    }
+    if (path.length === 0 || secretAtOrBelow(path, secretPaths)) {
+      throw new UnsupportedSettingsEdit('settingsSecretStructureUnsupported',
+        'Settings secret fields cannot be edited in the JSON editor.')
+    }
     if (next === undefined) operations.push({ op: 'unset', path })
     else operations.push({ op: 'set', path, value: next })
   }
@@ -133,8 +166,8 @@ export function SettingsPage({ client, t, onBack }: {
       if (ops.length > 0) await client.settingsMutate(row.namespace, ops, row.revision)
       if (await refresh(false)) setNotice(t('settingsSaved'))
     } catch (cause: unknown) {
-      if (cause instanceof UnsupportedSettingsArrayEdit) {
-        setError(t('settingsArrayStructureUnsupported'))
+      if (cause instanceof UnsupportedSettingsEdit) {
+        setError(t(cause.messageKey))
         return
       }
       await refresh(true)

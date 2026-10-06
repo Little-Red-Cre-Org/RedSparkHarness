@@ -12,11 +12,11 @@ Status: implemented
 
 原生 Web Session controller 在现有经过身份验证的 `/api` Connection 载体上增加 Settings 与 Credentials 操作，不创建新的 Engine、Connection registry、监听器或授权服务。Desktop 复用现有私有原生 Host 载体及所选 profile 的 Provider。
 
-Settings owner 通过传入 schema 元数据及可选生效时机，选择公开自己的配置界面。Host 只描述显式公开的活动注册项，剥离 schema 声明的机密值、省略所有 schema 默认元数据，并拒绝藏在不支持 schema 节点后的机密字段；之后针对预期 revision 应用可见路径修改。原生修改可寻址现有数组索引，但不能创建空洞或删除元素；机密字段本身及其祖先路径都会被拒绝。过期写入返回预期及当前 revision；Client 刷新权威投影，同时保留用户草稿。
+Settings owner 通过传入 schema 元数据及可选生效时机，选择公开自己的配置界面。Host 只描述显式公开的活动注册项，剥离 schema 声明的机密值、省略所有 schema 默认元数据，并拒绝藏在不支持 schema 节点后的机密字段；之后针对预期 revision 应用可见路径修改。不含机密字段的对象项可在变化路径新增、删除或替换；隐藏机密字段下方的修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组修改使用现有索引，不能创建空洞或删除元素。过期写入返回预期及当前 revision；Client 刷新权威投影，同时保留用户草稿。
 
 凭据引用从标记为 `credential-ref` 的已注册 schema 中发现，不依赖静态 Provider 或密钥目录。Host 仅投影 configured、source 与 writable 事实。Settings 或 Credentials Provider 异常文本会替换为通用 RPC 错误；revision 冲突只保留 namespace 与预期／当前 revision。Client 将值单次发送至 set，成功后清空本地输入，只收到确认；unset 也不返回值。
 
-原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。数组编辑按现有索引修改；对不支持的扩缩或可见行移动会报错，不会误报保存成功。不切换默认 profile 装配。
+原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。Session 错误构造器作为共享 Client peer 保留，使 `instanceof` 能匹配选定 Session Consumer 抛出的错误。
 
 ## 支持范围
 
@@ -36,4 +36,4 @@ Settings 注册必须通过元数据选择公开；基于 schema 的编辑使用
 
 ## 测试
 
-Settings 包回归覆盖公开选择、机密值与默认值脱敏、凭据引用发现、对象与数组路径修改、隐藏值保留及 revision 冲突。经过身份验证的原生 HTTP 用例检查原始 descriptor 脱敏、带机密值的 Provider 失败、过期写入投影及只写 Credentials RPC。Client 测试覆盖数组索引修改与明确拒绝结构变化；定向包编译与浏览器检查覆盖变更源码。
+Settings 包回归覆盖公开选择、机密值与默认值脱敏、凭据引用发现、对象与数组路径修改、隐藏值保留及 revision 冲突。经过身份验证的原生 HTTP 用例检查原始 descriptor 脱敏、带机密值的 Provider 失败、过期写入投影及只写 Credentials RPC。Client 测试通过真实 Settings owner 覆盖非机密对象修改、数组索引修改与不安全结构拒绝；定向包编译与浏览器检查覆盖变更源码。

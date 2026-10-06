@@ -10247,6 +10247,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-tool':
         specifier: workspace:^
         version: link:../ui-tool
+      '@deepseek-ai/dsh-llm-pi-ai':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm-pi-ai
       '@deepseek-ai/dsh-native-model-selection':
         specifier: workspace:^
         version: link:../../../../Engine/llm/native-model-selection
@@ -10256,6 +10259,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-settings':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/settings/settings
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../../../Modules/Official/todo/tool-todo
