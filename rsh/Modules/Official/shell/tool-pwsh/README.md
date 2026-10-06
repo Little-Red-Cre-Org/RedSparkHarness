@@ -11,8 +11,6 @@ English | [中文](README.zh.md)
 
 `dsh-tool-pwsh` runs PowerShell commands through the mounted shell executor. Its `./native` entry registers the same tool over native shell, job, approval, and environment services. Each call starts a fresh pwsh process; `run_in_background` creates a managed job. Commands use native `C:\...` paths and `$env:NAME` variables. Every call receives the managed `DSH_*` environment. Under a sandboxing executor, the tool describes Windows language-mode and named-pipe restrictions. Mount it with a PowerShell executor and `dsh-shell-env`.
 
-The Cordis entry imports `dsh-tools`; the `./native` entry uses `dsh-native-tools` and does not import the legacy registry. A Native-only consumer can omit the optional `dsh-tools` peer, while a Cordis composition that loads the default entry must install it.
-
 ## Table of Contents
 
 - [Use this package](#use-this-package)
@@ -32,6 +30,8 @@ The native entry registers tools in its installation scope. Descendant Agents se
 The native contribution declares the same canonical foreground/background result fields as Bash. Foreground values retain independent exit, timeout, abort, stream and sandbox facts; background starts retain the native `jobId`. Native background execution requires both the job registry and its control tools. The registry validates the value before the PowerShell renderer produces its existing text. Both native and Cordis consumers use `canonicalShellResult` from the shell definition. These declarations do not install PTC bindings or change background job ownership. Installed jobControls.jobs must identify the same selected jobs registry; mismatches fail loading.
 
 Load this plugin in any composition where the agent should run PowerShell commands — typically a Windows composition whose `ctx.shell` is backed by a PowerShell executor. It registers the `pwsh` tool once the executor provider and the `dsh-shell-env` registry are mounted.
+
+The default Cordis entry imports `dsh-tools` and requires its optional peer; `./native` imports `dsh-native-tools`, so Native-only consumers can omit `dsh-tools`.
 
 ### When to choose it
 

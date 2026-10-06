@@ -11,8 +11,6 @@ kind: "package-reference"
 
 `dsh-tool-pwsh` 通过已挂载的 shell 执行器运行 PowerShell 命令。`./native` 入口基于原生 shell、任务、审批和环境服务注册同一工具。每次调用都启动全新 pwsh 进程；`run_in_background` 创建受管理的后台任务。命令使用原生 `C:\...` 路径与 `$env:NAME` 变量。每次调用都接收受管 `DSH_*` 环境。在沙箱执行器下，工具向模型说明 Windows 语言模式和命名管道限制。请与 PowerShell 执行器及 `dsh-shell-env` 一起挂载。
 
-Cordis 入口会导入 `dsh-tools`；`./native` 入口使用 `dsh-native-tools`，不会导入旧注册表。仅使用 Native 入口的消费者可以省略可选的 `dsh-tools` peer；加载默认入口的 Cordis 组合必须安装该包。
-
 ## 目录
 
 - [使用本包](#use-this-package)
@@ -32,6 +30,8 @@ Cordis 入口会导入 `dsh-tools`；`./native` 入口使用 `dsh-native-tools`�
 原生贡献声明与 Bash 相同的标准前台/后台结果字段。前台值分别保留退出、超时、取消、输出流与沙箱事实；后台启动保留原生 `jobId`。原生后台执行要求同时安装任务注册表及其控制工具。注册表先校验值，再由 PowerShell 呈现器生成现有文本。原生与 Cordis 消费者均使用 shell 定义中的 `canonicalShellResult`。这些声明不安装 PTC 绑定，也不改变后台任务所有权。 已安装的 jobControls.jobs 必须标识选定的同一 jobs 注册表；不一致时加载失败。
 
 在 agent 需要运行 PowerShell 命令的任何组合中加载本插件——通常是 `ctx.shell` 由 PowerShell 执行器支撑的 Windows 组合。一旦挂载执行器提供方与 `dsh-shell-env` 注册表，它就注册 `pwsh` 工具。
+
+默认 Cordis 入口导入 `dsh-tools` 并要求安装其可选 peer；`./native` 入口使用 `dsh-native-tools`，因此仅使用 Native 入口的消费者可以省略 `dsh-tools`。
 
 ### 何时选择
 
