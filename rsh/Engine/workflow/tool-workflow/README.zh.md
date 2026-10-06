@@ -68,7 +68,7 @@ Native 组合会挂载 `@deepseek-ai/dsh-tool-workflow/native`，并传入一个
 
 ### 持久会话记录
 
-对于根 transport 执行（`exec.parent` 缺省），工具会用四个 log-only 事件把运行投影到调用方 agent 的会话：`start()` 返回后写 run-start，只记录 `run.id` 匹配的成员开始与结束，并且只在结果可用且 dispose 完全停稳后写 run-end。嵌套 transport 调用照常执行，但不写任何记录。会话追加操作首次失败后，本运行会停止后续记录并只告警一次，留下空记录或合法连续前缀，同时不改变工具结果和清理。包 invariant 会在冷加载与实时追加时拒绝重复 start、未配对成员、仍有开放成员的终点与 run-end 后更新，同时允许缺失终态后缀的连续前缀。
+对于根 Native 执行（`exec.parent` 缺省），工具会用四个 log-only 事件把运行投影到调用方 agent 的会话：`start()` 返回后写 run-start，只记录 `run.id` 匹配的成员开始与结束，并且只在结果可用且 dispose 完全停稳后写 run-end。嵌套 transport 调用照常执行，但不写任何记录。会话追加失败会取消运行、停止该运行后续记录，并在自有清理完成后拒绝消费方；不会只留下前缀并返回成功结果。所选引擎对普通进度观察器失败另按回调分别隔离。包 invariant 会在冷加载与实时追加时拒绝重复 start、未配对成员、仍有开放成员的终点与 run-end 后更新，同时允许缺失终态后缀的连续前缀。
 
 ### 渲染意图
 
@@ -162,7 +162,7 @@ Use the <toolName> tool ONLY when the user explicitly asks for a workflow or for
 - **父级轮次会阻塞到整个工作流结算**——没有后台启动／轮询接口，取消会丢弃局部输出并返回错误。
 - **`args` 必须是对象，Native 结果文本有界**——调用方把顶层数组／标量包装到字段中；规范工作流结果保持完整，超过 `maxResultChars` 的 JSON 会在面向模型的投影中截断，而不是存储在检索句柄背后。
 - **每次工具注册的工作流策略固定**——提供方选择、上限与工具名称属于部署配置，不是模型调用参数。
-- **持久记录只覆盖顶层且只供观察**——嵌套 PTC mode dispatch 不记录；记录故障会刻意退化为不完整前缀，而不改变执行。
+- **持久记录覆盖根 Native 调用**——嵌套 PTC mode dispatch 不记录；必需追加失败会取消运行并使消费方失败，普通进度观察器仍分别隔离。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -6,7 +6,7 @@ The workflow seam lets an agent run a model-written orchestration SCRIPT that st
 
 Service Definition: [dsh-workflow](../../Engine/workflow/workflow) (`ctx.workflowEngine` + the vocabulary below). The Service Provider is [dsh-workflow-worker-thread](../../Engine/workflow/workflow-worker-thread) (a `node:worker_threads` engine — one worker per run, the script's vm context inside it); the model-facing Consumer is [dsh-tool-workflow](../../Engine/workflow/tool-workflow). The proposal and rationale: [the dynamic-workflows Agent Note](../../../.agents/notes/implemented/feature/2026-07-05-dynamic-workflows.md).
 
-Sources: browser-safe vocabulary in [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts), Host request and live-run handles in [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts).
+Sources: browser-safe vocabulary and the provider-neutral `WorkflowRun` handle in [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts); the Host-only start request is in [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts).
 
 ## The start request
 
@@ -96,8 +96,9 @@ The handle the consumer holds while a script executes. Cordis and native Definit
 
 ```ts type-equiv
 /**
- * Holder-owned live workflow. `result` never rejects; consumers may cancel
- * and must call idempotent `dispose()` to await script and child quiescence.
+ * Holder-owned live workflow shared by Cordis and native Consumers. `result`
+ * never rejects; Consumers may cancel and must call idempotent `dispose()` to
+ * await the selected Provider's script and child cleanup policy.
  */
 interface WorkflowRun {
   readonly id: WorkflowRunId
@@ -106,7 +107,7 @@ interface WorkflowRun {
   readonly result: Promise<WorkflowResult>
   /** Cancel the run and its children. */
   cancel(reason?: string): void
-  /** Cancel if needed and await bounded settlement and cleanup. */
+  /** Cancel if needed and await script termination and the Provider's owned child cleanup. */
   dispose(): Promise<void>
 }
 ```

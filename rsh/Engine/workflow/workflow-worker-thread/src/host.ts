@@ -50,6 +50,7 @@ interface ChildRecord {
   readonly run: WorkflowHostChild
   disposal?: Promise<void>
   disposalSettled?: boolean
+  disposalFailed?: boolean
   disposalFailure?: unknown
 }
 
@@ -274,7 +275,7 @@ export class WorkerRun<Parent> implements WorkflowRun {
       this.reapChildren('workflow disposed')
       if (this.awaitChildCleanup) {
         await this.childQuiescence()
-        const failures = [...this.children.values()].flatMap(record => record.disposalFailure === undefined ? [] : [record.disposalFailure])
+        const failures = [...this.children.values()].flatMap(record => record.disposalFailed === true ? [record.disposalFailure] : [])
         if (failures.length > 0) throw new AggregateError(failures, 'workflow native child cleanup failed')
       }
     })().then(
@@ -476,7 +477,7 @@ export class WorkerRun<Parent> implements WorkflowRun {
       return
     }
     void this.disposeChild(callId, record).then(() => {
-      if (record.disposalFailure === undefined) this.post(HostToWorkerType.ChildDisposed, { callId })
+      if (!this.awaitChildCleanup || record.disposalFailed !== true) this.post(HostToWorkerType.ChildDisposed, { callId })
       else this.post(HostToWorkerType.ChildDisposeFailed, { callId, rendered: renderThrown(record.disposalFailure) })
     })
   }
@@ -500,6 +501,7 @@ export class WorkerRun<Parent> implements WorkflowRun {
         record.disposalSettled = true
         this.finishChild(callId)
       }, (error: unknown) => {
+        record.disposalFailed = true
         record.disposalFailure = error
         record.disposalSettled = true
         this.ctx.logger.warn(`workflow-worker-thread: child dispose failed: ${renderThrown(error)}`)

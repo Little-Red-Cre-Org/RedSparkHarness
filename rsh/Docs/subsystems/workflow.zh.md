@@ -6,7 +6,7 @@
 
 Service Definition：[dsh-workflow](../../Engine/workflow/workflow)（`ctx.workflowEngine` + 下文词汇）。Service Provider 是 [dsh-workflow-worker-thread](../../Engine/workflow/workflow-worker-thread)（一个 `node:worker_threads` 引擎——每个 run 一个 worker，脚本的 vm 上下文位于其中）；面向模型的 Consumer 是 [dsh-tool-workflow](../../Engine/workflow/tool-workflow)。提案与设计理由见 [dynamic-workflows Agent Note](../../../.agents/notes/implemented/feature/2026-07-05-dynamic-workflows.zh.md)。
 
-源码：浏览器安全词汇位于 [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts)，Host 请求与活跃运行句柄位于 [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts)。
+源码：浏览器安全词汇与 provider-neutral 的 `WorkflowRun` 句柄位于 [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts)；仅 Host 使用的启动请求位于 [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts)。
 
 ## 启动请求
 
@@ -96,8 +96,9 @@ interface WorkflowResult {
 
 ```ts type-equiv
 /**
- * Holder-owned live workflow. `result` never rejects; consumers may cancel
- * and must call idempotent `dispose()` to await script and child quiescence.
+ * Holder-owned live workflow shared by Cordis and native Consumers. `result`
+ * never rejects; Consumers may cancel and must call idempotent `dispose()` to
+ * await the selected Provider's script and child cleanup policy.
  */
 interface WorkflowRun {
   readonly id: WorkflowRunId
@@ -106,7 +107,7 @@ interface WorkflowRun {
   readonly result: Promise<WorkflowResult>
   /** Cancel the run and its children. */
   cancel(reason?: string): void
-  /** Cancel if needed and await bounded settlement and cleanup. */
+  /** Cancel if needed and await script termination and the Provider's owned child cleanup. */
   dispose(): Promise<void>
 }
 ```

@@ -57,6 +57,7 @@ class NativeWorkflowAdapter extends MockAdapter {
       await new Promise<void>((_resolve, reject) => {
         const signal = options.signal
         if (signal === undefined) throw new Error('workflow cancellation fixture requires a model signal')
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- preserve AbortSignal's exact cancellation reason.
         const abort = (): void => { reject(signal.reason) }
         if (signal.aborted) abort()
         else signal.addEventListener('abort', abort, { once: true })
@@ -78,6 +79,7 @@ interface FixtureOptions {
   readonly withRalph?: boolean
   readonly observerFailure?: 'sync' | 'async'
   readonly childDisposeGate?: { readonly wait: Promise<void>; readonly onDispose: (id: string) => void }
+  readonly childDisposeFailure?: { readonly reason: unknown }
   readonly disposeGraceMs?: number
 }
 
@@ -110,9 +112,12 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
         const observer = request.observer
         if (observer !== undefined && options.observerFailure !== undefined) {
           const notify = (event: string, dispatch: () => void | Promise<void>): void | Promise<void> => {
-            dispatch()
-            if (options.observerFailure === 'sync') throw new Error(`observer-${event}-sync`)
-            return Promise.reject(new Error(`observer-${event}-async`))
+            const dispatched = Promise.resolve(dispatch())
+            if (options.observerFailure === 'sync') {
+              void dispatched.catch(() => { /* the wrapper's synchronous failure is the fixture outcome */ })
+              throw new Error(`observer-${event}-sync`)
+            }
+            return dispatched.then(() => { throw new Error(`observer-${event}-async`) })
           }
           const failingObserver: NativeWorkflowObserver = {
             phase: title => notify('phase', () => observer.phase(title)),
@@ -151,7 +156,7 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
   await host.start()
   if (app === undefined || agents === undefined || subagents === undefined) throw new Error('native workflow composition is incomplete')
   if (workflow === undefined) throw new Error('native workflow registry is missing')
-  if (options.childDisposeGate !== undefined) {
+  if (options.childDisposeGate !== undefined || options.childDisposeFailure !== undefined) {
     const start = subagents.start.bind(subagents)
     subagents.start = async (request, _signal) => {
       const run = await start(request, new AbortController().signal)
@@ -160,6 +165,7 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
         options.childDisposeGate?.onDispose(String(run.id))
         await options.childDisposeGate?.wait
         await dispose()
+        if (options.childDisposeFailure !== undefined) throw options.childDisposeFailure.reason
       }
       return run
     }
@@ -195,13 +201,10 @@ it('runs parallel real WorkerRun children and records their durable Sessions bef
     const starts = parent!.events.filter(event => event.type === 'tool-workflow/agent-start')
     const ends = parent!.events.filter(event => event.type === 'tool-workflow/agent-end')
     expect(starts).toHaveLength(2)
-    expect(ends).toEqual(expect.arrayContaining([
-      expect.objectContaining({ data: expect.objectContaining({ outcome: 'completed' }) }),
-      expect.objectContaining({ data: expect.objectContaining({ outcome: 'completed' }) }),
-    ]))
+    expect(ends.map(event => event.data.outcome)).toEqual(['completed', 'completed'])
     expect(parent!.events.find(event => event.type === 'tool-workflow/run-end'))
       .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'completed' } })
-    const children = starts.map(event => String((event.data as { childId: string }).childId))
+    const children = starts.map(event => event.data.childId)
     expect(new Set(children).size).toBe(2)
     for (const id of children) {
       const child = sessions.find(session => session.id === id)
@@ -241,7 +244,7 @@ it('runs the native Ralph Consumer from a real structured child report', async (
     const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
     expect(parent).toBeDefined()
     expect(parent?.events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes('Ralph worker reported completion'))).toBe(true)
-    const childId = String((parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data as { childId: string } | undefined)?.childId ?? '')
+    const childId = parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data.childId ?? ''
     const child = sessions.find(session => session.id === childId)
     expect(child?.events.filter(event => event.type === 'tool/call' && event.data.name === 'structured_output')).toHaveLength(3)
     const structuredResults = child?.events.filter(event => event.type === 'tool/result') ?? []
@@ -277,7 +280,7 @@ it('rejects a completed structured child without an accepted report', async () =
       .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'completed' } })
     expect(parent?.events.some(event => event.type === 'tool/result'
       && JSON.stringify(event).includes('Ralph round 1 child failed'))).toBe(true)
-    const childId = String((parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data as { childId: string } | undefined)?.childId ?? '')
+    const childId = parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data.childId ?? ''
     const child = sessions.find(session => session.id === childId)
     expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
     expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
@@ -331,10 +334,10 @@ it('cancels and drains an accepted child before closing the durable workflow rec
     const sessions = await readSessions(state.sessions)
     const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
     expect(parent?.events.some(event => event.type === 'tool-workflow/agent-start')).toBe(true)
-    expect(parent?.events).toContainEqual(expect.objectContaining({ type: 'tool-workflow/agent-end', data: expect.objectContaining({ outcome: 'cancelled' }) }))
+    expect(parent?.events.filter(event => event.type === 'tool-workflow/agent-end').map(event => event.data.outcome)).toEqual(['cancelled'])
     expect(parent?.events.find(event => event.type === 'tool-workflow/run-end'))
       .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'cancelled' } })
-    const childId = String((parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data as { childId: string }).childId)
+    const childId = parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data.childId ?? ''
     const child = sessions.find(session => session.id === childId)
     expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
     expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
@@ -391,4 +394,30 @@ it('keeps native disposal pending until concurrent cancelled child Sessions rele
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
+})
+
+it('retains native workflow ownership when child disposal rejects undefined', async () => {
+  const state = await fixture([
+    toolCallResponse('workflow', 'workflow', { meta: { name: 'undefined-cleanup', description: 'check cleanup ownership' },
+      script: "const result = await agent('inspect the workspace'); return { result }" }),
+    textResponse('child finished'),
+    textResponse('continue after the workflow tool reports its cleanup failure'),
+  ], new Set(), { childDisposeFailure: { reason: undefined } })
+  let stopFailure: unknown
+  try {
+    await state.host.run(state.scope, { kind: 'native-workflow-undefined-cleanup' }, invocation =>
+      state.app.run(['run a workflow whose child disposer rejects undefined'], invocation.signal))
+    const run = state.run()
+    expect(run).toBeDefined()
+    expect((await run!.result).stopReason).toBe('error')
+    await expect(run!.dispose()).rejects.toBeInstanceOf(AggregateError)
+    const sessions = await readSessions(state.sessions)
+    const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
+    expect(parent?.events.find(event => event.type === 'tool-workflow/run-end')).toBeUndefined()
+    expect(state.adapter.requests).toHaveLength(3)
+  } finally {
+    try { await state.host.stop() } catch (error: unknown) { stopFailure = error }
+    await rm(state.directory, { recursive: true, force: true })
+  }
+  expect(stopFailure).toBeInstanceOf(AggregateError)
 })

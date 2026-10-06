@@ -68,7 +68,7 @@ The consumer owns the model-facing schema, the `tool:<toolName>` system-prompt g
 
 ### Durable session records
 
-For a root transport execution (`exec.parent` absent), the tool projects the run into the calling Agent's Session with four log-only events: run-start after `start()` returns, member starts and endings filtered by `run.id`, then run-end only after the result is available and disposal reaches quiescence. Nested transport calls execute normally but write no record. The first failed Session append disables later recording for that run with one warning, leaving either no record or a legal continuous prefix without changing the tool result or cleanup. The package invariant rejects duplicate starts, unpaired members, terminal events with open members, and updates after run-end on both cold load and live append, while accepting missing terminal suffixes.
+For a root Native execution (`exec.parent` absent), the tool projects the run into the calling Agent's Session with four log-only events: run-start after `start()` returns, member starts and endings filtered by `run.id`, then run-end only after the result is available and disposal reaches quiescence. Nested transport calls execute normally but write no record. A failed Session append cancels the run, disables later recording for that run, and rejects the consumer after owned cleanup settles; it never returns a completed result with only a prefix. Ordinary progress-observer failures have separate per-callback containment in the selected engine. The package invariant rejects duplicate starts, unpaired members, terminal events with open members, and updates after run-end on both cold load and live append, while accepting missing terminal suffixes.
 
 ### Render intent
 
@@ -162,7 +162,7 @@ These limits define what the tool does not yet support. They are current constra
 - **The parent turn blocks until the whole workflow settles** — there is no background start/poll API, and cancellation discards partial output as an error.
 - **`args` must be an object and Native result text is bounded** — callers wrap top-level arrays and scalars in a field; the canonical workflow result stays complete, while JSON beyond `maxResultChars` is truncated in the model-facing projection rather than stored behind a retrieval handle.
 - **Workflow policy is fixed per tool registration** — provider selection, caps, and tool name are deployment config, not model-call arguments.
-- **Durable records are top-level and observational** — nested PTC mode dispatches are not recorded, and a recording failure intentionally degrades to an incomplete prefix rather than changing execution.
+- **Durable records cover root Native calls** — nested PTC mode dispatches are not recorded, and a failed required append cancels the run and fails the consumer; ordinary progress observers remain contained separately.
 
 <a id="dev-note"></a>
 ### Dev Note

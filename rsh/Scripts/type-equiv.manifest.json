@@ -1509,7 +1509,7 @@
     {
       "doc": "rsh/Docs/subsystems/workflow.md",
       "symbol": "WorkflowRun",
-      "source": "rsh/Engine/workflow/workflow/src/runtime-types.ts"
+      "source": "rsh/Engine/workflow/workflow/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/lsp.md",

@@ -84,7 +84,7 @@ Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, arg
 
 ### 生命周期与归属
 
-运行由持有方负责：引擎插件卸载会阻止新的启动，但不会撤销已接受的运行，调用方必须 dispose 自己启动的每个运行。`dispose()` 在需要时取消，并等待选定 Provider 的脚本与子任务清理策略。若已接受的子任务仍在释放 Session 写入器与资源，Native 清理可在脚本终止后继续等待。
+Cordis 引擎中的运行由调用方负责：卸载引擎会阻止新的启动，但不会撤销已接受的运行，因此调用方必须 dispose 自己启动的每个运行。Native Provider 也会跟踪已接受的运行，并在安装卸载时取消和排空它们。两种模式下，`dispose()` 都会在需要时取消，并应用所选 Provider 的脚本与子任务清理策略；若已接受的子任务仍在释放 Session 写入器与资源，Native 清理可在脚本终止后继续等待。
 
 `workflow/start` 与 `workflow/end` 为运行配对；`workflow/phase` 与 `workflow/log` 携带脚本叙述；`workflow/agent-start` 与 `workflow/agent-end` 按 `seq` 为每次子 agent 调用配对。每个监听器都独立隔离：抛错的监听器只记录日志，不会饿死同级监听器或改变执行，并且每个监听器都会收到自己的 payload 副本。
 
@@ -131,7 +131,7 @@ Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, arg
 - **没有日志化或恢复**——脚本、子 agent 进度与中间值均不设检查点，因此进程重启后无法继续运行。
 - **没有已保存或嵌套工作流**——该能力只启动调用方提供的脚本，工作流脚本不会收到用于递归编排的 `workflow()` 钩子。
 - **没有 token 预算词汇**——引擎限制并发、条目与子 agent，但请求与结果都不会统计跨子 agent 的模型 token。
-- **运行由持有方负责，不由服务跟踪**——卸载引擎不会发现独立的活动句柄；每个消费方都必须 dispose 自己启动的运行。
+- **Cordis 运行由持有方负责**——卸载其引擎不会发现独立的活动句柄，因此每个消费方都必须 dispose 自己启动的运行；Native Provider 会另外跟踪并在卸载时排空已接受运行。
 
 <a id="dev-note"></a>
 ### 开发备注

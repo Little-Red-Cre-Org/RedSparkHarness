@@ -84,7 +84,7 @@ The package separates the script, run, result, and event contracts from executio
 
 ### Lifecycle and ownership
 
-A run is holder-owned: engine-plugin unload prevents new starts but does not revoke accepted runs, and the caller must dispose every run it starts. `dispose()` cancels if needed and awaits the selected Provider's script and child cleanup policy. Native cleanup can remain pending beyond script termination while an accepted child releases its Session writer and resources.
+A run is caller-owned under the Cordis engine: unloading that engine prevents new starts but does not revoke accepted runs, so the caller must dispose every run it starts. The Native Provider also tracks its accepted runs and cancels and drains them when its installation unloads. In either mode, `dispose()` cancels if needed and applies the selected Provider's script and child cleanup policy; Native cleanup can remain pending beyond script termination while an accepted child releases its Session writer and resources.
 
 `workflow/start` and `workflow/end` pair the run; `workflow/phase` and `workflow/log` carry script narration; `workflow/agent-start` and `workflow/agent-end` pair each child call by `seq`. Every listener is independently contained: a throwing listener is logged without starving peers or changing execution, and each receives its own payload clone.
 
@@ -131,7 +131,7 @@ These limits define what the capability does not yet support. They are current c
 - **No journaling or resume** — scripts, child progress, and intermediate values are not checkpointed, so a process restart cannot continue a run.
 - **No saved or nested workflows** — the capability starts caller-supplied scripts only, and a workflow script receives no `workflow()` hook for recursive orchestration.
 - **No token-budget vocabulary** — engines cap concurrency, items, and children, but neither the request nor the result accounts for model tokens across children.
-- **Runs are holder-owned, not service-tracked** — unloading the engine does not discover independent live handles; every consumer must dispose the run it started.
+- **Cordis runs are holder-owned** — unloading its engine does not discover independent live handles, so each consumer must dispose its run; the Native Provider separately tracks and drains accepted runs on unload.
 
 <a id="dev-note"></a>
 ### Dev Note
