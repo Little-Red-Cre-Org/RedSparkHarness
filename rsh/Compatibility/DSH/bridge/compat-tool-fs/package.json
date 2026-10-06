@@ -18,6 +18,7 @@
   "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-compat-fs-policy": "workspace:^",
     "@deepseek-ai/dsh-agent-loop": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-fs-observation-policy": "workspace:^",

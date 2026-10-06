@@ -1,4 +1,4 @@
-/** Built dsh profile adapts selected Cordis filesystem contributions into one native Session. */
+/** Built dsh CLI fixture composes selected Cordis filesystem contributions into one native Session. */
 import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -15,9 +15,9 @@ import {
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const bin = join(root, 'rsh/Programs/CLI/lib/bin.js')
 const scenario = join(root, 'snapshots/compat/file-round')
-const shippedProfile = join(root, 'rsh/Programs/CLI/tests/profiles/compat')
+const profileFixture = join(root, 'rsh/Programs/CLI/tests/profiles/compat')
 
-it('adapts legacy file tools through a shipped profile and writes one durable result', async () => {
+it('adapts legacy file tools through the compatibility test profile and writes one durable result', async () => {
   if (!existsSync(bin)) throw new Error('build dsh before running compat.snapshot.ts')
   const home = mkdtempSync(join(tmpdir(), 'dsh-native-compat-'))
   const profileDir = join(home, 'profiles', 'compat')
@@ -28,8 +28,8 @@ it('adapts legacy file tools through a shipped profile and writes one durable re
   const modules = join(profileDir, 'node_modules')
   mkdirSync(workspace, { recursive: true })
   mkdirSync(profileDir, { recursive: true })
-  copyFileSync(join(shippedProfile, 'package.json'), join(profileDir, 'package.json'))
-  copyFileSync(join(shippedProfile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
+  copyFileSync(join(profileFixture, 'package.json'), join(profileDir, 'package.json'))
+  copyFileSync(join(profileFixture, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   for (const [name, path] of [
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
@@ -80,11 +80,16 @@ it('adapts legacy file tools through a shipped profile and writes one durable re
     expect(run.stdout).toBe('compat done')
     expect(readFileSync(join(workspace, 'created.txt'), 'utf8')).toBe('from-compat-profile\n')
     const requests = readFileSync(modelAudit, 'utf8').trim().split('\n').map(line => JSON.parse(line) as {
-      messages: { content: { type: string }[] }[]; tools: { name: string }[]
+      messages: { role: string; content: { type: string; text?: string }[] }[]; tools: { name: string }[]
     })
     expect(requests).toHaveLength(2)
     expect(requests[0]?.tools.map(tool => tool.name)).toContain('write')
     expect(requests[0]?.messages[0]?.content[0]).toMatchObject({ type: 'text', text: expect.stringContaining('Use the write tool') })
+    expect(requests.map(request => request.messages.filter(message => message.role === 'user')
+      .flatMap(message => message.content.filter(block => block.type === 'text').map(block => block.text))))
+      .toEqual([['create the file'], ['create the file']])
+    expect(requests.map(request => request.messages.flatMap(message => message.content)
+      .filter(block => block.type === 'tool-result').length)).toEqual([0, 1])
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
@@ -92,8 +97,13 @@ it('adapts legacy file tools through a shipped profile and writes one durable re
       const reader = await storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
+        const inputs = events.filter(event => event.type === 'user/message')
+        expect(inputs).toHaveLength(1)
+        expect(inputs[0]).toMatchObject({ data: { content: [{ type: 'text', text: 'create the file' }] } })
         expect(events.filter(event => event.type === 'tool/call')).toHaveLength(1)
-        expect(events.filter(event => event.type === 'tool/result')).toHaveLength(1)
+        const results = events.filter(event => event.type === 'tool/result')
+        expect(results).toHaveLength(1)
+        expect(results[0]).toMatchObject({ data: { message: { content: [{ type: 'tool-result', isError: false }] } } })
       } finally { await reader.close() }
       const currentName = sessionFixtureName(0, SESSION_FORMAT_VERSION)
       const storedName = readdirSync(sessionRoot, { recursive: true })

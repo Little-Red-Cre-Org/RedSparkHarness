@@ -330,6 +330,9 @@ importers:
       '@deepseek-ai/dsh-agent-loop':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent-loop
+      '@deepseek-ai/dsh-compat-fs-policy':
+        specifier: workspace:^
+        version: link:../compat-fs-policy
       '@deepseek-ai/dsh-compat-fs-sandbox':
         specifier: workspace:^
         version: link:../compat-fs-sandbox

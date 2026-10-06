@@ -88,6 +88,12 @@
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
       "optional": true
+    },
+    "@deepseek-ai/dsh-subagent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
     }
   }
 }

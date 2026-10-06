@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-dsh-runtime` lets a native compatibility bridge share one Cordis Context with selected first-party DSH plugins. It requires the verified Cordis 4.0.2 release, mounts only an allowlisted plugin set, and disposes each mount with the native runtime. Native installations that do not select this package avoid the compatibility dependency.
+`dsh-compat-dsh-runtime` lets a native compatibility bridge share one Cordis Context with selected first-party DSH plugins. It accepts only Cordis 4.0.2, checked before Context creation, mounts only an allowlisted plugin set, and disposes each mount with the native runtime. Native installations that do not select this package avoid the compatibility dependency.
 
 ## Table of Contents
 
@@ -41,7 +41,7 @@ The native plugin accepts an empty configuration. It is selected through the nat
 
 ### Supported adapter set
 
-This Host-only set targets the same-version RSH 0.1.5-rc.2 workspace packages and Cordis 4.0.2. Other Cordis releases reject before Context creation. DSH runtime declarations and each adapter's accepted configuration are checked before mounting; arbitrary plugins and application bundles are unsupported.
+This Host-only set targets the current RSH 0.1.5-rc.2 workspace packages and accepts only Cordis 4.0.2. Each selected filesystem adapter checks its DSH runtime API revision, role, capability, and accepted configuration before mounting. These checks do not compare installed DSH package names and versions against a shared support record, so package-version changes are not rejected by this runtime. Arbitrary plugins and application bundles are unsupported.
 
 | Native installer | Legacy mounts | Required native services | Configuration |
 |---|---|---|---|
@@ -50,7 +50,7 @@ This Host-only set targets the same-version RSH 0.1.5-rc.2 workspace packages an
 | `compat-fs-sandbox` | `fs-sandbox`, internal `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
 | `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`, internal `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`; optional `sandboxPolicy` | Positive `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
 
-Names in the table use the `@deepseek-ai/dsh-` prefix; internal mounts belong to this runtime's allowlist. Native ownership awaits each Fiber's asynchronous removal and failed activation cleanup. Cordis Loader configuration, HMR and Client adapters are unsupported; native installation removal is supported. None of these installers creates a legacy Agent loop or Session writer.
+Names in the table use the `@deepseek-ai/dsh-` prefix; internal mounts belong to this runtime's allowlist. Native ownership awaits each Fiber's asynchronous removal and failed activation cleanup. Cordis Loader configuration, HMR and Client adapters are unsupported; native installation removal is supported. `NativeHost.replace` and CLI `dsh.profile.configReload: "live"` replace installations after profile or patch changes; they do not reload changed bridge module code. Cordis adapter HMR replaces a Cordis plugin mount, not native bridge code. None of these installers creates a legacy Agent loop or Session writer.
 
 -----
 
@@ -60,7 +60,7 @@ Names in the table use the `@deepseek-ai/dsh-` prefix; internal mounts belong to
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The provider creates one Cordis Context, installs `RshPluginHost`, and tracks every mounted Fiber by package name. The allowlist is checked before activation; failed activation disposes the partial Fiber and reports both activation and cleanup errors. Native ownership registers Context and mount cleanup before asynchronous activation settles.
+The provider creates one Cordis Context, installs `RshPluginHost`, and tracks every mounted Fiber by package name. The allowlist is checked before activation; failed activation disposes the partial Fiber and reports both activation and cleanup errors. Native ownership registers Context and mount cleanup before asynchronous activation settles. It also suppresses a synchronous `fs/observed` bridge echo only while the identical native scope, target, observation object, and actor are being forwarded between the Native and Cordis event buses; other events and listener failures keep their normal behavior.
 
 No runtime invariant companion is published because the package-name map only indexes mounts initiated through this provider for duplicate rejection and Fiber disposal; adapter services and events remain owned by the Cordis Context, so the map is not a second projection of their state.
 

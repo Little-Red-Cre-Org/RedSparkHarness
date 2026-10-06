@@ -42,7 +42,10 @@ export const plugin: NativePlugin = {
       const legacy = runtime.context
       native.on('fs/write-intent', (target, actor) => legacy.waterfall('fs/write-intent', target, actor, () => undefined))
       native.on('fs/edit-intent', (target, actor) => legacy.waterfall('fs/edit-intent', target, actor, () => undefined))
-      native.on('fs/observed', (target, observation, actor) => { legacy.emit('fs/observed', target, observation, actor) })
+      native.on('fs/observed', (target, observation, actor) => {
+        runtime.forwardFsObserved(native.scope, target, observation, actor,
+          () => { legacy.emit('fs/observed', target, observation, actor) })
+      })
       native.provide('fsObservationPolicy', { kind: 'observed-state' })
     }
   },
