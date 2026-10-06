@@ -30,6 +30,10 @@
       "types": "./lib/types/client.d.ts",
       "default": "./lib/types/client.js"
     },
+    "./compatibility-events": {
+      "types": "./lib/types/compatibility-events.d.ts",
+      "default": "./lib/types/compatibility-events.js"
+    },
     "./typert": {
       "types": "./lib/typert.host.d.ts",
       "default": "./lib/typert.host.js"
@@ -39,11 +43,26 @@
       "default": "./lib/typert.remote-client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./facts": {
+      "types": "./lib/types/facts.d.ts",
+      "default": "./lib/types/facts.js"
+    },
+    "./projection": {
+      "types": "./lib/types/projection.d.ts",
+      "default": "./lib/projection.js"
+    }
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/native.js",
+    "lib/projection.js",
+    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
     "lib/typert.host.js",
@@ -53,26 +72,29 @@
   ],
   "license": "MIT",
   "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/dsh-session-projection": "workspace:^",
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
   },
   "dependencies": {
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-loop": "workspace:^",
     "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
     "@deepseek-ai/dsh-bash-local": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
@@ -81,8 +103,45 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-checkpoint-policy": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
+    "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-subprocess-local": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "agents",
+        "activeSessions"
+      ],
+      "provides": [
+        "goals"
+      ],
+      "optional": []
+    }
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-invariants": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-scope": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-projection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-typert-protocol": {
+      "optional": true
+    }
   }
 }

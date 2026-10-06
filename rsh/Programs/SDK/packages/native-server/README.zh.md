@@ -30,9 +30,11 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 `session/prompt` 接受有序文本块及编码栅格图片（`{ type: "image", data, mimeType }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
 
-`session/steer` 通过精确的活动 Session 所有者，为已接收根任务的下一步排入有序提示内容。持久化后返回消息 ID，不中断当前模型派发。拒绝未知、空闲、已取消或属于其它 Program 的所有者。如果下一步开始之前任务被取消或自然结束，已接收输入仍保留为待处理项，恢复轮次会认领它。引导输入与普通提示共用图片准入。
+`session/steer` 通过精确的活动 Session 所有者，为已接收根任务的下一步排入有序提示内容。持久化后返回消息 ID，不中断当前模型派发。若 turn 中断后该 root 已暂停，steer 也会唤醒它的普通驱动；Goal 驱动显式重新启用之前，Goal 准入仍保持关闭。拒绝未知、空闲、已取消或属于其它 Program 的所有者。如果下一步开始之前任务被取消或自然结束，已接收输入仍保留为待处理项，恢复轮次会认领它。引导输入与普通提示共用图片准入。
 
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
+
+应用提供的 `rootExecution` 指向 `initialize` 选定的同一个执行器。`ready(signal)` 等待初始化成功；若初始化失败、调用方取消或 SDK 关闭则会拒绝。其它 root 操作只能在就绪后使用，因此已安装的 Provider 可沿用 SDK Program 选定的路由，无需创建另一个执行器或增加 SDK wire 方法。[根执行器决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-07-native-sdk-provides-its-root-executor.zh.md)说明了这一所有权。
 
 此 Program 已接收根任务的委派子会话先发送 `subagent.started` 血缘通知，再发送后端已接收的 `session.event`。选定的原生 Subagent Provider 仅在真实的一次性结果或可持续驻留阶段结束并释放写入器后报告 `subagent.finished`；仅打断某一轮不会结束仍驻留的子任务。服务端将结果与此 SDK 根任务准入的精确子、父 Agent 匹配；仅分离所有者不会报告成功。两个 SDK 的 `subscribeSessionTree` 与运行订阅包含这些后代，根响应事件仍独立保存。共用相同 Provider 的其它 Program 不会混入。关闭时先排空已接受的后代、发送其结束结果并刷新传输，再释放观察者。
 

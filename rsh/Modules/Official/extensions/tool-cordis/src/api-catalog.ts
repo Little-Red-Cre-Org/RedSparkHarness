@@ -1090,7 +1090,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       {
         signature: 'create(agent: Agent, request: CreateGoalRequest): GoalView',
         description: 'Create and arm a goal. A completed goal may be replaced; every other current phase must be cleared or resumed instead.',
-        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'objective and optional round cap.' }],
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'objective, optional round cap and observed Goal reference.' }],
         returns: 'the created live view.',
       },
       {
@@ -1132,7 +1132,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       {
         signature: '@Remote(\'create\') remoteExportCreate(agent: Agent, request: CreateGoalRequest): CreateGoalResult',
         description: 'Create one Goal through the remote boundary.',
-        parameters: [{ name: 'agent', description: 'exact live Agent resolved from the wire identity.' }, { name: 'request', description: 'objective and optional round cap.' }],
+        parameters: [{ name: 'agent', description: 'exact live Agent resolved from the wire identity.' }, { name: 'request', description: 'objective, optional round cap and observed Goal reference.' }],
         returns: 'the created Goal identity.',
       },
     ],
@@ -4148,7 +4148,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'CreateGoalRequest',
-    declaration: 'export interface CreateGoalRequest {\n    readonly objective: string;\n    readonly maxGoalRounds?: number;\n}',
+    declaration: 'export interface CreateGoalRequest {\n    readonly expectedRef?: GoalRef | null;\n    readonly objective: string;\n    readonly maxGoalRounds?: number;\n}',
   },
   {
     name: 'CreateGoalResult',

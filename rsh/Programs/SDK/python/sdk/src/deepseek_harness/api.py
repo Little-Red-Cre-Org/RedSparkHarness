@@ -137,7 +137,7 @@ class Session:
         self.id = session_id
 
     def steer(self, input: str | list[JsonObject]) -> str:
-        """Queue input for this admitted native SDK root's next step without cancelling dispatch.
+        """Queue input for this admitted native SDK root's next step and wake it after an interruption.
 
         Returns the durable message id; idle Sessions and unsupported profiles reject.
         """

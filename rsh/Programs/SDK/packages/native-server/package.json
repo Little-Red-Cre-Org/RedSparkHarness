@@ -23,7 +23,7 @@
     "requires": ["fs", "sessionPersistence", "model", "modelExecution", "agents", "sessionExecution", "activeSessions", "attachments"],
     "optional": ["subagents", "tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext", "agentInstructions", "modelSelection",
       "agentPresets", "workspaceRegistry"],
-    "provides": ["application"]
+    "provides": ["application", "rootExecution"]
   } },
   "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.d.ts"],
   "license": "MIT",

@@ -1,0 +1,8 @@
+version: 1
+scenario: scheduled-root-origin
+profile: native-sdk
+composition: native-sdk-scheduled-root-origin
+recording: authored
+header:
+  class: native-sdk-scheduled-root-origin
+  pin: true

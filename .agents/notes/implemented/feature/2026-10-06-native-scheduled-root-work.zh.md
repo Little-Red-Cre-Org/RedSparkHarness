@@ -26,8 +26,8 @@ Cordis gateway 会加载 `@deepseek-ai/dsh-typert-protocol`，公开 Client 声�
 
 ## 后果
 
-调度器作为可选安装出现在 `native-web` 与 `native-tui` 的首次使用组合中。已有的用户 profile 文件保持原样。原生 SDK 与 ACP profile 也组合了原生根执行器，但未安装或验收调度器；通用 SDK 工具结果投影不会安装定时任务管理能力。
+调度器作为可选安装出现在 `native-web` 与 `native-tui` 的首次使用组合中。已有的用户 profile 文件保持原样。随附的原生 SDK profile 默认不安装调度器，但无密钥的 TypeScript 与 Python carrier 已通过 `rootExecution` 服务验证定时来源的持久化和同一 Session 冷恢复。本次变更未验证 ACP 调度。
 
 ## 验证
 
-定向原生 Host 场景覆盖到期计划、独立持久 Session、仅维护时在发布 owner 前保存来源、Provider 替换与冷恢复、防止递归管理、无需模型请求的所有者管理、取消以及规范工具结果。配对的 TypeScript 与 Python SDK 用例确认可忽略来源事件保留在运行结果投影中。Profile 模板与原生依赖检查覆盖安装元数据和无 Cordis 的入口依赖图。
+定向原生 Host 场景覆盖到期计划、独立持久 Session、仅维护时在发布 owner 前保存来源、Provider 替换与冷恢复、防止递归管理、无需模型请求的所有者管理、取消以及规范工具结果。配对的 TypeScript 与 Python SDK 用例确认可忽略的来源标记在关闭和同一 Session 冷恢复后仍保留于持久 Session；当前运行投影不会重放该历史标记，并会保留回合事件和最终响应。Profile 模板与原生依赖检查覆盖安装元数据和无 Cordis 的入口依赖图。

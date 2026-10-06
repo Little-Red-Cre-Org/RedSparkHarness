@@ -3,6 +3,9 @@
  * @module @deepseek-ai/dsh-commands
  */
 
+import { parseCommand } from './parse.ts'
+export { parseCommand } from './parse.ts'
+export type { ParsedCommand } from './parse.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -77,14 +80,6 @@ export interface CommandDefinition {
   readonly handler: (invocation: CommandInvocation) => CommandResult | Promise<CommandResult>
 }
 
-/** Syntactically valid slash command before registry resolution. */
-export interface ParsedCommand {
-  /** Lowercase command name without the leading slash. */
-  readonly name: string
-  /** Exact text following the command name. */
-  readonly rawInput: string
-}
-
 interface RegisteredCommand {
   readonly definition: CommandDefinition
   readonly descriptor: CommandDescriptor
@@ -114,21 +109,6 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     commands: CommandRuntime
   }
-}
-
-/**
- * Parse an exact slash command without normalizing its trailing input.
- *
- * @param line - Complete candidate command line.
- * @returns The parsed command, or `undefined` when the line is not a command.
- */
-export function parseCommand(line: string): ParsedCommand | undefined {
-  const match = /^\/([a-z][a-z0-9_-]*)(?=$|[\t\n\r ])/u.exec(line)
-  if (match === null) return undefined
-  const name = match[1]
-  /* v8 ignore next -- the first capture is required whenever the regular expression matches */
-  if (name === undefined) return undefined
-  return Object.freeze({ name, rawInput: line.slice(match[0].length) })
 }
 
 /** Convert arbitrary abort reasons to one stable rejected Error. */

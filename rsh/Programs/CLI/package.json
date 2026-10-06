@@ -75,7 +75,10 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent-control": "workspace:^"
+    "@deepseek-ai/dsh-tool-subagent-control": "workspace:^",
+    "@deepseek-ai/dsh-goal": "workspace:^",
+    "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
+    "@deepseek-ai/dsh-tool-goal": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -97,8 +100,6 @@
     "@deepseek-ai/dsh-compaction-basic": "workspace:^",
     "@deepseek-ai/dsh-compaction-tool-result-pruner": "workspace:^",
     "@deepseek-ai/dsh-cordis-client-runner": "workspace:^",
-    "@deepseek-ai/dsh-goal": "workspace:^",
-    "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
     "@deepseek-ai/dsh-headless": "workspace:^",
     "@deepseek-ai/dsh-hooks-claude-code": "workspace:^",
     "@deepseek-ai/dsh-hooks-codex": "workspace:^",
@@ -128,7 +129,6 @@
     "@deepseek-ai/dsh-tool-bash-persistent": "workspace:^",
     "@deepseek-ai/dsh-tool-cordis": "workspace:^",
     "@deepseek-ai/dsh-tool-fs-search": "workspace:^",
-    "@deepseek-ai/dsh-tool-goal": "workspace:^",
     "@deepseek-ai/dsh-tool-jobs": "workspace:^",
     "@deepseek-ai/dsh-tool-present": "workspace:^",
     "@deepseek-ai/dsh-tool-pwsh": "workspace:^",

@@ -30,7 +30,7 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Engine/goal/goal"
+      "path": "../../../../Engine/goal/goal/tsconfig.host.json"
     },
     {
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"

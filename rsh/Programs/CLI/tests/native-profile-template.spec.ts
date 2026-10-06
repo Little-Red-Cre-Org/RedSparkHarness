@@ -89,6 +89,24 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   expect(profile.installations.find(row => row.id === 'task-scheduler')).toMatchObject({
     config: { path: join('C:/rsh-native-tui', 'profiles', 'native-tui', 'task-scheduler.sqlite') },
   })
+  expect(profile.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))).toEqual([
+    { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: 'root' },
+    { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
+    { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'root' },
+  ])
+  expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
+})
+
+it('installs the native Goal Definition, driver, and model tools in headless profiles', () => {
+  for (const platform of ['win32', 'linux'] as const) {
+    const profile = shippedNativeProfileComposition('/tmp/rsh-goal', 'native-headless', platform)
+    expect(profile.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))).toEqual([
+      { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: 'root' },
+      { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
+      { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'root' },
+    ])
+    expect(profile.installations.some(row => row.plugin === '@deepseek-ai/dsh-command-goal')).toBe(false)
+  }
 })
 
 it('ships a complete one-shot shell seam in the native headless profile', () => {

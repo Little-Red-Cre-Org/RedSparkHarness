@@ -263,7 +263,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Modules/Official/interaction/commands/src/types.ts:112`](../Modules/Official/interaction/commands/src/types.ts)
+来源：[`rsh/Modules/Official/interaction/commands/src/facts.ts:87`](../Modules/Official/interaction/commands/src/facts.ts)
 
 <a id="commandrun--log-only"></a>
 
@@ -283,7 +283,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'command/run': { commandId: CommandId; name: string; args?: string; source: CommandSource }
 ```
 
-来源：[`rsh/Modules/Official/interaction/commands/src/types.ts:105`](../Modules/Official/interaction/commands/src/types.ts)
+来源：[`rsh/Modules/Official/interaction/commands/src/facts.ts:80`](../Modules/Official/interaction/commands/src/facts.ts)
 
 ### `compaction/*`
 
@@ -462,7 +462,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'goal/change': GoalChangeMeta
 ```
 
-来源：[`rsh/Engine/goal/goal/src/domain.ts:66`](../Engine/goal/goal/src/domain.ts)
+来源：[`rsh/Engine/goal/goal/src/facts.ts:57`](../Engine/goal/goal/src/facts.ts)
 
 ### `hook/*`
 
@@ -732,6 +732,21 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 ```
 
 来源：[`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/types.ts)
+
+<a id="sessionroot-origin--log-only"></a>
+
+#### `session/root-origin` — log-only
+
+```ts persistence-catalog
+/**
+ * Program-selected classification for a scheduled root. It is informational;
+ * older readers may skip it, while current Programs use it to keep scheduled
+ * roots ineligible for interactive management after replacement or restore.
+ */
+'session/root-origin': { origin: 'scheduled' }
+```
+
+来源：[`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 

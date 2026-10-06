@@ -27,9 +27,13 @@ kind: "package-reference"
 
 当会话需要在多轮与多次重启之间记住一个长期完成目标时，挂载 `dsh-goal`。本包是服务：模型工具、`/goal` 命令与续行驱动器都是消费同一 goal 状态的独立包，因此只挂载本包只会存储和提供 goal，不会启动任何工作。
 
+`./projection` 导出浏览器安全的 `foldGoal(events)`，读取完整、有序的 Session 历史。它返回持久化 Goal 阶段、修订、轮数与阻塞原因，不包含 activation 或修改权限；无效回放会失败，不推测 UI 状态。Host 与 Client 编译面共用该纯 fold。
+
 ### 何时使用
 
 goal 适合一个需要跨自动 Goal Round 持续的长期完成目标——例如完成一次迁移，或修复所有失败的文档门禁。常规单轮工作不应创建 goal。服务每会话至多保留一个当前 goal：未完成的 goal 必须先 edit、pause、resume、block 或 clear，才能被另一个替代；已完成的 goal 可以直接被替换。
+
+create 请求可携带 `expectedRef`：`null` 要求当前没有 Goal；id/revision 引用要求被替换的已完成 Goal 与该引用一致。原生创建在串行修改内检查已捕获的观察值，兼容创建在提交前检查。省略该字段保持普通创建行为。
 
 ### 配置服务
 
@@ -106,6 +110,7 @@ view.activation                        // 'armed' | 'disarmed' — not persisted
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`GoalService`、配置 schema、变更、续行启用缓存、投影单元 |
 | [`src/domain.ts`](src/domain.ts) | 持久变更载荷、`goal/changed` 事件、goal 消息来源归属 |
+| [`src/compatibility-events.ts`](src/compatibility-events.ts) | 仅供 Cordis 使用的 activation 事件声明，由 `./compatibility-events` 导出 |
 | [`src/types.ts`](src/types.ts) | 纯客户端安全类型：`GoalView`、`GoalSnapshot`、`GoalActivationChanged`、投影键声明 |
 | [`src/fold.ts`](src/fold.ts) | 持久 goal 变更的严格回放折叠与解码器 |
 | [`src/runtime.ts`](src/runtime.ts) | `GoalId` 品牌、`GoalError` 代码、变更版本常量 |
@@ -113,7 +118,11 @@ view.activation                        // 'armed' | 'disarmed' — not persisted
 
 ### 事件与归属
 
-`goal/changed` 在持久事件提交后触发，监听器失败会被隔离；载荷携带操作、精确 ref 与最新视图（clear tombstone 时省略）。`goal/activation-changed` 在不改变持久状态的情况下，转发携带精确当前 ref 的进程本地 `armed`／`disarmed` 边界；clear 后则不携带 goal。已准入的续行 Round 通过 `user/message` 事件上的 `GoalMessageSource { goalId, revision, round }` 归属，严格折叠会将其验证为当前 goal 的下一个已准入 Round。
+`goal/changed` 在持久事件提交后触发，监听器失败会被隔离；载荷携带操作、精确 ref 与最新视图（clear tombstone 时省略）。`goal/activation-changed` 在不改变持久状态的情况下，转发携带精确当前 ref 的进程本地 `armed`／`disarmed` 边界；clear 后则不携带 goal。Cordis 消费方从 `@deepseek-ai/dsh-goal/compatibility-events` 导入此 activation 事件声明；`./types` 与 `./native` 保持不依赖 Cordis。已准入的续行 Round 通过 `user/message` 事件上的 `GoalMessageSource { goalId, revision, round }` 归属，严格折叠会将其验证为当前 goal 的下一个已准入 Round。
+
+### 原生 profile
+
+原生 profile 选择 `./native`，通过精确的 Program 所有 `activeSessions` 服务提供 `goals`。Provider 先订阅持久化事件，再恢复严格的 Goal 事实；等待 flush 后重新拒绝陈旧 revision，只在进程内 root 驻留租约中保留自动执行许可。恢复 active Goal 不会自动授权它。关闭或复制的 Agent/Session owner 会明确报错，本包不增加 writer 或模型循环。
 
 </details>
 

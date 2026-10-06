@@ -5,7 +5,7 @@ import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootExecutionOperations, NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
 import { SessionId, SessionSeq, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
@@ -64,9 +64,18 @@ interface NativeSdkChildLineage {
   readonly rootSessionId: NativeSessionId
 }
 
+interface NativeSdkRootExecutionWaiter {
+  readonly wake: () => void
+  readonly fail: (cause: unknown) => void
+}
+
 /** One native executor and one JSON-RPC connection owned by the profile. */
 export class NativeSdkApplication implements NativeApplication {
+  /** The SDK Program's root executor, available after initialize selects its route. */
+  readonly rootExecution: NativeRootExecutionOperations
   private executor: NativeHeadlessApplication | undefined
+  private readonly rootExecutionWaiters = new Set<NativeSdkRootExecutionWaiter>()
+  private rootInitializationFailure: { readonly cause: unknown } | undefined
   private readonly abort = new AbortController()
   private readonly sessions = new Map<string, Promise<void>>()
   private readonly pending = new Set<Promise<unknown>>()
@@ -76,7 +85,29 @@ export class NativeSdkApplication implements NativeApplication {
   private initializing = false
 
   constructor(private readonly context: NativeContext, private readonly config: Config,
-    private readonly input: Readable = process.stdin, private readonly output: Writable = process.stdout) {}
+    private readonly input: Readable = process.stdin, private readonly output: Writable = process.stdout) {
+    const rootExecution = {
+      ready: async (signal) => {
+        this.assertOpen()
+        const lifetime = AbortSignal.any([signal, this.abort.signal, this.context.signal])
+        const executor = await this.waitForExecutor(lifetime)
+        this.assertOpen()
+        await executor.rootExecution.ready(lifetime)
+      },
+      resolve: id => this.rootOperations().resolve(id),
+      workspaceRoutes: () => this.rootOperations().workspaceRoutes(),
+      selectWorkspace: (request, signal) => this.rootOperations().selectWorkspace(request, signal),
+      releaseWorkspace: (id, signal) => this.rootOperations().releaseWorkspace(id, signal),
+      capture: owner => this.rootOperations().capture(owner),
+      cancel: owner => this.rootOperations().cancel(owner),
+      execute: (request, signal) => this.rootOperations().execute(request, signal),
+      settle: (request, signal) => this.rootOperations().settle(request, signal),
+      maintenance: (request, operation, signal) => this.rootOperations().maintenance(request, operation, signal),
+      fork: (request, signal) => this.rootOperations().fork(request, signal),
+      selectPreset: (request, signal) => this.rootOperations().selectPreset(request, signal),
+    } satisfies Omit<NativeRootExecutionOperations, 'deletions'>
+    this.rootExecution = rootExecution
+  }
 
   /**
    * Serve the existing SDK methods until shutdown, EOF, or Host cancellation.
@@ -217,6 +248,7 @@ export class NativeSdkApplication implements NativeApplication {
     this.assertOpen()
     if (this.executor !== undefined || this.initializing) throw new Error('native SDK: already initialized')
     this.initializing = true
+    this.rootInitializationFailure = undefined
     try {
       const cwd = resolve(nonempty(raw.cwd, 'cwd'))
       const provider = nonempty(raw.provider, 'provider')
@@ -235,8 +267,60 @@ export class NativeSdkApplication implements NativeApplication {
         ...reasoningEffort === undefined ? {} : { reasoningEffort },
         ...maxTokens === undefined ? {} : { maxTokens },
       }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
+      const deletions = this.executor.rootExecution.deletions
+      if (deletions !== undefined) Object.defineProperty(this.rootExecution, 'deletions', { enumerable: true, value: deletions })
+      Object.freeze(this.rootExecution)
+      for (const waiter of [...this.rootExecutionWaiters]) waiter.wake()
       return { serverInfo: { name: 'deepseek-harness-sdk-runtime', version: '0.0.1' } }
+    } catch (failure: unknown) {
+      this.rootInitializationFailure = { cause: failure }
+      this.rejectRootExecutionWaiters(failure)
+      throw failure
     } finally { this.initializing = false }
+  }
+
+  private rootOperations(): NativeRootExecutionOperations {
+    const executor = this.executor
+    if (executor === undefined) throw new Error('native SDK: initialize first')
+    return executor.rootExecution
+  }
+
+  private async waitForExecutor(signal: AbortSignal): Promise<NativeHeadlessApplication> {
+    const executor = this.executor
+    if (executor !== undefined) return executor
+    if (this.closing || this.abort.signal.aborted || this.context.signal.aborted) {
+      return Promise.reject(new Error('native SDK: closing before initialize'))
+    }
+    if (this.rootInitializationFailure !== undefined) throw this.rootInitializationFailure.cause
+    signal.throwIfAborted()
+    return new Promise((resolveExecutor, rejectExecutor) => {
+      const remove = (): void => {
+        signal.removeEventListener('abort', abort)
+        this.rootExecutionWaiters.delete(waiter)
+      }
+      const wake = (): void => {
+        const ready = this.executor
+        if (ready === undefined) return
+        remove()
+        resolveExecutor(ready)
+      }
+      const fail = (cause: unknown): void => {
+        remove()
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- preserve AbortSignal's exact cancellation reason.
+        rejectExecutor(cause)
+      }
+      const abort = (): void => {
+        fail(signal.reason)
+      }
+      const waiter = { wake, fail }
+      this.rootExecutionWaiters.add(waiter)
+      signal.addEventListener('abort', abort, { once: true })
+      wake()
+    })
+  }
+
+  private rejectRootExecutionWaiters(cause: unknown): void {
+    for (const waiter of [...this.rootExecutionWaiters]) waiter.fail(cause)
   }
 
   private async fork(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<{ sessionId: string }> {
@@ -301,7 +385,7 @@ export class NativeSdkApplication implements NativeApplication {
       throw new Error('native SDK: steering owner settled during attachment admission')
     }
     const message = createUserMessage({ content, source: { kind: 'user' } })
-    const messageId = await owner.enqueue(message, 'next-step', false, signal)
+    const messageId = await owner.enqueue(message, 'next-step', true, signal)
     return { messageId: String(messageId) }
   }
 
@@ -361,9 +445,13 @@ export const plugin: NativePlugin = {
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
     'agentPresets', 'workspaceRegistry'],
-  provides: ['application'],
+  provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)
-    return (context) => { context.provide('application', new NativeSdkApplication(context, config)) }
+    return (context) => {
+      const application = new NativeSdkApplication(context, config)
+      context.provide('application', application)
+      context.provide('rootExecution', application.rootExecution)
+    }
   },
 }

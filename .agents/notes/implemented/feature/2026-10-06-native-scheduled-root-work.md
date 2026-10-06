@@ -26,8 +26,8 @@ The Cordis gateway loads `@deepseek-ai/dsh-typert-protocol`, and the published C
 
 ## Consequences
 
-The scheduler is an opt-in installation in `native-web` and `native-tui` first-use compositions. Existing user profile files stay untouched. Native SDK and ACP profiles also compose the native root executor, but do not install or validate the scheduler; generic SDK tool-result projection does not install scheduled-work management.
+The scheduler is an opt-in installation in `native-web` and `native-tui` first-use compositions. Existing user profile files stay untouched. The shipped native SDK profile does not install the scheduler by default, but a keyless TypeScript and Python carrier validates scheduled-origin persistence and same-Session cold restore through its `rootExecution` service. ACP scheduling is not validated by this change.
 
 ## Verification
 
-Focused native Host scenarios cover due-plan execution, independent durable Sessions, origin persistence before maintenance-only owner publication, Provider replacement and cold restore, denied recursive management, owner management without model requests, cancellation, and canonical tool results. Paired TypeScript and Python SDK cases confirm the ignorable origin event remains in run projections. Profile-template and native dependency checks cover installation metadata and the Cordis-free entry graph.
+Focused native Host scenarios cover due-plan execution, independent durable Sessions, origin persistence before maintenance-only owner publication, Provider replacement and cold restore, denied recursive management, owner management without model requests, cancellation, and canonical tool results. Paired TypeScript and Python SDK cases confirm the ignorable origin marker remains in the durable Session across close and same-Session cold restore, while the current-run projection does not replay that historical marker and preserves turn events and the final response. Profile-template and native dependency checks cover installation metadata and the Cordis-free entry graph.
