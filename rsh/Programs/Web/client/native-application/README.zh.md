@@ -32,7 +32,7 @@ kind: "package-reference"
 
 转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。传输和历史错误会显示；发送失败时保留草稿。
 
-配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。页面不提供持久化语言偏好或 Settings UI。
+配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取活动 Settings 注册项发布的 schema，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。编辑器按现有索引修改数组元素；不支持的数组结构修改会明确报错，不会误报成功。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
 React 与 Session 消息投影通过 peer 依赖共享应用实例；Session Consumer 只作为类型依赖，运行时由选定 capability 提供。
 
@@ -53,7 +53,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 <a id="dev-note"></a>
 ## 开发备注
 
-生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)。
+生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -79,4 +79,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
-- 文件上传、完整 Sidebar、布局及 Settings 仍属于独立的原生 Client 迁移。
+- 文件上传、完整 Sidebar、布局、浏览器授权流程、不透明凭据 grant 编辑及完整旧版插件 Settings 页面仍属于独立的原生 Client 迁移。
+- Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

@@ -6,12 +6,13 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import { HumanInteraction } from './human.tsx'
 import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
+import { SettingsPage } from './settings-page.tsx'
 
 type Translate = (key: ConversationLocaleKey) => string
 
@@ -65,7 +66,12 @@ function Message({ event, t, sessionId, controller }: {
   </article>
 }
 
-function Conversation({ controller, t, locale }: { controller: NativeConversationController; t: Translate; locale: 'en' | 'zh' }) {
+function Conversation({ controller, client, t, locale }: {
+  controller: NativeConversationController
+  client: NativeSessionClient
+  t: Translate
+  locale: 'en' | 'zh'
+}) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const toolCards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
@@ -73,11 +79,14 @@ function Conversation({ controller, t, locale }: { controller: NativeConversatio
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
   const [uploadKey, setUploadKey] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
+  if (showSettings) return <SettingsPage client={client} t={t} onBack={() => setShowSettings(false)} />
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <h1>{t('title')}</h1>
     <nav aria-label={t('sessions')}>
+      <button type="button" onClick={() => setShowSettings(true)}>{t('settings')}</button>
       <button disabled={!ready} onClick={() => { void controller.create() }}>{t('create')}</button>
       <select aria-label={t('sessions')} value={snapshot.selected ?? ''} disabled={!ready}
         onChange={(event) => {
@@ -153,9 +162,10 @@ export const plugin: NativePlugin = {
       const selected = locale ?? (globalThis.navigator.languages.some(language => language.toLowerCase().startsWith('zh')) ? 'zh' : 'en')
       const dictionary = selected === 'zh' ? zh : en
       const t: Translate = key => dictionary[key]
-      const controller = new NativeConversationController(context.require('clientNativeSession'), { maxLiveTextChars, maxLiveEvents })
+      const client = context.require('clientNativeSession')
+      const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
       context.own(() => controller.close())
-      context.provide('clientApplication', { render: () => <Conversation controller={controller} t={t} locale={selected} /> })
+      context.provide('clientApplication', { render: () => <Conversation controller={controller} client={client} t={t} locale={selected} /> })
       void controller.load()
     }
   },

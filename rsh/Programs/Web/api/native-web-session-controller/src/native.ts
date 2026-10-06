@@ -30,6 +30,11 @@ import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
 import type { NativeUserQuestionRegistry } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
+import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
+import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import type {} from '@deepseek-ai/dsh-credentials/native'
+import { NativeSettingsConflictError, type NativeSettings, type NativeSettingsPathOp } from '@deepseek-ai/dsh-settings/native'
+import type {} from '@deepseek-ai/dsh-settings/native'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -67,6 +72,17 @@ function sessionId(value: unknown): SessionId {
   return SessionId(value)
 }
 
+function projectCredentialInfo(info: CredentialInfo): CredentialInfo {
+  return { configured: info.configured, ...info.source === undefined ? {} : { source: info.source }, writable: info.writable }
+}
+
+function settingsConflictDetails(error: unknown): Record<string, unknown> | undefined {
+  if (!(error instanceof NativeSettingsConflictError)) return undefined
+  return {
+    namespace: error.namespace, expected: error.expected, actual: error.actual,
+  }
+}
+
 /** Resolve Program settings and resource limits before installing routes.
  * @param input - profile configuration.
  * @returns validated native Session configuration.
@@ -81,10 +97,18 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human'])
+  'session/select-model', 'session/select-preset', 'session/answer-human', 'settings/describe', 'settings/mutate',
+  'credentials/describe', 'credentials/set', 'credentials/unset'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
+const nativeSettingsMutation = z.strictObject({
+  ns: z.string().regex(/^[a-z][a-z0-9-]*$/), ops: z.array(z.unknown()).max(512),
+  expectedRevision: z.number().int().refine(Number.isSafeInteger).nonnegative(),
+})
+const nativeCredentialRefs = z.strictObject({ refs: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/)).max(64) })
+const nativeCredentialSet = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), value: z.string().min(1) })
+const nativeCredentialUnset = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/) })
 
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
@@ -95,6 +119,8 @@ export interface NativeWebSelectionProviders {
   } | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
   readonly attachments?: AttachmentOperations | undefined
+  readonly settings?: NativeSettings | undefined
+  readonly credentials?: NativeCredentials | undefined
 }
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
@@ -314,6 +340,9 @@ export class NativeWebSessionService {
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
+        return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
+      }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/prompt') {
@@ -403,8 +432,83 @@ export class NativeWebSessionService {
         throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
+      if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
+        const settingsRequest = endpoint.startsWith('settings/')
+        const conflict = settingsRequest ? settingsConflictDetails(error) : undefined
+        return { ok: false, error: {
+          code: conflict === undefined ? settingsRequest ? 'native/settings' : 'native/credentials' : 'native/settings-conflict',
+          message: conflict === undefined ? settingsRequest ? 'Settings request failed.' : 'Credentials request failed.'
+            : 'Settings changed since it was loaded.',
+          details: conflict ?? {},
+        } }
+      }
       return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
     }
+  }
+
+  private async configuration(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
+    if (endpoint === 'settings/describe') {
+      if (Object.keys(object(payload)).length !== 0) throw new TypeError('native settings: describe takes no fields')
+      return this.settings().describe()
+    }
+    if (endpoint === 'settings/mutate') {
+      const request = nativeSettingsMutation.parse(payload)
+      const settings = this.settings()
+      if (!settings.describe().some(row => row.namespace === request.ns)) {
+        throw new Error(`native settings: namespace "${request.ns}" is not exposed to the native page`)
+      }
+      await settings.mutate(request.ns, request.ops as NativeSettingsPathOp[], request.expectedRevision)
+      signal.throwIfAborted()
+      const next = settings.describe().find(row => row.namespace === request.ns)
+      if (next === undefined) throw new Error(`native settings: namespace "${request.ns}" was disposed after the write`)
+      return next
+    }
+    if (endpoint === 'credentials/describe') {
+      const { refs } = nativeCredentialRefs.parse(payload)
+      const allowed = this.acceptedCredentialRefs()
+      for (const ref of refs) if (!allowed.has(ref)) {
+        throw new Error(`native credentials: reference "${ref}" is not declared by an active settings schema`)
+      }
+      const credentials = this.credentials()
+      const entries = await Promise.all([...new Set(refs)].map(async ref =>
+        [ref, projectCredentialInfo(await credentials.describe(credentialRef(ref)))] as const))
+      signal.throwIfAborted()
+      return Object.fromEntries(entries)
+    }
+    if (endpoint === 'credentials/set') {
+      const { ref, value } = nativeCredentialSet.parse(payload)
+      await this.credentials().set(credentialRef(this.acceptedCredentialRef(ref)), value)
+      signal.throwIfAborted()
+      return { updated: true }
+    }
+    if (endpoint === 'credentials/unset') {
+      const { ref } = nativeCredentialUnset.parse(payload)
+      await this.credentials().unset(credentialRef(this.acceptedCredentialRef(ref)))
+      signal.throwIfAborted()
+      return { updated: true }
+    }
+    throw new Error(`native web session: unsupported endpoint "${endpoint}"`)
+  }
+
+  private settings(): NativeSettings {
+    if (this.selections.settings === undefined) throw new Error('native settings: this composition has no settings service')
+    return this.selections.settings
+  }
+
+  private credentials(): NativeCredentials {
+    if (this.selections.credentials === undefined) throw new Error('native credentials: this composition has no credential provider')
+    return this.selections.credentials
+  }
+
+  private acceptedCredentialRefs(): Set<string> {
+    return new Set(this.settings().describe().flatMap(row => row.credentialRefs))
+  }
+
+  private acceptedCredentialRef(ref: string): string {
+    if (!this.acceptedCredentialRefs().has(ref)) {
+      throw new Error(`native credentials: reference "${ref}" is not declared by an active settings schema`)
+    }
+    return ref
   }
 
   /** Close admission, cancel turns and await accepted readers and writer settlement.
@@ -424,7 +528,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -437,6 +541,7 @@ export const plugin: NativePlugin = {
       const models = context.optional('modelSelection')
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
+          settings: context.optional('settings'), credentials: context.optional('credentials'),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())

@@ -28,6 +28,8 @@ kind: "package-reference"
 
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。
 
+同一 Consumer 通过选定的 `/api` 载体提供 `settingsDescribe`、带 revision 检查的 `settingsMutate`、`credentialsDescribe`、`credentialsSet` 与 `credentialsUnset`。Settings descriptor 只包含显式发布的 namespace；凭据读取只返回是否存在、来源与可写性事实，凭据写入返回确认且不回显值。`NativeSessionRpcError` 保留 Host 错误码与冲突详情以便处理过期写入。
+
 提示上传携带有序的编码光栅图片；Host 在根所有者内准入它们。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
 
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。

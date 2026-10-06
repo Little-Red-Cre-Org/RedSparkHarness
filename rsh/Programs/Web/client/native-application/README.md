@@ -31,7 +31,7 @@ Model and reasoning choices come from the Host model directory, including provid
 
 The transcript uses the shared Session append-origin and message projection rules. Replacement copies remain model-only; raw Session records remain available in a disclosure, including tool results, permissions, interruptions and opaque ignorable facts. Transport and history failures remain visible; failed submission retains its draft.
 
-Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
+Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The Settings page reads schemas published by active Settings registrations, edits user overrides as JSON with revision checks, and derives write-only credential controls from `credential-ref` fields. It edits existing array entries by index and reports unsupported array-structure changes instead of claiming success. Credential values are sent only to the Host for storage and are never read back. The page adds no durable language preference or default-profile switch.
 
 React and Session message projection use shared application peer instances; the Session Consumer is a type-only dependency supplied by the selected runtime capability.
 
@@ -49,7 +49,7 @@ No invariant companion is published because the view reads the selected Host Con
 
 ## Dev Note
 
-Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md).
+Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md).
 
 ## Model Experience
 
@@ -73,4 +73,5 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
-- File uploads, full Sidebar, layout and Settings remain separate native Client migrations.
+- File uploads, full Sidebar, layout, browser authorization flows, opaque credential grant editing and the complete legacy plugin Settings page remain separate native Client migrations.
+- A Settings owner must explicitly publish its schema metadata; this page does not edit hidden `role('secret')` values or create authorization grants.

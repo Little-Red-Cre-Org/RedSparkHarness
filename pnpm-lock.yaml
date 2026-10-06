@@ -9544,6 +9544,9 @@ importers:
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../../client/connection
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/credentials/credentials
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -9574,6 +9577,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-settings':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/settings/settings
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
@@ -9593,12 +9599,12 @@ importers:
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session
-      '@deepseek-ai/dsh-credentials':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/credentials/credentials
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../../host/native-web-assets
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
 
   rsh/Programs/Web/api/remotes:
     dependencies:

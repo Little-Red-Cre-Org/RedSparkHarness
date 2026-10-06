@@ -28,6 +28,8 @@ Model controls decode the selected Host catalog and installed preset metadata. M
 
 The optional prompt observer follows accepted durable events and transient assistant text through the selected Connection Fetch response. The maintained eventsource-parser handles SSE framing. Event decoding uses the shared Session parser; missing terminal settlement, malformed frames or observer failure cancel the exact admission and await Host drain before rejection. Caller cancellation detaches following and still awaits durable settlement. A custom RPC carrier without response support rejects observed prompts before admission.
 
+The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`, `credentialsDescribe`, `credentialsSet` and `credentialsUnset` on the selected `/api` carrier. Settings descriptors are limited to explicitly published namespaces; credential reads contain only presence, source and writability facts, and credential writes return acknowledgements without echoing their values. `NativeSessionRpcError` retains the Host code and conflict details for stale-write handling.
+
 Prompt uploads carry ordered encoded raster images; the Host admits them under its root owner. Advertised image limits come from the selected attachment Provider. Image reads send only a Session identity and recorded attachment identity, then validate response media type and byte length before returning a Blob.
 
 `close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.
