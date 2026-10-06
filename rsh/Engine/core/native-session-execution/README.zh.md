@@ -58,7 +58,7 @@ Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工�
 
 `activeSessions` 服务在模型调用发起归属之外提供确切的 Program 所有 Agent 与 Session 访问。注册会等待未来 attach 观察者后才允许初始模型接纳。释放会关闭查询接纳、等待已接纳 attach 回调，并在 Program writer 清理前执行 detach 清理；移除观察者也会等待已接纳回调。Attach 失败通过 detach 清理回滚。复制的 Agent 与复制的 Session 不能选择所有者。
 
-活动所有者通过唯一 writer 暴露已校验历史、追踪 append/flush、独立的持久收件箱候选与后端已接纳事件观察。其 invocation 来自当前 Program 入口（`root` 或 `delegated`），独立于历史 Session 谱系。有序异步 step hook 通过 `next()` 委派，只能选择未修改的已捕获候选。Hook 结算后 Program 检查取消与所有者可用性，再在模型投影前持久化确切的领取或取消。
+活动所有者通过唯一 writer 暴露已校验历史、追踪 append/flush、独立的持久收件箱候选与后端已接纳事件观察。其 invocation 来自当前 Program 入口（`root` 或 `delegated`），独立于历史 Session 谱系。有序异步 step hook 通过 `next()` 委派，只能选择未修改的已捕获候选。Hook 可注册一个同步提交检查，由 Program 在请求准备后执行；检查只能取消该次 admission 所选候选的 id，并且不能返回 Promise。
 
 驻留保留是进程本地的 Program 所有权。Consumer 可跨空闲 turn 保留根 writer；释放确切的 lease 允许自然关闭。取消与卸载会覆盖保留并等待已接纳工作停稳。Consumer 仅在 `writerAvailable` 且确切所有权仍有效时才能追加。关闭的所有者会直接报错；注册表不创建替代收件箱、模型循环或 writer。
 

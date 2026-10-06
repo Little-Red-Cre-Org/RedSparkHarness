@@ -12,7 +12,7 @@ Status: implemented
 
 原生 `@deepseek-ai/dsh-goal` Provider 要求 Program 提供 `agents` 与 `activeSessions` 服务。它从活跃 owner 的持久 Session 事件恢复 Goal 事实，并通过该 owner 追加变更；它不增加 writer 或模型循环。
 
-原生 Goal round driver 使用该 owner 的 admission 与 idle hooks；`@deepseek-ai/dsh-tool-goal` 根据精确的活跃 root Agent 和当前轮次持久用户消息授权变更。新建或恢复的 Goal 初始均为 disarmed；只有显式 human resume 才会启用续行。
+原生 Goal round driver 使用该 owner 的 admission 与 idle hooks；`@deepseek-ai/dsh-tool-goal` 根据精确的活跃 root Agent 和当前轮次持久用户消息授权变更。显式创建 Goal 后会启用续行；冷恢复的 active Goal 初始为 disarmed，直到人类显式恢复。异步请求准备完成后，Program 在 inbox 领取与模型可见事件追加前同步重新检查已准入 Goal 的 id、修订、round 与 activation；它只取消已失效的 Goal 输入，并保留其他排队消息。
 
 已发布的 `native-headless` 与 `native-tui` CLI profile 在 root 安装 Goal Definition、round driver 和模型工具，同时保留唯一一项 `session-execution`。两个 profile 都使用 Program 现有的 Session 与 Agent 权威。
 

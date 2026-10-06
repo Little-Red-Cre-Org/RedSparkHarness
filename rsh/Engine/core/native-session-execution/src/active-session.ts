@@ -19,7 +19,14 @@ export interface NativeStepAdmissionContext {
   readonly step: number
   readonly candidates: readonly UserMessage[]
   readonly signal: AbortSignal
+  /** Register a synchronous final check after preparation; it returns admitted inputs to cancel before commit. */
+  readonly registerCommitCheck: (check: NativeStepAdmissionCommitCheck) => void
 }
+
+/** Synchronously identify admitted inputs invalidated during asynchronous step preparation.
+ * @returns Captured admitted input ids that the Program must cancel before committing the step.
+ */
+export type NativeStepAdmissionCommitCheck = () => readonly MessageId[]
 
 /** Inputs selected from the unchanged captured candidates, or ids rejected without a model request. */
 export type NativeStepAdmissionDecision =

@@ -43,7 +43,7 @@ kind: "package-reference"
 
 一次性执行清理会在活动 owner 观察者拒绝后仍尝试关闭 writer，同时保留执行与清理失败。Agent 接纳在发布生命周期通知前拥有借用的 preset lease，通知失败或取消会释放 lease。驻留子级将选定 preset 持久化到创建 header，并在模块准备前校验恢复事实。
 
-`sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。待处理消息记录为持久 inbox 事件，step 准入在推导模型输入之前持久记录精确认领。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
+`sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。模型和指令准备等异步操作完成后，Program 执行 admission 提交检查，随后同步移除确切的已选 inbox 输入并追加 step 与模型可见输入事件；仅取消失效输入，其他待处理消息仍留在队列中。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
 
 Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，穿过普通 Session 父节点，并在检查 subagent 末端前核验每条直接父子关系及 subagent 委派深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 

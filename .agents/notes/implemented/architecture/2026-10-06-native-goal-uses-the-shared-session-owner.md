@@ -12,7 +12,7 @@ Native profiles need the same durable Goal state and bounded continuation policy
 
 The native `@deepseek-ai/dsh-goal` Provider requires the Program's `agents` and `activeSessions` services. It restores Goal facts from the active owner's durable Session events and appends mutations through that owner; it adds no writer or model loop.
 
-The native Goal round driver uses that owner's admission and idle hooks, and `@deepseek-ai/dsh-tool-goal` authorizes mutations from the exact live root Agent and durable current-turn user messages. A fresh or restored Goal starts disarmed; an explicit human resume arms continuation.
+The native Goal round driver uses that owner's admission and idle hooks, and `@deepseek-ai/dsh-tool-goal` authorizes mutations from the exact live root Agent and durable current-turn user messages. Explicit Goal creation arms continuation; a cold-restored active Goal starts disarmed until a human resumes it. After asynchronous request preparation, the Program synchronously rechecks the admitted Goal id, revision, round and activation immediately before inbox claim and model-visible appends; it cancels only a superseded Goal input and leaves other queued messages intact.
 
 The shipped `native-headless` and `native-tui` CLI profiles install the Goal Definition, round driver, and model tools at root while retaining one `session-execution` installation. Both profiles use the Program's existing Session and Agent authority.
 

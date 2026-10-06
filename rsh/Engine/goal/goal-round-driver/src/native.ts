@@ -155,6 +155,12 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
           message: 'Goal round was rejected before entering its step.' })
         return { kind: 'reject', discard: [message.id] }
       }
+      context.registerCommitCheck(() => {
+        const current = this.active(state)
+        if (current !== undefined && this.matches(state, message, current)) return []
+        if (state.attempt?.id === message.id) state.attempt = undefined
+        return [message.id]
+      })
       return decision
     }
   }

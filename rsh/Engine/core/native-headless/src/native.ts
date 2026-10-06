@@ -10,6 +10,7 @@ import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionExecutionOperations,
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
   NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import { NativeContinuationSession } from './continuation-session.ts'
 import { NativeContinuationRuntime } from './continuation-runtime.ts'
@@ -500,6 +501,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let turn = 1
     let settledAnswer: string | undefined
     let concludedByTool = false
+    let admissionInvalidated = false
     let exitCode = 1
     let turnFailure: { error: unknown } | undefined
     let eventObserverFailed = false
@@ -654,10 +656,19 @@ export class NativeHeadlessApplication implements NativeApplication {
         const admit = async (step: number) => {
           if (activeOwner === undefined) {
             const prepared = await prepare()
-            return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), ...prepared }
+            return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), commitChecks: [], ...prepared }
           }
           const candidates = [...owner.messages('next-step'), ...step === 1 ? owner.messages('next-turn').slice(0, 1) : []]
-          const decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal })
+          const commitChecks: NativeStepAdmissionCommitCheck[] = []
+          let registrationOpen = true
+          let decision: Awaited<ReturnType<NativeProgramActiveSession['admission']['decide']>>
+          try {
+            decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal,
+              registerCommitCheck: (check) => {
+                if (!registrationOpen) throw new Error('native-headless: admission commit checks must register before admission settles')
+                commitChecks.push(check)
+              } })
+          } finally { registrationOpen = false }
           signal.throwIfAborted()
           if (decision.kind === 'reject') {
             await owner.remove(decision.discard, 'canceled', signal)
@@ -665,8 +676,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             return undefined
           }
           const prepared = await prepare()
-          await owner.remove(decision.messages.map(input => input.id), undefined, signal)
-          return { inputs: decision.messages, ...prepared }
+          return { inputs: decision.messages, commitChecks, ...prepared }
         }
         const initialInputs = await admit(1)
         request.initialize?.((type, data, ...options) => {
@@ -680,10 +690,35 @@ export class NativeHeadlessApplication implements NativeApplication {
           signal.throwIfAborted()
           const admitted = step === 1 ? initialInputs : await admit(step)
           if (admitted === undefined) break
-          const { inputs, selection, preparedStep } = admitted
+          const { inputs, selection, preparedStep, commitChecks } = admitted
           const stepConfig = preparedStep.config
           const instructionContext = await this.agentInstructions?.prepare(session, inputs, signal)
           signal.throwIfAborted()
+          if (activeOwner !== undefined) {
+            const admittedIds = new Set(inputs.map(input => input.id))
+            const rejected = new Set<MessageId>()
+            for (const check of commitChecks) {
+              const rejectedByCheck: unknown = check()
+              if (!Array.isArray(rejectedByCheck)) {
+                if (typeof rejectedByCheck === 'object' && rejectedByCheck !== null && 'then' in rejectedByCheck) {
+                  // Observe a rejected async check after refusing its result synchronously.
+                  void Promise.resolve(rejectedByCheck).then(undefined, () => undefined)
+                }
+                throw new Error('native-headless: admission commit check must return message ids synchronously')
+              }
+              for (const messageId of rejectedByCheck as MessageId[]) {
+                if (!admittedIds.has(messageId)) throw new Error('native-headless: admission commit check rejected an unadmitted message')
+                rejected.add(messageId)
+              }
+            }
+            if (rejected.size > 0) {
+              await owner.remove([...rejected], 'canceled', signal)
+              admissionInvalidated = true
+              exitCode = 0
+              break
+            }
+            owner.removePending(inputs.map(input => input.id), undefined)
+          }
           track(session.append('step/start', { turn, step }))
           if (step === 1) {
             if (session.deriveMessages().every(message => message.role !== 'system')) {
@@ -849,7 +884,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             break
           }
         }
-        if (reason.kind === 'completed' && settledAnswer === undefined && !concludedByTool) {
+        if (reason.kind === 'completed' && settledAnswer === undefined && !concludedByTool && !admissionInvalidated) {
           reason = { kind: 'error', error: { code: 'STEP_LIMIT', message: 'native-headless: model step limit reached' } }
         }
       } catch (error: unknown) {

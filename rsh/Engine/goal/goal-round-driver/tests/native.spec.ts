@@ -4,12 +4,13 @@ import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-sessio
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agentPlugin, NativeAgentId, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as executionPlugin, type NativeSessionExecutionOperations,
-  type NativeActiveSessionOperations, type NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+  type NativeActiveSessionOperations, type NativeActiveSessionOwner,
+  type NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
@@ -21,10 +22,13 @@ import { plugin as goalCommandPlugin } from '../../command-goal/src/native.ts'
 import { plugin as goalToolsPlugin } from '../../tool-goal/src/native.ts'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
+import { foldGoal } from '@deepseek-ai/dsh-goal/projection'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 
-async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
+async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], prepareInstructions?: NativeAgentInstructions['prepare']) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-continuation-host-'))
   const scope = new NativeScope()
   const model = new MockAdapter(script)
@@ -57,7 +61,15 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
     } }
   const modelProvider: NativePlugin = { apiVersion: 1, name: 'continuation-model', targets: ['host'],
     requires: [], provides: ['model'], resolve: () => (context) => { context.provide('model', model) } }
-  const host = new NativeHost(resolveInstallation([
+  const instructions: NativeAgentInstructions = {
+    seed: (..._args: Parameters<NativeAgentInstructions['seed']>) => {},
+    prepare: async (session: Parameters<NativeAgentInstructions['prepare']>[0],
+      inputs: Parameters<NativeAgentInstructions['prepare']>[1], signal: Parameters<NativeAgentInstructions['prepare']>[2]) =>
+      await prepareInstructions?.(session, inputs, signal),
+  } as unknown as NativeAgentInstructions
+  const instructionsProvider: NativePlugin = { apiVersion: 1, name: 'continuation-instructions', targets: ['host'],
+    requires: [], provides: ['agentInstructions'], resolve: () => context => context.provide('agentInstructions', instructions) }
+  const installation: InstallationRequest[] = [
     { plugin: capture, scope, config: undefined },
     { plugin: appPlugin, scope, config: { cwd: root, provider: 'mock', model: 'parent', systemPrompt: 'Parent.', maxSteps: 4 } },
     { plugin: executionPlugin, scope, config: undefined },
@@ -72,7 +84,9 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0]) {
     { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
     { plugin: storagePlugin, scope, config: { root: join(root, 'sessions'), compression: 'none' } },
     { plugin: modelProvider, scope, config: undefined },
-  ], 'host'))
+  ]
+  if (prepareInstructions !== undefined) installation.push({ plugin: instructionsProvider, scope, config: undefined })
+  const host = new NativeHost(resolveInstallation(installation, 'host'))
   await host.start()
   if (app === undefined || storage === undefined || agents === undefined || execution === undefined || tools === undefined
     || activeSessions === undefined || goals === undefined || commands === undefined || continuation === undefined) {
@@ -202,6 +216,109 @@ it('rechecks the exact revision after downstream admission and discards a stale 
     } finally { await reader.close() }
   } finally { resume.resolve(undefined); await remove(); await removeDetach(); await Promise.all(removals.map(release => release()))
     await state.close() }
+})
+
+
+it.each(['pause', 'edit'] as const)('rechecks a Goal after instructions preparation when it is %s', async (action) => {
+  const ready = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const state = await fixture([
+    toolCallResponse('create', 'create_goal', { objective: 'Original Goal.', max_goal_rounds: 1 }), textResponse('Armed.'),
+    action === 'edit' ? textResponse('The revised objective was completed.') : textResponse('The queued user input was handled.'),
+  ], async (_session, inputs) => {
+    if (inputs.some(input => input.source.kind === 'goal')) { ready.resolve(undefined); await release.promise }
+  })
+  const id = SessionId(`native-goal-late-${action}`)
+  const detached = Promise.withResolvers<undefined>()
+  let active: NativeActiveSessionOwner | undefined
+  const remove = state.activeSessions.onAttached(async (owner) => { active = owner })
+  const removeDetach = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  try {
+    await state.app.executeTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal)
+    await ready.promise
+    if (active === undefined) throw new Error('missing active Goal owner')
+    const goal = state.goals.get(active.agent)
+    if (goal === undefined) throw new Error('missing Goal')
+    if (action === 'pause') {
+      await state.goals.pause(active.agent, goal)
+      await active.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep this queued input.' }] }),
+        'next-step', false, new AbortController().signal)
+    } else await state.goals.edit(active.agent, goal, { objective: 'Revised Goal.' })
+    release.resolve(undefined)
+    await detached.promise
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      const inboxEvents = events.filter((event): event is Extract<SessionEvent, { type: 'agent/inbox/spliced' }> =>
+        event.type === 'agent/inbox/spliced')
+      const goalMessages = events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(inboxEvents.some(event => event.data.outcome === 'canceled' && event.data.target === 'next-turn')).toBe(true)
+      expect(() => foldGoal(events)).not.toThrow()
+      if (action === 'pause') {
+        expect(goalMessages).toHaveLength(0)
+        expect(events.some(event => event.type === 'user/message' && event.data.source.kind === 'user'
+          && event.data.content.some(block => block.type === 'text' && block.text === 'Keep this queued input.'))).toBe(true)
+        expect(inboxEvents.some(event => event.data.target === 'next-step'
+          && event.data.inserted.some(message => message.content.some(block => block.type === 'text'
+            && block.text === 'Keep this queued input.')))).toBe(true)
+        expect(state.model.requests).toHaveLength(3)
+        expect(JSON.stringify(state.model.requests.at(-1)?.messages)).toContain('Keep this queued input.')
+        expect(foldGoal(events).goal).toMatchObject({ phase: 'paused' })
+      } else {
+        expect(goalMessages.map(event => event.type === 'user/message' ? event.data.source : undefined)).toEqual([
+          expect.objectContaining({ kind: 'goal', revision: 2, round: 1 }),
+        ])
+        expect(state.model.requests).toHaveLength(3)
+        expect(JSON.stringify(state.model.requests.at(-1)?.messages)).toContain('Revised Goal.')
+        expect(foldGoal(events)).toMatchObject({ goal: { phase: 'blocked' }, roundsStarted: 1 })
+      }
+    } finally { await reader.close() }
+  } finally { release.resolve(undefined); await remove(); await removeDetach(); await state.close() }
+})
+
+
+it('rejects asynchronous admission commit checks before logging the admitted input', async () => {
+  const state = await fixture([toolCallResponse('create', 'create_goal', { objective: 'Never commit this Goal.' }), textResponse('Armed.')])
+  const id = SessionId('native-goal-async-check')
+  const detached = Promise.withResolvers<undefined>()
+  const releases: (() => Promise<void>)[] = []
+  const remove = state.activeSessions.onAttached(async (owner) => {
+    releases.push(owner.beforeStep(async (context, next) => {
+      const decision = await next()
+      if (context.candidates.some(message => message.source.kind === 'goal')) {
+        context.registerCommitCheck((async () => { throw new Error('late invalid async check') }) as unknown as NativeStepAdmissionCommitCheck)
+      }
+      return decision
+    }, 900))
+  })
+  const removeDetach = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  try {
+    let executionError: unknown
+    try {
+      await state.app.executeRootTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+        content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal)
+    } catch (error: unknown) { executionError = error }
+    const describeExecution = (failure: unknown): unknown => failure instanceof AggregateError
+      ? { message: failure.message, errors: failure.errors.map(describeExecution) }
+      : failure instanceof Error ? { name: failure.name, message: failure.message, code: 'code' in failure ? failure.code : undefined }
+        : String(failure)
+    expect(executionError === undefined ? undefined : JSON.stringify(describeExecution(executionError)))
+      .toContain('admission commit check must return message ids synchronously')
+    await detached.promise
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(state.model.requests).toHaveLength(2)
+      expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(0)
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(() => foldGoal(events)).not.toThrow()
+    } finally { await reader.close() }
+  } finally {
+    await remove(); await removeDetach(); await Promise.all(releases.map(release => release()))
+    await state.close()
+  }
 })
 
 
