@@ -6,8 +6,8 @@
  * @module @deepseek-ai/dsh-token-meter/estimate
  */
 
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
-import type { EpochHeader } from '@deepseek-ai/dsh-session'
+import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm/native'
+import type { EpochHeader } from '@deepseek-ai/dsh-session/native'
 
 /** Fixed text-density estimate used until exact tokenization is needed. */
 const CHARS_PER_TOKEN = 4

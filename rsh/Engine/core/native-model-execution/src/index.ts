@@ -1,11 +1,17 @@
 /** Native model execution and Session recording for a single Agent step. */
 import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage,
-  resolveCallConfigWithModel, callConfigEquals, type LlmCallConfig, type PreparedAdapterCall, type LlmResolvedModelInfo, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+  resolveCallConfigWithModel, callConfigEquals, type LlmCallConfig, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 
 /** Streaming model selected by a native profile. */
 export interface NativeModel {
+  /** Read the selected adapter's declared image pricing without I/O.
+   * @param provider - recorded provider route.
+   * @param model - recorded model id.
+   * @returns adapter-owned pricing when declared.
+   */
+  imageRequestPricing?(provider: string, model: string): LlmImageRequestPricing | undefined
   /** Capture exact-model metadata and dispatch from the same Provider generation.
    * @param provider - configured route. @param model - exact model identity.
    * @param signal - cancellation during preparation.
