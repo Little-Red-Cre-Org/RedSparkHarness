@@ -95,6 +95,7 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
     configurationOnlyDevDependencies: new Set(),
     clientRuntimeDependencies: new Set(),
     publishedTypeSourceUses: new Map(),
+    publishedTypePeerDependencies: new Set(),
     clientInject: new Set(),
   }
 }
@@ -189,6 +190,7 @@ function hostRuntimeFixture(): {
     configurationOnlyDevDependencies: new Set(),
     clientRuntimeDependencies: new Set(),
     publishedTypeSourceUses: new Map(),
+    publishedTypePeerDependencies: new Set(),
     clientInject: new Set(),
   }
   return { provider, workspaceNames, consumerFacts }
@@ -266,6 +268,9 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-client-ui-conversation',
         '@deepseek-ai/dsh-client-ui-slots',
       ],
+    })
+    expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
+      '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
@@ -795,6 +800,48 @@ describe('dependency sections', () => {
     expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
       missing: [dependency],
     } }))).toContain('publishedTypeDependencies names unmanaged package missing')
+  })
+
+  it('requires published type peers to have a source use and a required peer declaration', () => {
+    const dependency = '@deepseek-ai/dsh-types'
+    const peerPolicy = policy({ publishedTypePeerDependencies: { '@f/probe': [dependency] } })
+    const subject = sourceFacts({ 'src/index.ts': `export type { Payload } from '${dependency}'` }, {
+      devDependencies: { [CORDIS]: 'workspace:^', [dependency]: 'workspace:^' },
+      peerDependencies: { [CORDIS]: 'workspace:^', [dependency]: 'workspace:^' },
+    }, 'configured-host', peerPolicy)
+    const workspaceSubject = {
+      ...subject,
+      workspaceNames: new Set([...subject.workspaceNames, dependency]),
+    }
+    const state = {
+      facts: [workspaceSubject], packages: [], policyViolations: [], workspaceNames: workspaceSubject.workspaceNames,
+    }
+
+    expect(expectedPackageDependencies(workspaceSubject).get(dependency)?.section).toBe('peer-dev')
+    expect(collectPublishedTypeDependencyPolicyViolations([workspaceSubject], peerPolicy)).toEqual([])
+    expect(collectPackageDependencyViolations(state)).toEqual([])
+
+    const missingPeer = {
+      ...workspaceSubject,
+      manifest: { ...workspaceSubject.manifest, peerDependencies: { [CORDIS]: 'workspace:^' } },
+    }
+    expect(collectPublishedTypeDependencyPolicyViolations([missingPeer], peerPolicy)).toContain(
+      `publishedTypePeerDependencies requires @f/probe to declare ${dependency} as a required peer at workspace:^`,
+    )
+    const optionalPeer = {
+      ...workspaceSubject,
+      manifest: {
+        ...workspaceSubject.manifest,
+        peerDependenciesMeta: { [dependency]: { optional: true } },
+      },
+    }
+    expect(collectPublishedTypeDependencyPolicyViolations([optionalPeer], peerPolicy)).toContain(
+      `publishedTypePeerDependencies requires @f/probe peer ${dependency} to be non-optional`,
+    )
+    const stale = { ...workspaceSubject, publishedTypeSourceUses: new Map() }
+    expect(collectPublishedTypeDependencyPolicyViolations([stale], peerPolicy)).toContain(
+      `publishedTypePeerDependencies lists @f/probe dependency ${dependency} without a source type import`,
+    )
   })
 
   it('keeps reviewed third-party Client library imports as production dependencies', () => {

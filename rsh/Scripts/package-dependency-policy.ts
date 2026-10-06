@@ -37,6 +37,11 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
+/** Published type imports whose provider must be installed by the consumer. */
+const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
+} as const satisfies Readonly<Record<string, readonly string[]>>
+
 /** Development-only package relationships not represented by source imports. */
 const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-api-remotes'],
@@ -63,6 +68,7 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
 export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-pwsh': ['@deepseek-ai/dsh-tools'],
   '@deepseek-ai/dsh-workflow': ['@deepseek-ai/dsh-agent'],
+  '@deepseek-ai/dsh-fs-sandbox': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy'],
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
 }
@@ -135,6 +141,7 @@ export interface PackageDependencyPolicy {
   readonly clientRuntimeDependencies: Readonly<Record<string, readonly string[]>>
   readonly sharedClientRuntimePeers: Readonly<Record<string, readonly string[]>>
   readonly publishedTypeDependencies?: Readonly<Record<string, readonly string[]>>
+  readonly publishedTypePeerDependencies?: Readonly<Record<string, readonly string[]>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
   readonly peerRequiredHostExports: HostDependencyExports
@@ -150,6 +157,7 @@ export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
   clientRuntimeDependencies: CLIENT_RUNTIME_DEPENDENCIES,
   sharedClientRuntimePeers: SHARED_CLIENT_RUNTIME_PEERS,
   publishedTypeDependencies: PUBLISHED_TYPE_DEPENDENCIES,
+  publishedTypePeerDependencies: PUBLISHED_TYPE_PEER_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,
   peerRequiredHostExports: PEER_REQUIRED_HOST_EXPORTS,
