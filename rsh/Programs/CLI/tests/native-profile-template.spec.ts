@@ -17,7 +17,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     })
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
-    expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
+    expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
     expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
 
@@ -45,7 +45,7 @@ it('defines a native-acp Host composition without Cordis rows', () => {
     plugin: '@deepseek-ai/dsh-native-acp',
     config: { provider: 'deepseek-official', model: 'deepseek-v4-flash', maxSteps: 8 },
   })
-  expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
+  expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
 })
 
 it.each(['native-sdk', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
@@ -61,7 +61,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
     plugin: '@deepseek-ai/dsh-native-tui',
     config: { provider: 'deepseek', model: 'deepseek-v4-flash', maxSteps: 8 },
   })
-  expect(profile.installations.some(row => row.plugin.includes('cordis'))).toBe(false)
+  expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
 })
 
 it('ships a complete one-shot shell seam in the native headless profile', () => {

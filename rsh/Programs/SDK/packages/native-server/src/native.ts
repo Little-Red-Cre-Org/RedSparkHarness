@@ -6,7 +6,9 @@ import { createNativeHeadlessApplication, type NativeHeadlessApplication } from 
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
+import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
+import { SessionId, SessionSeq, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
@@ -49,6 +51,19 @@ interface NativeSdkTurnAdmission {
   failure?: AggregateError
 }
 
+interface NativeSdkRootLineage {
+  readonly agent: NativeAgent
+  readonly owner: NativeActiveSessionOwner
+  readonly routeId?: NativeRootRouteId
+}
+
+interface NativeSdkChildLineage {
+  readonly agent: NativeAgent
+  readonly parentAgent: NativeAgent
+  readonly parentSessionId: NativeSessionId
+  readonly rootSessionId: NativeSessionId
+}
+
 /** One native executor and one JSON-RPC connection owned by the profile. */
 export class NativeSdkApplication implements NativeApplication {
   private executor: NativeHeadlessApplication | undefined
@@ -56,6 +71,7 @@ export class NativeSdkApplication implements NativeApplication {
   private readonly sessions = new Map<string, Promise<void>>()
   private readonly pending = new Set<Promise<unknown>>()
   private readonly activeTurns = new Map<string, NativeSdkTurnAdmission>()
+  private readonly acceptedRootSessions = new Set<string>()
   private closing = false
   private initializing = false
 
@@ -99,7 +115,10 @@ export class NativeSdkApplication implements NativeApplication {
       this.closing = true
       this.abort.abort(new Error('native SDK: closing'))
       await Promise.allSettled([...this.pending])
-      await transport.flush()
+      const failures: unknown[] = []
+      try { await this.executor?.dispose() } catch (error: unknown) { failures.push(error) }
+      try { await transport.flush() } catch (error: unknown) { failures.push(error) }
+      if (failures.length > 0) throw new AggregateError(failures, 'native SDK: shutdown cleanup failed')
       return 0
     } finally {
       this.input.off('end', onEnd)
@@ -116,22 +135,58 @@ export class NativeSdkApplication implements NativeApplication {
   private observeDescendants(transport: JsonRpcLineTransport): () => Promise<void> {
     const active = this.context.require('activeSessions')
     const observed = new Map<NativeActiveSessionOwner, () => void>()
+    const roots = new Map<NativeSessionId, NativeSdkRootLineage>()
+    const descendants = new Map<NativeSessionId, NativeSdkChildLineage>()
+    const releaseFinished = this.context.optional('subagents')?.onFinished((finished: NativeSubagentFinished) => {
+      const childSessionId = finished.result.id
+      const lineage = descendants.get(childSessionId)
+      if (lineage === undefined || lineage.parentAgent !== finished.parentAgent
+        || lineage.parentSessionId !== finished.parentSession.id) return
+      const root = roots.get(lineage.rootSessionId)
+      if (root?.routeId !== SDK_ROOT_ROUTE || !this.acceptedRootSessions.has(String(lineage.rootSessionId))) return
+      transport.notify('subagent.finished', {
+        provider: finished.result.provider,
+        agentId: String(childSessionId),
+        parentSessionId: String(lineage.parentSessionId),
+        childSessionId: String(childSessionId),
+        status: finished.result.stopReason === 'completed' ? 'ok' : 'error',
+        stopReason: finished.result.stopReason,
+        ...(finished.result.output.length === 0 ? {} : { lastAssistantMessage: [...finished.result.output] }),
+      })
+    }) ?? (() => {})
     const releaseAttached = active.onAttached((owner) => {
-      if (this.closing || owner.invocation !== 'delegated') return Promise.resolve()
+      if (this.closing) return Promise.resolve()
       const executor = this.executor
-      const interaction = executor?.interactionOwner(owner.agent)
-      if (interaction === undefined || executor === undefined) return Promise.resolve()
-      const root = active.owners().find(candidate => candidate.agent === interaction.displayRootAgent)
-      if (root === undefined || !this.activeTurns.get(String(root.session.id))?.received
-        || executor.rootExecution.capture(root).id !== SDK_ROOT_ROUTE) return Promise.resolve()
+      if (executor === undefined) return Promise.resolve()
+      const interaction = executor.interactionOwner(owner.agent)
+      if (owner.invocation === 'root') {
+        if (interaction?.displayRootAgent !== owner.agent || interaction.displayRootSessionId !== owner.session.id) return Promise.resolve()
+        const previous = roots.get(owner.session.id)
+        roots.set(owner.session.id, previous?.agent === owner.agent ? { ...previous, owner } : { agent: owner.agent, owner })
+        return Promise.resolve()
+      }
+      if (interaction === undefined) return Promise.resolve()
+      const rootSessionId = interaction.displayRootSessionId
+      const root = roots.get(rootSessionId)
+      if (root?.agent !== interaction.displayRootAgent || !this.acceptedRootSessions.has(String(rootSessionId))) return Promise.resolve()
+      const routeId = root.routeId ?? executor.rootExecution.capture(root.owner).id
+      if (root.routeId === undefined) roots.set(rootSessionId, { ...root, routeId })
+      if (routeId !== SDK_ROOT_ROUTE) return Promise.resolve()
       const parentSession = owner.session.header.parentSession
-      const parent = active.owners().find(candidate => candidate.session.id === parentSession)
-      if (parent === undefined || parent !== root && !observed.has(parent)) return Promise.resolve()
-      const childSessionId = String(owner.session.id)
+      if (parentSession === undefined) return Promise.resolve()
+      const parentSessionId = parentSession
+      const parentAgent = parentSessionId === rootSessionId ? root.agent : descendants.get(parentSessionId)?.agent
+      if (parentAgent === undefined) return Promise.resolve()
+      const childSessionId = owner.session.id
+      const previous = descendants.get(childSessionId)
+      if (previous !== undefined && previous.agent !== owner.agent && executor.interactionOwner(previous.agent) !== undefined) {
+        return Promise.resolve()
+      }
+      descendants.set(childSessionId, { agent: owner.agent, parentAgent, parentSessionId, rootSessionId })
       observed.set(owner, owner.onEvent((event) => {
-        transport.notify('session.event', { sessionId: childSessionId, event })
+        transport.notify('session.event', { sessionId: String(childSessionId), event })
       }))
-      transport.notify('subagent.started', { parentSessionId: String(parentSession), childSessionId })
+      transport.notify('subagent.started', { parentSessionId: String(parentSession), childSessionId: String(childSessionId) })
       return Promise.resolve()
     })
     const releaseDetached = active.onDetached((owner) => {
@@ -142,8 +197,11 @@ export class NativeSdkApplication implements NativeApplication {
     return async () => {
       try { await Promise.all([releaseAttached(), releaseDetached()]) }
       finally {
+        releaseFinished()
         for (const release of observed.values()) release()
         observed.clear()
+        roots.clear()
+        descendants.clear()
       }
     }
   }
@@ -275,6 +333,7 @@ export class NativeSdkApplication implements NativeApplication {
             if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
               admission.received = true
+              this.acceptedRootSessions.add(sessionId)
               accepted.resolve(String(message.id))
               transport.notify('session.status', { sessionId, status: 'running' })
             }
@@ -300,7 +359,7 @@ export class NativeSdkApplication implements NativeApplication {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
+  optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
     'agentPresets', 'workspaceRegistry'],
   provides: ['application'],
   resolve(input) {

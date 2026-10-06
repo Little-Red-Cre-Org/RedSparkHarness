@@ -5,9 +5,10 @@ import { foldConsumedWork } from '@deepseek-ai/dsh-native-agent/consumed-work'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import { createUserMessage, type ContentBlock, type MessageId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session } from '@deepseek-ai/dsh-session/native'
-import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation,
+  NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
 import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData } from '@deepseek-ai/dsh-subagent-protocol'
-import type { NativeSubagentCatalogEntry, NativeSubagentRequest } from './index.ts'
+import type { NativeSubagentCatalogEntry, NativeSubagentFinished, NativeSubagentRequest } from './index.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }
 
@@ -22,9 +23,11 @@ export class NativeSubagentContinuations {
    * @param context - selected Provider scope.
    * @param provider - durable backend name.
    * @param prepare - shared child permission setup.
+   * @param onFinished - publishes the actual settled result to subscribed consumers.
    */
   constructor(private readonly context: NativeContext, private readonly provider: string,
-    private readonly prepare: (request: NativeSubagentRequest, setup: NativeDelegationSetup) => void) {}
+    private readonly prepare: (request: NativeSubagentRequest, setup: NativeDelegationSetup) => void,
+    private readonly onFinished: (finished: NativeSubagentFinished) => void) {}
 
   /** Admit initial input without waiting for a model turn.
    * @param request - resolved child creation.
@@ -179,12 +182,18 @@ export class NativeSubagentContinuations {
   }
 
   private settlement(operations: NativeSessionContinuations, parent: NativeAgent, session: Session,
-    id: SessionId, boundary: number): (result: unknown, failure: unknown) => Promise<void> {
-    return async (_result, failure) => {
-      if (this.closing || this.context.signal.aborted) return
-      const own = failure === undefined ? (await operations.observe(id, this.context.signal)).events.slice(boundary) : []
-      const output = failure === undefined ? finalAssistantOutput(own) : undefined
-      const terminal = { stopReason: failure === undefined ? subagentEpochStopReason(foldConsumedWork(own)) : 'error',
+    id: SessionId, boundary: number): (result: NativeSessionTurnResult | undefined, failure: unknown,
+    observation: NativeContinuationObservation | undefined) => Promise<void> {
+    return async (result, failure, observation) => {
+      const own = observation?.events.slice(boundary) ?? []
+      const output = failure === undefined && observation !== undefined ? finalAssistantOutput(own) : undefined
+      const stopReason = failure === undefined && observation !== undefined ? subagentEpochStopReason(foldConsumedWork(own)) : 'error'
+      if (result !== undefined || failure !== undefined) {
+        this.onFinished({ parentAgent: parent, parentSession: session,
+          result: { id, provider: this.provider, output: output ?? [], stopReason } })
+      }
+      if (this.closing || this.context.signal.aborted || operations.isClosing || observation === undefined) return
+      const terminal = { stopReason,
         ...output === undefined ? {} : { output } }
       const residentParent = this.children.get(session.id)
       const wake = residentParent?.handle.agent === parent && !residentParent.handle.isClosing

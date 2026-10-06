@@ -27,8 +27,14 @@ export interface NativeContinuationCandidate {
 /** Fresh or cold child residency with declared composition and no independent turn loop. */
 export interface NativeContinuationRequest extends Omit<NativeSessionDelegation, 'lifetime' | 'message' | 'onReady'> {
   readonly resume: boolean
-  /** Notify after the child writer and Agent have been released; notification admission may be asynchronous. */
-  readonly onSettled?: (result: NativeSessionTurnResult | undefined, failure: unknown) => Promise<void>
+  /** Notify after release with the durable child observation for this residency epoch.
+   * @param result - completed Program turn result, if a turn ran.
+   * @param failure - execution or cleanup failure, if one occurred.
+   * @param observation - exact durable child history after writer release.
+   * @returns completion of any consumer settlement work.
+   */
+  readonly onSettled?: (result: NativeSessionTurnResult | undefined, failure: unknown,
+    observation: NativeContinuationObservation | undefined) => Promise<void>
 }
 
 /** One Program-owned residency epoch of a durable child Session. */
@@ -59,6 +65,8 @@ export interface NativeSessionContinuation {
 
 /** Selected Program operations authorized by the exact initiating Agent and active Session. */
 export interface NativeSessionContinuations {
+  /** Whether this Program has closed admission for new continuation operations. */
+  readonly isClosing: boolean
   /**
    * Materialize a child under the selected parent without transferring execution ownership.
    * @param request - exact durable child id, create/resume choice and resolved composition.

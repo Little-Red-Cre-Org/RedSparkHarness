@@ -10,7 +10,8 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agentPlugin, NativeAgentId, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as executionPlugin, type NativeSessionExecutionOperations, type NativeSessionContinuation,
-  type NativeActiveSessionOperations, type NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+  type NativeActiveSessionOperations, type NativeActiveSessionOwner,
+  type NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as meterPlugin, type NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
@@ -279,6 +280,59 @@ it('retains one child writer across parent closure, processes another turn and c
 })
 
 
+
+
+it('publishes the durable settlement of a retained child when its Program closes', async () => {
+  const state = await fixture([
+    toolCallResponse('open', 'open_child', {}),
+    toolCallResponse('wait', 'wait_for_shutdown', {}),
+    textResponse('Parent settled.'),
+  ])
+  const parentId = SessionId('shutdown-parent')
+  const childId = SessionId('shutdown-child')
+  const signal = new AbortController().signal
+  const entered = Promise.withResolvers<undefined>()
+  const settled = Promise.withResolvers<{ observation: NativeContinuationObservation | undefined; isClosing: boolean }>()
+  const input = (text: string) => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
+  const removeWait = state.tools.register({ schema: { name: 'wait_for_shutdown', description: 'Wait for Program shutdown.', parameters: {} },
+    async execute(call) {
+      entered.resolve(undefined)
+      await new Promise<void>((resolve) => {
+        call.signal.addEventListener('abort', () => { resolve() }, { once: true })
+      })
+      call.signal.throwIfAborted()
+      return { content: [], isError: false }
+    } })
+  const removeOpen = state.tools.register({ schema: { name: 'open_child', description: 'Open a child.', parameters: {} },
+    async execute(call) {
+      const operations = state.execution.continuations!(call.agent, call.session)
+      const child = await operations.open({ id: childId, resume: false, maxDepth: 1,
+        config: { ...state.execution.configuration(call.agent, call.session), model: 'child' },
+        onSettled: async (_result, _failure, observation) => { settled.resolve({ observation, isClosing: operations.isClosing }) },
+      }, call.signal)
+      await child.enqueue(input('Hold until shutdown.'), 'next-turn', call.signal)
+      await child.ready
+      await entered.promise
+      return { content: [], isError: false }
+    } })
+  try {
+    const rootTurn = state.app.executeTurn({ id: parentId, resume: false, message: input('Open child.') }, signal)
+      .then(value => ({ status: 'fulfilled' as const, value }), (error: unknown) => ({ status: 'rejected' as const, error }))
+    await entered.promise
+    expect(await rootTurn).toMatchObject({ status: 'fulfilled', value: { exitCode: 0 } })
+    const closing = state.app.dispose()
+    const outcome = await settled.promise
+    expect(outcome.isClosing).toBe(true)
+    expect(outcome.observation?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+    expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
+    await closing
+  } finally {
+    await state.app.dispose().catch(() => {})
+    await removeOpen()
+    await removeWait()
+    await state.close()
+  }
+})
 
 
 it('drains every retained root and unregisters Agents after one writer close fails', async () => {

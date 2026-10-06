@@ -159,8 +159,9 @@ export class NativeContinuationActivation {
           return this.driver.run(this.owner, initial, signal)
         }, controller.signal)
       } catch (error: unknown) {
+        // Abortable Node APIs wrap the exact signal reason in AbortError.cause.
         const expectedAbort = [controller.signal, executionSignal, this.execution.signal].some(signal => signal?.aborted
-          && error === signal.reason)
+          && (error === signal.reason || error instanceof Error && error.name === 'AbortError' && error.cause === signal.reason))
         if (!expectedAbort) throw error
         this.result = { exitCode: 1 }
       } finally { if (this.turn === controller) this.turn = undefined }
