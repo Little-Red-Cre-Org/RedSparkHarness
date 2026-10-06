@@ -52,6 +52,10 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
   constructor(private readonly goals: NativeGoalOperations, private readonly sessions: NativeActiveSessionOperations,
     private readonly config: NativeGoalDriverConfig, private readonly signal: AbortSignal) {
     this.releases = [sessions.onAttached(async (owner) => {
+      if (owner.invocation !== 'root') return
+      if (owner.rootOperations === undefined) {
+        throw new Error('Goal driver requires the exact root turn interruption operations')
+      }
       const state: DriverState = { owner, releases: [], attempt: undefined, runningGoal: undefined,
         directHuman: false, interruption: undefined, release: undefined, stopping: false }
       this.states.set(owner, state)
@@ -69,7 +73,7 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
         } else if (event.type === 'user/message' && event.data.source.kind === 'user' && state.runningGoal !== undefined) {
           state.directHuman = true
         } else if (event.type === 'goal/change' && event.data.operation === 'pause'
-          && state.runningGoal?.id === event.data.goal.id && !state.directHuman) {
+          && state.runningGoal?.id === event.data.goal.id && this.ownsAutomaticTurn(state)) {
           void this.interrupt(state, { kind: 'hook', reason: 'goal-pause' })
         } else if (event.type === 'turn/end') {
           state.runningGoal = undefined
@@ -109,6 +113,18 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
     return this.goals.resume(owner.agent, goal)
   }
 
+  async pause(owner: NativeActiveSessionOwner, ref: GoalRef): Promise<GoalView> {
+    this.assertOwner(owner)
+    const state = this.states.get(owner)
+    if (state === undefined) throw new Error('Goal continuation requires the exact root owner with active driver hooks')
+    const goal = await this.goals.pause(owner.agent, ref)
+    this.assertOwner(owner)
+    if (state.runningGoal?.id === goal.id && this.ownsAutomaticTurn(state)) {
+      await this.interrupt(state, { kind: 'hook', reason: 'goal-pause' })
+    }
+    return goal
+  }
+
   private assertOwner(owner: NativeActiveSessionOwner): void {
     const state = this.states.get(owner)
     this.signal.throwIfAborted()
@@ -129,7 +145,7 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
       state.stopping = true
       if (this.available(state)) this.goals.disarm(state.owner.agent)
     }
-    for (const state of states) if (state.runningGoal !== undefined) {
+    for (const state of states) if (this.ownsAutomaticTurn(state)) {
       void this.interrupt(state, { kind: 'hook', reason: 'goal-driver-unloaded' })
     }
     return this.disposal = (async () => {
@@ -146,10 +162,15 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
 
   private interrupt(state: DriverState, reason: TurnEndCancelCause): Promise<void> {
     if (state.interruption !== undefined) return state.interruption
+    const round = state.runningGoal
+    if (round === undefined || state.directHuman) return Promise.resolve()
     const rootOperations = state.owner.rootOperations
     const interruption = state.interruption = rootOperations === undefined
       ? Promise.reject(new Error('Goal turn interruption requires the exact root operation owner'))
-      : Promise.resolve().then(() => rootOperations.interruptTurn(reason))
+      : Promise.resolve().then(() => {
+        if (state.runningGoal !== round || state.directHuman) return
+        return rootOperations.interruptTurn(reason)
+      })
     this.interruptions.add(interruption)
     void interruption.then(() => { this.interruptions.delete(interruption) }, (failure: unknown) => {
       this.interruptions.delete(interruption)
@@ -176,6 +197,9 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
 
   private available(state: DriverState): boolean {
     return state.owner.writerAvailable && this.sessions.owner(state.owner.agent, state.owner.session) === state.owner
+  }
+  private ownsAutomaticTurn(state: DriverState): boolean {
+    return state.runningGoal !== undefined && !state.directHuman
   }
   private active(state: DriverState): GoalView | undefined {
     if (state.stopping || this.stopping || this.signal.aborted || !this.available(state)) return undefined

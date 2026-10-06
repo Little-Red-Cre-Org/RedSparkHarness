@@ -27,7 +27,7 @@ kind: "package-reference"
 
 当 active 的 goal 应在无人干预的情况下持续推进时，挂载 `dsh-goal-round-driver`。它与 goal 服务和 goal 工具组合使用：服务拥有状态，工具让模型控制状态，本包负责调度轮次。
 
-原生入口为定时工作提供 `goalContinuation.create(owner, request)` 与 `resume(owner, ref, additionalRounds, source)`。两者要求精确附加的 root owner，以及本驱动器仍存活的 idle 与 pre-step hooks。它们通过 Goal 权威写入；恢复已耗尽轮数的 Goal 时按明确额度扩容，并保留原标识。恢复必须明确提供 human 或 model 来源；paused Goal 只接受 human，不隐式提升模型权限。执行与持久化输入仍由 Program 拥有。
+原生入口为定时工作提供 `goalContinuation.create(owner, request)`、`pause(owner, ref)` 与 `resume(owner, ref, additionalRounds, source)`。这些操作要求精确附加的 root owner 和本驱动器仍存活的 hooks。驱动器必须附加到提供 `rootOperations.interruptTurn` 的 Native root owner；缺少该操作时会在注册 hooks 或 Goal 输入前拒绝附加。驱动器忽略 delegated owner。状态通过 Goal 权威写入；pause 只会中止驱动器当前拥有的自动 Goal Round，恢复已耗尽轮数的 Goal 时按明确额度扩容并保留原标识。恢复必须明确提供 human 或 model 来源；paused Goal 只接受 human，不隐式提升模型权限。执行与持久化输入仍由 Program 拥有。
 
 ### 组合方式
 
@@ -52,7 +52,7 @@ kind: "package-reference"
 
 ### 何时停止续行
 
-Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行。人类 `/goal pause` 会持久化暂停并中止当前 turn；模型发起的暂停会正常结束，包括 Goal-owned turn 后续 step 已接纳直接人类输入的情况。编辑通过 revision 栅栏使进行中的 Round 失效，驱动器会继续新 revision。驱动器也会在 turn 因 max tokens 结束、持久性写入失败、agent 被取消或 Round 上限耗尽时停止——达到上限时会以稳定代码 `round-limit` 记录 blocker。取消绝不会自动重启 Round：正在进行或已排队的 Goal 会在下一次 idle 时暂停；与 Goal 尝试无关的取消只会停用续行。
+Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行。人类 `/goal pause` 会持久化暂停；仅当驱动器拥有当前自动 Goal turn 时才会中止该轮，人类发起的 turn 不会取消。模型发起的暂停会正常结束，包括 Goal-owned turn 后续 step 已接纳直接人类输入的情况。编辑通过 revision 栅栏使进行中的 Round 失效，驱动器会继续新 revision。驱动器也会在 turn 因 max tokens 结束、持久性写入失败、agent 被取消或 Round 上限耗尽时停止——达到上限时会以稳定代码 `round-limit` 记录 blocker。取消绝不会自动重启 Round：正在进行或已排队的 Goal 会在下一次 idle 时暂停；与 Goal 尝试无关的取消只会停用续行。
 
 ### resume、fork 或卸载之后
 

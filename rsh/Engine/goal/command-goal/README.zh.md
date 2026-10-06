@@ -39,7 +39,7 @@ kind: "package-reference"
 | `/goal` | 显示当前目标、持久 phase、Round 数量与上限、进程本地续行启用状态与有效的下一步命令；被阻塞的 goal 还会显示其策略代码与说明 |
 | `/goal <objective>` | 创建 goal 并启用续行，或用全新身份替换已完成 goal |
 | `/goal edit <objective>` | 编辑当前目标，不改变其 phase 或续行启用状态 |
-| `/goal pause` | 持久化暂停、停用续行，并中止确切 root 的当前 turn，同时保留尚未领取的 inbox 输入 |
+| `/goal pause` | 持久化暂停并停用续行；原生驱动器只中止其当前拥有的自动 Goal Round，不会取消人类发起的 turn |
 | `/goal resume` | 恢复已停止 goal，或在会话 resume 或 fork 后重新启用 active goal；仍受剩余 Round 上限约束 |
 | `/goal clear` | 清除当前 goal，同时保留其持久历史 |
 
@@ -53,7 +53,7 @@ kind: "package-reference"
 
 ### 组合方式
 
-命令注入命令注册表与 goal 服务。自定义应用会挂载它们的所有者与此插件；自动续行仍是独立选择：
+命令必须注入命令注册表与 Goal 服务，并可选使用原生 Goal 驱动器。未安装驱动器时，pause 只修改持久 Goal 状态，不取消 turn；安装驱动器后，只会中止其当前拥有的自动 Goal Round。自定义应用会挂载所需的所有者与此插件；自动续行仍是独立选择：
 
 ```yaml
 - id: commands

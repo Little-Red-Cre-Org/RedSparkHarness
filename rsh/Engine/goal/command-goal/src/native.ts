@@ -2,6 +2,7 @@
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { CommandDefinitionId, type NativeCommandInvocation, type CommandResult } from '@deepseek-ai/dsh-commands/native'
 import { GoalError, type NativeGoalOperations } from '@deepseek-ai/dsh-goal/native'
+import type { NativeGoalContinuationOperations } from '@deepseek-ai/dsh-goal-round-driver/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { assertNever, prepareGoalCommand, resolveGoalCommandState, renderGoal, goalCommandRef, missingGoal } from './common.ts'
 
@@ -12,7 +13,8 @@ async function submitAttachments(invocation: NativeCommandInvocation): Promise<v
   }), 'next-turn', false, invocation.signal)
 }
 
-async function execute(goals: NativeGoalOperations, invocation: NativeCommandInvocation): Promise<CommandResult> {
+async function execute(goals: NativeGoalOperations, continuation: NativeGoalContinuationOperations | undefined,
+  invocation: NativeCommandInvocation): Promise<CommandResult> {
   const prepared = prepareGoalCommand(invocation.rawInput, invocation.attachments.length)
   if (prepared.kind === 'error') return prepared
   invocation.signal.throwIfAborted()
@@ -40,8 +42,10 @@ async function execute(goals: NativeGoalOperations, invocation: NativeCommandInv
         if (current === undefined) return missingGoal('pause')
         const release = invocation.owner.retain()
         try {
-          const goal = await goals.pause(invocation.agent, goalCommandRef(command, current))
-          await invocation.owner.rootOperations?.interruptTurn({ kind: 'hook', reason: 'goal-pause' })
+          const ref = goalCommandRef(command, current)
+          const goal = continuation === undefined
+            ? await goals.pause(invocation.agent, ref)
+            : await continuation.pause(invocation.owner, ref)
           return renderGoal('Goal paused', goal)
         } finally { release() }
       }
@@ -61,17 +65,19 @@ async function execute(goals: NativeGoalOperations, invocation: NativeCommandInv
 
 /** Native Goal human Consumer; slash input stays outside model history. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-command-goal', targets: ['host'], requires: ['commands', 'goals'], provides: [],
+  apiVersion: 1, name: '@deepseek-ai/dsh-command-goal', targets: ['host'], requires: ['commands', 'goals'],
+  optional: ['goalContinuation'], provides: [],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 0)) {
       throw new Error('command-goal: configuration must be an empty object')
     }
     return (context) => {
       const goals = context.require('goals')
+      const continuation = context.optional('goalContinuation')
       context.effect(context.require('commands').register({ definitionId: CommandDefinitionId('@deepseek-ai/dsh-command-goal'),
         name: 'goal', description: 'Set or view the goal for a long-running task',
         input: { hint: '[<objective>|clear|edit <objective>|pause|resume]', attachments: true },
-        handler: invocation => execute(goals, invocation),
+        handler: invocation => execute(goals, continuation, invocation),
       }, context.scope))
     }
   },

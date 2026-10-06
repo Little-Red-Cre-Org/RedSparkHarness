@@ -8,6 +8,14 @@ export type NativeGoalContinuationSource = 'human' | 'model'
 /** Driver-owned arming; Goal remains the durable state authority. */
 export interface NativeGoalContinuationOperations {
   /**
+   * Pause the exact Goal and drain only its active automatic turn; ordinary human turns remain active.
+   * @param owner - original attached Program root owner.
+   * @param ref - exact current Goal revision.
+   * @returns durably paused Goal after any owned automatic turn settles.
+   * @throws when the owner is no longer attached or the Goal reference is stale.
+   */
+  pause(owner: NativeActiveSessionOwner, ref: GoalRef): Promise<GoalView>
+  /**
    * Create a Goal only while the exact owner has active continuation hooks.
    * @param owner - original attached Program root owner.
    * @param request - objective and resolved round cap.

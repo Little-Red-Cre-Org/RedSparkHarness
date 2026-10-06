@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 
 Mount `dsh-goal-round-driver` when an active goal should keep making progress without human intervention. It composes with the goal service and the goal tools: the service owns the state, the tools give the model control over it, and this package schedules the rounds.
 
-The native entry provides `goalContinuation.create(owner, request)` and `resume(owner, ref, additionalRounds, source)` for scheduled work. Both require the exact attached root owner with this driver’s live idle and pre-step hooks. They write through the Goal authority; resuming an exhausted Goal extends its cap by the explicit allowance and preserves its original identity. Resume requires an explicit human or model source; a paused Goal accepts only human operations. The Program still owns execution and durable inputs.
+The native entry provides `goalContinuation.create(owner, request)`, `pause(owner, ref)`, and `resume(owner, ref, additionalRounds, source)` for scheduled work. They require the exact attached root owner with this driver’s live hooks. The driver must attach to a Native root owner that provides `rootOperations.interruptTurn`; attachment fails before hooks or Goal inputs are registered if that operation is missing. The driver ignores delegated owners. It writes through the Goal authority; pause interrupts only a currently running automatic Goal round owned by this driver, and resume of an exhausted Goal extends its cap by the explicit allowance while preserving identity. Resume requires an explicit human or model source; a paused Goal accepts only human operations. The Program still owns execution and durable inputs.
 
 ### Compose it
 
@@ -52,7 +52,7 @@ With an exact live agent idle, an active armed goal, and remaining capacity, the
 
 ### When continuation stops
 
-A round starts only at whole-agent idle, and completion, pause, and blocking suppress continuation. A human `/goal pause` persists the pause and interrupts the current turn; a model pause finishes normally, including when direct human input enters a later step of a Goal-owned turn. An edit invalidates an in-flight round through the revision fence, and the driver continues the new revision. The driver also stops when a turn ends on max tokens, a durability write fails, the agent is cancelled, or the round cap is exhausted — at the cap it records a blocker with the stable code `round-limit`. Cancellation never auto-restarts a round: a goal whose round was under way or already queued is paused at the next idle point, and a cancellation unrelated to a goal attempt only disarms continuation.
+A round starts only at whole-agent idle, and completion, pause, and blocking suppress continuation. A human `/goal pause` persists the pause and interrupts the current automatic Goal turn only when the driver owns it; a human-owned turn is not canceled. A model pause finishes normally, including when direct human input enters a later step of a Goal-owned turn. An edit invalidates an in-flight round through the revision fence, and the driver continues the new revision. The driver also stops when a turn ends on max tokens, a durability write fails, the agent is cancelled, or the round cap is exhausted — at the cap it records a blocker with the stable code `round-limit`. Cancellation never auto-restarts a round: a goal whose round was under way or already queued is paused at the next idle point, and a cancellation unrelated to a goal attempt only disarms continuation.
 
 ### After resume, fork, or unload
 

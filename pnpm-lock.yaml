@@ -2447,6 +2447,9 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../Tests/test-support/agent-loop-testkit
+      '@deepseek-ai/dsh-goal-round-driver':
+        specifier: workspace:^
+        version: link:../goal-round-driver
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session

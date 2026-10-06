@@ -42,6 +42,7 @@
     "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
+    "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
@@ -71,7 +72,9 @@
         "goals"
       ],
       "provides": [],
-      "optional": []
+      "optional": [
+        "goalContinuation"
+      ]
     }
   }
 }

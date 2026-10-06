@@ -39,7 +39,7 @@ Every sub-command runs against the current goal of the invoking agent; a bare `/
 | `/goal` | Shows the current objective, durable phase, round count and cap, process-local activation, and valid next commands; a blocked goal also shows its policy code and explanation |
 | `/goal <objective>` | Creates and arms a goal, or replaces a completed goal with a fresh identity |
 | `/goal edit <objective>` | Edits the current objective without changing its phase or activation |
-| `/goal pause` | Persists the pause, disarms continuation, and interrupts the exact root's current turn without discarding unclaimed inbox input |
+| `/goal pause` | Persists the pause and disarms continuation; the Native driver interrupts only its currently running automatic Goal round, leaving a human-owned turn alone |
 | `/goal resume` | Resumes a stopped goal, or rearms an active goal after session resume or fork, subject to its remaining round cap |
 | `/goal clear` | Clears the current goal while retaining its durable history |
 
@@ -53,7 +53,7 @@ Control words (`clear`, `pause`, `resume`, `edit`) are recognized only when they
 
 ### Compose it
 
-The command injects the commands registry and the goal service. A custom app mounts their owners plus this plugin; automatic continuation remains an independent choice:
+The command requires the commands registry and Goal service and optionally uses the Native Goal driver. Without a driver, pause changes durable Goal state but does not cancel a turn; when installed, the driver interrupts only a current automatic Goal round that it owns. A custom app mounts the required owners plus this plugin; automatic continuation remains an independent choice:
 
 ```yaml
 - id: commands

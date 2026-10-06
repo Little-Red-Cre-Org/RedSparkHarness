@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-Native 确切的 Program 绑定 root owner 提供 `interruptTurn(reason)`，它会中止并等待当前 turn，同时保留 Session epoch 与尚未领取的 inbox 消息。Native `/goal pause` 先持久化暂停，再在保留 owner 的情况下中断该 root turn，直到结算完成。Native 驱动器卸载会停用 Goal、中断并排空已接纳的 Goal turn，然后移除 hooks。两条路径都不会创建另一个 writer 或 Agent loop。
+Native 确切的 Program 绑定 root owner 提供 `interruptTurn(reason)`，它会中止并等待当前 turn，同时保留 Session epoch 与尚未领取的 inbox 消息。Native 命令通过可选的 Goal 驱动器处理 pause；只有驱动器拥有当前自动 Goal Round 且该 turn 尚未接纳直接人类输入时，才会中断它。仅挂载命令的 profile 会持久化暂停，但不会取消人类 turn。若 Native root owner 没有 `rootOperations.interruptTurn`，驱动器会在安装 hooks 或调度 Goal 输入前拒绝附加。驱动器卸载会停用 Goal、中断并排空已接纳的 Goal turn，然后移除 hooks。这些路径都不会创建另一个 writer 或 Agent loop。
 
 Native Goal 驱动器会跟踪已接纳的 Goal 消息，以及同一 turn 中接纳的直接人类消息。模型暂停只会中断纯 Goal 自动轮次；若人类消息进入后续 step，模型可以暂停 Goal 并正常完成 turn。显式 Session 与 TUI cancel 继续使用完整 root cancel，它会关闭 epoch 并丢弃待处理 inbox。
 
@@ -24,7 +24,7 @@ Native Goal 驱动器会跟踪已接纳的 Goal 消息，以及同一 turn 中�
 
 ## 后果
 
-Goal pause 与驱动器卸载会停止当前 Goal turn，但不会撤回尚未领取的普通消息。之后的唤醒会复用同一 root owner，并将这些消息交给模型。完整 Session cancel 保留其显式丢弃行为。
+Goal pause 与驱动器卸载会停止当前自动 Goal turn，不会取消无关的人类 turn，也不会撤回尚未领取的普通消息。之后的唤醒会复用同一 root owner，并将这些消息交给模型。完整 Session cancel 保留其显式丢弃行为。
 
 ## 测试
 
