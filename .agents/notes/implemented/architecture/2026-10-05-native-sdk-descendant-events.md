@@ -10,7 +10,7 @@ Both SDKs discover descendant subscriptions from subagent.started, but the nativ
 
 ## Decision
 
-The Program observes active delegated owners and authenticates their display root through its existing executor and exact SDK route. The admitted root or an already observed descendant must own the durable parent relation. A lineage notification precedes the child's backend-accepted Session events. Owner detachment withdraws the listener; application shutdown withdraws and drains registry observations before closing the transport. Root execution retains its own event projection and sole writer.
+The Program observes active delegated owners and authenticates their display root through its existing executor and exact SDK route. The admitted root or an already observed descendant must own the durable parent relation. A lineage notification precedes the child's backend-accepted Session events. Owner detachment withdraws the event listener while retained lineage permits the selected Subagent Provider to publish its actual settled result. Shutdown drains accepted execution before flushing the transport and then releases lineage observations. Root execution retains its own event projection and sole writer.
 
 ## Alternatives considered
 
@@ -18,4 +18,4 @@ A second event store would duplicate the Session log. Publishing every active ow
 
 ## Consequences
 
-TypeScript and Python session-tree subscriptions receive actual delegated descendants without changing their root response projection. The shipped native profile still lacks the production Subagent tool and finished-result authority. One existing recorded Session scenario exercises real delegation and a separate Program sharing Providers through both SDKs; durable child history retains its parent relation.
+TypeScript and Python session-tree subscriptions receive actual delegated descendants without changing their root response projection. Their shipped native profile projects `subagent.finished` only from actual one-shot or continuable Provider settlement matched to the exact observed lineage; completion, failure, cancellation, and shutdown settlement use the Provider result and durable child history. The event is not another durable result authority. One existing recorded Session scenario exercises these paths and a separate Program sharing Providers through both SDKs; durable child history retains its parent relation.

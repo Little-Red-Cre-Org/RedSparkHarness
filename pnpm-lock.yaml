@@ -8945,12 +8945,25 @@ importers:
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/native-subagent
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+    devDependencies:
+      '@deepseek-ai/dsh-attachment-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/attachment/attachment-local
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence-jsonl
 
   rsh/Programs/SDK/packages/protocol:
     dependencies:

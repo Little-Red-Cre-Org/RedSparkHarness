@@ -18,4 +18,4 @@ Status: implemented
 
 ## Consequences
 
-原生 native-sdk 配置支持真实前台派生，并在子清理后向父任务返回真实输出。一个既有记录场景验证两套 SDK、真实工具限制、深度、token 预算、作用域 persona、委派拒绝、模型错误部分输出、子取消与父任务冷恢复。后台任务、可持续子任务、外部后端、目录投影、persona 变量插值与完成结果通知仍属于独立能力工作。
+原生 native-sdk 配置支持真实前台派生，并在子清理后向父任务返回真实输出。一个既有记录场景验证两套 SDK、真实工具限制、深度、token 预算、作用域 persona、委派拒绝、模型错误部分输出、子取消与父任务冷恢复。TypeScript 与 Python SDK Consumer 还会在确切已观察血缘内把实际结束的 Provider 结果投影为 `subagent.finished`。后台任务、可持续子任务、外部后端、目录投影与 persona 变量插值仍属于独立能力；[SDK 后代事件观察](2026-10-05-native-sdk-descendant-events.zh.md)负责线路投影。

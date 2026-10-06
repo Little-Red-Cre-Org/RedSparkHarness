@@ -40,7 +40,7 @@ Registered tools use the registry's model transport selection and exact Agent sc
 
 The validated `builtinTools` boolean defaults to `true`. Setting it to `false` removes both fixed file schemas and the built-in `{program}` code tool, and dispatches only registry contributions. An opt-in PTC profile selects this value explicitly so its registry-owned `run_code` is the sole transport. Prompt sections receive the exact requesting Agent scope before their rendered text enters the persisted system message.
 
-`sessionExecution` routes child turns and continuations through the same executor. `activeSessions` publishes the exact current Agent, Session and writer; Consumers retain that owner to keep a root resident, or append through idle maintenance without starting a model turn. Pending messages are durable inbox events, and step admission persists their exact claims before deriving model input. Resume and forks retain historical preset selection; preset removal cancels and drains its exact leases.
+`sessionExecution` routes child turns and continuations through the same executor. `activeSessions` publishes the exact current Agent, Session and writer; Consumers retain that owner to keep a root resident, or append through idle maintenance without starting a model turn. Pending messages are durable inbox events, and step admission persists their exact claims before deriving model input. Resume and forks retain historical preset selection; preset removal cancels and drains its exact leases. An `AbortError` counts as expected cancellation only when its `cause` is the exact reason of an aborted signal; execution and cleanup failures remain errors.
 
 The Program lists continuation candidates from its selected persistence corpus. It limits paths to the initiating Session's workspace, traverses ordinary Session parents, and checks each direct-parent edge and subagent delegation depth before inspecting a subagent endpoint. An unreadable intermediate yields a diagnostic for its candidate without hiding healthy sibling paths. The existing Agent registry supplies resident status without loading a cold child.
 
@@ -112,8 +112,8 @@ The reading is appended after existing history and does not change the reusable 
 
 ## Known Limitations and Deferred Work
 
-- Fixed file tools, `run_code`, and registered tools run serially; SDK protocol and Web UI remain absent.
+- Fixed file tools, `run_code`, and registered tools run serially. This package does not implement the SDK protocol or Web UI; the native SDK and Web compositions provide those interfaces.
 - Native model Providers and broader capability adapters live in separate packages.
-- Session and persistence packages still carry Cordis dependencies, although this composition creates no Cordis Context.
+- This composition imports the Cordis-free `./native` Session and persistence entries and creates no Cordis Context. Their packages retain Cordis adapters for compatibility, with Cordis as an optional peer dependency.
 
 Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly.

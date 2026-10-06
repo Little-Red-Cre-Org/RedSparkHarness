@@ -26,7 +26,7 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 原生路径还为已接收模型分块发送 `session.chunk`，并提供 `session/cancel`。取消仅针对当前已接收轮次，在持久化接收前或结束后返回 false，并等待其资源清理结束后响应。清理失败会拒绝取消请求。排队提示与其它 Session 独立接收。分块投影选定派发，`assistant/message` 或 `assistant/attempt` 仍是其持久化所有者。同 id 提示恢复存储历史。
 
-`session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。随附 native-sdk profile 安装 Session-execution Provider；应用显式要求其执行与活动所有者服务。
+`session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。根执行要求 Session-execution 与活动所有者 Provider。精简组装可不安装 Subagent Provider；选定后它才启用 `subagent.finished` 投影，随附 native-sdk profile 会安装它。
 
 `session/prompt` 接受有序文本块及编码栅格图片（`{ type: "image", data, mimeType }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
 
@@ -34,7 +34,7 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 
-此 Program 已接收根任务的委派子会话先发送 `subagent.started` 血缘通知，再发送后端已接收的 `session.event`。两个 SDK 的 `subscribeSessionTree` 与运行订阅包含这些后代；根响应事件仍独立保存。共用相同 Provider 的其它 Program 不会混入。所有者分离及关闭时撤销观察者，不新建 Session 写入者。
+此 Program 已接收根任务的委派子会话先发送 `subagent.started` 血缘通知，再发送后端已接收的 `session.event`。选定的原生 Subagent Provider 仅在真实的一次性结果或可持续驻留阶段结束并释放写入器后报告 `subagent.finished`；仅打断某一轮不会结束仍驻留的子任务。服务端将结果与此 SDK 根任务准入的精确子、父 Agent 匹配；仅分离所有者不会报告成功。两个 SDK 的 `subscribeSessionTree` 与运行订阅包含这些后代，根响应事件仍独立保存。共用相同 Provider 的其它 Program 不会混入。关闭时先排空已接受的后代、发送其结束结果并刷新传输，再释放观察者。
 
 <a id="dev-note"></a>
 
@@ -66,4 +66,5 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 ## 已知限制与延后工作
 
-- 内置 native-sdk profile 未安装生产子代理工具。`subagent.finished` 要求子代理结果权威，仍由兼容 profile 提供；后代事件投影本身不提供 Provider 结果或停止原因。
+- 原生 SDK 结果通知覆盖选定的进程内 Subagent Provider；外部或远程子任务后端不会投影为 `subagent.finished`。
+- SDK wire 目录发现仍不支持。随附 profile 中模型可见的 `list_agents` 工具是独立能力。

@@ -24,7 +24,7 @@ The profile sets `systemPrompt` and positive `maxSteps`. `initialize` selects on
 
 The native route also emits `session.chunk` for accepted model chunks and serves `session/cancel`. Cancellation targets only the currently admitted turn, returns false before a durable receipt or after settlement, and awaits owned cleanup before replying. Cleanup failures reject the cancellation request. Queued prompts and other Sessions remain admitted independently. Chunks project the selected dispatch; `assistant/message` or `assistant/attempt` remains their durable owner. Same-id prompts restore stored history.
 
-`session/fork` copies the source history through a closed turn into a fresh destination, without invoking a model. Its optional `atSeq` selects an existing event in that closed turn; omission selects the last closed turn. Source history remains unchanged, and the next destination prompt resumes the durable copy. The shipped native-sdk profile installs the Session-execution Provider; the application requires its execution and active-owner services explicitly.
+`session/fork` copies the source history through a closed turn into a fresh destination, without invoking a model. Its optional `atSeq` selects an existing event in that closed turn; omission selects the last closed turn. Source history remains unchanged, and the next destination prompt resumes the durable copy. Root execution requires the Session-execution and active-owner Providers. The selected Subagent Provider is optional for minimal assemblies and enables `subagent.finished` projection when installed; the shipped native-sdk profile installs it.
 
 `session/prompt` accepts ordered text blocks and encoded raster images (`{ type: "image", data, mimeType }`). The required attachment Provider validates canonical base64, declared media type, decoded bytes and deployment limits before the durable inbox receipt. The Session stores immutable references; the selected model adapter reads verified request variants, including after restart or fork. Caller-supplied durable attachment references are refused. The selected model must support image input.
 
@@ -32,7 +32,7 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
 
-Delegated children of this Program's admitted root emit `subagent.started` lineage before their backend-accepted `session.event` notifications. Both SDKs' `subscribeSessionTree` and run subscriptions include these descendants; root response events remain separate. Other Programs sharing the same Providers are excluded. Owner detachment and shutdown release the observers without creating another Session writer.
+Delegated children of this Program's admitted root emit `subagent.started` lineage before their backend-accepted `session.event` notifications. The selected native Subagent Provider reports `subagent.finished` only after a real one-shot result or continuable residency epoch has settled and released its writer; interrupting a turn alone does not finish a still-resident child. The server matches that result to the exact child and parent Agents accepted under this SDK root; detachment alone never reports success. Both SDKs' `subscribeSessionTree` and run subscriptions include these descendants, while root response events remain separate. Other Programs sharing the same Providers are excluded. Shutdown drains accepted descendants, emits their settled results and flushes the transport before releasing observers.
 
 ## Dev Note
 
@@ -58,4 +58,5 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- The shipped native-sdk profile does not install a production Subagent tool. `subagent.finished` requires the Subagent result authority and remains on the compatibility profile; descendant event projection alone supplies neither a Provider result nor a stop reason.
+- Native SDK result notifications cover the selected in-process Subagent Provider. External or remote child backends are not projected as `subagent.finished`.
+- SDK wire catalog discovery remains unsupported. The model-visible `list_agents` tool in the shipped profile is a separate capability.

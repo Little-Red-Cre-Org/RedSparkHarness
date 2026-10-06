@@ -18,7 +18,10 @@ function fixture(): string {
   write(root, 'tsconfig.base.json', JSON.stringify({
     compilerOptions: {
       module: 'esnext', target: 'es2022', jsx: 'react-jsx',
-      paths: { '@fixture/static': ['./rsh/Programs/Web/client/static/src/index.ts'] },
+      paths: {
+        '@fixture/static': ['./rsh/Programs/Web/client/static/src/index.ts'],
+        '@fixture/static/boot-page': ['./rsh/Programs/Web/client/static/src/boot-page.ts'],
+      },
     },
   }))
   write(root, 'tsconfig.base.client.json', '{"extends":"./tsconfig.base.json"}')
@@ -84,6 +87,7 @@ describe('browser dependency discovery', () => {
     library(root, 'lazy-lib')
     library(root, 'asset-lib')
     library(root, 'native-only-lib')
+    library(root, 'leaf-lib')
     write(root, 'node_modules/asset-lib/package.json', JSON.stringify({
       name: 'asset-lib', exports: { './theme.css': './theme.css' },
     }))
@@ -95,12 +99,18 @@ describe('browser dependency discovery', () => {
       'export const output = value',
       'export const lazy = () => import("lazy-lib")',
     ].join('\n'))
+    write(root, 'rsh/Programs/Web/client/static/src/boot-page.ts', 'import { value } from "leaf-lib"; export const BootPage = value')
     const app = join(root, 'rsh/Programs/Web/application')
     write(root, 'rsh/Programs/Web/application/package.json', '{"name":"@fixture/web","type":"module","exports":{"./dist/*":"./dist/*"}}')
     symlinkSync(resolve(repositoryRoot, 'rsh/Programs/Web/application/node_modules'), join(app, 'node_modules'), 'junction')
     write(root, 'rsh/Programs/Web/application/index.html', '<script type="module" src="./main.ts"></script>')
     write(root, 'rsh/Programs/Web/application/native.html', '<script type="module" src="./native.ts"></script>')
-    write(root, 'rsh/Programs/Web/application/main.ts', 'import { output, lazy } from "@fixture/static"; console.log(output); void lazy()')
+    write(root, 'rsh/Programs/Web/application/main.ts', [
+      'import { output, lazy } from "@fixture/static"',
+      'import { BootPage } from "@fixture/static/boot-page"',
+      'console.log(output, BootPage)',
+      'void lazy()',
+    ].join('\n'))
     write(root, 'rsh/Programs/Web/application/native.ts', 'import { value } from "native-only-lib"; console.log(value)')
     write(root, 'rsh/Programs/Web/application/vite.config.ts', `export default {
       build: { rollupOptions: { input: {
@@ -111,7 +121,7 @@ describe('browser dependency discovery', () => {
     }`)
     write(root, 'rsh/Programs/Web/application/dist/sentinel.txt', 'untouched')
 
-    expect(await browserBundledExternals(root)).toEqual(new Set(['shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib']))
+    expect(await browserBundledExternals(root)).toEqual(new Set(['shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib', 'leaf-lib']))
     expect(readFileSync(join(app, 'dist/sentinel.txt'), 'utf8')).toBe('untouched')
     expect(existsSync(join(app, 'dist/index.html'))).toBe(false)
     expect(existsSync(join(app, 'dist/native.html'))).toBe(false)

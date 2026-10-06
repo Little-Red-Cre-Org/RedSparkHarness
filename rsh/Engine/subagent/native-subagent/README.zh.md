@@ -33,6 +33,8 @@ kind: "package-reference"
 
 可持续启动通过 Program 提交描述符与首次收件箱准入后返回。sendMessage 只允许直接父子相邻关系，从持久描述符恢复已关闭的直接子任务，并返回已接受消息 id，不等待回答。list 读取选定 Program 的持久目录而不加载 Agent，穿过普通 Session 与一次性子任务，只返回此 Provider 的可持续描述符及实际驻留状态或逐项读取诊断。冷恢复保留路由、persona、工具限制与工作区；激活预算采用选定部署的默认值。interrupt 停止当前工作，把未认领输入停放至另一消息唤醒。父级销毁和提供者卸载等待驻留子任务清理；执行与清理失败使操作拒绝。
 
+可持续子任务释放写入器与 Agent 后，Provider 读取该驻留阶段的持久 Session 历史，并把真实结果报告给已注册消费者。随后仅在选定 Program 仍开放时，通过精确父级 inbox 投递一条 subagent-settled 通知。结束原因与结束内容只来自本驻留阶段的持久后缀；清理失败报告 error，不保留更早回答。根父任务在下一用户轮次读取队列通知；驻留的可持续父任务沿用已有唤醒路径。Provider 关闭时，排空已接受的阶段仍会发布结果，但不再投递新通知。
+
 <a id="model-experience"></a>
 ## 模型体验
 
@@ -55,7 +57,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - persona 是作用域内的字面文本；不支持模板变量插值。
-- 此入口不提供外部后端与 subagent.finished 结果通知。
+- 此入口不提供外部后端。原生 SDK 消费 Provider 的结束结果观察者并匹配精确的进程内子任务血缘；本包本身不发送 SDK wire 通知。
 - 不发布 invariant 配套模块：Program 保留 Agent、Session 与写入器权威；提供者仅拥有已接受调用与作用域安装。
 
 <a id="dev-note"></a>

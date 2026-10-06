@@ -30,6 +30,8 @@ Layers apply to an empty entry list in this order: each bundle in the profile's 
 
 Custom profiles default to live reload. `web` reloads live; `headless`, `sdk`, `sdk-minimal`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
 
+Native `native-web` sets `dsh.profile.configReload: live` to watch `rsh.profile.json` and explicit JSON `--patch` files, then replace the Host installation plan. `native-headless`, `native-sdk`, `native-acp`, and `native-tui` remain startup-only. See [the CLI reload contract](../Programs/CLI/reference/README.md); Host config reload is separate from Cordis patch reload and Web Client asset rebuilding.
+
 To see the tree your machine boots:
 
 ```sh
@@ -116,9 +118,7 @@ Details: the [sequence diagram](agent-lifecycle.md), the [tool pipeline](tool-ex
 
 ## Session log
 
-The session log is the source of the context the model sees. `deriveMessages()` projects model history from it. Each `assistant/message` embeds the exact compact timed stream that produced its assembled content; `assistant/attempt` retains settled failed, retried, cancelled, and stream-error attempts without adding model history. Fork, resume, transcripts, telemetry, and persistence all derive from these durable settlements, while live UI incrementality comes from `agent/assistant-stream`; a hard process loss before settlement leaves no durable attempt stream ([decision](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.md)).
-
-Session consumers know only the current logical format. Header-only `stat` and `list` rescan each Session directory, select its numerically highest canonical generation, and translate a supported historical header without loading events or publishing a successor. A stored-session `open` selects that same generation, refuses a future version, or decodes and composes the static adjacent migration chain once before returning validated current logical events. A read open uses that in-memory result without publishing a successor; a write open first encodes, verifies, and exclusively publishes the final version-named successor beside the unchanged source. Ordinary repair of an unsealed interrupted tail remains a handle consumer responsibility; migration inserts a missing interrupted `turn/end` only for the bounded released restart already sealed by a later `turn/start`. JSONL v0 uses `session.jsonl[.zstd]`, v1 and later use lowercase `session.vN.jsonl[.zstd]`, and committed generation paths are never renamed, replaced, or deleted. The JSONL provider owns physical framing, compression, generation selection, and exclusive publication, while each adjacent migration package owns exactly one `vN -> vN+1` step ([decision](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md)).
+The session log supplies model-visible history; `deriveMessages()` projects request messages, and durable settlements feed resume, transcripts, telemetry, and persistence. Live UI updates use `agent/assistant-stream` ([stream decision](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.md)). The [Session subsystem](subsystems/session.md) owns record behavior; the [agent loop](../Engine/core/agent-loop/README.md) owns request and stream behavior; [Session format status](session-format-status.md) and the [released migration decision](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md) own stored formats.
 
 **Model-visible means logged.** Anything that reaches a model request must be reconstructable from the log, and a runtime invariant asserts it. This is why a new model-visible input requires a new session event: extend `SessionEventMap` and render from the log.
 
