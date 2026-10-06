@@ -6,7 +6,10 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
+import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
+import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
+import type {} from '@deepseek-ai/dsh-fs'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
@@ -15,11 +18,13 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
+import { plugin as nativeToolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { plugin as sandboxFsPlugin } from '@deepseek-ai/dsh-compat-fs-sandbox/native'
 import { plugin as sandboxPolicyPlugin } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import { plugin as compatPolicyPlugin } from '@deepseek-ai/dsh-compat-fs-policy/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
@@ -165,6 +170,141 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
     await host.remove(bridge)
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')
+  } finally {
+    await host.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('delegates legacy write and edit waterfalls through native next callbacks', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-waterfall-'))
+  const scope = new NativeScope()
+  let runtime: CompatDshRuntime | undefined
+  let filesystem: FileSystemOperations | undefined
+  let tools: NativeToolRegistry | undefined
+  let agents: NativeAgentRegistry | undefined
+  const capture: NativePlugin = {
+    apiVersion: 1, name: 'compat-waterfall-capture', targets: ['host'],
+    requires: ['compatDshRuntime', 'fs', 'tools', 'agents'], provides: [],
+    resolve: () => (context) => {
+      runtime = context.require('compatDshRuntime')
+      filesystem = context.require('fs')
+      tools = context.require('tools')
+      agents = context.require('agents')
+    },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: compatRuntimePlugin, scope, config: undefined },
+    { plugin: agentPlugin, scope, config: undefined },
+    { plugin: toolsPlugin, scope, config: undefined },
+    { plugin: promptPlugin, scope, config: undefined },
+    { plugin: localFilesystemPlugin, scope, config: { cwd: directory } },
+    { plugin: capture, scope, config: undefined },
+    { plugin, scope, config: undefined },
+  ], 'host'))
+  let unregister: (() => Promise<void>) | undefined
+  const disposers: (() => boolean)[] = []
+  try {
+    await host.start()
+    if (runtime === undefined || filesystem === undefined || tools === undefined || agents === undefined) {
+      throw new Error('missing compatibility waterfall services')
+    }
+    const legacy = runtime.context
+    const sequence: string[] = []
+    disposers.push(legacy.on('fs/write-intent', async (_target, _actor, next) => {
+      sequence.push('write:outer')
+      return next()
+    }))
+    disposers.push(legacy.on('fs/write-intent', async () => {
+      sequence.push('write:terminal')
+      return { kind: 'createIfAbsent' }
+    }))
+    disposers.push(legacy.on('fs/edit-intent', async (_target, _actor, next) => {
+      sequence.push('edit:outer')
+      return next()
+    }))
+    disposers.push(legacy.on('fs/edit-intent', async (target) => {
+      sequence.push('edit:terminal')
+      const info = await filesystem?.stat(target)
+      if (info === undefined) throw new Error('missing file before edit waterfall')
+      return { version: info.version }
+    }))
+
+    const id = SessionId('compat-waterfall-session')
+    const session = Session.create(id, undefined, {
+      version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: directory, isSeeded: false, delegationDepth: 0,
+    })
+    const agent: NativeAgent = { id: NativeAgentId('compat-waterfall-agent'), scope }
+    unregister = agents.register(agent)
+    const signal = new AbortController().signal
+    const execute = (callId: string, name: string, args: unknown) => tools?.execute({
+      agent, callId: ToolCallId(callId), name, arguments: args, session, signal,
+      appendEvent: async (type, data, ...options) => session.append(type, data, ...options),
+    })
+    const write = await execute('compat-waterfall-write', 'write', { file_path: 'sample.txt', content: 'before edit\n' })
+    expect(write?.isError).toBe(false)
+    const edit = await execute('compat-waterfall-edit', 'edit', {
+      file_path: 'sample.txt', old_string: 'before', new_string: 'after',
+    })
+    expect(edit?.isError).toBe(false)
+    const target = await filesystem.resolve('sample.txt')
+    expect(await filesystem.readText(target)).toBe('after edit\n')
+    expect(sequence).toEqual(['write:outer', 'write:terminal', 'edit:outer', 'edit:terminal'])
+  } finally {
+    for (const dispose of disposers) dispose()
+    if (unregister !== undefined) await unregister()
+    await host.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('uses the legacy observation policy for native file tools', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-native-'))
+  await writeFile(join(directory, 'sample.txt'), 'before\n')
+  const scope = new NativeScope()
+  let tools: NativeToolRegistry | undefined
+  let agents: NativeAgentRegistry | undefined
+  const capture: NativePlugin = {
+    apiVersion: 1, name: 'native-file-tool-capture', targets: ['host'], requires: ['tools', 'agents'], provides: [],
+    resolve: () => (context) => { tools = context.require('tools'); agents = context.require('agents') },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: capture, scope, config: undefined },
+    { plugin: agentPlugin, scope, config: undefined },
+    { plugin: toolsPlugin, scope, config: undefined },
+    { plugin: localFilesystemPlugin, scope, config: { cwd: directory } },
+    { plugin: compatPolicyPlugin, scope, config: undefined },
+    { plugin: nativeToolFsPlugin, scope, config: undefined },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
+  ], 'host'))
+  try {
+    await host.start()
+    if (tools === undefined || agents === undefined) throw new Error('missing native tool registries')
+    const id = SessionId('compat-native-tool-session')
+    const session = Session.create(id, undefined, {
+      version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: directory, isSeeded: false, delegationDepth: 0,
+    })
+    const agent: NativeAgent = { id: NativeAgentId('compat-native-tool-agent'), scope }
+    const unregister = agents.register(agent)
+    const signal = new AbortController().signal
+    try {
+      const read = await tools.execute({
+        agent, callId: ToolCallId('native-read-1'), name: 'read', arguments: { file_path: 'sample.txt' }, session, signal,
+        appendEvent: async (type, data, ...opts) => session.append(type, data, ...opts),
+      })
+      expect(read.isError).toBe(false)
+      const write = await tools.execute({
+        agent, callId: ToolCallId('native-write-1'), name: 'write', arguments: { file_path: 'sample.txt', content: 'after read\n' }, session, signal,
+        appendEvent: async (type, data, ...opts) => session.append(type, data, ...opts),
+      })
+      expect(write.isError).toBe(false)
+      const edit = await tools.execute({
+        agent, callId: ToolCallId('native-edit-1'), name: 'edit', arguments: { file_path: 'sample.txt', old_string: 'after', new_string: 'edited' }, session, signal,
+        appendEvent: async (type, data, ...opts) => session.append(type, data, ...opts),
+      })
+      expect(edit.isError).toBe(false)
+      expect(await readFile(join(directory, 'sample.txt'), 'utf8')).toBe('edited read\n')
+    } finally { await unregister() }
   } finally {
     await host.stop()
     await rm(directory, { recursive: true, force: true })
