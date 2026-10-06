@@ -5765,6 +5765,13 @@ importers:
         version: link:../../../../Engine/llm/llm
 
   rsh/Modules/Official/fs/fs-sandbox:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
