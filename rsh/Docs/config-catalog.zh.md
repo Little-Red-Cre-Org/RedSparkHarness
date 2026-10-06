@@ -2987,7 +2987,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Engine/workflow/tool-ralph/src/index.ts:21`](../Engine/workflow/tool-ralph/src/index.ts)
+来源：[`rsh/Engine/workflow/tool-ralph/src/index.ts:24`](../Engine/workflow/tool-ralph/src/index.ts)
 
 <a id="deepseek-aidsh-tool-session-query"></a>
 
@@ -3478,7 +3478,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Engine/workflow/workflow-worker-thread/src/index.ts:32`](../Engine/workflow/workflow-worker-thread/src/index.ts)
+来源：[`rsh/Engine/workflow/workflow-worker-thread/src/index.ts:33`](../Engine/workflow/workflow-worker-thread/src/index.ts)
 
 ## 无配置的可加载插件
 

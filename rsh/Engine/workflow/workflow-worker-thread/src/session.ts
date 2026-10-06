@@ -83,6 +83,7 @@ class ChildRpcBridge implements ChildPort {
     // the run is torn down), the settled promise may never gain a consumer —
     // it must not surface as an unhandled rejection and kill the worker.
     entry.settled.promise.catch(() => { /* consumed: unconsumed child settlement after failed start */ })
+    entry.disposed.promise.catch(() => { /* consumed: child cleanup failure if the script abandoned its dispose RPC */ })
     this.pending.set(callId, entry)
     this.post(WorkerToHostType.ChildStart, { callId, request })
     const childId = await entry.started.promise
@@ -116,6 +117,13 @@ class ChildRpcBridge implements ChildPort {
     const entry = this.pending.get(callId)
     this.pending.delete(callId)
     entry?.disposed.resolve()
+  }
+
+  /** A requested cleanup failed; the host retains ownership and reports the failure to the script. */
+  onChildDisposeFailed(callId: number, rendered: string): void {
+    const entry = this.pending.get(callId)
+    this.pending.delete(callId)
+    entry?.disposed.reject(new Error(rendered))
   }
 }
 
@@ -187,6 +195,9 @@ export async function runWorkerSession(port: MessagePort, init: WorkerInit): Pro
         break
       case HostToWorkerType.ChildDisposed:
         children.onChildDisposed(message.callId)
+        break
+      case HostToWorkerType.ChildDisposeFailed:
+        children.onChildDisposeFailed(message.callId, message.rendered)
         break
       /* v8 ignore next 2 -- closed engine-owned union; the arm only makes adding a message type a compile error */
       default:

@@ -86,6 +86,22 @@ export interface WorkflowResult {
   agentsStarted: number
 }
 
+/**
+ * Holder-owned live workflow shared by Cordis and native Consumers. `result`
+ * never rejects; Consumers may cancel and must call idempotent `dispose()` to
+ * await the selected Provider's script and child cleanup policy.
+ */
+export interface WorkflowRun {
+  readonly id: WorkflowRunId
+  /** The validated meta block available before the script body runs. */
+  readonly meta: WorkflowMeta
+  readonly result: Promise<WorkflowResult>
+  /** Cancel the run and its children. */
+  cancel(reason?: string): void
+  /** Cancel if needed and await script termination and the Provider's owned child cleanup. */
+  dispose(): Promise<void>
+}
+
 /** Identifying detail for a run, carried by every `workflow/*` event as borrowed immutable data, never the live run. */
 export interface WorkflowRunInfo {
   /** The run's id. */

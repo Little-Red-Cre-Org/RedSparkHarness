@@ -218,6 +218,12 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
+  // Workflow's native Definition, typed source leaves, and worker/Consumer
+  // bundles are published alongside the existing Cordis package entry.
+  '@deepseek-ai/dsh-workflow': ['lib/errors.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-workflow-worker-thread': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-workflow': ['lib/native.js', 'lib/foreground.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-ralph': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-tools': [
     'lib/json-schema.js', 'lib/code-output.js', 'lib/ts-types.js', 'lib/py-types.js',

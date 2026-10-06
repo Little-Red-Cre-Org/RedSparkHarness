@@ -46,6 +46,8 @@ While the script runs, the parent turn waits: the tool starts the run, awaits it
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-workflow) is the exhaustive source for every accepted field.
 
+Native compositions mount `@deepseek-ai/dsh-tool-workflow/native` with a `provider` name visible in the scoped Native workflow Definition; the worker Provider is installed separately. Root calls record run and child progress in the invoking Session before returning the result.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -58,15 +60,15 @@ This section explains how the consumer is split from the engine and how the run 
 
 ### Design concept
 
-The consumer owns the model-facing schema, the `tool:<toolName>` system-prompt guidance, and the result envelope; script parsing, execution, caps, and cancellation live behind `ctx.workflowEngine`, so a hardened engine swaps in without changing what the model sees. Usage guidance ships with the tool plugin as a prompt section, never in the deployment persona.
+The consumer owns the model-facing schema, the `tool:<toolName>` system-prompt guidance, and the result envelope; Cordis and Native installations select execution through their respective workflow Definitions. Usage guidance ships with the tool plugin as a prompt section, never in the deployment persona.
 
 ### Run lifecycle
 
-`execute` starts the run and awaits `run.result` inside a `try/finally` that always disposes the run. `exec.signal` is bridged to `run.cancel()`, including the already-aborted-before-start case. A non-`completed` stop reason maps to an `isError` result reporting the reason; completion renders `{ runId, agentsStarted, result }`, with the Native renderer truncating only that projection at `maxResultChars`.
+`execute` starts the run and awaits `run.result` inside a `try/finally` that always disposes the run. `exec.signal` is bridged to `run.cancel()`, including the already-aborted-before-start case. A non-`completed` stop reason maps to an `isError` result reporting the reason; completion renders `{ runId, agentsStarted, result }`, with the Native renderer truncating only that projection at `maxResultChars`. Native `run-end` is appended only after accepted child Session cleanup finishes, which can outlast the worker's script grace.
 
 ### Durable session records
 
-For a root transport execution (`exec.parent` absent), the tool projects the run into the calling Agent's Session with four log-only events: run-start after `start()` returns, member starts and endings filtered by `run.id`, then run-end only after the result is available and disposal reaches quiescence. Nested transport calls execute normally but write no record. The first failed Session append disables later recording for that run with one warning, leaving either no record or a legal continuous prefix without changing the tool result or cleanup. The package invariant rejects duplicate starts, unpaired members, terminal events with open members, and updates after run-end on both cold load and live append, while accepting missing terminal suffixes.
+For a root Native execution (`exec.parent` absent), the tool projects the run into the calling Agent's Session with four log-only events: run-start after `start()` returns, member starts and endings filtered by `run.id`, then run-end only after the result is available and disposal reaches quiescence. Nested transport calls execute normally but write no record. A failed Session append cancels the run, disables later recording for that run, and rejects the consumer after owned cleanup settles; it never returns a completed result with only a prefix. Ordinary progress-observer failures have separate per-callback containment in the selected engine. The package invariant rejects duplicate starts, unpaired members, terminal events with open members, and updates after run-end on both cold load and live append, while accepting missing terminal suffixes.
 
 ### Render intent
 
@@ -77,6 +79,7 @@ Decided up front per the [render-intent Agent Note](../../../../.agents/notes/im
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: tool registration, run lifecycle, recorder wiring |
+| [`src/native.ts`](src/native.ts) | Native tool registration, scoped Provider selection, and root Session progress recording |
 | [`src/types.ts`](src/types.ts) | The four log-only record event payloads and their `SessionEventMap` declaration |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: durable workflow-record protocol validation |
 
@@ -159,7 +162,7 @@ These limits define what the tool does not yet support. They are current constra
 - **The parent turn blocks until the whole workflow settles** — there is no background start/poll API, and cancellation discards partial output as an error.
 - **`args` must be an object and Native result text is bounded** — callers wrap top-level arrays and scalars in a field; the canonical workflow result stays complete, while JSON beyond `maxResultChars` is truncated in the model-facing projection rather than stored behind a retrieval handle.
 - **Workflow policy is fixed per tool registration** — provider selection, caps, and tool name are deployment config, not model-call arguments.
-- **Durable records are top-level and observational** — nested PTC mode dispatches are not recorded, and a recording failure intentionally degrades to an incomplete prefix rather than changing execution.
+- **Durable records cover root Native calls** — nested PTC mode dispatches are not recorded, and a failed required append cancels the run and fails the consumer; ordinary progress observers remain contained separately.
 
 <a id="dev-note"></a>
 ### Dev Note

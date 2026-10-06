@@ -4386,9 +4386,33 @@ importers:
 
   rsh/Engine/workflow/tool-ralph:
     dependencies:
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../subagent/native-subagent
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+      '@deepseek-ai/dsh-tool-workflow':
+        specifier: workspace:^
+        version: link:../tool-workflow
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
+      '@deepseek-ai/dsh-workflow':
+        specifier: workspace:^
+        version: link:../workflow
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.1.5
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -4429,18 +4453,33 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
-      '@deepseek-ai/dsh-workflow':
-        specifier: workspace:^
-        version: link:../workflow
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../workflow-worker-thread
 
   rsh/Engine/workflow/tool-workflow:
     dependencies:
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
+      '@deepseek-ai/dsh-workflow':
+        specifier: workspace:^
+        version: link:../workflow
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.1.5
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -4469,14 +4508,18 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
-      '@deepseek-ai/dsh-workflow':
-        specifier: workspace:^
-        version: link:../workflow
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../workflow-worker-thread
 
   rsh/Engine/workflow/workflow:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -4502,12 +4545,30 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../subagent/native-subagent
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
+      '@deepseek-ai/dsh-workflow':
+        specifier: workspace:^
+        version: link:../workflow
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.1.5
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -4548,9 +4609,6 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
-      '@deepseek-ai/dsh-workflow':
-        specifier: workspace:^
-        version: link:../workflow
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
@@ -8744,6 +8802,9 @@ importers:
       '@deepseek-ai/dsh-webhook-github':
         specifier: workspace:^
         version: link:../../Modules/Official/webhook/webhook-github
+      '@deepseek-ai/dsh-workflow':
+        specifier: workspace:^
+        version: link:../../Engine/workflow/workflow
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../../Engine/workflow/workflow-worker-thread

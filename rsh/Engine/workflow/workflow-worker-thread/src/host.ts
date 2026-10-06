@@ -10,22 +10,48 @@ import { tmpdir } from 'node:os'
 import { Worker } from 'node:worker_threads'
 import type { WorkerOptions } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
 import { assertNever, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import type { SubagentRun } from '@deepseek-ai/dsh-subagent'
-import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRun, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
+import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
+import type { NativeWorkflowObserver, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { renderThrown } from './realm.ts'
-import type { ExecutionObserver } from './runtime.ts'
 import { HostToWorkerType, WorkerToHostType } from './protocol.ts'
 import type { HostToWorkerPayloads, WorkerToHostMessage } from './protocol.ts'
 import type { ChildResult, ChildStartRequest, WorkerInit } from './types.ts'
 
+/** Host logger retained by an accepted run. */
+export interface WorkflowHostContext {
+  readonly logger: { warn(message: string): void }
+}
+
+/** Child lifecycle consumed by the shared worker controller. */
+export interface WorkflowHostChild {
+  readonly id: SessionId
+  readonly result: Promise<{ readonly output: readonly ContentBlock[]; readonly structured?: unknown; readonly stopReason: string }>
+  /** Await owned child cleanup. @returns quiescent completion. */
+  dispose(): Promise<void>
+}
+
+/** Parent-specific adapter to the selected Subagent Definition. */
+export interface WorkflowHostChildren<Parent> {
+  /** @param provider - named child transport. @param request - explicit child execution. @returns accepted child lifecycle. */
+  start(provider: string, request: {
+    readonly parent: Parent
+    readonly prompt: ContentBlock[]
+    readonly signal: AbortSignal
+    readonly outputSchema?: ChildStartRequest['schema']
+    readonly agentOptions?: { readonly provider?: string; readonly model?: string }
+  }): Promise<WorkflowHostChild>
+}
+
 /** One published child and its shared quiescent-disposal transaction. */
 interface ChildRecord {
-  readonly run: SubagentRun
+  readonly run: WorkflowHostChild
   disposal?: Promise<void>
+  disposalSettled?: boolean
+  disposalFailed?: boolean
+  disposalFailure?: unknown
 }
 
 /**
@@ -102,7 +128,7 @@ function resolveWorkerSpawn(init: WorkerInit): { entry: string | URL; options: W
  * engine returns this run, so unloading the engine removes only the ability to
  * start another workflow; this run can still start and clean up its children.
  */
-export class WorkerRun implements WorkflowRun {
+export class WorkerRun<Parent> implements WorkflowRun {
   /** Settles exactly once with the run's outcome; never rejects. */
   readonly result: Promise<WorkflowResult>
   private settleResolve!: (result: WorkflowResult) => void
@@ -133,16 +159,17 @@ export class WorkerRun implements WorkflowRun {
   private disposed: Promise<void> | undefined
 
   constructor(
-    private readonly ctx: Context,
-    private readonly subagents: SubagentRuntime,
+    private readonly ctx: WorkflowHostContext,
+    private readonly subagents: WorkflowHostChildren<Parent>,
     readonly id: WorkflowRunId,
     readonly meta: WorkflowMeta,
-    private readonly parent: Agent,
+    private readonly parent: Parent,
     init: WorkerInit,
     private readonly provider: string,
     private readonly disposeGraceMs: number,
-    private readonly observer: ExecutionObserver,
+    private readonly observer: NativeWorkflowObserver,
     signal: AbortSignal | undefined,
+    private readonly awaitChildCleanup = false,
   ) {
     this.result = new Promise<WorkflowResult>((resolve) => { this.settleResolve = resolve })
     // workerData rides the structured clone: args are plain JSON by the seam
@@ -215,11 +242,11 @@ export class WorkerRun implements WorkflowRun {
    * grace the worker gets to settle (the worker's own dispose RPCs join the
    * shared per-child disposal). Waits (at most the grace) for the result and
    * child quiescence, then terminates the worker unconditionally — the
-   * thread never outlives its run — and reaps whatever children remain
-   * (their disposal is contained, not awaited past the grace, the same
-   * abandonment the seam documents for a slow-disposing child). Idempotent;
-   * safe on every path.
-   * @returns resolves when the run's resources are released or abandoned.
+   * thread never outlives its run — and reaps whatever children remain. The
+   * native Provider then waits for its selected Session executions to finish
+   * cleanup; the legacy Provider keeps its bounded external-backend policy.
+   * Idempotent; safe on every path.
+   * @returns resolves after the selected cleanup policy completes; native cleanup failures reject.
    */
   dispose(): Promise<void> {
     if (this.disposed !== undefined) return this.disposed
@@ -246,6 +273,11 @@ export class WorkerRun implements WorkflowRun {
       ])
       await this.worker.terminate()
       this.reapChildren('workflow disposed')
+      if (this.awaitChildCleanup) {
+        await this.childQuiescence()
+        const failures = [...this.children.values()].flatMap(record => record.disposalFailed === true ? [record.disposalFailure] : [])
+        if (failures.length > 0) throw new AggregateError(failures, 'workflow native child cleanup failed')
+      }
     })().then(
       () => { claimed.resolve(undefined) },
       /* v8 ignore next -- result/quiescence never reject and Worker.terminate is the only external promise */
@@ -284,14 +316,14 @@ export class WorkerRun implements WorkflowRun {
         // already in flight (or emitted while the cancel crossed the
         // boundary) must not reach observers — nothing is emitted after
         // cancel() returns.
-        if (this.cancelReason === undefined) this.observer.phase(message.title)
+        if (this.cancelReason === undefined) this.observe('phase', () => this.observer.phase(message.title))
         break
       case WorkerToHostType.Log:
-        if (this.cancelReason === undefined) this.observer.log(message.message)
+        if (this.cancelReason === undefined) this.observe('log', () => this.observer.log(message.message))
         break
       case WorkerToHostType.AgentStart:
         this.liveAgents.set(message.info.seq, message.info)
-        this.observer.agentStart(message.info)
+        this.observe('agentStart', () => this.observer.agentStart(message.info))
         break
       case WorkerToHostType.AgentEnd:
         // NOT suppressed on cancel: cancelled children report their paired
@@ -312,6 +344,22 @@ export class WorkerRun implements WorkflowRun {
       /* v8 ignore next 2 -- closed engine-owned union; the arm only makes adding a message type a compile error */
       default:
         assertNever(message, 'worker-to-host message')
+    }
+  }
+
+  /** Contain observer failures so they cannot interrupt worker admission or child accounting. */
+  private observe(event: string, dispatch: () => void | Promise<void>): void {
+    let pending: void | Promise<void>
+    try {
+      pending = dispatch()
+    } catch (error: unknown) {
+      this.ctx.logger.warn(`workflow-worker-thread: observer ${event} threw: ${renderThrown(error)}`)
+      return
+    }
+    if (pending !== undefined) {
+      void pending.catch((error: unknown) => {
+        this.ctx.logger.warn(`workflow-worker-thread: observer ${event} rejected: ${renderThrown(error)}`)
+      })
     }
   }
 
@@ -350,7 +398,7 @@ export class WorkerRun implements WorkflowRun {
 
   /** Await one provider-owned startup transaction and publish only while admitted. */
   private async startChild(callId: number, request: ChildStartRequest): Promise<void> {
-    let run: SubagentRun
+    let run: WorkflowHostChild
     try {
       run = await this.subagents.start(this.provider, {
         prompt: [{ type: 'text', text: request.prompt }],
@@ -377,10 +425,16 @@ export class WorkerRun implements WorkflowRun {
     const failure = this.childAdmissionFailure()
     if (failure !== undefined) {
       this.post(HostToWorkerType.ChildStartError, { callId, rendered: failure.rendered })
-      try {
-        await run.dispose()
-      } catch (error: unknown) {
-        this.ctx.logger.warn(`workflow-worker-thread: refused child dispose failed: ${renderThrown(error)}`)
+      if (this.awaitChildCleanup) {
+        const record: ChildRecord = { run }
+        this.children.set(callId, record)
+        await this.disposeChild(callId, record)
+      } else {
+        try {
+          await run.dispose()
+        } catch (error: unknown) {
+          this.ctx.logger.warn(`workflow-worker-thread: refused child dispose failed: ${renderThrown(error)}`)
+        }
       }
       return
     }
@@ -394,7 +448,7 @@ export class WorkerRun implements WorkflowRun {
       (result) => {
         try {
           const snapshot = snapshotJsonValue<ChildResult>({
-            output: result.output,
+            output: [...result.output],
             ...result.structured !== undefined ? { structured: result.structured } : {},
             stopReason: result.stopReason,
           })
@@ -422,8 +476,10 @@ export class WorkerRun implements WorkflowRun {
       this.post(HostToWorkerType.ChildDisposed, { callId })
       return
     }
-    // disposeChild never rejects (containment is inside), so the ack always follows.
-    void this.disposeChild(callId, record).then(() => { this.post(HostToWorkerType.ChildDisposed, { callId }) })
+    void this.disposeChild(callId, record).then(() => {
+      if (!this.awaitChildCleanup || record.disposalFailed !== true) this.post(HostToWorkerType.ChildDisposed, { callId })
+      else this.post(HostToWorkerType.ChildDisposeFailed, { callId, rendered: renderThrown(record.disposalFailure) })
+    })
   }
 
   /**
@@ -431,21 +487,27 @@ export class WorkerRun implements WorkflowRun {
    * leaves when it settles. Memoized per callId: the worker's dispose RPC,
    * the dispose() host drive, and the reap can all land on the same child —
    * the child's `dispose()` runs once and every caller awaits that one
-   * settlement. A rejection is contained (the subagent seam's dispose() is
-   * not supposed to reject, but a backend that does anyway must not break
-   * quiescence): logged, and the child still leaves the registry.
+   * settlement. A legacy external-backend rejection is logged and retired;
+   * a native cleanup rejection remains tracked and is reported by dispose().
    * @param callId - the child's registry key.
    * @param record - the registered child (the caller looked it up).
-   * @returns resolves when the disposal settled either way; never rejects.
+   * @returns resolves when the disposal attempt settles; failures stay on the record.
    */
   private disposeChild(callId: number, record: ChildRecord): Promise<void> {
     if (record.disposal !== undefined) return record.disposal
     record.disposal = Promise.resolve()
       .then(() => record.run.dispose())
-      .catch((error: unknown) => {
+      .then(() => {
+        record.disposalSettled = true
+        this.finishChild(callId)
+      }, (error: unknown) => {
+        record.disposalFailed = true
+        record.disposalFailure = error
+        record.disposalSettled = true
         this.ctx.logger.warn(`workflow-worker-thread: child dispose failed: ${renderThrown(error)}`)
+        if (this.awaitChildCleanup) this.notifyChildQuiescence()
+        else this.finishChild(callId)
       })
-      .then(() => { this.finishChild(callId) })
     return record.disposal
   }
 
@@ -463,13 +525,19 @@ export class WorkerRun implements WorkflowRun {
 
   /** Release waiters only after both pending starts and published children end. */
   private notifyChildQuiescence(): void {
-    if (this.children.size !== 0 || this.pendingStarts.size !== 0) return
+    if (this.pendingStarts.size !== 0) return
+    if (this.awaitChildCleanup) {
+      if ([...this.children.values()].some(record => record.disposalSettled !== true)) return
+    } else if (this.children.size !== 0) return
     for (const waiter of this.quiescenceWaiters.splice(0)) waiter()
   }
 
   /** Resolves once every pending start and published child has reached quiescence. */
   private childQuiescence(): Promise<void> {
-    if (this.children.size === 0 && this.pendingStarts.size === 0) return Promise.resolve()
+    const childrenSettled = this.awaitChildCleanup
+      ? [...this.children.values()].every(record => record.disposalSettled === true)
+      : this.children.size === 0
+    if (childrenSettled && this.pendingStarts.size === 0) return Promise.resolve()
     return new Promise((resolve) => { this.quiescenceWaiters.push(resolve) })
   }
 
@@ -563,7 +631,7 @@ export class WorkerRun implements WorkflowRun {
   private endAgent(end: WorkflowAgentEndInfo): void {
     /* v8 ignore next -- a real end still in flight across the grace force-settle: not orderable in-process */
     if (!this.liveAgents.delete(end.seq)) return
-    this.observer.agentEnd(end)
+    this.observe('agentEnd', () => this.observer.agentEnd(end))
   }
 
   /**

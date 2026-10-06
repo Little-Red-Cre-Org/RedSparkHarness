@@ -5,9 +5,9 @@
  * @module @deepseek-ai/dsh-workflow-worker-thread/types
  */
 
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
-import type { WorkflowMeta } from '@deepseek-ai/dsh-workflow'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
+import type { WorkflowMeta } from '@deepseek-ai/dsh-workflow/types'
 
 /**
  * The per-run limits the worker-side runtime enforces. The host keeps the
