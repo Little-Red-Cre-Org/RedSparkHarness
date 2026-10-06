@@ -26,7 +26,8 @@ export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSur
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
 
-type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType
+/** Options admitted with one event in a Session append batch. */
+export type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType
   ? SurfaceIntent<T>
   : { readonly ignorable?: true; readonly sourceEventSeqs?: never; readonly surfaceOp?: never }
 

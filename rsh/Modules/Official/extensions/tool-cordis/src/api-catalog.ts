@@ -5220,7 +5220,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionAppendInput',
-    declaration: 'export type SessionAppendInput = {\n    [T in SessionEventType]: {\n        readonly type: T;\n        readonly data: SessionEventMap[T];\n    } & (T extends SurfaceEventType ? {\n        readonly opts: SurfaceIntent<T>;\n    } : {\n        readonly opts?: never;\n    });\n}[SessionEventType];',
+    declaration: 'export type SessionAppendInput = {\n    [T in SessionEventType]: {\n        readonly type: T;\n        readonly data: SessionEventMap[T];\n    } & (T extends SurfaceEventType ? {\n        readonly opts: SessionAppendOptions<T>;\n    } : {\n        readonly opts?: SessionAppendOptions<T>;\n    });\n}[SessionEventType];',
+  },
+  {
+    name: 'SessionAppendOptions',
+    declaration: 'export type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType ? SurfaceIntent<T> : {\n    readonly ignorable?: true;\n    readonly sourceEventSeqs?: never;\n    readonly surfaceOp?: never;\n};',
   },
   {
     name: 'SessionAssistantStreamAttempt',
@@ -5288,7 +5292,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionEventMap',
-    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'system/message\': {\n        turn: number;\n        step: number;\n        message: SystemMessage;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        stream: AssistantStreamRecord[];\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'assistant/attempt\': {\n        turn: number;\n        step: number;\n        stream: AssistantStreamRecord[];\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: ToolCallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n        startsSeries?: true;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': {\n        inherited?: true;\n    };\n}',
+    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'system/message\': {\n        turn: number;\n        step: number;\n        message: SystemMessage;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        stream: AssistantStreamRecord[];\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'assistant/attempt\': {\n        turn: number;\n        step: number;\n        stream: AssistantStreamRecord[];\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: ToolCallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n        startsSeries?: true;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': {\n        inherited?: true;\n    };\n    \'session/root-origin\': {\n        origin: \'scheduled\';\n    };\n}',
   },
   {
     name: 'SessionEventMetadataFilter',
