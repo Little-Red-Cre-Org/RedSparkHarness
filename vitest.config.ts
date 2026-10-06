@@ -152,7 +152,7 @@ const processBoundTests = [
   'rsh/Core/subprocess/subprocess-local/tests/process-exit.spec.ts',
   'rsh/Core/subprocess/subprocess-local/tests/spawn.spec.ts',
   'rsh/Engine/context/time-context/tests/time-context.spec.ts',
-  'rsh/Engine/llm/llm-pi-ai/tests/adapter.spec.ts',
+  'rsh/Modules/Official/llm/llm-pi-ai/tests/adapter.spec.ts',
   'rsh/Compatibility/DSH/boot/app-boot/tests/app-boot.spec.ts',
   'rsh/Engine/workflow/workflow-worker-thread/tests/session.spec.ts',
 ]

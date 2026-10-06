@@ -16,7 +16,7 @@ An authorized prefix includes all unhanded canonical context from seq 0 through 
 
 The backend uses on-demand capture with complete history and the existing redaction waterfall. `DISABLED` constructs no transport. `FULL` is rejected rather than aliased. Direct `ctx.sessionTelemetry.emit()` calls are no-ops, so callers cannot bypass feedback authorization. SDK scheduled flush and shutdown may finish previously authorized batches but never capture new records. Sending after submission needs no further user interaction or model call.
 
-The [canonical-feedback decision](2026-09-05-canonical-feedback-log.md) owns storage, versions, deletion, and plain command confirmation. The [opt-in DeepSeek contribution](../../../../rsh/Engine/session/session-log-deepseek/README.md) remains independent, with its existing destination and acceptance behavior.
+The [canonical-feedback decision](2026-09-05-canonical-feedback-log.md) owns storage, versions, deletion, and plain command confirmation. The [opt-in DeepSeek contribution](../../../../rsh/Modules/Official/llm/session-log-deepseek/README.md) remains independent, with its existing destination and acceptance behavior.
 
 ## Alternatives considered
 

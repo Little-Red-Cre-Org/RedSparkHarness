@@ -35,7 +35,6 @@ session 组让对话持久保存，恢复已发布的日志格式，并使已提
 | [`session-persistence/`](session-persistence/README.zh.md) | 定义持久会话存储服务，以及每个后端组合的共享写入协调机制 | `ctx.sessionPersistence` |
 | [`session-persistence-jsonl/`](session-persistence-jsonl/README.zh.md) | 随产品交付的后端：逐 Session 使用不可变规范 generation 文件名并排他发布后继；可选 Zstandard 压缩 | 注册到 `ctx.sessionPersistence` |
 | [`session-checkpoint-policy/`](session-checkpoint-policy/README.zh.md) | 让模型请求、顶层工具副作用与已完成步骤在下一步动作前持久化 | 包装 `ctx.llm` 与 `ctx.tools` |
-| [`session-log-deepseek/`](session-log-deepseek/README.zh.md) | 把增量规范日志作为可选的官方 DeepSeek 请求元数据上传 | 贡献 `dsh_session_log` |
 
 ### 投影
 
@@ -74,6 +73,7 @@ session 组让对话持久保存，恢复已发布的日志格式，并使已提
 - [会话标题子系统](../../Docs/subsystems/session-title.zh.md)——标题资格、回退与提供方流程。
 - [会话遥测子系统](../../Docs/subsystems/session-telemetry.zh.md)——捕获、脱敏与投递模式。
 - [会话子系统](../../Docs/subsystems/session.zh.md)——本组每个包持久化或派生的实时事件日志。
+- [官方 LLM 集成](../../Modules/Official/llm/README.zh.md)——可选的 DeepSeek 会话日志请求贡献。
 
 <a id="dev-note"></a>
 ## 开发备注

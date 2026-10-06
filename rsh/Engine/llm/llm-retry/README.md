@@ -98,8 +98,8 @@ The plugin is one listener in the `agent/request-error` waterfall. Always mode's
 Read these pages when the package-level contract is not enough. They move from the service contract to the adapters that own retry policies.
 
 - [dsh-llm service](../llm/README.md) — the provider-neutral service whose adapters own `retryPolicy`.
-- [llm-deepseek adapter](../llm-deepseek/README.md) — a provider adapter with a route-level `retryPolicy`.
-- [llm-pi-ai adapter](../llm-pi-ai/README.md) — a multi-provider adapter with per-profile `retryPolicy`.
+- [llm-deepseek adapter](../../../Modules/Official/llm/llm-deepseek/README.md) — a provider adapter with a route-level `retryPolicy`.
+- [llm-pi-ai adapter](../../../Modules/Official/llm/llm-pi-ai/README.md) — a multi-provider adapter with per-profile `retryPolicy`.
 - [Terminal LLM stream failures](../../../../.agents/notes/implemented/architecture/2026-07-29-terminal-llm-stream-failures.md) — how failures reach the service boundary as terminal chunks.
 - [LLM streaming subsystem](../../../Docs/subsystems/llm-streaming.md) — the `StreamChunk` protocol and adapter contract.
 

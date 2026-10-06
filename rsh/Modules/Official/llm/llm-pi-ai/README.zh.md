@@ -88,7 +88,7 @@ kind: "package-reference"
 | `maxRequestImageBytes` | `20 MiB` | 带最旧优先卸载的 base64 图片载荷总上限 |
 | `retryPolicy` | normal，5 次重试 | 由 `dsh-llm-retry` 执行的提供方自有重试策略 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-llm-pi-ai)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-llm-pi-ai)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 登录提供方
 
@@ -96,7 +96,7 @@ pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程�
 
 ### 解析模型目录
 
-已安装的 pi-ai 1.0 目录通过 `openai-codex` 提供当前 ChatGPT 订阅模型，包括 `gpt-6.1-sol`。显式模型列表会替换该目录；[模型选择升级指南](../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明了受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
+已安装的 pi-ai 1.0 目录通过 `openai-codex` 提供当前 ChatGPT 订阅模型，包括 `gpt-6.1-sol`。显式模型列表会替换该目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明了受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
 
 profile 的 `models` 列表会替换而非扩展路由的已安装目录；每个条目从同 id 已安装模型取未设置字段的默认值，因此把路由收窄到两个模型、修正一个容量或添加比已安装目录更新的模型都是一行编辑。`modelOverrides` 无需该代价即可重塑个别已安装目录模型——修正一个模型，保留其余三十七个——当它与 `models` 列表并存、位于手工声明路由上、或点名目录未描述的模型时会被拒绝，因为静默不变的模型会成为别人日后寻找的拼写错误。
 
@@ -172,12 +172,12 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 当包级约定不够用时阅读以下页面。它们从服务约定逐步进入孪生适配器与共享类型。
 
-- [dsh-llm 服务](../llm/README.zh.md)——本适配器注册其上的提供方无关服务。
+- [dsh-llm 服务](../../../../Engine/llm/README.zh.md)——本适配器注册其上的提供方无关服务。
 - [llm-deepseek 适配器](../llm-deepseek/README.zh.md)——`deepseek-official` 路由的 DeepSeek 直连孪生。
-- [LLM 流式子系统](../../../Docs/subsystems/llm-streaming.zh.md)——`StreamChunk` 协议与适配器约定。
-- [llm-retry](../llm-retry/README.zh.md)——应用每个 profile `retryPolicy` 的重试执行器。
-- [孪生 LLM 适配器](../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.zh.md)——为什么 DeepSeek 路由交付两个结构不同的适配器。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-llm-pi-ai)——每个受支持配置字段及其源声明。
+- [LLM 流式子系统](../../../../Docs/subsystems/llm-streaming.zh.md)——`StreamChunk` 协议与适配器约定。
+- [llm-retry](../../../../Engine/llm/llm-retry/README.zh.md)——应用每个 profile `retryPolicy` 的重试执行器。
+- [孪生 LLM 适配器](../../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.zh.md)——为什么 DeepSeek 路由交付两个结构不同的适配器。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-llm-pi-ai)——每个受支持配置字段及其源声明。
 
 -----
 

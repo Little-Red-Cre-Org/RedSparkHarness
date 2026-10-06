@@ -86,7 +86,7 @@ const subjectBuilt = [
   'rsh/Core/vendor/include/lib/index.js',
   'rsh/Core/vendor/loader/lib/index.js',
   'rsh/Programs/Web/host/webserver/lib/index.js',
-  'rsh/Engine/llm/plugin-package-inventory-deepseek/lib/index.js',
+  'rsh/Modules/Official/llm/plugin-package-inventory-deepseek/lib/index.js',
   'rsh/Core/native/system/packages/entry/lib/index.js',
   'rsh/Engine/preset/agent-presets/lib/typert.host.js',
   'rsh/Engine/preset/agent-presets/lib/typert.remote-client.js',

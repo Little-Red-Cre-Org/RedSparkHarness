@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Docs/cookbook/adding-an-llm-adapter.md
-adding-an-llm-adapter.md: b3ae5d36d8039a19d2a2fdca673d99e25442433f
-adding-an-llm-adapter.zh.md: 01e2e71b28f21454f74fbddeae77301198bc11ae
+adding-an-llm-adapter.md: ea4c61080390eb404e042f0707e3ecde6c62e2b4
+adding-an-llm-adapter.zh.md: 0e86893b526713f6d2153c33c8ff3c406ac07a3d

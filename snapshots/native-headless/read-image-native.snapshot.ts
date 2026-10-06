@@ -76,7 +76,7 @@ it('reads an image through dsh with real native Pi metadata, persists its bytes 
     ['session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
     ['fs-local', 'rsh/Modules/Official/fs/fs-local'], ['fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
     ['attachment-local', 'rsh/Modules/Official/attachment/attachment-local'], ['tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
-    ['llm-pi-ai', 'rsh/Engine/llm/llm-pi-ai'],
+    ['llm-pi-ai', 'rsh/Modules/Official/llm/llm-pi-ai'],
   ] as const) symlinkSync(join(root, path), join(modules, 'dsh-' + name), 'junction')
   const patch = join(home, 'patch.json')
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [

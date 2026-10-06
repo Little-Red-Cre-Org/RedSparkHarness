@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-02-system-prompt-as-surface-node.md
-2026-09-02-system-prompt-as-surface-node.md: cd60f56edabca4c1f4ae4503a2692a6d9c74dccc
-2026-09-02-system-prompt-as-surface-node.zh.md: 476c162aa5e5ed3446333d3d9f623206e85cd91d
+2026-09-02-system-prompt-as-surface-node.md: 17a30da17fa9238a6bde488b5a8d521d217f0acf
+2026-09-02-system-prompt-as-surface-node.zh.md: 219e0a9ef842de1405671f52c58e449c40915fb7
