@@ -26,7 +26,11 @@ kind: "package-bundle"
 <a id="use-this-package"></a>
 ## 使用本包
 
+随附的 `native-web` 和 `native-tui` profile 在首次使用时安装原生调度器。各 profile 在自身目录中使用独立的 SQLite 数据库。根 Agent 可通过 `task_schedule` 创建、列出、暂停、恢复、删除定时 Agent 工作并查看历史；到期任务通过所属 Program 的根 Session 执行权运行，结果写入独立 Session。Program 会在发布维护 owner 前持久化计划任务来源，因此即使关闭前没有接纳 prompt，Provider 替换和冷恢复后仍会禁止这些 Session 使用交互式任务管理。重新加载原生 profile 时，管理工具会重新绑定到仍活动的同一交互式根 Session；delegated Agent 和定时执行 Agent 仍不能管理任务。已保存的计划在进程重启后仍可使用，但中断的执行记录不会自动重放。原生入口拒绝兼容层预设记录和 Goal 任务；Goal 续跑与个人提醒投递需要各自的 Provider。现有 profile 文件归用户所有，模板变化不会覆盖它们。
+
 将插件安装到配置中，并添加 [cordis.patch.yml](cordis.patch.yml)。宿主需要正常的 Agent、预设、权限、工作区和会话持久化服务。数据库必须使用绝对路径和独立的本地 SQLite 文件，不要放在网络文件系统。仅导入包不会启用调度，Cordis 的 `apply` 负责加载。
+
+原生安装不使用 Typert 协议。Cordis 包根入口和 gateway 会加载 `@deepseek-ai/dsh-typert-protocol`，公开 Client 声明也引用其 `RemoteResult` 类型；由于该 peer 对原生消费者为可选，安装此插件的兼容 profile 必须显式提供它。
 
 Web 和桌面端通过 Web bundle 默认启用本插件，使用 Harness 主目录中的 `task-scheduler.sqlite`。源码完成构建后，可运行 `pnpm dsh web`。侧边栏提供任务创建入口，设置提供任务中心。Profile 补丁可以覆盖 `task-scheduler` 行或显式禁用它。
 

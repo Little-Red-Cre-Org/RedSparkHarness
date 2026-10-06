@@ -4871,6 +4871,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelReasoningEffort {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n}',
   },
   {
+    name: 'NativeRootRouteId',
+    declaration: 'export type NativeRootRouteId = Branded<\'NativeRootRouteId\'>;',
+  },
+  {
+    name: 'NativeSessionConfiguration',
+    declaration: 'export interface NativeSessionConfiguration {\n    readonly cwd: string;\n    readonly provider: string;\n    readonly model: string;\n    readonly systemPrompt: string;\n    readonly maxSteps: number;\n    readonly builtinTools?: boolean;\n    readonly reasoningEffort?: ReasoningEffortId;\n    readonly maxTokens?: number;\n}',
+  },
+  {
     name: 'NativeSessionDeletionOperations',
     declaration: 'export interface NativeSessionDeletionOperations {\n    delete(id: SessionId, options?: {\n        readonly signal?: AbortSignal;\n        readonly expectedRevision?: SessionPersistenceRevision;\n    }): Promise<SessionDeletionReceipt>;\n    restore(id: SessionDeletionId, options?: {\n        readonly signal?: AbortSignal;\n        readonly expectedCwd?: string;\n    }): Promise<SessionId>;\n    inspect(id: SessionDeletionId, options?: {\n        readonly signal?: AbortSignal;\n    }): Promise<SessionHeader>;\n    list(options?: {\n        readonly signal?: AbortSignal;\n    }): Promise<readonly SessionDeletionReceipt[]>;\n}',
   },
@@ -5212,7 +5220,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionAppendInput',
-    declaration: 'export type SessionAppendInput = {\n    [T in SessionEventType]: {\n        readonly type: T;\n        readonly data: SessionEventMap[T];\n    } & (T extends SurfaceEventType ? {\n        readonly opts: SurfaceIntent<T>;\n    } : {\n        readonly opts?: never;\n    });\n}[SessionEventType];',
+    declaration: 'export type SessionAppendInput = {\n    [T in SessionEventType]: {\n        readonly type: T;\n        readonly data: SessionEventMap[T];\n    } & (T extends SurfaceEventType ? {\n        readonly opts: SessionAppendOptions<T>;\n    } : {\n        readonly opts?: SessionAppendOptions<T>;\n    });\n}[SessionEventType];',
+  },
+  {
+    name: 'SessionAppendOptions',
+    declaration: 'export type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType ? SurfaceIntent<T> : {\n    readonly ignorable?: true;\n    readonly sourceEventSeqs?: never;\n    readonly surfaceOp?: never;\n};',
   },
   {
     name: 'SessionAssistantStreamAttempt',
@@ -5280,7 +5292,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionEventMap',
-    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'system/message\': {\n        turn: number;\n        step: number;\n        message: SystemMessage;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        stream: AssistantStreamRecord[];\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'assistant/attempt\': {\n        turn: number;\n        step: number;\n        stream: AssistantStreamRecord[];\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: ToolCallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n        startsSeries?: true;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': {\n        inherited?: true;\n    };\n}',
+    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'system/message\': {\n        turn: number;\n        step: number;\n        message: SystemMessage;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        stream: AssistantStreamRecord[];\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'assistant/attempt\': {\n        turn: number;\n        step: number;\n        stream: AssistantStreamRecord[];\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: ToolCallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n        startsSeries?: true;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': {\n        inherited?: true;\n    };\n    \'session/root-origin\': {\n        origin: \'scheduled\';\n    };\n}',
   },
   {
     name: 'SessionEventMetadataFilter',
@@ -6068,7 +6080,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'TaskInput',
-    declaration: 'export interface TaskInput {\n    countdownStartedAt?: string | undefined;\n    kind?: \'goal\' | \'scheduled\' | undefined;\n    completionCriteria?: string | undefined;\n    maxGoalRounds?: number | undefined;\n    title: string;\n    prompt: string;\n    workspace: string;\n    agentPreset: string;\n    permissionPreset: string;\n    provider: string;\n    model: string;\n    at: string;\n    endAt?: string | undefined;\n    everySeconds?: number | undefined;\n}',
+    declaration: 'export interface TaskInput {\n    countdownStartedAt?: string | undefined;\n    kind?: \'goal\' | \'scheduled\' | undefined;\n    completionCriteria?: string | undefined;\n    maxGoalRounds?: number | undefined;\n    title: string;\n    prompt: string;\n    workspace: string;\n    nativeRoute?: NativeRootRouteId | undefined;\n    nativeConfiguration?: Readonly<NativeSessionConfiguration> | undefined;\n    agentPreset?: string | undefined;\n    permissionPreset?: string | undefined;\n    provider: string;\n    model: string;\n    at: string;\n    endAt?: string | undefined;\n    everySeconds?: number | undefined;\n}',
   },
   {
     name: 'TaskNotice',

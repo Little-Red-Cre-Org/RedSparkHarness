@@ -29,6 +29,10 @@ function toolEvent(data: unknown): SessionEvent {
   return { type: 'tool/result', seq: SessionSeq(0), time: 1, data, surfaceOp: 'append' } as SessionEvent
 }
 
+function rootOriginEvent(data: unknown): SessionEvent {
+  return { type: 'session/root-origin', seq: SessionSeq(0), time: 1, data, ignorable: true } as unknown as SessionEvent
+}
+
 function toolData(isError: boolean) {
   return {
     turn: 1, step: 1,
@@ -37,6 +41,9 @@ function toolData(isError: boolean) {
 }
 
 function appendEvent(session: Session, event: SessionEvent) {
+  if (event.type === 'session/root-origin') {
+    return session.appendBatch([{ type: 'session/root-origin', data: event.data, opts: { ignorable: true } }])[0]
+  }
   const append = session.append.bind(session) as (
     type: SessionEvent['type'], data: unknown, metadata?: unknown,
   ) => SessionEvent
@@ -60,6 +67,9 @@ const invalidData = [
     { name: 'request header is not an object', event: requestEvent({ header: data, reason: 'initial' }), rule: /header must be an object/ },
     { name: 'tool data is not an object', event: toolEvent(data), rule: /data must be an object/ },
   ]),
+  ...[null, { origin: 'other' }, { origin: 'scheduled', extra: true }].map(data => ({
+    name: 'scheduled root origin is not canonical', event: rootOriginEvent(data), rule: /root origin data/,
+  })),
   { name: 'missing request header', event: requestEvent({ reason: 'initial' }), rule: /header must be an object/ },
   ...[{ tools: [] }, { adapterDefaults: {} }].map(optional => ({
     name: 'empty optional request field',
@@ -100,6 +110,7 @@ describe('canonical event payload acceptance', () => {
           toolEvent(toolData(false)),
           toolEvent(toolData(true)),
           toolEvent({ ...toolData(true), error: failure }),
+          rootOriginEvent({ origin: 'scheduled' }),
         ]
         for (const event of events) expect(() => accept(structuredClone(event))).not.toThrow()
       })

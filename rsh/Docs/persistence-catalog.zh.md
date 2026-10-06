@@ -85,7 +85,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:404`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:412`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:434`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:465`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:418`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:440`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:471`](../Engine/core/session/src/types.ts)
 
 ## 事件
 
@@ -732,6 +732,21 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 ```
 
 来源：[`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/types.ts)
+
+<a id="sessionroot-origin--log-only"></a>
+
+#### `session/root-origin` — log-only
+
+```ts persistence-catalog
+/**
+ * Program-selected classification for a scheduled root. It is informational;
+ * older readers may skip it, while current Programs use it to keep scheduled
+ * roots ineligible for interactive management after replacement or restore.
+ */
+'session/root-origin': { origin: 'scheduled' }
+```
+
+来源：[`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 

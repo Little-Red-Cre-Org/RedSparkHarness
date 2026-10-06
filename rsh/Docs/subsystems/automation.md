@@ -6,7 +6,7 @@ The [task scheduler](../../Modules/Official/automation/task-scheduler/README.md)
 
 ## Records and authority
 
-[TaskInput and Task](../../Modules/Official/automation/task-scheduler/src/types.ts) capture the title, prompt, absolute workspace, provider and model identifiers, preset identifiers, first target and optional fixed interval. A plan belongs to its creating session. Its state controls future admission; a null next target means a one-shot occurrence has already been claimed. Credentials remain in the provider's credential service.
+[TaskInput and Task](../../Modules/Official/automation/task-scheduler/src/types.ts) capture the title, prompt, absolute workspace, provider and model identifiers, first target and optional fixed interval. A compatibility plan carries Agent and permission presets; a native plan instead carries an immutable Program route and resolved execution configuration. A plan belongs to its creating session. Its state controls future admission; a null next target means a one-shot occurrence has already been claimed. Credentials remain in the provider's credential service.
 
 [Run](../../Modules/Official/automation/task-scheduler/src/types.ts) identifies one occurrence and records its scheduled time, start, deadline, settlement, execution-session link and outcome. All numeric times are Unix milliseconds. SQLite owns plans and receipts; the execution session owns model messages and tool results. A completed receipt means the durable Agent turn ended, not that generated code passed verification.
 
@@ -18,7 +18,7 @@ The optional RFC 3339 `TaskInput.endAt` is exclusive and later than `at`. Plan e
 
 [TaskStore](../../Modules/Official/automation/task-scheduler/src/store.ts) creates a running receipt and advances the next target in one immediate SQLite transaction. A unique task/target pair and the running-claim check prevent duplicate admission of the same occurrence and overlapping claims for one task. Missed recurring periods coalesce to the latest due target. Expired claims become interrupted and pause their task; their external effects are uncertain.
 
-[SchedulerEngine](../../Modules/Official/automation/task-scheduler/src/engine.ts) owns polling and cancellation. The [execution adapter](../../Modules/Official/automation/task-scheduler/src/execute.ts) resolves existing presets, creates an independent Agent, preserves permission checks, and reads its durable turn settlement. Plugin unload stops admission and drains cancellation before closing its connection. Application shutdown stops execution; stored plans remain for the next mount.
+[SchedulerEngine](../../Modules/Official/automation/task-scheduler/src/engine.ts) owns polling and cancellation. The [compatibility execution adapter](../../Modules/Official/automation/task-scheduler/src/execute.ts) resolves presets and creates an independent Agent. The [native Provider](../../Modules/Official/automation/task-scheduler/src/native-registry.ts) executes through the selected Program's root Session authority and refuses stored route drift. Both read durable turn settlement. Plugin unload stops admission and drains cancellation before closing its connection. Application shutdown stops execution; stored plans remain for the next mount.
 
 ## Notification records
 

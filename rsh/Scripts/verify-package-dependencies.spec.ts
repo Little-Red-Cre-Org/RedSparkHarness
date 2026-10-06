@@ -268,6 +268,12 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-client-ui-conversation',
         '@deepseek-ai/dsh-client-ui-slots',
       ],
+      '@deepseek-ai/dsh-task-scheduler': [
+        '@deepseek-ai/dsh-native-agent',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-native-session-execution',
+        '@deepseek-ai/dsh-typert-protocol',
+      ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
       '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
@@ -1192,6 +1198,52 @@ describe('dependency sections', () => {
     sessionManifest.peerDependenciesMeta = { [scope]: { optional: false } }
     expect(collectPackageDependencyViolations(state(session))).toContainEqual(expect.stringContaining(scope))
 
+    const tools = '@deepseek-ai/dsh-tools'
+    const typertProtocol = '@deepseek-ai/dsh-typert-protocol'
+    const schedulerManifest: PackageDependencyManifest = {
+      name: '@deepseek-ai/dsh-task-scheduler',
+      exports: { '.': './lib/index.js', './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+      peerDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
+      peerDependenciesMeta: { [tools]: { optional: true }, [typertProtocol]: { optional: true } },
+    }
+    const scheduler = {
+      ...facts(schedulerManifest),
+      manifestPath: 'rsh/Modules/Official/automation/task-scheduler/package.json',
+      workspaceNames: new Set([CORDIS, tools, typertProtocol]),
+      allSourceUses: new Map([
+        [tools, ['rsh/Modules/Official/automation/task-scheduler/src/tools.ts']],
+        [typertProtocol, ['rsh/Modules/Official/automation/task-scheduler/src/gateway.ts', 'rsh/Modules/Official/automation/task-scheduler/src/client/index.ts']],
+      ]),
+      hostRuntimeSourceUses: new Map([
+        [tools, ['rsh/Modules/Official/automation/task-scheduler/src/tools.ts']],
+        [typertProtocol, ['rsh/Modules/Official/automation/task-scheduler/src/gateway.ts']],
+      ]),
+      hostRuntimeExportUses: [{
+        packageName: tools,
+        specifier: tools,
+        exportName: 'defineTool',
+        sourcePath: 'rsh/Modules/Official/automation/task-scheduler/src/tools.ts',
+        line: 1,
+        column: 10,
+        sourceLine: `import { defineTool } from '${tools}'`,
+      }, {
+        packageName: typertProtocol,
+        specifier: typertProtocol,
+        exportName: 'TypertRemoteService',
+        sourcePath: 'rsh/Modules/Official/automation/task-scheduler/src/gateway.ts',
+        line: 1,
+        column: 10,
+        sourceLine: `import { TypertRemoteService } from '${typertProtocol}'`,
+      }],
+      peerRequiredHostDependencies: new Set([tools]),
+    }
+    expect(collectPackageDependencyViolations(state(scheduler))).toEqual([])
+    delete (schedulerManifest.exports as Record<string, unknown>)['./native']
+    expect(collectPackageDependencyViolations(state(scheduler))).toContainEqual(
+      expect.stringContaining(`${tools} must be matching peerDependencies + devDependencies`),
+    )
+
     const rendererManifest: PackageDependencyManifest = {
       name: '@deepseek-ai/dsh-client-ui-renderer',
       peerDependencies: { react: '^18.2.0' },
@@ -1209,29 +1261,29 @@ describe('dependency sections', () => {
     rendererManifest.devDependencies = { react: '^17.0.0' }
     expect(collectPackageDependencyViolations(state(renderer))).toContainEqual(expect.stringContaining('react must be matching'))
 
-    const tools = '@deepseek-ai/dsh-tools'
+    const pwshTools = '@deepseek-ai/dsh-tools'
     const toolManifest: PackageDependencyManifest = {
       name: '@deepseek-ai/dsh-tool-pwsh',
       exports: { '.': './lib/index.js', './native': './lib/native.js' },
-      devDependencies: { [tools]: 'workspace:^' },
-      peerDependencies: { [tools]: 'workspace:^' },
-      peerDependenciesMeta: { [tools]: { optional: true } },
+      devDependencies: { [pwshTools]: 'workspace:^' },
+      peerDependencies: { [pwshTools]: 'workspace:^' },
+      peerDependenciesMeta: { [pwshTools]: { optional: true } },
     }
     const tool = {
       ...facts(toolManifest),
       manifestPath: 'rsh/Modules/Official/shell/tool-pwsh/package.json',
       cordisPeerRequired: false,
-      allSourceUses: new Map([[tools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
-      hostRuntimeSourceUses: new Map([[tools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
+      allSourceUses: new Map([[pwshTools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
+      hostRuntimeSourceUses: new Map([[pwshTools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
       hostRuntimeExportUses: [],
-      workspaceNames: new Set([tools]),
+      workspaceNames: new Set([pwshTools]),
     }
     expect(collectPackageDependencyViolations(state(tool))).toEqual([])
-    toolManifest.peerDependenciesMeta = { [tools]: { optional: false } }
-    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${tools} must be matching`))
-    toolManifest.peerDependenciesMeta = { [tools]: { optional: true } }
+    toolManifest.peerDependenciesMeta = { [pwshTools]: { optional: false } }
+    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${pwshTools} must be matching`))
+    toolManifest.peerDependenciesMeta = { [pwshTools]: { optional: true } }
     delete (toolManifest.exports as Record<string, unknown>)['./native']
-    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${tools} must be matching`))
+    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${pwshTools} must be matching`))
   })
 
   it('reports wrong sections, workspace ranges, and stale peer metadata', () => {

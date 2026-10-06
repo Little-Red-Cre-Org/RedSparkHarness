@@ -6,7 +6,7 @@
 
 ## 记录与权威来源
 
-[TaskInput 和 Task](../../Modules/Official/automation/task-scheduler/src/types.ts) 保存标题、提示词、绝对工作区路径、提供方与模型标识、预设标识、首次目标时间及可选的固定周期。计划属于创建它的会话。状态控制后续执行的准入；下一目标时间为空表示单次任务已经领取。凭据保留在提供方的凭据服务中。
+[TaskInput 和 Task](../../Modules/Official/automation/task-scheduler/src/types.ts) 保存标题、提示词、绝对工作区路径、提供方与模型标识、首次目标时间及可选的固定周期。兼容层计划保存 Agent 和权限预设；原生计划改为保存不可变的 Program 路线与已解析的执行配置。计划属于创建它的会话。状态控制后续执行的准入；下一目标时间为空表示单次任务已经领取。凭据保留在提供方的凭据服务中。
 
 [Run](../../Modules/Official/automation/task-scheduler/src/types.ts) 标识一次执行，记录计划时间、开始时间、截止时间、结算时间、执行会话链接和结果。所有数字时间均为 Unix 毫秒。SQLite 是计划和回执的权威来源；执行会话是模型消息与工具结果的权威来源。完成回执表示持久化的 Agent 轮次已结束，不代表生成的代码通过了验证。
 
@@ -18,7 +18,7 @@
 
 [TaskStore](../../Modules/Official/automation/task-scheduler/src/store.ts) 在同一个 SQLite 即时事务中创建运行回执并推进下次目标时间。任务与目标时间的唯一约束，以及运行中领取记录检查，防止同一次执行重复准入，也防止同一任务的领取重叠。错过的周期合并为最近一次到期目标。超时领取记录转为中断并暂停所属任务，因为其外部影响无法确定。
 
-[SchedulerEngine](../../Modules/Official/automation/task-scheduler/src/engine.ts) 负责轮询和取消。[执行适配器](../../Modules/Official/automation/task-scheduler/src/execute.ts) 解析现有预设、创建独立 Agent、保留权限检查，并读取持久化轮次结算。插件卸载先停止准入，再等待取消完成，最后关闭连接。应用关闭会停止执行；已保存的计划保留到下次挂载。
+[SchedulerEngine](../../Modules/Official/automation/task-scheduler/src/engine.ts) 负责轮询和取消。[兼容层执行适配器](../../Modules/Official/automation/task-scheduler/src/execute.ts) 解析预设并创建独立 Agent。[原生 Provider](../../Modules/Official/automation/task-scheduler/src/native-registry.ts) 经由所选 Program 的根 Session 执行权运行，并拒绝已存路线漂移。两条路径都读取持久化轮次结算。插件卸载先停止准入，再等待取消完成，最后关闭连接。应用关闭会停止执行；已保存的计划保留到下次挂载。
 
 ## 提醒记录
 

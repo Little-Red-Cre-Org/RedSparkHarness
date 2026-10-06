@@ -26,10 +26,17 @@ export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSur
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
 
+/** Options admitted with one event in a Session append batch. */
+export type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType
+  ? SurfaceIntent<T>
+  : { readonly ignorable?: true; readonly sourceEventSeqs?: never; readonly surfaceOp?: never }
+
 /** Typed input admitted with all other inputs before any batch event is published. */
 export type SessionAppendInput = {
   [T in SessionEventType]: { readonly type: T; readonly data: SessionEventMap[T] }
-    & (T extends SurfaceEventType ? { readonly opts: SurfaceIntent<T> } : { readonly opts?: never })
+    & (T extends SurfaceEventType
+      ? { readonly opts: SessionAppendOptions<T> }
+      : { readonly opts?: SessionAppendOptions<T> })
 }[SessionEventType]
 
 /** Validate and freeze one detached creation header in place. */
@@ -493,7 +500,8 @@ export class Session {
    * publication callback has been validated. Guards observe the pre-batch log;
    * publication observers see the complete accepted batch in sequence order.
    * Persistence remains the selected writer's asynchronous durability barrier.
-   * @param inputs - ordered typed facts and any required surface metadata.
+   * @param inputs - ordered typed facts and required surface metadata; a log-only event may set
+   *   `ignorable: true` when older readers can safely skip it.
    * @returns immutable accepted events with contiguous sequences.
    * @throws before changing the log if any input or synchronous acceptance check fails.
    */
@@ -508,9 +516,11 @@ export class Session {
       const surface = new SurfaceManager(candidateLog)
       const guards = [...this.appendGuards]
       for (const input of inputs) {
+        const options = input.opts
         const snapshot = snapshotJsonValue({ type: input.type, data: input.data,
-          ...input.opts?.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: input.opts.sourceEventSeqs },
-          ...input.opts?.surfaceOp === undefined ? {} : { surfaceOp: input.opts.surfaceOp } })
+          ...options !== undefined && 'ignorable' in options ? { ignorable: true } : {},
+          ...options !== undefined && 'sourceEventSeqs' in options ? { sourceEventSeqs: options.sourceEventSeqs } : {},
+          ...options !== undefined && 'surfaceOp' in options ? { surfaceOp: options.surfaceOp } : {} })
         if (snapshot === undefined) throw new Error(`session event "${input.type}" carries non-JSON-serializable data or surface metadata`)
         const event = deepFreeze({ ...snapshot, seq: SessionSeq(candidateLog.length), time: Date.now() } as unknown as SessionEvent)
         validateSessionEventData(event, `session event "${event.type}" at seq ${event.seq}`)

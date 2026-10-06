@@ -1,5 +1,6 @@
 /** Persisted task definitions and execution receipts. */
 import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { NativeRootRouteId, NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
 
 /** Durable identity of one scheduled plan. */
 export type TaskId = Branded<'ScheduledTaskId'>
@@ -14,8 +15,12 @@ export interface TaskInput {
   title: string
   prompt: string
   workspace: string
-  agentPreset: string
-  permissionPreset: string
+  /** Native Program route; mutually exclusive with compatibility presets. */
+  nativeRoute?: NativeRootRouteId | undefined
+  /** Full resolved Program configuration captured with the native route. */
+  nativeConfiguration?: Readonly<NativeSessionConfiguration> | undefined
+  agentPreset?: string | undefined
+  permissionPreset?: string | undefined
   provider: string
   model: string
   at: string
@@ -46,6 +51,8 @@ export interface Run {
   sessionId: string | null
   detail: string
 }
+/** A claimed occurrence always has a durable execution Session id before dispatch. */
+export type ClaimedRun = Omit<Run, 'sessionId'> & { sessionId: string }
 /** Adapter settlement; completed certifies an Agent turn, not code correctness. */
 export interface ExecutionResult {
   state: 'completed' | 'failed' | 'blocked'
@@ -53,7 +60,8 @@ export interface ExecutionResult {
   detail: string
 }
 /** Run one occurrence and honor cancellation before releasing its execution resources. */
-export type ExecuteTask = (task: Task, run: Run, signal: AbortSignal, progress?: (detail: string) => void) => Promise<ExecutionResult>
+export type ExecuteTask = (task: Task, run: ClaimedRun, signal: AbortSignal,
+  progress?: (detail: string) => void) => Promise<ExecutionResult>
 /** Polling, execution and retention limits validated by the plugin configuration. */
 export interface SchedulerOptions {
   /** Milliseconds between due-time checks; does not change the stored target time. */

@@ -48,6 +48,8 @@ export interface NativeRootSessionRequest {
   readonly route: NativeRootRouteId
   readonly id: SessionId
   readonly resume: boolean
+  /** Program-persisted admission origin for a scheduled root; other roots omit it. */
+  readonly rootOrigin?: 'scheduled'
   /** Explicit fresh-root composition; restoration uses accepted historical selection. */
   readonly preset?: string
 }

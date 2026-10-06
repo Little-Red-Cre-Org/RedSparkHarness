@@ -21,4 +21,4 @@ const reflection = {
     }
   },
 }
-export default clientBundle(name, ['lib/types/index.js'], { hostPhase: true, lib: { plugins: [reflection] } })
+export default clientBundle(name, ['lib/types/index.js', 'lib/types/native.js'], { hostPhase: true, lib: { plugins: [reflection], outputOptions: { chunkFileNames: 'shared-[hash].js' } } })

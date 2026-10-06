@@ -32,6 +32,8 @@ The native route also emits `session.chunk` for accepted model chunks and serves
 
 The application declares the shared executor's optional `modelSelection` service; compositions may install that Provider without a separate SDK model registry.
 
+The application provides `rootExecution` as the same executor selected by `initialize`. Its `ready(signal)` waits for successful initialization and rejects when initialization fails, its caller cancels, or the SDK closes; other root operations are available only after readiness. This lets installed Providers use the SDK Program's selected route without creating another executor or adding an SDK wire method. The [root-execution decision](../../../../../.agents/notes/implemented/architecture/2026-10-07-native-sdk-provides-its-root-executor.md) records this ownership.
+
 Delegated children of this Program's admitted root emit `subagent.started` lineage before their backend-accepted `session.event` notifications. The selected native Subagent Provider reports `subagent.finished` only after a real one-shot result or continuable residency epoch has settled and released its writer; interrupting a turn alone does not finish a still-resident child. The server matches that result to the exact child and parent Agents accepted under this SDK root; detachment alone never reports success. Both SDKs' `subscribeSessionTree` and run subscriptions include these descendants, while root response events remain separate. Other Programs sharing the same Providers are excluded. Shutdown drains accepted descendants, emits their settled results and flushes the transport before releasing observers.
 
 ## Dev Note
