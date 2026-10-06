@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
@@ -11,7 +12,8 @@ import TerminalSessionService, { TerminalSessionId } from '@deepseek-ai/dsh-term
 import type { TerminalBackend, TerminalBackendSession, TerminalSendOperation, TerminalSendRequest, TerminalSessionStatus, TerminalSignal } from '@deepseek-ai/dsh-terminal'
 import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
 import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
-import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
+import * as ToolPty from '../src/compat.ts'
+import * as ToolTerminalEntry from '../src/index.ts'
 import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
 
 function fakeAgent(ctx: Context, rawId: string): Agent {
@@ -135,6 +137,24 @@ function text(result: { content: { type: string; text?: string }[] }): string {
 }
 
 describe('tool-terminal foreground API', () => {
+  it('awaits the public lazy Cordis entry when started by the real Loader', async () => {
+    const { ctx, agent } = await setupBase(false)
+    await ctx.plugin(Loader)
+    ctx.loader.internal = {
+      version: 'v2',
+      async import(specifier: string) {
+        if (specifier !== '@deepseek-ai/dsh-tool-terminal') throw new Error(`unexpected Loader import: ${specifier}`)
+        return ToolTerminalEntry
+      },
+    } as unknown as NonNullable<typeof ctx.loader.internal>
+
+    await ctx.loader.create({ name: '@deepseek-ai/dsh-tool-terminal' })
+    await ctx.loader.await()
+
+    expect(ctx.tools.get('terminal_open')).toBeDefined()
+    expect(text(await call(ctx, 'terminal_open', { type: 'stub' }, agent))).toContain('started terminal session pty-1')
+  })
+
   it('registers exactly six schemas and drives the full owner-scoped lifecycle', async () => {
     const { ctx, agent } = await setup(false)
     expect(TOOL_NAMES.every(name => ctx.tools.get(name) !== undefined)).toBe(true)

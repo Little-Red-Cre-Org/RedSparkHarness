@@ -27,6 +27,8 @@ Use this package to give an agent a named tool that delegates work to a configur
 
 The ./native entry consumes native-subagent. Configuration requires toolName and maxDepth; maxSteps, provider, model, reasoningEffort, maxTokens, persona and toolFilter are optional deployment choices. backgroundMode defaults to one-shot: run_in_background requires jobs and jobControls, returns after readiness, and job_output/job_kill observe or cancel the Agent-owned job. The Provider backgroundJobs, selected jobs and jobControls.jobs must identify the same registry; mismatches fail loading. backgroundMode:continuable defaults to durable initial-message acceptance; run_in_background:false waits for an ordinary one-shot result. Continuable mode requires subagentControls bound to the same selected Provider and its continuationTools registry. NativeTools validates arguments and records actual results.
 
+The package root remains the Cordis plugin entry and loads its compatibility implementation only when `apply` runs. Its Cordis peer dependencies are optional for package-manager installation; native compositions should select `./native`, while Cordis compositions must install the peers required by the compatibility entry.
+
 Mount one instance per delegation target, each with a distinct `toolName`. The tool exists exactly while its provider does, so sibling load order and provider reloads never strand it.
 
 ### Minimal configuration
@@ -100,7 +102,9 @@ The tool's description derives from `provider.inheritsParentContext`: a fresh ch
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Tool registration, lifecycle mirroring, mode resolution, result settlement |
+| [`src/index.ts`](src/index.ts) | Public Cordis facade and lazy compatibility loading |
+| [`src/compat.ts`](src/compat.ts) | Tool registration, lifecycle mirroring, mode resolution, result settlement |
+| [`src/config.ts`](src/config.ts) | Public configuration type and schema |
 | [`src/model-selection.ts`](src/model-selection.ts) | Request/config merge and live LLM route preflight |
 | [`src/model-selection-settings.ts`](src/model-selection-settings.ts) | Host-owned opt-in setting sampled for new Sessions |
 | [`src/model-selection-state.ts`](src/model-selection-state.ts) | Session event that records and inherits the sampled decision |

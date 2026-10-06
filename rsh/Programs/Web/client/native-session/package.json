@@ -50,10 +50,6 @@
       "provides": [
         "clientNativeSession"
       ]
-    },
-    "client": {
-      "platform": "web",
-      "immediately": true
     }
   },
   "files": [
@@ -68,7 +64,12 @@
   "license": "MIT",
   "dependencies": {
     "eventsource-parser": "^3.1.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
@@ -77,11 +78,6 @@
     "@deepseek-ai/dsh-session": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^"
   }
 }

@@ -30,7 +30,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import ts from 'typescript'
 import { mixedNativeLibraryDirectories, nativeCompatibilityOnlyPeers, nativeSafeSourceEntryTargets, nativeSafeSourceSubpaths } from './native-package-policy.ts'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
@@ -180,6 +180,13 @@ function cordisFreeSourceClosure(
         ts.sys,
       ).resolvedModule?.resolvedFileName
       if (resolved === undefined && specifier.text.startsWith('.')) {
+        const assetSpecifier = specifier.text.split(/[?#]/u, 1)[0] ?? specifier.text
+        if (assetSpecifier.endsWith('.css')) {
+          if (!existsSync(resolve(dirname(source.fileName), assetSpecifier))) {
+            throw new Error(`safe source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
+          }
+          continue
+        }
         throw new Error(`safe source import cannot be resolved: ${source.fileName} -> ${specifier.text}`)
       }
       if (resolved === undefined) continue

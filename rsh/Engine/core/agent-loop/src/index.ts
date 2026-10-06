@@ -42,6 +42,13 @@ const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
   FiberState.FAILED,
 ])
 
+/** Return the active Loader tree's readiness task when this composition has a Loader. */
+function loaderReadiness(ctx: Context): Promise<void> | undefined {
+  const loader = ctx.get('loader') as { await(): Promise<unknown> } | undefined
+  if (loader === undefined) return undefined
+  return Promise.resolve().then(() => loader.await()).then(() => undefined)
+}
+
 const turnBoundaryProjectionSchema: zod.ZodType<TurnBoundaryProjection> = zod.object({
   openTurnStartSeq: zod.number().int().nonnegative().transform(SessionSeq).nullable(),
   lastStepStartSeq: zod.number().int().nonnegative().transform(SessionSeq).nullable(),
@@ -325,7 +332,7 @@ export interface Config {
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
     id: string
-    /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
+    /** Stable identity; Loader-managed startup waits for persistence selection, then resumes history or creates fresh. */
     sessionId?: SessionId
     /** Optional workspace for a fresh session. */
     cwd?: string
@@ -422,11 +429,24 @@ export class AgentLoop extends Service implements AgentFactory {
     ctx.systemPrompt.variable('model', context => context.agent?.options.model)
     ctx.systemPrompt.variable('cwd', context => context.agent?.session.header.cwd)
 
+    const configuredPersistenceReadiness = this.config.agents.some(agent =>
+      agent.resumeSessionId === undefined || agent.resumeSessionId === '',
+    )
+      && ctx.get('sessionPersistence') === undefined
+      ? loaderReadiness(ctx)
+      : undefined
     for (const { id, sessionId, cwd, resumeSessionId, ...options } of this.config.agents) {
       const meta = cwd === undefined ? {} : { cwd }
       if (resumeSessionId === undefined || resumeSessionId === '') {
         const configuredId = sessionId ?? brandString<SessionId>(`${id}-session-${randomUUID()}`)
         const persistence = sessionId === undefined ? undefined : ctx.get('sessionPersistence')
+        if (persistence === undefined && configuredPersistenceReadiness !== undefined) {
+          const startup = this.startConfiguredAfterPersistenceReady(
+            id, configuredId, options, meta, sessionId !== undefined, configuredPersistenceReadiness,
+          )
+          this.ownership.trackStartup(startup)
+          continue
+        }
         if (persistence === undefined) {
           const startup = this.create(configuredId, options, meta).then(() => undefined, (error: unknown) => {
             this.reportConfiguredStartupFailure(id, 'restore', configuredId, error)
@@ -473,6 +493,29 @@ export class AgentLoop extends Service implements AgentFactory {
       } catch (listenerError: unknown) {
         this.ctx.logger.warn(`agent "${configId}": config-start-failed listener threw: ${errorChain(listenerError)}`)
       }
+    }
+  }
+
+  /** Start a fresh declarative Agent after its Loader tree settles persistence selection. */
+  private async startConfiguredAfterPersistenceReady(
+    configId: string,
+    sessionId: SessionId,
+    agentOptions: AgentOptions,
+    meta: Pick<SessionHeader, 'cwd'>,
+    reuseMaterializedSession: boolean,
+    readiness: Promise<void>,
+  ): Promise<void> {
+    try {
+      await this.ownership.waitWhileActive(readiness)
+      if (!this.ownership.isActive()) return
+      const persistence = this.ctx.get('sessionPersistence')
+      if (persistence === undefined || !reuseMaterializedSession) {
+        await this.create(sessionId, agentOptions, meta)
+      } else {
+        await this.restoreOrCreateConfigured(this.ctx, persistence, sessionId, agentOptions, meta)
+      }
+    } catch (error: unknown) {
+      this.reportConfiguredStartupFailure(configId, 'restore', sessionId, error)
     }
   }
 

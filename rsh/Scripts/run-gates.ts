@@ -25,6 +25,7 @@ export type Mode =
   | 'ci-primary'
   | 'ci-linux-primary'
   | 'ci-static'
+  | 'ci-package-publication'
   | 'ci-lint-contracts-ready'
   | 'ci-coverage'
   | 'ci-bench'
@@ -136,6 +137,7 @@ function parseMode(raw: string | undefined): Mode {
     case 'ci-primary':
     case 'ci-linux-primary':
     case 'ci-static':
+    case 'ci-package-publication':
     case 'ci-lint-contracts-ready':
     case 'ci-coverage':
     case 'ci-bench':
@@ -153,7 +155,7 @@ function parseMode(raw: string | undefined): Mode {
       return raw
     default:
       throw new Error(
-        `run-gates: expected mode ci-primary | ci-linux-primary | ci-static | ci-lint-contracts-ready | ci-coverage | ci-bench | ci-snapshot | ci-artifacts | ci-consumers | ci-windows-blocking | ci-windows-complete | ci-windows-observational | node-compat | check-all | hygiene | doc-sync | doc-quick, got ${JSON.stringify(raw)}.`,
+        `run-gates: expected mode ci-primary | ci-linux-primary | ci-static | ci-package-publication | ci-lint-contracts-ready | ci-coverage | ci-bench | ci-snapshot | ci-artifacts | ci-consumers | ci-windows-blocking | ci-windows-complete | ci-windows-observational | node-compat | check-all | hygiene | doc-sync | doc-quick, got ${JSON.stringify(raw)}.`,
       )
   }
 }
@@ -237,6 +239,8 @@ export function gatesForMode(selected: Mode): Gate[] {
       return [...ciPrimaryGates(), webSnapshotGate(['built-package-invariants'])]
     case 'ci-static':
       return ciStaticGates({ ownsBuild: false })
+    case 'ci-package-publication':
+      return packagePublicationGates()
     case 'ci-lint-contracts-ready':
       return [
         lintGate(),
@@ -313,6 +317,14 @@ function ciSharedStaticGates(): Gate[] {
     pnpmScript('no-bare-dispatcher', 'verify-no-bare-dispatcher', { label: 'proxy-aware dispatchers' }),
     pnpmScript('approval-policy', 'test:approval-policy', { label: 'Weighted approval policy' }),
     pnpmScript('issue-management', 'test:issue-management', { label: 'Issue management policy' }),
+  ]
+}
+
+function packagePublicationGates(): Gate[] {
+  return [
+    pnpmScript('constraints', 'constraints'),
+    pnpmScript('native-dependencies', 'verify-native-dependencies'),
+    pnpmScript('package-invariants', 'verify-package-invariants', { label: 'package invariants' }),
   ]
 }
 

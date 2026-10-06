@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -39,7 +39,7 @@ function fixture(options: {
   invariantFile?: boolean
   invariantDependency?: boolean
   invariantReference?: boolean
-  buildEntry?: boolean
+  buildEntry?: boolean | string
   omissionReason?: boolean
 } = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-package-invariants-'))
@@ -94,15 +94,20 @@ function fixture(options: {
   if (companion) {
     writeFileSync(join(dir, 'src/invariant.ts'), options.source ?? handwrittenInvariant(packageName))
   }
-  writeFileSync(
-    join(dir, 'tsdown.config.ts'),
-    buildEntry ? "export default { entry: ['lib/types/index.js', 'lib/types/invariant.js'] }\n" : "export default { entry: ['lib/types/index.js'] }\n",
-  )
+  const buildConfig = typeof buildEntry === 'string'
+    ? buildEntry
+    : buildEntry ? "export default { entry: ['lib/types/index.js', 'lib/types/invariant.js'] }\n"
+      : "export default { entry: ['lib/types/index.js'] }\n"
+  writeFileSync(join(dir, 'tsdown.config.ts'), buildConfig)
   writeFileSync(
     join(dir, 'README.md'),
     options.omissionReason === false ? '# Probe\n' : '# Probe\n\nNo runtime invariant companion is published because this fixture owns no diverging observations.\n',
   )
   return root
+}
+
+function configSource(...lines: string[]): string {
+  return lines.join(String.fromCharCode(10)) + String.fromCharCode(10)
 }
 
 describe('package invariant gate', () => {
@@ -199,6 +204,126 @@ describe('package invariant gate', () => {
       expect.stringContaining('TypeScript project references must omit ../../../Core/runtime-diagnostics/invariants'),
       expect.stringContaining('build override must omit lib/types/invariant.js'),
     ]))
+  })
+
+  it.each([
+    {
+      name: 'supported brace entry list',
+      companion: true,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })"),
+      message: undefined,
+    },
+    {
+      name: 'missing companion entry',
+      companion: true,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,native,types}.js'] })"),
+      message: 'package build override must bundle lib/types/invariant.js',
+    },
+    {
+      name: 'omitted companion entry',
+      companion: false,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: ['lib/types/{index,invariant,native,types}.js'] })"),
+      message: 'package build override must omit lib/types/invariant.js when src/invariant.ts is absent',
+    },
+    {
+      name: 'supported entry helper',
+      companion: true,
+      buildEntry: configSource("import { defineConfig, entry } from 'tsdown'", "export default defineConfig([entry('lib/types/index.js'), entry('lib/types/invariant.js')])"),
+      message: undefined,
+    },
+    {
+      name: 'dynamic callback config without companion',
+      companion: false,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "function configFactory(){ return { entry: ['lib/types/invariant.js'] } }; export default defineConfig(() => configFactory())"),
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'unknown identifier config without companion',
+      companion: false,
+      buildEntry: "const config = { entry: ['lib/types/invariant.js'] }; export default config",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'computed entry map key collision',
+      companion: true,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "const collision = String('index'); export default defineConfig({ entry: {[collision]: 'lib/types/invariant.js', index: 'lib/types/index.js'} })"),
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'local clientBundle helper decoy',
+      companion: true,
+      buildEntry: "function clientBundle(_name: string, _entries: readonly string[]){return {entry:['lib/types/index.js']}}; export default clientBundle('@deepseek-ai/dsh-probe',['lib/types/invariant.js'])",
+      message: 'package build override has an unsupported entry declaration',
+    },
+    {
+      name: 'imported clientBundle wrapper preserves entry',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/ui-sidebar-documentpreview',
+      packageName: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview',
+      buildEntry: configSource(
+        "import { clientBundle } from '../tsdown.client.ts'",
+        "const bundle = clientBundle('@deepseek-ai/dsh-client-ui-sidebar-documentpreview', ['lib/types/index.js'])",
+        'const pdfWorker = []',
+        "function pdfLicenseBanner() { return 'license' }",
+        "function pdfAssets() { return '{}' }",
+        'export default (options) => bundle(options).map(config =>',
+        "  config.name?.endsWith('/client') === true ? { ...config,",
+        '    banner: pdfLicenseBanner(), plugins: [config.plugins, pdfWorker],',
+        '    define: { ...config.define, __DSH_PDFJS_ASSETS__: pdfAssets() },',
+        '  } : config,',
+        ')',
+      ),
+      message: undefined,
+    },
+    {
+      name: 'canonical Client wrappers preserve static linked leaves',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/ui-conversation',
+      packageName: '@deepseek-ai/dsh-client-ui-conversation',
+      buildEntry: configSource(
+        "import { clientBundle, staticLinkedLeaf } from '../tsdown.client.ts'",
+        "const legacy = clientBundle('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/index.js'])",
+        "const native = staticLinkedLeaf('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/tool-records.js', 'lib/types/conversation-copy.js'])",
+        'export default (args) => [...legacy(args), ...native(args)]',
+      ),
+      message: undefined,
+    },
+    {
+      name: 'canonical Client-only wrapper preserves literal entry maps',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/native-application',
+      packageName: '@deepseek-ai/dsh-client-native-application',
+      buildEntry: configSource(
+        "import { defineConfig } from 'tsdown'",
+        "import { clientOnly } from '../tsdown.client.ts'",
+        "export default clientOnly([defineConfig({ name: '@deepseek-ai/dsh-client-native-application/client', entry: ['lib/types/index.js', 'lib/types/native.js', 'lib/types/controller.js'], outDir: 'lib', format: ['esm'], platform: 'browser', target: 'es2024', fixedExtension: false, dts: false, clean: false })])",
+      ),
+      message: undefined,
+    },
+    {
+      name: 'entry map records emitted paths',
+      companion: true,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: { invariant: 'lib/types/index.js' } })"),
+      message: 'package build override must bundle lib/types/invariant.js',
+    },
+    {
+      name: 'nested entry metadata is unsupported',
+      companion: true,
+      buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: { index: 'lib/types/index.js', metadata: { note: 'lib/types/invariant.js' } } })"),
+      message: 'package build override has an unsupported entry declaration',
+    },
+  ])('$name', ({ companion, packageDirectory, packageName, buildEntry, message }) => {
+    const root = fixture({
+      companion,
+      ...(packageDirectory === undefined ? {} : { packageDirectory }),
+      ...(packageName === undefined ? {} : { packageName }),
+      buildEntry,
+    })
+    expect(existsSync(join(root, packageDirectory ?? 'rsh/Engine/core/probe', 'lib'))).toBe(false)
+    const buildViolations = collectPackageInvariantViolations(root)
+      .filter(violation => violation.path.endsWith('/tsdown.config.ts'))
+    if (message === undefined) expect(buildViolations).toEqual([])
+    else expect(buildViolations.map(violation => violation.message)).toContain(message)
   })
 
   it('rejects foreign, duplicate, and unresolved registrations', () => {

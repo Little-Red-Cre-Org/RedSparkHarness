@@ -59,6 +59,12 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/workspace-path',
 ])
 
+/** Native-profile Client packages that do not implement the Cordis module-table entry. */
+export const nativeProfileClientDirectories: ReadonlySet<string> = new Set([
+  'rsh/Programs/Web/client/native-session',
+  'rsh/Programs/Web/client/native-application',
+])
+
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Programs/Web/client/ui-primitives', ['client']],
@@ -151,6 +157,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
@@ -160,6 +167,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/workflow/tool-ralph', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
+  ['rsh/Modules/Official/terminal/tool-terminal', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],

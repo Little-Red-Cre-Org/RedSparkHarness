@@ -27,6 +27,8 @@ kind: "package-reference"
 
 原生 `./native` 入口要求配置与选定后端匹配的 `type`，并注册六个终端工具。`maxResultBytes` 限制渲染输出；`enableRunInBackground` 默认 true，并在安装时要求原生 Jobs Provider。仅需前台执行的组合将其设为 false。前台取消会中断发送，后台工作仍由确切 Agent 持有，并通过 NativeJobs 结算。NativeJobs 直接接收清理后的 send 输出；`job_output` 读取保留的实时文本，不消费 send viewport。最终格式化输出替换实时文本并保留截断元数据。返回文本及发送展示元数据进入应用持有的 Session 结果。
 
+包根入口仍是 Cordis 插件入口，仅在调用 `apply` 时加载兼容实现。Cordis 对等依赖（peer dependency）对于包管理器安装保持可选；原生组合应选择 `./native`，Cordis 组合则需安装兼容入口使用的 `dsh-tools` 对等依赖。
+
 当组合挂载了终端后端、且模型应当能跨调用使用终端状态时启用这些工具——使用调试器单步调试、在 REPL 中探索，或中断前台命令后回到 shell。指引章节会引导模型对有界操作使用单次 bash、read、write 与 edit 工具。
 
 ### 六个工具
@@ -85,7 +87,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 6 个工具定义、schema、指引章节、后台任务集成 |
+| [`src/index.ts`](src/index.ts) | 公开 Cordis 兼容入口与延迟加载 |
+| [`src/compat.ts`](src/compat.ts) | 6 个工具定义、schema、指引章节、后台任务集成 |
+| [`src/config.ts`](src/config.ts) | 公开配置类型与 schema |
 | [`src/render.ts`](src/render.ts) | 结果渲染与完整结果的 UTF-8 上限 |
 
 ### 结果上限

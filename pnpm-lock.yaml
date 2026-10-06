@@ -6042,6 +6042,12 @@ importers:
 
   rsh/Modules/Official/fs/tool-fs-search:
     dependencies:
+      '@deepseek-ai/dsh-output-retention':
+        specifier: workspace:^
+        version: link:../../../../Core/util/output-retention
+      '@deepseek-ai/dsh-timeout':
+        specifier: workspace:^
+        version: link:../../../../Core/util/timeout
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6058,6 +6064,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -6073,9 +6082,6 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-tools
-      '@deepseek-ai/dsh-output-retention':
-        specifier: workspace:^
-        version: link:../../../../Core/util/output-retention
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope
@@ -6097,9 +6103,6 @@ importers:
       '@deepseek-ai/dsh-system-prompt':
         specifier: workspace:^
         version: link:../../../../Engine/core/system-prompt
-      '@deepseek-ai/dsh-timeout':
-        specifier: workspace:^
-        version: link:../../../../Core/util/timeout
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
@@ -10302,13 +10305,17 @@ importers:
         version: link:../../../../Core/util/package-manifest
 
   rsh/Programs/Web/client/native-application:
+    dependencies:
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
-      '@deepseek-ai/dsh-client-native-session':
-        specifier: workspace:^
-        version: link:../native-session
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
@@ -10318,9 +10325,6 @@ importers:
       '@deepseek-ai/dsh-native-model-selection':
         specifier: workspace:^
         version: link:../../../../Engine/llm/native-model-selection
-      '@deepseek-ai/dsh-native-runtime':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -10336,13 +10340,6 @@ importers:
 
   rsh/Programs/Web/client/native-session:
     dependencies:
-      eventsource-parser:
-        specifier: ^3.1.0
-        version: 3.1.0
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
@@ -10358,6 +10355,13 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      eventsource-parser:
+        specifier: ^3.1.0
+        version: 3.1.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session

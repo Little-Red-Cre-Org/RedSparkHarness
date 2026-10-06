@@ -27,6 +27,8 @@ kind: "package-reference"
 
 原生 ./native 入口消费 native-subagent。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。backgroundMode 默认 one-shot：run_in_background 要求 jobs 与 jobControls，在真实就绪后返回，job_output/job_kill 观察或取消 Agent 所有的任务。Provider 的 backgroundJobs、选定 jobs 与 jobControls.jobs 必须标识同一注册表；不一致时加载失败。backgroundMode:continuable 默认在首次消息持久接受后返回；run_in_background:false 等待普通一次性结果。可持续模式要求 subagentControls 绑定同一选定 Provider 与其 continuationTools 注册表。NativeTools 校验参数并记录真实结果。
 
+包根入口仍是 Cordis 插件入口，仅在调用 `apply` 时加载兼容实现。Cordis 对等依赖（peer dependency）对于包管理器安装保持可选；原生组合应选择 `./native`，Cordis 组合则需安装兼容入口使用的对等依赖。
+
 每个委派目标挂载一个实例，且每个实例的 `toolName` 必须不同。工具与其提供方同时存在、同时消失，因此同级加载顺序与提供方重新加载都不会让工具悬空。
 
 ### 最小配置
@@ -100,7 +102,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 工具注册、生命周期镜像、模式解析、结果结算 |
+| [`src/index.ts`](src/index.ts) | 公开 Cordis 兼容入口与延迟加载 |
+| [`src/compat.ts`](src/compat.ts) | 工具注册、生命周期镜像、模式解析、结果结算 |
+| [`src/config.ts`](src/config.ts) | 公开配置类型与 schema |
 | [`src/model-selection.ts`](src/model-selection.ts) | 请求／配置合并与实时 LLM 路由预检 |
 | [`src/model-selection-settings.ts`](src/model-selection-settings.ts) | 为新 Session 读取的宿主所有 opt-in 设置 |
 | [`src/model-selection-state.ts`](src/model-selection-state.ts) | 记录并继承已读取决定的 Session 事件 |
