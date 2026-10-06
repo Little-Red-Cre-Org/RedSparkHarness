@@ -18,6 +18,6 @@ Status: implemented
 
 ## 结果
 
-可持续部署要求控制工具绑定同一 Provider 与 Tools 注册表。run_in_background:false 保留普通一次性执行。按接收方串行投递，启动或冷准入失败等待新建驻留清理。打断停放未认领输入；另一消息唤醒。父级销毁与提供者卸载等待子执行清理，保留清理失败。两个 SDK 通过既有 Session 树订阅观察已接受子事件。目录、外部后端、persona 插值与自动完成结果通知仍是独立能力。
+可持续部署要求控制工具绑定同一 Provider 与 Tools 注册表。run_in_background:false 保留普通一次性执行。按接收方串行投递，启动或冷准入失败等待新建驻留清理。打断停放未认领输入；另一消息唤醒。仅当 driver `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。仍在驻留的子任务被打断一轮并不会结束；`subagent.finished` 在写入器释放后报告一次性结果或可持续驻留阶段的真实结束。父级销毁与提供者卸载等待子执行清理，保留清理失败。两个 SDK 通过既有 Session 树订阅观察已接受子事件。ACP 投影、目录、外部后端与 persona 插值仍是独立能力。
 
-运行时结束通知采用[结束通知准入](2026-10-05-native-subagent-settlement.zh.md)；独立 subagent.finished wire 通知仍是后续能力。
+运行时结束通知采用[结束通知准入](2026-10-05-native-subagent-settlement.zh.md)。原生 SDK 的 `subagent.finished` 投影从实际 Provider 结束结果生成，不替代父级结束通知。

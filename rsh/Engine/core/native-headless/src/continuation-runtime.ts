@@ -109,7 +109,9 @@ export class NativeContinuationRuntime {
    * @returns operations retaining that identity without exposing Program application classes.
    */
   forParent(agent: NativeAgent, session: Session): NativeSessionContinuations {
+    const isClosing = (): boolean => this.closing !== undefined || this.program.lifetime.aborted
     return {
+      get isClosing() { return isClosing() },
       open: (request, signal) => this.open(agent, session, request, signal),
       maintenance: async (id, operation, signal) => {
         this.assertParent(agent)
@@ -374,8 +376,15 @@ export class NativeContinuationRuntime {
         release: () => resources.dispose(),
         settled: async (result, failure) => {
           if (!published) ready.reject(failure ?? new Error('native-continuation: child closed before publication'))
-          if (published && this.closing === undefined && !this.program.lifetime.aborted && this.program.agents.get(parent.id) === parent) {
-            await request.onSettled?.(result, failure)
+          if (published && request.onSettled !== undefined) {
+            let observation: NativeContinuationObservation
+            try {
+              observation = await this.observe(request.id, session.id, new AbortController().signal, request.config)
+            } catch (error: unknown) {
+              await request.onSettled(result, failure ?? error, undefined)
+              throw error
+            }
+            await request.onSettled(result, failure, observation)
           }
         },
       }, !request.resume)

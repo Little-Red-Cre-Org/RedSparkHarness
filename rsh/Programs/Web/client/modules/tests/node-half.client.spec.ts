@@ -561,8 +561,8 @@ describe('client bundle activation', () => {
   })
 
   it('splits startup combos before the map-form URL exceeds 3 KiB', async () => {
-    const packageNames = Array.from({ length: 48 }, (_, index) => (
-      `@fixture/combo-url-${String(index).padStart(3, '0')}-${'x'.repeat(40)}`
+    const packageNames = Array.from({ length: 21 }, (_, index) => (
+      `@fixture/combo-url-${String(index).padStart(3, '0')}-${'x'.repeat(114)}`
     ))
     const sourceMap = JSON.stringify({
       version: 3,

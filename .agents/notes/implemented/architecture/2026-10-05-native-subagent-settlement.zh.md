@@ -20,4 +20,4 @@ turn/end 或 owner 脱离都不能证明清理成功。复制子任务历史会�
 
 ## 后果
 
-根父任务在下一个用户 turn 消费通知；驻留的可续接父任务保留现有唤醒语义。关闭时抑制新通知并排空拥有的子任务。Session 和收件箱仍归 Program 所有。目录与 subagent.finished wire 通知仍是独立能力。[续接准入](2026-10-05-native-subagent-continuation.zh.md)和[兼容对话](../feature/2026-07-28-continuable-subagent-conversations.zh.md)仍保留其路由、权限与生命周期决策依据。
+根父任务在下一个用户 turn 消费通知；驻留的可续接父任务保留现有唤醒语义。关闭时抑制新通知并排空拥有的子任务。Session 和收件箱仍归 Program 所有。原生 SDK 会把实际 Provider 结束结果独立投影为 `subagent.finished`，包括关闭期间结束的已接收子任务 epoch；线路事件不会向父级投递消息或唤醒父任务。ACP 投影与目录仍是独立能力。[续接准入](2026-10-05-native-subagent-continuation.zh.md)和[兼容对话](../feature/2026-07-28-continuable-subagent-conversations.zh.md)仍保留其路由、权限与生命周期决策依据。

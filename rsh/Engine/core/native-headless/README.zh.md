@@ -43,7 +43,7 @@ kind: "package-reference"
 
 一次性执行清理会在活动 owner 观察者拒绝后仍尝试关闭 writer，同时保留执行与清理失败。Agent 接纳在发布生命周期通知前拥有借用的 preset lease，通知失败或取消会释放 lease。驻留子级将选定 preset 持久化到创建 header，并在模块准备前校验恢复事实。
 
-`sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。待处理消息记录为持久 inbox 事件，step 准入在推导模型输入之前持久记录精确认领。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。
+`sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。待处理消息记录为持久 inbox 事件，step 准入在推导模型输入之前持久记录精确认领。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
 
 Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，穿过普通 Session 父节点，并在检查 subagent 末端前核验每条直接父子关系及 subagent 委派深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 
@@ -117,8 +117,8 @@ Program 从选定的持久化集合列出 continuation 候选。它将路径限�
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-- 固定文件工具、`run_code` 和已注册工具串行执行；SDK 协议和 Web UI 仍然缺失。
+- 固定文件工具、`run_code` 与已注册工具串行执行。此包不实现 SDK 协议或 Web UI；这些接口由原生 SDK 与 Web 组合提供。
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
-- Session 与持久化包仍携带 Cordis 依赖，但此组合不会创建 Cordis Context。
+- 此组合导入 Cordis-free 的 Session 与持久化 `./native` 入口，且不创建 Cordis Context。相关包为 Cordis 兼容入口保留适配器，并将 Cordis 设为可选 peer dependency。
 
 其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务。

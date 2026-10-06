@@ -5,7 +5,7 @@ import json
 import sys
 
 from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
-from deepseek_harness.errors import JsonRpcError
+from deepseek_harness.errors import JsonRpcError, TransportClosedError
 
 launcher, home, workspace, patch, task = sys.argv[1:]
 config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
@@ -17,6 +17,21 @@ def refuse_steering(session, text):
     except JsonRpcError:
         return
     raise AssertionError("inactive steering accepted")
+
+
+def expect_finished(notifications, child_id, stop_reason):
+    ended = next((index for index, item in enumerate(notifications)
+        if item.method == "session.event" and item.payload["sessionId"] == child_id
+        and item.payload["event"]["type"] == "turn/end"), None)
+    matches = [(index, item) for index, item in enumerate(notifications)
+        if item.method == "subagent.finished" and item.payload["childSessionId"] == child_id]
+    assert ended is not None and len(matches) == 1
+    index, finished = matches[0]
+    assert index > ended
+    assert all(finished.payload.get(key) == value for key, value in {
+        "provider": "spawn", "agentId": child_id, "childSessionId": child_id,
+        "parentSessionId": "sdk-recorded-fork", "status": "ok" if stop_reason == "completed" else "error",
+        "stopReason": stop_reason}.items())
 
 
 with DeepSeekHarness(config) as harness:
@@ -94,11 +109,13 @@ with DeepSeekHarness(config) as restored:
         assert started.events[-1]["data"]["reason"]["kind"] == "completed"
         start = next(event for event in started.events if event["type"] == "tool/result")["data"]["message"]["content"][0]
         assert start["isError"] is False and "Job: subagent-1" in start["content"][0]["text"]
+        background_id = next(item.payload["childSessionId"] for item in started.notifications if item.method == "subagent.started")
         while True:
             notification = background_events.next()
             if notification.method == "session.event" and notification.payload["sessionId"] != session.id \
                 and notification.payload["event"]["type"] == "tool/call":
                 break
+        background_notifications = []
         stopped = session.run("stop the background child")
         outputs = [event["data"]["message"]["content"][0] for event in stopped.events if event["type"] == "tool/result"]
         assert "background child live output" in outputs[0]["content"][0]["text"]
@@ -106,6 +123,12 @@ with DeepSeekHarness(config) as restored:
         assert "requested cancellation" in outputs[1]["content"][0]["text"]
         assert "cancelled" in outputs[2]["content"][0]["text"]
         assert stopped.final_response == result.final_response
+        while True:
+            notification = background_events.next()
+            background_notifications.append(notification)
+            if notification.method == "subagent.finished" and notification.payload["childSessionId"] == background_id:
+                break
+        expect_finished(background_notifications, background_id, "aborted")
     child_cancelled = False
 
     def cancel_child(notification):
@@ -118,6 +141,8 @@ with DeepSeekHarness(config) as restored:
     cancelled_child = session.run("cancel a production child", on_notification=cancel_child)
     assert child_cancelled
     assert cancelled_child.events[-1]["data"]["reason"]["kind"] == "aborted"
+    cancelled_id = next(item.payload["childSessionId"] for item in cancelled_child.notifications if item.method == "subagent.started")
+    expect_finished(cancelled_child.notifications, cancelled_id, "aborted")
     assert any(item.method == "session.event" and item.payload["sessionId"] != session.id
         and item.payload["event"]["type"] == "turn/end" for item in cancelled_child.notifications)
     result = production
@@ -139,12 +164,28 @@ with DeepSeekHarness(config) as recovered:
         controlled = session.run("message and interrupt the continuable child")
         assert all(event["data"]["message"]["content"][0]["isError"] is False
             for event in controlled.events if event["type"] == "tool/result")
+        cancelled_epoch = []
         while True:
             notification = tree.next()
+            cancelled_epoch.append(notification)
             if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \
                 and notification.payload["event"]["type"] == "turn/end":
                 assert notification.payload["event"]["data"]["reason"]["kind"] == "aborted"
                 break
+        assert any(item.method == "session.event" and item.payload["sessionId"] == continuation_id
+            and item.payload["event"]["type"] == "agent/inbox/spliced"
+            and any(message["source"]["kind"] == "agent-message"
+                and any(block.get("text") == "parked continuation follow-up" for block in message["content"])
+                for message in item.payload["event"]["data"]["inserted"]) for item in cancelled_epoch)
+        assert not any(item.method == "subagent.finished" and item.payload["childSessionId"] == continuation_id
+            for item in cancelled_epoch)
+        recovered.close()
+        shutdown_notifications = []
+        try:
+            tree.drain(shutdown_notifications.append)
+        except TransportClosedError:
+            pass
+        expect_finished(cancelled_epoch + shutdown_notifications, continuation_id, "aborted")
 with DeepSeekHarness(config) as cold:
     session = cold.start_session("sdk-recorded-fork")
     with cold.client.subscribe_session_notifications(session.id) as tree:
@@ -157,11 +198,28 @@ with DeepSeekHarness(config) as cold:
         assert "Its closing message:" in json.dumps(notice.events)
         assert result.final_response in json.dumps(notice.events)
         session.run("consume the continuation notice")
+        completed_epoch = []
         while True:
             notification = tree.next()
+            completed_epoch.append(notification)
             if notification.method == "session.event" and notification.payload["sessionId"] == continuation_id \
                 and notification.payload["event"]["type"] == "turn/end":
                 assert notification.payload["event"]["data"]["reason"]["kind"] == "completed"
                 break
+        while True:
+            notification = tree.next()
+            completed_epoch.append(notification)
+            if notification.method == "subagent.finished" and notification.payload["childSessionId"] == continuation_id:
+                break
+        expect_finished(completed_epoch, continuation_id, "completed")
+
+with DeepSeekHarness(config) as catalog:
+    listed = catalog.start_session("sdk-recorded-turn").run("catalog descendants through fork")
+    content = next(event for event in listed.events if event["type"] == "tool/result")["data"]["message"]["content"][0]
+    assert content["isError"] is False
+    rows = json.loads(content["content"][0]["text"])
+    assert rows == [{"kind": "child", "id": continuation_id, "label": "continuable child",
+        "status": "ready", "parent": "sdk-recorded-fork", "depth": 2}]
+
 print(json.dumps({"finalResponse": result.final_response, "events": result.events,
     "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}))

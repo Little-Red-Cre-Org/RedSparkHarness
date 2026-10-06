@@ -42,7 +42,7 @@ e2e 断言应重新运行命令或从外部重新读取文件；对 agent 自身
 
 ## 测试解析：仅限源码
 
-- 每个 vitest 配置都将 vite-tsconfig-paths 指向 `tsconfig.base.json`；工作区包的裸导入解析到 `src`（[布局](development.zh.md#typescript-project-layout)），绝不会经由包的 `exports` 解析到构建后的 `lib/`，因为其中的陈旧产物会加载第二份模块单例。构建产物只在显式指定时使用：以 `lib` 模式运行的子进程，以及下文的构建产物冒烟测试。
+- Vitest 配置通过 `vite-tsconfig-paths` 和 `tsconfig.base.json` 将工作区导入映射到 `src`（[布局](development.zh.md#typescript-project-layout)），避免陈旧 `lib/` 产物加载重复的模块单例。产品入口导入的已发布浏览器子路径也必须配置源码别名，使源码平面构建无需生成 `lib/`。构建产物仅用于 `lib` 模式子进程及下文冒烟测试。
 
 ## 测试子进程启动模式
 
