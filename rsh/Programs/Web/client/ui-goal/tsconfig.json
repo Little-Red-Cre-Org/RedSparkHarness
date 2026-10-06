@@ -42,7 +42,7 @@
       "path": "../../../../Modules/Official/interaction/commands"
     },
     {
-      "path": "../../../../Engine/goal/goal"
+      "path": "../../../../Engine/goal/goal/tsconfig.client.json"
     },
     {
       "path": "../../../../Core/typert/protocol"

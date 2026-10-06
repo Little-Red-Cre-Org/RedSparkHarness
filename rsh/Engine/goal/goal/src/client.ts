@@ -1,3 +1,5 @@
+export type * from './compatibility-events.ts'
+export type * from './projection-types.ts'
 /**
  * Client-namespace projection of the goal domain: a pure re-export of the
  * package's types outlet. Client code imports ONLY the client namespace

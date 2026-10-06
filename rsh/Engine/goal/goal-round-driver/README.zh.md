@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当 active 的 goal 应在无人干预的情况下持续推进时，挂载 `dsh-goal-round-driver`。它与 goal 服务和 goal 工具组合使用：服务拥有状态，工具让模型控制状态，本包负责调度轮次。
 
+原生入口为定时工作提供 `goalContinuation.create(owner, request)`、`pause(owner, ref)` 与 `resume(owner, ref, additionalRounds, source)`。这些操作要求精确附加的 root owner 和本驱动器仍存活的 hooks。驱动器必须附加到提供 `rootOperations.interruptTurn` 的 Native root owner；缺少该操作时会在注册 hooks 或 Goal 输入前拒绝附加。驱动器忽略 delegated owner。状态通过 Goal 权威写入；pause 只会中止驱动器当前拥有的自动 Goal Round，恢复已耗尽轮数的 Goal 时按明确额度扩容并保留原标识。恢复必须明确提供 human 或 model 来源；paused Goal 只接受 human，不隐式提升模型权限。执行与持久化输入仍由 Program 拥有。
+
 ### 组合方式
 
 把驱动器挂载在 goal 服务与 goal 工具旁边；驱动器本身不需要任何配置。
@@ -50,16 +52,18 @@ kind: "package-reference"
 
 ### 何时停止续行
 
-Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行；宿主发起的暂停还会中止正在运行的轮次，而模型在自己轮次内发起的暂停会正常结束。编辑只会通过修订栅栏使进行中的 Round 失效，驱动器会继续新修订。驱动器也会在以下情况自行停止：轮次因 max tokens 结束、持久性写入失败、agent 被取消、插件卸载，或 Round 上限耗尽——上限耗尽时它会以稳定代码 `round-limit` 记录一个 blocker。取消绝不会自动重启 Round：Round 已在进行或已排入队列的 goal 会在下一次 idle 时被暂停；与 goal 尝试无关的取消只会停用续行。
+Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行。人类 `/goal pause` 会持久化暂停；仅当驱动器拥有当前自动 Goal turn 时才会中止该轮，人类发起的 turn 不会取消。模型发起的暂停会正常结束，包括 Goal-owned turn 后续 step 已接纳直接人类输入的情况。编辑通过 revision 栅栏使进行中的 Round 失效，驱动器会继续新 revision。驱动器也会在 turn 因 max tokens 结束、持久性写入失败、agent 被取消或 Round 上限耗尽时停止——达到上限时会以稳定代码 `round-limit` 记录 blocker。取消绝不会自动重启 Round：正在进行或已排队的 Goal 会在下一次 idle 时暂停；与 Goal 尝试无关的取消只会停用续行。
 
 ### resume、fork 或卸载之后
 
-把驱动器挂载到现有 agent 上绝不会启用任何 goal 的续行；会话 resume 或 fork 后，active 的 goal 会保持停用续行，直到用户明确授权 resume——驱动器绝不会自行复活工作。卸载插件会取消进行中的 Round，并确保不再启动后续 Round。
+把驱动器挂载到现有 agent 上绝不会启用任何 goal 的续行；会话 resume 或 fork 后，active 的 goal 会保持停用续行，直到用户明确授权 resume——驱动器绝不会自行复活工作。卸载插件会停用 Goal、中止并排空当前 Round，且不再启动后续 Round。
 
 -----
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
+
+原生卸载先排空贡献回调，再排空 owner hooks。任一阶段失败都不会跳过另一阶段；只有两阶段均已结束后才聚合清理错误。重复卸载返回同一个 promise。
 
 <details>
 <summary>实现细节——点击展开</summary>
@@ -84,6 +88,10 @@ Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻�
 ### Round 提示词
 
 保留的提示词是一个文本块：前几行为 JSON 引用的目标与 `round/maxGoalRounds`，其后是工作指令。不变式伴生会从持久前缀重建 goal，并拒绝内容与该提示词不完全一致的任何 goal 来源消息。
+
+### 原生 profile
+
+原生 profile 选择 `./native` 并配置 `admissionOrder`（默认 `700`）。驱动器等待 Program 所有的空闲 checkpoint，预留持久化 Goal 消息，并在下游 step admission 完成后重新检查精确 id、revision、轮数与 activation。拒绝的陈旧输入在模型请求前按捕获的 id 移除，并发输入继续待处理。宿主暂停与驱动器卸载只中断当前 root turn，因此 root epoch 仍可继续使用，尚未领取的普通 inbox 消息会留到后续唤醒。完成、阻塞、取消和卸载通过 Program 释放 root 驻留，不会打开子 agent。
 
 </details>
 

@@ -38,7 +38,7 @@ With explicit `profile="native-sdk"`, `Session.cancel()` and `HarnessClient.sess
 
 With explicit `profile="native-sdk"`, `run` also accepts encoded raster image dictionaries (`{"type": "image", "data": ..., "mimeType": "image/png"}`) alongside text; the native attachment Provider owns validation and durable storage.
 
-`Session.steer(input)` and `HarnessClient.session_steer(session_id, content_blocks)` durably queue next-step input on the active native-sdk root. They return a message id without waiting for a model answer or cancelling the current dispatch; idle or unknown Sessions and compatibility profiles reject.
+`Session.steer(input)` and `HarnessClient.session_steer(session_id, content_blocks)` durably queue next-step input on the active native-sdk root. They return a message id without waiting for a model answer or cancelling the current dispatch. A steer wakes a root parked after a turn interruption, while Goal work remains disarmed until explicitly rearmed; idle or unknown Sessions and compatibility profiles reject.
 
 `Session.fork(destination_session_id, at_seq=None)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.session_fork` exposes the wire receipt. Forking does not invoke a model.
 

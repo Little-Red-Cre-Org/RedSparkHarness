@@ -297,7 +297,7 @@ export class HarnessClient {
   }
 
   /**
-   * Durably steer the admitted native SDK root at its next step without interrupting dispatch.
+   * Durably steer the admitted native SDK root at its next step and wake it after a turn interruption.
    * @param sessionId - active Session owned by this runtime; idle or unknown identities reject.
    * @param contentBlocks - ordered text and encoded images, admitted through the prompt policy.
    * @returns the durable next-step message id; unsupported profiles reject.

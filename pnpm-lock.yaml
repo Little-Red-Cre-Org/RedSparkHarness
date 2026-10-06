@@ -2421,6 +2421,22 @@ importers:
         version: link:../../../Modules/Official/interaction/user-approval
 
   rsh/Engine/goal/command-goal:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/commands
+      '@deepseek-ai/dsh-goal':
+        specifier: workspace:^
+        version: link:../goal
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -2437,15 +2453,9 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../Tests/test-support/agent-loop-testkit
-      '@deepseek-ai/dsh-commands':
+      '@deepseek-ai/dsh-goal-round-driver':
         specifier: workspace:^
-        version: link:../../../Modules/Official/interaction/commands
-      '@deepseek-ai/dsh-goal':
-        specifier: workspace:^
-        version: link:../goal
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../llm/llm
+        version: link:../goal-round-driver
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -2455,6 +2465,15 @@ importers:
 
   rsh/Engine/goal/goal:
     dependencies:
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -2512,6 +2531,25 @@ importers:
         version: link:../../../Core/typert/protocol
 
   rsh/Engine/goal/goal-round-driver:
+    dependencies:
+      '@deepseek-ai/dsh-goal':
+        specifier: workspace:^
+        version: link:../goal
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -2525,18 +2563,9 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../Tests/test-support/agent-loop-testkit
-      '@deepseek-ai/dsh-goal':
-        specifier: workspace:^
-        version: link:../goal
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../llm/llm
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../core/session
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../session/session-projection
@@ -2549,9 +2578,36 @@ importers:
 
   rsh/Engine/goal/tool-goal:
     dependencies:
+      '@deepseek-ai/dsh-goal':
+        specifier: workspace:^
+        version: link:../goal
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -2568,15 +2624,6 @@ importers:
       '@deepseek-ai/dsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../../Tests/test-support/agent-loop-testkit
-      '@deepseek-ai/dsh-goal':
-        specifier: workspace:^
-        version: link:../goal
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../llm/llm
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../core/session
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../session/session-projection
@@ -6140,6 +6187,24 @@ importers:
 
   rsh/Modules/Official/interaction/commands:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-util-crypto':
         specifier: workspace:^
         version: link:../../../../Core/util/crypto
@@ -6156,21 +6221,12 @@ importers:
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../attachment/attachment
-      '@deepseek-ai/dsh-brand':
-        specifier: workspace:^
-        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-typert-protocol':
         specifier: workspace:^
         version: link:../../../../Core/typert/protocol
@@ -8347,6 +8403,12 @@ importers:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-goal':
+        specifier: workspace:^
+        version: link:../../Engine/goal/goal
+      '@deepseek-ai/dsh-goal-round-driver':
+        specifier: workspace:^
+        version: link:../../Engine/goal/goal-round-driver
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
@@ -8440,6 +8502,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-tool-goal':
+        specifier: workspace:^
+        version: link:../../Engine/goal/tool-goal
       '@deepseek-ai/dsh-tool-subagent':
         specifier: workspace:^
         version: link:../../Engine/subagent/tool-subagent
@@ -8664,12 +8729,6 @@ importers:
       '@deepseek-ai/dsh-cordis-client-runner':
         specifier: workspace:^
         version: link:../../Modules/Official/extensions/cordis-client-runner
-      '@deepseek-ai/dsh-goal':
-        specifier: workspace:^
-        version: link:../../Engine/goal/goal
-      '@deepseek-ai/dsh-goal-round-driver':
-        specifier: workspace:^
-        version: link:../../Engine/goal/goal-round-driver
       '@deepseek-ai/dsh-headless':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/headless
@@ -8757,9 +8816,6 @@ importers:
       '@deepseek-ai/dsh-tool-fs-search':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-fs-search
-      '@deepseek-ai/dsh-tool-goal':
-        specifier: workspace:^
-        version: link:../../Engine/goal/tool-goal
       '@deepseek-ai/dsh-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/tool-jobs
