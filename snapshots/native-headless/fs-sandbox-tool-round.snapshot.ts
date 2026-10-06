@@ -1,11 +1,11 @@
 /** Shipped native-headless filesystem tools record confined writes and denial. */
 import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
-import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
+import { assertWorkspaceOutsideTemp } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
@@ -133,6 +133,7 @@ export const plugin = { apiVersion: 1, name: 'native-fs-sandbox-approval', targe
  } }`)
 
   try {
+    assertWorkspaceOutsideTemp(base)
     const child = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', replayTask,

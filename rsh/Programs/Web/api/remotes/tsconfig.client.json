@@ -36,7 +36,7 @@
       "path": "../../../../Modules/Official/extensions/cordis-host-runner"
     },
     {
-      "path": "../../../../Engine/goal/goal"
+      "path": "../../../../Engine/goal/goal/tsconfig.client.json"
     },
     {
       "path": "../../../../Modules/Official/feedback/message-feedback"

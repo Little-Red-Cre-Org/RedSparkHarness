@@ -1,13 +1,18 @@
 """Python twin of the native SDK recorded-session scenario through the public dsh profile."""
 import base64
+import os
 from pathlib import Path
 import json
 import sys
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from urllib.request import urlopen
 
 from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
 from deepseek_harness.errors import JsonRpcError, TransportClosedError
 
-launcher, home, workspace, patch, task = sys.argv[1:]
+launcher, home, workspace, patch, *arguments = sys.argv[1:]
+goal_control = arguments[-1:] == ["goal-control"]
+task = arguments[0] if arguments else "say hello through native SDK"
 config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key"})
@@ -17,6 +22,14 @@ def refuse_steering(session, text):
     except JsonRpcError:
         return
     raise AssertionError("inactive steering accepted")
+
+
+class CleanupFailed(RuntimeError):
+    def __init__(self, primary, failures):
+        details = "; ".join(repr(failure) for failure in failures)
+        super().__init__(f"native SDK Goal Python cleanup failed: {details}")
+        self.primary_error = primary
+        self.cleanup_errors = tuple(failures)
 
 
 def expect_finished(notifications, child_id, stop_reason):
@@ -32,6 +45,144 @@ def expect_finished(notifications, child_id, stop_reason):
         "provider": "spawn", "agentId": child_id, "childSessionId": child_id,
         "parentSessionId": "sdk-recorded-fork", "status": "ok" if stop_reason == "completed" else "error",
         "stopReason": stop_reason}.items())
+
+
+def serialized(result):
+    return {"finalResponse": result.final_response, "events": result.events,
+        "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}
+
+
+def _wait_for_goal_input(subscription, session_id):
+    while True:
+        notification = subscription.next()
+        if notification.method != "session.event" or notification.payload.get("sessionId") != session_id:
+            continue
+        event = notification.payload.get("event", {})
+        source = event.get("data", {}).get("source", {})
+        if event.get("type") == "user/message" and source.get("kind") == "goal" and source.get("round") == 1:
+            return notification
+
+
+if goal_control:
+    control_url = os.environ["NATIVE_SDK_GOAL_CONTROL_URL"]
+    human_text = "Keep this ordinary human input through the Goal pause."
+    wake_text = "Wake the parked SDK owner after the Goal pause settles."
+    cold_text = "Check the restored Goal before rearming it."
+    resume_text = "Explicitly resume the Goal after cold restore."
+    session_id = "sdk-goal-control"
+    stage = "start Python SDK Goal lifecycle"
+
+    def report_stage(value):
+        nonlocal_stage[0] = value
+        print(f"native SDK Goal Python stage: {value}", file=sys.stderr)
+
+    nonlocal_stage = [stage]
+
+    def diagnostics():
+        try:
+            with urlopen(f"{control_url}/goal-diagnostics", timeout=2) as response:
+                return json.loads(response.read().decode())
+        except BaseException as failure:
+            return {"diagnosticsError": repr(failure)}
+
+    def endpoint(path, expected, description):
+        report_stage(description)
+        try:
+            with urlopen(f"{control_url}/{path}", timeout=15) as response:
+                actual = response.read().decode()
+            if actual != expected:
+                raise AssertionError(f"expected {expected!r}, received {actual!r}")
+        except BaseException as failure:
+            raise RuntimeError(f"native SDK Goal Python stage {description}; evidence={diagnostics()}") from failure
+
+    def cleanup_failed_run(primary, harness, tree=None):
+        failures = []
+        try:
+            with urlopen(f"{control_url}/release-goal-pause", timeout=2) as response:
+                if response.read().decode() != "released":
+                    raise RuntimeError("pause release endpoint rejected cleanup")
+        except BaseException as failure:
+            failures.append(failure)
+        if tree is not None:
+            try:
+                tree.close()
+            except BaseException as failure:
+                failures.append(failure)
+        try:
+            harness.close()
+        except BaseException as failure:
+            failures.append(failure)
+        if failures:
+            raise CleanupFailed(primary, failures) from primary
+
+    def bounded_call(operation, description, harness, tree=None):
+        report_stage(description)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(operation)
+            try:
+                return future.result(timeout=15)
+            except BaseException as failure:
+                cleanup_failed_run(failure, harness, tree)
+                raise RuntimeError(f"native SDK Goal Python stage {description}; evidence={diagnostics()}") from failure
+
+    def bounded_run(session, text, description, harness):
+        return bounded_call(lambda: session.run(text), description, harness)
+
+    with DeepSeekHarness(config) as harness:
+        session = harness.start_session(session_id)
+        harness.start()
+        tree = harness.client.subscribe_session_notifications(session_id)
+
+        report_stage("start bootstrap SDK prompt")
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            initial = executor.submit(session.run, task)
+            goal_input = executor.submit(_wait_for_goal_input, tree, session_id)
+            initial_pending = initial
+            try:
+                while True:
+                    watched = [goal_input] if initial_pending is None else [goal_input, initial_pending]
+                    done, _ = wait(watched, timeout=15, return_when=FIRST_COMPLETED)
+                    if not done:
+                        raise RuntimeError(f"native SDK Goal Python stage wait for Goal event; evidence={diagnostics()}")
+                    if goal_input in done:
+                        goal_notification = goal_input.result()
+                        break
+                    initial_pending.result()
+                    initial_pending = None
+
+                endpoint("await-goal-round-one", "started", "wait for the round-1 provider request to start")
+                human_message_id = bounded_call(lambda: session.steer(human_text),
+                    "persist ordinary human next-step input during the Goal request", harness, tree)
+                endpoint("release-goal-pause", "released", "release the controlled Goal pause")
+                endpoint("await-goal-pause-settled", "settled", "wait for the Goal pause to settle and park the root")
+                wake_message_id = bounded_call(lambda: session.steer(wake_text),
+                    "wake the parked root with a second ordinary human steer", harness, tree)
+                report_stage("settle retained human inputs through the original SDK run")
+                try:
+                    initial_result = initial.result(timeout=15)
+                except BaseException as failure:
+                    raise RuntimeError(f"native SDK Goal Python stage settle retained input; evidence={diagnostics()}") from failure
+                runs = {"bootstrap": serialized(initial_result)}
+                assert any(event.get("type") == "agent/inbox/spliced"
+                    and any(message.get("id") == human_message_id for message in event.get("data", {}).get("inserted", []))
+                    for event in initial_result.events)
+                assert any(event.get("type") == "agent/inbox/spliced"
+                    and any(message.get("id") == wake_message_id for message in event.get("data", {}).get("inserted", []))
+                    for event in initial_result.events)
+            except BaseException as failure:
+                cleanup_failed_run(failure, harness, tree)
+                raise
+        tree.close()
+
+    with DeepSeekHarness(config) as restored:
+        restored_session = restored.start_session(session_id)
+        runs["cold"] = serialized(bounded_run(restored_session, cold_text,
+            "cold restored SDK admission while Goal is disarmed", restored))
+        runs["rearmed"] = serialized(bounded_run(restored_session, resume_text,
+            "explicit human Goal rearm on the retained restored SDK Host", restored))
+    print(json.dumps({"runs": runs, "goalNotification": {
+        "method": goal_notification.method, "params": goal_notification.payload}}))
+    raise SystemExit(0)
 
 
 with DeepSeekHarness(config) as harness:

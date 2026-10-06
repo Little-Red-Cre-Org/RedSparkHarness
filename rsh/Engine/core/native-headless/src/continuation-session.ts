@@ -159,6 +159,13 @@ export class NativeContinuationSession {
   async remove(ids: readonly MessageId[], outcome: 'canceled' | undefined, signal: AbortSignal): Promise<void> {
     this.assertOpen()
     signal.throwIfAborted()
+    this.removePending(ids, outcome)
+    await this.persist()
+  }
+
+  /** Record exact inbox removals in the current Session batch without awaiting its durability barrier. */
+  removePending(ids: readonly MessageId[], outcome: 'canceled' | undefined): void {
+    this.assertOpen()
     const selected = new Set(ids)
     for (const target of ['next-step', 'next-turn'] as const) {
       const messages = this.inbox[target]
@@ -168,7 +175,6 @@ export class NativeContinuationSession {
           ...outcome === undefined ? {} : { outcome } }))
       }
     }
-    await this.persist()
   }
 
   /** Cancel all unclaimed accepted input with durable cancellation attribution. @returns completion of the cancellation checkpoint. */

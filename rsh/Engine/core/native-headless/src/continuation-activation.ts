@@ -33,6 +33,7 @@ export class NativeContinuationActivation {
   private readonly closed = Promise.withResolvers<void>()
   private changed = Promise.withResolvers<undefined>()
   private turn: AbortController | undefined
+  private turnSettled: Promise<void> | undefined
   private pumping: Promise<void> | undefined
   private closing: Promise<void> | undefined
   private children = 0
@@ -99,11 +100,13 @@ export class NativeContinuationActivation {
   /**
    * Interrupt only the current turn; unclaimed input stays parked until another message wakes it.
    * @param reason - cancellation cause for the selected driver.
+   * @returns completion after the current turn cleanup and durable closer.
    */
-  interrupt(reason: unknown): void {
-    if (this.turn === undefined) return
+  interrupt(reason: unknown): Promise<void> {
+    if (this.turn === undefined) return Promise.resolve()
     this.parked = true
-    this.turn.abort(reason)
+    if (!this.turn.signal.aborted) this.turn.abort(reason)
+    return this.turnSettled ?? Promise.resolve()
   }
 
   /** Close admission, interrupt active work and drain before releasing the writer. @returns the memoized release transaction. */
@@ -150,6 +153,8 @@ export class NativeContinuationActivation {
       }
       const controller = new AbortController()
       this.turn = controller
+      const settled = Promise.withResolvers<void>()
+      this.turnSettled = settled.promise
       const initial = this.initial
       this.initial = false
       let executionSignal: AbortSignal | undefined
@@ -164,7 +169,11 @@ export class NativeContinuationActivation {
           && (error === signal.reason || error instanceof Error && error.name === 'AbortError' && error.cause === signal.reason))
         if (!expectedAbort) throw error
         this.result = { exitCode: 1 }
-      } finally { if (this.turn === controller) this.turn = undefined }
+      } finally {
+        if (this.turn === controller) this.turn = undefined
+        if (this.turnSettled === settled.promise) this.turnSettled = undefined
+        settled.resolve()
+      }
     }
   }
 

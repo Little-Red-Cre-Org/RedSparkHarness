@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-06-goal-turn-interruption-preserves-human-inbox.md
+2026-10-06-goal-turn-interruption-preserves-human-inbox.md: 787cfaf853d814e5fb51467cd2221f5046bc433f
+2026-10-06-goal-turn-interruption-preserves-human-inbox.zh.md: 7eb9ecd078a3027edfeae86c615ff144fca59c94

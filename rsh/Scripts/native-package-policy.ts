@@ -96,6 +96,11 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
   ['rsh/Engine/subagent/tool-subagent-control', 'Native and Cordis controls route adjacent messages and interruption through their selected Subagent Provider'],
+  ['rsh/Engine/goal/goal', 'Native Goal service and Cordis service share event-sourced state and request facts'],
+  ['rsh/Engine/goal/goal-round-driver', 'Native and Cordis round drivers share continuation rules and prompts'],
+  ['rsh/Engine/goal/tool-goal', 'Native and Cordis Goal tools share schemas, validation and presentation'],
+  ['rsh/Engine/goal/command-goal', 'Native and Cordis Goal commands share lifecycle request facts'],
+  ['rsh/Modules/Official/interaction/commands', 'Native command service and Cordis registry share parsed and durable command facts'],
   ['rsh/Engine/workflow/workflow', 'Native and Cordis Definitions expose one workflow lifecycle vocabulary'],
   ['rsh/Engine/workflow/workflow-worker-thread', 'Native and Cordis Providers share the worker controller and WorkerRun lifecycle'],
   ['rsh/Engine/workflow/tool-workflow', 'Native and Cordis workflow Consumers share foreground lifecycle and progress recording'],
@@ -162,6 +167,11 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/subagent/tool-subagent-control', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
+  ['rsh/Engine/goal/goal', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Engine/goal/goal-round-driver', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants']],
+  ['rsh/Engine/goal/tool-goal', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-session-projection']],
+  ['rsh/Engine/goal/command-goal', ['@deepseek-ai/cordis']],
+  ['rsh/Modules/Official/interaction/commands', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Engine/workflow/workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session']],
   ['rsh/Engine/workflow/workflow-worker-thread', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/tool-workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
@@ -190,6 +200,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/goal/goal', ['./types']],
+  ['rsh/Modules/Official/interaction/commands', ['./facts']],
   ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy']],
   ['rsh/Programs/Web/client/ui-tool', ['./tool-renderer']],
   ['rsh/Programs/Web/client/locale', ['./dictionary']],
