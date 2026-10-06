@@ -1,5 +1,5 @@
 {
-  "extends": "../../../../tsconfig.base.json",
+  "extends": "../../../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types"
@@ -9,10 +9,10 @@
   ],
   "references": [
     {
-      "path": "../../../Core/vendor/cosmokit"
+      "path": "../../../../Core/vendor/cosmokit"
     },
     {
-      "path": "../../../Core/vendor/cordis"
+      "path": "../../../../Core/vendor/cordis"
     }
   ]
 }

@@ -97,7 +97,7 @@ const userId = getOrCreateAnonymousUserId() // stable for the process lifetime
 - [dsh-home-paths](../../util/home-paths/README.zh.md)——负责 `$DSH_HOME` 与 `~/.dsh` 的解析。
 - [dsh-session-telemetry-otel](../../../Engine/session/session-telemetry-otel/README.zh.md)——将该 id 作为 OTel Resource `user.id` 上报。
 - [dsh-command-feedback](../../../Modules/Official/feedback/command-feedback/README.zh.md)——将 id 嵌入反馈确认。
-- [dsh-llm-deepseek](../../../Engine/llm/llm-deepseek/README.zh.md)——在提供方请求中发送 `x-deepseek-harness-user-id`。
+- [dsh-llm-deepseek](../../../Modules/Official/llm/llm-deepseek/README.zh.md)——在提供方请求中发送 `x-deepseek-harness-user-id`。
 - [会话遥测子系统](../../../Docs/subsystems/session-telemetry.zh.md)——遥测 seam 及其后端约定。
 
 -----

@@ -93,7 +93,7 @@ Read these pages when you need the launcher that builds the snapshot or the cons
 
 - [Boot package](../../../Compatibility/DSH/boot/app-boot/README.md) — the launcher that fills `ctx.launchEnvironment` before any config entry mounts.
 - [Credentials store](../../../Modules/Official/credentials/credentials-local/README.md) — resolves stored credentials against the snapshot's layers.
-- [DeepSeek provider](../../../Engine/llm/llm-deepseek/README.md) — reads provider configuration through the launch environment.
+- [DeepSeek provider](../../../Modules/Official/llm/llm-deepseek/README.md) — reads provider configuration through the launch environment.
 
 -----
 

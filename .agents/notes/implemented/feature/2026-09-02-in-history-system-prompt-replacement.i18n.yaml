@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-02-in-history-system-prompt-replacement.md
-2026-09-02-in-history-system-prompt-replacement.md: c877d45e18ac66b97d65d6e21ce55ce9c21d5829
-2026-09-02-in-history-system-prompt-replacement.zh.md: 52a2bec07bde827892680812bbfb9199d79cdf08
+2026-09-02-in-history-system-prompt-replacement.md: 2246d0f692b8972827b4997a74d34f858b20de88
+2026-09-02-in-history-system-prompt-replacement.zh.md: 2194470e2929458429202315226bf2e17bfc774a

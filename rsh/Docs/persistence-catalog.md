@@ -778,7 +778,7 @@ Source: [`rsh/Engine/session/session-title-llm/src/index.ts:45`](../Engine/sessi
 }
 ```
 
-Source: [`rsh/Engine/session/session-log-deepseek/src/types.ts:81`](../Engine/session/session-log-deepseek/src/types.ts)
+Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/types.ts:81`](../Modules/Official/llm/session-log-deepseek/src/types.ts)
 
 ### `step/*`
 

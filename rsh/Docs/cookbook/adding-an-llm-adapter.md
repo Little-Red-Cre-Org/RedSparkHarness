@@ -2,7 +2,7 @@
 
 English | [中文](adding-an-llm-adapter.zh.md)
 
-How to connect a new model provider. Reference implementations: `rsh/Engine/llm/llm-deepseek` (direct HTTP, SSE framed by `eventsource-parser`) and `rsh/Engine/llm/llm-pi-ai` (wrapping an LLM library). Read the `StreamChunk` doc in `rsh/Engine/llm/llm/src/types.ts` first — it records the protocol conventions both adapters were verified against.
+How to connect a new model provider. Reference implementations: `rsh/Modules/Official/llm/llm-deepseek` (direct HTTP, SSE framed by `eventsource-parser`) and `rsh/Modules/Official/llm/llm-pi-ai` (wrapping an LLM library). Read the `StreamChunk` doc in `rsh/Engine/llm/llm/src/types.ts` first — it records the protocol conventions both adapters were verified against.
 
 ## The shape
 
@@ -36,7 +36,7 @@ Provider-specific thinking-mode toggles remain in the adapter's Config. Exact mo
 
 ## Implementation structure
 
-Keep wire types, request serialization, transport parsing, chunk translation, and the adapter class as separate responsibilities; [`llm-deepseek`](../../Engine/llm/llm-deepseek/README.md) is the reference layout.
+Keep wire types, request serialization, transport parsing, chunk translation, and the adapter class as separate responsibilities; [`llm-deepseek`](../../Modules/Official/llm/llm-deepseek/README.md) is the reference layout.
 
 ## Verification
 

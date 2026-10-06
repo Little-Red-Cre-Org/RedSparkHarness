@@ -780,7 +780,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/session/session-log-deepseek/src/types.ts:81`](../Engine/session/session-log-deepseek/src/types.ts)
+来源：[`rsh/Modules/Official/llm/session-log-deepseek/src/types.ts:81`](../Modules/Official/llm/session-log-deepseek/src/types.ts)
 
 ### `step/*`
 
