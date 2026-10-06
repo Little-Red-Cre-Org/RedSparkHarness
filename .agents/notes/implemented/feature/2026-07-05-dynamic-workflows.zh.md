@@ -22,6 +22,8 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 `ctx.workflowEngine` 是 bash 形态的抽象 `WorkflowEngine`——每个上下文一个引擎，无命名提供方注册表（引擎是部署级替换，不是共存者）。`start(request)` 对无法启动的脚本同步抛出；返回的 `WorkflowRun` 的 `result` 永不 reject（失败时结算为 `stopReason: 'error' | 'cancelled'`）。`workflow/*` 事件是仅观察的 emit，携带数据快照（id + meta；`workflow/end` 省略 result 值），按监听器隔离，与 `subagent/start`/`subagent/end` 对称——控制权留在 run 的持有者手中。词汇详情见 [subsystems/workflow.md](../../../../rsh/Docs/subsystems/workflow.zh.md)。
 
+本包还导出 native Definition 与作用域 Provider 注册表。Cordis 与 native Definition 通过 provider-neutral 的 `./types` 入口共用 `WorkflowRun`；只有 Cordis 的 `WorkflowStartRequest` 经由仅宿主可用的 `./runtime-types` 入口引用 `Agent`。native 消费方可省略 Agent peer；Cordis API 的消费方仍可使用该 peer。
+
 ### 引擎（dsh-workflow-worker-thread）：每次运行一个 worker 线程
 
 **信任前提**：工作流脚本与模型的 bash 访问具有相同的信任级别。引擎会约束有缺陷脚本的影响，并保证结果已 settled、值可安全表示为 JSON、取消后完全停稳；它不防御恶意代码。vm 上下文和 worker 线程不是安全边界：脚本可以逃逸到具有进程级权限的 Node API。沙箱化需要在此 seam 背后使用独立进程或 isolated-vm 引擎。
@@ -29,6 +31,8 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 **为何选择 `node:worker_threads`**：每次运行获得一个非池化的 worker。vm 上下文限定了文档中说明的脚本 API，而消息端口 RPC 将 `agent()` 桥接到宿主侧的子循环。worker 防止脚本的同步工作阻塞宿主，提供序列化边界，并允许取消后强制终止。`isolated-vm` 因其维护状态和部署要求被否决。
 
 宿主在发布前校验元数据并解析正文。私有枚举键 payload 映射定义协议格式；待启动记录、已发布子记录、单一取消信号、worker 死亡回收、结果优先级与 dispose（资源释放）时的完全停稳，在此协议上保持 subagent run 约定。这些竞态算法由 [agent 作用域运行时设计 Agent Note](../architecture/2026-07-12-agent-scope-runtime-design.zh.md#workflow-children-are-pending-starts-or-published-records) 定义。
+
+native Provider 与 Cordis Provider 使用同一 worker controller 和 `WorkerRun`。它通过 Program 选定的 NativeSubagent 与 Session executor 发送每个 `agent()` 请求，保持相同的子任务所有权、结构化结果提交和取消排空语义。
 
 引擎暴露一条进程内 `MessageChannel` 测试路径，因为主进程 V8 覆盖率无法观测 worker 执行。
 
@@ -52,7 +56,7 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 ## 测试
 
-worker 侧逻辑通过进程内 `MessageChannel` 运行，使 V8 覆盖率能够度量它。单元测试覆盖脚本辅助函数、fatal 与 nullable 失败、JSON 边界、上限、取消、子 agent 所有权和通过真实循环的结构化输出。构建后二进制文件的冒烟测试在纯 Node 下运行单独打包的 `lib/worker.cjs`，带密钥的 e2e 驱动真实子 agent，面向模型的工作流行为通过其所属示例进行快照覆盖。
+worker 侧逻辑通过进程内 `MessageChannel` 运行，使 V8 覆盖率能够度量它。单元测试覆盖脚本辅助函数、fatal 与 nullable 失败、JSON 边界、上限、取消、子 agent 所有权和通过真实循环的结构化输出。构建后二进制文件的冒烟测试在纯 Node 下运行单独打包的 `lib/worker.cjs`，带密钥的 e2e 驱动真实子 agent，面向模型的工作流行为通过其所属示例进行快照覆盖。native-headless profile 也会通过随包 CLI profile 无密钥回放工作流工具，并单独验证两个并发子 Session。
 
 ## 延迟（明确的非目标）
 

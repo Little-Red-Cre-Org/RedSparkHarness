@@ -47,6 +47,21 @@ kind: "package-reference"
 
 负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
 
+### Native profile 配置
+
+Native profile 会把 `@deepseek-ai/dsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
+
+| 字段 | 默认值 | 含义 |
+|---|---|---|
+| `name` | `worker-thread` | workflow 消费方选择的 Provider 名称。 |
+| `subagentProvider` | 必填 | `agent()` 使用的 NativeSubagent Provider。 |
+| `maxDepth` | `3` | 传给共享 Provider 的委派子级深度上限。 |
+| `maxConcurrentAgents` | `0` | 并发子 agent 上限；`0` 根据可用 CPU 并行度解析。 |
+| `maxTotalAgents` | `1000` | 一次 workflow 运行允许启动的子 agent 总数上限。 |
+| `maxItemsPerCall` | `4096` | 单次 `parallel()` 或 `pipeline()` 接受的条目数。 |
+| `syncTimeoutMs` | `5000` | worker 对脚本初始同步片段施加的超时，单位为毫秒。 |
+| `disposeGraceMs` | `5000` | worker 终止前取消与子 agent 排空的上限，单位为毫秒。 |
+
 ### 运行会得到什么
 
 运行启动后，脚本正文在 worker 中以顶层 `await` 执行，并可使用钩子 `agent()`、`parallel()`、`pipeline()`、`phase()` 与 `log()`；`meta` 与 `args` 以普通 JSON 数据到达，绝不作为代码求值。每次 `agent()` 调用都会在配置的提供方下启动一个宿主侧 subagent，并以运行的父级作为每个子 agent（智能体）的父级。运行以脚本的最终 JSON 值结算；普通子 agent 失败会把 `agent()` 兑现为 `null`，由脚本处理。
@@ -71,13 +86,14 @@ kind: "package-reference"
 
 ### 设计理念
 
-每次运行一个 worker thread，让行为异常的脚本无法拖垮宿主，并使强制终止成为可能：脚本在 worker 内可逃逸的 `node:vm` 上下文中运行，`agent()` 调用通过带类型的宿主／worker 协议回到 `ctx.subagents`。vm 上下文塑造脚本的 API 表面；它不是安全沙箱。
+每次运行一个 worker thread，让行为异常的脚本无法拖垮宿主，并使强制终止成为可能：脚本在 worker 内可逃逸的 `node:vm` 上下文中运行，`agent()` 调用通过带类型的宿主／worker 协议到达选定的 Subagent Definition。vm 上下文塑造脚本的 API 表面；它不是安全沙箱。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、前置校验、`start()` 接线 |
+| [`src/native.ts`](src/native.ts) | Native worker Provider 注册与共享 Subagent 路由 |
 | [`src/host.ts`](src/host.ts) | 一次运行的宿主侧：worker 启动、子 agent 编排、结算、dispose |
 | [`src/worker.ts`](src/worker.ts) | worker 入口：脚本执行、钩子实现、值物化 |
 | [`src/runtime.ts`](src/runtime.ts) | 脚本运行时：钩子约定、`parallel()` 与 `pipeline()` 组合器 |

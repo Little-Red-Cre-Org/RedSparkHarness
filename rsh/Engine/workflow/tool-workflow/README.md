@@ -46,6 +46,8 @@ While the script runs, the parent turn waits: the tool starts the run, awaits it
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-workflow) is the exhaustive source for every accepted field.
 
+Native compositions mount `@deepseek-ai/dsh-tool-workflow/native` with a `provider` name visible in the scoped Native workflow Definition; the worker Provider is installed separately. Root calls record run and child progress in the invoking Session before returning the result.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -58,7 +60,7 @@ This section explains how the consumer is split from the engine and how the run 
 
 ### Design concept
 
-The consumer owns the model-facing schema, the `tool:<toolName>` system-prompt guidance, and the result envelope; script parsing, execution, caps, and cancellation live behind `ctx.workflowEngine`, so a hardened engine swaps in without changing what the model sees. Usage guidance ships with the tool plugin as a prompt section, never in the deployment persona.
+The consumer owns the model-facing schema, the `tool:<toolName>` system-prompt guidance, and the result envelope; Cordis and Native installations select execution through their respective workflow Definitions. Usage guidance ships with the tool plugin as a prompt section, never in the deployment persona.
 
 ### Run lifecycle
 
@@ -77,6 +79,7 @@ Decided up front per the [render-intent Agent Note](../../../../.agents/notes/im
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: tool registration, run lifecycle, recorder wiring |
+| [`src/native.ts`](src/native.ts) | Native tool registration, scoped Provider selection, and root Session progress recording |
 | [`src/types.ts`](src/types.ts) | The four log-only record event payloads and their `SessionEventMap` declaration |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: durable workflow-record protocol validation |
 

@@ -31,6 +31,8 @@ Run a workflow when a task decomposes into many independent pieces that one scri
 
 The model reaches the capability through the `workflow` tool from `dsh-tool-workflow`, which owns the call schema and result envelope; the engine supplies the execution underneath. A tool call submits `meta`, `script`, and optional `args` and returns `{ runId, agentsStarted, result }` when the run completes. The tool blocks the parent turn until the whole workflow settles, so the model sees one final outcome, never intermediate child messages.
 
+Native compositions install the `@deepseek-ai/dsh-workflow/native` Definition, one selected execution Provider, and the model-facing Consumers separately. The worker Provider delegates through the Program's existing NativeSubagent and Session executor, so it does not create another Agent loop or Session owner. The native Definition uses the provider-neutral `@deepseek-ai/dsh-workflow/types` run handle; the optional `@deepseek-ai/dsh-agent` peer serves only the legacy Cordis entry.
+
 ### Running a workflow script
 
 An orchestration script is a plain JavaScript body (not TypeScript) that runs with top-level `await` and ends with `return <json-value>`. The `meta` identity block and any `args` arrive as plain JSON data — never evaluated code. During execution the script calls the provided hooks: `agent(prompt, opts)` starts one subagent and resolves with its final text or, with a schema, a validated structured value; `parallel()` and `pipeline()` combine independent work; `phase()` and `log()` narrate progress for observers.
@@ -48,7 +50,7 @@ When the script settles, the run's result resolves with the returned value, the 
 
 ### Programmatic runs
 
-Plugin consumers can start a run directly: `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })`. `parent` attributes every child to the invoking agent; `signal` cancels the run when aborted. `start()` validates the meta block and parses the script before a run exists, so a malformed request fails immediately with a violation list.
+Cordis consumers can start a run directly through `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })`; this legacy entry uses the optional `@deepseek-ai/dsh-agent` peer. Native consumers select a Provider through `context.require('workflow').start(name, request)` and consume the `./native` Definition without that peer. Both paths attribute every child to the invoking agent and accept cancellation; the selected implementation validates the meta block and parses the script before publishing a run.
 
 A returned run exposes `id`, `meta`, `result`, `cancel(reason?)`, and `dispose()`. The result never rejects: a script failure resolves with `stopReason: 'error'`, cancellation with `'cancelled'`. The caller owns the run — call `dispose()` on every path; it cancels remaining work and waits for script and children to settle within a bounded grace.
 
@@ -68,14 +70,15 @@ This section explains how the capability is split and where the contracts live; 
 
 ### Design concept
 
-The package separates the script, run, result, and event contracts from execution: any engine can implement `ctx.workflowEngine` behind the same vocabulary, and one engine serves a context at a time — loading a second engine fails loudly, so swapping engines means changing which engine plugin the composition loads. The `workflow/*` events are observe-only: payloads carry run identity snapshots, never the live run, so listeners cannot acquire cancellation or disposal authority.
+The package separates the script, run, result, and event contracts from execution: Cordis and Native compositions expose distinct Definitions over the same vocabulary, and each scopes Provider selection to its own composition. The `workflow/*` events are observe-only: payloads carry run identity snapshots, never the live run, so listeners cannot acquire cancellation or disposal authority.
 
 ### Source map
 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service definition, `workflow/*` event declarations, `WorkflowError` and its fatal flag |
-| [`src/types.ts`](src/types.ts) | Browser-safe vocabulary: `WorkflowMeta`, `WorkflowResult`, run and agent event info |
+| [`src/native.ts`](src/native.ts) | Native workflow Definition and scoped execution Provider registry |
+| [`src/types.ts`](src/types.ts) | Provider-neutral vocabulary: `WorkflowRun`, `WorkflowMeta`, `WorkflowResult`, and agent event info |
 | [`src/runtime-types.ts`](src/runtime-types.ts) | Host-only `WorkflowStartRequest` and `WorkflowRun` handles |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: event pairing and identity checks |
 

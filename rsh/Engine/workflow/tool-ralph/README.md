@@ -44,7 +44,9 @@ Each child receives only the immutable objective, its current round and cap, a s
 | `maxHandoffChars` | `16384` | Maximum serialized characters in one round report. |
 | `maxResultChars` | `16384` | Maximum characters in the complete successful parent result. |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-ralph) is the exhaustive source for every accepted field. The configured provider must exist, support structured output, and report `inheritsParentContext: false`; a call against a provider that violates this fails loudly before any round starts.
+The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-ralph) is the exhaustive source for every accepted Cordis field. In Cordis compositions, the selected provider must support structured output and report `inheritsParentContext: false`; Native profiles instead select `workflowProvider` and `subagentProvider` explicitly and require the Native Tools registry for the structured report call.
+
+Native profiles mount `@deepseek-ai/dsh-tool-ralph/native`; shipped compositions select the `worker-thread` workflow Provider and `spawn` NativeSubagent Provider. Ralph remains a foreground Consumer of the shared Workflow Definition and Subagent execution authority.
 
 -----
 
@@ -58,7 +60,7 @@ This section explains the fixed-script design and the validation and lifecycle m
 
 ### Design concept
 
-The loop is a deployment-owned fixed script: the model supplies data only and cannot alter the loop, provider route, schema, or handoff validation. The tool is an ordinary plugin over `ctx.workflowEngine` and `ctx.subagents` — no Ralph mode or fresh-agent loop is added to `agent-loop`, and the same-session goal domain stays independent. The [harness-level goal-based execution Agent Note](../../../../.agents/notes/implemented/feature/2026-07-16-harness-level-loop.md) owns the policy and deferred work.
+The loop is a deployment-owned fixed script: the model supplies data only and cannot alter the loop, provider route, schema, or handoff validation. Cordis and Native Consumers use their respective workflow and subagent Definitions; neither adds a Ralph mode or fresh-agent loop to `agent-loop`, and the same-session goal domain stays independent. The [harness-level goal-based execution Agent Note](../../../../.agents/notes/implemented/feature/2026-07-16-harness-level-loop.md) owns the policy and deferred work.
 
 ### Fixed script and routing
 
@@ -81,6 +83,7 @@ The pending call is a `generic` card titled `ralph` with the immutable objective
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: fixed script, provider routing, report validation, tool registration |
+| [`src/native.ts`](src/native.ts) | Native tool registration, explicit workflow and subagent routes, and child cancellation drain |
 | — | No runtime invariant companion is published; this model-facing orchestration adapter owns no independent event stream; workflow and subagent owners validate the runs and child lifecycles it starts. |
 
 </details>

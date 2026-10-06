@@ -44,7 +44,9 @@ kind: "package-reference"
 | `maxHandoffChars` | `16384` | 一份 Round 报告序列化后的最大字符数。 |
 | `maxResultChars` | `16384` | 返回给父级的完整成功结果最大字符数。 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-ralph)是每个受支持字段的穷尽式真源。配置的提供方必须存在、支持结构化输出，并报告 `inheritsParentContext: false`；针对违反此要求的提供方发起调用时，会在任何 Round 开始前直接报错。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-ralph)是所有 Cordis 配置字段的穷尽式真源。在 Cordis 组合中，选定的提供方必须支持结构化输出并报告 `inheritsParentContext: false`；Native profile 则会显式选择 `workflowProvider` 与 `subagentProvider`，并要求 Native Tools registry 承载结构化报告调用。
+
+Native profile 会挂载 `@deepseek-ai/dsh-tool-ralph/native`；已发布组合选择 `worker-thread` workflow Provider 与 `spawn` NativeSubagent Provider。Ralph 仍是共享 Workflow Definition 与 Subagent 执行权威的前台 Consumer。
 
 -----
 
@@ -58,7 +60,7 @@ kind: "package-reference"
 
 ### 设计理念
 
-循环是部署方拥有的固定脚本：模型只提供数据，无法改变循环、提供方路由、schema 或交接校验。该工具是基于 `ctx.workflowEngine` 与 `ctx.subagents` 的普通插件——不会向 `agent-loop` 添加 Ralph 模式或全新 agent loop，同会话的 goal 领域也保持独立。[Harness 层目标式执行 Agent Note](../../../../.agents/notes/implemented/feature/2026-07-16-harness-level-loop.zh.md)拥有策略与暂缓事项。
+循环是部署方拥有的固定脚本：模型只提供数据，无法改变循环、提供方路由、schema 或交接校验。Cordis 与 Native Consumer 分别使用各自的 workflow 与 subagent Definition；两者都不会向 `agent-loop` 添加 Ralph 模式或全新 agent loop，同会话的 goal 领域也保持独立。[Harness 层目标式执行 Agent Note](../../../../.agents/notes/implemented/feature/2026-07-16-harness-level-loop.zh.md)拥有策略与暂缓事项。
 
 ### 固定脚本与路由
 
@@ -81,6 +83,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：固定脚本、提供方路由、报告校验、工具注册 |
+| [`src/native.ts`](src/native.ts) | Native 工具注册、显式 workflow 与 subagent 路由，以及子任务取消排空 |
 | — | 不发布运行时不变式伴生入口；该面向模型的编排适配器不拥有独立事件流；工作流与 subagent 归属方会校验该适配器启动的运行及其子 agent 生命周期。 |
 
 </details>

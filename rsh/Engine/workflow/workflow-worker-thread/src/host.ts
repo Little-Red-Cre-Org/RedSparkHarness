@@ -10,21 +10,45 @@ import { tmpdir } from 'node:os'
 import { Worker } from 'node:worker_threads'
 import type { WorkerOptions } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
 import { assertNever, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import type { SubagentRun } from '@deepseek-ai/dsh-subagent'
-import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRun, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
+import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
+import type { WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { renderThrown } from './realm.ts'
 import type { ExecutionObserver } from './runtime.ts'
 import { HostToWorkerType, WorkerToHostType } from './protocol.ts'
 import type { HostToWorkerPayloads, WorkerToHostMessage } from './protocol.ts'
 import type { ChildResult, ChildStartRequest, WorkerInit } from './types.ts'
 
+/** Host logger retained by an accepted run. */
+export interface WorkflowHostContext {
+  readonly logger: { warn(message: string): void }
+}
+
+/** Child lifecycle consumed by the shared worker controller. */
+export interface WorkflowHostChild {
+  readonly id: SessionId
+  readonly result: Promise<{ readonly output: readonly ContentBlock[]; readonly structured?: unknown; readonly stopReason: string }>
+  /** Await owned child cleanup. @returns quiescent completion. */
+  dispose(): Promise<void>
+}
+
+/** Parent-specific adapter to the selected Subagent Definition. */
+export interface WorkflowHostChildren<Parent> {
+  /** @param provider - named child transport. @param request - explicit child execution. @returns accepted child lifecycle. */
+  start(provider: string, request: {
+    readonly parent: Parent
+    readonly prompt: ContentBlock[]
+    readonly signal: AbortSignal
+    readonly outputSchema?: ChildStartRequest['schema']
+    readonly agentOptions?: { readonly provider?: string; readonly model?: string }
+  }): Promise<WorkflowHostChild>
+}
+
 /** One published child and its shared quiescent-disposal transaction. */
 interface ChildRecord {
-  readonly run: SubagentRun
+  readonly run: WorkflowHostChild
   disposal?: Promise<void>
 }
 
@@ -102,7 +126,7 @@ function resolveWorkerSpawn(init: WorkerInit): { entry: string | URL; options: W
  * engine returns this run, so unloading the engine removes only the ability to
  * start another workflow; this run can still start and clean up its children.
  */
-export class WorkerRun implements WorkflowRun {
+export class WorkerRun<Parent> implements WorkflowRun {
   /** Settles exactly once with the run's outcome; never rejects. */
   readonly result: Promise<WorkflowResult>
   private settleResolve!: (result: WorkflowResult) => void
@@ -133,11 +157,11 @@ export class WorkerRun implements WorkflowRun {
   private disposed: Promise<void> | undefined
 
   constructor(
-    private readonly ctx: Context,
-    private readonly subagents: SubagentRuntime,
+    private readonly ctx: WorkflowHostContext,
+    private readonly subagents: WorkflowHostChildren<Parent>,
     readonly id: WorkflowRunId,
     readonly meta: WorkflowMeta,
-    private readonly parent: Agent,
+    private readonly parent: Parent,
     init: WorkerInit,
     private readonly provider: string,
     private readonly disposeGraceMs: number,
@@ -350,7 +374,7 @@ export class WorkerRun implements WorkflowRun {
 
   /** Await one provider-owned startup transaction and publish only while admitted. */
   private async startChild(callId: number, request: ChildStartRequest): Promise<void> {
-    let run: SubagentRun
+    let run: WorkflowHostChild
     try {
       run = await this.subagents.start(this.provider, {
         prompt: [{ type: 'text', text: request.prompt }],
@@ -394,7 +418,7 @@ export class WorkerRun implements WorkflowRun {
       (result) => {
         try {
           const snapshot = snapshotJsonValue<ChildResult>({
-            output: result.output,
+            output: [...result.output],
             ...result.structured !== undefined ? { structured: result.structured } : {},
             stopReason: result.stopReason,
           })

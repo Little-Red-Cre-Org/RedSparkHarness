@@ -8,7 +8,9 @@ import { NativeSubagentContinuations } from './continuation.ts'
 import type { NativeDelegationSetup, NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeJobId, NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
+import { assertObjectJsonSchema, type ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
 import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
+import { attachNativeStructuredOutput, type NativeStructuredAttachment } from './structured.ts'
 import type {} from '@deepseek-ai/dsh-native-prompt'
 import type {} from '@deepseek-ai/dsh-native-tools'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
@@ -23,6 +25,7 @@ export interface NativeSubagentOptions {
   readonly maxTokens?: number
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
+  readonly outputSchema?: ObjectJsonSchema
 }
 
 /** Exact initiating parent and resolved child composition. */
@@ -35,6 +38,7 @@ export interface NativeSubagentRequest {
   readonly maxDepth: number
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
+  readonly outputSchema?: ObjectJsonSchema
 }
 
 /** Durable child's real result after writer and owned resource release. */
@@ -42,7 +46,16 @@ export interface NativeSubagentResult {
   readonly id: SessionId
   readonly provider: string
   readonly output: readonly ContentBlock[]
+  readonly structured?: unknown
   readonly stopReason: 'completed' | 'max-tokens' | 'aborted' | 'refusal' | 'error'
+}
+
+/** One admitted one-shot child whose real Session identity is published after initial facts persist. */
+export interface NativeSubagentRun {
+  readonly id: SessionId
+  readonly result: Promise<NativeSubagentResult>
+  /** Abort this child and await its writer and owned-resource release. @returns quiescent completion. */
+  dispose(): Promise<void>
 }
 
 /** One completed one-shot run or settled continuable residency epoch associated with its exact caller. */
@@ -92,6 +105,8 @@ export interface NativeSubagentControlTools {
 
 /** Replaceable Subagent Provider; Programs retain Agent execution and Session writing. */
 export interface NativeSubagentOperations {
+  /** Selected native child transport name. */
+  readonly providerName: string
   /** Jobs registry selected by this Provider for background starts; absent in foreground-only assemblies. */
   readonly backgroundJobs: NativeJobRegistry | undefined
   /** Tools registry selected for child permissions and continuation controls; absent in tool-free assemblies. */
@@ -121,6 +136,13 @@ export interface NativeSubagentOperations {
    * @returns actual output and terminal reason after writer and resource release.
    */
   run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult>
+  /**
+   * Publish one child handle only after the selected executor reports durable initial readiness.
+   * @param request - resolved child composition.
+   * @param signal - caller cancellation, retained through child settlement.
+   * @returns the actual Session identity and result owned by the existing executor.
+   */
+  start(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentRun>
   /**
    * Start an Agent-owned child under the selected Jobs registry.
    * @param request - resolved child request with the foreground permission restrictions.
@@ -212,20 +234,54 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (options.toolFilter !== undefined && this.context.optional('tools') === undefined) {
       throw new Error('native-subagent: toolFilter requires tools')
     }
+    if (options.outputSchema !== undefined) {
+      assertObjectJsonSchema(options.outputSchema)
+      if (this.context.optional('tools') === undefined) throw new Error('native-subagent: outputSchema requires tools')
+    }
     return { agent, session, label: request.label, prompt: [...request.prompt], maxDepth: options.maxDepth,
       config: { cwd: parent.cwd, provider, model, systemPrompt: parent.systemPrompt,
         maxSteps: options.maxSteps ?? parent.maxSteps, builtinTools: false,
         ...reasoningEffort === undefined ? {} : { reasoningEffort }, ...maxTokens === undefined ? {} : { maxTokens } },
       ...options.persona === undefined ? {} : { persona: options.persona },
-      ...options.toolFilter === undefined ? {} : { toolFilter: options.toolFilter } }
+      ...options.toolFilter === undefined ? {} : { toolFilter: options.toolFilter },
+      ...options.outputSchema === undefined ? {} : { outputSchema: structuredClone(options.outputSchema) } }
   }
 
   /** @inheritdoc */
   run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
-    const task = this.execute(request, effective)
-    return this.track(task, effective)
+    return this.track(this.execute(request, effective), effective)
+  }
+
+  /** @inheritdoc */
+  async start(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentRun> {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    signal.throwIfAborted()
+    const cancellation = new AbortController()
+    const effective = AbortSignal.any([signal, this.context.signal, cancellation.signal, this.cancellation.signal])
+    const id = SessionId(randomUUID())
+    const ready = Promise.withResolvers<void>()
+    let published = false
+    const task = this.track(this.execute(request, effective, { id, onReady: () => {
+      effective.throwIfAborted()
+      published = true
+      ready.resolve()
+    } }), effective)
+    void task.then(() => {
+      if (!published) ready.reject(new Error('native-subagent: child settled before readiness'))
+    }, ready.reject)
+    await ready.promise
+    let disposal: Promise<void> | undefined
+    return { id, result: task, dispose: () => {
+      if (disposal !== undefined) return disposal
+      if (!effective.aborted) cancellation.abort({ kind: 'native-subagent-run-disposed' })
+      disposal = task.then(() => {}, (error: unknown) => {
+        if (effective.aborted && isCancellation(error, effective.reason)) return
+        throw error
+      })
+      return disposal
+    } }
   }
 
   /** @inheritdoc */
@@ -245,7 +301,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       const jobId = jobs.start({ agent: request.agent, kind: 'subagent', label: request.label,
         run: async (jobSignal, publishOutput) => {
           const effective = AbortSignal.any([jobSignal, startup.signal, this.context.signal, this.cancellation.signal])
-          task = this.track(this.execute(request, effective, { id, onReady: () => {
+          task = this.track(this.execute(request, effective, { id, agentLifetime: true, onReady: () => {
             if (publication.ready) return
             effective.throwIfAborted()
             publication.ready = true
@@ -334,7 +390,8 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (errors.length > 0) throw new AggregateError(errors, 'native-subagent: accepted run cleanup failed')
   }
 
-  private prepare(request: NativeSubagentRequest, { agent, own }: NativeDelegationSetup): void {
+  private prepare(request: NativeSubagentRequest, setup: NativeDelegationSetup): NativeStructuredAttachment | undefined {
+    const { agent, own } = setup
     const prompt = this.context.require('promptSections')
     own(prompt.register({ name: 'subagent:delegation', order: 100, text: () => SUBAGENT_DELEGATION_CONTEXT }, agent.scope))
     if (request.toolFilter !== undefined) {
@@ -346,27 +403,35 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (persona !== undefined) {
       own(prompt.register({ name: 'deployment:persona-prefix', order: 0, text: () => persona }, agent.scope))
     }
+    const schema = request.outputSchema
+    if (schema === undefined) return undefined
+    const tools = this.context.optional('tools')
+    if (tools === undefined) throw new Error('native-subagent: outputSchema requires tools')
+    return attachNativeStructuredOutput(setup, tools, prompt, schema)
   }
 
   private async execute(request: NativeSubagentRequest, signal: AbortSignal, background?: {
     readonly id: SessionId
-    readonly onReady: () => void
-    readonly isPublished: () => boolean
-    readonly publishOutput: (text: string) => void
+    readonly onReady?: () => void
+    readonly isPublished?: () => boolean
+    readonly publishOutput?: (text: string) => void
+    readonly agentLifetime?: boolean
   }): Promise<NativeSubagentResult> {
     const id = background?.id ?? SessionId(randomUUID())
     const output = new AssistantOutputFold()
     let end: TurnEndReason | undefined
     const descriptor = snapshotSubagentDescriptor({ mode: 'one-shot', provider: this.providerName, label: request.label })
+    let structured: NativeStructuredAttachment | undefined
     try {
       await this.context.require('sessionExecution').delegate(request.agent, request.session, {
         id, config: request.config, maxDepth: request.maxDepth,
-        ...background === undefined ? {} : { lifetime: 'agent' as const,
-          onReady: background.onReady, onChunk: (chunk: StreamChunk) => {
-            if (chunk.type === 'text-delta') background.publishOutput(chunk.text)
-          } },
+        ...background?.agentLifetime === true ? { lifetime: 'agent' as const } : {},
+        ...background?.onReady === undefined ? {} : { onReady: background.onReady },
+        ...background?.publishOutput === undefined ? {} : { onChunk: (chunk: StreamChunk) => {
+          if (chunk.type === 'text-delta') background.publishOutput?.(chunk.text)
+        } },
         message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
-        prepare: (setup) => { this.prepare(request, setup) },
+        prepare: (setup) => { structured = this.prepare(request, setup) },
         initialize: (append) => { append('subagent/descriptor', descriptor) },
         onEvent: (event) => {
           output.push(event)
@@ -375,7 +440,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       }, signal)
     } catch (error: unknown) {
       // Node cancellation adapters retain the original signal reason as AbortError.cause.
-      const cancelled = background?.isPublished() === true && signal.aborted && end?.kind === 'aborted'
+      const cancelled = background?.isPublished?.() === true && signal.aborted && end?.kind === 'aborted'
         && (error === signal.reason || error instanceof Error && error.name === 'AbortError' && error.cause === signal.reason)
       const failed = !cancelled && (signal.aborted || error instanceof AggregateError || end?.kind !== 'error')
       if (failed && end !== undefined) {
@@ -385,10 +450,19 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       }
       if (failed) throw error
     }
-    const result = { id, provider: this.providerName, output: output.collect() ?? [], stopReason: stopReason(end) }
+    const captured = structured?.captured()
+    const terminal = stopReason(end)
+    const result: NativeSubagentResult = { id, provider: this.providerName, output: output.collect() ?? [],
+      ...captured === undefined ? {} : { structured: captured.value },
+      stopReason: request.outputSchema !== undefined && terminal === 'completed' && captured === undefined ? 'error' : terminal }
     this.publishFinished({ parentAgent: request.agent, parentSession: request.session, result })
     return result
   }
+
+}
+
+function isCancellation(error: unknown, reason: unknown): boolean {
+  return error === reason || error instanceof Error && error.name === 'AbortError' && error.cause === reason
 }
 
 /** Native in-process spawn Provider; deployment selects its advertised name. */

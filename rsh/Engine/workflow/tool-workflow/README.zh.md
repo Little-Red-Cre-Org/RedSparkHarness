@@ -46,6 +46,8 @@ kind: "package-reference"
 
 生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-workflow)是每个受支持字段的穷尽式真源。
 
+Native 组合会挂载 `@deepseek-ai/dsh-tool-workflow/native`，并传入一个在作用域内 Native workflow Definition 可见的 `provider` 名称；worker Provider 需要单独安装。根调用会在返回结果前将运行与子 agent 进度记录到调用方 Session。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -58,7 +60,7 @@ kind: "package-reference"
 
 ### 设计理念
 
-消费方拥有模型侧 schema、`tool:<toolName>` 系统提示词指导与结果包络；脚本解析、执行、上限与取消位于 `ctx.workflowEngine` 之后，因此更坚固的引擎可以无缝替换，而不改变模型看到的内容。使用指导以提示词段的形式随工具插件交付，绝不放入部署 persona。
+消费方拥有模型侧 schema、`tool:<toolName>` 系统提示词指导与结果包络；Cordis 与 Native 安装分别通过各自的 workflow Definition 选择执行实现。使用指导以提示词段的形式随工具插件交付，绝不放入部署 persona。
 
 ### 运行生命周期
 
@@ -77,6 +79,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：工具注册、运行生命周期、记录器接线 |
+| [`src/native.ts`](src/native.ts) | Native 工具注册、有作用域的 Provider 选择与根 Session 进度记录 |
 | [`src/types.ts`](src/types.ts) | 四个 log-only 记录事件 payload 及其 `SessionEventMap` 声明 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式配套入口：持久工作流记录协议校验 |
 

@@ -47,6 +47,21 @@ Loading the engine registers `ctx.workflowEngine`; adding `dsh-tool-workflow` on
 
 An owning consumer may set `WorkflowStartRequest.subagentProvider` and `WorkflowStartRequest.maxTotalAgents` for one run — engine-level policy, not script hooks; the ordinary `workflow` tool leaves both unset, and a per-run total-child cap may lower but never raise the configured ceiling. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-workflow-worker-thread) is the exhaustive source for every accepted field.
 
+### Native profile configuration
+
+Native profiles install `@deepseek-ai/dsh-workflow-worker-thread/native` as the selected `workflow` Provider. The worker delegates through the NativeSubagent Definition and requires its configured provider name to match the installed provider. Native configuration is resolved before the Provider is installed:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `name` | `worker-thread` | Provider name selected by workflow consumers. |
+| `subagentProvider` | required | Installed NativeSubagent provider used by `agent()`. |
+| `maxDepth` | `3` | Maximum delegated-child depth passed to the shared provider. |
+| `maxConcurrentAgents` | `0` | Concurrent child ceiling; `0` resolves from available CPU parallelism. |
+| `maxTotalAgents` | `1000` | Total child-start ceiling for one workflow run. |
+| `maxItemsPerCall` | `4096` | Items accepted by one `parallel()` or `pipeline()` call. |
+| `syncTimeoutMs` | `5000` | Worker timeout for the script's initial synchronous slice, in milliseconds. |
+| `disposeGraceMs` | `5000` | Cancellation and child-drain bound before worker termination, in milliseconds. |
+
 ### What a run gives you
 
 When a run starts, the script body executes in the worker with top-level `await` and the hooks `agent()`, `parallel()`, `pipeline()`, `phase()`, and `log()`; `meta` and `args` arrive as plain JSON data, never evaluated code. Every `agent()` call starts a host-side subagent under the configured provider, with the run's parent as the parent of every child. The run settles with the script's final JSON value; an ordinary child failure resolves `agent()` to `null` so the script can handle it.
@@ -71,13 +86,14 @@ This section explains the engine's isolation design and run mechanics; observabl
 
 ### Design concept
 
-One worker thread per run keeps a misbehaving script from stalling the host and makes force termination possible: the script runs in an escapable `node:vm` context inside the worker, and `agent()` calls cross a typed host/worker protocol back to `ctx.subagents`. The vm context shapes the script's API surface; it is not a security sandbox.
+One worker thread per run keeps a misbehaving script from stalling the host and makes force termination possible: the script runs in an escapable `node:vm` context inside the worker, and `agent()` calls cross a typed host/worker protocol to the selected Subagent Definition. The vm context shapes the script's API surface; it is not a security sandbox.
 
 ### Source map
 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, up-front validation, `start()` wiring |
+| [`src/native.ts`](src/native.ts) | Native worker Provider registration and shared Subagent routing |
 | [`src/host.ts`](src/host.ts) | Host side of a run: worker spawn, child orchestration, settlement, disposal |
 | [`src/worker.ts`](src/worker.ts) | Worker entry: script execution, hook implementation, value materialization |
 | [`src/runtime.ts`](src/runtime.ts) | Script runtime: hook contracts, `parallel()` and `pipeline()` combinators |

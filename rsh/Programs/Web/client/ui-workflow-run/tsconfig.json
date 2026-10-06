@@ -42,7 +42,7 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/workflow/workflow"
+      "path": "../../../../Engine/workflow/workflow/tsconfig.client.json"
     },
     {
       "path": "../../../../Engine/workflow/tool-workflow"

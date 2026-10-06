@@ -31,6 +31,8 @@ kind: "package-reference"
 
 模型通过 `dsh-tool-workflow` 的 `workflow` 工具触达该能力；该工具拥有调用 schema 与结果包络，引擎提供其下的执行。一次工具调用提交 `meta`、`script` 与可选 `args`，运行完成时返回 `{ runId, agentsStarted, result }`。工具会阻塞父级轮次直到整个工作流结算，因此模型只看到最终结果，永远不会看到中间子 agent 消息。
 
+Native 组合会分别安装 `@deepseek-ai/dsh-workflow/native` Definition、一个选定的执行 Provider 与面向模型的 Consumer。worker Provider 经由 Program 已有的 NativeSubagent 与 Session executor 委派工作，因此不会创建第二套 Agent loop 或 Session owner。Native Definition 使用 provider-neutral 的 `@deepseek-ai/dsh-workflow/types` 运行句柄；可选的 `@deepseek-ai/dsh-agent` peer 仅供旧 Cordis 入口使用。
+
 ### 运行工作流脚本
 
 编排脚本是纯 JavaScript 脚本体（不是 TypeScript），以顶层 `await` 运行并以 `return <json-value>` 结尾。`meta` 身份块与任何 `args` 都以普通 JSON 数据到达——绝不作为代码求值。执行期间脚本调用提供的钩子：`agent(prompt, opts)` 启动一个 subagent，并以其最终文本、或在提供 schema 时以经过校验的结构化值兑现；`parallel()` 与 `pipeline()` 组合独立工作；`phase()` 与 `log()` 为观察者叙述进度。
@@ -48,7 +50,7 @@ return { reviewed: reviews.length }
 
 ### 编程方式运行
 
-插件消费方可以直接启动运行：`ctx.workflowEngine.start({ script, meta, args?, parent, signal? })`。`parent` 把每个子 agent 归属于调用它的 agent；`signal` 在中止时取消运行。`start()` 在运行存在之前校验 meta 块并解析脚本，因此格式错误的请求会立即以违规清单失败。
+Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })` 启动运行；这个旧入口使用可选的 `@deepseek-ai/dsh-agent` peer。Native 消费方通过 `context.require('workflow').start(name, request)` 选择 Provider，并可在不安装该 peer 的情况下消费 `./native` Definition。两条路径都会把每个子 agent 归属于调用它的 agent，并接受取消；选定的实现会在发布运行前校验 meta 块并解析脚本。
 
 返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并在有界宽限期内等待脚本与子 agent 完全停稳。
 
@@ -68,14 +70,15 @@ return { reviewed: reviews.length }
 
 ### 设计理念
 
-本包把脚本、运行、结果与事件约定同执行分开：任何引擎都可以在同一词汇背后实现 `ctx.workflowEngine`，一个上下文同时只有一个引擎——加载第二个引擎会明确报错，因此更换引擎意味着更改组合所加载的引擎插件。`workflow/*` 事件只供观察：payload 携带运行身份快照，绝不携带活动运行，因此监听器无法取得取消或 dispose 权限。
+本包把脚本、运行、结果与事件约定同执行分开：Cordis 与 Native 组合通过不同 Definition 暴露相同词汇，并在各自组合内限定 Provider 选择。`workflow/*` 事件只供观察：payload 携带运行身份快照，绝不携带活动运行，因此监听器无法取得取消或 dispose 权限。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 服务定义、`workflow/*` 事件声明、`WorkflowError` 及其 fatal 标志 |
-| [`src/types.ts`](src/types.ts) | 浏览器安全词汇：`WorkflowMeta`、`WorkflowResult`、运行与 agent 事件信息 |
+| [`src/native.ts`](src/native.ts) | Native workflow Definition 与有作用域的执行 Provider registry |
+| [`src/types.ts`](src/types.ts) | provider-neutral 词汇：`WorkflowRun`、`WorkflowMeta`、`WorkflowResult` 与 agent 事件信息 |
 | [`src/runtime-types.ts`](src/runtime-types.ts) | 仅宿主的 `WorkflowStartRequest` 与 `WorkflowRun` 句柄 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：事件配对与身份校验 |
 

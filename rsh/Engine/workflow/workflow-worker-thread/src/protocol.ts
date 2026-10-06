@@ -7,7 +7,7 @@
  * @module @deepseek-ai/dsh-workflow-worker-thread/protocol
  */
 
-import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowResult } from '@deepseek-ai/dsh-workflow'
+import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowResult } from '@deepseek-ai/dsh-workflow/types'
 import type { ChildResult, ChildStartRequest } from './types.ts'
 
 /** Message tags the worker sends the host (the wire values are the tag strings). */
