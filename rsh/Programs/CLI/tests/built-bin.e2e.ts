@@ -189,6 +189,156 @@ function createNativeCliFixture(): { home: string; marker: string } {
   return { home, marker }
 }
 
+/** A live native profile whose app can prove candidate rejection, turnover, and run failures. */
+function createNativeProfileReloadFixture(runFailure?: 'abort-reason' | 'after-abort' | 'during-preflight'): {
+  home: string
+  profileFile: string
+  patch: string
+  events: string
+  ready: string
+  preflightStart: string
+  preflightRelease: string
+  runFailure: string
+  runFailureObserved: string
+} {
+  const home = mkdtempSync(join(tmpdir(), 'dsh-native-profile-reload-'))
+  const profile = join(home, 'profiles', 'native-reload')
+  const profileFile = join(profile, 'rsh.profile.json')
+  const providerDir = join(profile, 'node_modules', 'native-reload-provider')
+  const appDir = join(profile, 'node_modules', 'native-reload-app')
+  const preflightDir = join(profile, 'node_modules', 'native-reload-preflight')
+  const patch = join(home, 'reload.json')
+  const events = join(home, 'events')
+  const ready = join(home, 'ready')
+  const preflightStart = join(home, 'preflight-start')
+  const preflightRelease = join(home, 'preflight-release')
+  const runFailureFile = join(home, 'run-failure')
+  const runFailureObserved = join(home, 'run-failure-observed')
+  mkdirSync(providerDir, { recursive: true })
+  mkdirSync(appDir, { recursive: true })
+  mkdirSync(preflightDir, { recursive: true })
+  writeFileSync(join(profile, 'package.json'), JSON.stringify({
+    name: 'native-reload-profile',
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'live' } },
+  }))
+  writeFileSync(profileFile, JSON.stringify({
+    formatVersion: 1,
+    scopes: [{ id: 'root' }],
+    installations: [
+      { id: 'provider', plugin: 'native-reload-provider', scope: 'root' },
+      { id: 'app', plugin: 'native-reload-app', scope: 'root', config: {
+        generation: 'first', ...(runFailure === undefined ? {} : { runFailure }),
+      } },
+    ],
+  }))
+  writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [] }))
+  writeFileSync(join(providerDir, 'package.json'), JSON.stringify({
+    name: 'native-reload-provider', type: 'module',
+    exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['credentials'] } },
+  }))
+  writeFileSync(join(providerDir, 'native.mjs'), [
+    "import { appendFileSync } from 'node:fs'",
+    'export const plugin = {',
+    "  apiVersion: 1, name: 'native-reload-provider', targets: ['host'], requires: [], provides: ['credentials'],",
+    '  resolve: () => context => {',
+    "    appendFileSync(process.env.NATIVE_RELOAD_EVENTS, 'provider:start\\n')",
+    "    context.provide('credentials', {})",
+    "    context.own(() => appendFileSync(process.env.NATIVE_RELOAD_EVENTS, 'provider:cleanup\\n'))",
+    '  },',
+    '}',
+    '',
+  ].join('\n'))
+  writeFileSync(join(appDir, 'package.json'), JSON.stringify({
+    name: 'native-reload-app', type: 'module',
+    exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['credentials'], optional: [], provides: ['application'] } },
+  }))
+  writeFileSync(join(appDir, 'native.mjs'), [
+    "import { appendFileSync, existsSync, writeFileSync } from 'node:fs'",
+    "import { setTimeout as delay } from 'node:timers/promises'",
+    'export const plugin = {',
+    "  apiVersion: 1, name: 'native-reload-app', targets: ['host'], requires: ['credentials'], provides: ['application'],",
+    '  resolve: input => {',
+    "    if (input === null || typeof input !== 'object' || typeof input.generation !== 'string') throw new Error('native-reload-app generation must be a string')",
+    '    const generation = input.generation',
+    '    const finishAfterRun = input.finishAfterRun === true',
+    '    const runFailure = input.runFailure',
+    '    return context => {',
+    '      let runCount = 0',
+    '      context.own(() => appendFileSync(process.env.NATIVE_RELOAD_EVENTS, `app:cleanup:${generation}\\n`))',
+    '      context.provide(\'application\', { run: async (_args, signal) => {',
+    '        runCount += 1',
+    '        appendFileSync(process.env.NATIVE_RELOAD_EVENTS, `app:start:${generation}\\n`)',
+    '        if (generation === \'first\') writeFileSync(process.env.NATIVE_RELOAD_READY, \'ready\')',
+    '        if (runFailure === \'during-preflight\') {',
+    '          if (runCount > 1) return 0',
+    '          appendFileSync(process.env.NATIVE_RELOAD_EVENTS, \'app:waiting-for-failure\\n\')',
+    '          while (!existsSync(process.env.NATIVE_RELOAD_RUN_FAILURE)) await delay(5)',
+    '          appendFileSync(process.env.NATIVE_RELOAD_EVENTS, `app:failure-aborted:${signal.aborted}\\n`)',
+    '          writeFileSync(process.env.NATIVE_RELOAD_RUN_FAILURE_OBSERVED, \'failed\')',
+    '          throw new Error(\'SENTINEL_RUN_NOT_ABORTED\')',
+    '        }',
+    '        if (!finishAfterRun) await new Promise(resolve => signal.addEventListener(\'abort\', resolve, { once: true }))',
+    '        if (runFailure === \'after-abort\') {',
+    '          appendFileSync(process.env.NATIVE_RELOAD_EVENTS, \'app:failure-after-abort\\n\')',
+    '          writeFileSync(process.env.NATIVE_RELOAD_RUN_FAILURE_OBSERVED, \'failed\')',
+    '          throw new Error(\'SENTINEL_RUN_DRAIN_FAILURE\')',
+    '        }',
+    '        if (runFailure === \'abort-reason\') {',
+    '          appendFileSync(process.env.NATIVE_RELOAD_EVENTS, \'app:cancelled-with-abort-reason\\n\')',
+    '          writeFileSync(process.env.NATIVE_RELOAD_RUN_FAILURE_OBSERVED, \'cancelled\')',
+    '          throw signal.reason',
+    '        }',
+    '        appendFileSync(process.env.NATIVE_RELOAD_EVENTS, `app:return:${generation}\\n`)',
+    '        return 0',
+    '      } })',
+    '    }',
+    '  },',
+    '}',
+    '',
+  ].join('\n'))
+  writeFileSync(join(preflightDir, 'package.json'), JSON.stringify({
+    name: 'native-reload-preflight', type: 'module',
+    exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: [] } },
+  }))
+  writeFileSync(join(preflightDir, 'native.mjs'), [
+    "import { appendFileSync, existsSync, writeFileSync } from 'node:fs'",
+    "import { setTimeout as delay } from 'node:timers/promises'",
+    "appendFileSync(process.env.NATIVE_RELOAD_EVENTS, 'preflight:start\\n')",
+    "writeFileSync(process.env.NATIVE_RELOAD_PREFLIGHT_START, 'started')",
+    'while (!existsSync(process.env.NATIVE_RELOAD_PREFLIGHT_RELEASE)) await delay(5)',
+    'export const plugin = { apiVersion: 1, name: \'native-reload-preflight\', targets: [\'host\'], requires: [], provides: [], resolve: () => () => {} }',
+    '',
+  ].join('\n'))
+  return { home, profileFile, patch, events, ready, preflightStart, preflightRelease, runFailure: runFailureFile, runFailureObserved }
+}
+
+function startNativeProfileReload(fixture: ReturnType<typeof createNativeProfileReloadFixture>) {
+  const nodeOptions = [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning']
+    .filter((value): value is string => value !== undefined && value.length > 0)
+    .join(' ')
+  return execa(process.execPath, [dshBin, '--profile', 'native-reload', '--patch', fixture.patch], {
+    cwd: fixture.home,
+    reject: false,
+    timeout: SPAWN_TIMEOUT_MS,
+    killSignal: 'SIGKILL',
+    env: {
+      ...process.env,
+      NODE_OPTIONS: nodeOptions,
+      DSH_HOME: fixture.home,
+      NATIVE_RELOAD_EVENTS: fixture.events,
+      NATIVE_RELOAD_READY: fixture.ready,
+      NATIVE_RELOAD_PREFLIGHT_START: fixture.preflightStart,
+      NATIVE_RELOAD_PREFLIGHT_RELEASE: fixture.preflightRelease,
+      NATIVE_RELOAD_RUN_FAILURE: fixture.runFailure,
+      NATIVE_RELOAD_RUN_FAILURE_OBSERVED: fixture.runFailureObserved,
+    },
+    extendEnv: false,
+  })
+}
+
 function startProfileLifecycle(fixture: ProfileLifecycleFixture, args: readonly string[] = []) {
   return execa(process.execPath, [dshBin, '--profile', 'lifecycle', ...args], {
     cwd: fixture.home,
@@ -402,6 +552,141 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       rmSync(fixture.home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS)
+
+  it('keeps a running native Host on invalid JSON patch and hands an in-flight app to the valid generation', async () => {
+    const fixture = createNativeProfileReloadFixture()
+    const child = startNativeProfileReload(fixture)
+    let stderr = ''
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    const waitForStderr = (message: string): Promise<void> => new Promise((resolve, reject) => {
+      const cleanup = (): void => {
+        child.stderr.off('data', onData)
+        child.stderr.off('end', onEnd)
+      }
+      const onData = (): void => {
+        if (!stderr.includes(message)) return
+        cleanup()
+        resolve()
+      }
+      const onEnd = (): void => {
+        cleanup()
+        reject(new Error(`native profile stderr closed before ${JSON.stringify(message)}: ${stderr}`))
+      }
+      child.stderr.on('data', onData)
+      child.stderr.once('end', onEnd)
+    })
+    try {
+      await waitForFile(fixture.ready)
+      writeFileSync(fixture.patch, JSON.stringify({
+        formatVersion: 1, installations: [{ id: 'app', config: { generation: 17 } }],
+      }))
+      await waitForStderr('native profile reload rejected: native-reload-app generation must be a string')
+      const originalProfile = readFileSync(fixture.profileFile, 'utf8')
+      writeFileSync(fixture.profileFile, '{')
+      await waitForStderr(`native profile reload rejected: native profile cannot read JSON ${fixture.profileFile}`)
+      expect(readFileSync(fixture.events, 'utf8')).toBe('provider:start\napp:start:first\n')
+
+      writeFileSync(fixture.profileFile, originalProfile)
+      writeFileSync(fixture.patch, JSON.stringify({
+        formatVersion: 1, installations: [{ id: 'app', config: { generation: 'second', finishAfterRun: true } }],
+      }))
+      const result = await child
+      expect(result.timedOut, stderr).toBe(false)
+      expect(result.signal, stderr).toBeUndefined()
+      expect(result.exitCode, stderr).toBe(0)
+      expect(stderr).toContain('native profile reload rejected: native-reload-app generation must be a string')
+      expect(readFileSync(fixture.events, 'utf8')).toBe([
+        'provider:start',
+        'app:start:first',
+        'app:return:first',
+        'app:cleanup:first',
+        'app:start:second',
+        'app:return:second',
+        'app:cleanup:second',
+        'provider:cleanup',
+        '',
+      ].join('\n'))
+    } finally {
+      child.kill('SIGKILL')
+      await child
+      rmSync(fixture.home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS + 30_000)
+
+  it('continues replacement when the application rejects with its invocation abort reason', async () => {
+    const fixture = createNativeProfileReloadFixture('abort-reason')
+    const child = startNativeProfileReload(fixture)
+    let stderr = ''
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    try {
+      await waitForFile(fixture.ready)
+      writeFileSync(fixture.patch, JSON.stringify({
+        formatVersion: 1, installations: [{ id: 'app', config: { generation: 'second', finishAfterRun: true } }],
+      }))
+      const result = await child
+      expect(result.timedOut, stderr).toBe(false)
+      expect(result.signal, stderr).toBeUndefined()
+      expect(result.exitCode, stderr).toBe(0)
+      expect(stderr).toBe('')
+      expect(readFileSync(fixture.events, 'utf8')).toBe([
+        'provider:start',
+        'app:start:first',
+        'app:cancelled-with-abort-reason',
+        'app:cleanup:first',
+        'app:start:second',
+        'app:return:second',
+        'app:cleanup:second',
+        'provider:cleanup',
+        '',
+      ].join('\n'))
+    } finally {
+      child.kill('SIGKILL')
+      await child
+      rmSync(fixture.home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS + 30_000)
+
+  it.each([
+    { runFailure: 'after-abort' as const, sentinel: 'SENTINEL_RUN_DRAIN_FAILURE' },
+    { runFailure: 'during-preflight' as const, sentinel: 'SENTINEL_RUN_NOT_ABORTED' },
+  ])('fails the Host on an independent app rejection ($runFailure)', async ({ runFailure, sentinel }) => {
+    const fixture = createNativeProfileReloadFixture(runFailure)
+    const child = startNativeProfileReload(fixture)
+    let stderr = ''
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    try {
+      await waitForFile(fixture.ready)
+      if (runFailure === 'after-abort') {
+        writeFileSync(fixture.patch, JSON.stringify({
+          formatVersion: 1, installations: [{ id: 'app', config: { generation: 'second', finishAfterRun: true } }],
+        }))
+        await waitForFile(fixture.runFailureObserved)
+        expect(readFileSync(fixture.events, 'utf8')).toContain('app:failure-after-abort\n')
+      } else {
+        const profile = JSON.parse(readFileSync(fixture.profileFile, 'utf8')) as { installations: unknown[] }
+        profile.installations.push({ id: 'preflight', plugin: 'native-reload-preflight', scope: 'root' })
+        writeFileSync(fixture.profileFile, JSON.stringify(profile))
+        await waitForFile(fixture.preflightStart)
+        writeFileSync(fixture.runFailure, 'fail')
+        await waitForFile(fixture.runFailureObserved)
+        expect(readFileSync(fixture.events, 'utf8')).toContain('app:failure-aborted:false\n')
+        writeFileSync(fixture.preflightRelease, 'continue')
+      }
+
+      const result = await child
+      expect(result.timedOut, stderr).toBe(false)
+      expect(result.signal, stderr).toBeUndefined()
+      expect(result.exitCode, stderr).toBe(1)
+      expect(stderr).toContain(sentinel)
+      const events = readFileSync(fixture.events, 'utf8')
+      expect(events.match(/app:start:first\n/g)).toHaveLength(1)
+      expect(events).not.toContain('app:start:second\n')
+    } finally {
+      child.kill('SIGKILL')
+      await child
+      rmSync(fixture.home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS + 30_000)
 
   it('routes help and usage errors without activating startup-dependent rows', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-app-help-'))

@@ -14,6 +14,10 @@
 
 `web`、`headless`、`sdk`、`sdk-minimal` 和 `acp` profile 首次使用时会从随附模板自动初始化（`web`：base + web-app，实时应用 patch；`headless`：base + headless，只在启动时应用 patch；`sdk`：base + sdk-app，只在启动时应用 patch；`sdk-minimal`：独立组合包，只在启动时应用 patch；`acp`：base + acp-app，只在启动时应用 patch）。其他缺失的 profile 会显式报错，并提示运行 `dsh plugin --profile <name> add <package>`。
 
+### Native profile 重载
+
+随附的 `native-web` profile 设置 `dsh.profile.configReload: live`；它监视该 profile 的 `rsh.profile.json` 和通过 `--patch` 显式传入的 JSON 文件。CLI 会先校验候选组合，再替换正在运行的 Native Host；未变的安装身份会复用，受影响的应用运行会排空，然后从当前代际启动应用。格式错误或无法解析的候选会保留当前运行图。独立的应用故障即使与候选预检重叠，也会保留原诊断并终止进程；只有 invocation 自身完全匹配的 abort reason，或替换期间在应用回调开始前发生的 Host admission 拒绝，才会被视为运行代际已替换。Host 激活、清理或 watcher 失败会终止进程，不会复活旧运行图。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` profile 仍只在启动时加载。此机制监视 profile 数据，不监视包源码；它独立于 Cordis patch 重载和 Web Client 资源重建。
+
 `dsh --profile <name> --from-default-profile <template>` 会在启动前，从上述五个随附模板之一初始化新的自定义目标。目标名称不能是随附 profile 名称，并且完整的目标 profile 目录必须不存在。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它把模板当前的组合包列表和 `patchReload` 值复制进一份依赖为空、用户 patch 为空的新 manifest。它不会读取 `<template>` 指定的本地同名 profile，不会复制其依赖或 patch，也不会持久化继承字段；模板列表之后的变化不会改写新 profile。复制列表中指名的内置组合包仍从当前 dsh 安装目录解析。初始化成功不会增加 launcher 输出。
 
 profile 已经存在时，`--from-default-profile` 会被拒绝，且不会修改或启动它；去掉该选项即可使用它。残留的目标目录同样会被原样保留，此时必须改用另一个 profile 名称。未知模板或随附目标名称会在创建目标之前失败；未知模板的诊断会列出有效模板。初始化在组合包解析和应用启动之前提交，因此后续失败仍会把新 profile 留在磁盘上，重试时需要去掉创建选项。`--dump-config` 和 `--dump-default-config` 接受该选项：它们初始化目标并打印所请求的配置树，但不启动应用。
@@ -92,7 +96,7 @@ dsh web --help
 
 进程关闭时，插件树最多有 5 秒完成 dispose。首次收到 `SIGINT` 或 `SIGTERM` 时会开始优雅排空：`SIGTERM` 是监督进程发出的常规停止请求，在所有运行模式下都以 0 退出；`SIGINT` 则报告 130。第二次收到信号时会立即强制退出。如果一次性运行在正常结束时已经卡在 dispose 阶段，第一次按下 `Ctrl+C` 就会直接升级为强制退出，而不会被忽略。
 
-基于 base 的模式都将运行命令时所在的目录作为默认 workspace 根目录，以 65,536 字节渲染预算加载适用的 `AGENTS.md` 或 `CLAUDE.md` 指令，并使用内存 SQLite 会话内容索引。独立的 `sdk-minimal` profile 把运行命令时所在的目录作为沙箱策略根目录，但刻意省略文件系统工具、指令发现与 SQLite。`patchReload: live` profile 会监视 profile 与 home 两个 `cordis.patch.yml` 配置层的有效变更，并以事务方式重新应用；`startup` profile 则只应用一次。一次性运行模式通过有界关闭流程退出，该流程会 dispose 所有实时监视器。
+基于 base 的模式都将运行命令时所在的目录作为默认 workspace 根目录，以 65,536 字节渲染预算加载适用的 `AGENTS.md` 或 `CLAUDE.md` 指令，并使用内存 SQLite 会话内容索引。独立的 `sdk-minimal` profile 把运行命令时所在的目录作为沙箱策略根目录，但刻意省略文件系统工具、指令发现与 SQLite。在 Cordis profile 中，`patchReload: live` 会监视 profile 与 home 两个 `cordis.patch.yml` 配置层的有效变更，并以事务方式重新应用；`startup` profile 则只应用一次。Native profile 重载采用上文所述的独立 `configReload` 行为。一次性运行模式通过有界关闭流程退出，该流程会 dispose 所有实时监视器。
 
 基于 base 的 profile 中，新会话默认使用 `workspace-write` 权限预设。Bash 和文件系统修改仅限于会话 workspace 与平台临时根目录；读取和网络访问不受限制，进程可见性则取决于所选沙箱后端——bwrap 在私有 PID 命名空间中运行命令并隐藏宿主进程，Landlock 与 Seatbelt 保持宿主进程可见性不变。`DSH_PERMISSION_MODE` 更改进程后备值。General settings 中存储的权限影响后续 Web 会话，不改变已打开的会话。独立的 `sdk-minimal` 配置树则固定为 `danger-full-access`，且不挂载 approval 或权限 settings 服务。
 
