@@ -17,6 +17,21 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as attachments } from '@deepseek-ai/dsh-attachment-local/native'
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasMessageId(value: unknown): boolean {
+  return isRecord(value) && typeof value.messageId === 'string' && value.messageId.length > 0
+}
+
+function isAssistantReply(value: unknown): boolean {
+  if (!isRecord(value) || value.type !== 'assistant/message' || !isRecord(value.data)
+    || !isRecord(value.data.message) || !Array.isArray(value.data.message.content)) return false
+  const content = value.data.message.content as unknown[]
+  return content.some(block => isRecord(block) && block.type === 'text' && block.text === 'minimal model reply')
+}
+
 it('runs without the optional subagent Provider and drains admitted model work after EOF', async () => {
   expect(sdkServer.requires).not.toContain('subagents')
   expect(sdkServer.optional).toContain('subagents')
@@ -57,8 +72,8 @@ it('runs without the optional subagent Provider and drains admitted model work a
   await mkdir(workspace)
   const replies = new Map<number, ReturnType<typeof Promise.withResolvers<{ id: number; result?: unknown; error?: unknown }>>>()
   let outputBuffer = ''
-  output.on('data', (chunk) => {
-    outputBuffer += chunk.toString()
+  output.on('data', (chunk: Buffer | string) => {
+    outputBuffer += typeof chunk === 'string' ? chunk : chunk.toString('utf8')
     for (;;) {
       const newline = outputBuffer.indexOf('\n')
       if (newline < 0) break
@@ -119,7 +134,7 @@ it('runs without the optional subagent Provider and drains admitted model work a
       runReturned = true
       await host.stop()
       return result
-    }, error => ({ error }))
+    }, (error: unknown) => ({ error }))
     const initialized = response(1)
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: workspace, provider: 'fixture', model: 'fixture' } })}\n`)
     const initialization = await initialized
@@ -128,17 +143,15 @@ it('runs without the optional subagent Provider and drains admitted model work a
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
       sessionId: 'minimal-sdk-session', contentBlocks: [{ type: 'text', text: 'Run without subagents.' }],
     } })}\n`)
-    expect((await firstPrompt).result).toMatchObject({ messageId: expect.any(String) })
+    expect(hasMessageId((await firstPrompt).result)).toBe(true)
     await idle.promise
-    expect(sessionEvents).toContainEqual(expect.objectContaining({ type: 'assistant/message', data: expect.objectContaining({
-      message: expect.objectContaining({ content: [{ type: 'text', text: 'minimal model reply' }] }),
-    }) }))
+    expect(sessionEvents.some(isAssistantReply)).toBe(true)
     const acceptedPrompt = response(3)
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'session/prompt', params: {
       sessionId: 'minimal-sdk-session', contentBlocks: [{ type: 'text', text: 'Wait for model cancellation.' }],
     } })}\n`)
     await entered.promise
-    expect((await acceptedPrompt).result).toMatchObject({ messageId: expect.any(String) })
+    expect(hasMessageId((await acceptedPrompt).result)).toBe(true)
     input.end()
     await aborted.promise
     await setImmediate()

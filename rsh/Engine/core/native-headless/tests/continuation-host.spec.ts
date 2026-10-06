@@ -297,9 +297,10 @@ it('publishes the durable settlement of a retained child when its Program closes
   const removeWait = state.tools.register({ schema: { name: 'wait_for_shutdown', description: 'Wait for Program shutdown.', parameters: {} },
     async execute(call) {
       entered.resolve(undefined)
-      await new Promise<void>((_resolve, reject) => {
-        call.signal.addEventListener('abort', () => { reject(call.signal.reason) }, { once: true })
+      await new Promise<void>((resolve) => {
+        call.signal.addEventListener('abort', resolve, { once: true })
       })
+      call.signal.throwIfAborted()
       return { content: [], isError: false }
     } })
   const removeOpen = state.tools.register({ schema: { name: 'open_child', description: 'Open a child.', parameters: {} },
@@ -316,7 +317,7 @@ it('publishes the durable settlement of a retained child when its Program closes
     } })
   try {
     const rootTurn = state.app.executeTurn({ id: parentId, resume: false, message: input('Open child.') }, signal)
-      .then(value => ({ status: 'fulfilled' as const, value }), error => ({ status: 'rejected' as const, error }))
+      .then(value => ({ status: 'fulfilled' as const, value }), (error: unknown) => ({ status: 'rejected' as const, error }))
     await entered.promise
     expect(await rootTurn).toMatchObject({ status: 'fulfilled', value: { exitCode: 0 } })
     const closing = state.app.dispose()

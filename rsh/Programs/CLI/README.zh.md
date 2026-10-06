@@ -22,7 +22,7 @@
 
 运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp`、`native-sdk` 和 `native-acp` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
-native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者；一次性后台子任务使用 job_output/job_kill；可持续 Subagent 控制仍不支持。
+native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
 
 ## 应用参数

@@ -22,11 +22,14 @@ it('reports a finished-listener failure and continues without changing the settl
   const request: NativeSubagentRequest = { agent: parent, session, label: 'child', prompt: [], maxDepth: 1,
     config: { cwd: '/selected', provider: 'model', model: 'test', systemPrompt: '', maxSteps: 1, builtinTools: false } }
   provider.onFinished(() => { throw failure })
+  provider.onFinished(async () => { throw failure })
   provider.onFinished((finished) => { result.push(finished.result) })
 
   await expect(provider.run(request, new AbortController().signal)).resolves.toMatchObject({ stopReason: 'completed' })
+  await vi.waitFor(() => { expect(warn).toHaveBeenCalledTimes(2) })
   expect(result).toEqual([expect.objectContaining({ stopReason: 'completed' })])
-  expect(warn).toHaveBeenCalledWith('native-subagent: finished observer failed', failure)
+  expect(warn).toHaveBeenNthCalledWith(1, 'native-subagent: finished observer failed', failure)
+  expect(warn).toHaveBeenNthCalledWith(2, 'native-subagent: finished observer failed', failure)
   await provider.dispose()
   warn.mockRestore()
 })

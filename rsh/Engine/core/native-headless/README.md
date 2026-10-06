@@ -112,8 +112,8 @@ The reading is appended after existing history and does not change the reusable 
 
 ## Known Limitations and Deferred Work
 
-- Fixed file tools, `run_code`, and registered tools run serially; SDK protocol and Web UI remain absent.
+- Fixed file tools, `run_code`, and registered tools run serially. This package does not implement the SDK protocol or Web UI; the native SDK and Web compositions provide those interfaces.
 - Native model Providers and broader capability adapters live in separate packages.
-- Session and persistence packages still carry Cordis dependencies, although this composition creates no Cordis Context.
+- This composition imports the Cordis-free `./native` Session and persistence entries and creates no Cordis Context. Their packages retain Cordis adapters for compatibility, with Cordis as an optional peer dependency.
 
 Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly.

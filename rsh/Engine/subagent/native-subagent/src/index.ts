@@ -52,10 +52,11 @@ export interface NativeSubagentFinished {
   readonly result: NativeSubagentResult
 }
 
-/** Synchronous observer of settled in-process child results.
+/** Observer of settled in-process child results; returned promises are observed without delaying settlement.
  * @param finished - exact parent and child result.
+ * @returns optional asynchronous observer work; the Provider does not await it.
  */
-export type NativeSubagentFinishedListener = (finished: NativeSubagentFinished) => void
+export type NativeSubagentFinishedListener = (finished: NativeSubagentFinished) => void | Promise<void>
 
 /** Published Agent-owned child after its first durable turn facts are committed. */
 export interface NativeSubagentBackground {
@@ -98,7 +99,7 @@ export interface NativeSubagentOperations {
   /**
    * Observe in-process results after cleanup; an interrupted turn does not finish a still-resident continuation.
    * @param listener - exact parent and completed result observer.
-   * @returns idempotent observer removal; listener failures are reported and do not change child settlement.
+   * @returns idempotent observer removal; synchronous throws and rejected observer promises are reported without changing child settlement.
    */
   onFinished(listener: NativeSubagentFinishedListener): () => void
   /**
@@ -312,7 +313,10 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       console.warn('native-subagent: finished observer failed', error)
     }
     for (const listener of this.finished) {
-      try { void Promise.resolve(listener(finished)).catch(reportFailure) }
+      try {
+        const result = listener(finished)
+        if (result !== undefined) void result.catch(reportFailure)
+      }
       catch (error: unknown) { reportFailure(error) }
     }
   }
