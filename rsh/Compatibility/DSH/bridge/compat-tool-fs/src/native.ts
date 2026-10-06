@@ -89,7 +89,10 @@ export const plugin: NativePlugin = {
       const eventMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/fs-event-bridge', (context: Context) => {
         context.on('fs/write-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/write-intent', next, target, actor))
         context.on('fs/edit-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/edit-intent', next, target, actor))
-        context.on('fs/observed', (target, observation, actor) => { native.events.emit(native.scope, 'fs/observed', target, observation, actor) })
+        context.on('fs/observed', (target, observation, actor) => {
+          runtime.forwardFsObserved(native.scope, target, observation, actor,
+            () => { native.events.emit(native.scope, 'fs/observed', target, observation, actor) })
+        })
       })
       native.own(() => eventMount.dispose())
       await eventMount.ready

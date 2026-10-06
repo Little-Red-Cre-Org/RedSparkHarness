@@ -1,6 +1,6 @@
 version: 1
 scenario: file-round
-profile: headless
+profile: compat
 composition: native-compat-file-round
 recording: authored
 header:

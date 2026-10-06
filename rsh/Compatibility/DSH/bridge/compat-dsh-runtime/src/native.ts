@@ -22,6 +22,14 @@ export interface CompatDshRuntime {
   readonly context: Context
   /** Start one allowlisted legacy plugin with cleanup registered before activation settles. */
   mount(packageName: string, plugin: Plugin, config?: unknown): CompatDshMount
+  /** Coordinate observed-event forwarding so the identical event is not sent back between buses synchronously.
+   * @param scope - native scope whose event is being bridged.
+   * @param target - stable filesystem target passed to the event.
+   * @param observation - presence and version passed to the event.
+   * @param actor - observing tool identity, when present.
+   * @param forward - synchronous dispatch into the other event bus.
+   */
+  forwardFsObserved(scope: object, target: object, observation: object, actor: object | undefined, forward: () => void): void
 }
 
 /** Native-owned Cordis mount. Register dispose with the Native context before awaiting ready. */
@@ -75,6 +83,7 @@ export const plugin: NativePlugin = {
       })
       await context.plugin(RshPluginHost)
       const mounts = new Map<string, CompatDshMount>()
+      const activeObservations: { scope: object; target: object; observation: object; actor: object | undefined }[] = []
       let disposed = false
       const disposeMount = (packageName: string, fiber: ReturnType<Context['plugin']>): (() => Promise<void>) => {
         let disposal: Promise<void> | undefined
@@ -95,6 +104,12 @@ export const plugin: NativePlugin = {
       }
       const runtime: CompatDshRuntime = {
         context,
+        forwardFsObserved(scope, target, observation, actor, forward) {
+          if (activeObservations.some(active =>
+            active.scope === scope && active.target === target && active.observation === observation && active.actor === actor)) return
+          activeObservations.push({ scope, target, observation, actor })
+          try { forward() } finally { activeObservations.pop() }
+        },
         mount(packageName, legacyPlugin, config) {
           if (disposed) throw new Error('compat-dsh-runtime: host is disposed')
           if (!LEGACY_PLUGINS.has(packageName)) throw new Error(`compat-dsh-runtime: unsupported plugin ${packageName}`)

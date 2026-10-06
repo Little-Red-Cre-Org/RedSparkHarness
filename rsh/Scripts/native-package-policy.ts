@@ -163,6 +163,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
+  ['rsh/Modules/Official/fs/fs-local', ['@deepseek-ai/dsh-plugin-host']],
+  ['rsh/Modules/Official/fs/fs-observation-policy', ['@deepseek-ai/dsh-plugin-host']],
   ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
   ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
