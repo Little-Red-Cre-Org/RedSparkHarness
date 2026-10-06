@@ -200,7 +200,14 @@ interface TsdownEntryScan {
   readonly includesInvariant: boolean
 }
 
-type TsdownConfigHelper = 'clientBundle' | 'clientLibrary' | 'clientOnly' | 'defineConfig' | 'entry' | 'staticLinked'
+type TsdownConfigHelper =
+  | 'clientBundle'
+  | 'clientLibrary'
+  | 'clientOnly'
+  | 'defineConfig'
+  | 'entry'
+  | 'staticLinked'
+  | 'staticLinkedLeaf'
 
 interface TsdownEntryContext {
   readonly helpers: ReadonlyMap<string, TsdownConfigHelper>
@@ -242,7 +249,7 @@ function importedTsdownHelpers(
       const helper = moduleName === 'tsdown' && (importedName === 'defineConfig' || importedName === 'entry')
         ? importedName
         : clientBuildImport && (importedName === 'clientBundle' || importedName === 'clientLibrary'
-          || importedName === 'clientOnly' || importedName === 'staticLinked')
+          || importedName === 'clientOnly' || importedName === 'staticLinked' || importedName === 'staticLinkedLeaf')
           ? importedName
           : undefined
       const localName = specifier.name.text
@@ -309,7 +316,8 @@ function inspectConfigExpression(expression: ts.Expression, context: TsdownEntry
     case 'clientBundle':
       return inspectClientBundle(expression.arguments, context)
     case 'clientLibrary':
-    case 'staticLinked': {
+    case 'staticLinked':
+    case 'staticLinkedLeaf': {
       const entries = expression.arguments[1]
       return expression.arguments.length === 2 && entries !== undefined
         ? inspectEntryValue(entries) : unsupportedEntryScan()

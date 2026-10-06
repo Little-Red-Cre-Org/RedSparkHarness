@@ -228,18 +228,23 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
+      '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
       '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+      '@deepseek-ai/dsh-client-ui-tool': ['react'],
       '@deepseek-ai/dsh-client-native-application': [
         'react',
         '@deepseek-ai/dsh-session',
         '@deepseek-ai/dsh-native-model-selection',
         '@deepseek-ai/dsh-agent-presets',
+        '@deepseek-ai/dsh-client-ui-tool',
         '@deepseek-ai/dsh-tool-todo',
       ],
       '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
+      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store'],
       '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-client-native-session': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-client-connection',
@@ -250,6 +255,15 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-native-application': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-client-native-session',
+      ],
+      '@deepseek-ai/dsh-client-ui-conversation': [
+        '@deepseek-ai/dsh-llm',
+        '@deepseek-ai/dsh-attachment',
+        '@deepseek-ai/dsh-client-ui-slots',
+      ],
+      '@deepseek-ai/dsh-client-ui-tool': [
+        '@deepseek-ai/dsh-client-ui-conversation',
+        '@deepseek-ai/dsh-client-ui-slots',
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
@@ -270,6 +284,7 @@ describe('package dependency scope', () => {
     ])
     for (const specifier of [
       '@deepseek-ai/dsh-agent-presets/selection',
+      '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
       '@deepseek-ai/dsh-native-model-selection/types',
       '@deepseek-ai/dsh-session/types',
       '@deepseek-ai/dsh-session/event-validation',

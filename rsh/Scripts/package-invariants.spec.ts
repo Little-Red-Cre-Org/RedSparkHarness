@@ -276,6 +276,31 @@ describe('package invariant gate', () => {
       message: undefined,
     },
     {
+      name: 'canonical Client wrappers preserve static linked leaves',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/ui-conversation',
+      packageName: '@deepseek-ai/dsh-client-ui-conversation',
+      buildEntry: configSource(
+        "import { clientBundle, staticLinkedLeaf } from '../tsdown.client.ts'",
+        "const legacy = clientBundle('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/index.js'])",
+        "const native = staticLinkedLeaf('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/tool-records.js', 'lib/types/conversation-copy.js'])",
+        'export default (args) => [...legacy(args), ...native(args)]',
+      ),
+      message: undefined,
+    },
+    {
+      name: 'canonical Client-only wrapper preserves literal entry maps',
+      companion: false,
+      packageDirectory: 'rsh/Programs/Web/client/native-application',
+      packageName: '@deepseek-ai/dsh-client-native-application',
+      buildEntry: configSource(
+        "import { defineConfig } from 'tsdown'",
+        "import { clientOnly } from '../tsdown.client.ts'",
+        "export default clientOnly([defineConfig({ name: '@deepseek-ai/dsh-client-native-application/client', entry: ['lib/types/index.js', 'lib/types/native.js', 'lib/types/controller.js'], outDir: 'lib', format: ['esm'], platform: 'browser', target: 'es2024', fixedExtension: false, dts: false, clean: false })])",
+      ),
+      message: undefined,
+    },
+    {
       name: 'entry map records emitted paths',
       companion: true,
       buildEntry: configSource("import { defineConfig } from 'tsdown'", "export default defineConfig({ entry: { invariant: 'lib/types/index.js' } })"),

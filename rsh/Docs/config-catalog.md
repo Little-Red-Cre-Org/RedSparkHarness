@@ -99,7 +99,7 @@ export interface Config {
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
     id: string
-    /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
+    /** Stable identity; Loader-managed startup waits for persistence selection, then resumes history or creates fresh. */
     sessionId?: SessionId
     /** Optional workspace for a fresh session. */
     cwd?: string
@@ -111,7 +111,7 @@ export interface Config {
 
 Depends on: [`AgentOptions`](subsystems/core.md) · [`SessionId`](subsystems/core.md)
 
-Source: [`rsh/Engine/core/agent-loop/src/index.ts:318`](../Engine/core/agent-loop/src/index.ts)
+Source: [`rsh/Engine/core/agent-loop/src/index.ts:325`](../Engine/core/agent-loop/src/index.ts)
 
 <a id="deepseek-aidsh-agent-presets"></a>
 

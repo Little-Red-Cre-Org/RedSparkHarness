@@ -9,11 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-此无 Cordis 的 Client 应用为显式 native-web profile 提供对话页面。选定 renderer 挂载 React；client-native-session 提供经过身份验证的 Host 操作。
-
-原生 profile 通过 `dsh.native` 行及 `./native` 导出选择本包；旧 `dsh.client` 模块表不会加载它。生产依赖包含已发布声明引用的包，但安装这些包不会激活其 NativePlugin；profile 会选择实际运行的贡献。包选择与声明依赖的决策记录在[安装说明](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.zh.md)中。
-
-根 Tool 调用与持久化结果、失败标识及呈现元数据配对，通过共享 Tool 卡片模型呈现。冷历史使用相同投影；不呈现尚不可用的文件打开和轨迹操作。嵌套分派记录保留在原始 Session 披露中，不建立独立的嵌套卡片层级。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。页面依据 Session 记录呈现根级 Tool 结果与失败；嵌套分派仍保留在原始历史中。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输或历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 

@@ -9,11 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This Cordis-free Client application supplies the conversation page for the explicit native-web profile. The selected renderer mounts React; client-native-session supplies authenticated Host operations.
-
-The native profile selects this package through its `dsh.native` row and `./native` export; the legacy `dsh.client` module table does not load it. Production dependencies include packages referenced by the published declarations, but installing those packages does not activate their NativePlugins; the profile selects the runtime contributions. The package-selection and declaration-dependency decision is recorded in the [installation note](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.md).
-
-Root Tool calls pair with their durable result, failure identity and presentation metadata and render through the shared Tool card models. Cold history uses the same projection; unavailable file-opening and trajectory actions are omitted. Nested dispatch records remain available in the raw Session disclosure rather than a separate nested card hierarchy.
+The `native-web` profile uses this Client page to create or resume Sessions, inspect durable history and send messages through the Host. The page renders root Tool results and failures from Session records; nested dispatch remains in raw history. Model and reasoning choices come from the Host model directory, while stale selections and transport or history failures remain visible. Published declarations require the listed package dependencies, and the profile must select the runtime contributions, renderer and `client-native-session` Host operations.
 
 ## Table of Contents
 

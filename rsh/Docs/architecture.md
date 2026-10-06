@@ -28,7 +28,7 @@ Each declares itself in its own `package.json` under a `dsh` field: `dsh.profile
 
 Layers apply to an empty entry list in this order: each bundle in the profile's listed order, then the profile's `cordis.patch.yml`, then the home-level one, then any `--patch` overlay. A patch targets a row by id and replaces its whole config, or inserts new rows.
 
-Custom profiles default to live patch reload. The shipped `web` profile is live; `headless`, `sdk`, `sdk-minimal`, and `acp` apply all layers once at startup because replacing a one-shot or stdio application's dependencies after it owns work would invalidate that lifecycle.
+Custom profiles default to live reload. `web` reloads live; `headless`, `sdk`, `sdk-minimal`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
 
 To see the tree your machine boots:
 

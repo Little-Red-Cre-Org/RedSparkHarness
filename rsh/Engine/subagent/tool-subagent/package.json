@@ -35,10 +35,10 @@
   },
   "files": [
     "lib/index.js",
-    "lib/shared-*.js",
     "lib/invariant.js",
     "lib/model-selection-settings.js",
     "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

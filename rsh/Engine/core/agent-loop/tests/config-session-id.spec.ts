@@ -102,6 +102,87 @@ describe('config-driven session id', () => {
     await conflicting.fiber.dispose()
   })
 
+  it.each([
+    { label: 'exact configured identity', sessionId: SessionId('config-loader-persistence') },
+    { label: 'generated fresh identity', sessionId: undefined },
+  ])('waits for Loader readiness before persisting a $label', async ({ sessionId }) => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-cfg-loader-persistence-'))
+    dirs.push(root)
+    const ctx = await makeCoreContext()
+    const readiness = Promise.withResolvers<undefined>()
+    ctx.provide('loader', { await: () => readiness.promise })
+    ctx.llm.registerAdapter(['mock'], new MockAdapter([textResponse('stored after readiness')]))
+    const loop = await ctx.plugin(AgentLoop, {
+      agents: [{ id: 'main', ...(sessionId === undefined ? {} : { sessionId }), provider: 'mock', model: 'mock' }],
+    })
+
+    expect(ctx.agents.list()).toHaveLength(0)
+    await ctx.plugin(JsonlSessionPersistence, { root })
+    readiness.resolve(undefined)
+    await expect.poll(() => ctx.agents.list(), { timeout: 5_000 }).toHaveLength(1)
+    const agent = ctx.agents.list()[0]!
+    expect(agent.session.id).toBe(agent.id)
+    if (sessionId !== undefined) expect(agent.id).toBe(sessionId)
+    agent.followup(createUserMessage({
+      content: [{ type: 'text', text: 'persist this turn' }],
+      source: { kind: 'user' },
+    }))
+    await waitForIdle(ctx, agent)
+    await ctx.sessions.flush(agent.session)
+
+    expect(JSON.stringify(await readStoredEvents(ctx, agent.session.id))).toContain('persist this turn')
+    await loop.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('keeps exact configured sessions memory-only when a settled Loader has no backend', async () => {
+    const ctx = await makeCoreContext()
+    ctx.provide('loader', { await: async () => {} })
+    const sessionId = SessionId('config-loader-memory-only')
+    const loop = await ctx.plugin(AgentLoop, {
+      agents: [{ id: 'main', sessionId, model: 'mock' }],
+    })
+
+    await expect.poll(() => ctx.agents.get(sessionId), { timeout: 5_000 }).toBeDefined()
+    expect(ctx.get('sessionPersistence')).toBeUndefined()
+    await loop.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('cancels exact configured startup before Loader readiness', async () => {
+    const ctx = await makeCoreContext()
+    const readiness = Promise.withResolvers<undefined>()
+    ctx.provide('loader', { await: () => readiness.promise })
+    const sessionId = SessionId('config-loader-cancelled')
+    const loop = await ctx.plugin(AgentLoop, {
+      agents: [{ id: 'main', sessionId, model: 'mock' }],
+    })
+
+    await loop.dispose()
+    readiness.resolve(undefined)
+    expect(ctx.agents.get(sessionId)).toBeUndefined()
+    await ctx.fiber.dispose()
+  })
+
+  it('contains Loader readiness failure without publishing a memory-only Agent', async () => {
+    const ctx = await makeCoreContext()
+    const readiness = Promise.withResolvers<undefined>()
+    ctx.provide('loader', { await: () => readiness.promise })
+    const sessionId = SessionId('config-loader-failure')
+    const failures: unknown[] = []
+    ctx.on('agent-loop/config-start-failed', ({ error }) => { failures.push(error) })
+    const loop = await ctx.plugin(AgentLoop, {
+      agents: [{ id: 'main', sessionId, model: 'mock' }],
+    })
+    const failure = new Error('Loader composition failed')
+    readiness.reject(failure)
+
+    await expect.poll(() => failures).toEqual([failure])
+    expect(ctx.agents.get(sessionId)).toBeUndefined()
+    await loop.dispose()
+    await ctx.fiber.dispose()
+  })
+
   it('rejects duplicate exact ids before asynchronous configured startup', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-cfg-exact-duplicate-'))
     dirs.push(root)

@@ -53,8 +53,9 @@ const FIXTURE = {
     peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
   }),
   'rsh/f/native-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-  'rsh/f/native-consumer/src/native.ts': "export { native } from './native-dependency.ts'\n",
+  'rsh/f/native-consumer/src/native.ts': "import './style.css'\nexport { native } from './native-dependency.ts'\n",
   'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@deepseek-ai/cordis'\nexport const native = context\n",
+  'rsh/f/native-consumer/src/style.css': '.native { color: red; }\n',
 
   'rsh/f/native-types-consumer/package.json': JSON.stringify({
     name: '@f/native-types-consumer',
@@ -240,6 +241,21 @@ describe('optional dependency loads', () => {
       + ' declared optional in peerDependenciesMeta; import it as a type, or restructure so module scope does not need it',
     )
     expect(safeExportViolations.some(violation => violation.startsWith('rsh/f/native-types-consumer/src/index.ts:1'))).toBe(false)
+  })
+
+  it('requires a local stylesheet imported by a Cordis-free source entry to exist', () => {
+    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-import-missing-style-'))
+    try {
+      for (const [path, content] of Object.entries(FIXTURE)) {
+        if (path === 'rsh/f/native-consumer/src/style.css') continue
+        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
+        writeFileSync(join(caseRoot, path), content)
+      }
+      expect(() => collectOptionalImportViolations(new TypeScriptProject(caseRoot)))
+        .toThrow('safe source import cannot be resolved:')
+    } finally {
+      rmSync(caseRoot, { recursive: true, force: true })
+    }
   })
 
   it('checks optional loads from a binary startup closure but leaves dynamic compatibility branches on demand', () => {

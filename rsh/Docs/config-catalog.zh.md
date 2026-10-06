@@ -101,7 +101,7 @@ export interface Config {
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
     id: string
-    /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
+    /** Stable identity; Loader-managed startup waits for persistence selection, then resumes history or creates fresh. */
     sessionId?: SessionId
     /** Optional workspace for a fresh session. */
     cwd?: string
