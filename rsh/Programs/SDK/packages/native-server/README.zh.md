@@ -34,6 +34,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 
+应用提供的 `rootExecution` 指向 `initialize` 选定的同一个执行器。`ready(signal)` 等待初始化成功；若初始化失败、调用方取消或 SDK 关闭则会拒绝。其它 root 操作只能在就绪后使用，因此已安装的 Provider 可沿用 SDK Program 选定的路由，无需创建另一个执行器或增加 SDK wire 方法。[根执行器决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-07-native-sdk-provides-its-root-executor.zh.md)说明了这一所有权。
+
 此 Program 已接收根任务的委派子会话先发送 `subagent.started` 血缘通知，再发送后端已接收的 `session.event`。选定的原生 Subagent Provider 仅在真实的一次性结果或可持续驻留阶段结束并释放写入器后报告 `subagent.finished`；仅打断某一轮不会结束仍驻留的子任务。服务端将结果与此 SDK 根任务准入的精确子、父 Agent 匹配；仅分离所有者不会报告成功。两个 SDK 的 `subscribeSessionTree` 与运行订阅包含这些后代，根响应事件仍独立保存。共用相同 Provider 的其它 Program 不会混入。关闭时先排空已接受的后代、发送其结束结果并刷新传输，再释放观察者。
 
 <a id="dev-note"></a>

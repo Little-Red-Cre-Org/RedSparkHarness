@@ -26,7 +26,11 @@ Create one-shot reminders, recurring tasks, or goal tasks with completion criter
 <a id="use-this-package"></a>
 ## Use this package
 
+The shipped `native-web` and `native-tui` profiles install the native scheduler on first use. Each profile keeps a separate SQLite database under its profile directory. A root Agent can use `task_schedule` to create, list, pause, resume, delete, and inspect scheduled Agent work; due runs execute through that Program's root Session authority and persist independent Session results. The Program persists scheduled origin before publishing the maintenance owner, so Provider replacement and cold restore keep those Sessions ineligible for interactive management even if no prompt was admitted before shutdown. Reloading the native profile reattaches management to the same live interactive root Session; delegated and scheduled execution Agents remain unable to manage tasks. Stored plans survive process restart, while interrupted receipts are not replayed. The native entry rejects compatibility preset records and Goal tasks; Goal continuation and personal reminder delivery require their separate Providers. Existing profile files are user-owned and are not rewritten when the template changes.
+
 Install the plugin into a profile and add [cordis.patch.yml](cordis.patch.yml) to its patches. The Host requires the normal Agent, preset, permission, workspace, and session-persistence services. The database path must be absolute and must identify a dedicated local SQLite file. Do not share it over a network filesystem. Merely importing the package does not enable scheduling; the exported Cordis `apply` mounts it.
+
+Native installations do not use the Typert protocol. The Cordis package root and gateway load `@deepseek-ai/dsh-typert-protocol`, and the published Client declarations reference its `RemoteResult` type; a compatibility profile that installs this plugin must provide it because it is an optional peer for Native consumers.
 
 Web and Desktop enable this plugin by default through the Web bundle, using `task-scheduler.sqlite` in the Harness home. From a built source checkout, use `pnpm dsh web`. The sidebar exposes task creation and Settings exposes the task center. A profile patch can override the `task-scheduler` row or disable it explicitly.
 

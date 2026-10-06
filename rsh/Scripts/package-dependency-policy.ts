@@ -35,6 +35,12 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
+  '@deepseek-ai/dsh-task-scheduler': [
+    '@deepseek-ai/dsh-native-agent',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-native-session-execution',
+    '@deepseek-ai/dsh-typert-protocol',
+  ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Published type imports whose provider must be installed by the consumer. */
@@ -71,6 +77,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
   '@deepseek-ai/dsh-fs-sandbox': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy'],
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
+  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol'],
 }
 
 /** Client runtime peers whose values must resolve to the shared application instances. */
@@ -121,8 +128,10 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
+  '@deepseek-ai/dsh-llm/native': ['createUserMessage', 'ReasoningEffortId'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
   '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
+  '@deepseek-ai/dsh-session/native': ['SessionId'],
   '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports

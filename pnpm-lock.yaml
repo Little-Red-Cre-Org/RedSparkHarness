@@ -5077,9 +5077,15 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
-      '@deepseek-ai/dsh-typert-protocol':
+      '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
-        version: link:../../../../Core/typert/protocol
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -5150,6 +5156,9 @@ importers:
       '@deepseek-ai/dsh-loader-smoke':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/loader-smoke
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-permission-presets':
         specifier: workspace:^
         version: link:../../interaction/permission-presets
@@ -5201,6 +5210,9 @@ importers:
       '@deepseek-ai/dsh-typert-generator':
         specifier: workspace:^
         version: link:../../../../Core/typert/generator
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: workspace:^
+        version: link:../../../../Core/typert/protocol
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
         version: link:../../interaction/user-approval

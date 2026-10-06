@@ -1,0 +1,8 @@
+version: 1
+scenario: task-schedule
+profile: native-tui
+composition: native-terminal-task-schedule
+recording: authored
+header:
+  class: native-terminal-task-schedule
+  pin: true

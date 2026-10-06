@@ -68,6 +68,8 @@ export interface NativeActiveSessionOwner {
   readonly session: Session
   /** Current Program invocation; a historical child resumed through a root entry remains root. */
   readonly invocation: 'root' | 'delegated'
+  /** Persisted Program admission origin for a scheduled root, including after restore; absent for other owners. */
+  readonly rootOrigin?: 'scheduled' | undefined
   /** Captured live-root turn interruption and maintenance handle; delegated invocations never provide one. */
   readonly rootOperations?: NativeRootSessionOperations | undefined
   readonly inheritedEventCount: number

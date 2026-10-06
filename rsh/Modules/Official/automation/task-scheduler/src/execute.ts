@@ -1,7 +1,7 @@
 /** The only adapter between scheduled work and the existing Agent runtime. */
 import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-permission-presets'
@@ -20,11 +20,16 @@ import type { ExecuteTask } from './types.ts'
 export function agentExecutor(ctx: Context): ExecuteTask {
   return async (task, run, signal, progress) => {
     signal.throwIfAborted()
-    ctx.permissionPresets.resolve(task.permissionPreset)
-    const preset = await ctx.agentPresets.resolve(task.agentPreset)
+    if (task.nativeRoute !== undefined || task.agentPreset === undefined || task.permissionPreset === undefined) {
+      throw new Error('Compatibility execution requires explicit Agent and permission presets')
+    }
+    const agentPreset = task.agentPreset
+    const permissionPreset = task.permissionPreset
+    ctx.permissionPresets.resolve(permissionPreset)
+    const preset = await ctx.agentPresets.resolve(agentPreset)
     await ctx.agentPresets.standingKeyFor(preset.id)
     const workspace = await ctx.workspaceRegistry.create(task.workspace)
-    const sessionId = brandString<SessionId>(run.sessionId ?? `scheduled-${run.id}`)
+    const sessionId = brandString<SessionId>(run.sessionId)
     const setup = async (agentCtx: Context) => { await ctx.agentPresets.mount(agentCtx, preset.id) }
     const existing = ctx.agents.get(sessionId)
     if (existing && (!task.resumeSessionId || existing.status !== 'idle')) throw new Error('Execution session is busy; wait before continuing')
@@ -41,7 +46,7 @@ export function agentExecutor(ctx: Context): ExecuteTask {
     try {
       signal.throwIfAborted()
       await workspace.attachSession(sessionId)
-      if (!existing) ctx.permissionPresets.set(handle.agent.session, task.permissionPreset)
+      if (!existing) ctx.permissionPresets.set(handle.agent.session, permissionPreset)
       ctx.sessionTitle.rename(handle.agent.session, `${task.kind === 'goal' ? '[Goal]' : '[Scheduled]'} ${task.title}`)
       if (task.kind === 'goal') {
         if (!ctx.tools.get('update_goal', handle.agent)) throw new Error('Goal service and goal tools must be enabled in this preset')
@@ -76,21 +81,27 @@ export function agentExecutor(ctx: Context): ExecuteTask {
           await delay(200, undefined, { signal })
         }
       }
-      handle.agent.followup(createUserMessage({
-        content: [{ type: 'text', text: `[Scheduled task ${task.id}; occurrence ${new Date(run.scheduledAt).toISOString()}]\nThe scheduled time has arrived. Execute now; relative delays in the original instruction have already elapsed and must not be waited again.\n${task.prompt}` }],
-        source: { kind: 'plugin', plugin: 'task-scheduler' },
-      }))
-      await handle.agent.whenIdle()
-      await ctx.sessions.flush(handle.agent.session)
-      signal.throwIfAborted()
-      // A turn's durable settlement, not the idle lifecycle flag, determines its receipt.
-      // oxlint-disable-next-line typescript/no-deprecated -- Read the dedicated execution session's durable settlement.
-      const end = handle.agent.session.snapshotEvents().findLast(event => event.type === 'turn/end')
-      const reason = end?.type === 'turn/end' ? end.data.reason.kind : undefined
-      return { sessionId, state: reason === 'completed' ? 'completed' : reason === 'blocked' ? 'blocked' : 'failed',
-        detail: reason === 'completed'
-          ? 'Agent turn completed. This is not a certification that code or tests passed; inspect the execution session.'
-          : `Agent turn did not complete: ${reason ?? 'no durable turn/end'}` }
+      const session = handle.agent.session
+      const firstRunSeq = session.seq
+      let turnEnd: SessionEvent<'turn/end'> | undefined
+      const stopObserving = ctx.on('session/event', (observed, event) => {
+        if (observed === session && event.seq >= firstRunSeq && event.type === 'turn/end') turnEnd = event
+      })
+      try {
+        handle.agent.followup(createUserMessage({
+          content: [{ type: 'text', text: `[Scheduled task ${task.id}; occurrence ${new Date(run.scheduledAt).toISOString()}]\nThe scheduled time has arrived. Execute now; relative delays in the original instruction have already elapsed and must not be waited again.\n${task.prompt}` }],
+          source: { kind: 'plugin', plugin: 'task-scheduler' },
+        }))
+        await handle.agent.whenIdle()
+        await ctx.sessions.flush(session)
+        signal.throwIfAborted()
+        // The latest current-session event supplies its reason; the flush proves the receipt is durable.
+        const reason = turnEnd?.data.reason.kind
+        return { sessionId, state: reason === 'completed' ? 'completed' : reason === 'blocked' ? 'blocked' : 'failed',
+          detail: reason === 'completed'
+            ? 'Agent turn completed. This is not a certification that code or tests passed; inspect the execution session.'
+            : `Agent turn did not complete: ${reason ?? 'no durable turn/end'}` }
+      } finally { stopObserving() }
     } catch (error) {
       return { state: 'failed', sessionId, detail: String(error).slice(0, 2000) }
     } finally {

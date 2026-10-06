@@ -9,4 +9,4 @@ export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSur
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
 export { adoptSessionEvent, snapshotSessionEvent, Session, SessionForkError, decodeSeqRanges, encodeSeqRanges } from './session-core.ts'
-export type { SessionForkSource, SessionForkErrorCode, SessionAppendInput } from './session-core.ts'
+export type { SessionForkSource, SessionForkErrorCode, SessionAppendInput, SessionAppendOptions } from './session-core.ts'
