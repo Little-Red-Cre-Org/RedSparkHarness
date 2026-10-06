@@ -44,6 +44,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/workflow-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-tui/native-tui.snapshot.ts',
+  'snapshots/native-tui/task-schedule.snapshot.ts',
   'snapshots/native-tui/model-controls.snapshot.ts',
   'snapshots/native-tui/preset-controls.snapshot.ts',
   'snapshots/native-tui/human-interaction.snapshot.ts',

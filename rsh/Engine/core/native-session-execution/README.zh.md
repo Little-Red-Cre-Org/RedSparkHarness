@@ -64,7 +64,7 @@ Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工�
 
 active owner 可为精确的当前 root 调用提供 `rootOperations`。这个 Program 所有的 handle 在普通 writer 关闭后仍可使用，前提是原始 Agent 仍活跃。`runIdle()` 同步拒绝忙碌或已释放 root，在 idle maintenance 中临时恢复唯一 writer；成功释放可以唤醒已接纳待处理输入，失败则保留持久化 inbox 事实且不发起模型请求。delegated 调用不提供该 handle。registry 不拥有未来 timer 或第二个 executor。
 
-本包还定义 `rootExecution`，由选定的 Program 提供 Provider。`ready(signal)` 等待真实 executor 与配置，由该 Program 定义。明确的 branded route 绑定 Program 的不可变配置与现有 scope，未知 route 在接纳前失败。`capture(owner)` 只接受精确附着的 root。`execute()` 等待完整 root 结算；`maintenance()` 在不产生模型 turn 的情况下执行持久化 root 事务。这些操作不转移权限，也不注册另一个 executor。
+本包还定义 `rootExecution`，由选定的 Program 提供 Provider。`ready(signal)` 等待真实 executor 与配置，由该 Program 定义。明确的 branded route 绑定 Program 的不可变配置与现有 scope，未知 route 在接纳前失败。`capture(owner)` 只接受精确附着的 root。`execute()` 等待完整 root 结算；`maintenance()` 在不产生模型 turn 的情况下执行持久化 root 事务。计划任务的 root 请求会在发布活动 owner 前记录信息型 `session/root-origin` 事件，因此即使维护阶段未接纳 prompt，Provider 替换和 Session 恢复后仍会保留计划任务分类。这些操作不转移权限，也不注册另一个 executor。
 
 `fork(request, signal)` 使用选定的 Program 路由与已持久化的闭合源轮次创建新根目标，并在复制继承前缀、持久化精确切点后返回目标身份。Program 拥有源观察、Agent 注册、取消及唯一目标写入器；Consumer 不能提供替代 seed 事件，也不能通过源 id 转移权限。
 

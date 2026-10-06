@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-06-native-scheduled-root-work.md
+2026-10-06-native-scheduled-root-work.md: e8c7f62b1b63cac864e6ce5d9a1370cda8516784
+2026-10-06-native-scheduled-root-work.zh.md: f09fc559da6592a2aa03f4aebbcdf1b96f049b5c

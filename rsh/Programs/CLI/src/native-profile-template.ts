@@ -121,6 +121,10 @@ export function shippedNativeProfileComposition(
       { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: ROOT,
         config: { allowParallelInProgress: true } },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
+      ...(profile === 'native-web' || profile === 'native-tui' ? [{
+        id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
+        config: { path: join(home, 'profiles', profile, 'task-scheduler.sqlite') },
+      }] : []),
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
       { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,

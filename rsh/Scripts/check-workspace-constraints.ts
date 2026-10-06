@@ -172,6 +172,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-settings': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-settings-file': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],

@@ -4871,6 +4871,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelReasoningEffort {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n}',
   },
   {
+    name: 'NativeRootRouteId',
+    declaration: 'export type NativeRootRouteId = Branded<\'NativeRootRouteId\'>;',
+  },
+  {
+    name: 'NativeSessionConfiguration',
+    declaration: 'export interface NativeSessionConfiguration {\n    readonly cwd: string;\n    readonly provider: string;\n    readonly model: string;\n    readonly systemPrompt: string;\n    readonly maxSteps: number;\n    readonly builtinTools?: boolean;\n    readonly reasoningEffort?: ReasoningEffortId;\n    readonly maxTokens?: number;\n}',
+  },
+  {
     name: 'NativeSessionDeletionOperations',
     declaration: 'export interface NativeSessionDeletionOperations {\n    delete(id: SessionId, options?: {\n        readonly signal?: AbortSignal;\n        readonly expectedRevision?: SessionPersistenceRevision;\n    }): Promise<SessionDeletionReceipt>;\n    restore(id: SessionDeletionId, options?: {\n        readonly signal?: AbortSignal;\n        readonly expectedCwd?: string;\n    }): Promise<SessionId>;\n    inspect(id: SessionDeletionId, options?: {\n        readonly signal?: AbortSignal;\n    }): Promise<SessionHeader>;\n    list(options?: {\n        readonly signal?: AbortSignal;\n    }): Promise<readonly SessionDeletionReceipt[]>;\n}',
   },
@@ -6068,7 +6076,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'TaskInput',
-    declaration: 'export interface TaskInput {\n    countdownStartedAt?: string | undefined;\n    kind?: \'goal\' | \'scheduled\' | undefined;\n    completionCriteria?: string | undefined;\n    maxGoalRounds?: number | undefined;\n    title: string;\n    prompt: string;\n    workspace: string;\n    agentPreset: string;\n    permissionPreset: string;\n    provider: string;\n    model: string;\n    at: string;\n    endAt?: string | undefined;\n    everySeconds?: number | undefined;\n}',
+    declaration: 'export interface TaskInput {\n    countdownStartedAt?: string | undefined;\n    kind?: \'goal\' | \'scheduled\' | undefined;\n    completionCriteria?: string | undefined;\n    maxGoalRounds?: number | undefined;\n    title: string;\n    prompt: string;\n    workspace: string;\n    nativeRoute?: NativeRootRouteId | undefined;\n    nativeConfiguration?: Readonly<NativeSessionConfiguration> | undefined;\n    agentPreset?: string | undefined;\n    permissionPreset?: string | undefined;\n    provider: string;\n    model: string;\n    at: string;\n    endAt?: string | undefined;\n    everySeconds?: number | undefined;\n}',
   },
   {
     name: 'TaskNotice',

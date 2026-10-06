@@ -20,11 +20,16 @@ import type { ExecuteTask } from './types.ts'
 export function agentExecutor(ctx: Context): ExecuteTask {
   return async (task, run, signal, progress) => {
     signal.throwIfAborted()
-    ctx.permissionPresets.resolve(task.permissionPreset)
-    const preset = await ctx.agentPresets.resolve(task.agentPreset)
+    if (task.nativeRoute !== undefined || task.agentPreset === undefined || task.permissionPreset === undefined) {
+      throw new Error('Compatibility execution requires explicit Agent and permission presets')
+    }
+    const agentPreset = task.agentPreset
+    const permissionPreset = task.permissionPreset
+    ctx.permissionPresets.resolve(permissionPreset)
+    const preset = await ctx.agentPresets.resolve(agentPreset)
     await ctx.agentPresets.standingKeyFor(preset.id)
     const workspace = await ctx.workspaceRegistry.create(task.workspace)
-    const sessionId = brandString<SessionId>(run.sessionId ?? `scheduled-${run.id}`)
+    const sessionId = brandString<SessionId>(run.sessionId)
     const setup = async (agentCtx: Context) => { await ctx.agentPresets.mount(agentCtx, preset.id) }
     const existing = ctx.agents.get(sessionId)
     if (existing && (!task.resumeSessionId || existing.status !== 'idle')) throw new Error('Execution session is busy; wait before continuing')
@@ -41,7 +46,7 @@ export function agentExecutor(ctx: Context): ExecuteTask {
     try {
       signal.throwIfAborted()
       await workspace.attachSession(sessionId)
-      if (!existing) ctx.permissionPresets.set(handle.agent.session, task.permissionPreset)
+      if (!existing) ctx.permissionPresets.set(handle.agent.session, permissionPreset)
       ctx.sessionTitle.rename(handle.agent.session, `${task.kind === 'goal' ? '[Goal]' : '[Scheduled]'} ${task.title}`)
       if (task.kind === 'goal') {
         if (!ctx.tools.get('update_goal', handle.agent)) throw new Error('Goal service and goal tools must be enabled in this preset')
@@ -84,7 +89,6 @@ export function agentExecutor(ctx: Context): ExecuteTask {
       await ctx.sessions.flush(handle.agent.session)
       signal.throwIfAborted()
       // A turn's durable settlement, not the idle lifecycle flag, determines its receipt.
-      // oxlint-disable-next-line typescript/no-deprecated -- Read the dedicated execution session's durable settlement.
       const end = handle.agent.session.snapshotEvents().findLast(event => event.type === 'turn/end')
       const reason = end?.type === 'turn/end' ? end.data.reason.kind : undefined
       return { sessionId, state: reason === 'completed' ? 'completed' : reason === 'blocked' ? 'blocked' : 'failed',

@@ -61,6 +61,8 @@ export interface NativeTurnRequest {
   readonly resume: boolean
   /** Program-selected immutable route; direct calls use their existing bound route or configured base. */
   readonly route?: NativeRootRouteId
+  /** Root admission classification persisted before the active owner is published. */
+  readonly rootOrigin?: 'scheduled'
   /** Explicit composition for a fresh root; resume and fork use accepted history. */
   readonly preset?: string
   readonly message?: UserMessage
@@ -93,12 +95,12 @@ export interface NativeTurnResult {
 }
 
 /** Resolve typed Program routing without parsing another Program's additional configuration fields. */
-function resolveRootRoute(config: Config): Readonly<NativeRootRoute> {
-  const { cwd, provider, model, systemPrompt, maxSteps, reasoningEffort, maxTokens } = config
+function resolveRootRoute(config: ResolvedConfig): Readonly<NativeRootRoute> {
+  const { cwd, provider, model, systemPrompt, maxSteps, builtinTools, reasoningEffort, maxTokens } = config
   return Object.freeze({
     id: config.rootRouteId === undefined ? brandString<NativeRootRouteId>('root') : config.rootRouteId,
     ...config.workspaceRoutes === undefined ? {} : { workspaceSelection: true as const },
-    configuration: Object.freeze({ cwd, provider, model, systemPrompt, maxSteps,
+    configuration: Object.freeze({ cwd, provider, model, systemPrompt, maxSteps, builtinTools,
       ...reasoningEffort === undefined ? {} : { reasoningEffort },
       ...maxTokens === undefined ? {} : { maxTokens } }),
   })
@@ -280,7 +282,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly fs: import('@deepseek-ai/dsh-fs/native').FileSystemOperations,
     private readonly storage: NativeSessionPersistenceOperations,
     private readonly modelExecution: NativeModelExecution,
-    private readonly config: Config,
+    private readonly config: ResolvedConfig,
     private readonly agents: NativeAgentRegistry,
     private readonly tools: NativeToolRegistry | undefined,
     private readonly promptSections: NativePromptRegistry | undefined,
@@ -584,6 +586,8 @@ export class NativeHeadlessApplication implements NativeApplication {
       this.seededContinuations.add(owner)
       if (forkSeed !== undefined) await owner.discard()
       releaseObservation = owner.onEvent(notifyEvent)
+      const rootOrigin = await this.admitRootOrigin(owner, request.rootOrigin, invocation,
+        this.activeOwners.get(owner)?.owner)
       if (rootObservation !== undefined) {
         const releaseEvents = releaseObservation
         const observers = this.rootChunkObservers.get(owner) ?? new Set<(chunk: StreamChunk) => void>()
@@ -600,7 +604,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       this.currentTurns.set(owner, turnOwnership)
       const rootEpoch = this.rootEpochs.get(id)
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
-      activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config)
+      activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config, rootOrigin)
       const schemas = [
         ...(config.builtinTools ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])] : []),
         ...(this.tools?.modelSchemas(agent.scope) ?? []),
@@ -967,7 +971,7 @@ export class NativeHeadlessApplication implements NativeApplication {
    * @param signal - caller cancellation before and during exclusive idle admission.
    * @returns the operation result after durable writes and idle Consumers settle; retained work may continue.
    */
-  executeSessionOperation<T>(request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route'>,
+  executeSessionOperation<T>(request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route' | 'rootOrigin'>,
     operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> {
     if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
     signal.throwIfAborted()
@@ -977,12 +981,16 @@ export class NativeHeadlessApplication implements NativeApplication {
     const active = live === undefined ? undefined : this.activeOwners.get(live)?.owner
     if (active !== undefined) {
       if (!request.resume) throw new Error('native-headless: fresh Session identity is already active')
+      if (request.rootOrigin !== undefined && active.rootOrigin !== request.rootOrigin) {
+        throw new Error('native-headless: root origin differs from its attached owner')
+      }
       return this.runLiveSessionOperation(active, operation, signal)
     }
     return this.withRootExecution(request, signal, execution => this.runIdleSessionOperation(execution, request, operation, signal))
   }
 
-  private runIdleSessionOperation<T>(execution: NativeAgentExecution, request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route'>,
+  private runIdleSessionOperation<T>(execution: NativeAgentExecution,
+    request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route' | 'rootOrigin'>,
     operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal,
     forkSeed?: NativeRootForkSeed): Promise<T> {
     return execution.runMaintenance(async (agentSignal) => {
@@ -1657,12 +1665,32 @@ export class NativeHeadlessApplication implements NativeApplication {
     })
   }
 
+  private async admitRootOrigin(owner: NativeContinuationSession, requested: 'scheduled' | undefined,
+    invocation: 'root' | 'delegated', activeOwner: NativeActiveSessionOwner | undefined): Promise<'scheduled' | undefined> {
+    if (requested !== undefined && invocation !== 'root') {
+      throw new Error('native-headless: scheduled origin requires the selected root executor')
+    }
+    const scheduled = requested === 'scheduled' || owner.scheduledRoot
+    if (activeOwner !== undefined && activeOwner.rootOrigin !== (scheduled ? 'scheduled' : undefined)) {
+      throw new Error('native-headless: root origin differs from its attached owner')
+    }
+    if (!scheduled) return undefined
+    if (!owner.scheduledRoot) await owner.markScheduledRoot()
+    return 'scheduled'
+  }
+
   private async ensureActiveOwner(owner: NativeContinuationSession, agent: NativeAgent,
-    invocation: 'root' | 'delegated', config: Config): Promise<NativeProgramActiveSession | undefined> {
+    invocation: 'root' | 'delegated', config: Config,
+    rootOrigin: 'scheduled' | undefined): Promise<NativeProgramActiveSession | undefined> {
     if (this.activeSessionRegistry === undefined) return undefined
     const existing = this.activeOwners.get(owner)
-    if (existing !== undefined) return existing.owner
-    const active = new NativeProgramActiveSession(agent, owner, invocation, {
+    if (existing !== undefined) {
+      if (existing.owner.rootOrigin !== rootOrigin) {
+        throw new Error('native-headless: root origin differs from its attached owner')
+      }
+      return existing.owner
+    }
+    const active = new NativeProgramActiveSession(agent, owner, invocation, rootOrigin, {
       signal: AbortSignal.any([this.agents.execution(agent).signal, this.context.signal, this.operationCancellation.signal]),
       retain: () => {
         const childRetention = this.continuationRuntime.retainChild(agent)

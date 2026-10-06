@@ -19,7 +19,9 @@ import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instruction
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import { brandString } from '@deepseek-ai/dsh-brand'
 import { SessionId } from '@deepseek-ai/dsh-session'
+import type { NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../src/native.ts'
 
@@ -37,13 +39,14 @@ async function fixture(
   let filesystem: LocalFileSystemBackend | undefined
   let agents: NativeAgentRegistry | undefined
   let tools: NativeToolRegistry | undefined
+  let rootExecution: NativeRootExecutionOperations | undefined
   let approval: NativeApprovalService | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools'], optional: ['approval'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution'], optional: ['approval'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       const provided = context.require('fs')
@@ -51,6 +54,7 @@ async function fixture(
       filesystem = provided
       agents = context.require('agents')
       tools = context.require('tools')
+      rootExecution = context.require('rootExecution')
       approval = context.optional('approval')
     },
   }
@@ -71,9 +75,21 @@ async function fixture(
     ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
   ], 'host'))
   await host.start()
-  if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined) throw new Error('missing native application dependencies')
-  return { host, scope, app, filesystem, agents, tools, approval, adapter, directory, workspace, sessions }
+  if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined || rootExecution === undefined) throw new Error('missing native application dependencies')
+  return { host, scope, app, filesystem, agents, tools, rootExecution, approval, adapter, directory, workspace, sessions }
 }
+
+it('captures resolved builtin tool defaults and explicit route selection', async () => {
+  for (const [options, expected] of [[{}, true], [{ ptc: true }, false]] as const) {
+    const state = await fixture([], options)
+    try {
+      expect(state.rootExecution.resolve(brandString<NativeRootRouteId>('root')).configuration.builtinTools).toBe(expected)
+    } finally {
+      await state.host.stop()
+      await rm(state.directory, { recursive: true, force: true })
+    }
+  }
+})
 
 it('logs the model-visible request and tool result, then resumes the same stored Session', async () => {
   const state = await fixture([
@@ -408,20 +424,25 @@ it('runs registered native tools under the exact live Agent initiator', async ()
     toolCallResponse('identity-1', 'identity', {}),
     textResponse('identity confirmed'),
   ])
+  let initiatedAgent: unknown
   const dispose = state.tools.register({
     schema: { name: 'identity', description: 'Confirm the current native Agent.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
     async execute(call) {
       expect(state.agents.requireInitiator()).toBe(call.agent)
       expect(state.agents.get(call.agent.id)).toBe(call.agent)
+      initiatedAgent = call.agent
       return { content: [{ type: 'text', text: String(call.agent.id) }], isError: false }
     },
   })
   try {
     await state.host.run(state.scope, { kind: 'identity' }, invocation => state.app.run(['confirm', 'identity'], invocation.signal))
-    expect(state.agents.list()).toEqual([])
+    const resident = state.agents.list()
+    expect(resident).toHaveLength(1)
+    expect(resident[0]).toBe(initiatedAgent)
   } finally {
     await dispose()
     await state.host.stop()
+    expect(state.agents.list()).toEqual([])
     await rm(state.directory, { recursive: true, force: true })
   }
 })

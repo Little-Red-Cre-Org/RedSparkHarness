@@ -13,12 +13,16 @@ export class NativeContinuationSession {
   private readonly inbox: Record<InboxTarget, readonly UserMessage[]> = { 'next-turn': [], 'next-step': [] }
   private readonly tracked = new Set<AppendObserver>()
   private readonly accepted = new Set<AppendObserver>()
+  private rootOrigin: 'scheduled' | undefined
   private persistence: Promise<void> = Promise.resolve()
   private failure: { readonly error: unknown } | undefined
   private closing: Promise<void> | undefined
 
   private constructor(readonly session: Session, readonly writer: Writer, readonly initialEvents: readonly SessionEvent[]) {
     for (const event of initialEvents) this.foldInbox(event)
+    const origins = initialEvents.filter(event => event.seq >= writer.inheritedEventCount && event.type === 'session/root-origin')
+    if (origins.length > 1) throw new Error('native-continuation: Session has duplicate root origin records')
+    if (origins.length > 0) this.rootOrigin = 'scheduled'
   }
 
   /**
@@ -79,6 +83,11 @@ export class NativeContinuationSession {
   /** Whether either durable inbox destination has unclaimed input. */
   get hasPending(): boolean { return this.inbox['next-turn'].length > 0 || this.inbox['next-step'].length > 0 }
 
+  /**
+   * @returns Whether this Session writer owns a persisted scheduled-root classification.
+   */
+  get scheduledRoot(): boolean { return this.rootOrigin === 'scheduled' }
+
   /** Whether this writer owner has closed admission and started draining. */
   get isClosing(): boolean { return this.closing !== undefined }
 
@@ -112,6 +121,22 @@ export class NativeContinuationSession {
     this.foldInbox(event)
     this.pending.push(event)
     for (const observer of this.tracked) observer(event)
+  }
+
+  /**
+   * Persist the scheduled root marker before publishing its active owner.
+   * @returns completion of the marker's storage durability barrier.
+   */
+  async markScheduledRoot(): Promise<void> {
+    this.assertOpen()
+    if (this.rootOrigin !== undefined) throw new Error('native-continuation: Session already has a root origin')
+    const event = this.session.appendBatch([{
+      type: 'session/root-origin', data: { origin: 'scheduled' }, opts: { ignorable: true },
+    }])[0]
+    if (event === undefined) throw new Error('native-continuation: root origin admission produced no event')
+    this.rootOrigin = 'scheduled'
+    this.track(event)
+    await this.persist()
   }
 
   /**

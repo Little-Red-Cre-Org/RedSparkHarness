@@ -35,6 +35,10 @@ export function apply(ctx: Context, config: Config): void {
   }
   ctx.effect(() => {
     const store = new TaskStore(config.path)
+    if (store.tasks().some(task => task.nativeRoute !== undefined)) {
+      store.close()
+      throw new Error('Compatibility task scheduling cannot load native Program routes')
+    }
     new TaskSchedulerGateway(ctx, store, config)
     const engine = new SchedulerEngine(store, agentExecutor(ctx), config, (error) => { ctx.logger.error(String(error)) })
     const owners = new Map<Agent, () => void>()

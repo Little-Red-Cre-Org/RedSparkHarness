@@ -266,6 +266,12 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-client-ui-conversation',
         '@deepseek-ai/dsh-client-ui-slots',
       ],
+      '@deepseek-ai/dsh-task-scheduler': [
+        '@deepseek-ai/dsh-native-agent',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-native-session-execution',
+        '@deepseek-ai/dsh-typert-protocol',
+      ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
@@ -1144,6 +1150,52 @@ describe('dependency sections', () => {
     expect(collectPackageDependencyViolations(state(session))).toEqual([])
     sessionManifest.peerDependenciesMeta = { [scope]: { optional: false } }
     expect(collectPackageDependencyViolations(state(session))).toContainEqual(expect.stringContaining(scope))
+
+    const tools = '@deepseek-ai/dsh-tools'
+    const typertProtocol = '@deepseek-ai/dsh-typert-protocol'
+    const schedulerManifest: PackageDependencyManifest = {
+      name: '@deepseek-ai/dsh-task-scheduler',
+      exports: { '.': './lib/index.js', './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+      peerDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
+      peerDependenciesMeta: { [tools]: { optional: true }, [typertProtocol]: { optional: true } },
+    }
+    const scheduler = {
+      ...facts(schedulerManifest),
+      manifestPath: 'rsh/Modules/Official/automation/task-scheduler/package.json',
+      workspaceNames: new Set([CORDIS, tools, typertProtocol]),
+      allSourceUses: new Map([
+        [tools, ['rsh/Modules/Official/automation/task-scheduler/src/tools.ts']],
+        [typertProtocol, ['rsh/Modules/Official/automation/task-scheduler/src/gateway.ts', 'rsh/Modules/Official/automation/task-scheduler/src/client/index.ts']],
+      ]),
+      hostRuntimeSourceUses: new Map([
+        [tools, ['rsh/Modules/Official/automation/task-scheduler/src/tools.ts']],
+        [typertProtocol, ['rsh/Modules/Official/automation/task-scheduler/src/gateway.ts']],
+      ]),
+      hostRuntimeExportUses: [{
+        packageName: tools,
+        specifier: tools,
+        exportName: 'defineTool',
+        sourcePath: 'rsh/Modules/Official/automation/task-scheduler/src/tools.ts',
+        line: 1,
+        column: 10,
+        sourceLine: `import { defineTool } from '${tools}'`,
+      }, {
+        packageName: typertProtocol,
+        specifier: typertProtocol,
+        exportName: 'TypertRemoteService',
+        sourcePath: 'rsh/Modules/Official/automation/task-scheduler/src/gateway.ts',
+        line: 1,
+        column: 10,
+        sourceLine: `import { TypertRemoteService } from '${typertProtocol}'`,
+      }],
+      peerRequiredHostDependencies: new Set([tools]),
+    }
+    expect(collectPackageDependencyViolations(state(scheduler))).toEqual([])
+    delete (schedulerManifest.exports as Record<string, unknown>)['./native']
+    expect(collectPackageDependencyViolations(state(scheduler))).toContainEqual(
+      expect.stringContaining(`${tools} must be matching peerDependencies + devDependencies`),
+    )
 
     const rendererManifest: PackageDependencyManifest = {
       name: '@deepseek-ai/dsh-client-ui-renderer',

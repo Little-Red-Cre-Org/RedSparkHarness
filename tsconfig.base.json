@@ -633,6 +633,7 @@
       "@deepseek-ai/dsh-storage/native": ["./rsh/Core/storage/storage/src/native.ts"],
       "@deepseek-ai/dsh-subagent-protocol/assistant-output": ["./rsh/Engine/subagent/subagent-protocol/src/assistant-output.ts"],
       "@deepseek-ai/dsh-subagent-protocol/descriptor": ["./rsh/Engine/subagent/subagent-protocol/src/descriptor.ts"],
+      "@deepseek-ai/dsh-task-scheduler/native": ["./rsh/Modules/Official/automation/task-scheduler/src/native.ts"],
       "@deepseek-ai/dsh-terminal-bash/native": ["./rsh/Modules/Official/terminal/terminal-bash/src/native.ts"],
       "@deepseek-ai/dsh-terminal/error": ["./rsh/Modules/Official/terminal/terminal/src/error.ts"],
       "@deepseek-ai/dsh-terminal/native": ["./rsh/Modules/Official/terminal/terminal/src/native.ts"],

@@ -113,6 +113,7 @@
     "snapshots/native-headless/native-headless.snapshot.ts",
     "snapshots/native-headless/tool-results.snapshot.ts",
     "snapshots/native-tui/native-tui.snapshot.ts",
+    "snapshots/native-tui/task-schedule.snapshot.ts",
     "rsh/Programs/TUI/native-tui/tests/**/*.ts",
     "snapshots/native-headless/human-question.snapshot.ts",
     "snapshots/native-headless/mcp-image-native.snapshot.ts",

@@ -93,6 +93,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/automation/task-scheduler', 'Native and Cordis schedulers share SQLite plan facts while selected Programs own Agent execution and Session writers'],
   ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
   ['rsh/Engine/subagent/tool-subagent-control', 'Native and Cordis controls route adjacent messages and interruption through their selected Subagent Provider'],
@@ -166,6 +167,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/workflow/tool-workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/tool-ralph', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/automation/task-scheduler', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
   ['rsh/Modules/Official/terminal/tool-terminal', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
