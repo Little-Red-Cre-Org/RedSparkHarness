@@ -26,6 +26,8 @@ export interface GoalRef {
 
 /** Input whose omitted round cap is resolved by the service configuration. */
 export interface CreateGoalRequest {
+  /** Optional human observation; null requires absence, a reference requires the same completed Goal. */
+  readonly expectedRef?: GoalRef | null
   readonly objective: string
   readonly maxGoalRounds?: number
 }
@@ -123,30 +125,4 @@ export interface GoalProjectionState {
   readonly seenGoalIds: GoalId[]
   /** First strict replay failure, or null while the durable stream is valid. */
   readonly failure: string | null
-}
-
-declare module '@deepseek-ai/dsh-session-projection/types' {
-  interface SessionProjectionStateMap {
-    goal: GoalProjectionState
-  }
-  interface SessionProjectionMap {
-    /**
-     * The session's current goal and admitted-round count, or
-     * `null` before the first create and after a clear tombstone.
-     * `goal/change` supplies the whole lifecycle value; matching admitted
-     * `user/message` events advance `roundsStarted`.
-     */
-    goal: GoalProjection | null
-  }
-}
-
-declare module '@deepseek-ai/cordis' {
-  interface Events {
-    /**
-     * Process-local goal activation changed for one session.
-     * @mode emit
-     * @param payload - session id and the exact current goal activation, or no goal after a clear.
-     */
-    'goal/activation-changed'(payload: GoalActivationChanged): void
-  }
 }

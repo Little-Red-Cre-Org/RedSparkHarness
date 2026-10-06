@@ -18,7 +18,7 @@
       "path": "../../core/agent"
     },
     {
-      "path": "../goal"
+      "path": "../goal/tsconfig.host.json"
     },
     {
       "path": "../../llm/llm"
@@ -28,6 +28,12 @@
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.host.json"
     }
   ]
 }

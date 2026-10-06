@@ -86,6 +86,10 @@ This section explains how the tools enforce authority and render output; the obs
 
 All three tools share one canonical output: the compact JSON `{ goal: null }` or `{ goal: { id, revision, objective, phase, roundsStarted, maxGoalRounds, blockedReason? }, activation }`. `activation` in a result is a live observation and never becomes replay authority. UI clients receive pure generic cards — read for `get_goal`, other for mutations.
 
+### Native profile
+
+Native profiles select `./native`, with configurable `blockedAfterConsecutiveRounds` (default `3`) and `promptOrder` (default `500`). Authority comes from the exact live Program owner, runtime root/delegated invocation role, and durably logged inputs of the current open turn. A historical child Session resumed as root uses the current invocation role. Autonomous completion and blocking require the exact admitted Goal round; wrap-up context is logged before the final assistant answer.
+
 </details>
 
 -----

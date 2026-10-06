@@ -40,6 +40,15 @@
     },
     {
       "path": "../../../../Core/util/crypto"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
     }
   ]
 }

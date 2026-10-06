@@ -74,8 +74,10 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
       result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' } },
     })
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 5, method: 'session/prompt',
-      params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'image', data: 'AA==', mimeType: 'image/png' }] } })}\n`)
-    expect(await receive(frame => frame.id === 5)).toMatchObject({ error: { message: expect.stringContaining('text contentBlocks') as unknown } })
+      params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'audio' }] } })}\n`)
+    expect(await receive(frame => frame.id === 5)).toMatchObject({ error: {
+      message: expect.stringContaining('text or encoded raster images') as unknown,
+    } })
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt',
       params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'text', text: 'say hello' }] } })}\n`)
     expect(await receive(frame => frame.id === 2)).toMatchObject({ result: { messageId: expect.any(String) as unknown } })

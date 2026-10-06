@@ -356,6 +356,10 @@ describe('package payload constraints', () => {
     ])
   })
 
+  it('includes the emitted Workflow type module required by its root bundle', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-workflow' })).toContain('lib/types.js')
+  })
+
   it('includes the separately published Todo Client entry', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-tool-todo' })).toContain('lib/client-native.js')
   })

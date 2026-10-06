@@ -2,7 +2,7 @@
 
 [English](goal.md) | 中文
 
-事件溯源目标服务及其策略消费方共享的类型。[目标领域 Agent Note](../../../.agents/notes/implemented/feature/2026-07-19-persisted-same-session-goal-domain.zh.md) 负责记录持久化与激活决策；本页记录 [`rsh/Engine/goal/goal/src/types.ts`](../../Engine/goal/goal/src/types.ts) 中的确切字段和变体。
+事件溯源目标服务及其策略消费方共享的类型。[目标领域 Agent Note](../../../.agents/notes/implemented/feature/2026-07-19-persisted-same-session-goal-domain.zh.md) 负责记录持久化与激活决策；本页记录 [`types.ts`](../../Engine/goal/goal/src/types.ts) 与 [`facts.ts`](../../Engine/goal/goal/src/facts.ts) 中的确切声明。
 
 ## 标识与生命周期
 
@@ -131,11 +131,13 @@ interface GoalMessageSource {
 
 ## 请求与通知
 
-创建操作会区分调用方省略字段与采用部署配置值这两种情况，`create()` 会在内部解析后者。编辑是局部替换，其运行时校验器要求至少提供一个字段。每条变更通知都会携带获准的操作和确切修订号；清除操作不带 `goal`。
+创建操作会在内部解析调用方省略的 Round 上限。可选 `expectedRef` 要求当前没有 Goal（`null`），或要求当前恰好是调用方观察到的已完成 Goal；引用过期时会拒绝替换。省略 `expectedRef` 会保留普通创建行为。编辑是局部替换，其运行时校验器要求至少提供一个字段。每条变更通知都会携带获准的操作和确切修订号；清除操作不带 `goal`。
 
 ```ts type-equiv
 /** Input whose omitted round cap is resolved by the service configuration. */
 interface CreateGoalRequest {
+  /** Optional human observation; null requires absence, a reference requires the same completed Goal. */
+  readonly expectedRef?: GoalRef | null
   readonly objective: string
   readonly maxGoalRounds?: number
 }
@@ -199,7 +201,7 @@ disarm(agent: Agent): GoalView | undefined
  * Create and arm a goal. A completed goal may be replaced; every other
  * current phase must be cleared or resumed instead.
  * @param agent - owning live agent.
- * @param request - objective and optional round cap.
+ * @param request - objective, optional round cap and observed Goal reference.
  * @returns the created live view.
  */
 create(agent: Agent, request: CreateGoalRequest): GoalView
@@ -258,7 +260,7 @@ block(agent: Agent, ref: GoalRef, reason: GoalBlockReason): GoalView
 /**
  * Create one Goal through the remote boundary.
  * @param agent - exact live Agent resolved from the wire identity.
- * @param request - objective and optional round cap.
+ * @param request - objective, optional round cap and observed Goal reference.
  * @returns the created Goal identity.
  */
 @Remote('create') remoteExportCreate(agent: Agent, request: CreateGoalRequest): CreateGoalResult
@@ -287,7 +289,7 @@ Process-local goal activation changed for one session.
 'goal/activation-changed'(payload: GoalActivationChanged): void
 ```
 
-Source: [`rsh/Engine/goal/goal/src/types.ts`](../../Engine/goal/goal/src/types.ts)
+Source: [`rsh/Engine/goal/goal/src/compatibility-events.ts`](../../Engine/goal/goal/src/compatibility-events.ts)
 
 <a id="goalchanged--emit"></a>
 

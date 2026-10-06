@@ -149,6 +149,7 @@ const NON_SOURCE_DIRECTORIES = new Set([
 
 /** Glob traversal exclusions corresponding to the non-source path predicate. */
 export const TRANSLATION_SCOPE_GLOB_EXCLUDES = [
+  'output/**',
   '.agents/notes/archived/**',
   '**/node_modules/**',
   '**/lib/**',
@@ -177,6 +178,7 @@ function isTranslationSourceExcluded(file: string): boolean {
   return segments.some(segment => NON_SOURCE_DIRECTORIES.has(segment)
       || segment.startsWith('.doc-typecheck-')
     || segment.startsWith('.node-next-types-'))
+    || file.startsWith('output/')
     || file.startsWith('rsh/Programs/Web/application/dist/')
     || file.startsWith('rsh/Docs/website/')
     || file.startsWith('rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-')

@@ -55,7 +55,9 @@ export interface NativeSessionContinuation {
    * @returns accepted message id, independently of its eventual execution.
    */
   enqueue(message: UserMessage, target: InboxTarget, signal: AbortSignal): Promise<MessageId>
-  /** Interrupt current work while preserving unclaimed input. @param reason - driver cancellation cause. */
+  /** Request interruption while preserving unclaimed input; the current turn settles asynchronously.
+   * @param reason - driver cancellation cause.
+   */
   interrupt(reason: unknown): void
   /** Retain residency while an owned descendant has work. @returns exact idempotent ownership release. */
   retainChild(): () => void

@@ -394,7 +394,8 @@ export class NativeContinuationRuntime {
         get isClosing() { return activation.isClosing },
         ready: ready.promise, done: activation.done,
         enqueue: (message, target, admissionSignal) => activation.enqueue(message, target, admissionSignal),
-        interrupt: (reason) => { activation.interrupt(reason) }, retainChild: () => activation.retainChild(),
+        // Interruption is request-only; execution and cleanup failures remain visible through done and dispose.
+        interrupt: (reason) => { void activation.interrupt(reason) }, retainChild: () => activation.retainChild(),
         dispose: () => activation.close(),
       }
       const live: Resident = { request, parent, owner, activation, handle }

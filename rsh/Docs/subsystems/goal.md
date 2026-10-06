@@ -2,7 +2,7 @@
 
 English | [中文](goal.zh.md)
 
-Types shared by the event-sourced goal service and its policy consumers. The [goal-domain Agent Note](../../../.agents/notes/implemented/feature/2026-07-19-persisted-same-session-goal-domain.md) owns the persistence and activation decisions; this page records the exact fields and variants from [`rsh/Engine/goal/goal/src/types.ts`](../../Engine/goal/goal/src/types.ts).
+Types shared by the event-sourced goal service and its policy consumers. The [goal-domain Agent Note](../../../.agents/notes/implemented/feature/2026-07-19-persisted-same-session-goal-domain.md) owns the persistence and activation decisions; this page records the exact declarations from [`types.ts`](../../Engine/goal/goal/src/types.ts) and [`facts.ts`](../../Engine/goal/goal/src/facts.ts).
 
 ## Identity and lifecycle
 
@@ -131,11 +131,13 @@ interface GoalMessageSource {
 
 ## Requests and notifications
 
-Creation separates caller omission from the deployment choice, which `create()` resolves internally. An edit is a partial replacement whose runtime validator requires at least one field. Every mutation notification carries the accepted operation and exact revision; clear omits `goal`.
+Creation resolves an omitted round cap internally. Its optional `expectedRef` requires either no current Goal (`null`) or the exact completed Goal observed by the caller; stale references reject replacement. Omitting `expectedRef` keeps ordinary creation behavior. An edit is a partial replacement whose runtime validator requires at least one field. Every mutation notification carries the accepted operation and exact revision; clear omits `goal`.
 
 ```ts type-equiv
 /** Input whose omitted round cap is resolved by the service configuration. */
 interface CreateGoalRequest {
+  /** Optional human observation; null requires absence, a reference requires the same completed Goal. */
+  readonly expectedRef?: GoalRef | null
   readonly objective: string
   readonly maxGoalRounds?: number
 }
@@ -199,7 +201,7 @@ disarm(agent: Agent): GoalView | undefined
  * Create and arm a goal. A completed goal may be replaced; every other
  * current phase must be cleared or resumed instead.
  * @param agent - owning live agent.
- * @param request - objective and optional round cap.
+ * @param request - objective, optional round cap and observed Goal reference.
  * @returns the created live view.
  */
 create(agent: Agent, request: CreateGoalRequest): GoalView
@@ -258,7 +260,7 @@ block(agent: Agent, ref: GoalRef, reason: GoalBlockReason): GoalView
 /**
  * Create one Goal through the remote boundary.
  * @param agent - exact live Agent resolved from the wire identity.
- * @param request - objective and optional round cap.
+ * @param request - objective, optional round cap and observed Goal reference.
  * @returns the created Goal identity.
  */
 @Remote('create') remoteExportCreate(agent: Agent, request: CreateGoalRequest): CreateGoalResult
@@ -287,7 +289,7 @@ Process-local goal activation changed for one session.
 'goal/activation-changed'(payload: GoalActivationChanged): void
 ```
 
-Source: [`rsh/Engine/goal/goal/src/types.ts`](../../Engine/goal/goal/src/types.ts)
+Source: [`rsh/Engine/goal/goal/src/compatibility-events.ts`](../../Engine/goal/goal/src/compatibility-events.ts)
 
 <a id="goalchanged--emit"></a>
 

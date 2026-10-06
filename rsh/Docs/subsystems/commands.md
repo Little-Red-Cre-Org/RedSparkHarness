@@ -4,7 +4,7 @@ English | [中文](commands.zh.md)
 
 The human-command registry service from [`dsh-commands`](../../Modules/Official/interaction/commands). Interactive adapters use it to discover and directly execute plugin-owned commands for an exact agent without creating a model message. The [command Agent Note](../../../.agents/notes/implemented/feature/2026-07-19-plugin-command-registration.md) owns dispatch and lifecycle rationale; the [package README](../../Modules/Official/interaction/commands/README.md) owns composition and limitations.
 
-Source: [`rsh/Modules/Official/interaction/commands/src/index.ts`](../../Modules/Official/interaction/commands/src/index.ts)
+Source: [registry](../../Modules/Official/interaction/commands/src/index.ts), [shared declarations](../../Modules/Official/interaction/commands/src/facts.ts), and [parser](../../Modules/Official/interaction/commands/src/parse.ts).
 
 ## Input metadata
 

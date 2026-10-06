@@ -1,0 +1,436 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_goal",
+      "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "create_goal",
+      "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "description": "The direct human completion objective."
+          },
+          "max_goal_rounds": {
+            "type": "number",
+            "description": "Optional positive safe-integer automatic round cap."
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_goal",
+      "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "edit",
+              "pause",
+              "resume",
+              "complete",
+              "blocked"
+            ]
+          },
+          "objective": {
+            "type": "string"
+          },
+          "max_goal_rounds": {
+            "type": "number"
+          },
+          "blocked_reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "revision",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": [
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  ]
+}
