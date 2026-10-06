@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-sandbox` selects the existing sandboxing filesystem for a native profile. It requires `sandboxPolicy`, adapts that policy into the shared Cordis Context, and provides the only native `fs` service. A denied mutation stays denied and this bridge never falls back to bare local storage.
+`dsh-compat-fs-sandbox` selects the existing sandboxing filesystem for a native profile. It requires `sandboxPolicy`, adapts that policy into the shared Cordis Context, and provides the only native `fs` service through a live proxy that follows Loader Provider replacement. A denied mutation stays denied and this bridge never falls back to bare local storage.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The configuration is the local-backend configuration accepted by `dsh-fs-sandbox`. Profiles must also install `dsh-native-sandbox-policy` with an explicit mode and absolute root. Missing policy, unsupported configuration, or a duplicate `fs` Provider rejects activation.
+The configuration is the local-backend configuration accepted by `dsh-fs-sandbox`. The compatibility runtime validates the installed package against its [support matrix](../compat-dsh-runtime/README.md#supported-adapter-set). Updating its Loader entry replaces the Provider behind the live native proxy; disable and removal await Loader cleanup, after which service access fails as unavailable. Profiles must also install `dsh-native-sandbox-policy` with an explicit mode and absolute root. Missing policy, unsupported configuration, or a duplicate `fs` Provider rejects activation.
 
 <a id="model-experience"></a>
 ## Model Experience

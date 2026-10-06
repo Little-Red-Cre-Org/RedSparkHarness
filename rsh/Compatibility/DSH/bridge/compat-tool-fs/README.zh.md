@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-tool-fs` 将旧 read、write 和 edit 工具适配进原生工具和提示词注册表。原生应用仍是模型请求以及持久 `tool/call` 和 `tool/result` 记录的唯一所有者。bridge 将旧文件系统决策转发进原生事件，并在释放共享 Cordis Context 中的插件前等待已接收的工具工作。其 `fs/observed` 转发使用兼容 runtime 的精确同步回声抑制，避免旧策略把同一事件经两个总线来回发送。
+`dsh-compat-tool-fs` 将旧 read、write 和 edit 工具适配进原生工具和提示词注册表。原生应用仍是模型请求以及持久 `tool/call` 和 `tool/result` 记录的唯一所有者。Loader entry 变更会撤销原生工具和提示段落、排空已接收的工具调用和进行中的提示词组装，再按启用的 entry 重建贡献。停用或移除所选旧 observation policy 也会撤销这些贡献。bridge 将文件系统决策转发进原生事件，并使用兼容 runtime 的精确同步 `fs/observed` 回声抑制。
 
 ## 目录
 
@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-bridge 只接受 `dsh-tool-fs` 支持的正整数限制：`readLimit`、`readMaxLineLength`、`readMaxBytes` 和 `readStreamMinSize`。profile 必须提供 `fs`、`tools` 和 `promptSections`。当文件系统具有 sandbox mode 且存在 `sandboxPolicy` 时，旧 write 和 edit 会接收当前 Session 策略。
+bridge 只接受 `dsh-tool-fs` 支持的正整数限制：`readLimit`、`readMaxLineLength`、`readMaxBytes` 和 `readStreamMinSize`。兼容 runtime 会按[支持矩阵](../compat-dsh-runtime/README.zh.md#supported-adapter-set)校验已安装包。更新 entry 配置前会排空工具调用和提示词组装，再替换注册的 schema 和提示文本；停用和移除会撤销它们，只有所选策略与所需 Cordis 服务仍可用时才会在启用后恢复。Profile 必须提供 `fs`、`tools` 和 `promptSections`；选定策略提供方时，可选的 `fsObservationPolicy` 服务会建立启动顺序。当文件系统具有 sandbox mode 且存在 `sandboxPolicy` 时，旧 write 和 edit 会接收当前 Session 策略。
 
 <a id="model-experience"></a>
 ## 模型体验

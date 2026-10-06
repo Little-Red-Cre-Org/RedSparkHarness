@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-compatibility-filesystem-version-support.md
-2026-10-05-compatibility-filesystem-version-support.md: c0bddb72247628413da23b326719a3fd0e082942
-2026-10-05-compatibility-filesystem-version-support.zh.md: eba7a65476b52616b4ea55cae399bc457e9d9267
+2026-10-05-compatibility-filesystem-version-support.md: 4a9fb93551f436a5727404dd06ecc533f1634973
+2026-10-05-compatibility-filesystem-version-support.zh.md: d74fe4888541c7b2ab6cf7de14a7a8795b9648cb

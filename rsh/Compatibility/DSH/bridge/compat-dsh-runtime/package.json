@@ -31,6 +31,7 @@
   "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
   "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
   "dependencies": {
+    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-plugin-host": "workspace:^"
   }

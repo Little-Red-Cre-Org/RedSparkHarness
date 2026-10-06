@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-policy` applies the legacy filesystem observation policy to native `fs/*` events. It forwards decisions and observations from native code into the shared Cordis Context, retaining per-session seen-state and stale-version guards. The compatibility runtime suppresses only a matching synchronous `fs/observed` echo while either bridge is forwarding it. Removing the bridge removes only its own listeners and state.
+`dsh-compat-fs-policy` applies the legacy filesystem observation policy to native `fs/*` events. It forwards decisions and observations from native code into the shared Cordis Context, retaining per-session seen-state and stale-version guards. The compatibility runtime suppresses only a matching synchronous `fs/observed` echo while either bridge is forwarding it. Loader mutations drain and remove this bridge's Native event listeners before changing the policy entry; the listeners return only when that entry is enabled.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The bridge accepts no configuration fields. It provides `fsObservationPolicy`, so a native profile cannot select it together with the native observation-policy Provider in one scope.
+The bridge accepts no configuration fields. The compatibility runtime validates the installed package against its [support matrix](../compat-dsh-runtime/README.md#supported-adapter-set). Its Loader entry accepts an empty configuration update and supports disable, enable, and removal; Native event subscriptions are drained around each operation. It provides `fsObservationPolicy`, so a native profile cannot select it together with the native observation-policy Provider in one scope.
 
 <a id="model-experience"></a>
 ## Model Experience

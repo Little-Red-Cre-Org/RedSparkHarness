@@ -14,7 +14,7 @@ import { plugin, validateLegacyPolicyManifest } from '../src/native.ts'
 it('rejects changed legacy declarations, configuration and duplicate policy authority', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/fs-observation-policy/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacyPolicyManifest>[0]
   expect(() => { validateLegacyPolicyManifest(manifest) }).not.toThrow()
-  expect(() => { validateLegacyPolicyManifest({ dsh: { runtime: { apiVersion: 2, role: 'policy', capability: 'filesystem' } } }) })
+  expect(() => { validateLegacyPolicyManifest({ ...manifest, dsh: { ...manifest.dsh, runtime: { apiVersion: 2, role: 'policy', capability: 'filesystem' } } }) })
     .toThrow('unsupported')
   const scope = new NativeScope()
   expect(() => plugin.resolve({ ignored: true })).toThrow('configuration must be empty')

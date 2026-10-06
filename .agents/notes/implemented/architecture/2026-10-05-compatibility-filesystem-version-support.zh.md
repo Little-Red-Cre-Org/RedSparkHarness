@@ -10,7 +10,7 @@ English | [中文](2026-10-05-compatibility-filesystem-version-support.md)
 
 ## Decision
 
-可选的文件系统兼容 runtime 只接受 Cordis 4.0.2，即固定的 vendor 版本。其 README 拥有同版本 RSH 包的首批 Host 适配器矩阵。各适配器保留既有配置校验和原生清理所有权。不支持 Loader 配置、HMR 和 Client 适配器。
+可选的文件系统兼容 runtime 只接受 Cordis 4.0.2 和 Loader 1.0.3。统一支持记录固定四个文件系统 DSH 包，以及共享的 `dsh-tools` 和 `dsh-system-prompt` Cordis 插件，版本均为 0.1.5-rc.2。文件系统包必须声明记录中的 DSH runtime API、角色和能力；共享 Cordis 插件没有 `dsh.runtime` 声明，因此 runtime 会检查其已安装包名和版本，使用 RSH `adapter` 描述符，并在启动后要求其提供声明的服务。选定插件以共享 Loader entry 运行。配置更新、启用、停用和移除会先排空原生工具、进行中的提示词组装、事件监听器和已接收的调用，再执行 Loader 操作；原生 profile 替换是独立操作。不支持模块代码 HMR、任意插件、旧应用 bundle 和 Client adapter。详见[原生兼容 Loader entry 生命周期决策](2026-10-06-native-compatibility-loader-entry-lifecycle.zh.md)。
 
 ## Alternatives considered
 
@@ -18,4 +18,4 @@ English | [中文](2026-10-05-compatibility-filesystem-version-support.md)
 
 ## Consequences
 
-非法、预发布及其他版本 manifest 在创建 Context 前拒绝。更新支持版本时必须修改固定版本并验证受影响适配器集合。此变更不修改 vendor 源码、默认 profile 或 Session 格式。
+非法、预发布及其他版本 manifest 在创建 Context 前拒绝。更新支持版本时必须修改固定版本并验证受影响适配器集合。Loader entry 配置不会创建旧 Agent loop 或 Session writer。此决策不修改 vendor 源码、默认 profile 或 Session 格式。
