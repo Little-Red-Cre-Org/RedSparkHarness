@@ -16,7 +16,7 @@ Settings owner 通过传入 schema 元数据及可选生效时机，选择公开
 
 凭据引用从标记为 `credential-ref` 的已注册 schema 中发现，不依赖静态 Provider 或密钥目录。Host 仅投影 configured、source 与 writable 事实。Settings 或 Credentials Provider 异常文本会替换为通用 RPC 错误；revision 冲突只保留 namespace 与预期／当前 revision。Client 将值单次发送至 set，成功后清空本地输入，只收到确认；unset 也不返回值。
 
-原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。Session 错误构造器作为共享 Client peer 保留，使 `instanceof` 能匹配选定 Session Consumer 抛出的错误。
+原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。原生 application 将 `client-native-session` 声明为共享 Client peer 和开发依赖，因为 SettingsPage 在运行时导入 `NativeSessionRpcError`，并通过 `instanceof` 识别所选 Consumer 抛出的错误。
 
 ## 支持范围
 

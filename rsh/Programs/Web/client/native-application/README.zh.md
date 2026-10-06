@@ -9,9 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-此无 Cordis 的 Client 应用为显式 native-web profile 提供对话页面。选定 renderer 挂载 React；client-native-session 提供经过身份验证的 Host 操作。
-
-根 Tool 调用与持久化结果、失败标识及呈现元数据配对，通过共享 Tool 卡片模型呈现。冷历史使用相同投影；不呈现尚不可用的文件打开和轨迹操作。嵌套分派记录保留在原始 Session 披露中，不建立独立的嵌套卡片层级。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。页面依据 Session 记录呈现根级 Tool 结果与失败；嵌套分派仍保留在原始历史中。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输或历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 
@@ -34,7 +32,7 @@ kind: "package-reference"
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取活动 Settings 注册项发布的 schema，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。可新增、删除或替换不含机密值的对象项；隐藏机密值下方的可见修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组按现有索引修改，不支持的数组结构修改会报错。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
-React、Session 消息投影与原生 Session 错误类通过 peer 依赖共享实例。Session 数据类型仍是纯类型依赖；运行时 Session Consumer 由所选 capability 提供。
+React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 

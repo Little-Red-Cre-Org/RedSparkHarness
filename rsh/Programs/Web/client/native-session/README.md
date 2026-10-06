@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 This Cordis-free Client Consumer exposes the native Web Session lifecycle through the selected Connection RPC Provider.
 
+The native profile selects this package through its `dsh.native` row and `./native` export; the legacy `dsh.client` module table does not load it. Production dependencies include packages referenced by the published declarations, but installing those packages does not activate their NativePlugins. The profile must still select the required Connection Provider; the package-selection and declaration-dependency decision is recorded in the [installation note](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.md).
+
 ## Table of Contents
 
 - [Reference](#reference)
@@ -22,7 +24,7 @@ This Cordis-free Client Consumer exposes the native Web Session lifecycle throug
 <a id="reference"></a>
 ## Reference
 
-Install after client-connection with required positive integer maxFollowBufferChars, limiting the SSE parser buffer. The clientNativeSession service supports list, create, history, prompt, cancel and status. A prompt requires an explicit resume boolean and completes after Host settlement. Caller cancellation aborts non-prompt requests; prompt cancellation awaits Host settlement. Host errors reject; decoded results validate their endpoint fields before reaching Consumers. The Consumer keeps no second Session cache or connection loop.
+Select after client-connection in the native profile and configure a positive integer maxFollowBufferChars, limiting the SSE parser buffer. The clientNativeSession service supports list, create, history, prompt, cancel and status. A prompt requires an explicit resume boolean and completes after Host settlement. Caller cancellation aborts non-prompt requests; prompt cancellation awaits Host settlement. Host errors reject; decoded results validate their endpoint fields before reaching Consumers. The Consumer keeps no second Session cache or connection loop.
 
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
 
@@ -34,7 +36,7 @@ Prompt uploads carry ordered encoded raster images; the Host admits them under i
 
 `close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.
 
-The shared Session package is a peer because event validation and format interpretation use the application's same Session implementation.
+The published declarations reference native-runtime, client-connection, native-model-selection, agent-presets and brand, so those packages are production dependencies for type resolution. The shared Session package remains a peer because event validation and format interpretation use the application's same Session implementation.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 
@@ -44,7 +46,7 @@ Following also carries transient approvals and question batches. answerHuman use
 
 ## Invariants
 
-No independent state can diverge from the Host authority, so this package publishes no invariant installer.
+No runtime invariant companion is published because the Client's per-session admission map and pending Promises correlate transport calls, cancellation and human answers with the exact Host admission; durable Session events and writer identity remain Host-owned, so the Client holds no second Session projection.
 
 <a id="dev-note"></a>
 ## Dev Note

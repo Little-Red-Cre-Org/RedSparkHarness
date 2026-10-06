@@ -54,6 +54,7 @@ function policy(fields: Partial<PackageDependencyPolicy> = {}): PackageDependenc
     hostPackages: [],
     configurationOnlyDevDependencies: {},
     clientRuntimeDependencies: {},
+    sharedClientRuntimePeers: {},
     safeHostDependencyExports: {},
     peerRequiredHostExports: {},
     ...fields,
@@ -80,6 +81,7 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
     hostRuntimeSourceUses: new Map([
       ['@deepseek-ai/dsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
     ]),
+    clientRuntimeSourceUses: new Map(),
     hostRuntimeExportUses: [{
       packageName: '@deepseek-ai/dsh-runtime',
       specifier: '@deepseek-ai/dsh-runtime',
@@ -173,6 +175,7 @@ function hostRuntimeFixture(): {
     workspaceNames,
     allSourceUses: new Map(),
     hostRuntimeSourceUses: new Map([[provider.name, [sourcePath]]]),
+    clientRuntimeSourceUses: new Map(),
     hostRuntimeExportUses: [{
       packageName: provider.name,
       specifier,
@@ -224,6 +227,46 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
       '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
     })
+    expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
+      '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
+      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+      '@deepseek-ai/dsh-client-ui-tool': ['react'],
+      '@deepseek-ai/dsh-client-native-application': [
+        'react',
+        '@deepseek-ai/dsh-session',
+        '@deepseek-ai/dsh-native-model-selection',
+        '@deepseek-ai/dsh-agent-presets',
+        '@deepseek-ai/dsh-client-native-session',
+        '@deepseek-ai/dsh-client-ui-tool',
+        '@deepseek-ai/dsh-tool-todo',
+      ],
+      '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
+    })
+    expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
+      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store'],
+      '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
+      '@deepseek-ai/dsh-client-native-session': [
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-client-connection',
+        '@deepseek-ai/dsh-native-model-selection',
+        '@deepseek-ai/dsh-agent-presets',
+        '@deepseek-ai/dsh-brand',
+      ],
+      '@deepseek-ai/dsh-client-native-application': [
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-client-native-session',
+      ],
+      '@deepseek-ai/dsh-client-ui-conversation': [
+        '@deepseek-ai/dsh-llm',
+        '@deepseek-ai/dsh-attachment',
+        '@deepseek-ai/dsh-client-ui-slots',
+      ],
+      '@deepseek-ai/dsh-client-ui-tool': [
+        '@deepseek-ai/dsh-client-ui-conversation',
+        '@deepseek-ai/dsh-client-ui-slots',
+      ],
+    })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',
       '@deepseek-ai/dsh-typert-protocol',
@@ -240,6 +283,17 @@ describe('package dependency scope', () => {
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-errors']).toEqual([
       'HarnessError', 'errorChain', 'isHarnessError',
     ])
+    for (const specifier of [
+      '@deepseek-ai/dsh-agent-presets/selection',
+      '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
+      '@deepseek-ai/dsh-native-model-selection/types',
+      '@deepseek-ai/dsh-session/types',
+      '@deepseek-ai/dsh-session/event-validation',
+      '@deepseek-ai/dsh-session/surface',
+      '@deepseek-ai/dsh-tool-todo/client-native',
+    ]) {
+      expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports[specifier]).toBeUndefined()
+    }
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
   })
 
@@ -672,6 +726,14 @@ describe('face-aware source classification', () => {
     expect([...found.allSourceUses.keys()].sort()).toEqual([
       '@f/browser', '@f/hidden', '@f/nested', '@f/runtime', '@f/types',
     ])
+    expect(collectHostDependencyExportPolicyViolations(
+      [found],
+      found.workspaceNames,
+      {
+        safeHostDependencyExports: { '@f/runtime': ['value'], '@f/nested': ['nested'] },
+        peerRequiredHostExports: { '@f/browser': ['browser'] },
+      },
+    )).toEqual(['peerRequiredHostExports lists unused @f/browser export browser'])
   })
 
   it('identifies exact runtime exports without treating type imports as values', () => {
@@ -761,6 +823,26 @@ describe('dependency sections', () => {
     expect(collectClientRuntimeDependencyPolicyViolations(
       [subject], policy({ clientRuntimeDependencies: { '@f/probe': ['missing'] } }),
     )).toEqual(['clientRuntimeDependencies lists unused @f/probe dependency missing'])
+  })
+
+  it('requires shared Client peers to have runtime imports and peer declarations', () => {
+    const sharedPolicy = policy({
+      sharedClientRuntimePeers: { '@f/probe': ['@f/state'] },
+    })
+    const subject = sourceFacts({
+      'src/index.ts': 'export {}',
+      'src/client/index.ts': "import type { State } from '@f/state'",
+    }, {
+      peerDependencies: { '@f/state': '^1.0.0' },
+    }, 'client-host', sharedPolicy)
+    const peerSubject = {
+      ...subject,
+      workspaceNames: new Set([...subject.workspaceNames, '@f/state']),
+    }
+
+    expect(collectClientRuntimeDependencyPolicyViolations([peerSubject], sharedPolicy)).toEqual([
+      'sharedClientRuntimePeers lists unused @f/probe peer @f/state',
+    ])
   })
 
   it.each(['client-only', 'client-host'] as const)('moves unused third-party and CSS inputs to development dependencies for %s', (role) => {

@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This Cordis-free Client application supplies the conversation page for the explicit native-web profile. The selected renderer mounts React; client-native-session supplies authenticated Host operations.
-
-Root Tool calls pair with their durable result, failure identity and presentation metadata and render through the shared Tool card models. Cold history uses the same projection; unavailable file-opening and trajectory actions are omitted. Nested dispatch records remain available in the raw Session disclosure rather than a separate nested card hierarchy.
+The `native-web` profile uses this Client page to create or resume Sessions, inspect durable history and send messages through the Host. The page renders root Tool results and failures from Session records; nested dispatch remains in raw history. Model and reasoning choices come from the Host model directory, while stale selections and transport or history failures remain visible. Published declarations require the listed package dependencies, and the profile must select the runtime contributions, renderer and `client-native-session` Host operations.
 
 ## Table of Contents
 
@@ -33,7 +31,7 @@ The transcript uses the shared Session append-origin and message projection rule
 
 Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The Settings page reads schemas published by active Settings registrations, edits user overrides as JSON with revision checks, and derives write-only credential controls from `credential-ref` fields. Non-secret object entries can be added, removed, or replaced; visible edits below hidden secrets stay leaf-based, and unsafe secret-bearing structure changes are rejected. Array edits use existing indices and unsupported array-structure changes report an error. Credential values are sent only to the Host for storage and are never read back. The page adds no durable language preference or default-profile switch.
 
-React, Session message projection and the native Session error class use shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer.
+React, Session, native model selection, agent preset selection, todo Client values and the native Session error class use the application's shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer. `native-runtime` remains a production dependency because published declarations reference it. `client-native-session` is a peer and development dependency because the page imports `NativeSessionRpcError` at runtime and must share its constructor with the selected Consumer.
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
 

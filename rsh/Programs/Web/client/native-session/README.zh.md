@@ -11,6 +11,8 @@ kind: "package-reference"
 
 该不依赖 Cordis 的 Client Consumer 通过选定的 Connection RPC Provider 提供原生 Web Session 生命周期。
 
+原生 profile 通过 `dsh.native` 行及 `./native` 导出选择本包；旧 `dsh.client` 模块表不会加载它。生产依赖包含已发布声明引用的包，但安装这些包不会激活其 NativePlugin；profile 仍必须显式选择所需的 Connection Provider。包选择与声明依赖的决策记录在[安装说明](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-profile-installation.zh.md)中。
+
 ## 目录
 
 - [参考](#reference)
@@ -22,7 +24,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-安装在 client-connection 之后，必须配置正整数 maxFollowBufferChars，限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
+在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
 
@@ -34,7 +36,7 @@ kind: "package-reference"
 
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
-共享 Session 包是 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
+已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
@@ -44,7 +46,7 @@ kind: "package-reference"
 
 ## 不变量
 
-本包没有可与 Host 权威分歧的独立状态，因此不发布不变量安装器。
+本包不发布运行时不变量伴生入口，因为 Client 的每 Session 准入映射和待处理 Promise 用精确 Host 准入标识关联传输调用、取消和人工回答；持久 Session 事件与写入者身份仍由 Host 拥有，因此 Client 不保留第二份 Session 投影。
 
 <a id="dev-note"></a>
 ## 开发备注

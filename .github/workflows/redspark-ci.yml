@@ -60,3 +60,6 @@ jobs:
       - name: Documentation checks
         if: runner.os == 'Linux'
         run: pnpm run doc-sync
+      - name: Package publication rules
+        if: runner.os == 'Linux'
+        run: pnpm run check:ci:package-publication

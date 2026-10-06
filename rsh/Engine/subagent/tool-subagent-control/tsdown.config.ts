@@ -1,7 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-const entry = (path: string) => ({
-  entry: [path],
+const nodeOutput = {
   outDir: 'lib',
   format: ['esm'] as const,
   platform: 'node' as const,
@@ -9,10 +8,10 @@ const entry = (path: string) => ({
   fixedExtension: false,
   dts: false,
   clean: false,
-})
+}
 
 /** Build self-contained Loader entries so the package needs no private chunks. */
 export default defineConfig([
-  entry('lib/types/native.js'),
-  entry('lib/types/index.js'),
+  { ...nodeOutput, entry: ['lib/types/native.js'] },
+  { ...nodeOutput, entry: ['lib/types/index.js'] },
 ])

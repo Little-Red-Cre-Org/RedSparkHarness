@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在 `ctx.subprocess` 后端之后挂载工具；无需宿主 `rg` 安装，也无需文件系统提供方。模型随后获得按修改时间排序的文件发现与按行组织的内容搜索，两者都有界并受超时防护。
 
+包根入口是 Cordis 兼容入口；原生组合应导入 `./native`，以免安装可选 Cordis 对等依赖（peer dependency）。`dsh-output-retention` 与 `dsh-timeout` 是运行时依赖；`dsh-errors` 是必需对等依赖，使搜索错误与宿主共享同一个 `HarnessError` 类身份。
+
 ### 最小组合
 
 一个子进程后端，然后是工具；spill 后端为可选，使达到上限的结果可完整恢复。
