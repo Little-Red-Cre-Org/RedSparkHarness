@@ -1,5 +1,5 @@
 ---
-description: "Pure shared Subagent descriptors, assistant-output folding and delegation permission text."
+description: "Pure shared Subagent descriptors, assistant-output folding, stop-reason types and delegation permission text."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Pure shared Subagent descriptors, assistant-output folding and delegation permission text.
+Pure shared Subagent descriptors, assistant-output folding, stop-reason types and delegation permission text.
 
 ## Table of Contents
 
@@ -28,6 +28,8 @@ The root export and descriptor and assistant-output leaves require no runtime in
 ## Ownership
 
 Descriptors record child mode, selected provider and label. The output fold consumes accepted Session events and retains actual final or partial assistant content. It creates no Session, writer or execution.
+
+Providers extend `SubagentStopReasonMap` through declaration merging on this package root, and `SubagentStopReason` derives from that map. The Cordis-backed `dsh-subagent` Service Definition re-exports both types.
 
 Settlement helpers select the ending from accepted-work accounting and construct the shared runtime-owned notice, including its child attribution and closing content. The consuming Provider owns cleanup completion and durable inbox admission.
 

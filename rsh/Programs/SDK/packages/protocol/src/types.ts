@@ -8,9 +8,9 @@
  * @module @deepseek-ai/dsh-sdk-protocol/types
  */
 
-import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@deepseek-ai/dsh-llm'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent'
+import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent-protocol'
 
 /** Parameters for the process-wide SDK handshake. */
 export interface InitializeParams {

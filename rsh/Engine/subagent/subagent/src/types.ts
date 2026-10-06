@@ -13,8 +13,11 @@ import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { ContentBlock, MessageId } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
+import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent-protocol'
 import type { ObjectJsonSchema, ToolRestriction } from '@deepseek-ai/dsh-tools'
 import type { SubagentDescriptorData } from './descriptor.ts'
+
+export type { SubagentStopReason, SubagentStopReasonMap } from '@deepseek-ai/dsh-subagent-protocol'
 
 /** Identifies one accepted subagent run across its lifecycle event pair. */
 export type SubagentRunId = Branded<'SubagentRunId'>
@@ -242,28 +245,6 @@ export interface ContinuableCreateSpec {
    */
   readonly seed?: readonly SessionEvent[]
 }
-
-/**
- * Why a subagent run ended. Merge-extensible (a backend may add variants);
- * consumers branch on the known cases and fall through `default`. The known
- * cases mirror the harness turn-end vocabulary so the tool layer can map a
- * non-`completed` result to an `isError` tool result.
- */
-export interface SubagentStopReasonMap {
-  /** The child finished its turn normally. */
-  completed: 'completed'
-  /** Cancelled through the request signal or disposal. */
-  aborted: 'aborted'
-  /** Model or transport failure. */
-  error: 'error'
-  /** The child hit its token ceiling before finishing. */
-  'max-tokens': 'max-tokens'
-  /** The child declined the task. */
-  refusal: 'refusal'
-}
-
-/** The union over {@link SubagentStopReasonMap} — widens automatically as backends merge in variants. */
-export type SubagentStopReason = SubagentStopReasonMap[keyof SubagentStopReasonMap]
 
 /**
  * The terminal outcome of a subagent run, resolved by {@link SubagentRun.result}.

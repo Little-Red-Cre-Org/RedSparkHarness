@@ -8964,9 +8964,6 @@ importers:
         specifier: workspace:*
         version: link:../../../CLI
     devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -9035,18 +9032,15 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/util/json-rpc-line
     devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
-      '@deepseek-ai/dsh-subagent':
+      '@deepseek-ai/dsh-subagent-protocol':
         specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent
+        version: link:../../../../Engine/subagent/subagent-protocol
 
   rsh/Programs/SDK/packages/server:
     dependencies:

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-subagent-spawn.md
-2026-10-05-native-subagent-spawn.md: 2a097384f1c02a2dcb12097a7d6b27a81a370f7d
-2026-10-05-native-subagent-spawn.zh.md: f690d4d98e85dcd6ea1b4f1a442ca74859c7c63d
+2026-10-05-native-subagent-spawn.md: 198a4c6fde17f1c11ccdb00e50790da9a74acfd0
+2026-10-05-native-subagent-spawn.zh.md: 180e1b45d50c17f297f1e3cf248fbf8725e36a59

@@ -12,9 +12,6 @@
       "path": "../../../../Core/vendor/cosmokit"
     },
     {
-      "path": "../../../../Core/vendor/cordis"
-    },
-    {
       "path": "../../../../Engine/llm/llm"
     },
     {

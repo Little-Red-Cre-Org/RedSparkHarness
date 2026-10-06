@@ -3,7 +3,10 @@ import { builtDeclarationPath } from './doc-typecheck-paths.ts'
 
 describe('builtDeclarationPath', () => {
   it('maps package source directories and exact entry files to built declarations', () => {
-    expect(builtDeclarationPath('./packages/*/*/src')).toBe('./packages/*/*/lib/types')
+    expect(builtDeclarationPath('./packages/*/*/src'))
+      .toBe('./packages/*/*/lib/types/index.d.ts')
+    expect(builtDeclarationPath('./packages/*/*/src/*'))
+      .toBe('./packages/*/*/lib/types/*')
     expect(builtDeclarationPath('./packages/runtime-diagnostics/invariants/src/index.ts'))
       .toBe('./packages/runtime-diagnostics/invariants/lib/types/index.d.ts')
     expect(builtDeclarationPath('./packages/core/session/src/invariant.ts'))

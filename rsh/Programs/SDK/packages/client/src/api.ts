@@ -8,7 +8,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
-import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import { createProcessHarnessClient, HarnessClient, isRecord, SdkProtocolError } from './client.ts'
 import type { RuntimeProcessOptions } from './launch.ts'
 import type { ContentBlock, DeepSeekHarnessOptions, HarnessNotification, RunResult, SdkPromptContentBlock } from './types.ts'

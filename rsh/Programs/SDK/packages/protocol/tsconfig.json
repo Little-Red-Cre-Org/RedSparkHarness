@@ -15,16 +15,13 @@
       "path": "../../../../Core/vendor/cosmokit"
     },
     {
-      "path": "../../../../Core/vendor/cordis"
-    },
-    {
       "path": "../../../../Engine/llm/llm"
     },
     {
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/subagent/subagent"
+      "path": "../../../../Engine/subagent/subagent-protocol"
     }
   ]
 }

@@ -326,14 +326,16 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)——后端可以添加变体，因此消费方应对已知 case 分支处理，将未知的终态原因视为失败：
+`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)。Provider 可通过对 `@deepseek-ai/dsh-subagent-protocol` 中的 `SubagentStopReasonMap` 做声明合并来添加变体；消费方应对已知 case 分支处理，并将未知的终态原因视为失败：
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
- * consumers branch on the known cases and fall through `default`. The known
- * cases mirror the harness turn-end vocabulary so the tool layer can map a
- * non-`completed` result to an `isError` tool result.
+ * consumers branch on the known cases and fall through `default`. Providers
+ * extend this map through declaration merging on
+ * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
+ * turn-end vocabulary so the tool layer can map a non-`completed` result to an
+ * `isError` tool result.
  */
 interface SubagentStopReasonMap {
   /** The child finished its turn normally. */

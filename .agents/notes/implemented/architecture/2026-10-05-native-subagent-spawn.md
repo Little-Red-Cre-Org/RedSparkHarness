@@ -10,7 +10,7 @@ Native SDK descendant observation has no production Subagent Consumer or selecte
 
 ## Decision
 
-Compose a native foreground service and spawn Provider with the native tool-subagent Consumer. Reuse Program-owned Session execution, logged request configuration, depth and writer ownership. Share the existing descriptor, output fold and permission text in a Cordis-free protocol package. Resolve child budgets, route, persona and tool restrictions explicitly; disable implicit builtin tools. Delegated approvals record the existing rejection audit without consulting a permission-expanding answerer. Use the existing owner repair operation for every interrupted invocation.
+Compose a native foreground service and spawn Provider with the native tool-subagent Consumer. Reuse Program-owned Session execution, logged request configuration, depth and writer ownership. The Cordis-free protocol package owns shared descriptors, output folding, permission text and the merge-extensible Subagent stop-reason map; the service package re-exports its stop-reason types, while Providers extend the map on the protocol package root. Resolve child budgets, route, persona and tool restrictions explicitly; disable implicit builtin tools. Delegated approvals record the existing rejection audit without consulting a permission-expanding answerer. Use the existing owner repair operation for every interrupted invocation.
 
 ## Alternatives considered
 
