@@ -66,6 +66,8 @@ export enum HostToWorkerType {
   ChildFailed = 'child-failed',
   /** Child RPC reply: a requested disposal completed. */
   ChildDisposed = 'child-disposed',
+  /** Child RPC reply: requested disposal failed and the run still owns cleanup. */
+  ChildDisposeFailed = 'child-dispose-failed',
 }
 
 /** The payload each host→worker tag carries. */
@@ -84,6 +86,8 @@ export interface HostToWorkerPayloads {
   [HostToWorkerType.ChildFailed]: { callId: number; rendered: string }
   /** The RPC correlation id of the completed disposal. */
   [HostToWorkerType.ChildDisposed]: { callId: number }
+  /** The RPC correlation id and rendered cleanup failure. */
+  [HostToWorkerType.ChildDisposeFailed]: { callId: number; rendered: string }
 }
 
 /**

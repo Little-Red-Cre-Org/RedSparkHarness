@@ -32,7 +32,7 @@ The package also exports a native Definition and scoped Provider registry. Cordi
 
 The host validates metadata and parses the body before publication. Private enum-keyed payload maps define the wire protocol; pending starts, published child records, one cancellation signal, worker-death reaping, result precedence, and disposal quiescence preserve the subagent run contract across it. The [agent-scope runtime-design Agent Note](../architecture/2026-07-12-agent-scope-runtime-design.md#workflow-children-are-pending-starts-or-published-records) owns those race algorithms.
 
-The native Provider uses the same worker controller and `WorkerRun` as the Cordis Provider. It sends each `agent()` request through the Program's selected NativeSubagent and Session executor, preserving the same child ownership, structured-result commit, and cancellation drain.
+The native Provider uses the same worker controller and `WorkerRun` as the Cordis Provider. It sends each `agent()` request through the Program's selected NativeSubagent and Session executor, preserving the same child ownership, structured-result commit, and cancellation drain. Its script grace bounds worker termination; native `dispose()` continues awaiting accepted child cleanup and retains run ownership if cleanup fails. Progress observer failures are logged per callback and do not control execution.
 
 The engine exposes an in-process `MessageChannel` test path because main-process V8 coverage cannot see worker execution.
 

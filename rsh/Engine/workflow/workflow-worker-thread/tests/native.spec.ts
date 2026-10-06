@@ -19,11 +19,25 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../../../core/native-headless/src/native.ts'
-import type { NativeWorkflowOperations, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
+import type { NativeWorkflowObserver, NativeWorkflowOperations, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
+import type { NativeSubagentOperations } from '@deepseek-ai/dsh-native-subagent/native'
 
 type AdapterScript = ConstructorParameters<typeof MockAdapter>[0]
+
+function multiToolCallResponse(calls: readonly { readonly id: string; readonly name: string; readonly args: object }[]): StreamChunk[] {
+  const chunks: StreamChunk[] = []
+  calls.forEach((call, index) => {
+    for (const chunk of toolCallResponse(call.id, call.name, call.args)) {
+      if (chunk.type === 'usage' || chunk.type === 'finish') continue
+      chunks.push('index' in chunk ? { ...chunk, index } : chunk)
+    }
+  })
+  chunks.push({ type: 'usage', usage: { inputTokens: 10, outputTokens: 5 } }, { type: 'finish', reason: { kind: 'tool-calls' } })
+  return chunks
+}
 
 class NativeWorkflowAdapter extends MockAdapter {
   private readonly responses: AdapterScript
@@ -60,7 +74,14 @@ class NativeWorkflowAdapter extends MockAdapter {
   }
 }
 
-async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new Set(), withRalph = false) {
+interface FixtureOptions {
+  readonly withRalph?: boolean
+  readonly observerFailure?: 'sync' | 'async'
+  readonly childDisposeGate?: { readonly wait: Promise<void>; readonly onDispose: (id: string) => void }
+  readonly disposeGraceMs?: number
+}
+
+async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new Set(), options: FixtureOptions = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-native-workflow-'))
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
@@ -69,6 +90,7 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
   const adapter = new NativeWorkflowAdapter(script, waitAt)
   let app: NativeApplication | undefined
   let agents: NativeAgentRegistry | undefined
+  let subagents: NativeSubagentOperations | undefined
   let workflow: NativeWorkflowOperations | undefined
   let run: WorkflowRun | undefined
   const model: NativePlugin = {
@@ -76,14 +98,31 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'capture-native-workflow-services', targets: ['host'], requires: ['application', 'agents', 'workflow'], provides: [],
+    apiVersion: 1, name: 'capture-native-workflow-services', targets: ['host'], requires: ['application', 'agents', 'workflow', 'subagents'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       agents = context.require('agents')
+      subagents = context.require('subagents')
       workflow = context.require('workflow')
       const start = workflow.start.bind(workflow)
       workflow.start = (name, request) => {
-        const accepted = start(name, request)
+        let acceptedRequest = request
+        const observer = request.observer
+        if (observer !== undefined && options.observerFailure !== undefined) {
+          const notify = (event: string, dispatch: () => void | Promise<void>): void | Promise<void> => {
+            dispatch()
+            if (options.observerFailure === 'sync') throw new Error(`observer-${event}-sync`)
+            return Promise.reject(new Error(`observer-${event}-async`))
+          }
+          const failingObserver: NativeWorkflowObserver = {
+            phase: title => notify('phase', () => observer.phase(title)),
+            log: message => notify('log', () => observer.log(message)),
+            agentStart: agent => notify('agentStart', () => observer.agentStart(agent)),
+            agentEnd: agent => notify('agentEnd', () => observer.agentEnd(agent)),
+          }
+          acceptedRequest = { ...request, observer: failingObserver }
+        }
+        const accepted = start(name, acceptedRequest)
         run = accepted
         return accepted
       }
@@ -99,9 +138,9 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
     { plugin: promptPlugin, scope, config: undefined },
     { plugin: subagentsPlugin, scope, config: { providerName: 'spawn' } },
     { plugin: workflowPlugin, scope, config: undefined },
-    { plugin: workerPlugin, scope, config: { subagentProvider: 'spawn' } },
+    { plugin: workerPlugin, scope, config: { subagentProvider: 'spawn', disposeGraceMs: options.disposeGraceMs ?? 5000 } },
     { plugin: workflowToolPlugin, scope, config: { provider: 'worker-thread' } },
-    ...(withRalph ? [{ plugin: ralphToolPlugin, scope, config: {
+    ...(options.withRalph ? [{ plugin: ralphToolPlugin, scope, config: {
       workflowProvider: 'worker-thread', subagentProvider: 'spawn', maxRounds: 1,
     } }] : []),
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
@@ -110,9 +149,22 @@ async function fixture(script: AdapterScript, waitAt: ReadonlySet<number> = new 
     { plugin: model, scope, config: undefined },
   ], 'host'))
   await host.start()
-  if (app === undefined || agents === undefined) throw new Error('native workflow composition is incomplete')
+  if (app === undefined || agents === undefined || subagents === undefined) throw new Error('native workflow composition is incomplete')
   if (workflow === undefined) throw new Error('native workflow registry is missing')
-  return { host, scope, app, agents, adapter, directory, sessions, workflow, run: () => run }
+  if (options.childDisposeGate !== undefined) {
+    const start = subagents.start.bind(subagents)
+    subagents.start = async (request, _signal) => {
+      const run = await start(request, new AbortController().signal)
+      const dispose = run.dispose.bind(run)
+      run.dispose = async () => {
+        options.childDisposeGate?.onDispose(String(run.id))
+        await options.childDisposeGate?.wait
+        await dispose()
+      }
+      return run
+    }
+  }
+  return { host, scope, app, agents, subagents, adapter, directory, sessions, workflow, run: () => run }
 }
 
 async function readSessions(root: string) {
@@ -167,11 +219,19 @@ it('runs parallel real WorkerRun children and records their durable Sessions bef
 it('runs the native Ralph Consumer from a real structured child report', async () => {
   const state = await fixture([
     toolCallResponse('ralph', 'ralph', { objective: 'inspect the workspace', maxRounds: 1 }),
-    toolCallResponse('report', 'structured_output', {
-      status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [], blocker: '',
+    toolCallResponse('invalid-report', 'structured_output', {
+      status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [],
     }),
+    multiToolCallResponse([
+      { id: 'report', name: 'structured_output', args: {
+        status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [], blocker: '',
+      } },
+      { id: 'duplicate-report', name: 'structured_output', args: {
+        status: 'complete', summary: 'second report', evidence: ['second commit'], nextSteps: [], blocker: '',
+      } },
+    ]),
     textResponse('Ralph reported completion.'),
-  ], new Set(), true)
+  ], new Set(), { withRalph: true })
   try {
     await state.host.run(state.scope, { kind: 'native-ralph' }, invocation =>
       state.app.run(['run one Ralph round'], invocation.signal))
@@ -183,13 +243,71 @@ it('runs the native Ralph Consumer from a real structured child report', async (
     expect(parent?.events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes('Ralph worker reported completion'))).toBe(true)
     const childId = String((parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data as { childId: string } | undefined)?.childId ?? '')
     const child = sessions.find(session => session.id === childId)
-    expect(child?.events).toContainEqual(expect.objectContaining({ type: 'tool/call', data: expect.objectContaining({ name: 'structured_output' }) }))
-    expect(child?.events.some(event => event.type === 'tool/result' && JSON.stringify(event).includes('"isError":false'))).toBe(true)
+    expect(child?.events.filter(event => event.type === 'tool/call' && event.data.name === 'structured_output')).toHaveLength(3)
+    const structuredResults = child?.events.filter(event => event.type === 'tool/result') ?? []
+    expect(structuredResults).toHaveLength(3)
+    expect(JSON.stringify(structuredResults[0])).toContain('"callId":"invalid-report"')
+    expect(JSON.stringify(structuredResults[0])).toContain('"isError":true')
+    expect(JSON.stringify(structuredResults[1])).toContain('"callId":"report"')
+    expect(JSON.stringify(structuredResults[1])).toContain('"isError":false')
+    expect(JSON.stringify(structuredResults[2])).toContain('"callId":"duplicate-report"')
+    expect(JSON.stringify(structuredResults[2])).toContain('"isError":true')
     expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
     expect(childId).not.toBe('')
     expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
+    expect(state.adapter.requests).toHaveLength(4)
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('rejects a completed structured child without an accepted report', async () => {
+  const state = await fixture([
+    toolCallResponse('ralph-no-report', 'ralph', { objective: 'inspect the workspace', maxRounds: 1 }),
+    textResponse('The inspection is complete.'),
+    textResponse('No structured report was accepted.'),
+  ], new Set(), { withRalph: true })
+  try {
+    await state.host.run(state.scope, { kind: 'native-ralph-no-report' }, invocation =>
+      state.app.run(['run one Ralph round without a report'], invocation.signal))
+    const sessions = await readSessions(state.sessions)
+    const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
+    expect(parent?.events.find(event => event.type === 'tool-workflow/run-end'))
+      .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'completed' } })
+    expect(parent?.events.some(event => event.type === 'tool/result'
+      && JSON.stringify(event).includes('Ralph round 1 child failed'))).toBe(true)
+    const childId = String((parent?.events.find(event => event.type === 'tool-workflow/agent-start')?.data as { childId: string } | undefined)?.childId ?? '')
+    const child = sessions.find(session => session.id === childId)
+    expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
     expect(state.adapter.requests).toHaveLength(3)
   } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it.each(['sync', 'async'] as const)('contains %s observer failures without breaking real worker events or cleanup', async (failure) => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const state = await fixture([
+    toolCallResponse('workflow', 'workflow', { meta: { name: 'observer-audit', description: 'exercise every observer' },
+      script: "phase('working'); log('progress'); const result = await agent('inspect the workspace'); return { result }" }),
+    textResponse('child finished'),
+    textResponse('workflow finished'),
+  ], new Set(), { observerFailure: failure })
+  try {
+    await state.host.run(state.scope, { kind: `native-workflow-observer-${failure}` }, invocation =>
+      state.app.run(['exercise workflow observer delivery'], invocation.signal))
+    const sessions = await readSessions(state.sessions)
+    const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
+    expect(parent?.events.filter(event => event.type === 'tool-workflow/agent-start')).toHaveLength(1)
+    expect(parent?.events.filter(event => event.type === 'tool-workflow/agent-end')).toHaveLength(1)
+    expect(parent?.events.find(event => event.type === 'tool-workflow/run-end'))
+      .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'completed' } })
+    expect(warn.mock.calls.filter(([message]) => String(message).includes('observer') && String(message).includes(failure === 'sync' ? 'threw' : 'rejected'))).toHaveLength(4)
+  } finally {
+    warn.mockRestore()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
@@ -221,6 +339,55 @@ it('cancels and drains an accepted child before closing the durable workflow rec
     expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
     expect(state.agents.get(NativeAgentId(childId))).toBeUndefined()
   } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('keeps native disposal pending until concurrent cancelled child Sessions release their writers', async () => {
+  const disposalGate = Promise.withResolvers<undefined>()
+  const disposedIds: string[] = []
+  const state = await fixture([
+    toolCallResponse('workflow', 'workflow', { meta: { name: 'cleanup-audit', description: 'release two children' },
+      script: "await parallel([() => agent('wait for cancellation one'), () => agent('wait for cancellation two')]); return { unreachable: true }" }),
+    textResponse('unused first result'),
+    textResponse('unused second result'),
+    textResponse('workflow cancelled'),
+  ], new Set([1, 2]), { disposeGraceMs: 40, childDisposeGate: {
+    wait: disposalGate.promise,
+    onDispose: (id) => { disposedIds.push(id) },
+  } })
+  let runSettled = false
+  try {
+    const running = state.host.run(state.scope, { kind: 'native-workflow-delayed-cleanup' }, invocation =>
+      state.app.run(['start concurrent children and cancel the workflow'], invocation.signal))
+    void running.then(() => { runSettled = true }, () => { runSettled = true })
+    await vi.waitFor(() => { expect(state.adapter.requests).toHaveLength(3) }, { timeout: 5_000 })
+    const run = state.run()
+    expect(run).toBeDefined()
+    run?.cancel('cancel while two child Sessions are active')
+    const result = await run!.result
+    expect(result.stopReason).toBe('cancelled')
+    await vi.waitFor(() => { expect(new Set(disposedIds).size).toBe(2) }, { timeout: 5_000 })
+    expect(runSettled).toBe(false)
+    expect(disposedIds).toHaveLength(2)
+    for (const id of disposedIds) expect(state.agents.get(NativeAgentId(id))).toBeDefined()
+
+    disposalGate.resolve(undefined)
+    await running
+    expect(runSettled).toBe(true)
+    const sessions = await readSessions(state.sessions)
+    const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))
+    expect(parent?.events.find(event => event.type === 'tool-workflow/run-end'))
+      .toMatchObject({ type: 'tool-workflow/run-end', data: { stopReason: 'cancelled' } })
+    expect(disposedIds).toHaveLength(2)
+    for (const id of disposedIds) {
+      const child = sessions.find(session => session.id === id)
+      expect(child?.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
+      expect(state.agents.get(NativeAgentId(id))).toBeUndefined()
+    }
+  } finally {
+    disposalGate.resolve(undefined)
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

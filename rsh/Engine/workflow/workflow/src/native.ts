@@ -8,16 +8,16 @@ import type { WorkflowRun } from './types.ts'
 export type { WorkflowRun } from './types.ts'
 export type { WorkflowResult, WorkflowMeta } from './types.ts'
 
-/** Observe-only progress callbacks; Consumer owns durable parent recording. */
+/** Observe-only progress callbacks; Consumer owns durable parent recording. Callback failures are reported without affecting execution. */
 export interface NativeWorkflowObserver {
   /** @param title - current script phase. */
-  phase(title: string): void
+  phase(title: string): void | Promise<void>
   /** @param message - script narration. */
-  log(message: string): void
+  log(message: string): void | Promise<void>
   /** @param agent - published child identity. */
-  agentStart(agent: WorkflowAgentInfo): void
+  agentStart(agent: WorkflowAgentInfo): void | Promise<void>
   /** @param agent - paired child settlement. */
-  agentEnd(agent: WorkflowAgentEndInfo): void
+  agentEnd(agent: WorkflowAgentEndInfo): void | Promise<void>
 }
 
 /** Resolved foreground orchestration request attributed to an admitted tool invocation. */

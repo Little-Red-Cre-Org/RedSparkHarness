@@ -279,6 +279,13 @@ export function stopReasonError(result: WorkflowResult): string | undefined {
 
 const TRUNCATION_NOTICE = '\n… [truncated]'
 
+/** Canonical Ralph result fields used by the legacy tool schema. */
+export const RALPH_OUTPUT_PROPERTIES = {
+  runId: { type: 'string', required: true },
+  agentsStarted: { type: 'integer', required: true },
+  result: { type: 'json', required: true },
+} as const
+
 /** Bound complete parent-facing text, including its envelope and truncation marker. */
 function boundResult(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text

@@ -43,7 +43,7 @@ Loading the engine registers `ctx.workflowEngine`; adding `dsh-tool-workflow` on
 | `maxTotalAgents` | `1000` | Total `agent()` calls one run may start — the runaway-loop backstop. |
 | `maxItemsPerCall` | `4096` | Items accepted by one `parallel()` or `pipeline()` call. |
 | `syncTimeoutMs` | `5000` | VM timeout for the script's initial synchronous slice, in milliseconds. |
-| `disposeGraceMs` | `5000` | Bound before force-settlement and worker termination; also bounds `dispose()`. |
+| `disposeGraceMs` | `5000` | Bound before the legacy run is force-settled and its worker terminated. |
 
 An owning consumer may set `WorkflowStartRequest.subagentProvider` and `WorkflowStartRequest.maxTotalAgents` for one run — engine-level policy, not script hooks; the ordinary `workflow` tool leaves both unset, and a per-run total-child cap may lower but never raise the configured ceiling. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-workflow-worker-thread) is the exhaustive source for every accepted field.
 
@@ -62,11 +62,13 @@ Native profiles install `@deepseek-ai/dsh-workflow-worker-thread/native` as the 
 | `syncTimeoutMs` | `5000` | Worker timeout for the script's initial synchronous slice, in milliseconds. |
 | `disposeGraceMs` | `5000` | Cancellation and child-drain bound before worker termination, in milliseconds. |
 
+For the Native Provider, this deadline bounds script settlement and worker termination; `dispose()` then continues waiting for every accepted NativeSubagent child to release its Session writer and owned resources. Cleanup failure rejects disposal and keeps the run tracked. The Cordis Provider retains its grace-bounded policy for slow external child backends.
+
 ### What a run gives you
 
 When a run starts, the script body executes in the worker with top-level `await` and the hooks `agent()`, `parallel()`, `pipeline()`, `phase()`, and `log()`; `meta` and `args` arrive as plain JSON data, never evaluated code. Every `agent()` call starts a host-side subagent under the configured provider, with the run's parent as the parent of every child. The run settles with the script's final JSON value; an ordinary child failure resolves `agent()` to `null` so the script can handle it.
 
-A malformed meta block, a body that does not parse, an unavailable provider route, or a per-run cap above the ceiling is rejected synchronously before a worker exists, so the caller sees a violation list and can correct the call. During execution, hook misuse and tripped caps kill the script with a fatal workflow error. Cancellation is bounded: a script that ignores it is force-settled as cancelled and its worker terminated after `disposeGraceMs`.
+A malformed meta block, a body that does not parse, an unavailable provider route, or a per-run cap above the ceiling is rejected synchronously before a worker exists, so the caller sees a violation list and can correct the call. During execution, hook misuse and tripped caps kill the script with a fatal workflow error. A script that ignores cancellation is force-settled as cancelled and its worker terminated after `disposeGraceMs`; native child cleanup remains owned until its real settlement.
 
 ### Trust expectations
 
@@ -117,7 +119,7 @@ Values leaving the script pass through realm materialization, which accepts plai
 
 `cancel()` records the first reason, tells the worker to cancel, aborts the one signal shared by every pending and published child, and arms the `disposeGraceMs` timer; worker hooks then throw `CANCELLED` at their next await. If the run remains unsettled at the deadline, the host resolves it as cancelled, pairs stranded child lifecycle events, and terminates the worker.
 
-`dispose()` is idempotent: it cancels the run, starts host-driven disposal immediately, waits for result and child quiescence up to the same grace, terminates the worker unconditionally, and performs a final survivor sweep. Per-child disposal is memoized so worker RPC, host cancellation, death cleanup, and public disposal all join one operation.
+`dispose()` is idempotent: it cancels the run, starts host-driven disposal immediately, waits for result and child quiescence up to the script grace, terminates the worker unconditionally, and performs a final survivor sweep. The Native Provider then awaits accepted child cleanup beyond that grace; a cleanup failure rejects disposal and remains tracked. Per-child disposal is memoized so worker RPC, host cancellation, death cleanup, and public disposal all join one operation. Progress observers are isolated per callback: synchronous throws and rejected Promises are logged without changing execution or suppressing later events.
 
 ### Outcome and event guarantees
 

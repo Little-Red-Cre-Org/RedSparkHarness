@@ -31,7 +31,6 @@ export function resolveNativeRalphConfig(input: unknown): NativeRalphConfig { re
 /** Require a visible structured-output one-shot Provider; the native Definition requires a fresh child.
  * @param subagents - shared Subagent Definition.
  * @param name - selected transport.
- * @param scope - consuming installation or Agent scope.
  */
 export function requireNativeRalphProvider(subagents: NativeSubagentOperations, name: string): void {
   if (subagents.providerName !== name) throw new Error(`Ralph subagent transport "${name}" is not selected`)

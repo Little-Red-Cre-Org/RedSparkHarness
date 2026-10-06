@@ -89,7 +89,7 @@ export interface WorkflowResult {
 /**
  * Holder-owned live workflow shared by Cordis and native Consumers. `result`
  * never rejects; Consumers may cancel and must call idempotent `dispose()` to
- * await script and child quiescence.
+ * await the selected Provider's script and child cleanup policy.
  */
 export interface WorkflowRun {
   readonly id: WorkflowRunId
@@ -98,7 +98,7 @@ export interface WorkflowRun {
   readonly result: Promise<WorkflowResult>
   /** Cancel the run and its children. */
   cancel(reason?: string): void
-  /** Cancel if needed and await bounded settlement and cleanup. */
+  /** Cancel if needed and await script termination and the Provider's owned child cleanup. */
   dispose(): Promise<void>
 }
 

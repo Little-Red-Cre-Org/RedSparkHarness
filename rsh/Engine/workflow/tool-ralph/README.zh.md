@@ -72,7 +72,7 @@ Native profile 会挂载 `@deepseek-ai/dsh-tool-ralph/native`；已发布组合�
 
 ### 生命周期与取消
 
-调用方 agent 是每个全新子 agent 的父级，因此会保留 cwd 与谱系，但不会复制其对话。`exec.signal` 进入工作流引擎，同时也桥接到 `run.cancel()`，以便不依赖具体实现。工具等待 `run.result` 并在 `finally` 中调用 `run.dispose()`，因此被取消的父级步骤会等到引擎完成有界终止且子 agent 完全停稳后才返回。
+调用方 agent 是每个全新子 agent 的父级，因此会保留 cwd 与谱系，但不会复制其对话。`exec.signal` 进入工作流引擎，同时也桥接到 `run.cancel()`，以便不依赖具体实现。工具等待 `run.result` 并在 `finally` 中调用 `run.dispose()`。Native dispose 可能在 worker 脚本宽限期结束后继续等待已接受子 Session 写入器与资源释放；旧外部后端的清理仍受宽限期约束。
 
 ### 渲染意图
 

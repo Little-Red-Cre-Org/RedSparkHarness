@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-运行一段纯 JavaScript 编排脚本，将工作扇出给 subagent，并返回脚本的最终 JSON 值。脚本可以使用 `agent()`、`parallel()`、`pipeline()`、`phase()` 和 `log()`；模型通常通过 `workflow` 工具访问它们。每次运行都归调用方所有，将每个子 agent（智能体）归属于调用它的 agent，在失败或取消时以结果兑现而不拒绝，并在有界宽限期内完成 dispose（资源释放）。调用方必须提供执行引擎，因此可以更换隔离策略而不改变可见行为。
+运行一段纯 JavaScript 编排脚本，将工作扇出给 subagent，并返回脚本的最终 JSON 值。脚本可以使用 `agent()`、`parallel()`、`pipeline()`、`phase()` 和 `log()`；模型通常通过 `workflow` 工具访问它们。每次运行都归调用方所有，将每个子 agent（智能体）归属于调用它的 agent；失败或取消会以结果兑现而不拒绝。选定引擎拥有子任务清理；Native dispose 可能在脚本终止后继续等待，直到子 Session 释放资源。调用方必须提供执行引擎，因此可以更换隔离策略而不改变可见行为。
 
 ## 目录
 
@@ -52,7 +52,7 @@ return { reviewed: reviews.length }
 
 Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })` 启动运行；这个旧入口使用可选的 `@deepseek-ai/dsh-agent` peer。Native 消费方通过 `context.require('workflow').start(name, request)` 选择 Provider，并可在不安装该 peer 的情况下消费 `./native` Definition。两条路径都会把每个子 agent 归属于调用它的 agent，并接受取消；选定的实现会在发布运行前校验 meta 块并解析脚本。
 
-返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并在有界宽限期内等待脚本与子 agent 完全停稳。
+返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并等待选定 Provider 的脚本与子任务清理策略。必要时，Native Provider 会在脚本宽限期之后继续等待已接受子 Session 清理。
 
 ### 失败与恢复
 
@@ -84,7 +84,7 @@ Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, arg
 
 ### 生命周期与归属
 
-运行由持有方负责：引擎插件卸载会阻止新的启动，但不会撤销已接受的运行，调用方必须 dispose 自己启动的每个运行。`dispose()` 在需要时取消，并在引擎文档规定的期限内等待脚本与子 agent 完全停稳，因此等待 `result` 的消费方绝不会因取消而卡死。
+运行由持有方负责：引擎插件卸载会阻止新的启动，但不会撤销已接受的运行，调用方必须 dispose 自己启动的每个运行。`dispose()` 在需要时取消，并等待选定 Provider 的脚本与子任务清理策略。若已接受的子任务仍在释放 Session 写入器与资源，Native 清理可在脚本终止后继续等待。
 
 `workflow/start` 与 `workflow/end` 为运行配对；`workflow/phase` 与 `workflow/log` 携带脚本叙述；`workflow/agent-start` 与 `workflow/agent-end` 按 `seq` 为每次子 agent 调用配对。每个监听器都独立隔离：抛错的监听器只记录日志，不会饿死同级监听器或改变执行，并且每个监听器都会收到自己的 payload 副本。
 

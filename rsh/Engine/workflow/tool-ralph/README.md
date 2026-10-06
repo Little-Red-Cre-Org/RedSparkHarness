@@ -72,7 +72,7 @@ Status-specific semantics and the serialized `maxHandoffChars` ceiling are valid
 
 ### Lifecycle and cancellation
 
-The caller's agent is the parent of every fresh child, preserving cwd and lineage without copying its conversation. `exec.signal` enters the workflow engine and is also bridged to `run.cancel()` for implementation independence. The tool awaits `run.result` and calls `run.dispose()` in `finally`, so a cancelled parent step waits for the engine's bounded termination and child quiescence before returning.
+The caller's agent is the parent of every fresh child, preserving cwd and lineage without copying its conversation. `exec.signal` enters the workflow engine and is also bridged to `run.cancel()` for implementation independence. The tool awaits `run.result` and calls `run.dispose()` in `finally`. Native disposal can outlast the worker script grace while accepted child Session writers and resources are released; legacy external-backend cleanup remains grace-bounded.
 
 ### Render intent
 

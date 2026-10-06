@@ -106,14 +106,20 @@ export class NativeWorkflowWorkerProvider implements NativeWorkflowProvider {
         maxTotalAgents, maxItemsPerCall: this.config.maxItemsPerCall,
         syncTimeoutMs: this.config.syncTimeoutMs,
       } }, subagentProvider, this.config.disposeGraceMs,
-      request.observer ?? { phase: () => {}, log: () => {}, agentStart: () => {}, agentEnd: () => {} }, request.signal)
+      request.observer ?? { phase: () => {}, log: () => {}, agentStart: () => {}, agentEnd: () => {} }, request.signal, true)
     this.runs.add(run)
     const removeParent = this.agents.onDispose(request.parent.agent, () => run.dispose())
     const dispose = run.dispose.bind(run)
+    let trackedDispose: Promise<void> | undefined
     run.dispose = () => {
-      const drain = dispose()
-      void drain.then(() => { removeParent(); this.runs.delete(run) }, () => { removeParent(); this.runs.delete(run) })
-      return drain
+      trackedDispose ??= dispose().then(() => {
+        removeParent()
+        this.runs.delete(run)
+      }, (error: unknown) => {
+        this.host.logger.warn(`native-workflow: run cleanup failed; retaining ownership: ${error instanceof Error ? error.message : String(error)}`)
+        throw error
+      })
+      return trackedDispose
     }
     return run
   }

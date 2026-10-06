@@ -32,7 +32,7 @@ harness 可以通过 `dsh-tool-subagent` 将一个任务委派给一个子 agent
 
 宿主在发布前校验元数据并解析正文。私有枚举键 payload 映射定义协议格式；待启动记录、已发布子记录、单一取消信号、worker 死亡回收、结果优先级与 dispose（资源释放）时的完全停稳，在此协议上保持 subagent run 约定。这些竞态算法由 [agent 作用域运行时设计 Agent Note](../architecture/2026-07-12-agent-scope-runtime-design.zh.md#workflow-children-are-pending-starts-or-published-records) 定义。
 
-native Provider 与 Cordis Provider 使用同一 worker controller 和 `WorkerRun`。它通过 Program 选定的 NativeSubagent 与 Session executor 发送每个 `agent()` 请求，保持相同的子任务所有权、结构化结果提交和取消排空语义。
+native Provider 与 Cordis Provider 使用同一 worker controller 和 `WorkerRun`。它通过 Program 选定的 NativeSubagent 与 Session executor 发送每个 `agent()` 请求，保持相同的子任务所有权、结构化结果提交和取消排空语义。脚本宽限期约束 worker 终止；native `dispose()` 会继续等待已接受子任务清理，清理失败时保留运行所有权。进度观察器逐回调记录失败，但不控制执行。
 
 引擎暴露一条进程内 `MessageChannel` 测试路径，因为主进程 V8 覆盖率无法观测 worker 执行。
 

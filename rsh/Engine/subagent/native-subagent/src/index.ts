@@ -25,6 +25,9 @@ export interface NativeSubagentOptions {
   readonly maxTokens?: number
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
+  /**
+   * A successful run needs one schema-valid structured_output commit. Failed attempts may retry; normal completion without one is an error.
+   */
   readonly outputSchema?: ObjectJsonSchema
 }
 
@@ -46,6 +49,7 @@ export interface NativeSubagentResult {
   readonly id: SessionId
   readonly provider: string
   readonly output: readonly ContentBlock[]
+  /** Accepted schema-valid structured_output value when requested and committed. */
   readonly structured?: unknown
   readonly stopReason: 'completed' | 'max-tokens' | 'aborted' | 'refusal' | 'error'
 }

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run a plain-JavaScript orchestration script that fans work out to subagents and returns the script's final JSON value. Scripts can use `agent()`, `parallel()`, `pipeline()`, `phase()`, and `log()`; models normally access them through the `workflow` tool. Each run belongs to its caller, attributes every child to the invoking agent, resolves failures and cancellation without rejecting its result, and completes disposal within a bounded grace period. The caller must supply an execution engine, allowing the isolation strategy to change without altering visible behavior.
+Run a plain-JavaScript orchestration script that fans work out to subagents and returns the script's final JSON value. Scripts can use `agent()`, `parallel()`, `pipeline()`, `phase()`, and `log()`; models normally access them through the `workflow` tool. Each run belongs to its caller, attributes every child to the invoking agent, and resolves failures and cancellation without rejecting its result. The selected engine owns child cleanup; native disposal can remain pending beyond script termination until child Sessions release their resources. The caller must supply an execution engine, allowing the isolation strategy to change without altering visible behavior.
 
 ## Table of Contents
 
@@ -52,7 +52,7 @@ When the script settles, the run's result resolves with the returned value, the 
 
 Cordis consumers can start a run directly through `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })`; this legacy entry uses the optional `@deepseek-ai/dsh-agent` peer. Native consumers select a Provider through `context.require('workflow').start(name, request)` and consume the `./native` Definition without that peer. Both paths attribute every child to the invoking agent and accept cancellation; the selected implementation validates the meta block and parses the script before publishing a run.
 
-A returned run exposes `id`, `meta`, `result`, `cancel(reason?)`, and `dispose()`. The result never rejects: a script failure resolves with `stopReason: 'error'`, cancellation with `'cancelled'`. The caller owns the run — call `dispose()` on every path; it cancels remaining work and waits for script and children to settle within a bounded grace.
+A returned run exposes `id`, `meta`, `result`, `cancel(reason?)`, and `dispose()`. The result never rejects: a script failure resolves with `stopReason: 'error'`, cancellation with `'cancelled'`. The caller owns the run — call `dispose()` on every path; it cancels remaining work and awaits the selected Provider's script and child cleanup policy. A native Provider waits for accepted child Session cleanup beyond the script grace when necessary.
 
 ### Failures and recovery
 
@@ -84,7 +84,7 @@ The package separates the script, run, result, and event contracts from executio
 
 ### Lifecycle and ownership
 
-A run is holder-owned: engine-plugin unload prevents new starts but does not revoke accepted runs, and the caller must dispose every run it starts. `dispose()` cancels if needed and awaits script and child quiescence within the engine's documented bound, so a consumer awaiting `result` is never wedged past a cancellation.
+A run is holder-owned: engine-plugin unload prevents new starts but does not revoke accepted runs, and the caller must dispose every run it starts. `dispose()` cancels if needed and awaits the selected Provider's script and child cleanup policy. Native cleanup can remain pending beyond script termination while an accepted child releases its Session writer and resources.
 
 `workflow/start` and `workflow/end` pair the run; `workflow/phase` and `workflow/log` carry script narration; `workflow/agent-start` and `workflow/agent-end` pair each child call by `seq`. Every listener is independently contained: a throwing listener is logged without starving peers or changing execution, and each receives its own payload clone.
 
