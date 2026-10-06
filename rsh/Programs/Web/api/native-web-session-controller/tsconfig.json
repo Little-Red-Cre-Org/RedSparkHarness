@@ -45,6 +45,12 @@
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
+      "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/credentials"
+    },
+    {
       "path": "../../../../Modules/Official/interaction/native-approval"
     },
     {

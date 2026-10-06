@@ -236,6 +236,7 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-session',
         '@deepseek-ai/dsh-native-model-selection',
         '@deepseek-ai/dsh-agent-presets',
+        '@deepseek-ai/dsh-client-native-session',
         '@deepseek-ai/dsh-client-ui-tool',
         '@deepseek-ai/dsh-tool-todo',
       ],

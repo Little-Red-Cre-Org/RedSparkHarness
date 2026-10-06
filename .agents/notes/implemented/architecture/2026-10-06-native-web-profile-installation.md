@@ -30,7 +30,7 @@ Inferring a build helper from its spelling instead of its imported binding was r
 
 ## Consequences
 
-`native-session` declares its public declaration providers `native-runtime`, `client-connection`, `native-model-selection`, `agent-presets`, and `brand` as dependencies. `native-application` declares `native-runtime` and `client-native-session` as dependencies. Both packages remain selected through `dsh.native`; the `client-connection` provider's optional Cordis peer does not add a Cordis requirement to the native installer.
+`native-session` declares its public declaration providers `native-runtime`, `client-connection`, `native-model-selection`, `agent-presets`, and `brand` as dependencies. `native-application` declares `native-runtime` as a dependency for published declarations, and `client-native-session` as a shared Client peer plus a development dependency because its Settings page imports `NativeSessionRpcError` at runtime and must resolve the same constructor as the selected Consumer. Both packages remain selected through `dsh.native`; the `client-connection` provider's optional Cordis peer does not add a Cordis requirement to the native installer.
 
 The existing [profile fallback decision](2026-09-25-profile-module-fallback-optional-dependencies.md) governs discovery of installed optional compatibility packages; this note governs published declaration closure for the native Web packages.
 

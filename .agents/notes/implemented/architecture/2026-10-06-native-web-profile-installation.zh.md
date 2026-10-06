@@ -30,7 +30,7 @@ SDK Loader fixture 会从 `ctx.inject()` 回调返回异步的 `tool-subagent` �
 
 ## Consequences
 
-`native-session` 将其公开声明提供方 `native-runtime`、`client-connection`、`native-model-selection`、`agent-presets` 和 `brand` 声明为 dependencies。`native-application` 将 `native-runtime` 与 `client-native-session` 声明为 dependencies。两个包仍由 `dsh.native` 选择；`client-connection` Provider 的可选 Cordis peer 不会让原生 installer 必须依赖 Cordis。
+`native-session` 将其公开声明提供方 `native-runtime`、`client-connection`、`native-model-selection`、`agent-presets` 和 `brand` 声明为 dependencies。`native-application` 将 `native-runtime` 声明为已发布声明的 dependency，并将 `client-native-session` 声明为共享 Client peer 与开发依赖，因为 Settings 页面在运行时导入 `NativeSessionRpcError`，并必须与所选 Consumer 解析到同一个构造器。两个包仍由 `dsh.native` 选择；`client-connection` Provider 的可选 Cordis peer 不会让原生 installer 必须依赖 Cordis。
 
 现有[profile fallback 决策](2026-09-25-profile-module-fallback-optional-dependencies.zh.md)规定已安装可选兼容包的发现方式；本说明记录原生 Web 包已发布声明的依赖闭包。
 
