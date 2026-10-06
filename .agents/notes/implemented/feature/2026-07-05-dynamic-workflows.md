@@ -22,6 +22,8 @@ One deliberate strictness DIVERGENCE from CC: hook misuse — unknown or deferre
 
 `ctx.workflowEngine` is an abstract `WorkflowEngine` in the bash shape — one engine per context, no named-provider registry (engines are deployment swaps, not co-residents). `start(request)` throws synchronously for a script that cannot begin; a returned `WorkflowRun`'s `result` NEVER rejects (failures resolve as `stopReason: 'error' | 'cancelled'`). The `workflow/*` events are observe-only emits carrying DATA SNAPSHOTS (id + meta; `workflow/end` omits the result value), per-listener contained, mirroring `subagent/start`/`subagent/end` — control stays with the run's holder. Vocabulary details: [subsystems/workflow.md](../../../../rsh/Docs/subsystems/workflow.md).
 
+The package also exports a native Definition and scoped Provider registry. Cordis and native Definitions share `WorkflowRun` through the provider-neutral `./types` entry; only the Cordis `WorkflowStartRequest` refers to `Agent` through the host-only `./runtime-types` entry. The Agent peer is optional for native consumers and remains available to consumers of the Cordis API.
+
 ### The engine (dsh-workflow-worker-thread): one worker thread per run
 
 **Trust premise**: workflow scripts have the same trust as the model's bash access. The engine contains buggy scripts and guarantees settled results, JSON-safe values, and cancellation quiescence; it does not defend against hostile code. A vm context and worker thread are not security boundaries: a script can escape to Node APIs with process-wide authority. Sandboxing requires a separate-process or isolated-vm engine behind this seam.
@@ -29,6 +31,8 @@ One deliberate strictness DIVERGENCE from CC: hook misuse — unknown or deferre
 **Why `node:worker_threads`**: each run gets one unpooled worker. A vm context limits the documented script API, while message-port RPC bridges `agent()` to host-side child loops. The worker prevents synchronous script work from blocking the host, provides a serialization boundary, and permits forced termination after cancellation. `isolated-vm` was rejected because of its maintenance state and deployment requirements.
 
 The host validates metadata and parses the body before publication. Private enum-keyed payload maps define the wire protocol; pending starts, published child records, one cancellation signal, worker-death reaping, result precedence, and disposal quiescence preserve the subagent run contract across it. The [agent-scope runtime-design Agent Note](../architecture/2026-07-12-agent-scope-runtime-design.md#workflow-children-are-pending-starts-or-published-records) owns those race algorithms.
+
+The native Provider uses the same worker controller and `WorkerRun` as the Cordis Provider. It sends each `agent()` request through the Program's selected NativeSubagent and Session executor, preserving the same child ownership, structured-result commit, and cancellation drain. Its script grace bounds worker termination; native `dispose()` continues awaiting accepted child cleanup and retains run ownership if cleanup fails. Progress observer failures are logged per callback and do not control execution.
 
 The engine exposes an in-process `MessageChannel` test path because main-process V8 coverage cannot see worker execution.
 
@@ -40,7 +44,7 @@ The engine exposes an in-process `MessageChannel` test path because main-process
 
 A `workflow` tool mirroring `dsh-tool-subagent`'s synchronous shape: start, await, `try/finally` dispose, abort-bridge `exec.signal`, non-`completed` → `isError`. Render intent: a `generic` card titled by the call's `meta.name` parameter (presentation is a pure function of args). The tool description IS the model-facing authoring spec. The usage policy ships with the tool as its own `tool:<toolName>` prompt section (explicit-ask-only guidance — tool guidance lives in tool plugins, never in the deployment persona); the harness has no ultracode-style effort gate.
 
-For a top-level tool execution, the same consumer also writes the run and actual member lifecycle into the calling parent Session as four log-only `tool-workflow/*` events. The recording path observes rather than controls execution: its first append failure disables later writes for that run and leaves a legal prefix without changing the tool result. [`ui-workflow-run`](../../../../rsh/Programs/Web/client/ui-workflow-run/README.md) rebuilds those facts through the Conversation Node engine as a separate keyed Chat row; the existing generic tool row remains its own presentation owner. The detailed persistence, replay, disclosure, and live-navigation decision lives in [durable workflow runs in Chat](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md).
+For a top-level Native tool execution, the same consumer also writes the run and actual member lifecycle into the calling parent Session as four log-only `tool-workflow/*` events. A failed durable append cancels the run, disables later writes, and rejects the consumer after owned cleanup; ordinary progress-observer failures remain contained per callback. [`ui-workflow-run`](../../../../rsh/Programs/Web/client/ui-workflow-run/README.md) rebuilds those facts through the Conversation Node engine as a separate keyed Chat row; the existing generic tool row remains its own presentation owner. The detailed persistence, replay, disclosure, and live-navigation decision lives in [durable workflow runs in Chat](../../archived/feature/2026-08-10-durable-workflow-runs-in-chat.md).
 
 ### The foundation: structured output on the subagent seam
 
@@ -52,7 +56,7 @@ An output schema makes a schema-valid committed capture mandatory for successful
 
 ## Testing
 
-Worker-side logic runs through an in-process `MessageChannel` so V8 coverage measures it. Unit tests cover script helpers, fatal and nullable failures, JSON boundaries, caps, cancellation, child ownership, and structured output through real loops. A built-bin smoke runs the separately bundled `lib/worker.cjs` under plain Node, a with-key e2e drives real child agents, and model-facing workflow behavior is snapshot-covered through its owning example.
+Worker-side logic runs through an in-process `MessageChannel` so V8 coverage measures it. Unit tests cover script helpers, fatal and nullable failures, JSON boundaries, caps, cancellation, child ownership, and structured output through real loops. A built-bin smoke runs the separately bundled `lib/worker.cjs` under plain Node, a with-key e2e drives real child agents, and model-facing workflow behavior is snapshot-covered through its owning example. The native-headless profile also replays the workflow tool without a key and separately exercises two concurrent child Sessions through the shipped CLI profile.
 
 ## Deferred (documented non-goals)
 

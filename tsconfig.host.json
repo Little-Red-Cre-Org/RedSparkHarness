@@ -389,7 +389,7 @@
     { "path": "./rsh/Modules/Community/experimental/agent-team-profile" },
     { "path": "./rsh/Modules/Community/experimental/tool-agent-team" },
     { "path": "./rsh/Modules/Community/experimental/agent-team-web-profile" },
-    { "path": "./rsh/Engine/workflow/workflow" },
+    { "path": "./rsh/Engine/workflow/workflow/tsconfig.host.json" },
     { "path": "./rsh/Engine/workflow/workflow-worker-thread" },
     { "path": "./rsh/Engine/workflow/tool-workflow" },
     { "path": "./rsh/Engine/workflow/tool-ralph" },

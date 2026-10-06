@@ -46,6 +46,8 @@ kind: "package-reference"
 
 生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-workflow)是每个受支持字段的穷尽式真源。
 
+Native 组合会挂载 `@deepseek-ai/dsh-tool-workflow/native`，并传入一个在作用域内 Native workflow Definition 可见的 `provider` 名称；worker Provider 需要单独安装。根调用会在返回结果前将运行与子 agent 进度记录到调用方 Session。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -58,15 +60,15 @@ kind: "package-reference"
 
 ### 设计理念
 
-消费方拥有模型侧 schema、`tool:<toolName>` 系统提示词指导与结果包络；脚本解析、执行、上限与取消位于 `ctx.workflowEngine` 之后，因此更坚固的引擎可以无缝替换，而不改变模型看到的内容。使用指导以提示词段的形式随工具插件交付，绝不放入部署 persona。
+消费方拥有模型侧 schema、`tool:<toolName>` 系统提示词指导与结果包络；Cordis 与 Native 安装分别通过各自的 workflow Definition 选择执行实现。使用指导以提示词段的形式随工具插件交付，绝不放入部署 persona。
 
 ### 运行生命周期
 
-`execute` 启动运行，并在 `try/finally` 内等待 `run.result`；该结构总会对运行执行 dispose。`exec.signal` 会桥接到 `run.cancel()`，包括启动前已经中止的情况。非 `completed` 结束原因会映射为报告原因的 `isError` 结果；完成时渲染 `{ runId, agentsStarted, result }`，Native 渲染器只会在 `maxResultChars` 处截断该投影。
+`execute` 启动运行，并在 `try/finally` 内等待 `run.result`；该结构总会对运行执行 dispose。`exec.signal` 会桥接到 `run.cancel()`，包括启动前已经中止的情况。非 `completed` 结束原因会映射为报告原因的 `isError` 结果；完成时渲染 `{ runId, agentsStarted, result }`，Native 渲染器只会在 `maxResultChars` 处截断该投影。Native `run-end` 只会在已接受子 Session 清理完成后追加，因此可能晚于 worker 脚本宽限期。
 
 ### 持久会话记录
 
-对于根 transport 执行（`exec.parent` 缺省），工具会用四个 log-only 事件把运行投影到调用方 agent 的会话：`start()` 返回后写 run-start，只记录 `run.id` 匹配的成员开始与结束，并且只在结果可用且 dispose 完全停稳后写 run-end。嵌套 transport 调用照常执行，但不写任何记录。会话追加操作首次失败后，本运行会停止后续记录并只告警一次，留下空记录或合法连续前缀，同时不改变工具结果和清理。包 invariant 会在冷加载与实时追加时拒绝重复 start、未配对成员、仍有开放成员的终点与 run-end 后更新，同时允许缺失终态后缀的连续前缀。
+对于根 Native 执行（`exec.parent` 缺省），工具会用四个 log-only 事件把运行投影到调用方 agent 的会话：`start()` 返回后写 run-start，只记录 `run.id` 匹配的成员开始与结束，并且只在结果可用且 dispose 完全停稳后写 run-end。嵌套 transport 调用照常执行，但不写任何记录。会话追加失败会取消运行、停止该运行后续记录，并在自有清理完成后拒绝消费方；不会只留下前缀并返回成功结果。所选引擎对普通进度观察器失败另按回调分别隔离。包 invariant 会在冷加载与实时追加时拒绝重复 start、未配对成员、仍有开放成员的终点与 run-end 后更新，同时允许缺失终态后缀的连续前缀。
 
 ### 渲染意图
 
@@ -77,6 +79,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：工具注册、运行生命周期、记录器接线 |
+| [`src/native.ts`](src/native.ts) | Native 工具注册、有作用域的 Provider 选择与根 Session 进度记录 |
 | [`src/types.ts`](src/types.ts) | 四个 log-only 记录事件 payload 及其 `SessionEventMap` 声明 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式配套入口：持久工作流记录协议校验 |
 
@@ -159,7 +162,7 @@ Use the <toolName> tool ONLY when the user explicitly asks for a workflow or for
 - **父级轮次会阻塞到整个工作流结算**——没有后台启动／轮询接口，取消会丢弃局部输出并返回错误。
 - **`args` 必须是对象，Native 结果文本有界**——调用方把顶层数组／标量包装到字段中；规范工作流结果保持完整，超过 `maxResultChars` 的 JSON 会在面向模型的投影中截断，而不是存储在检索句柄背后。
 - **每次工具注册的工作流策略固定**——提供方选择、上限与工具名称属于部署配置，不是模型调用参数。
-- **持久记录只覆盖顶层且只供观察**——嵌套 PTC mode dispatch 不记录；记录故障会刻意退化为不完整前缀，而不改变执行。
+- **持久记录覆盖根 Native 调用**——嵌套 PTC mode dispatch 不记录；必需追加失败会取消运行并使消费方失败，普通进度观察器仍分别隔离。
 
 <a id="dev-note"></a>
 ### 开发备注

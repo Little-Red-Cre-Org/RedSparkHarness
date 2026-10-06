@@ -42,6 +42,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
   'snapshots/native-headless/todo-native.snapshot.ts',
   'snapshots/native-headless/tool-results.snapshot.ts',
+  'snapshots/native-headless/workflow-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/goal-control.snapshot.ts',
   'snapshots/native-tui/native-tui.snapshot.ts',

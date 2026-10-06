@@ -43,15 +43,32 @@ kind: "package-reference"
 | `maxTotalAgents` | `1000` | 一次运行最多启动的 `agent()` 调用总数——失控循环的后备闸。 |
 | `maxItemsPerCall` | `4096` | 一次 `parallel()` 或 `pipeline()` 调用接受的条目数。 |
 | `syncTimeoutMs` | `5000` | 脚本最初同步片段的 VM 超时时间，单位为毫秒。 |
-| `disposeGraceMs` | `5000` | 强制结算与终止 worker 前的期限；同时约束 `dispose()`。 |
+| `disposeGraceMs` | `5000` | 旧 Provider 强制结算运行并终止 worker 前的期限。 |
 
 负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
+
+### Native profile 配置
+
+Native profile 会把 `@deepseek-ai/dsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
+
+| 字段 | 默认值 | 含义 |
+|---|---|---|
+| `name` | `worker-thread` | workflow 消费方选择的 Provider 名称。 |
+| `subagentProvider` | 必填 | `agent()` 使用的 NativeSubagent Provider。 |
+| `maxDepth` | `3` | 传给共享 Provider 的委派子级深度上限。 |
+| `maxConcurrentAgents` | `0` | 并发子 agent 上限；`0` 根据可用 CPU 并行度解析。 |
+| `maxTotalAgents` | `1000` | 一次 workflow 运行允许启动的子 agent 总数上限。 |
+| `maxItemsPerCall` | `4096` | 单次 `parallel()` 或 `pipeline()` 接受的条目数。 |
+| `syncTimeoutMs` | `5000` | worker 对脚本初始同步片段施加的超时，单位为毫秒。 |
+| `disposeGraceMs` | `5000` | worker 终止前取消与子 agent 排空的上限，单位为毫秒。 |
+
+对于 Native Provider，此期限只约束脚本结算与 worker 终止；随后 `dispose()` 会继续等待每个已接受的 NativeSubagent 子任务释放 Session 写入器及其所有资源。清理失败会使 dispose 拒绝，并让运行继续保持跟踪。Cordis Provider 对慢速外部子任务后端仍采用宽限期上限。
 
 ### 运行会得到什么
 
 运行启动后，脚本正文在 worker 中以顶层 `await` 执行，并可使用钩子 `agent()`、`parallel()`、`pipeline()`、`phase()` 与 `log()`；`meta` 与 `args` 以普通 JSON 数据到达，绝不作为代码求值。每次 `agent()` 调用都会在配置的提供方下启动一个宿主侧 subagent，并以运行的父级作为每个子 agent（智能体）的父级。运行以脚本的最终 JSON 值结算；普通子 agent 失败会把 `agent()` 兑现为 `null`，由脚本处理。
 
-格式错误的 meta 块、无法解析的正文、不可用的提供方路由或高于上限的单次运行上限，都会在 worker 存在之前被同步拒绝，调用方因此看到违规清单并可以修正调用。执行期间，钩子误用与超出上限会用致命工作流错误终止脚本。取消是有界的：忽略取消的脚本会在 `disposeGraceMs` 后被强制以取消状态结算，其 worker 被终止。
+格式错误的 meta 块、无法解析的正文、不可用的提供方路由或高于上限的单次运行上限，都会在 worker 存在之前被同步拒绝，调用方因此看到违规清单并可以修正调用。执行期间，钩子误用与超出上限会用致命工作流错误终止脚本。忽略取消的脚本会在 `disposeGraceMs` 后被强制以取消状态结算并终止 worker；Native 子任务清理仍由 Provider 持有，直到真实结算。
 
 ### 信任预期
 
@@ -71,13 +88,14 @@ kind: "package-reference"
 
 ### 设计理念
 
-每次运行一个 worker thread，让行为异常的脚本无法拖垮宿主，并使强制终止成为可能：脚本在 worker 内可逃逸的 `node:vm` 上下文中运行，`agent()` 调用通过带类型的宿主／worker 协议回到 `ctx.subagents`。vm 上下文塑造脚本的 API 表面；它不是安全沙箱。
+每次运行一个 worker thread，让行为异常的脚本无法拖垮宿主，并使强制终止成为可能：脚本在 worker 内可逃逸的 `node:vm` 上下文中运行，`agent()` 调用通过带类型的宿主／worker 协议到达选定的 Subagent Definition。vm 上下文塑造脚本的 API 表面；它不是安全沙箱。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、前置校验、`start()` 接线 |
+| [`src/native.ts`](src/native.ts) | Native worker Provider 注册与共享 Subagent 路由 |
 | [`src/host.ts`](src/host.ts) | 一次运行的宿主侧：worker 启动、子 agent 编排、结算、dispose |
 | [`src/worker.ts`](src/worker.ts) | worker 入口：脚本执行、钩子实现、值物化 |
 | [`src/runtime.ts`](src/runtime.ts) | 脚本运行时：钩子约定、`parallel()` 与 `pipeline()` 组合器 |
@@ -101,7 +119,7 @@ kind: "package-reference"
 
 `cancel()` 记录第一个原因、通知 worker 取消、中止所有待处理与已发布子 agent 共享的唯一信号，并启动 `disposeGraceMs` 定时器；worker 钩子随后在下次 await 时抛出 `CANCELLED`。如果运行到期限仍未结算，宿主会将其以取消状态兑现、为悬空的子 agent 生命周期事件配对，并终止 worker。
 
-`dispose()` 是幂等的：它取消运行、立即启动宿主驱动的 dispose、在同一宽限期内等待结果与子 agent 完全停稳、无条件终止 worker，并执行最后一次幸存项扫描。每个子 agent 的 dispose 都会记忆化，使 worker RPC、宿主取消、死亡清理与公开 dispose 都汇入同一操作。
+`dispose()` 是幂等的：它取消运行、立即启动宿主驱动的 dispose、在脚本宽限期内等待结果与子 agent 停稳、无条件终止 worker，并执行最后一次幸存项扫描。Native Provider 随后会在该宽限期之外等待已接受子任务清理；清理失败会使 dispose 拒绝且继续保留跟踪。每个子 agent 的 dispose 都会记忆化，使 worker RPC、宿主取消、死亡清理与公开 dispose 都汇入同一操作。进度观察器逐回调隔离：同步抛错与拒绝的 Promise 会被记录，但不会改变执行或阻止后续事件。
 
 ### 结果与事件保证
 

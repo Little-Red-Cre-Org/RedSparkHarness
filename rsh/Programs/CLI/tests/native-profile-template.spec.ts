@@ -55,6 +55,25 @@ it.each(['native-sdk', 'native-acp'] as const)('installs native list_agents expl
   }])
 })
 
+it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
+  'selects one shared workflow engine and both model-facing consumers in %s', (profileName) => {
+    const profile = shippedNativeProfileComposition('C:/rsh-native-workflow', profileName, 'win32')
+    const byId = new Map(profile.installations.map(row => [row.id, row]))
+    expect(byId.get('subagents')).toMatchObject({ plugin: '@deepseek-ai/dsh-native-subagent', config: { providerName: 'spawn' } })
+    expect(byId.get('workflow')?.plugin).toBe('@deepseek-ai/dsh-workflow')
+    expect(byId.get('workflow-worker')).toMatchObject({
+      plugin: '@deepseek-ai/dsh-workflow-worker-thread', config: { subagentProvider: 'spawn' },
+    })
+    expect(byId.get('workflow-tool')).toMatchObject({
+      plugin: '@deepseek-ai/dsh-tool-workflow', config: { provider: 'worker-thread' },
+    })
+    expect(byId.get('ralph-tool')).toMatchObject({
+      plugin: '@deepseek-ai/dsh-tool-ralph', config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' },
+    })
+    expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
+    expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
+  })
+
 it('defines a native-tui composition over the shared headless Providers', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({

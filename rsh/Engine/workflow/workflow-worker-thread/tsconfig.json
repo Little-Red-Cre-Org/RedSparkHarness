@@ -36,10 +36,25 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../workflow"
+      "path": "../workflow/tsconfig.host.json"
     },
     {
       "path": "../../../Core/util/http-proxy"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../subagent/native-subagent"
     }
   ]
 }

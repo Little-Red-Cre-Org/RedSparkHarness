@@ -61,6 +61,7 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
 
 /** Legacy Host peers omitted by the separately published native entry. */
 export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-workflow': ['@deepseek-ai/dsh-agent'],
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
 }

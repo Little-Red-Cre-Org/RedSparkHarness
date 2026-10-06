@@ -651,14 +651,21 @@
       "@deepseek-ai/dsh-tool-fs-search/native": ["./rsh/Modules/Official/fs/tool-fs-search/src/native.ts"],
       "@deepseek-ai/dsh-tool-goal/native": ["./rsh/Engine/goal/tool-goal/src/native.ts"],
       "@deepseek-ai/dsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"],
+      "@deepseek-ai/dsh-tool-ralph/native": ["./rsh/Engine/workflow/tool-ralph/src/native.ts"],
+      "@deepseek-ai/dsh-tool-ralph/runtime": ["./rsh/Engine/workflow/tool-ralph/src/runtime.ts"],
       "@deepseek-ai/dsh-tool-subagent-control/native": ["./rsh/Engine/subagent/tool-subagent-control/src/native.ts"],
       "@deepseek-ai/dsh-tool-subagent/native": ["./rsh/Engine/subagent/tool-subagent/src/native.ts"],
       "@deepseek-ai/dsh-tool-terminal/native": ["./rsh/Modules/Official/terminal/tool-terminal/src/native.ts"],
       "@deepseek-ai/dsh-tool-todo/client-native": ["./rsh/Modules/Official/todo/tool-todo/src/client-native.ts"],
+      "@deepseek-ai/dsh-tool-workflow/foreground": ["./rsh/Engine/workflow/tool-workflow/src/foreground.ts"],
+      "@deepseek-ai/dsh-tool-workflow/native": ["./rsh/Engine/workflow/tool-workflow/src/native.ts"],
       "@deepseek-ai/dsh-user-question-broker/native": ["./rsh/Modules/Official/interaction/user-question-broker/src/native.ts"],
       "@deepseek-ai/dsh-user-questions/broker": ["./rsh/Modules/Official/interaction/user-questions/src/broker.ts"],
       "@deepseek-ai/dsh-user-questions/native": ["./rsh/Modules/Official/interaction/user-questions/src/native.ts"],
-      "@deepseek-ai/dsh-user-questions/protocol": ["./rsh/Modules/Official/interaction/user-questions/src/protocol.ts"]
+      "@deepseek-ai/dsh-user-questions/protocol": ["./rsh/Modules/Official/interaction/user-questions/src/protocol.ts"],
+      "@deepseek-ai/dsh-workflow-worker-thread/native": ["./rsh/Engine/workflow/workflow-worker-thread/src/native.ts"],
+      "@deepseek-ai/dsh-workflow/errors": ["./rsh/Engine/workflow/workflow/src/errors.ts"],
+      "@deepseek-ai/dsh-workflow/native": ["./rsh/Engine/workflow/workflow/src/native.ts"]
       // END generated package aliases
     }
   }
