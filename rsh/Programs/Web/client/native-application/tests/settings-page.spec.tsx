@@ -2,7 +2,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
-import { NativeSettings, type NativeSettingsPathOp, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
+import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsDescriptor,
+  type NativeSettingsPathOp, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff } from '../src/settings-page.tsx'
@@ -11,7 +12,9 @@ afterEach(cleanup)
 
 const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
 const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
-const settingsDescription = (namespaces: readonly NativeSettingsDescriptor[], limits = defaultLimits) => ({ namespaces, limits })
+const settingsDescription = (
+  namespaces: readonly (NativeSettingsDescriptor | ServiceNativeSettingsDescriptor)[], limits = defaultLimits,
+) => ({ namespaces, limits })
 
 async function expectSettingsOutput(name: string, language: string): Promise<void> {
   const output = {
