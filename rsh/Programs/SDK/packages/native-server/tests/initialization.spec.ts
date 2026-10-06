@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { setImmediate } from 'node:timers/promises'
 import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
@@ -35,6 +35,7 @@ function isAssistantReply(value: unknown): boolean {
 it('runs without the optional subagent Provider and drains admitted model work after EOF', async () => {
   expect(sdkServer.requires).not.toContain('subagents')
   expect(sdkServer.optional).toContain('subagents')
+  expect(sdkServer.provides).toContain('rootExecution')
   const entered = Promise.withResolvers<undefined>()
   const aborted = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
@@ -101,6 +102,7 @@ it('runs without the optional subagent Provider and drains admitted model work a
     return deferred.promise
   }
   let app: NativeSdkApplication | undefined
+  let carrierContext: NativeContext | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'deferred-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => {
@@ -112,10 +114,12 @@ it('runs without the optional subagent Provider and drains admitted model work a
     apiVersion: 1, name: 'minimal-sdk-carrier', targets: ['host'],
     requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
     optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions',
-      'modelSelection', 'agentPresets', 'workspaceRegistry'], provides: ['application'],
+      'modelSelection', 'agentPresets', 'workspaceRegistry'], provides: ['application', 'rootExecution'],
     resolve: () => (context) => {
+      carrierContext = context
       app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
       context.provide('application', app)
+      context.provide('rootExecution', app.rootExecution)
     },
   }
   const host = new NativeHost(resolveInstallation([
@@ -128,17 +132,24 @@ it('runs without the optional subagent Provider and drains admitted model work a
   let done: Promise<unknown> | undefined
   try {
     await host.start()
-    if (app === undefined) throw new Error('minimal SDK carrier did not activate')
+    if (app === undefined || carrierContext === undefined) throw new Error('minimal SDK carrier did not activate')
     const application = app
+    const context = carrierContext
     done = host.run(scope, { kind: 'test' }, invocation => application.run([], invocation.signal)).then(async (result) => {
       runReturned = true
-      await host.stop()
       return result
     }, (error: unknown) => ({ error }))
+    const callerAbort = new AbortController()
+    const canceledReadiness = application.rootExecution.ready(callerAbort.signal).catch((error: unknown) => error)
+    const callerReason = { kind: 'fixture caller cancellation' }
+    callerAbort.abort(callerReason)
+    expect(await canceledReadiness).toBe(callerReason)
+    const pendingReadiness = application.rootExecution.ready(new AbortController().signal)
     const initialized = response(1)
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: workspace, provider: 'fixture', model: 'fixture' } })}\n`)
     const initialization = await initialized
     expect(initialization.result, JSON.stringify(initialization)).toMatchObject({ serverInfo: { name: 'deepseek-harness-sdk-runtime' } })
+    await pendingReadiness
     const firstPrompt = response(2)
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
       sessionId: 'minimal-sdk-session', contentBlocks: [{ type: 'text', text: 'Run without subagents.' }],
@@ -158,6 +169,20 @@ it('runs without the optional subagent Provider and drains admitted model work a
     expect({ runReturned, modelReleased, modelSettled }).toEqual({ runReturned: false, modelReleased: false, modelSettled: false })
     release.resolve(undefined)
     expect(await done).toBe(0)
+    expect({ modelReleased, modelSettled }).toEqual({ modelReleased: false, modelSettled: true })
+    const shutdownInput = new PassThrough()
+    const shutdownOutput = new PassThrough()
+    const shutdownApplication = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, shutdownInput, shutdownOutput)
+    const shutdown = new AbortController()
+    const shutdownDone = shutdownApplication.run([], shutdown.signal)
+    const shutdownReadiness = shutdownApplication.rootExecution.ready(new AbortController().signal).catch((error: unknown) => error)
+    shutdown.abort(new Error('Host stopped'))
+    expect(await shutdownReadiness).toMatchObject({ message: 'native SDK: closing' })
+    expect(await shutdownDone).toBe(0)
+    await expect(shutdownApplication.rootExecution.ready(new AbortController().signal)).rejects.toThrow('native SDK: closing')
+    shutdownInput.destroy()
+    shutdownOutput.destroy()
+    await host.stop()
     expect({ modelReleased, modelSettled }).toEqual({ modelReleased: true, modelSettled: true })
     const persistence = new JsonlSessionBackend({ root: sessions, compression: 'none' })
     try {

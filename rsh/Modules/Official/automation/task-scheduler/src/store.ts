@@ -6,9 +6,19 @@ import { mkdirSync } from 'node:fs'
 import { dirname, isAbsolute } from 'node:path'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { z } from 'zod'
-import type { Run, RunId, Task, TaskId, TaskInput } from './types.ts'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import type { ClaimedRun, Run, RunId, Task, TaskId, TaskInput } from './types.ts'
 import type { TaskNotice } from './gui-types.ts'
 
+const nativeConfigurationSchema = z.object({
+  cwd: z.string().refine(isAbsolute), provider: z.string().min(1), model: z.string().min(1), systemPrompt: z.string(),
+  maxSteps: z.number().int().positive(), builtinTools: z.boolean().optional(),
+  reasoningEffort: z.string().min(1).transform(ReasoningEffortId).optional(),
+  maxTokens: z.number().int().positive().optional(),
+}).strict().transform(({ builtinTools, reasoningEffort, maxTokens, ...required }) => ({ ...required,
+  ...builtinTools === undefined ? {} : { builtinTools },
+  ...reasoningEffort === undefined ? {} : { reasoningEffort }, ...maxTokens === undefined ? {} : { maxTokens } }))
 const inputSchema = z.object({
   countdownStartedAt: z.iso.datetime({ offset: true }).optional(),
   kind: z.enum(['goal', 'scheduled']).optional(),
@@ -17,13 +27,18 @@ const inputSchema = z.object({
   title: z.string().trim().min(1).max(200),
   prompt: z.string().trim().min(1).max(32000),
   workspace: z.string().refine(isAbsolute, 'workspace must be absolute'),
-  agentPreset: z.string().min(1), permissionPreset: z.string().min(1),
+  nativeRoute: z.string().min(1).transform(value => brandString<NativeRootRouteId>(value)).optional(),
+  nativeConfiguration: nativeConfigurationSchema.optional(),
+  agentPreset: z.string().min(1).optional(), permissionPreset: z.string().min(1).optional(),
   provider: z.string().min(1), model: z.string().min(1),
   at: z.iso.datetime({ offset: true }),
   endAt: z.iso.datetime({ offset: true }).optional(),
   everySeconds: z.number().int().positive().max(Math.floor(Number.MAX_SAFE_INTEGER / 1000)).optional(),
-}).strict()
-const taskSchema = inputSchema.extend({
+}).strict().refine(input => input.nativeRoute === undefined
+  ? input.nativeConfiguration === undefined && input.agentPreset !== undefined && input.permissionPreset !== undefined
+  : input.nativeConfiguration !== undefined && input.agentPreset === undefined && input.permissionPreset === undefined,
+'execution requires either nativeRoute or both compatibility presets')
+const taskSchema = inputSchema.safeExtend({
   pausedRemainingMs: z.number().int().nonnegative().optional(),
   resumeSessionId: z.string().min(1).optional(),
   id: z.uuid(), ownerSessionId: z.string().min(1),
@@ -47,11 +62,11 @@ export class TaskStore {
     try {
       this.db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;')
       const version = this.db.prepare('PRAGMA user_version').get()?.['user_version']
-      if (version !== 0 && version !== 1 && version !== 2 && version !== 3 && version !== 4) throw new Error(`unsupported scheduler database version: ${String(version)}`)
+      if (version !== 0 && version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5) throw new Error(`unsupported scheduler database version: ${String(version)}`)
       this.db.exec('CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, task_id TEXT NOT NULL, scheduled_at INTEGER NOT NULL, body TEXT NOT NULL, UNIQUE(task_id, scheduled_at));')
       this.tasks()
       this.runs()
-      this.db.exec('CREATE TABLE IF NOT EXISTS notice_reads (id TEXT PRIMARY KEY, run_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS notice_deleted (id TEXT PRIMARY KEY); PRAGMA user_version=4;')
+      this.db.exec('CREATE TABLE IF NOT EXISTS notice_reads (id TEXT PRIMARY KEY, run_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS notice_deleted (id TEXT PRIMARY KEY); PRAGMA user_version=5;')
     } catch (error) { this.db.close(); throw error }
   }
   /** Bind every retained reminder receipt to its single conversation after durable publication.
@@ -243,7 +258,7 @@ export class TaskStore {
    * @param mode - Restrict admission to reminders, Agent work, or both.
    * @returns The admitted occurrence, or undefined when no work can be admitted.
    */
-  claim(now: number, timeoutMs: number, maxConcurrent: number, mode: 'all' | 'reminder' | 'agent' = 'all'): { task: Task; run: Run } | undefined {
+  claim(now: number, timeoutMs: number, maxConcurrent: number, mode: 'all' | 'reminder' | 'agent' = 'all'): { task: Task; run: ClaimedRun } | undefined {
     return this.transaction(() => {
       const runs = this.runs()
       for (const plan of this.tasks()) {
@@ -258,9 +273,10 @@ export class TaskStore {
       if (!task || task.nextAt === null) return undefined
       const period = task.everySeconds === undefined ? undefined : task.everySeconds * 1000
       const scheduledAt = period === undefined ? task.nextAt : task.nextAt + Math.floor((now - task.nextAt) / period) * period
-      const run: Run = { id: brandString<RunId>(randomUUID()), taskId: task.id, scheduledAt, startedAt: now,
-        deadline: now + timeoutMs, finishedAt: null, state: 'running', sessionId: null, detail: '' }
-      run.sessionId = task.resumeSessionId ?? `scheduled-${run.id}`
+      const id = brandString<RunId>(randomUUID())
+      const run: ClaimedRun = { id, taskId: task.id, scheduledAt, startedAt: now,
+        deadline: now + timeoutMs, finishedAt: null, state: 'running',
+        sessionId: task.resumeSessionId ?? `scheduled-${id}`, detail: '' }
       task.nextAt = period === undefined ? null : scheduledAt + period
       if (task.nextAt !== null && task.endAt !== undefined && task.nextAt >= Date.parse(task.endAt)) task.nextAt = null
       this.writeRun(run)

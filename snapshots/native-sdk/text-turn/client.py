@@ -5,13 +5,14 @@ from pathlib import Path
 import json
 import sys
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
 from deepseek_harness.errors import JsonRpcError, TransportClosedError
 
 launcher, home, workspace, patch, *arguments = sys.argv[1:]
 goal_control = arguments[-1:] == ["goal-control"]
+scheduled_origin = arguments[-1:] == ["scheduled-origin"]
 task = arguments[0] if arguments else "say hello through native SDK"
 config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
@@ -50,6 +51,39 @@ def expect_finished(notifications, child_id, stop_reason):
 def serialized(result):
     return {"finalResponse": result.final_response, "events": result.events,
         "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}
+
+
+if scheduled_origin:
+    control_url = os.environ["NATIVE_SDK_SCHEDULED_ORIGIN_CONTROL_URL"]
+    session_id = "sdk-scheduled-root-origin"
+
+    def endpoint(path, expected=None):
+        request = Request(f"{control_url}/{path}", data=b"" if path == "start-origin" else None,
+            headers={"content-type": "application/json"} if path == "start-origin" else {},
+            method="POST" if path == "start-origin" else "GET")
+        with urlopen(request, timeout=15) as response:
+            actual = response.read().decode()
+        if expected is not None and actual != expected:
+            raise AssertionError(f"expected {expected!r}, received {actual!r}")
+
+    uninitialized = DeepSeekHarness(config)
+    try:
+        uninitialized.client.start()
+        endpoint("await-origin-plugin-loaded", "ready")
+        endpoint("start-origin", "accepted")
+        endpoint("await-origin-root-waiting", "waiting")
+    finally:
+        uninitialized.close()
+    endpoint("await-origin-root-rejected", "rejected")
+
+    with DeepSeekHarness(config) as initializing:
+        initializing.start()
+        endpoint("start-origin", "accepted")
+        endpoint("await-origin-ready", "ready")
+    with DeepSeekHarness(config) as restored:
+        result = restored.start_session(session_id).run(task)
+        print(json.dumps({"run": serialized(result)}))
+    raise SystemExit(0)
 
 
 def _wait_for_goal_input(subscription, session_id):

@@ -88,6 +88,8 @@ export function startReminderJournal(ctx: Context, store: TaskStore): () => Prom
  * @param run - Receipt to remove from the journal.
  */
 export async function removeReminderRecord(ctx: Context, store: TaskStore, task: Task, run: Run): Promise<void> {
+  if (task.nativeRoute !== undefined || task.agentPreset === undefined) throw new Error('Reminder journals require compatibility Agent presets')
+  const agentPreset = task.agentPreset
   if (!run.sessionId) return
   const oldId = SessionId(run.sessionId)
   const existing = ctx.agents.get(oldId)
@@ -95,9 +97,9 @@ export async function removeReminderRecord(ctx: Context, store: TaskStore, task:
   if (existing) await ctx.sessions.flush(existing.session)
   const source = await ctx.sessionPersistence.open(oldId, 'read')
   const id = SessionId(`scheduled-reminder-${randomUUID()}`)
-  const handle = await ctx.agents.create({ sessionId: id, meta: { cwd: task.workspace, agentPreset: task.agentPreset },
+  const handle = await ctx.agents.create({ sessionId: id, meta: { cwd: task.workspace, agentPreset },
     agentOptions: { provider: task.provider, model: task.model },
-    setup: async (scope) => { await ctx.agentPresets.mount(scope, task.agentPreset) },
+    setup: async (scope) => { await ctx.agentPresets.mount(scope, agentPreset) },
   })
   try {
     const seen = new Set<string>()

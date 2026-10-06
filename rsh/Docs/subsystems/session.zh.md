@@ -156,6 +156,12 @@ interface SessionEventMap {
    * so tolerating concurrent writers needs a signal beyond the log.
    */
   'session/end-seed': { inherited?: true }
+  /**
+   * Program-selected classification for a scheduled root. It is informational;
+   * older readers may skip it, while current Programs use it to keep scheduled
+   * roots ineligible for interactive management after replacement or restore.
+   */
+  'session/root-origin': { origin: 'scheduled' }
 }
 ```
 
@@ -575,7 +581,8 @@ declare class Session {
    * publication callback has been validated. Guards observe the pre-batch log;
    * publication observers see the complete accepted batch in sequence order.
    * Persistence remains the selected writer's asynchronous durability barrier.
-   * @param inputs - ordered typed facts and any required surface metadata.
+   * @param inputs - ordered typed facts and required surface metadata; a log-only event may set
+   *   `ignorable: true` when older readers can safely skip it.
    * @returns immutable accepted events with contiguous sequences.
    * @throws before changing the log if any input or synchronous acceptance check fails.
    */

@@ -17,10 +17,11 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
  * @param humanInteractions - install existing question, tool and approval Providers.
  * @param installedPresets - publish two explicit standing compositions from the fixture installation.
+ * @param taskScheduler - install the shipped persistent task-scheduler Provider and Consumer.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
-  modelControls = false, humanInteractions = false, installedPresets = false) {
+  modelControls = false, humanInteractions = false, installedPresets = false, taskScheduler = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -77,6 +78,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   const shipped = shippedNativeProfileComposition(home, 'native-tui')
   const selected = new Set(['app', 'session-execution', 'agents', 'tools', 'model-execution', 'storage'])
   if (modelControls) selected.add('model-selection')
+  if (taskScheduler) selected.add('task-scheduler')
   if (humanInteractions) for (const id of ['approval', 'user-questions', 'ask-user-tool']) { selected.add(id) }
   const installations = shipped.installations.filter(row => selected.has(row.id)).map(row => row.id === 'app'
     ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: humanInteractions ? 5 : 3 } }

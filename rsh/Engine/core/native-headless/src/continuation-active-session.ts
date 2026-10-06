@@ -39,10 +39,12 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
    * @param agent - exact registered Agent.
    * @param owner - Program's exclusive Session writer.
    * @param invocation - explicit root or delegated Program entry.
+   * @param rootOrigin - durable Program classification for a scheduled root.
    * @param driver - selected residency and admission callbacks.
    */
   constructor(readonly agent: NativeAgent, private readonly owner: NativeContinuationSession,
-    readonly invocation: 'root' | 'delegated', private readonly driver: NativeActiveSessionDriver) {}
+    readonly invocation: 'root' | 'delegated', readonly rootOrigin: 'scheduled' | undefined,
+    private readonly driver: NativeActiveSessionDriver) {}
 
   /** @inheritdoc */
   get rootOperations(): NativeRootSessionOperations | undefined { return this.driver.rootOperations }
