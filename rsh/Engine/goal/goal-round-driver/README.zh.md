@@ -52,11 +52,11 @@ kind: "package-reference"
 
 ### 何时停止续行
 
-Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行；宿主发起的暂停还会中止正在运行的轮次，而模型在自己轮次内发起的暂停会正常结束。编辑只会通过修订栅栏使进行中的 Round 失效，驱动器会继续新修订。驱动器也会在以下情况自行停止：轮次因 max tokens 结束、持久性写入失败、agent 被取消、插件卸载，或 Round 上限耗尽——上限耗尽时它会以稳定代码 `round-limit` 记录一个 blocker。取消绝不会自动重启 Round：Round 已在进行或已排入队列的 goal 会在下一次 idle 时被暂停；与 goal 尝试无关的取消只会停用续行。
+Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行。人类 `/goal pause` 会持久化暂停并中止当前 turn；模型发起的暂停会正常结束，包括 Goal-owned turn 后续 step 已接纳直接人类输入的情况。编辑通过 revision 栅栏使进行中的 Round 失效，驱动器会继续新 revision。驱动器也会在 turn 因 max tokens 结束、持久性写入失败、agent 被取消或 Round 上限耗尽时停止——达到上限时会以稳定代码 `round-limit` 记录 blocker。取消绝不会自动重启 Round：正在进行或已排队的 Goal 会在下一次 idle 时暂停；与 Goal 尝试无关的取消只会停用续行。
 
 ### resume、fork 或卸载之后
 
-把驱动器挂载到现有 agent 上绝不会启用任何 goal 的续行；会话 resume 或 fork 后，active 的 goal 会保持停用续行，直到用户明确授权 resume——驱动器绝不会自行复活工作。卸载插件会取消进行中的 Round，并确保不再启动后续 Round。
+把驱动器挂载到现有 agent 上绝不会启用任何 goal 的续行；会话 resume 或 fork 后，active 的 goal 会保持停用续行，直到用户明确授权 resume——驱动器绝不会自行复活工作。卸载插件会停用 Goal、中止并排空当前 Round，且不再启动后续 Round。
 
 -----
 
@@ -91,7 +91,7 @@ Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻�
 
 ### 原生 profile
 
-原生 profile 选择 `./native` 并配置 `admissionOrder`（默认 `700`）。驱动器等待 Program 所有的空闲 checkpoint，预留持久化 Goal 消息，并在下游 step admission 完成后重新检查精确 id、revision、轮数与 activation。拒绝的陈旧输入在模型请求前按捕获的 id 移除，并发输入继续待处理。完成、阻塞、取消和卸载通过 Program 释放 root 驻留，不会打开子 agent。
+原生 profile 选择 `./native` 并配置 `admissionOrder`（默认 `700`）。驱动器等待 Program 所有的空闲 checkpoint，预留持久化 Goal 消息，并在下游 step admission 完成后重新检查精确 id、revision、轮数与 activation。拒绝的陈旧输入在模型请求前按捕获的 id 移除，并发输入继续待处理。宿主暂停与驱动器卸载只中断当前 root turn，因此 root epoch 仍可继续使用，尚未领取的普通 inbox 消息会留到后续唤醒。完成、阻塞、取消和卸载通过 Program 释放 root 驻留，不会打开子 agent。
 
 </details>
 

@@ -39,7 +39,7 @@ kind: "package-reference"
 | `/goal` | 显示当前目标、持久 phase、Round 数量与上限、进程本地续行启用状态与有效的下一步命令；被阻塞的 goal 还会显示其策略代码与说明 |
 | `/goal <objective>` | 创建 goal 并启用续行，或用全新身份替换已完成 goal |
 | `/goal edit <objective>` | 编辑当前目标，不改变其 phase 或续行启用状态 |
-| `/goal pause` | 暂停 active goal 并停用续行 |
+| `/goal pause` | 持久化暂停、停用续行，并中止确切 root 的当前 turn，同时保留尚未领取的 inbox 输入 |
 | `/goal resume` | 恢复已停止 goal，或在会话 resume 或 fork 后重新启用 active goal；仍受剩余 Round 上限约束 |
 | `/goal clear` | 清除当前 goal，同时保留其持久历史 |
 

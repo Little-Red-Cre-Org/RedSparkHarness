@@ -42,6 +42,8 @@ NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的�
 
 Host 的 `rootExecution.cancel(owner)` 关闭确切附着的根 Agent epoch，包括未保留驻留的普通轮次。它拒绝外来或已释放的所有者，并等待执行、保留工作、writer 与注册清理。清理失败保留错误及已关闭的执行条目，防止在资源释放状态不明时建立替代执行。取消成功后，后续恢复通过新的 Agent epoch 继续。
 
+确切根 owner 还提供 `rootOperations.interruptTurn(reason)`。它只中止并等待该 root 的当前 turn；Session epoch 保持存活，尚未领取的 inbox 消息继续排队并可在之后唤醒。需要丢弃待处理输入并关闭 epoch 时，使用完整的 root cancel。
+
 委派可提供 `initialize(append)`，在首个 turn 内记录子级自有事实，并通过 `onReady(agent)` 在这些事实持久化后接收已注册子级。执行器在首次模型请求前调用两者。初始化、持久化或交付失败会在自有清理结束后拒绝，模块不会获得 writer 的直接访问权。
 
 Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工作区／模型／提示词／预算及已有子任务执行操作调用 `register()`。每个 Agent 仅接纳一个活动贡献，包括释放等待期间。返回的释放函数关闭 turn 接纳、取消 turn 持有的委派并等待执行器结算。它不关闭 Program 的 writer，也不释放其 Agent。

@@ -1109,6 +1109,17 @@ export class NativeHeadlessApplication implements NativeApplication {
     const execution = this.agents.execution(agent)
     const lifetime = AbortSignal.any([execution.signal, this.context.signal, this.operationCancellation.signal])
     return { agent, sessionId: id, signal: lifetime,
+      interruptTurn: (reason) => {
+        lifetime.throwIfAborted()
+        if (this.disposal !== undefined || this.executions.get(id)?.execution !== execution || this.agents.get(agent.id) !== agent) {
+          throw new Error('native-headless: original root Agent is no longer live')
+        }
+        const epoch = this.rootEpochs.get(id)
+        if (epoch === undefined || epoch.owner.session.id !== id) {
+          throw new Error('native-headless: root turn interruption requires the retained Session owner')
+        }
+        return epoch.activation.interrupt(reason)
+      },
       runIdle: <T>(operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> => {
         lifetime.throwIfAborted()
         signal.throwIfAborted()

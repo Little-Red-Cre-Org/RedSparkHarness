@@ -22,11 +22,36 @@ import { plugin as goalCommandPlugin } from '../../command-goal/src/native.ts'
 import { plugin as goalToolsPlugin } from '../../tool-goal/src/native.ts'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
 import { foldGoal } from '@deepseek-ai/dsh-goal/projection'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
+import { maxTokensResponse, MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
+
+async function* signalFaithfulStream(stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
+  options: GenerateOptions): AsyncGenerator<StreamChunk> {
+  try { yield* stream(options) }
+  catch (failure: unknown) {
+    if (options.signal?.aborted) throw options.signal.reason
+    throw failure
+  }
+}
+
+function aggregateLeaves(failure: unknown): readonly unknown[] {
+  return failure instanceof AggregateError ? failure.errors.flatMap(aggregateLeaves) : [failure]
+}
+
+async function closeAfterAbort(state: Awaited<ReturnType<typeof fixture>>, signal: AbortSignal): Promise<void> {
+  try { await state.close() }
+  catch (failure: unknown) {
+    expect(signal.aborted).toBe(true)
+    const leaves = aggregateLeaves(failure)
+    expect(leaves.length).toBeGreaterThan(0)
+    expect(leaves.every(error => error === signal.reason)).toBe(true)
+    await rm(state.root, { recursive: true, force: true })
+  }
+}
 
 async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], prepareInstructions?: NativeAgentInstructions['prepare']) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-continuation-host-'))
@@ -68,7 +93,8 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], pre
       await prepareInstructions?.(session, inputs, signal),
   } as unknown as NativeAgentInstructions
   const instructionsProvider: NativePlugin = { apiVersion: 1, name: 'continuation-instructions', targets: ['host'],
-    requires: [], provides: ['agentInstructions'], resolve: () => context => context.provide('agentInstructions', instructions) }
+    requires: [], provides: ['agentInstructions'], resolve: () => (context) => { context.provide('agentInstructions', instructions) } }
+  const driverRequest: InstallationRequest = { plugin: driverPlugin, scope, config: undefined }
   const installation: InstallationRequest[] = [
     { plugin: capture, scope, config: undefined },
     { plugin: appPlugin, scope, config: { cwd: root, provider: 'mock', model: 'parent', systemPrompt: 'Parent.', maxSteps: 4 } },
@@ -77,7 +103,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], pre
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: promptPlugin, scope, config: undefined },
     { plugin: goalPlugin, scope, config: { defaultMaxGoalRounds: 2 } },
-    { plugin: driverPlugin, scope, config: undefined },
+    driverRequest,
     { plugin: goalToolsPlugin, scope, config: { blockedAfterConsecutiveRounds: 1 } },
     { plugin: commandsPlugin, scope, config: undefined }, { plugin: goalCommandPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined },
@@ -92,7 +118,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], pre
     || activeSessions === undefined || goals === undefined || commands === undefined || continuation === undefined) {
     throw new Error('missing continuation fixture services')
   }
-  return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, goals, commands, continuation,
+  return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, goals, commands, continuation, driverRequest,
     async close() { await host.stop(); await rm(root, { recursive: true }) } }
 }
 
@@ -347,6 +373,250 @@ it('cancels an admitted automatic round and releases Goal residency before Host 
   } finally { stream.mockRestore(); await state.close() }
 })
 
+it('driver unload interrupts its Goal round but preserves queued human input for the same root', async () => {
+  const state = await fixture([toolCallResponse('create', 'create_goal', { objective: 'Cancel on driver unload.' }),
+    textResponse('Armed.'), 'hang-slow', textResponse('Processed the wake input.'), textResponse('Processed the queued input.')])
+  const entered = Promise.withResolvers<undefined>()
+  const detached = Promise.withResolvers<undefined>()
+  let modelSignal: AbortSignal | undefined
+  const removeDetached = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  const original = state.model.stream.bind(state.model)
+  const spy = vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    const automatic = state.model.requests.length === 2
+    if (automatic) modelSignal = options.signal
+    for await (const chunk of signalFaithfulStream(original, options)) {
+      if (automatic) entered.resolve(undefined)
+      yield chunk
+    }
+  })
+  const run = state.app.executeTurn({ id: SessionId('native-goal-driver-unload'), resume: false,
+    message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) },
+  new AbortController().signal).then(() => undefined, () => undefined)
+  try {
+    await entered.promise
+    const owner = state.activeSessions.owners()[0]
+    if (owner === undefined) throw new Error('missing active root owner')
+    const queuedText = 'Keep this human input through driver unload.'
+    await owner.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: queuedText }] }),
+      'next-step', false, new AbortController().signal)
+    await state.host.remove(state.driverRequest)
+    expect(state.activeSessions.owners()).toHaveLength(1)
+    expect(state.goals.get(owner.agent)).toMatchObject({ phase: 'active', activation: 'disarmed' })
+    expect(owner.messages('next-step').map(message => message.content)).toEqual([
+      [{ type: 'text', text: queuedText }],
+    ])
+    await state.app.executeTurn({ id: owner.session.id, resume: true, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Wake the retained root after driver unload.' }] }) }, new AbortController().signal)
+    await detached.promise
+    await run
+    expect(modelSignal?.aborted).toBe(true)
+    expect(state.activeSessions.owners()).toHaveLength(0)
+    const reader = await state.storage.open(SessionId('native-goal-driver-unload'), 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(1)
+      expect(events.filter(event => event.type === 'turn/end').map(event => event.data.reason.kind)).toEqual([
+        'completed', 'aborted', 'completed',
+      ])
+      expect(events.some(event => event.type === 'user/message' && event.data.source.kind === 'user'
+        && event.data.content.some(block => block.type === 'text' && block.text === queuedText))).toBe(true)
+      expect(events.some(event => event.type === 'agent/inbox/spliced' && event.data.outcome === 'canceled'
+        && event.data.target === 'next-step')).toBe(false)
+      expect(state.model.requests).toHaveLength(4)
+      expect(JSON.stringify(state.model.requests.at(-1)?.messages)).toContain(queuedText)
+      expect(foldGoal(events).goal).toMatchObject({ phase: 'active' })
+    } finally { await reader.close() }
+  } finally {
+    await removeDetached(); spy.mockRestore()
+    if (modelSignal?.aborted) await closeAfterAbort(state, modelSignal)
+    else await state.close()
+  }
+})
+
+it('human /goal pause aborts a live Goal round, drains it, and preserves ordinary queued input', async () => {
+  const state = await fixture([toolCallResponse('create', 'create_goal', { objective: 'Pause the automatic round.' }),
+    textResponse('Armed.'), 'hang-slow', textResponse('Handled the retained human input.'), textResponse('Resumed round.')])
+  const entered = Promise.withResolvers<undefined>()
+  const detached = Promise.withResolvers<undefined>()
+  let modelSignal: AbortSignal | undefined
+  const removeDetached = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  const original = state.model.stream.bind(state.model)
+  const spy = vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    const automatic = state.model.requests.length === 2
+    if (automatic) modelSignal = options.signal
+    for await (const chunk of signalFaithfulStream(original, options)) {
+      if (automatic) entered.resolve(undefined)
+      yield chunk
+    }
+  })
+  const id = SessionId('native-goal-live-pause')
+  const run = state.app.executeTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+    content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal).then(() => undefined, () => undefined)
+  try {
+    await entered.promise
+    const owner = state.activeSessions.owners()[0]
+    if (owner === undefined) throw new Error('missing active root owner')
+    const queuedText = 'Keep this queued input.'
+    await owner.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: queuedText }] }),
+      'next-step', false, new AbortController().signal)
+    const command = await state.commands.dispatch({ agent: owner.agent, session: owner.session, line: '/goal pause',
+      attachments: [], signal: new AbortController().signal })
+    expect(command?.result).toMatchObject({ kind: 'success' })
+    await run
+    expect(modelSignal?.aborted).toBe(true)
+    expect(state.activeSessions.owners()).toHaveLength(1)
+    expect(owner.messages('next-step').map(message => message.content)).toEqual([
+      [{ type: 'text', text: queuedText }],
+    ])
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(events.filter(event => event.type === 'turn/end').at(-1)).toMatchObject({ data: { reason: { kind: 'aborted' } } })
+      expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(1)
+      expect(events.some(event => event.type === 'agent/inbox/spliced' && event.data.outcome === 'canceled'
+        && event.data.target === 'next-step')).toBe(false)
+      expect(foldGoal(events).goal).toMatchObject({ phase: 'paused' })
+    } finally { await reader.close() }
+    const resumed = await state.commands.dispatch({ agent: owner.agent, session: owner.session, line: '/goal resume',
+      attachments: [], signal: new AbortController().signal })
+    expect(resumed?.result).toMatchObject({ kind: 'success' })
+    await state.app.executeTurn({ id, resume: true, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Continue the session after pausing the Goal.' }] }) }, new AbortController().signal)
+    await detached.promise
+    await run
+    const replayReader = await state.storage.open(id, 'read')
+    try {
+      const replayEvents = (await replayReader.read()).events
+      expect(replayEvents.some(event => event.type === 'user/message' && event.data.source.kind === 'user'
+        && event.data.content.some(block => block.type === 'text' && block.text === queuedText))).toBe(true)
+      expect(replayEvents.filter(event => event.type === 'agent/inbox/spliced' && event.data.outcome === 'canceled'
+        && event.data.target === 'next-step')).toHaveLength(0)
+      expect(replayEvents.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(2)
+      expect(JSON.stringify(state.model.requests.at(-2)?.messages)).toContain(queuedText)
+      expect(JSON.stringify(state.model.requests.at(-2)?.messages)).toContain('Continue the session after pausing the Goal.')
+      expect(foldGoal(replayEvents).goal).toMatchObject({ phase: 'blocked', blockedReason: { code: 'round-limit' } })
+    } finally { await replayReader.close() }
+    expect(state.model.requests).toHaveLength(5)
+  } finally {
+    await removeDetached(); spy.mockRestore()
+    if (modelSignal?.aborted) await closeAfterAbort(state, modelSignal)
+    else await state.close()
+  }
+})
+
+it('a model pause after human work enters a Goal-owned turn finishes normally', async () => {
+  const state: Awaited<ReturnType<typeof fixture>> = await fixture([
+    toolCallResponse('create', 'create_goal', { objective: 'Allow direct human steering during an automatic turn.' }),
+    textResponse('Armed.'), toolCallResponse('inspect', 'get_goal', {}),
+    () => {
+      const agent = state.agents.get(NativeAgentId('native-goal-mixed-pause'))
+      if (agent === undefined) throw new Error('missing root Agent')
+      const goal = state.goals.get(agent)
+      if (goal === undefined) throw new Error('missing current Goal')
+      return toolCallResponse('pause', 'update_goal', { goal_id: goal.id, revision: goal.revision, action: 'pause' })
+    }, textResponse('The model completed its human-steered turn.'),
+  ])
+  const id = SessionId('native-goal-mixed-pause')
+  const entered = Promise.withResolvers<undefined>()
+  const resumeRound = Promise.withResolvers<undefined>()
+  const detached = Promise.withResolvers<undefined>()
+  const removeDetached = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  const original = state.model.stream.bind(state.model)
+  const spy = vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    if (state.model.requests.length === 2) {
+      entered.resolve(undefined)
+      await resumeRound.promise
+    }
+    yield* signalFaithfulStream(original, options)
+  })
+  try {
+    await state.app.executeTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal)
+    await entered.promise
+    const owner = state.activeSessions.owners()[0]
+    if (owner === undefined) throw new Error('missing active root owner')
+    const steeredText = 'Steer the active Goal before its next model step.'
+    await owner.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: steeredText }] }),
+      'next-step', false, new AbortController().signal)
+    resumeRound.resolve(undefined)
+    await detached.promise
+    expect(state.model.requests).toHaveLength(5)
+    expect(JSON.stringify(state.model.requests[3]?.messages)).toContain(steeredText)
+    expect(state.model.requests[2]?.signal?.aborted).toBe(false)
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(events.filter(event => event.type === 'turn/end').at(-1)).toMatchObject({ data: { reason: { kind: 'completed' } } })
+      expect(events.some(event => event.type === 'user/message' && event.data.source.kind === 'user'
+        && event.data.content.some(block => block.type === 'text' && block.text === steeredText))).toBe(true)
+      expect(foldGoal(events).goal).toMatchObject({ phase: 'paused' })
+    } finally { await reader.close() }
+  } finally {
+    resumeRound.resolve(undefined)
+    await removeDetached(); spy.mockRestore(); await state.close()
+  }
+})
+
+it('a model pause during a direct human turn ends normally without cancelling the root', async () => {
+  const state: Awaited<ReturnType<typeof fixture>> = await fixture([
+    toolCallResponse('create', 'create_goal', { objective: 'Pause from the direct turn.' }),
+    () => {
+      const agent = state.agents.get(NativeAgentId('native-goal-model-pause'))
+      if (agent === undefined) throw new Error('missing root Agent')
+      const goal = state.goals.get(agent)
+      if (goal === undefined) throw new Error('missing current Goal')
+      return toolCallResponse('pause', 'update_goal', { goal_id: goal.id, revision: goal.revision, action: 'pause' })
+    }, textResponse('The human can resume later.'),
+  ])
+  const id = SessionId('native-goal-model-pause')
+  const detached = Promise.withResolvers<undefined>()
+  const removeDetached = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  let modelSignal: AbortSignal | undefined
+  const original = state.model.stream.bind(state.model)
+  const spy = vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    if (state.model.requests.length === 1) modelSignal = options.signal
+    yield* original(options)
+  })
+  try {
+    await state.app.executeTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal)
+    await detached.promise
+    expect(modelSignal?.aborted).toBe(false)
+    expect(state.model.requests).toHaveLength(3)
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(events.filter(event => event.type === 'turn/start')).toHaveLength(events.filter(event => event.type === 'turn/end').length)
+      expect(events.filter(event => event.type === 'turn/end').at(-1)).toMatchObject({ data: { reason: { kind: 'completed' } } })
+      expect(foldGoal(events).goal).toMatchObject({ phase: 'paused' })
+    } finally { await reader.close() }
+  } finally { await removeDetached(); spy.mockRestore(); await state.close() }
+})
+
+it('max-tokens disarms an active Goal without queuing another round', async () => {
+  const state = await fixture([toolCallResponse('create', 'create_goal', { objective: 'Stop at the token ceiling.' }),
+    textResponse('Armed.'), maxTokensResponse('Cut off.'), textResponse('Unexpected continuation.')])
+  const detached = Promise.withResolvers<undefined>()
+  const removeDetached = state.activeSessions.onDetached(async () => { detached.resolve(undefined) })
+  try {
+    const id = SessionId('native-goal-max-tokens')
+    await state.app.executeTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Create an explicit Goal.' }] }) }, new AbortController().signal)
+    await detached.promise
+    expect(state.model.requests).toHaveLength(3)
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(1)
+      expect(events.filter(event => event.type === 'turn/end').at(-1)).toMatchObject({ data: { reason: { kind: 'max-tokens' } } })
+      expect(foldGoal(events)).toMatchObject({ goal: { phase: 'active' }, roundsStarted: 1 })
+    } finally { await reader.close() }
+  } finally { await removeDetached(); await state.close() }
+})
+
 
 it('creates and pauses a first human Goal command, then cold-restores its direct command view without any model turn', async () => {
   const state = await fixture([])
@@ -397,7 +667,7 @@ it('drains owner hooks after contribution cleanup fails and returns the same dis
         const removeIdle = originalIdle(callback)
         return async () => { await removeIdle(); entered.resolve(undefined); await release.promise }
       })
-      restores.push(() => idle.mockRestore())
+      restores.push(() => { idle.mockRestore() })
       await observer(owner)
     })
     return async () => { await remove(); throw failure }

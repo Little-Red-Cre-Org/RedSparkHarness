@@ -36,8 +36,15 @@ async function execute(goals: NativeGoalOperations, invocation: NativeCommandInv
         await submitAttachments(invocation)
         return renderGoal(current.phase === 'complete' ? 'Goal created' : 'Goal updated', goal)
       }
-      case 'pause': return current === undefined ? missingGoal('pause')
-        : renderGoal('Goal paused', await goals.pause(invocation.agent, goalCommandRef(command, current)))
+      case 'pause': {
+        if (current === undefined) return missingGoal('pause')
+        const release = invocation.owner.retain()
+        try {
+          const goal = await goals.pause(invocation.agent, goalCommandRef(command, current))
+          await invocation.owner.rootOperations?.interruptTurn({ kind: 'hook', reason: 'goal-pause' })
+          return renderGoal('Goal paused', goal)
+        } finally { release() }
+      }
       case 'resume': return current === undefined ? missingGoal('resume')
         : renderGoal('Goal resumed', await goals.resume(invocation.agent, goalCommandRef(command, current)))
       case 'clear':

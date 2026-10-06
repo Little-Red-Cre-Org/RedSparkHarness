@@ -39,7 +39,7 @@ Every sub-command runs against the current goal of the invoking agent; a bare `/
 | `/goal` | Shows the current objective, durable phase, round count and cap, process-local activation, and valid next commands; a blocked goal also shows its policy code and explanation |
 | `/goal <objective>` | Creates and arms a goal, or replaces a completed goal with a fresh identity |
 | `/goal edit <objective>` | Edits the current objective without changing its phase or activation |
-| `/goal pause` | Pauses an active goal and disarms continuation |
+| `/goal pause` | Persists the pause, disarms continuation, and interrupts the exact root's current turn without discarding unclaimed inbox input |
 | `/goal resume` | Resumes a stopped goal, or rearms an active goal after session resume or fork, subject to its remaining round cap |
 | `/goal clear` | Clears the current goal while retaining its durable history |
 

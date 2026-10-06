@@ -52,11 +52,11 @@ With an exact live agent idle, an active armed goal, and remaining capacity, the
 
 ### When continuation stops
 
-A round starts only at whole-agent idle, and completion, pause, and blocking suppress continuation; a host-initiated pause also aborts the turn already running, while a model-initiated pause inside its own turn finishes normally. An edit only invalidates an in-flight round through the revision fence, and the driver continues the new revision. The driver also stops on its own when a turn ends on max tokens, a durability write fails, the agent is cancelled, the plugin unloads, or the round cap is exhausted — at the cap it records a blocker with the stable code `round-limit`. Cancellation never auto-restarts a round: a goal whose round was under way or already queued is paused at the next idle point, and a cancellation unrelated to a goal attempt only disarms continuation.
+A round starts only at whole-agent idle, and completion, pause, and blocking suppress continuation. A human `/goal pause` persists the pause and interrupts the current turn; a model pause finishes normally, including when direct human input enters a later step of a Goal-owned turn. An edit invalidates an in-flight round through the revision fence, and the driver continues the new revision. The driver also stops when a turn ends on max tokens, a durability write fails, the agent is cancelled, or the round cap is exhausted — at the cap it records a blocker with the stable code `round-limit`. Cancellation never auto-restarts a round: a goal whose round was under way or already queued is paused at the next idle point, and a cancellation unrelated to a goal attempt only disarms continuation.
 
 ### After resume, fork, or unload
 
-Mounting the driver over an existing agent never arms a goal, and after session resume or fork an active goal stays disarmed until an explicit human-authorized resume — the driver never revives work on its own. Unloading the plugin cancels any in-flight round and ensures no later round starts.
+Mounting the driver over an existing agent never arms a goal, and after session resume or fork an active goal stays disarmed until an explicit human-authorized resume — the driver never revives work on its own. Unloading the plugin disarms the goal, interrupts and drains its current round, and prevents later rounds.
 
 -----
 
@@ -91,7 +91,7 @@ The retained prompt is one text block: the JSON-quoted objective and `round/maxG
 
 ### Native profile
 
-Native profiles select `./native` and configure `admissionOrder` (default `700`). The driver waits for the Program-owned idle checkpoint, reserves a durable Goal message, and rechecks the exact id, revision, round and activation after downstream step admission. Rejected stale input is removed by its captured id before a model request; concurrent input remains pending. Completion, blocking, cancellation and unloading release root residency through the Program rather than opening a child.
+Native profiles select `./native` and configure `admissionOrder` (default `700`). The driver waits for the Program-owned idle checkpoint, reserves a durable Goal message, and rechecks the exact id, revision, round and activation after downstream step admission. Rejected stale input is removed by its captured id before a model request; concurrent input remains pending. Host pause and driver unload interrupt only the current root turn, so the root epoch remains available and unclaimed ordinary inbox messages stay queued for a later wake. Completion, blocking, cancellation and unloading release root residency through the Program rather than opening a child.
 
 </details>
 

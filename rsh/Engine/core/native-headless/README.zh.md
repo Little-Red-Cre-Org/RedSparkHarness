@@ -47,7 +47,7 @@ kind: "package-reference"
 
 Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，穿过普通 Session 父节点，并在检查 subagent 末端前核验每条直接父子关系及 subagent 委派深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 
-`rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork 及可选可恢复删除。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
+`rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork 及可选可恢复删除。确切活动 root owner 还提供由 Program 绑定的 turn 中断操作，详见[Session 执行所有权](../native-session-execution/README.zh.md#execution-ownership)。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
 
