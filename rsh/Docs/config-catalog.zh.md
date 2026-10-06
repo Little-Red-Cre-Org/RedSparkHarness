@@ -101,7 +101,7 @@ export interface Config {
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
     id: string
-    /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
+    /** Stable identity; Loader-managed startup waits for persistence selection, then resumes history or creates fresh. */
     sessionId?: SessionId
     /** Optional workspace for a fresh session. */
     cwd?: string
@@ -3109,7 +3109,7 @@ export interface Config {
 
 依赖：[`AgentOptions`](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/subagent/tool-subagent/src/index.ts:48`](../Engine/subagent/tool-subagent/src/index.ts)
+来源：[`rsh/Engine/subagent/tool-subagent/src/config.ts:8`](../Engine/subagent/tool-subagent/src/config.ts)
 
 <a id="deepseek-aidsh-tool-terminal"></a>
 
@@ -3127,7 +3127,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/terminal/tool-terminal/src/index.ts:35`](../Modules/Official/terminal/tool-terminal/src/index.ts)
+来源：[`rsh/Modules/Official/terminal/tool-terminal/src/config.ts:11`](../Modules/Official/terminal/tool-terminal/src/config.ts)
 
 <a id="deepseek-aidsh-tool-todo"></a>
 

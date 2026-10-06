@@ -16,7 +16,7 @@ export const inject = ['agents', 'subagentModelSelection']
 export function apply(ctx: Context, config: Config): void {
   const install = (agent: Agent): void => {
     agent.ctx.inject(ToolSubagent.inject, (runtimeCtx) => {
-      ToolSubagent.apply(runtimeCtx, {
+      return ToolSubagent.apply(runtimeCtx, {
         provider: config.provider,
         modelSelectionSettings: true,
         ...(config.toolName === undefined ? {} : { toolName: config.toolName }),

@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This Cordis-free Client application supplies the conversation page for the explicit native-web profile. The selected renderer mounts React; client-native-session supplies authenticated Host operations.
-
-Root Tool calls pair with their durable result, failure identity and presentation metadata and render through the shared Tool card models. Cold history uses the same projection; unavailable file-opening and trajectory actions are omitted. Nested dispatch records remain available in the raw Session disclosure rather than a separate nested card hierarchy.
+The `native-web` profile uses this Client page to create or resume Sessions, inspect durable history and send messages through the Host. The page renders root Tool results and failures from Session records; nested dispatch remains in raw history. Model and reasoning choices come from the Host model directory, while stale selections and transport or history failures remain visible. Published declarations require the listed package dependencies, and the profile must select the runtime contributions, renderer and `client-native-session` Host operations.
 
 ## Table of Contents
 
@@ -33,7 +31,7 @@ The transcript uses the shared Session append-origin and message projection rule
 
 Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
 
-React and Session message projection use shared application peer instances; the Session Consumer is a type-only dependency supplied by the selected runtime capability.
+React, Session, native model selection, agent preset selection and todo Client values use the application's shared peer instances. The published declarations also reference native-runtime and client-native-session, so those packages are production dependencies for type resolution; their NativePlugins run only when selected by the native profile.
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
 

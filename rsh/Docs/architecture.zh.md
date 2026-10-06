@@ -28,7 +28,7 @@
 
 各层按此顺序应用在空条目列表之上：先按 profile 列出的顺序应用每个组合包，然后是 profile 的 `cordis.patch.yml`，然后是 home 级的那份，最后是任意 `--patch` overlay。一条 patch 按 id 定位某个条目并替换其整个 config，或插入新条目。
 
-自定义 profile 默认实时重载 patch。随附的 `web` profile 使用实时重载；`headless`、`sdk`、`sdk-minimal` 和 `acp` 则只在启动时应用一次所有配置层，因为一次性应用或 stdio 应用拥有工作之后，替换其依赖会破坏该生命周期。
+自定义 profile 默认实时重载。`web` 实时重载；`headless`、`sdk`、`sdk-minimal` 与 `acp` 只加载一次，因为工作开始后替换依赖会破坏一次性或 stdio 生命周期。持久化服务尚未就绪时，由 Loader 管理的新 Agent 会等待组合完成。
 
 Native `native-web` 将 `dsh.profile.configReload` 设为 `live`，以监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，再替换 Host 安装计划。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` 仍只在启动时加载。详见 [CLI 重载契约](../Programs/CLI/reference/README.zh.md)；Host 配置重载独立于 Cordis patch 重载和 Web Client 资源重建。
 

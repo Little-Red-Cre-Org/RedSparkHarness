@@ -21,7 +21,7 @@
 
 import { existsSync } from 'node:fs'
 import { isAbsolute, join, parse, relative, sep } from 'node:path'
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@deepseek-ai/dsh-errors'
 import { ItemRetainer, TextRetainer } from '@deepseek-ai/dsh-output-retention'
 import type { RetainedItems } from '@deepseek-ai/dsh-output-retention'
 import type { SubprocessOperations, SubprocessHandle, SubprocessOutcome, SubprocessOutputRead, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'

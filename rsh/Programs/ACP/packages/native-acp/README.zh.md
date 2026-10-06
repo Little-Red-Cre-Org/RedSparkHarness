@@ -40,7 +40,7 @@ Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。�
 
 ## 开发备注
 
-[原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权。此承载层没有可与执行器分歧的独立 Agent 或 Session 状态投影，因此不发布 invariant 入口。
+[原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权。本包不发布运行时不变量伴生入口，因为 ACP Session 表将每个协议 Session 与其执行器及 MCP 资源配对，而执行器拥有 Agent 执行和持久 Session 状态；ACP 记录保存传输与资源生命周期及临时控制，不是第二份 Session 投影。
 
 <a id="model-experience"></a>
 

@@ -14,7 +14,7 @@ import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-test
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
-import * as tool from '../src/index.ts'
+import * as tool from '../src/compat.ts'
 import * as ToolInvariant from '../src/invariant.ts'
 import SubagentModelSelectionConfig, {
   SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE,

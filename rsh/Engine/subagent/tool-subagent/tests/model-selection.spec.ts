@@ -10,7 +10,7 @@ import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import { MockAdapter } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import * as mock from './scripted-provider.ts'
-import * as tool from '../src/index.ts'
+import * as tool from '../src/compat.ts'
 import {
   assertAllowedModelRoutes,
   assertAllowedModelSelection,

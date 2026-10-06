@@ -42,6 +42,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 [原生 SDK 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-sdk-session-execution.zh.md)说明了进程和 Session 的所有权选择。
 
+本包不发布运行时不变量伴生入口，因为每个 Session 的请求尾链与活动轮准入只用于串行化传输调用并限定通知范围；原生执行器仍是 Agent 身份和持久 Session 状态的权威，该 server 不保留第二份 Session 投影。
+
 <a id="model-experience"></a>
 
 ## 模型体验

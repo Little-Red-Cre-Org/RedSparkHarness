@@ -7,6 +7,7 @@ import { writeClientBuildRecord } from './client-build-environment.ts'
 import {
   devWebBuildEnvironment,
   discoverLibraryDirs,
+  discoverNativeProfileDirs,
   discoverPluginDirs,
   watchClientPlugins,
 } from './dev-web.ts'
@@ -82,6 +83,32 @@ it('discovers client-preset packages the shell links, excluding loader-delivered
     await write('rsh/Programs/Web/host/server', {}, "import { defineConfig } from 'tsdown'\nexport default defineConfig({})\n")
 
     expect(discoverLibraryDirs(root)).toEqual(['rsh/Programs/Web/client/linked'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+it('keeps native-profile builds out of the legacy module table and static shell library roster', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-dev-web-native-profile-'))
+  try {
+    const directory = 'rsh/Programs/Web/client/native-application'
+    const packageDirectory = join(root, ...directory.split('/'))
+    const staticDirectory = join(root, 'rsh/Programs/Web/client/static')
+    const clientOnlyConfig = `import { clientOnly } from '../tsdown.client.ts'
+export default clientOnly({ entry: ['native.ts'] })
+`
+    await mkdir(packageDirectory, { recursive: true })
+    await mkdir(staticDirectory, { recursive: true })
+    await writeFile(join(packageDirectory, 'package.json'), JSON.stringify({
+      dsh: { native: { targets: ['client'] } },
+    }))
+    await writeFile(join(packageDirectory, 'tsdown.config.ts'), clientOnlyConfig)
+    await writeFile(join(staticDirectory, 'package.json'), JSON.stringify({}))
+    await writeFile(join(staticDirectory, 'tsdown.config.ts'), clientOnlyConfig)
+
+    expect(discoverPluginDirs(root)).toEqual([])
+    expect(discoverLibraryDirs(root)).toEqual(['rsh/Programs/Web/client/static'])
+    expect(discoverNativeProfileDirs(root)).toEqual([directory])
   } finally {
     await rm(root, { recursive: true, force: true })
   }

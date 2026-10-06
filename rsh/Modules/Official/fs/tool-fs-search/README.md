@@ -27,6 +27,8 @@ Use `dsh-tool-fs-search` to give models `glob` file discovery and `grep` content
 
 Mount the tools after a `ctx.subprocess` backend; no host `rg` install is needed, and no filesystem provider is required. The model then gets modification-time-ordered file discovery and line-oriented content search, each bounded and timeout-guarded.
 
+The package root is the Cordis compatibility entry; native compositions should import `./native` so optional Cordis peer dependencies stay out of the install. `dsh-output-retention` and `dsh-timeout` are runtime dependencies, and `dsh-errors` is a required peer dependency so search failures share the host's `HarnessError` class identity.
+
 ### Minimal composition
 
 A subprocess backend, then the tools; the spill backend is optional and makes capped results fully recoverable.
