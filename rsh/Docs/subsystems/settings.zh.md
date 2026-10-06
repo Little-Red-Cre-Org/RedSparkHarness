@@ -10,7 +10,7 @@
 
 [原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve, validateWrite, presentation)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。
 
-原生配置界面通过 `presentation` 选择性公开注册项。`describe()` 只返回带 presentation metadata 的活动注册；descriptor 包含序列化 schema、脱敏后的解析值/base/user、机密路径及其存在状态、当前凭据引用、生效时机和用户分节 revision。`mutate(namespace, ops, expectedRevision)` 在一次 revision 检查提交中按路径编辑用户分节。调用方必须发送路径修改，不能从脱敏视图重建整个分节；修改不能触及机密路径，也不能调整或重排数组。
+原生配置界面通过 `presentation` 选择性公开注册项。`describe()` 只返回带 presentation metadata 的活动注册；descriptor 包含序列化 schema、脱敏后的解析值/base/user、机密路径及其存在状态、当前凭据引用、生效时机和用户分节 revision。`mutate(namespace, ops, expectedRevision)` 在一次 revision 检查提交中按路径编辑用户分节。调用方必须发送路径修改，不能从脱敏视图重建整个分节。只要 owner validator 通过，Service 允许对非机密数组字段的父路径执行整体 `set`，因此可替换为长度或顺序不同的数组。沿数组索引下钻时只能使用现有索引；不能创建空位，也不能 `unset` 删除数组项。Service 会拒绝触及 schema 声明机密字段的修改，也会拒绝替换包含机密字段的祖先。单独作为页面策略，JSON 编辑器会拒绝数组扩缩或行重排；只有数组长度和行顺序不变时才生成路径修改。
 
 ```ts type-equiv
 /** Optional metadata required before a registration is exposed to configuration UI. */
