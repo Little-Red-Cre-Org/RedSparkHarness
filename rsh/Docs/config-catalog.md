@@ -1101,7 +1101,7 @@ export interface DeepSeekCatalogModel {
 
 Depends on: `ModelModality` (`@deepseek-ai/dsh-llm/native`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `SystemPromptUpdate` (`@deepseek-ai/dsh-llm/native`)
 
-Source: [`rsh/Engine/llm/llm-deepseek/src/config.ts:74`](../Engine/llm/llm-deepseek/src/config.ts)
+Source: [`rsh/Modules/Official/llm/llm-deepseek/src/config.ts:74`](../Modules/Official/llm/llm-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-llm-pi-ai"></a>
 
@@ -1376,7 +1376,7 @@ export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['
 
 Depends on: `Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`)
 
-Source: [`rsh/Engine/llm/llm-pi-ai/src/config.ts:221`](../Engine/llm/llm-pi-ai/src/config.ts)
+Source: [`rsh/Modules/Official/llm/llm-pi-ai/src/config.ts:221`](../Modules/Official/llm/llm-pi-ai/src/config.ts)
 
 <a id="deepseek-aidsh-llm-replay"></a>
 
@@ -1702,7 +1702,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/llm/plugin-package-inventory-deepseek/src/index.ts:32`](../Engine/llm/plugin-package-inventory-deepseek/src/index.ts)
+Source: [`rsh/Modules/Official/llm/plugin-package-inventory-deepseek/src/index.ts:32`](../Modules/Official/llm/plugin-package-inventory-deepseek/src/index.ts)
 
 <a id="deepseek-aidsh-pwsh-local"></a>
 
@@ -1908,7 +1908,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/session/session-log-deepseek/src/index.ts:38`](../Engine/session/session-log-deepseek/src/index.ts)
+Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/index.ts:38`](../Modules/Official/llm/session-log-deepseek/src/index.ts)
 
 <a id="deepseek-aidsh-session-log-export"></a>
 
@@ -3538,7 +3538,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-command-goal` — requires `commands` · `goals` ([`rsh/Engine/goal/command-goal/src/index.ts`](../Engine/goal/command-goal/src/index.ts))
 - `@deepseek-ai/dsh-commands` ([`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts))
 - `@deepseek-ai/dsh-cordis-client-runner` ([`rsh/Modules/Official/extensions/cordis-client-runner/src/index.ts`](../Modules/Official/extensions/cordis-client-runner/src/index.ts))
-- `@deepseek-ai/dsh-deepseek-llm-api-extensions` ([`rsh/Engine/llm/deepseek-llm-api-extensions/src/index.ts`](../Engine/llm/deepseek-llm-api-extensions/src/index.ts))
+- `@deepseek-ai/dsh-deepseek-llm-api-extensions` ([`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts))
 - `@deepseek-ai/dsh-experimental-client-ui-agent-team` ([`rsh/Modules/Community/experimental/client-ui-agent-team/src/index.ts`](../Modules/Community/experimental/client-ui-agent-team/src/index.ts))
 - `@deepseek-ai/dsh-fs-e2b` — requires `e2b` ([`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts))
 - `@deepseek-ai/dsh-fs-observation-policy` ([`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts))

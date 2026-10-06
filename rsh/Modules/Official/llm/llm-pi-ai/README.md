@@ -88,7 +88,7 @@ In a native Host with a settings Provider, the `llm-pi-ai` namespace overlays th
 | `maxRequestImageBytes` | `20 MiB` | Aggregate base64 image-payload bound with oldest-first offload |
 | `retryPolicy` | normal, 5 retries | Provider-owned retry policy executed by `dsh-llm-retry` |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-llm-pi-ai) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-llm-pi-ai) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Sign in to a provider
 
@@ -96,7 +96,7 @@ A provider pi-ai ships a login for can be signed into through the harness author
 
 ### Resolve the model catalog
 
-The installed pi-ai 1.0 catalog supplies current ChatGPT subscription models through `openai-codex`, including `gpt-6.1-sol`. Explicit model lists replace that catalog; [the model-selection upgrade guide](../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.md) explains restricted lists and the DeepSeek Flash ID. Replayed tool arguments use pi-ai's JSON object type without changing the durable replay format.
+The installed pi-ai 1.0 catalog supplies current ChatGPT subscription models through `openai-codex`, including `gpt-6.1-sol`. Explicit model lists replace that catalog; [the model-selection upgrade guide](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.md) explains restricted lists and the DeepSeek Flash ID. Replayed tool arguments use pi-ai's JSON object type without changing the durable replay format.
 
 A profile's `models` list replaces the route's installed catalog rather than extending it; each entry defaults its unset fields from the installed model of the same id, so narrowing a route to two models, correcting one capacity, or adding a model newer than the installed catalog are one-line edits. `modelOverrides` reshapes individual installed-catalog models without that cost — correct one model, keep the other thirty-seven — and is refused when set beside a `models` list, on a hand-declared route, or naming a model the catalog does not describe, because a silently unchanged model would be a typo someone hunts for later.
 
@@ -172,12 +172,12 @@ Successful assistant responses store a versioned, lossless-JSON replay state bes
 
 Read these pages when the package-level contract is not enough. They move from the service contract to the twin adapter and the shared types.
 
-- [dsh-llm service](../llm/README.md) — the provider-neutral service this adapter registers on.
+- [dsh-llm service](../../../../Engine/llm/README.md) — the provider-neutral service this adapter registers on.
 - [llm-deepseek adapter](../llm-deepseek/README.md) — the direct DeepSeek twin for the `deepseek-official` route.
-- [LLM streaming subsystem](../../../Docs/subsystems/llm-streaming.md) — the `StreamChunk` protocol and adapter contract.
-- [llm-retry](../llm-retry/README.md) — the retry executor that applies each profile's `retryPolicy`.
-- [Twin LLM adapters](../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.md) — why the DeepSeek route ships two structurally different adapters.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-llm-pi-ai) — every accepted config field and its source declaration.
+- [LLM streaming subsystem](../../../../Docs/subsystems/llm-streaming.md) — the `StreamChunk` protocol and adapter contract.
+- [llm-retry](../../../../Engine/llm/llm-retry/README.md) — the retry executor that applies each profile's `retryPolicy`.
+- [Twin LLM adapters](../../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.md) — why the DeepSeek route ships two structurally different adapters.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-llm-pi-ai) — every accepted config field and its source declaration.
 
 -----
 

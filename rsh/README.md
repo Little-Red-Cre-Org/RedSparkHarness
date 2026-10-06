@@ -36,7 +36,7 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`automation/`](Modules/Official/automation/README.md) | Persistent plans with independent scheduled Agent executions |
 | [`feedback/`](Modules/Official/feedback/README.md) | Human feedback capture and command |
 | [`identity/`](Core/identity/README.md) | Shared anonymous identity |
-| [`llm/`](Engine/llm/README.md) | LLM capability family: abstract service + provider adapters |
+| [`llm/`](Engine/llm/README.md) | LLM capability: Engine services and [official provider packages](Modules/Official/llm/README.md) |
 | [`e2b/`](Modules/Official/e2b/README.md) | E2B remote-runtime providers |
 | [`subprocess/`](Core/subprocess/README.md) | Subprocess capability family: Service Definition + local process-tree provider |
 | [`shell/`](Modules/Official/shell/README.md) | Bash capability family: executor seam, local impl, model-facing tools |

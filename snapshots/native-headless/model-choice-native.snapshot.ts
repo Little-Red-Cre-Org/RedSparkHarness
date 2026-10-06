@@ -74,7 +74,7 @@ it('records a selected model and its prepared controls through dsh and cold-repl
     ['credentials-local', 'rsh/Modules/Official/credentials/credentials-local'],
     ['session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
     ['fs-local', 'rsh/Modules/Official/fs/fs-local'], ['fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['llm-pi-ai', 'rsh/Engine/llm/llm-pi-ai'],
+    ['llm-pi-ai', 'rsh/Modules/Official/llm/llm-pi-ai'],
   ] as const) symlinkSync(join(root, path), join(modules, 'dsh-' + name), 'junction')
   const fixture = join(profile, 'node_modules/native-selection-fixture')
   mkdirSync(fixture)

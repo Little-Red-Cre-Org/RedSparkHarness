@@ -16,7 +16,7 @@ Status: implemented
 
 后端使用包含完整历史的按需捕获与现有脱敏 waterfall（瀑布式事件）。`DISABLED` 不构造传输。`FULL` 被拒绝，不作为别名。直接调用 `ctx.sessionTelemetry.emit()` 是空操作，因此调用方不能绕过反馈授权。SDK 定时刷新和关闭可以完成先前已授权的批次，但绝不捕获新记录。提交后的发送无需进一步用户交互或模型调用。
 
-[权威反馈决策](2026-09-05-canonical-feedback-log.zh.md)负责存储、版本、删除与纯命令确认。[需主动开启的 DeepSeek 贡献](../../../../rsh/Engine/session/session-log-deepseek/README.zh.md)保持独立，保留现有目标与接受行为。
+[权威反馈决策](2026-09-05-canonical-feedback-log.zh.md)负责存储、版本、删除与纯命令确认。[需主动开启的 DeepSeek 贡献](../../../../rsh/Modules/Official/llm/session-log-deepseek/README.zh.md)保持独立，保留现有目标与接受行为。
 
 ## 考虑过的替代方案
 

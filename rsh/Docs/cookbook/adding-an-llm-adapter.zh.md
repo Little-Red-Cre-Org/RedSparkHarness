@@ -2,7 +2,7 @@
 
 [English](adding-an-llm-adapter.md) | 中文
 
-如何接入一个新的模型提供方。参考实现：`rsh/Engine/llm/llm-deepseek`（直接 HTTP，SSE（Server-Sent Events）由 `eventsource-parser` 分帧）与 `rsh/Engine/llm/llm-pi-ai`（封装 LLM 库）。请先阅读 `rsh/Engine/llm/llm/src/types.ts` 中的 `StreamChunk` 文档——它记录了两个适配器都经过验证的协议约定。
+如何接入一个新的模型提供方。参考实现：`rsh/Modules/Official/llm/llm-deepseek`（直接 HTTP，SSE（Server-Sent Events）由 `eventsource-parser` 分帧）与 `rsh/Modules/Official/llm/llm-pi-ai`（封装 LLM 库）。请先阅读 `rsh/Engine/llm/llm/src/types.ts` 中的 `StreamChunk` 文档——它记录了两个适配器都经过验证的协议约定。
 
 ## 基本形态
 
@@ -36,7 +36,7 @@ export function apply(ctx: Context, config: Config) {
 
 ## 实现结构
 
-让协议格式（wire format）类型、请求序列化、传输解析、分片转换和适配器类分别承担独立职责；[`llm-deepseek`](../../Engine/llm/llm-deepseek/README.zh.md) 是参考布局。
+让协议格式（wire format）类型、请求序列化、传输解析、分片转换和适配器类分别承担独立职责；[`llm-deepseek`](../../Modules/Official/llm/llm-deepseek/README.zh.md) 是参考布局。
 
 ## 验证
 
