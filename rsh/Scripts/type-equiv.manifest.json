@@ -1742,6 +1742,31 @@
       "source": "rsh/Modules/Official/settings/settings/src/index.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsPresentation",
+      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsDescriptor",
+      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsPathOp",
+      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsScope",
+      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+    },
+    {
+      "doc": "rsh/Programs/Web/client/native-session/README.md",
+      "symbol": "NativeSettingsDescription",
+      "source": "rsh/Programs/Web/client/native-session/src/native.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/permission-presets.md",
       "symbol": "Config",
       "source": "rsh/Modules/Official/interaction/permission-presets/src/index.ts"

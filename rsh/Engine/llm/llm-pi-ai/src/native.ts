@@ -36,7 +36,7 @@ export const plugin: NativePlugin = {
           const config = Config(value)
           resolveProfiles(config.providers, 'deferred')
           return config
-        }, assertServiceable)
+        }, assertServiceable, { schema: Config, applies: 'live' })
         profiles = resolveProfiles(selection.get().providers, 'deferred')
         const unwatch = selection.watch((next) => { profiles = resolveProfiles(next.providers, 'deferred') })
         context.own(() => { unwatch(); selection.dispose() })

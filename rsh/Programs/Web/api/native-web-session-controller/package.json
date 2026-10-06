@@ -53,7 +53,9 @@
         "workspaceRegistry",
         "agentInstructions",
         "userQuestions",
-        "attachments"
+        "attachments",
+        "settings",
+        "credentials"
       ],
       "provides": [
         "nativeWebSession",
@@ -81,6 +83,8 @@
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^"
@@ -89,9 +93,11 @@
     "bundle": "tsdown"
   },
   "devDependencies": {
+    "@deepseek-ai/schemastery": "workspace:^",
     "@deepseek-ai/dsh-native-web-assets": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
+    "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-client-native-application": "workspace:^",
     "@deepseek-ai/dsh-attachment-local": "workspace:^"

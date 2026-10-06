@@ -4,6 +4,7 @@ import { plugin as attachmentStorage } from '@deepseek-ai/dsh-attachment-local/n
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
+import z from '@deepseek-ai/schemastery'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
@@ -28,6 +29,10 @@ import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
+import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
+import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
@@ -158,12 +163,61 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       }))
     },
   }
+  const settingsSchema = z.object({
+    apiKeyEnv: z.string().role('credential-ref'), label: z.string(),
+    privateValue: z.string().role('secret').default('private-leaf-schema-default'),
+  }).default({ apiKeyEnv: 'NATIVE_TEST_KEY', label: 'schema-default', privateValue: 'private-parent-schema-default' })
+  let settingsDocument: NativeSettingsSection = { 'native-settings-test': { label: 'stored', privateValue: 'private-setting' } }
+  const settingsProvider: NativePlugin = {
+    apiVersion: 1, name: 'native-settings-test-provider', targets: ['host'], requires: [], provides: ['settings'],
+    resolve: () => async (context) => {
+      const settings = new NativeSettings({
+        load: async () => settingsDocument,
+        persist: async (update) => { settingsDocument = update(settingsDocument); return settingsDocument },
+      })
+      context.own(() => settings.dispose())
+      await settings.start()
+      context.provide('settings', settings)
+    },
+  }
+  const settingsRegistrant: NativePlugin = {
+    apiVersion: 1, name: 'native-settings-test-registrant', targets: ['host'], requires: ['settings'], provides: [],
+    resolve: () => (context) => {
+      const scope = context.require('settings').register('native-settings-test',
+        { apiKeyEnv: 'NATIVE_TEST_KEY', label: 'base', privateValue: 'base-private' }, value => settingsSchema(value),
+        (next) => {
+          if (next.label === 'leak-trigger') throw new Error(`validator detail: ${next.privateValue}`)
+        }, { schema: settingsSchema, applies: 'live' })
+      context.own(() => { scope.dispose() })
+    },
+  }
+  const credentials = new Map<string, string>()
+  const credentialProvider: NativePlugin = {
+    apiVersion: 1, name: 'native-credentials-test-provider', targets: ['host'], requires: [], provides: ['credentials'],
+    resolve: () => (context) => {
+      const service = {
+        resolve: async (ref: string) => credentials.has(ref) ? { value: credentials.get(ref)!, source: 'test-store' } : undefined,
+        describe: async (ref: string) => ({ configured: credentials.has(ref), ...credentials.has(ref) ? { source: 'test-store' } : {}, writable: true }),
+        set: async (ref: string, value: string) => {
+          if (value === 'reject-write') throw new Error(`credential store detail: ${credentials.get(ref)}`)
+          credentials.set(ref, value)
+        },
+        unset: async (ref: string) => { credentials.delete(ref) },
+        readRecord: async () => undefined,
+        describeRecord: async () => ({ configured: false, writable: false }),
+        listRecords: async () => [],
+        modifyRecord: async () => undefined,
+        deleteRecord: async () => undefined,
+      } as unknown as NativeCredentials
+      context.provide('credentials', service)
+    },
+  }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
-      maxFollowers: 2, maxPendingHumanRequests: 2 } },
+      maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 } },
     ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
-      model, carrier, foreignProgram].map(plugin =>
+      model, carrier, foreignProgram, settingsProvider, settingsRegistrant, credentialProvider].map(plugin =>
       ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
     { plugin: localFilesystemPlugin, scope, config: { cwd } },
@@ -171,9 +225,15 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin: attachmentStorage, scope, config: { dshHome: directory } },
   ], 'host'))
   try {
-    for (const key of ['maxFollowBufferBytes', 'maxFollowers']) expect(() => resolveNativeWebSessionConfig({ cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
+    const baseConfig = { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100,
-      maxFollowBufferBytes: 1000000, maxFollowers: 2, maxPendingHumanRequests: 2, [key]: 0 })).toThrow(key)
+      maxFollowBufferBytes: 1000000, maxFollowers: 2, maxPendingHumanRequests: 2 }
+    expect(resolveNativeWebSessionConfig(baseConfig)).toMatchObject({ maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 })
+    for (const key of ['maxFollowBufferBytes', 'maxFollowers', 'maxCredentialRefsPerRead', 'maxSettingsOperations']) {
+      for (const value of [0, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+        expect(() => resolveNativeWebSessionConfig({ ...baseConfig, [key]: value })).toThrow(key)
+      }
+    }
     await host.start()
     if (web === undefined) throw new Error('missing HTTP Host')
     const login = await fetch(web.connection.authenticatedUrl(web.url), { redirect: 'manual' })
@@ -186,7 +246,66 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       headers.set('cookie', cookie)
       return fetch(new URL(input.pathname, url), { ...init, headers })
     })
+    const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
+    expect(rawSettingsReply).toMatchObject({ ok: true, value: {
+      limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
+    } })
+    const hasSettingsNamespaces = rawSettingsReply.ok
+      && typeof rawSettingsReply.value === 'object'
+      && rawSettingsReply.value !== null
+      && 'namespaces' in rawSettingsReply.value
+      && Array.isArray(rawSettingsReply.value.namespaces)
+    expect(hasSettingsNamespaces).toBe(true)
+    expect(JSON.stringify(rawSettingsReply)).not.toContain('private-leaf-schema-default')
+    expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
+    expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
+    const settingsDescription = await client.settingsDescribe()
+    expect(settingsDescription.limits).toEqual({ maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 })
+    const settingsViews = settingsDescription.namespaces
+    const settingsView = settingsViews.find(row => row.namespace === 'native-settings-test')
+    expect(settingsView).toMatchObject({ credentialRefs: ['NATIVE_TEST_KEY'], applies: 'live', revision: 0 })
+    expect(JSON.stringify(settingsViews)).not.toContain('private-setting')
+    const failedValidation = await rpc.call('/api', 'settings/mutate', { ns: 'native-settings-test',
+      ops: [{ op: 'set', path: ['label'], value: 'leak-trigger' }], expectedRevision: settingsView!.revision }, new AbortController().signal)
+    expect(failedValidation).toMatchObject({ ok: false, error: { code: 'native/settings', message: 'Settings request failed.' } })
+    expect(JSON.stringify(failedValidation)).not.toContain('private-setting')
+    const oversizedMutation = await rpc.call('/api', 'settings/mutate', { ns: 'native-settings-test', ops: [
+      { op: 'set', path: ['label'], value: 'oversized-partial' },
+      { op: 'set', path: ['apiKeyEnv'], value: 'OTHER_KEY' },
+    ], expectedRevision: settingsView!.revision }, new AbortController().signal)
+    expect(oversizedMutation).toMatchObject({ ok: false, error: { code: 'native/settings', message: 'Settings request failed.' } })
+    expect(settingsDocument['native-settings-test']).toEqual({ label: 'stored', privateValue: 'private-setting' })
+    await expect(client.settingsMutate('native-settings-test', [
+      { op: 'set', path: ['privateValue'], value: 'must-stay-out-of-settings' },
+    ], settingsView!.revision)).rejects.toMatchObject({ code: 'native/settings' })
+    expect(settingsDocument['native-settings-test']).toMatchObject({ privateValue: 'private-setting' })
+    const changedSettings = await client.settingsMutate('native-settings-test', [
+      { op: 'set', path: ['label'], value: 'changed' },
+    ], settingsView!.revision)
+    expect(changedSettings.value).toMatchObject({ label: 'changed', apiKeyEnv: 'NATIVE_TEST_KEY' })
+    await expect(client.settingsMutate('native-settings-test', [], settingsView!.revision))
+      .rejects.toMatchObject({ code: 'native/settings-conflict', details: { expected: 0, actual: 1 } })
+    const refreshedSettings = await client.settingsDescribe()
+    expect(refreshedSettings.namespaces.find(row => row.namespace === 'native-settings-test')?.value).toMatchObject({ label: 'changed' })
+    expect(await client.credentialsDescribe(['NATIVE_TEST_KEY'])).toEqual({ NATIVE_TEST_KEY: { configured: false, writable: true } })
+    const credentialSecret = 'native-rpc-secret-must-not-return'
+    await client.credentialsSet('NATIVE_TEST_KEY', credentialSecret)
+    const secretReply = await rpc.call('/api', 'credentials/set', { ref: 'NATIVE_TEST_KEY', value: credentialSecret }, new AbortController().signal)
+    expect(secretReply).toEqual({ ok: true, value: { updated: true } })
+    expect(JSON.stringify(secretReply)).not.toContain(credentialSecret)
+    expect(await client.credentialsDescribe(['NATIVE_TEST_KEY'])).toEqual({
+      NATIVE_TEST_KEY: { configured: true, source: 'test-store', writable: true },
+    })
+    const failedCredentialWrite = await rpc.call('/api', 'credentials/set', {
+      ref: 'NATIVE_TEST_KEY', value: 'reject-write',
+    }, new AbortController().signal)
+    expect(failedCredentialWrite).toMatchObject({ ok: false,
+      error: { code: 'native/credentials', message: 'Credentials request failed.' } })
+    expect(JSON.stringify(failedCredentialWrite)).not.toContain(credentialSecret)
+    await expect(client.credentialsDescribe(['UNRELATED_KEY'])).rejects.toBeInstanceOf(NativeSessionRpcError)
+    await expect(client.credentialsDescribe(['NATIVE_TEST_KEY', 'NATIVE_TEST_KEY', 'NATIVE_TEST_KEY']))
+      .rejects.toMatchObject({ code: 'native/credentials' })
     const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 100 })
     await conversation.load()
     await conversation.create()

@@ -66,7 +66,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
 }
 
-/** Client runtime peers that must share the application instance. */
+/** Client runtime peers whose values must resolve to the shared application instances. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-tool': ['react'],
   '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
@@ -76,6 +76,7 @@ export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly strin
     '@deepseek-ai/dsh-session',
     '@deepseek-ai/dsh-native-model-selection',
     '@deepseek-ai/dsh-agent-presets',
+    '@deepseek-ai/dsh-client-native-session',
     '@deepseek-ai/dsh-client-ui-tool',
     '@deepseek-ai/dsh-tool-todo',
   ],

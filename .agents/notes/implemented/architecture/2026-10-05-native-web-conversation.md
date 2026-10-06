@@ -18,7 +18,7 @@ Cancellation changes the view to stopping without declaring readiness. The send 
 
 Human transcript rows use append-origin Session events and the shared message projection. Model-only replacements cannot erase conversation the user already saw. Raw durable records preserve tool and permission facts that the minimal page does not yet present as feature cards or interactive decisions.
 
-The first-use native Client roster contains installed Providers and Consumers only. The page owns a complete typed English/Chinese dictionary pair and accepts explicit locale configuration. It does not create a Settings authority or change the legacy default composition.
+The first-use native Client roster contains installed Providers and Consumers only. The page owns a complete typed English/Chinese dictionary pair and accepts explicit locale configuration. Its Settings view consumes the selected Host's existing Settings and Credentials authorities through the same Connection; it creates neither authority and does not change the legacy default composition.
 
 ## Alternatives considered
 
