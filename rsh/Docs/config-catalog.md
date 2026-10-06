@@ -799,7 +799,7 @@ export type Config = LocalConfig
 
 Depends on: [`LocalConfig`](#deepseek-aidsh-fs-local)
 
-Source: [`rsh/Modules/Official/fs/fs-sandbox/src/index.ts:45`](../Modules/Official/fs/fs-sandbox/src/index.ts)
+Source: [`rsh/Modules/Official/fs/fs-sandbox/src/index.ts:43`](../Modules/Official/fs/fs-sandbox/src/index.ts)
 
 <a id="deepseek-aidsh-goal"></a>
 
