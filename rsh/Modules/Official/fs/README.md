@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The `fs/` group gives agents durable, policy-governed access to files: the `ctx.fs` service contract in `fs/`, the host-filesystem and sandbox-enforcing backends in `fs-local/` and `fs-sandbox/`, the read-before-edit policy in `fs-observation-policy/`, and the model-facing tools in `tool-fs/` (`read`, `read_image`, `write`, `edit`) and `tool-fs-search/` (`glob`, `grep`). A deployment mounts one backend, loads the policy for freshness-guarded mutations, and registers the tool packages the model should see; backends swap without touching the tools or the policy. File I/O takes no timeout by design: a deadline would kill work the OS still finishes, so cancellation is a best-effort signal at syscall boundaries.
+The `fs/` group gives agents durable, policy-governed access to files: the filesystem service contract in `fs/`, the host and sandbox-enforcing backends in `fs-local/` and `fs-sandbox/`, the read-before-edit policy in `fs-observation-policy/`, and the model-facing tools in `tool-fs/` (`read`, `read_image`, `write`, `edit`) and `tool-fs-search/` (`glob`, `grep`). `fs-sandbox/` exposes both Cordis and Native provider entries. A deployment selects one backend, loads its matching sandbox policy, and registers the tool packages the model should see; the tools and their policy stay independent of the backend face. File I/O has no timeout; cancellation is best-effort at syscall boundaries.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ Eight packages plus the remote sibling `fs-e2b` play the filesystem roles; the s
 |---|---|---|
 | [`fs/`](fs/README.md) | `ctx.fs` service contract: execution-world paths, bounded text I/O, and atomic mutations with an optional version guard | `ctx.fs` |
 | [`fs-local/`](fs-local/README.md) | Host-filesystem backend: reads, writes, and edits real files on the local machine | registers on `ctx.fs` |
-| [`fs-sandbox/`](fs-sandbox/README.md) | Sandbox-enforcing backend: fences writes and edits by the per-call sandbox mode while reads pass through | registers on `ctx.fs` |
+| [`fs-sandbox/`](fs-sandbox/README.md) | Cordis and Native sandbox-enforcing providers: fence writes and edits by the per-call mode while reads pass through | `ctx.fs` or Native `fs` service |
 | [`e2b/fs-e2b`](../e2b/fs-e2b/README.md) | E2B-backed backend: file state lives in the remote execution world shared with the E2B subprocess provider | registers on `ctx.fs` |
 | [`fs-observation-policy/`](fs-observation-policy/README.md) | Read-before-edit policy: records observed presence or absence and guards write/edit through the `fs/*` events | `fs/*` listeners |
 | [`tool-fs/`](tool-fs/README.md) | Model-facing `read`, `read_image`, `write`, and `edit` tools plus their executor | registers on `ctx.tools` |
@@ -36,7 +36,7 @@ Eight packages plus the remote sibling `fs-e2b` play the filesystem roles; the s
 | [`tool-str-replace-editor/`](tool-str-replace-editor/README.md) | Standalone `str_replace_editor` tool: `view`, `create`, `str_replace`, and `insert` over `ctx.fs` | registers on `ctx.tools` |
 | [`tool-present/`](tool-present/README.md) | Explicit immutable snapshots of delivered files | registers on `ctx.tools` |
 
-The policy is a plugin, not a service the tools inject: removing it leaves the bare provider's unconditional mutation behavior instead of breaking the tools. The mode fence in `fs-sandbox` and the read-before-edit gate compose. `tool-fs-search` deliberately does not extend the provider contract — search is a process-backed ripgrep workflow, so filesystem backends stay free of a universal search API.
+The policy is separate from the tools. The Cordis `fs-sandbox` Provider and its Native entry each require their matching policy provider and fail to load when it is absent; a deployment that wants unconfined writes must select `fs-local` explicitly. The sandbox fence and read-before-edit gate compose. `tool-fs-search` deliberately does not extend the provider contract — search is a process-backed ripgrep workflow, so filesystem backends stay free of a universal search API.
 
 -----
 

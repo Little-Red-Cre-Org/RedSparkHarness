@@ -87,7 +87,7 @@ session.deriveMessages()         // the derived model history
 
 该包建立在事件溯源之上：`Session` 是类型化 `SessionEvent` 的仅追加日志，其他一切——模型历史、transcript（文本记录）、遥测、标题、持久化——都从这条流派生。surface 是派生投影：一个增量管理器校验追加候选、根据已提交事件推进有序视图，并跟踪每次已提交重写都会递增的 `replaceGeneration`。模型可见即已记录：任何到达模型请求的内容都必须能从日志重建。每个完成结算的模型尝试都会提交一个事件：`assistant/message` 携带组装后的模型可见 message 及其紧凑带时间 stream，`assistant/attempt` 则保留失败、重试、取消或 stream error attempt，且不添加模型历史。如果进程在 settlement 前硬中断，则不会留下持久 attempt stream。
 
-`./native` 入口导出 Session 对象、事件类型、校验与投影，不加载 Cordis `SessionStore`。包根入口保留 `ctx.sessions` 服务、带作用域的事件发布及现有导出；两个入口使用同一个 Session 类。`dsh-scope` 是 Cordis 入口使用的可选 peer；原生 Session 导入不加载它。
+`./native` 入口导出 Session 对象、事件类型、校验与投影，不加载 Cordis `SessionStore`。包根入口保留 `ctx.sessions` 服务、带作用域的事件发布及现有导出；两个入口使用同一个 Session 类。公开 Session 声明复用 `dsh-llm` 类型，因此它是必需 peer。`dsh-scope` 是 Cordis 入口使用的可选 peer；原生 Session 导入不加载它。
 
 ### 请求头
 

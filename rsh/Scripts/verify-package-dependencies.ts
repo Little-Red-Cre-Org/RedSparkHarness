@@ -66,6 +66,7 @@ export interface PackageDependencyFacts {
   readonly configurationOnlyDevDependencies: ReadonlySet<string>
   readonly clientRuntimeDependencies: ReadonlySet<string>
   readonly publishedTypeSourceUses: ReadonlyMap<string, readonly string[]>
+  readonly publishedTypePeerDependencies: ReadonlySet<string>
   readonly clientInject: ReadonlySet<string>
 }
 
@@ -456,7 +457,10 @@ export function readPackageDependencyFacts(
   generatedHostSource?: string,
 ): PackageDependencyFacts {
   const inject = pkg.manifest.dsh?.client?.inject ?? []
-  const publishedTypes = new Set(policy.publishedTypeDependencies?.[pkg.manifest.name ?? ''] ?? [])
+  const publishedTypes = new Set([
+    ...(policy.publishedTypeDependencies?.[pkg.manifest.name ?? ''] ?? []),
+    ...(policy.publishedTypePeerDependencies?.[pkg.manifest.name ?? ''] ?? []),
+  ])
   const source = readAllSourceUses(root, pkg, publishedTypes)
   const clientRuntimeSourceUses = new Map<string, string[]>()
   for (const [name, paths] of source.runtimeUses) {
@@ -478,6 +482,9 @@ export function readPackageDependencyFacts(
     workspaceNames,
     allSourceUses: source.uses,
     publishedTypeSourceUses: source.typeUses,
+    publishedTypePeerDependencies: new Set(
+      policy.publishedTypePeerDependencies?.[pkg.manifest.name ?? ''] ?? [],
+    ),
     hostRuntimeSourceUses: hostRuntime.packageUses,
     clientRuntimeSourceUses,
     hostRuntimeExportUses: hostRuntime.exportUses,
@@ -554,7 +561,7 @@ export function collectClientRuntimeDependencyPolicyViolations(
  */
 export function collectPublishedTypeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
-  policy: Pick<PackageDependencyPolicy, 'publishedTypeDependencies'>,
+  policy: Pick<PackageDependencyPolicy, 'publishedTypeDependencies' | 'publishedTypePeerDependencies'>,
 ): string[] {
   const violations: string[] = []
   const byName = new Map(facts.map(fact => [fact.manifest.name, fact]))
@@ -571,6 +578,33 @@ export function collectPublishedTypeDependencyPolicyViolations(
       if (!fact.workspaceNames.has(dependency)) violations.push(`publishedTypeDependencies names unknown workspace package ${dependency}`)
       if (!fact.publishedTypeSourceUses.has(dependency)) {
         violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} without a source type import`)
+      }
+    }
+  }
+  for (const [name, dependencies] of Object.entries(policy.publishedTypePeerDependencies ?? {})) {
+    const fact = byName.get(name)
+    if (fact === undefined) {
+      violations.push(`publishedTypePeerDependencies names unmanaged package ${name}`)
+      continue
+    }
+    for (const dependency of duplicates(dependencies)) {
+      violations.push(`publishedTypePeerDependencies lists ${name} dependency ${dependency} more than once`)
+    }
+    for (const dependency of dependencies) {
+      if (!fact.workspaceNames.has(dependency)) {
+        violations.push(`publishedTypePeerDependencies names unknown workspace package ${dependency}`)
+      }
+      if (!fact.publishedTypeSourceUses.has(dependency)) {
+        violations.push(`publishedTypePeerDependencies lists ${name} dependency ${dependency} without a source type import`)
+      }
+      if (fact.manifest.peerDependencies?.[dependency] !== WORKSPACE_RANGE) {
+        violations.push(`publishedTypePeerDependencies requires ${name} to declare ${dependency} as a required peer at ${WORKSPACE_RANGE}`)
+      }
+      if (fact.manifest.devDependencies?.[dependency] !== WORKSPACE_RANGE) {
+        violations.push(`publishedTypePeerDependencies requires ${name} to retain ${dependency} in devDependencies at ${WORKSPACE_RANGE}`)
+      }
+      if (fact.manifest.peerDependenciesMeta?.[dependency] !== undefined) {
+        violations.push(`publishedTypePeerDependencies requires ${name} peer ${dependency} to be non-optional`)
       }
     }
   }
@@ -692,8 +726,10 @@ export function expectedPackageDependencies(
     expected.set(CORDIS, { section: 'peer-dev', origins: new Set(['shared Cordis runtime']) })
   }
   for (const [name, paths] of facts.allSourceUses) {
-    const section = facts.clientRuntimeDependencies.has(name) || facts.publishedTypeSourceUses.has(name)
-      ? 'dependencies' : 'devDependencies'
+    const section = facts.publishedTypePeerDependencies.has(name)
+      ? 'peer-dev'
+      : facts.clientRuntimeDependencies.has(name) || facts.publishedTypeSourceUses.has(name)
+        ? 'dependencies' : 'devDependencies'
     for (const path of paths) add(name, section, path)
   }
   if (facts.role !== 'configured-host') {

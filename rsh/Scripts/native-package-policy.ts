@@ -140,6 +140,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
   ['rsh/Modules/Official/fs/fs-observation-policy', 'Cordis event policy and native entry share a package'],
+  ['rsh/Modules/Official/fs/fs-sandbox', 'Cordis and native filesystem Providers share per-call sandbox enforcement'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */
@@ -183,6 +184,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-local', ['@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-observation-policy', ['@deepseek-ai/dsh-plugin-host']],
+  ['rsh/Modules/Official/fs/fs-sandbox', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy']],
   ['rsh/Engine/core/session', ['@deepseek-ai/dsh-scope']],
   ['rsh/Engine/llm/llm', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Core/storage/storage-domain', ['@deepseek-ai/schemastery']],
@@ -232,7 +234,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/shell/shell-env', ['./definition']],
   ['rsh/Modules/Official/attachment/attachment', ['./types', './brand', './error', './admission', './request-projection']],
   ['rsh/Modules/Official/fs/fs', ['./operations', './types']],
-  ['rsh/Modules/Official/sandbox/sandbox', ['./native-types']],
+  ['rsh/Modules/Official/fs/fs-local', ['./backend']],
+  ['rsh/Modules/Official/sandbox/sandbox', ['./native-types', './roots']],
   ['rsh/Engine/core/session', ['./types', './surface', './event-validation']],
   ['rsh/Engine/session/session-persistence', ['./deletion']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
@@ -253,6 +256,8 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
   ['rsh/Programs/CLI/native-profile', ['host']],
   ['rsh/Programs/DesktopHost/native-host', ['host']],
+  ['rsh/Modules/Official/sandbox/sandbox/roots', ['host']],
+  ['rsh/Modules/Official/fs/fs-local/backend', ['host']],
   ['rsh/Modules/Official/terminal/terminal/protocol', ['host']],
   ['rsh/Modules/Official/terminal/terminal/error', ['host']],
   ['rsh/Modules/Official/interaction/user-questions/protocol', ['host', 'client']],

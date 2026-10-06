@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-fs-sandbox` confines model file writes and edits according to each session's sandbox mode while preserving the local filesystem's read behavior. In `read-only`, it rejects every mutation; in `workspace-write`, it permits targets only inside the session workspace or a platform temporary root; in `danger-full-access`, it does not restrict mutations. Use it instead of `fs-local` with `ctx.sandboxPolicy` when sessions need workspace-confined file changes. Denied operations return `FS_SANDBOX_DENIED`, which filesystem tools present with the active mode and a same-turn escalation hint.
+`dsh-fs-sandbox` provides Cordis and Native filesystem entries that confine model writes and edits by each call's sandbox policy while preserving local reads. In `read-only`, it rejects mutations; in `workspace-write`, it permits targets only inside the workspace or platform temporary roots; in `danger-full-access`, it delegates without a path fence. Both entries share the same canonical containment check and local atomic backend. Denied operations return `FS_SANDBOX_DENIED`, which filesystem tools present with the active mode and a same-turn escalation hint.
 
 ## Table of Contents
 
@@ -25,9 +25,9 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount this backend instead of `fs-local` when the model's file writes and edits must be confined by the session's sandbox mode, while reads stay unconfined. The fence applies per call: the tool layer resolves the calling session's mode and workspace root into the same policy the bash runner receives, so the filesystem and shell families never confine to different roots.
+Select this provider instead of `fs-local` when model writes and edits must follow the session's sandbox mode, while reads stay unconfined. The fence applies per call: the tool layer resolves the calling session's mode and workspace root into the same policy the bash runner receives, so the filesystem and shell families never confine to different roots.
 
-### Minimal composition
+### Cordis composition
 
 Load the shared policy service, then this backend, then the tools; the read-before-edit policy plugin stays optional.
 
@@ -40,6 +40,12 @@ Load the shared policy service, then this backend, then the tools; the read-befo
 ```
 
 The backend's config is unchanged from the local backend's (`cwd` resolution default and `diffBasisMaxBytes` overwrite bound); the [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-fs-sandbox) is the exhaustive source.
+
+### Native profile composition
+
+The package also exports a Host-only `./native` entry that provides the same `fs` service from `LocalFileSystemBackend` and requires the `sandboxPolicy` service from `dsh-native-sandbox-policy`. When shutdown starts, the Native entry rejects new mutations and waits for admitted writes and edits—including containment checks and backend I/O—to settle before its Host installation stops. Select the Native policy and this provider explicitly; no local-filesystem fallback is installed when either provider is absent.
+
+The `runtime` entry remains the Cordis adapter and still requires `dsh-sandbox-policy`. Optional peer metadata lets Native-only installs omit Cordis, Plugin Host, and the legacy policy package; it does not select a face or guarantee that the Cordis face can load without its host and policy providers.
 
 ### How the fence behaves
 
@@ -68,6 +74,8 @@ The fence is a policy check in trusted code over a model-controlled path — not
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `SandboxedFileSystem`: mode fence on `writeText`/`editText`, `sandboxMode` fact |
+| [`src/native.ts`](src/native.ts) | Native Host Provider using the same local backend and required Native policy |
+| [`src/policy.ts`](src/policy.ts) | Shared per-call target check used by both provider entries |
 | [`src/containment.ts`](src/containment.ts) | Ancestor containment check with lexical fast path and identity-based fallback |
 
 ### How a mutation is fenced
@@ -90,7 +98,8 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Filesystem subsystem](../../../../Docs/subsystems/filesystem.md) — exhaustive provider contract, policy events, and error taxonomy.
 - [dsh-fs](../fs/README.md) — the `ctx.fs` contract this backend implements.
 - [fs-local](../fs-local/README.md) — the local backend this one extends.
-- [sandbox-policy](../../sandbox/sandbox-policy/README.md) — the shared per-session policy resolver this backend requires.
+- [sandbox-policy](../../sandbox/sandbox-policy/README.md) — the Cordis per-session policy resolver.
+- [native-sandbox-policy](../../sandbox/native-sandbox-policy/README.md) — the Native per-session policy provider.
 - [Process sandbox subsystem](../../../../Docs/subsystems/sandbox.md) — modes, per-call policy, and fail-closed errors.
 - [Cross-family fs sandbox decision](../../../../../.agents/notes/implemented/feature/2026-07-14-cross-family-fs-sandbox.md) — the shared mode fence and its escalation choreography.
 
@@ -103,11 +112,11 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The policy owner contributes capability-neutral `sandbox:policy` context. Indirectly, `dsh-tool-fs` renders this backend's `FS_SANDBOX_DENIED` refusals as the `[sandbox: file access denied under <mode> mode]` marker plus the same-turn escalation hint.
+In Cordis compositions, the policy owner contributes capability-neutral `sandbox:policy` context. In either face, `dsh-tool-fs` renders this backend's `FS_SANDBOX_DENIED` refusals as the `[sandbox: file access denied under <mode> mode]` marker plus the same-turn escalation hint.
 
 #### Token effect
 
-The current-policy clause adds a small runtime-context message while this backend is mounted; a denial adds the bounded marker and escalation hint to conversation history.
+The Cordis current-policy clause adds a small runtime-context message while the sandbox backend is mounted; a denial adds the bounded marker and escalation hint to conversation history. The Native Provider enforces the policy supplied to each mutation call.
 
 #### KV Cache effect
 
@@ -122,7 +131,7 @@ These limits define when the sandbox backend is a poor fit or needs special oper
 
 - **A policy fence, not a kernel boundary** — the check is trusted code over a model-controlled path, so the residual resolve-to-syscall TOCTOU is narrowed (by the in-place re-canonicalization) but not eliminated; adversarial host processes are out of scope. Kernel-grade isolation of untrusted code stays `ctx.shell`'s.
 - **Fence-vs-runner parity is derived from one owner** — the writable set comes from `writableRoots`, shared with the Seatbelt profile; a runner profile that defines its writable set elsewhere would drift.
-- **Requires `ctx.sandboxPolicy`** — tools use it to resolve each session policy and the backend uses it for agentless-call fallbacks; the backend does not confine without it composed.
+- **Requires the policy provider for the selected face** — Cordis uses `ctx.sandboxPolicy`; Native requires the `sandboxPolicy` service. Neither face falls back to an unconfined provider when its policy is missing.
 
 <a id="dev-note"></a>
 ### Dev Note
