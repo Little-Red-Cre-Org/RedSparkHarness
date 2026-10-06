@@ -14,7 +14,7 @@ import { plugin, validateLegacySandboxManifest } from '../src/native.ts'
 it('rejects changed declarations, config, missing policy and duplicate filesystem authority', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/fs-sandbox/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacySandboxManifest>[0]
   expect(() => { validateLegacySandboxManifest(manifest) }).not.toThrow()
-  expect(() => { validateLegacySandboxManifest({ dsh: { runtime: { apiVersion: 2, role: 'provider', capability: 'filesystem' } } }) }).toThrow('unsupported')
+  expect(() => { validateLegacySandboxManifest({ ...manifest, dsh: { ...manifest.dsh, runtime: { apiVersion: 2, role: 'provider', capability: 'filesystem' } } }) }).toThrow('unsupported')
   const scope = new NativeScope()
   expect(() => plugin.resolve({ unknown: true })).toThrow('fs-local:')
   expect(() => resolveInstallation([

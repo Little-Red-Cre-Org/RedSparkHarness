@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
+import { SUPPORT_RECORD, validateSupportManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-fs'
-import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
@@ -25,6 +25,7 @@ import { plugin as sandboxPolicyPlugin } from '@deepseek-ai/dsh-native-sandbox-p
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { plugin as compatPolicyPlugin } from '@deepseek-ai/dsh-compat-fs-policy/native'
+import { plugin as compatFsLocalPlugin } from '@deepseek-ai/dsh-compat-fs-local/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
@@ -33,13 +34,25 @@ import { plugin, validateLegacyToolManifest } from '../src/native.ts'
 it('rejects unsupported declarations, config and missing native registries before activation', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/tool-fs/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacyToolManifest>[0]
   expect(() => { validateLegacyToolManifest(manifest) }).not.toThrow()
-  expect(() => { validateLegacyToolManifest({ dsh: { runtime: { apiVersion: 2, role: 'consumer', capability: 'filesystem' } } }) })
+  expect(() => { validateLegacyToolManifest({ ...manifest, dsh: { ...manifest.dsh, runtime: { apiVersion: 2, role: 'consumer', capability: 'filesystem' } } }) })
     .toThrow('unsupported')
   const scope = new NativeScope()
   expect(() => plugin.resolve({ invented: true })).toThrow('unsupported configuration field invented')
   expect(() => resolveInstallation([
     { plugin, scope, config: undefined }, { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host')).toThrow('missing fs')
+})
+
+it('pins the shared Cordis plugins and their adapter roles to verified releases', () => {
+  for (const [packageName, service] of [
+    ['@deepseek-ai/dsh-system-prompt', 'systemPrompt'],
+    ['@deepseek-ai/dsh-tools', 'tools'],
+  ] as const) {
+    const manifest = JSON.parse(readFileSync(new URL(`../../../../../Engine/core/${packageName.endsWith('tools') ? 'tools' : 'system-prompt'}/package.json`, import.meta.url), 'utf8')) as { name: string; version: string }
+    expect(() => { validateSupportManifest(packageName, manifest) }).not.toThrow()
+    expect(SUPPORT_RECORD[packageName]).toMatchObject({ api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service })
+    expect(() => { validateSupportManifest(packageName, { ...manifest, version: '0.1.6' }) }).toThrow('unsupported')
+  }
 })
 
 it('passes per-session policy to a legacy write and preserves the denied file', async () => {
@@ -117,12 +130,21 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
   let app: NativeApplication | undefined
   let tools: NativeToolRegistry | undefined
   let prompt: NativePromptRegistry | undefined
+  let agents: NativeAgentRegistry | undefined
+  let runtime: CompatDshRuntime | undefined
+  let filesystem: FileSystemOperations | undefined
+  let nativeEvents: NativeContext['events'] | undefined
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'capture', targets: ['host'], requires: ['application', 'tools', 'promptSections'], provides: [],
+    apiVersion: 1, name: 'capture', targets: ['host'],
+    requires: ['application', 'tools', 'promptSections', 'agents', 'fs', 'compatDshRuntime'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       tools = context.require('tools')
       prompt = context.require('promptSections')
+      agents = context.require('agents')
+      runtime = context.require('compatDshRuntime')
+      filesystem = context.require('fs')
+      nativeEvents = context.events
     },
   }
   const bridge = { plugin, scope, config: { readLimit: 2 } }
@@ -133,18 +155,33 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: modelPlugin, scope, config: undefined },
     { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
-    { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
-    { plugin: policyPlugin, scope, config: undefined },
+    { plugin: compatFsLocalPlugin, scope, config: { cwd: workspace } },
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: promptPlugin, scope, config: undefined },
     bridge,
+    { plugin: compatPolicyPlugin, scope, config: undefined },
     { plugin: compatRuntimePlugin, scope, config: undefined },
   ], 'host'))
   try {
     await host.start()
-    if (app === undefined || tools === undefined || prompt === undefined) throw new Error('missing native consumer')
+    if (app === undefined || tools === undefined || prompt === undefined || agents === undefined
+      || runtime === undefined || filesystem === undefined) throw new Error('missing native consumer')
     const activeApp = app
+    const activeRuntime = runtime
+    const activeEvents = nativeEvents
+    if (activeEvents === undefined) throw new Error('missing native events')
+    const diagnostics = host.diagnostics()
+    const bridgeDiagnostic = diagnostics.find(entry => entry.name === plugin.name)
+    const policyDependency = bridgeDiagnostic?.dependencies.find(dependency => dependency.service === 'fsObservationPolicy')
+    if (policyDependency === undefined) throw new Error('missing policy startup dependency')
+    expect(diagnostics.find(entry => entry.id === policyDependency.provider)?.name).toBe(compatPolicyPlugin.name)
     expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+    expect(activeRuntime.context.pluginHost.get('@deepseek-ai/dsh-system-prompt')).toMatchObject({
+      apiVersion: 1, role: 'adapter', capability: 'dsh-compatibility',
+    })
+    expect(activeRuntime.context.pluginHost.get('@deepseek-ai/dsh-tools')).toMatchObject({
+      apiVersion: 1, role: 'adapter', capability: 'dsh-compatibility',
+    })
     expect((await prompt.render())).toContain('Use the read tool')
     await host.run(scope, { kind: 'test' }, invocation => activeApp.run(['read', 'sample.txt'], invocation.signal))
     expect(model.requests).toHaveLength(2)
@@ -167,6 +204,108 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
         expect(events.filter(event => event.type === 'tool/result')).toHaveLength(1)
       } finally { await reader.close() }
     } finally { await storage.close() }
+
+    let forwardedObservations = 0
+    activeRuntime.context.on('fs/observed', () => { forwardedObservations += 1 })
+    const target = await filesystem.resolve('sample.txt')
+    activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
+    expect(forwardedObservations).toBe(1)
+
+    await activeRuntime.update('@deepseek-ai/dsh-tool-fs', { readLimit: 1 })
+    expect(activeRuntime.context.loader.resolve('@deepseek-ai/dsh-tool-fs').options.config).toEqual({ readLimit: 1 })
+    expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+    expect(await prompt.render()).toContain('Use the read tool')
+
+    const assemblyEntered = Promise.withResolvers<undefined>()
+    const releaseAssembly = Promise.withResolvers<undefined>()
+    const unsubscribeAssembly = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
+      assemblyEntered.resolve(undefined)
+      await releaseAssembly.promise
+      return next()
+    })
+    let renderSettled = false
+    const pendingRender = prompt.render().finally(() => { renderSettled = true })
+    let disabling: Promise<void> | undefined
+    try {
+      await assemblyEntered.promise
+      let disabled = false
+      disabling = activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', false).then(() => { disabled = true })
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(disabled).toBe(false)
+      releaseAssembly.resolve(undefined)
+      await pendingRender
+      await disabling
+      expect(renderSettled).toBe(true)
+      expect(tools.schemas()).toEqual([])
+      expect(await prompt.render()).not.toContain('Use the read tool')
+      await activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
+      expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+      expect(await prompt.render()).toContain('Use the read tool')
+    } finally {
+      releaseAssembly.resolve(undefined)
+      const pending: Promise<unknown>[] = [pendingRender]
+      if (disabling !== undefined) pending.push(disabling)
+      await Promise.allSettled(pending)
+      unsubscribeAssembly()
+    }
+
+    const readEntered = Promise.withResolvers<undefined>()
+    const releaseRead = Promise.withResolvers<undefined>()
+    const readText = filesystem.readText.bind(filesystem)
+    filesystem.readText = async (target, signal) => {
+      readEntered.resolve(undefined)
+      await releaseRead.promise
+      return readText(target, signal)
+    }
+    const lifecycleSessionId = SessionId('compat-lifecycle-session')
+    const lifecycleSession = Session.create(lifecycleSessionId, undefined, {
+      version: SESSION_FORMAT_VERSION, id: lifecycleSessionId, createdAt: 2, cwd: workspace, isSeeded: false, delegationDepth: 0,
+    })
+    const lifecycleAgent: NativeAgent = { id: NativeAgentId('compat-lifecycle-agent'), scope }
+    const unregister = agents.register(lifecycleAgent)
+    const pendingRead = tools.execute({
+      agent: lifecycleAgent, callId: ToolCallId('compat-lifecycle-read'), name: 'read',
+      arguments: { file_path: 'sample.txt' }, session: lifecycleSession,
+      signal: new AbortController().signal,
+      appendEvent: async (type, data, ...options) => lifecycleSession.append(type, data, ...options),
+    })
+    let disabled = false
+    try {
+      await readEntered.promise
+      const disabling = activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', false).then(() => { disabled = true })
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(disabled).toBe(false)
+      releaseRead.resolve(undefined)
+      await Promise.allSettled([pendingRead])
+      await disabling
+    } finally {
+      releaseRead.resolve(undefined)
+      await unregister()
+    }
+    expect(disabled).toBe(true)
+    expect(tools.schemas()).toEqual([])
+    expect(await prompt.render()).toBe('')
+    await activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
+    expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+    expect(await prompt.render()).toContain('Use the read tool')
+    await activeRuntime.setEnabled('@deepseek-ai/dsh-fs-observation-policy', false)
+    expect(tools.schemas()).toEqual([])
+    expect(await prompt.render()).toBe('')
+    activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
+    expect(forwardedObservations).toBe(1)
+    await activeRuntime.setEnabled('@deepseek-ai/dsh-fs-observation-policy', true)
+    expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+    expect(await prompt.render()).toContain('Use the read tool')
+    activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
+    expect(forwardedObservations).toBe(2)
+    await activeRuntime.remove('@deepseek-ai/dsh-fs-observation-policy')
+    expect(tools.schemas()).toEqual([])
+    expect(await prompt.render()).toBe('')
+    activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
+    expect(forwardedObservations).toBe(2)
+    await activeRuntime.remove('@deepseek-ai/dsh-tool-fs')
+    expect(tools.schemas()).toEqual([])
+    expect(await prompt.render()).toBe('')
     await host.remove(bridge)
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')

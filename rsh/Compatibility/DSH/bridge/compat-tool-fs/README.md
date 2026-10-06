@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-tool-fs` adapts the legacy read, write, and edit tools into native tool and prompt registries. The native application remains the sole owner of model requests and durable `tool/call` and `tool/result` records. The bridge forwards legacy filesystem decisions into native events and waits for admitted tool work before it disposes its plugin in the shared Cordis Context. Its `fs/observed` forwarding uses the compatibility runtime's exact synchronous echo guard so a legacy policy does not send the same event back through both buses.
+`dsh-compat-tool-fs` adapts the legacy read, write, and edit tools into native tool and prompt registries. The native application remains the sole owner of model requests and durable `tool/call` and `tool/result` records. Loader entry mutations withdraw Native tools and prompt sections, drain admitted tool calls and in-flight prompt assembly, then rebuild them from the enabled entries. Disabling or removing the selected legacy observation policy also withdraws these contributions. The bridge forwards filesystem decisions into Native events and uses the compatibility runtime's exact synchronous echo guard for `fs/observed`.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The bridge accepts only the positive integer limits supported by `dsh-tool-fs`: `readLimit`, `readMaxLineLength`, `readMaxBytes`, and `readStreamMinSize`. A profile must provide `fs`, `tools`, and `promptSections`. When the filesystem has a sandbox mode and `sandboxPolicy` is present, legacy writes and edits receive the current Session policy.
+The bridge accepts only the positive integer limits supported by `dsh-tool-fs`: `readLimit`, `readMaxLineLength`, `readMaxBytes`, and `readStreamMinSize`. The compatibility runtime validates the installed package against its [support matrix](../compat-dsh-runtime/README.md#supported-adapter-set). Updating entry configuration drains tool calls and prompt assembly before replacing registered schemas and prompt text; disable and removal withdraw them, and enable restores them only while the selected policy and required Cordis services remain available. A profile must provide `fs`, `tools`, and `promptSections`; the optional `fsObservationPolicy` service establishes startup order when a policy provider is selected. When the filesystem has a sandbox mode and `sandboxPolicy` is present, legacy writes and edits receive the current Session policy.
 
 <a id="model-experience"></a>
 ## Model Experience

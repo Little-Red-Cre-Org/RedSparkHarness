@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-fs-local` 让原生 Consumer 使用维护中的本地文件系统后端。它在挂载到可选共享 Cordis Context 前校验所选旧包声明和本地后端配置。bridge 提供一个原生 `fs` 服务，并在 Host 关闭期间等待其插件释放。
+`dsh-compat-fs-local` 让原生 Consumer 使用维护中的本地文件系统后端。它在挂载到可选共享 Cordis Context 前校验所选旧包声明和本地后端配置。bridge 通过实时代理提供原生 `fs` 服务；Loader 更新配置后，代理会解析当前 Cordis Provider。
 
 ## 目录
 
@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-配置采用已记录的 `dsh-fs-local` 配置，包括可选工作目录。不支持的字段会在旧 Context 启动前失败。原生 profile 不得在同一作用域选择其他 `fs` Provider。
+配置采用已记录的 `dsh-fs-local` 配置，包括可选工作目录。不支持的字段会在旧 Context 启动前失败。兼容 runtime 只接受[支持矩阵](../compat-dsh-runtime/README.zh.md#supported-adapter-set)记录的已安装包版本。更新 Loader entry 配置会替换 Provider，原生代理会解析替换后的实例；停用或移除 entry 后，后续服务访问会以不可用错误失败。原生 profile 不得在同一作用域选择其他 `fs` Provider。
 
 <a id="model-experience"></a>
 ## 模型体验
