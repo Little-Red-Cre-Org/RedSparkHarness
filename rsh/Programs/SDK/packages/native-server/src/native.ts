@@ -301,7 +301,7 @@ export class NativeSdkApplication implements NativeApplication {
       throw new Error('native SDK: steering owner settled during attachment admission')
     }
     const message = createUserMessage({ content, source: { kind: 'user' } })
-    const messageId = await owner.enqueue(message, 'next-step', false, signal)
+    const messageId = await owner.enqueue(message, 'next-step', true, signal)
     return { messageId: String(messageId) }
   }
 

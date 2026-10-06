@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-06-goal-turn-interruption-preserves-human-inbox.md
-2026-10-06-goal-turn-interruption-preserves-human-inbox.md: 9fd660ae09053baa404e2f633fccfbaa9e6b7091
-2026-10-06-goal-turn-interruption-preserves-human-inbox.zh.md: 05e78821d3a723052f5b2a1cdc06582456dd3442
+2026-10-06-goal-turn-interruption-preserves-human-inbox.md: 787cfaf853d814e5fb51467cd2221f5046bc433f
+2026-10-06-goal-turn-interruption-preserves-human-inbox.zh.md: 7eb9ecd078a3027edfeae86c615ff144fca59c94

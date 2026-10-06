@@ -172,7 +172,7 @@ export class HarnessSession {
   constructor(readonly harness: DeepSeekHarness, readonly id: string) {}
 
   /**
-   * Queue input for this admitted native SDK root's next step without cancelling dispatch.
+   * Queue input for this admitted native SDK root's next step and wake a parked root without cancelling dispatch.
    * @param input - text or encoded-image content, using the same admission as run.
    * @returns the durable message id; idle Sessions and unsupported profiles reject.
    */

@@ -26,7 +26,7 @@ function normalizeGoalTimestamps(value: unknown): unknown {
   return value
 }
 
-function goalModel(audit: string): string {
+function goalModel(): string {
   return `import { appendFileSync } from 'node:fs'
 function currentSource(messages) {
   return [...messages].reverse().map(message => message.source).find(source => source?.kind === 'user' || source?.kind === 'goal')
@@ -129,7 +129,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))
-    writeFileSync(join(modules, 'native.mjs'), goalModel(audit))
+    writeFileSync(join(modules, 'native.mjs'), goalModel())
 
     const invoke = (args: string[]) => execa(process.execPath, [bin, '--profile', 'native-headless', '--patch', patchPath, ...args], {
       env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' }, reject: false, timeout: 30_000,
@@ -141,12 +141,15 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     expect(first.exitCode, first.stderr).toBe(0)
     expect(first.stdout).toContain('Goal is blocked')
 
-    const storage = new JsonlSessionBackend({ root: sessions, compression: 'none' })
-    let id: string
-    try {
-      id = (await storage.list())[0]?.header.id ?? ''
-      expect(id).not.toBe('')
-    } finally { await storage.close() }
+    const id = await (async () => {
+      const storage = new JsonlSessionBackend({ root: sessions, compression: 'none' })
+      try {
+        const id = (await storage.list())[0]?.header.id
+        if (id === undefined) throw new Error('Goal snapshot did not persist a Session')
+        expect(id).not.toBe('')
+        return id
+      } finally { await storage.close() }
+    })()
     writeMode('resume')
     const second = await invoke(['--resume', id, 'Please explicitly resume the blocked Goal.'])
     expect(second.exitCode, second.stderr).toBe(0)
@@ -159,7 +162,9 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
         const events = (await reader.read()).events
         expect(events.filter(event => event.type === 'goal/change').map(event => event.data.operation))
           .toEqual(['create', 'block', 'resume', 'complete'])
-        expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal').map(event => event.data.source))
+        const goalSources = events.flatMap(event => event.type === 'user/message' && event.data.source.kind === 'goal'
+          ? [event.data.source] : [])
+        expect(goalSources)
           .toEqual([
             expect.objectContaining({ kind: 'goal', round: 1 }),
             expect.objectContaining({ kind: 'goal', round: 2 }),
@@ -182,8 +187,8 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     expect(JSON.stringify(requests[6]?.messages)).toContain('Round: 2/4')
 
     const filename = sessionFixtureName(0, SESSION_FORMAT_VERSION)
-    const physical = readdirSync(sessions, { recursive: true })
-      .find(name => typeof name === 'string' && name.endsWith(filename))
+    const physical = readdirSync(sessions, { recursive: true }).find((name): name is string =>
+      typeof name === 'string' && name.endsWith(filename))
     if (physical === undefined) throw new Error('Goal snapshot did not write the current Session generation')
     const raw = readFileSync(join(sessions, physical), 'utf8')
     const redacted = redactSessionSnapshotIds([raw])[0] ?? raw
