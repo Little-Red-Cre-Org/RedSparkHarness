@@ -85,7 +85,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:404`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:412`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:434`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:465`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:418`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:440`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:471`](../Engine/core/session/src/types.ts)
 
 ## 事件
 
