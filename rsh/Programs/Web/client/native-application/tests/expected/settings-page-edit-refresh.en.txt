@@ -1,0 +1,18 @@
+{
+  "headings": [
+    "Settings",
+    "llm-pi-ai"
+  ],
+  "buttons": [
+    "Back to Sessions",
+    "Refresh settings",
+    "Save settings"
+  ],
+  "labels": [
+    "User overrides (JSON){ \"providers\": {} }"
+  ],
+  "alerts": [],
+  "notices": [
+    "Settings saved; values were read back from the Host."
+  ]
+}

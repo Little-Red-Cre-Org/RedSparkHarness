@@ -18,6 +18,8 @@ Settings owner 通过传入 schema 元数据及可选生效时机，选择公开
 
 原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。原生 application 将 `client-native-session` 声明为共享 Client peer 和开发依赖，因为 SettingsPage 在运行时导入 `NativeSessionRpcError`，并通过 `instanceof` 识别所选 Consumer 抛出的错误。
 
+Host 将 `maxCredentialRefsPerRead` 和 `maxSettingsOperations` 校验为正安全整数 Config 值，默认分别为 64 和 512。`settings/describe` 会随 namespace descriptor 公布选定 Host 的限制。页面按上限顺序分批读取已发现凭据引用并聚合脱敏信息；超过所公布设置操作数的修改会在发送前拒绝。Host 也会在调用 Settings Provider 前拒绝超限修改，因此一次 revision 检查原子写入不会拆分成局部请求。
+
 ## 支持范围
 
 该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。UI 不编辑隐藏的 `role('secret')` 字段，不创建授权 grant，不完成不透明 grant 记录编辑，也不复刻旧版插件设置页。浏览器授权登录属于独立工作。
@@ -32,8 +34,8 @@ Settings owner 通过传入 schema 元数据及可选生效时机，选择公开
 
 ## 后果
 
-Settings 注册必须通过元数据选择公开；基于 schema 的编辑使用路径操作保留未观测字段。冲突后调用方必须刷新并保留草稿。凭据值在 Web RPC 与界面中保持只写；grant 授权与不透明记录仍不受支持。
+Settings 注册必须通过元数据选择公开；基于 schema 的编辑使用路径操作保留未观测字段。冲突后调用方必须刷新并保留草稿。凭据读取遵守 Host 校验预算，超限设置修改会被拒绝，不会拆分执行。原生 Settings bundle 会随入口发布生成的 shared chunks；package payload gate 记录这一运行时依赖。凭据值在 Web RPC 与界面中保持只写；grant 授权与不透明记录仍不受支持。
 
 ## 测试
 
-Settings 包回归覆盖公开选择、机密值与默认值脱敏、凭据引用发现、对象与数组路径修改、隐藏值保留及 revision 冲突。经过身份验证的原生 HTTP 用例检查原始 descriptor 脱敏、带机密值的 Provider 失败、过期写入投影及只写 Credentials RPC。Client 测试通过真实 Settings owner 覆盖非机密对象修改、数组索引修改与不安全结构拒绝；定向包编译与浏览器检查覆盖变更源码。
+Settings 包回归覆盖公开选择、机密值与默认值脱敏、凭据引用发现、对象与数组路径修改、隐藏值保留及 revision 冲突。经过身份验证的原生 HTTP 测试覆盖公布的限制、Config 默认值与无效预算、只写凭据 RPC，并验证超限多操作修改不产生持久化局部写入。英文与中文 Settings 页面预期覆盖编辑/刷新、结构拒绝及只写凭据控件；65 引用用例证明有界分批读取能聚合状态并保留移除控件。

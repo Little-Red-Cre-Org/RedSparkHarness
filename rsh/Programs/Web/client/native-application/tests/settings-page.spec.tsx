@@ -4,10 +4,25 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { NativeSettings, type NativeSettingsPathOp, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
-import { en } from '../src/locales.ts'
+import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff } from '../src/settings-page.tsx'
 
 afterEach(cleanup)
+
+const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
+const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
+const settingsDescription = (namespaces: readonly NativeSettingsDescriptor[], limits = defaultLimits) => ({ namespaces, limits })
+
+async function expectSettingsOutput(name: string, language: string): Promise<void> {
+  const output = {
+    headings: screen.getAllByRole('heading').map(element => element.textContent),
+    buttons: screen.getAllByRole('button').map(element => element.textContent?.trim()),
+    labels: [...document.querySelectorAll('label')].map(element => element.textContent?.replace(/\s+/g, ' ').trim()),
+    alerts: screen.queryAllByRole('alert').map(element => element.textContent?.trim()),
+    notices: screen.queryAllByRole('status').map(element => element.textContent?.trim()),
+  }
+  await expect(JSON.stringify(output, null, 2)).toMatchFileSnapshot(`./expected/settings-page-${name}.${language}.txt`)
+}
 
 it('writes changed user fields without replacing a parent that contains a hidden secret', () => {
   expect(() => nativeSettingsDiff(
@@ -39,7 +54,7 @@ it('writes changed user fields without replacing a parent that contains a hidden
   )).toThrow('existing row count and order')
 })
 
-it('persists serviceable object additions and removals through Settings and refreshes its canonical projection', async () => {
+it.each(locales)('persists serviceable edits and refreshes the canonical projection ($language)', async ({ language, strings }) => {
   let document: NativeSettingsSection = { 'llm-pi-ai': { providers: {} } }
   const settings = new NativeSettings({
     load: async () => document,
@@ -56,61 +71,63 @@ it('persists serviceable object additions and removals through Settings and refr
     return descriptor
   })
   const client = {
-    settingsDescribe: vi.fn(async () => settings.describe()), settingsMutate,
+    settingsDescribe: vi.fn(async () => settingsDescription(settings.describe())), settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
 
   try {
-    render(<SettingsPage client={client} t={key => en[key]} onBack={() => undefined} />)
+    render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
     await screen.findByRole('heading', { name: 'llm-pi-ai' })
-    const editor = screen.getByLabelText('User overrides (JSON) llm-pi-ai') as HTMLTextAreaElement
+    const editor = screen.getByLabelText(`${strings.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
     fireEvent.change(editor, { target: { value: JSON.stringify({ providers: { deepseek: {} } }, null, 2) } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
     await waitFor(() => { expect(settingsMutate).toHaveBeenCalledOnce() })
     await waitFor(() => { expect(JSON.parse(editor.value)).toEqual({ providers: { deepseek: {} } }) })
     expect(settingsMutate.mock.calls[0]?.[1]).toEqual([{ op: 'set', path: ['providers', 'deepseek'], value: {} }])
-    expect(screen.getByText(en.settingsSaved)).toBeTruthy()
+    expect(screen.getByText(strings.settingsSaved)).toBeTruthy()
     expect(validateWrite).toHaveBeenCalledOnce()
     expect(Object.isFrozen(owner.get())).toBe(true)
     expect(resolveProfiles(owner.get().providers).has('deepseek')).toBe(true)
 
     fireEvent.change(editor, { target: { value: JSON.stringify({ providers: {} }, null, 2) } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
     await waitFor(() => { expect(settingsMutate).toHaveBeenCalledTimes(2) })
     await waitFor(() => { expect(JSON.parse(editor.value)).toEqual({ providers: {} }) })
     expect(settingsMutate.mock.calls[1]?.[1]).toEqual([{ op: 'unset', path: ['providers', 'deepseek'] }])
     expect(validateWrite).toHaveBeenCalledTimes(2)
     expect(resolveProfiles(owner.get().providers).has('deepseek')).toBe(false)
-    expect(screen.getByText(en.settingsSaved)).toBeTruthy()
+    expect(screen.getByText(strings.settingsSaved)).toBeTruthy()
+    await expectSettingsOutput('edit-refresh', language)
   } finally { await settings.dispose() }
 })
 
-it('renders schema-discovered credential references and clears the write-only value after storage', async () => {
+it.each(locales)('renders write-only credentials and clears the value after storage ($language)', async ({ language, strings }) => {
   const row: NativeSettingsDescriptor = {
     namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user: {}, applies: 'live', secrets: [],
     credentialRefs: ['DEEPSEEK_API_KEY'], revision: 4,
   }
   const credentialsSet = vi.fn(async () => undefined)
   const client = {
-    settingsDescribe: vi.fn(async () => [row]),
+    settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(async () => ({ DEEPSEEK_API_KEY: { configured: false, writable: true } })),
     credentialsSet,
     credentialsUnset: vi.fn(async () => undefined),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => en[key]} onBack={() => undefined} />)
+  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
 
   expect(await screen.findByRole('heading', { name: 'llm-pi-ai' })).toBeTruthy()
-  const input = screen.getByLabelText('New credential value DEEPSEEK_API_KEY') as HTMLInputElement
+  const input = screen.getByLabelText(`${strings.credentialValue} DEEPSEEK_API_KEY`) as HTMLInputElement
   fireEvent.change(input, { target: { value: 'native-rpc-secret' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save credential' }))
+  fireEvent.click(screen.getByRole('button', { name: strings.saveCredential }))
 
   await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'native-rpc-secret') })
   await waitFor(() => { expect(input.value).toBe('') })
   expect(document.body.textContent).not.toContain('native-rpc-secret')
+  await expectSettingsOutput('write-only-credential', language)
 })
 
-it('saves a visible array field through its existing index while preserving the hidden sibling', async () => {
+it.each(locales)('saves a visible array field through its existing index ($language)', async ({ strings }) => {
   let enabled = true
   let revision = 2
   const row = (): NativeSettingsDescriptor => ({
@@ -125,21 +142,21 @@ it('saves a visible array field through its existing index while preserving the 
     return row()
   })
   const client = {
-    settingsDescribe: vi.fn(async () => [row()]),
+    settingsDescribe: vi.fn(async () => settingsDescription([row()])),
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => en[key]} onBack={() => undefined} />)
+  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
-  fireEvent.change(screen.getByLabelText('User overrides (JSON) profiles'), {
+  fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), {
     target: { value: JSON.stringify({ rows: [{ enabled: false }] }) },
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+  fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
   await waitFor(() => { expect(settingsMutate).toHaveBeenCalledOnce() })
-  expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+  expect(await screen.findByText(strings.settingsSaved)).toBeTruthy()
 })
 
-it('reports unsupported array and hidden-secret structure edits instead of silently reporting a save', async () => {
+it.each(locales)('reports unsupported structure edits instead of reporting a save ($language)', async ({ language, strings }) => {
   const row: NativeSettingsDescriptor = {
     namespace: 'profiles', schema: {}, value: {}, base: {},
     user: { rows: [{ enabled: true }], providers: { alpha: { label: 'Alpha' } } }, applies: 'live',
@@ -148,23 +165,67 @@ it('reports unsupported array and hidden-secret structure edits instead of silen
   }
   const settingsMutate = vi.fn()
   const client = {
-    settingsDescribe: vi.fn(async () => [row]),
+    settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => en[key]} onBack={() => undefined} />)
+  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
-  fireEvent.change(screen.getByLabelText('User overrides (JSON) profiles'), { target: { value: JSON.stringify({ rows: [] }) } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
-  expect((await screen.findByRole('alert')).textContent).toContain(en.settingsArrayStructureUnsupported)
+  fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), { target: { value: JSON.stringify({ rows: [] }) } })
+  fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
+  expect((await screen.findByRole('alert')).textContent).toContain(strings.settingsArrayStructureUnsupported)
+  await expectSettingsOutput('array-structure-refusal', language)
   expect(settingsMutate).not.toHaveBeenCalled()
-  expect(screen.queryByText(en.settingsSaved)).toBeNull()
+  expect(screen.queryByText(strings.settingsSaved)).toBeNull()
 
-  fireEvent.change(screen.getByLabelText('User overrides (JSON) profiles'), {
+  fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), {
     target: { value: JSON.stringify({ rows: [{ enabled: true }], providers: {} }) },
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
-  expect((await screen.findByRole('alert')).textContent).toContain(en.settingsSecretStructureUnsupported)
+  fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
+  expect((await screen.findByRole('alert')).textContent).toContain(strings.settingsSecretStructureUnsupported)
+  await expectSettingsOutput('secret-structure-refusal', language)
   expect(settingsMutate).not.toHaveBeenCalled()
-  expect(screen.queryByText(en.settingsSaved)).toBeNull()
+  expect(screen.queryByText(strings.settingsSaved)).toBeNull()
+})
+
+it.each(locales)('aggregates credential reads above the advertised per-request budget ($language)', async ({ strings }) => {
+  const refs = Array.from({ length: 65 }, (_, index) => `NATIVE_TEST_KEY_${index}`)
+  const row: NativeSettingsDescriptor = {
+    namespace: 'credentials', schema: {}, value: {}, base: {}, user: {}, applies: 'live', secrets: [],
+    credentialRefs: refs, revision: 0,
+  }
+  const credentialsDescribe = vi.fn(async (batch: readonly string[]) => {
+    expect(batch.length).toBeLessThanOrEqual(64)
+    return Object.fromEntries(batch.map(ref => [ref, { configured: ref === refs[64], writable: true }]))
+  })
+  const client = {
+    settingsDescribe: vi.fn(async () => settingsDescription([row])),
+    settingsMutate: vi.fn(), credentialsDescribe,
+  } as unknown as NativeSessionClient
+  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  await screen.findByRole('heading', { name: 'credentials' })
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
+  expect(credentialsDescribe.mock.calls.map(([batch]) => batch)).toEqual([refs.slice(0, 64), refs.slice(64)])
+  expect(screen.getByRole('button', { name: strings.removeCredential })).toBeTruthy()
+  expect(screen.queryByText(`${strings.credentialError}:`)).toBeNull()
+})
+
+it.each(locales)('refuses edits above the advertised atomic operation budget ($language)', async ({ strings }) => {
+  const row: NativeSettingsDescriptor = {
+    namespace: 'bounded', schema: {}, value: {}, base: {}, user: { first: false, second: false }, applies: 'live',
+    secrets: [], credentialRefs: [], revision: 8,
+  }
+  const settingsMutate = vi.fn()
+  const client = {
+    settingsDescribe: vi.fn(async () => settingsDescription([row], { maxCredentialRefsPerRead: 64, maxSettingsOperations: 1 })),
+    settingsMutate, credentialsDescribe: vi.fn(async () => ({})),
+  } as unknown as NativeSessionClient
+  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  await screen.findByRole('heading', { name: 'bounded' })
+  fireEvent.change(screen.getByLabelText(`${strings.userOverrides} bounded`), {
+    target: { value: JSON.stringify({ first: true, second: true }) },
+  })
+  fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
+  expect((await screen.findByRole('alert')).textContent).toContain(strings.settingsOperationLimitExceeded)
+  expect(settingsMutate).not.toHaveBeenCalled()
 })

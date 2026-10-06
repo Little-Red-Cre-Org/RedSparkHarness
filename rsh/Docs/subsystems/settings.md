@@ -8,7 +8,70 @@ Source: [`rsh/Modules/Official/settings/settings/src/index.ts`](../../Modules/Of
 
 ## Native Host
 
-The [native definition](../../Modules/Official/settings/settings/src/native.ts) exposes `NativeSettings.register(namespace, base, resolve)` after its Provider loads the document. The returned owner scope reads a deep-frozen value, merges or replaces only its raw user section, accepts an optional expected revision, watches valid resolved changes and unregisters on disposal. Native watcher callbacks run serially per callback in commit order; their sync throws and async rejections are logged. A watcher disposer skips queued invocations, and Host teardown waits for started callbacks. The [file Provider](../../Modules/Official/settings/settings-file/src/native.ts) reads and writes the same YAML/JSON document under a cross-process lock; `llm-pi-ai` consumes its namespace on the next model request. Native settings does not publish the Cordis schema descriptor or generic wire editing API.
+The [native definition](../../Modules/Official/settings/settings/src/native.ts) exposes `NativeSettings.register(namespace, base, resolve, validateWrite, presentation)` after its Provider loads the document. The returned owner scope reads a deep-frozen value, merges or replaces only its raw user section, accepts an optional expected revision, watches valid resolved changes and unregisters on disposal. Native watcher callbacks run serially per callback in commit order; their sync throws and async rejections are logged. A watcher disposer skips queued invocations, and Host teardown waits for started callbacks. The [file Provider](../../Modules/Official/settings/settings-file/src/native.ts) reads and writes the same YAML/JSON document under a cross-process lock; `llm-pi-ai` consumes its namespace on the next model request.
+
+Native configuration UI exposure is opt-in through `presentation`. `describe()` returns only active registrations with presentation metadata; its descriptor carries the serialized schema, redacted resolved/base/user values, secret paths and presence, active credential references, apply timing and user-section revision. `mutate(namespace, ops, expectedRevision)` applies path edits to that user section in one revision-checked commit. A caller must send edits rather than reconstruct a whole section from its redacted view; edits cannot touch secret paths or resize/reorder arrays.
+
+```ts type-equiv
+/** Optional metadata required before a registration is exposed to configuration UI. */
+interface NativeSettingsPresentation {
+  /** Live schema whose `toJSON()` form and role metadata describe this registration. */
+  readonly schema: { toJSON(): unknown }
+  /** When the owner applies committed changes; defaults to `live`. */
+  readonly applies?: 'live' | 'restart'
+}
+```
+
+```ts type-equiv
+/** One redacted, schema-backed registration exposed to a native settings page. */
+interface NativeSettingsDescriptor {
+  /** Owning Settings namespace. */
+  readonly namespace: string
+  /** Serialized schema used to discover supported fields and credential refs, without default values. */
+  readonly schema: unknown
+  /** Effective resolved values with schema-declared secrets removed. */
+  readonly value: unknown
+  /** Composition base with schema-declared secrets removed. */
+  readonly base: unknown
+  /** Stored user overrides with schema-declared secrets removed. */
+  readonly user: unknown
+  /** When the owner applies committed changes. */
+  readonly applies: 'live' | 'restart'
+  /** Secret paths and whether each hidden value is currently present. */
+  readonly secrets: readonly { readonly path: string[]; readonly set: boolean }[]
+  /** Active values at schema fields marked `credential-ref`. */
+  readonly credentialRefs: readonly string[]
+  /** Revision of the stored user section. */
+  readonly revision: number
+}
+```
+
+```ts type-equiv
+/** One path-addressed change to a registered namespace's raw user section. */
+type NativeSettingsPathOp =
+  /** Set a JSON value at this path. */
+  | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
+  /** Remove the value at this path. */
+  | { readonly op: 'unset'; readonly path: readonly string[] }
+```
+
+```ts type-equiv
+/** A resolved namespace owner, with writes restricted to its own user section. */
+interface NativeSettingsScope<T> {
+  get(): T
+  readonly revision: number
+  update(patch: NativeSettingsSection, expectedRevision?: number): Promise<void>
+  replace(section: NativeSettingsSection, expectedRevision?: number): Promise<void>
+  /**
+   * Observe committed values in order for this callback. Rejections are logged.
+   * Disposal skips queued invocations and waits for started ones to settle.
+   * @param callback - receives the next and previous resolved values.
+   * @returns a disposer that prevents further invocations from starting.
+   */
+  watch(callback: (next: T, previous: T) => void | Promise<void>): () => void
+  dispose(): void
+}
+```
 
 ## Identity
 

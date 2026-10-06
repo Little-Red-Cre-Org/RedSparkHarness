@@ -9,7 +9,7 @@ type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
 
 class UnsupportedSettingsEdit extends TypeError {
-  constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported', message: string) {
+  constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
     super(message)
   }
 }
@@ -120,6 +120,7 @@ export function SettingsPage({ client, t, onBack }: {
   onBack: () => void
 }) {
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
+  const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
@@ -134,13 +135,23 @@ export function SettingsPage({ client, t, onBack }: {
     setError(undefined)
     setCredentialError(undefined)
     try {
-      const rows = await client.settingsDescribe(signal)
+      const description = await client.settingsDescribe(signal)
+      const rows = description.namespaces
+      setLimits(description.limits)
       setNamespaces(rows)
       setDrafts(current => keepDrafts ? current : Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
       const refs = [...new Set(rows.flatMap(row => row.credentialRefs))]
       if (refs.length === 0) setCredentials({})
       else {
-        try { setCredentials(await client.credentialsDescribe(refs, signal)) }
+        try {
+          const aggregate: Record<string, { configured: boolean; source?: string; writable: boolean }> = {}
+          for (let offset = 0; offset < refs.length; offset += description.limits.maxCredentialRefsPerRead) {
+            Object.assign(aggregate, await client.credentialsDescribe(
+              refs.slice(offset, offset + description.limits.maxCredentialRefsPerRead), signal,
+            ))
+          }
+          setCredentials(aggregate)
+        }
         catch (cause: unknown) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
       }
       return true
@@ -163,6 +174,9 @@ export function SettingsPage({ client, t, onBack }: {
     try {
       const after = userSection(JSON.parse(drafts[row.namespace] ?? '{}') as unknown)
       const ops = nativeSettingsDiff(userSection(row.user), after, row.secrets.map(secret => secret.path))
+      if (limits === undefined || ops.length > limits.maxSettingsOperations) {
+        throw new UnsupportedSettingsEdit('settingsOperationLimitExceeded', 'Settings edit exceeds the Host operation limit.')
+      }
       if (ops.length > 0) await client.settingsMutate(row.namespace, ops, row.revision)
       if (await refresh(false)) setNotice(t('settingsSaved'))
     } catch (cause: unknown) {

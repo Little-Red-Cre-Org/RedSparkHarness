@@ -53,6 +53,10 @@ export interface Config extends TurnConfig {
   readonly maxFollowBufferBytes: number
   readonly maxFollowers: number
   readonly maxPendingHumanRequests: number
+  /** Maximum credential references accepted by one read; defaults to 64. */
+  readonly maxCredentialRefsPerRead: number
+  /** Maximum path edits accepted by one Settings mutation; defaults to 512. */
+  readonly maxSettingsOperations: number
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -89,11 +93,15 @@ function settingsConflictDetails(error: unknown): Record<string, unknown> | unde
  */
 export function resolveNativeWebSessionConfig(input: unknown): Config {
   const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers,
-    maxPendingHumanRequests, ...turn } = object(input)
+    maxPendingHumanRequests, maxCredentialRefsPerRead, maxSettingsOperations, ...turn } = object(input)
+  const settingsLimits = z.strictObject({
+    maxCredentialRefsPerRead: z.number().int().min(1).refine(Number.isSafeInteger).default(64),
+    maxSettingsOperations: z.number().int().min(1).refine(Number.isSafeInteger).default(512),
+  }).parse({ maxCredentialRefsPerRead, maxSettingsOperations })
   return { ...resolveNativeHeadlessConfig(turn), maxPendingRequests: positive(maxPendingRequests, 'maxPendingRequests'),
     maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars'), maxFollowBufferBytes: positive(maxFollowBufferBytes, 'maxFollowBufferBytes'),
     maxFollowers: positive(maxFollowers, 'maxFollowers'),
-    maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests') }
+    maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests'), ...settingsLimits }
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
@@ -103,10 +111,13 @@ const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
 const nativeSettingsMutation = z.strictObject({
-  ns: z.string().regex(/^[a-z][a-z0-9-]*$/), ops: z.array(z.unknown()).max(512),
+  ns: z.string().regex(/^[a-z][a-z0-9-]*$/), ops: z.array(z.unknown()),
   expectedRevision: z.number().int().refine(Number.isSafeInteger).nonnegative(),
 })
-const nativeCredentialRefs = z.strictObject({ refs: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/)).max(64) })
+const nativeCredentialRef = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
+function credentialRefsRequest(maxCredentialRefsPerRead: number) {
+  return z.strictObject({ refs: z.array(nativeCredentialRef).max(maxCredentialRefsPerRead) })
+}
 const nativeCredentialSet = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), value: z.string().min(1) })
 const nativeCredentialUnset = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/) })
 
@@ -449,10 +460,19 @@ export class NativeWebSessionService {
   private async configuration(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
     if (endpoint === 'settings/describe') {
       if (Object.keys(object(payload)).length !== 0) throw new TypeError('native settings: describe takes no fields')
-      return this.settings().describe()
+      return {
+        namespaces: this.settings().describe(),
+        limits: {
+          maxCredentialRefsPerRead: this.config.maxCredentialRefsPerRead,
+          maxSettingsOperations: this.config.maxSettingsOperations,
+        },
+      }
     }
     if (endpoint === 'settings/mutate') {
       const request = nativeSettingsMutation.parse(payload)
+      if (request.ops.length > this.config.maxSettingsOperations) {
+        throw new TypeError('native settings: mutation exceeds configured operation limit')
+      }
       const settings = this.settings()
       if (!settings.describe().some(row => row.namespace === request.ns)) {
         throw new Error(`native settings: namespace "${request.ns}" is not exposed to the native page`)
@@ -464,7 +484,7 @@ export class NativeWebSessionService {
       return next
     }
     if (endpoint === 'credentials/describe') {
-      const { refs } = nativeCredentialRefs.parse(payload)
+      const { refs } = credentialRefsRequest(this.config.maxCredentialRefsPerRead).parse(payload)
       const allowed = this.acceptedCredentialRefs()
       for (const ref of refs) if (!allowed.has(ref)) {
         throw new Error(`native credentials: reference "${ref}" is not declared by an active settings schema`)
@@ -534,7 +554,8 @@ export const plugin: NativePlugin = {
     const config = resolveNativeWebSessionConfig(input)
     return (context) => {
       const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt,
-        maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human, ...turn } = config
+        maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human,
+        maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations, ...turn } = config
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })

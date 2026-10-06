@@ -1,0 +1,18 @@
+{
+  "headings": [
+    "Settings",
+    "profiles"
+  ],
+  "buttons": [
+    "Back to Sessions",
+    "Refresh settings",
+    "Save settings"
+  ],
+  "labels": [
+    "User overrides (JSON){\"rows\":[]}"
+  ],
+  "alerts": [
+    "Request failed: Settings arrays must keep their existing row count and order."
+  ],
+  "notices": []
+}

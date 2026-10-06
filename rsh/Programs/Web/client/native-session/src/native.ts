@@ -63,6 +63,19 @@ export interface NativeSettingsDescriptor {
   readonly revision: number
 }
 
+/** Settings views and the Host-validated request budgets used by the Client. */
+export interface NativeSettingsDescription {
+  /** Registered, redacted Settings namespaces. */
+  readonly namespaces: readonly NativeSettingsDescriptor[]
+  /** Per-request limits enforced by the selected Host. */
+  readonly limits: {
+    /** Maximum credential refs accepted by one read request. */
+    readonly maxCredentialRefsPerRead: number
+    /** Maximum operations accepted by one atomic Settings mutation. */
+    readonly maxSettingsOperations: number
+  }
+}
+
 /** One path-addressed Settings edit. */
 export type NativeSettingsPathOp =
   /** Set one JSON value at the path. */
@@ -94,11 +107,11 @@ export class NativeSessionRpcError extends Error {
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
-  /** Describe schema-published Settings namespaces with redacted values.
+  /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
-   * @returns the currently registered native Settings views.
+   * @returns the registered views and validated limits for bounded reads and atomic writes.
    */
-  settingsDescribe(signal?: AbortSignal): Promise<readonly NativeSettingsDescriptor[]>
+  settingsDescribe(signal?: AbortSignal): Promise<NativeSettingsDescription>
   /** Apply Settings path edits against the revision the page displayed.
    * @param namespace - registered Settings namespace.
    * @param ops - path-addressed user-layer edits.
@@ -237,6 +250,20 @@ function settingsDescriptor(value: unknown): NativeSettingsDescriptor {
   return data as unknown as NativeSettingsDescriptor
 }
 
+function settingsDescription(value: unknown): NativeSettingsDescription {
+  const data = fields(value)
+  const limits = fields(data.limits)
+  if (!Array.isArray(data.namespaces)
+    || typeof limits.maxCredentialRefsPerRead !== 'number' || !Number.isSafeInteger(limits.maxCredentialRefsPerRead) || limits.maxCredentialRefsPerRead < 1
+    || typeof limits.maxSettingsOperations !== 'number' || !Number.isSafeInteger(limits.maxSettingsOperations) || limits.maxSettingsOperations < 1) {
+    throw new TypeError('invalid native Settings description')
+  }
+  return { namespaces: data.namespaces.map(settingsDescriptor), limits: {
+    maxCredentialRefsPerRead: limits.maxCredentialRefsPerRead,
+    maxSettingsOperations: limits.maxSettingsOperations,
+  } }
+}
+
 function credentialInfo(value: unknown): NativeCredentialInfo {
   const data = fields(value)
   if (typeof data.configured !== 'boolean' || typeof data.writable !== 'boolean'
@@ -258,8 +285,7 @@ function header(value: unknown): SessionHeader {
 
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'settings/describe') {
-    if (!Array.isArray(value)) throw new TypeError('native Settings description must be an array')
-    return value.map(settingsDescriptor)
+    return settingsDescription(value)
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
   if (endpoint === 'credentials/describe') {

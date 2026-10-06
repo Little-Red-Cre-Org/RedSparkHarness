@@ -8,7 +8,70 @@
 
 ## 原生 Host
 
-[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。原生设置不公开 Cordis schema 描述或通用远端编辑 API。
+[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve, validateWrite, presentation)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。
+
+原生配置界面通过 `presentation` 选择性公开注册项。`describe()` 只返回带 presentation metadata 的活动注册；descriptor 包含序列化 schema、脱敏后的解析值/base/user、机密路径及其存在状态、当前凭据引用、生效时机和用户分节 revision。`mutate(namespace, ops, expectedRevision)` 在一次 revision 检查提交中按路径编辑用户分节。调用方必须发送路径修改，不能从脱敏视图重建整个分节；修改不能触及机密路径，也不能调整或重排数组。
+
+```ts type-equiv
+/** Optional metadata required before a registration is exposed to configuration UI. */
+interface NativeSettingsPresentation {
+  /** Live schema whose `toJSON()` form and role metadata describe this registration. */
+  readonly schema: { toJSON(): unknown }
+  /** When the owner applies committed changes; defaults to `live`. */
+  readonly applies?: 'live' | 'restart'
+}
+```
+
+```ts type-equiv
+/** One redacted, schema-backed registration exposed to a native settings page. */
+interface NativeSettingsDescriptor {
+  /** Owning Settings namespace. */
+  readonly namespace: string
+  /** Serialized schema used to discover supported fields and credential refs, without default values. */
+  readonly schema: unknown
+  /** Effective resolved values with schema-declared secrets removed. */
+  readonly value: unknown
+  /** Composition base with schema-declared secrets removed. */
+  readonly base: unknown
+  /** Stored user overrides with schema-declared secrets removed. */
+  readonly user: unknown
+  /** When the owner applies committed changes. */
+  readonly applies: 'live' | 'restart'
+  /** Secret paths and whether each hidden value is currently present. */
+  readonly secrets: readonly { readonly path: string[]; readonly set: boolean }[]
+  /** Active values at schema fields marked `credential-ref`. */
+  readonly credentialRefs: readonly string[]
+  /** Revision of the stored user section. */
+  readonly revision: number
+}
+```
+
+```ts type-equiv
+/** One path-addressed change to a registered namespace's raw user section. */
+type NativeSettingsPathOp =
+  /** Set a JSON value at this path. */
+  | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
+  /** Remove the value at this path. */
+  | { readonly op: 'unset'; readonly path: readonly string[] }
+```
+
+```ts type-equiv
+/** A resolved namespace owner, with writes restricted to its own user section. */
+interface NativeSettingsScope<T> {
+  get(): T
+  readonly revision: number
+  update(patch: NativeSettingsSection, expectedRevision?: number): Promise<void>
+  replace(section: NativeSettingsSection, expectedRevision?: number): Promise<void>
+  /**
+   * Observe committed values in order for this callback. Rejections are logged.
+   * Disposal skips queued invocations and waits for started ones to settle.
+   * @param callback - receives the next and previous resolved values.
+   * @returns a disposer that prevents further invocations from starting.
+   */
+  watch(callback: (next: T, previous: T) => void | Promise<void>): () => void
+  dispose(): void
+}
+```
 
 ## 标识
 
