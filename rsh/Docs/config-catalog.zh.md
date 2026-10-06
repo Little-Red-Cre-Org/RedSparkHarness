@@ -801,7 +801,7 @@ export type Config = LocalConfig
 
 依赖：[`LocalConfig`](#deepseek-aidsh-fs-local)
 
-来源：[`rsh/Modules/Official/fs/fs-sandbox/src/index.ts:45`](../Modules/Official/fs/fs-sandbox/src/index.ts)
+来源：[`rsh/Modules/Official/fs/fs-sandbox/src/index.ts:43`](../Modules/Official/fs/fs-sandbox/src/index.ts)
 
 <a id="deepseek-aidsh-goal"></a>
 

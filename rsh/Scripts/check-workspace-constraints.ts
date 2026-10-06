@@ -203,8 +203,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-local': [
     'lib/native.js', 'lib/backend.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-fs-sandbox': ['lib/types-*.js'],
-  '@deepseek-ai/dsh-sandbox': ['lib/native-types.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-fs-sandbox': ['lib/native.js', 'lib/shared-*.js', 'lib/types-*.js'],
+  '@deepseek-ai/dsh-sandbox': ['lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-sandbox-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-user-questions': ['lib/native.js', 'lib/protocol.js', 'lib/broker.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-user-question-broker': ['lib/native.js'],
