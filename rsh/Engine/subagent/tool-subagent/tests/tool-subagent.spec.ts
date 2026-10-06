@@ -21,7 +21,8 @@ import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { loadStoredSession } from '../../subagent/tests/persistence-helpers.ts'
 import * as mock from './scripted-provider.ts'
-import * as tool from '../src/index.ts'
+import * as tool from '../src/compat.ts'
+import * as ToolSubagentEntry from '../src/index.ts'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import {
   callSubagent,
@@ -657,17 +658,39 @@ describe('dsh-tool-subagent', () => {
     // a stray `export default apply` would collapse the module via
     // `unwrapExports` (`exports.default ?? exports`), DROP `inject`, and crash at
     // load with "cannot get property … without inject". Guard the shape directly.
-    expect('default' in tool).toBe(false)
-    expect(tool.name).toBe('tool-subagent')
-    expect(tool.inject).toEqual(['tools', 'subagents', 'systemPrompt', 'sessionProjections'])
+    expect('default' in ToolSubagentEntry).toBe(false)
+    expect(ToolSubagentEntry.name).toBe('tool-subagent')
+    expect(ToolSubagentEntry.inject).toEqual(['tools', 'subagents', 'systemPrompt', 'sessionProjections'])
 
     const loader = Object.create(Loader.prototype) as Loader
-    const unwrapped = loader.unwrapExports(tool) as Record<string, unknown>
-    expect(unwrapped).toBe(tool)
+    const unwrapped = loader.unwrapExports(ToolSubagentEntry) as Record<string, unknown>
+    expect(unwrapped).toBe(ToolSubagentEntry)
     expect(unwrapped.name).toBe('tool-subagent')
     expect(unwrapped.inject).toEqual(['tools', 'subagents', 'systemPrompt', 'sessionProjections'])
     expect(typeof unwrapped.apply).toBe('function')
-    expect(unwrapped.Config).toBeDefined()
+    expect(ToolSubagentEntry.Config).toBeDefined()
+  })
+
+  it('awaits the lazy Cordis compatibility entry through the real Loader', async () => {
+    const ctx = await projectedContext()
+    await ctx.plugin(Loader)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(SubagentRuntime)
+    await mock.mountScriptedProvider(ctx, { name: 'mock', reply: 'loaded through Cordis' })
+    ctx.loader.internal = {
+      version: 'v2',
+      async import(specifier: string) {
+        if (specifier !== '@deepseek-ai/dsh-tool-subagent') throw new Error(`unexpected Loader import: ${specifier}`)
+        return ToolSubagentEntry
+      },
+    } as unknown as NonNullable<typeof ctx.loader.internal>
+
+    await ctx.loader.create({ name: '@deepseek-ai/dsh-tool-subagent', config: { provider: 'mock' } })
+    await ctx.loader.await()
+
+    expect(ctx.tools.get('subagent')).toBeDefined()
+    expect(text(await callSubagent(ctx, { description: 'load tool', prompt: 'run' }))).toBe('loaded through Cordis')
   })
 
   it('passes persona/toolFilter/maxDepth config through to the start request', async () => {

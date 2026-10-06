@@ -9,9 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-此无 Cordis 的 Client 应用为显式 native-web profile 提供对话页面。选定 renderer 挂载 React；client-native-session 提供经过身份验证的 Host 操作。
-
-根 Tool 调用与持久化结果、失败标识及呈现元数据配对，通过共享 Tool 卡片模型呈现。冷历史使用相同投影；不呈现尚不可用的文件打开和轨迹操作。嵌套分派记录保留在原始 Session 披露中，不建立独立的嵌套卡片层级。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。页面依据 Session 记录呈现根级 Tool 结果与失败；嵌套分派仍保留在原始历史中。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输或历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 
@@ -34,7 +32,7 @@ kind: "package-reference"
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。页面不提供持久化语言偏好或 Settings UI。
 
-React 与 Session 消息投影通过 peer 依赖共享应用实例；Session Consumer 只作为类型依赖，运行时由选定 capability 提供。
+React、Session、原生模型选择、Agent 预设选择与 todo Client 值通过 peer 依赖共享应用实例。已发布声明也引用 native-runtime 与 client-native-session，因此这些包作为生产依赖安装以供类型解析；只有原生 profile 选择后才会运行它们的 NativePlugin。
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 

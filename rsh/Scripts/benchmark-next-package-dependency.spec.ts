@@ -64,6 +64,7 @@ describe('next package benchmark graph', () => {
         ['@f/types', ['rsh/g/probe/src/types.ts']],
       ]),
       hostRuntimeSourceUses: new Map([['@f/runtime', ['rsh/g/probe/src/index.ts']]]),
+      clientRuntimeSourceUses: new Map(),
       hostRuntimeExportUses: [{
         packageName: '@f/runtime',
         specifier: '@f/runtime',

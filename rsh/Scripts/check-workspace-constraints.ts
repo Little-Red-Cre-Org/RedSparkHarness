@@ -259,7 +259,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
-  '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js', 'lib/native.js'],
+  '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js', 'lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.

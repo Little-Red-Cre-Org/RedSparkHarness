@@ -62,6 +62,8 @@ kind: "package-reference"
 
 Provider 创建一个 Cordis Context，安装 `RshPluginHost`，并按包名跟踪每个挂载 Fiber。激活前检查允许列表；激活失败时释放部分 Fiber，并同时报告激活与清理错误。原生所有权会在异步激活结束前注册 Context 和挂载清理。
 
+本包不发布运行时不变量伴生入口，因为包名映射只索引由此 Provider 发起的挂载，用于拒绝重复挂载并取得对应 Fiber 的释放函数；adapter 服务与事件仍由 Cordis Context 拥有，该映射不是其状态的第二份投影。
+
 </details>
 
 -----

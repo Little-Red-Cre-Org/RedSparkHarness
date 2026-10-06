@@ -71,9 +71,6 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-spill": {
-      "optional": true
-    },
     "@deepseek-ai/cordis": {
       "optional": true
     }

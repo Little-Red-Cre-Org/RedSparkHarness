@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Mount this backend in a composition that spills text to the local filesystem. It registers as the `ctx.spillStore` service that the `dsh-spill-policy` plugin and other callers use.
 
+`dsh-spill` and NativeRuntime remain required peer dependencies because this package implements their provider seams. Cordis stays optional for package-manager installation; native compositions can select `./native` without installing Cordis.
+
 ### Minimal configuration
 
 Loading the plugin with no config is safe: files land in a lazily-created private (0700) per-process directory under the OS temp directory. Set `root` when the files must live under a known location.

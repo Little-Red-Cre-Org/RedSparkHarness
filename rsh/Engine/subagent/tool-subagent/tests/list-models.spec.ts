@@ -15,7 +15,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import * as tool from '../src/index.ts'
+import * as tool from '../src/compat.ts'
 import { registerListSubagentModels } from '../src/list-models.ts'
 import { testToolSignal, text } from './harness.ts'
 

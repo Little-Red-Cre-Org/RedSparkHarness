@@ -9,7 +9,7 @@ import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import * as mock from './scripted-provider.ts'
-import * as tool from '../src/index.ts'
+import * as tool from '../src/compat.ts'
 import SubagentModelSelectionConfig from '../src/model-selection-settings.ts'
 
 /** Shared non-aborted tool signal for package-local integration tests. */

@@ -139,6 +139,7 @@ describe('gate graph validation', () => {
     'ci-primary',
     'ci-linux-primary',
     'ci-static',
+    'ci-package-publication',
     'ci-lint-contracts-ready',
     'ci-coverage',
     'ci-bench',
@@ -225,6 +226,22 @@ describe('gate graph validation', () => {
       workers: 4,
       source: '8 available CPU(s), hygiene cap 4',
     })
+  })
+
+  it('exposes only source-plane package publication checks to RedSpark CI', () => {
+    const subject = withPnpmEntrypoint(() => gatesForMode('ci-package-publication'))
+    const { scripts } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
+      scripts: Record<string, string>
+    }
+
+    expect(subject.map(item => item.id)).toEqual(['constraints', 'native-dependencies', 'package-invariants'])
+    expect(subject.map(item => item.displayCommand)).toEqual([
+      'pnpm run constraints',
+      'pnpm run verify-native-dependencies',
+      'pnpm run verify-package-invariants',
+    ])
+    expect(subject.every(item => item.needs === undefined)).toBe(true)
+    expect(scripts['check:ci:package-publication']).toBe('tsx rsh/Scripts/run-gates.ts ci-package-publication')
   })
 
   it('schedules the longest documentation leaves before short checks', () => {
