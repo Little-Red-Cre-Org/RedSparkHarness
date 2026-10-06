@@ -145,7 +145,7 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
       state.stopping = true
       if (this.available(state)) this.goals.disarm(state.owner.agent)
     }
-    for (const state of states) if (this.ownsAutomaticTurn(state)) {
+    for (const state of states) if (this.ownsAutomaticTurn(state) && state.owner.rootOperations?.signal.aborted !== true) {
       void this.interrupt(state, { kind: 'hook', reason: 'goal-driver-unloaded' })
     }
     return this.disposal = (async () => {
@@ -168,7 +168,7 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
     const interruption = state.interruption = rootOperations === undefined
       ? Promise.reject(new Error('Goal turn interruption requires the exact root operation owner'))
       : Promise.resolve().then(() => {
-        if (state.runningGoal !== round || state.directHuman) return
+        if (state.runningGoal !== round || state.directHuman || rootOperations.signal.aborted) return
         return rootOperations.interruptTurn(reason)
       })
     this.interruptions.add(interruption)
