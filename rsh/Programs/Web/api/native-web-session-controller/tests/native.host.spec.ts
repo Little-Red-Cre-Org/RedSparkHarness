@@ -250,7 +250,12 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
       limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
     } })
-    expect(rawSettingsReply.ok && Array.isArray(rawSettingsReply.value.namespaces)).toBe(true)
+    const hasSettingsNamespaces = rawSettingsReply.ok
+      && typeof rawSettingsReply.value === 'object'
+      && rawSettingsReply.value !== null
+      && 'namespaces' in rawSettingsReply.value
+      && Array.isArray(rawSettingsReply.value.namespaces)
+    expect(hasSettingsNamespaces).toBe(true)
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-leaf-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
