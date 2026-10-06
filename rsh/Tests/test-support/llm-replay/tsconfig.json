@@ -21,7 +21,7 @@
       "path": "../../../Engine/llm/llm"
     },
     {
-      "path": "../../../Engine/llm/deepseek-llm-api-extensions"
+      "path": "../../../Modules/Official/llm/deepseek-llm-api-extensions"
     },
     {
       "path": "../../../Engine/core/session"

@@ -132,8 +132,8 @@ for await (const chunk of ctx.llm.stream({
 当包级约定不够用时阅读以下页面。它们从共享类型逐步进入具体适配器、重试执行器与计量服务。
 
 - [LLM（大语言模型）流式子系统](../../../Docs/subsystems/llm-streaming.zh.md)——消息与块类型、紧凑的 Assistant 流记录、`StreamChunk` 协议与适配器约定。
-- [llm-deepseek 适配器](../llm-deepseek/README.zh.md)——DeepSeek chat-completions 直连实现。
-- [llm-pi-ai 适配器](../llm-pi-ai/README.zh.md)——基于 pi-ai 的多提供方实现。
+- [llm-deepseek 适配器](../../../Modules/Official/llm/llm-deepseek/README.zh.md)——DeepSeek chat-completions 直连实现。
+- [llm-pi-ai 适配器](../../../Modules/Official/llm/llm-pi-ai/README.zh.md)——基于 pi-ai 的多提供方实现。
 - [llm-retry](../llm-retry/README.zh.md)——重跑失败模型请求的重试执行器。
 - [Token 计量](../token-meter/README.zh.md)——具备回放感知的请求与上下文压力测量。
 - [孪生 LLM 适配器](../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.zh.md)——为什么 DeepSeek 路由交付两个结构不同的适配器。

@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "rsh/Engine/llm/llm-pi-ai"
+    "directory": "rsh/Modules/Official/llm/llm-pi-ai"
   },
   "type": "module",
   "main": "lib/index.js",

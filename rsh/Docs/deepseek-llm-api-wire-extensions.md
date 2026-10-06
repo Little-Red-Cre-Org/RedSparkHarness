@@ -2,7 +2,7 @@
 
 English | [中文](deepseek-llm-api-wire-extensions.zh.md)
 
-This reference defines every DeepSeek Harness-specific HTTP header and additive JSON field sent by [`@deepseek-ai/dsh-llm-deepseek`](../Engine/llm/llm-deepseek/README.md) on `deepseek-official` chat-completion requests. It does not redefine fields owned by the upstream DeepSeek API. The provider-neutral LLM interface and `llm-pi-ai` do not implement these additions.
+This reference defines every DeepSeek Harness-specific HTTP header and additive JSON field sent by [`@deepseek-ai/dsh-llm-deepseek`](../Modules/Official/llm/llm-deepseek/README.md) on `deepseek-official` chat-completion requests. It does not redefine fields owned by the upstream DeepSeek API. The provider-neutral LLM interface and `llm-pi-ai` do not implement these additions.
 
 The adapter sends the additions to its resolved `baseURL`, including a configured gateway. They remain outside `messages`, system prompts, and tool schemas, so they do not add model-input tokens or alter the model-visible prefix.
 
@@ -17,7 +17,7 @@ The adapter sends the additions to its resolved `baseURL`, including a configure
 
 Each body extension owns its `version` independently. A version applies only to the object that contains it; no compatibility or ordering relationship exists between versions of different fields. JSON member order is not part of the protocol.
 
-The [`DeepSeekLlmApiExtensionRegistry`](../Engine/llm/deepseek-llm-api-extensions/README.md) reserves one provider per top-level extension name. Empty or whitespace-padded names, duplicate registrations, and collisions with the base DeepSeek request fail before HTTP dispatch.
+The [`DeepSeekLlmApiExtensionRegistry`](../Modules/Official/llm/deepseek-llm-api-extensions/README.md) reserves one provider per top-level extension name. Empty or whitespace-padded names, duplicate registrations, and collisions with the base DeepSeek request fail before HTTP dispatch.
 
 ## Request headers
 
@@ -40,7 +40,7 @@ After the configured endpoint returns HTTP 2xx, the adapter runs the prepared `a
 
 ## `dsh_plugin_packages`
 
-[`@deepseek-ai/dsh-plugin-package-inventory-deepseek`](../Engine/llm/plugin-package-inventory-deepseek/README.md) contributes the complete active Loader-backed plugin package inventory. The field is enabled by default.
+[`@deepseek-ai/dsh-plugin-package-inventory-deepseek`](../Modules/Official/llm/plugin-package-inventory-deepseek/README.md) contributes the complete active Loader-backed plugin package inventory. The field is enabled by default.
 
 ```json
 {
@@ -73,7 +73,7 @@ An enabled inventory with no qualifying entries sends `packages: []`; disabling 
 
 ## `dsh_session_log`
 
-[`@deepseek-ai/dsh-session-log-deepseek`](../Engine/session/session-log-deepseek/README.md) contributes one contiguous suffix of the canonical Session log. The field is disabled by default. When enabled, it applies to a request with a live Session and at least one event; a direct request, a stale Session id, or an empty log omits the field. The examples below use logical Session format 2 only to illustrate the wire fields; they do not identify the [current writer format](session-format-status.md).
+[`@deepseek-ai/dsh-session-log-deepseek`](../Modules/Official/llm/session-log-deepseek/README.md) contributes one contiguous suffix of the canonical Session log. The field is disabled by default. When enabled, it applies to a request with a live Session and at least one event; a direct request, a stale Session id, or an empty log omits the field. The examples below use logical Session format 2 only to illustrate the wire fields; they do not identify the [current writer format](session-format-status.md).
 
 ```json
 {
