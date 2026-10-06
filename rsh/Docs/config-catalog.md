@@ -815,7 +815,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/goal/goal/src/index.ts:172`](../Engine/goal/goal/src/index.ts)
+Source: [`rsh/Engine/goal/goal/src/index.ts:174`](../Engine/goal/goal/src/index.ts)
 
 <a id="deepseek-aidsh-headless"></a>
 
@@ -2855,7 +2855,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/goal/tool-goal/src/index.ts:25`](../Engine/goal/tool-goal/src/index.ts)
+Source: [`rsh/Engine/goal/tool-goal/src/index.ts:27`](../Engine/goal/tool-goal/src/index.ts)
 
 <a id="deepseek-aidsh-tool-jobs"></a>
 

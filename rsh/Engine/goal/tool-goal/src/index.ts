@@ -4,10 +4,12 @@
  * @module @deepseek-ai/dsh-tool-goal
  */
 
+import { CREATE_DESCRIPTION, GET_DESCRIPTION, goalValue, guidance } from './common.ts'
+import type { GoalToolValue } from './common.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { GoalId } from '@deepseek-ai/dsh-goal'
-import type { GoalRef, GoalView } from '@deepseek-ai/dsh-goal'
+import type { GoalRef } from '@deepseek-ai/dsh-goal'
 import { boundContextSummary, createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView } from '@deepseek-ai/dsh-tools'
@@ -40,33 +42,6 @@ interface ResolvedConfig {
 type UpdateAction = 'edit' | 'pause' | 'resume' | 'complete' | 'blocked'
 
 const UPDATE_ACTIONS: UpdateAction[] = ['edit', 'pause', 'resume', 'complete', 'blocked']
-
-const CREATE_DESCRIPTION =
-  'Create one persisted same-session completion goal when the current direct human request '
-  + 'is a long-running objective that should continue across autonomous goal rounds. You may '
-  + 'infer that intent without requiring the user to say "create a goal". Do not use this for '
-  + 'trivial single-turn work. Execution rejects non-human and subagent authority.'
-
-const GET_DESCRIPTION =
-  'Read the current same-session goal, including its exact id/revision, objective, phase, completed '
-  + 'continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. '
-  + 'Call this before updating a goal.'
-
-/** Canonical goal-tool output, matching the existing compact Native JSON. */
-type GoalToolValue =
-  | { goal: null }
-  | {
-    goal: {
-      id: string
-      revision: number
-      objective: string
-      phase: GoalView['phase']
-      roundsStarted: number
-      maxGoalRounds: number
-      blockedReason?: { code: string; message: string }
-    }
-    activation: GoalView['activation']
-  }
 
 const GOAL_VALUE_SCHEMA = {
   oneOf: [
@@ -108,19 +83,6 @@ const GOAL_VALUE_SCHEMA = {
   ],
 } as const
 
-/** Render policy guidance with its deployment-selected blocked threshold. */
-function guidance(blockedAfter: number): string {
-  return 'Use goal tools for one long-running completion objective in the current session. '
-    + 'create_goal may infer goal intent from a direct human request in any language; do not '
-    + 'create a goal for routine single-turn work. Call get_goal before update_goal and copy its '
-    + 'exact goal_id and revision. After session resume or fork, an active goal is disarmed: when '
-    + 'a human asks to continue or resume in any wording or language, use update_goal action '
-    + 'resume to rearm it. Mark complete only when the objective is actually achieved. Mark '
-    + `blocked only after the same blocking condition persists for at least ${blockedAfter} `
-    + 'consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, '
-    + 'or useful remaining work is not blocked.'
-}
-
 /** Validate config even when apply is called directly outside Loader normalization. */
 function resolveConfig(config: Config): ResolvedConfig {
   const blockedAfter = config.blockedAfterConsecutiveRounds ?? 3
@@ -150,25 +112,6 @@ function goalRef(goalId: string, revision: number): GoalRef {
     )
   }
   return { id: GoalId(goalId), revision }
-}
-
-/** Stable compact model result; activation is an observation, not replay state. */
-function goalValue(goal: GoalView | undefined): GoalToolValue {
-  if (goal === undefined) return { goal: null }
-  return {
-    goal: {
-      id: goal.id,
-      revision: goal.revision,
-      objective: goal.objective,
-      phase: goal.phase,
-      roundsStarted: goal.roundsStarted,
-      maxGoalRounds: goal.maxGoalRounds,
-      ...goal.blockedReason === undefined ? {} : {
-        blockedReason: { code: goal.blockedReason.code, message: goal.blockedReason.message },
-      },
-    },
-    activation: goal.activation,
-  }
 }
 
 /** Reusable canonical output declaration for all three goal controls. */

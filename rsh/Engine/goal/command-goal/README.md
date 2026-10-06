@@ -25,6 +25,9 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+Guarded human controls prefix an action with `--expected-ref=<URI-encoded JSON>`. The decoded value is `null` for an observed absent Goal or `{id, revision}` for an observed Goal. Malformed references and changed identities or revisions return an error before domain mutation. Unguarded slash commands retain their current-state semantics. Native and compatibility handlers pass the supplied reference to the owning Goal service; this parameter grants no model, filesystem or automatic-resume authority.
+
+
 Use `dsh-command-goal` in interactive deployments that mount a command adapter — the shipped Web client is the reference. It gives users direct control over the goal lifecycle without a model turn: commands execute in the UI command plane and the adapter renders their results directly.
 
 ### Command reference
@@ -85,6 +88,10 @@ This section explains how the command parses input and renders output; the obser
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: command grammar, status rendering, attachment submission |
 | — | No runtime invariant companion is published; this command adapter owns no event stream or state projection; accepted mutations are checked by the goal domain and command dispatch behavior is covered by package tests. |
+
+### Native profile
+
+Native profiles select `./native` beside native `commands` and `goals`. The same parser and direct UI renderers serve the command Consumer. Goal changes use the selected Program writer, and admitted objective attachments enter its durable inbox. Programs use `executeSessionOperation` for first or cold-restored commands without creating a model turn; root Goal retention and idle notifications reuse the same execution owner for subsequent automatic rounds. Pure command resolution uses the exact current Goal view for status output and unfinished-replacement refusals; mutations remain with the selected Goal domain.
 
 </details>
 

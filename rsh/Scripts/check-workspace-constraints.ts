@@ -154,6 +154,11 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-commands': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-goal': ['lib/native.js', 'lib/projection.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-goal': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-command-goal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted

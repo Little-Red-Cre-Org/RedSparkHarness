@@ -25,6 +25,9 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+人工控件可在动作前添加 `--expected-ref=<URI 编码的 JSON>`。未观察到 Goal 时传 `null`，已有 Goal 时传 `{id, revision}`。格式错误或标识、修订号已变化会在领域修改前返回错误。未携带此前置条件的斜线命令保持按当前状态执行的语义。原生与兼容处理器均将提供的引用传给唯一 Goal 服务；此前置条件不授予模型、文件系统或自动恢复权限。
+
+
 在挂载了命令适配器的交互式部署中使用 `dsh-command-goal`——随附的 Web 客户端是参考实现。它让用户无需模型轮次即可直接控制 goal 生命周期：命令在 UI 命令平面执行，适配器直接渲染其结果。
 
 ### 命令参考
@@ -85,6 +88,10 @@ kind: "package-reference"
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：命令语法、状态渲染、附件提交 |
 | — | 不发布运行时不变式伴生入口；此命令适配器不拥有事件流或状态投影；已接受的变更由 goal 领域检查，命令分发行为由包测试覆盖。 |
+
+### 原生 profile
+
+原生 profile 在原生 `commands` 与 `goals` 旁选择 `./native`。命令 Consumer 使用同一解析器与直接 UI 渲染函数。Goal 变更使用选定的 Program writer，已接纳的目标附件进入其持久化 inbox。Program 通过 `executeSessionOperation` 处理首次或冷恢复命令，不创建模型 turn；root Goal 驻留与空闲通知为后续自动轮次复用同一执行 owner。 纯命令解析使用确切的当前 Goal 视图生成状态输出并拒绝替换未完成任务；修改仍由所选 Goal 领域拥有。
 
 </details>
 

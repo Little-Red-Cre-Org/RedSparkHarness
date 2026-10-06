@@ -69,7 +69,7 @@
       "path": "../../../../Modules/Official/plan/plan-mode"
     },
     {
-      "path": "../../../../Engine/goal/goal"
+      "path": "../../../../Engine/goal/goal/tsconfig.client.json"
     },
     {
       "path": "../../../../Modules/Official/todo/tool-todo"

@@ -8,7 +8,7 @@
     "src"
   ],
   "references": [
-    { "path": "../../../../Engine/goal/goal" },
+    { "path": "../../../../Engine/goal/goal/tsconfig.host.json" },
     {
       "path": "../../../../Core/vendor/cosmokit"
     },

@@ -86,6 +86,10 @@ kind: "package-reference"
 
 三个工具共用一种规范输出：紧凑 JSON `{ goal: null }`，或 `{ goal: { id, revision, objective, phase, roundsStarted, maxGoalRounds, blockedReason? }, activation }`。结果中的 `activation` 是实时观察值，绝不会成为回放权限依据。UI 客户端收到纯通用卡片——`get_goal` 为 read，变更使用 other。
 
+### 原生 profile
+
+原生 profile 选择 `./native`，可配置 `blockedAfterConsecutiveRounds`（默认 `3`）和 `promptOrder`（默认 `500`）。权限来自精确的活跃 Program owner、运行时 root/delegated 调用角色与当前开放 turn 的持久化输入。历史子 Session 作为 root 恢复时使用当前调用角色。自动完成和阻塞必须来自精确接纳的 Goal 轮；收尾上下文在最终 assistant 回答前记录。
+
 </details>
 
 -----

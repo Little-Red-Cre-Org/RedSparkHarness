@@ -243,7 +243,7 @@
     { "path": "./rsh/Engine/core/agent" },
     { "path": "./rsh/Engine/core/agent-default-model" },
     { "path": "./rsh/Modules/Official/interaction/commands" },
-    { "path": "./rsh/Engine/goal/goal" },
+    { "path": "./rsh/Engine/goal/goal/tsconfig.host.json" },
     { "path": "./rsh/Engine/goal/tool-goal" },
     { "path": "./rsh/Engine/goal/goal-round-driver" },
     { "path": "./rsh/Engine/goal/command-goal" },

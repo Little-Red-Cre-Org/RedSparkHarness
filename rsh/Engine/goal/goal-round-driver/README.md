@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-goal-round-driver` automatically continues an active goal in the same session while the agent is idle, continuation is armed, and the configured round allowance remains. Each round gives the model another turn toward the objective; only goal rounds that reach model history consume the allowance, and exhaustion records a blocker. The driver has no configuration: the goal defines the round limit, and `dsh-tool-goal` defines when repeated blocking stops continuation. Mount it with `dsh-goal` and `dsh-tool-goal` for unattended multi-round progress; omit it when each step requires human steering.
+`dsh-goal-round-driver` automatically continues an active goal in the same session while the agent is idle, continuation is armed, and the configured round allowance remains. Each round gives the model another turn toward the objective; only goal rounds that reach model history consume the allowance, and exhaustion records a blocker. The compatibility driver has no configuration: the goal defines the round limit, and `dsh-tool-goal` defines when repeated blocking stops continuation. Mount it with `dsh-goal` and `dsh-tool-goal` for unattended multi-round progress; omit it when each step requires human steering.
 
 ## Table of Contents
 
@@ -26,6 +26,8 @@ English | [中文](README.zh.md)
 ## Use this package
 
 Mount `dsh-goal-round-driver` when an active goal should keep making progress without human intervention. It composes with the goal service and the goal tools: the service owns the state, the tools give the model control over it, and this package schedules the rounds.
+
+The native entry provides `goalContinuation.create(owner, request)` and `resume(owner, ref, additionalRounds, source)` for scheduled work. Both require the exact attached root owner with this driver’s live idle and pre-step hooks. They write through the Goal authority; resuming an exhausted Goal extends its cap by the explicit allowance and preserves its original identity. Resume requires an explicit human or model source; a paused Goal accepts only human operations. The Program still owns execution and durable inputs.
 
 ### Compose it
 
@@ -61,6 +63,8 @@ Mounting the driver over an existing agent never arms a goal, and after session 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
+Native disposal drains contribution callbacks before owner hooks. Failure in either phase does not skip the other phase; cleanup errors are aggregated only after both phases settle. Repeated disposal returns the same promise.
+
 <details>
 <summary>Implementation internals — click to expand</summary>
 
@@ -84,6 +88,10 @@ This section explains how the driver schedules rounds without races; the observa
 ### The round prompt
 
 The retained prompt is one text block: the JSON-quoted objective and `round/maxGoalRounds` on the first lines, then the working instructions. The invariant companion reconstructs the goal from the durable prefix and rejects any goal-sourced message whose content does not match the prompt exactly.
+
+### Native profile
+
+Native profiles select `./native` and configure `admissionOrder` (default `700`). The driver waits for the Program-owned idle checkpoint, reserves a durable Goal message, and rechecks the exact id, revision, round and activation after downstream step admission. Rejected stale input is removed by its captured id before a model request; concurrent input remains pending. Completion, blocking, cancellation and unloading release root residency through the Program rather than opening a child.
 
 </details>
 

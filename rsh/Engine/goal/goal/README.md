@@ -27,9 +27,13 @@ English | [中文](README.zh.md)
 
 Mount `dsh-goal` whenever a session should remember one long-running completion objective across many turns and restarts. The package is a service: the model tools, the `/goal` command, and the continuation driver are separate packages that consume the same goal state, so mounting only this package stores and serves the goal without starting any work.
 
+`./projection` exports browser-safe `foldGoal(events)` for complete, ordered Session history. It returns the durable Goal phase, revision, round count and blocker without activation or mutation authority; invalid replay fails instead of producing a guessed UI state. Host and Client compiler faces share this pure fold.
+
 ### When to use it
 
 A goal suits one long-running completion objective that should continue across autonomous goal rounds — for example shipping a migration or fixing every failing documentation gate. Routine single-turn work should not create a goal. The service keeps at most one current goal per session: an unfinished goal must be edited, paused, resumed, blocked, or cleared before another takes its place, while a completed goal can be replaced directly.
+
+A create request may include `expectedRef`: `null` requires that no current Goal exists; an id/revision reference requires that exact completed Goal before replacement. Native creation checks the detached observation inside its serialized mutation, and compatibility creation checks it before committing. Omitting the field preserves ordinary creation behavior.
 
 ### Set up the service
 
@@ -106,6 +110,7 @@ This section explains how the service realizes the behavior above; the observabl
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `GoalService`, config schema, mutations, activation cache, projection unit |
 | [`src/domain.ts`](src/domain.ts) | Durable change payloads, `goal/changed` event, goal message-source attribution |
+| [`src/compatibility-events.ts`](src/compatibility-events.ts) | Cordis-only activation event declaration, exported from `./compatibility-events` |
 | [`src/types.ts`](src/types.ts) | Pure client-safe types: `GoalView`, `GoalSnapshot`, `GoalActivationChanged`, projection-key declaration |
 | [`src/fold.ts`](src/fold.ts) | Strict replay fold and decoder for durable goal changes |
 | [`src/runtime.ts`](src/runtime.ts) | `GoalId` brand, `GoalError` codes, change-version constant |
@@ -113,7 +118,11 @@ This section explains how the service realizes the behavior above; the observabl
 
 ### Events and attribution
 
-`goal/changed` fires after the durable event commits, with listener failures contained; the payload carries the operation, the exact ref, and the fresh view (absent for a clear tombstone). `goal/activation-changed` forwards a process-local `armed`/`disarmed` edge with the exact current ref, or no goal after a clear, without changing durable state. Admitted continuation rounds are attributed through `GoalMessageSource { goalId, revision, round }` on the `user/message` event, which the strict fold validates as the next admitted round of the current goal.
+`goal/changed` fires after the durable event commits, with listener failures contained; the payload carries the operation, the exact ref, and the fresh view (absent for a clear tombstone). `goal/activation-changed` forwards a process-local `armed`/`disarmed` edge with the exact current ref, or no goal after a clear, without changing durable state. Cordis consumers import this activation event declaration from `@deepseek-ai/dsh-goal/compatibility-events`; `./types` and `./native` remain Cordis-free. Admitted continuation rounds are attributed through `GoalMessageSource { goalId, revision, round }` on the `user/message` event, which the strict fold validates as the next admitted round of the current goal.
+
+### Native profile
+
+Native profiles select `./native`, which provides `goals` through the exact Program-owned `activeSessions` service. The Provider restores strict durable Goal facts after subscribing to persisted events, rejects stale revisions after awaited flushes, and keeps arming only in a process-local root residency lease. Restoring an active Goal does not arm it. Closed or copied Agent/Session owners fail loud; the package adds no writer or model loop.
 
 </details>
 

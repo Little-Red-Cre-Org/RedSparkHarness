@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当 active 的 goal 应在无人干预的情况下持续推进时，挂载 `dsh-goal-round-driver`。它与 goal 服务和 goal 工具组合使用：服务拥有状态，工具让模型控制状态，本包负责调度轮次。
 
+原生入口为定时工作提供 `goalContinuation.create(owner, request)` 与 `resume(owner, ref, additionalRounds, source)`。两者要求精确附加的 root owner，以及本驱动器仍存活的 idle 与 pre-step hooks。它们通过 Goal 权威写入；恢复已耗尽轮数的 Goal 时按明确额度扩容，并保留原标识。恢复必须明确提供 human 或 model 来源；paused Goal 只接受 human，不隐式提升模型权限。执行与持久化输入仍由 Program 拥有。
+
 ### 组合方式
 
 把驱动器挂载在 goal 服务与 goal 工具旁边；驱动器本身不需要任何配置。
@@ -61,6 +63,8 @@ Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻�
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
+原生卸载先排空贡献回调，再排空 owner hooks。任一阶段失败都不会跳过另一阶段；只有两阶段均已结束后才聚合清理错误。重复卸载返回同一个 promise。
+
 <details>
 <summary>实现细节——点击展开</summary>
 
@@ -84,6 +88,10 @@ Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻�
 ### Round 提示词
 
 保留的提示词是一个文本块：前几行为 JSON 引用的目标与 `round/maxGoalRounds`，其后是工作指令。不变式伴生会从持久前缀重建 goal，并拒绝内容与该提示词不完全一致的任何 goal 来源消息。
+
+### 原生 profile
+
+原生 profile 选择 `./native` 并配置 `admissionOrder`（默认 `700`）。驱动器等待 Program 所有的空闲 checkpoint，预留持久化 Goal 消息，并在下游 step admission 完成后重新检查精确 id、revision、轮数与 activation。拒绝的陈旧输入在模型请求前按捕获的 id 移除，并发输入继续待处理。完成、阻塞、取消和卸载通过 Program 释放 root 驻留，不会打开子 agent。
 
 </details>
 
