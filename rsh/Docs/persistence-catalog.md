@@ -261,7 +261,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:321`](../Engine/core/session/src/
 }
 ```
 
-Source: [`rsh/Modules/Official/interaction/commands/src/types.ts:112`](../Modules/Official/interaction/commands/src/types.ts)
+Source: [`rsh/Modules/Official/interaction/commands/src/facts.ts:87`](../Modules/Official/interaction/commands/src/facts.ts)
 
 <a id="commandrun--log-only"></a>
 
@@ -281,7 +281,7 @@ Source: [`rsh/Modules/Official/interaction/commands/src/types.ts:112`](../Module
 'command/run': { commandId: CommandId; name: string; args?: string; source: CommandSource }
 ```
 
-Source: [`rsh/Modules/Official/interaction/commands/src/types.ts:105`](../Modules/Official/interaction/commands/src/types.ts)
+Source: [`rsh/Modules/Official/interaction/commands/src/facts.ts:80`](../Modules/Official/interaction/commands/src/facts.ts)
 
 ### `compaction/*`
 
@@ -460,7 +460,7 @@ Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:40`](../Mo
 'goal/change': GoalChangeMeta
 ```
 
-Source: [`rsh/Engine/goal/goal/src/domain.ts:66`](../Engine/goal/goal/src/domain.ts)
+Source: [`rsh/Engine/goal/goal/src/facts.ts:57`](../Engine/goal/goal/src/facts.ts)
 
 ### `hook/*`
 

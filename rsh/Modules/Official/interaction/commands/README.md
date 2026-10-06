@@ -75,6 +75,8 @@ The caller's abort signal stops the registry from awaiting a handler; a handler 
 
 The observable behavior is covered in [Use this package](#use-this-package); this section explains how the registry is built and where its contracts live.
 
+The `./brand` entry exposes command identities without loading Cordis. Host-only framework peers are optional for this entry; importing the root service requires those peers and its declared injections.
+
 ### Source map
 
 | File | Role |
@@ -95,6 +97,10 @@ Registrations live in global and agent-scoped layers merged per agent via `Scope
 ### Attachment admission
 
 Attachment enforcement happens in the executor: images are committed through `admitEncodedImages`, files are resolved through the single Session-aware receipt provider, and the executor restores their original mixed order before calling the handler. Validation rejection starts no attachment writes. An image-storage failure can leave unreachable content-addressed objects for deferred collection, but publishes no model-visible message. Cancellation is honored before the handler runs. Command errors leave the dispatching composer's draft and attachment cards intact.
+
+### Native profile
+
+Native profiles select `./native`, providing `commands` through exact `agents` and Program-owned `activeSessions`. Programs call `dispatch` only from an explicit human entry, after admitting attachment blocks. The Provider requires the current root invocation, flushes `command/run` before the handler, then flushes `command/done` after domain effects and cancellation cleanup. A command does not implicitly admit a model message. Scoped registration removal cancels accepted handlers and waits for their cleanup.
 
 </details>
 

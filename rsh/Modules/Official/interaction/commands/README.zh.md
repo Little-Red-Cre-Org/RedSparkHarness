@@ -75,6 +75,8 @@ ctx.commands.register({
 
 可观察行为已在[使用本包](#use-this-package)中说明；本节解释注册表的构建方式与其约定的归属。
 
+`./brand` 入口公开命令身份而不加载 Cordis。此入口将仅用于 Host 的框架 peer 依赖声明为可选；导入根入口服务仍需要这些 peer 及其声明的注入服务。
+
 ### 源码地图
 
 | 文件 | 职责 |
@@ -95,6 +97,10 @@ ctx.commands.register({
 ### 附件准入
 
 附件强制执行发生在执行器中：图片经 `admitEncodedImages` 提交，文件通过唯一的会话感知凭证提供方解析，执行器在调用处理器前恢复原始混合顺序。验证拒绝不会开始写入附件。图片存储失败可能留下等待清理且无法引用的内容寻址对象，但不会发布模型可见消息。取消会在处理器运行前生效。命令返回错误时，分发方 composer 的草稿与附件卡保持原位。
+
+### 原生 profile
+
+原生 profile 选择 `./native`，通过精确的 `agents` 与 Program 所有的 `activeSessions` 提供 `commands`。Program 只从明确的人类入口调用 `dispatch`，并先接纳附件块。Provider 要求当前 root 调用，在 handler 前 flush `command/run`，并在领域效果与取消清理结束后 flush `command/done`。命令不会隐式接纳模型消息。移除 scoped registration 会取消已接纳的 handler，并等待清理。
 
 </details>
 

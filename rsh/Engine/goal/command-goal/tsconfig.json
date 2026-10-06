@@ -21,7 +21,16 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../goal"
+      "path": "../goal/tsconfig.host.json"
+    },
+    {
+      "path": "../goal-round-driver/tsconfig.json"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../Core/util/brand"
     }
   ]
 }

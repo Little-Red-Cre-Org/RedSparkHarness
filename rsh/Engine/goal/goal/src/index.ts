@@ -1,9 +1,11 @@
+export type * from './projection-types.ts'
 /**
  * Same-session goal domain: event-sourced state, compare-and-set mutations,
  * and process-local continuation activation.
  * @module @deepseek-ai/dsh-goal
  */
 
+import { assertGoalCreationReference, resolveBlockReason, resolveCreateGoal, resolveMaxGoalRounds, resolveObjective } from './requests.ts'
 import { randomUUID } from 'node:crypto'
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -189,53 +191,6 @@ interface GoalRuntimeState {
   } | undefined
 }
 
-/** Validated create input with every deployment default materialized. */
-interface ResolvedCreateGoal {
-  readonly objective: string
-  readonly maxGoalRounds: number
-}
-
-/** Validate a caller-visible positive safe-integer round cap. */
-function resolveMaxGoalRounds(value: number): number {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new GoalError('maxGoalRounds must be a positive safe integer', 'GOAL_INVALID_MAX_ROUNDS')
-  }
-  return value
-}
-
-/** Validate and normalize an objective at the domain boundary. */
-function resolveObjective(value: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new GoalError('goal objective must be a non-empty string', 'GOAL_INVALID_OBJECTIVE')
-  }
-  return value.trim()
-}
-
-/** Materialize deployment defaults and validate one create request. */
-function resolveCreateGoal(request: CreateGoalRequest, defaultMaxGoalRounds: number): ResolvedCreateGoal {
-  return {
-    objective: resolveObjective(request.objective),
-    maxGoalRounds: resolveMaxGoalRounds(request.maxGoalRounds ?? defaultMaxGoalRounds),
-  }
-}
-
-/** Validate and detach one policy-owned blocker explanation. */
-function resolveBlockReason(reason: unknown): GoalBlockReason {
-  const record = typeof reason === 'object' && reason !== null && !Array.isArray(reason)
-    ? reason as Record<string, unknown>
-    : undefined
-  const code = record?.['code']
-  const message = record?.['message']
-  if (typeof code !== 'string' || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(code)
-    || typeof message !== 'string' || message.trim().length === 0) {
-    throw new GoalError(
-      'goal block reason requires a lower-kebab-case code and a non-empty message',
-      'GOAL_INVALID_BLOCK_REASON',
-    )
-  }
-  return { code, message: message.trim() }
-}
-
 /** Goal service (`ctx.goals`) backed exclusively by the owning session log. */
 export class GoalService extends TypertRemoteService {
   static inject = ['agents', 'sessionProjections']
@@ -297,13 +252,14 @@ export class GoalService extends TypertRemoteService {
    * Create and arm a goal. A completed goal may be replaced; every other
    * current phase must be cleared or resumed instead.
    * @param agent - owning live agent.
-   * @param request - objective and optional round cap.
+   * @param request - objective, optional round cap and observed Goal reference.
    * @returns the created live view.
    */
   create(agent: Agent, request: CreateGoalRequest): GoalView {
     const spec = resolveCreateGoal(request, this.resolved.defaultMaxGoalRounds)
     const [state, runtime] = this.prepareMutation(agent)
     const current = state?.goal
+    assertGoalCreationReference(spec.expectedRef, current)
     if (current !== undefined && current.phase !== 'complete') {
       throw new GoalError(`goal "${current.id}" already exists with phase "${current.phase}"`, 'GOAL_ALREADY_EXISTS')
     }
@@ -640,7 +596,7 @@ export class GoalService extends TypertRemoteService {
   /**
    * Create one Goal through the remote boundary.
    * @param agent - exact live Agent resolved from the wire identity.
-   * @param request - objective and optional round cap.
+   * @param request - objective, optional round cap and observed Goal reference.
    * @returns the created Goal identity.
    */
   @Remote('create')

@@ -25,6 +25,9 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+Guarded human controls prefix an action with `--expected-ref=<URI-encoded JSON>`. The decoded value is `null` for an observed absent Goal or `{id, revision}` for an observed Goal. Malformed references and changed identities or revisions return an error before domain mutation. Unguarded slash commands retain their current-state semantics. Native and compatibility handlers pass the supplied reference to the owning Goal service; this parameter grants no model, filesystem or automatic-resume authority.
+
+
 Use `dsh-command-goal` in interactive deployments that mount a command adapter — the shipped Web client is the reference. It gives users direct control over the goal lifecycle without a model turn: commands execute in the UI command plane and the adapter renders their results directly.
 
 ### Command reference
@@ -36,7 +39,7 @@ Every sub-command runs against the current goal of the invoking agent; a bare `/
 | `/goal` | Shows the current objective, durable phase, round count and cap, process-local activation, and valid next commands; a blocked goal also shows its policy code and explanation |
 | `/goal <objective>` | Creates and arms a goal, or replaces a completed goal with a fresh identity |
 | `/goal edit <objective>` | Edits the current objective without changing its phase or activation |
-| `/goal pause` | Pauses an active goal and disarms continuation |
+| `/goal pause` | Persists the pause and disarms continuation; the Native driver interrupts only its currently running automatic Goal round, leaving a human-owned turn alone |
 | `/goal resume` | Resumes a stopped goal, or rearms an active goal after session resume or fork, subject to its remaining round cap |
 | `/goal clear` | Clears the current goal while retaining its durable history |
 
@@ -50,7 +53,7 @@ Control words (`clear`, `pause`, `resume`, `edit`) are recognized only when they
 
 ### Compose it
 
-The command injects the commands registry and the goal service. A custom app mounts their owners plus this plugin; automatic continuation remains an independent choice:
+The command requires the commands registry and Goal service and optionally uses the Native Goal driver. Without a driver, pause changes durable Goal state but does not cancel a turn; when installed, the driver interrupts only a current automatic Goal round that it owns. A custom app mounts the required owners plus this plugin; automatic continuation remains an independent choice:
 
 ```yaml
 - id: commands
@@ -85,6 +88,10 @@ This section explains how the command parses input and renders output; the obser
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: command grammar, status rendering, attachment submission |
 | — | No runtime invariant companion is published; this command adapter owns no event stream or state projection; accepted mutations are checked by the goal domain and command dispatch behavior is covered by package tests. |
+
+### Native profile
+
+Native profiles select `./native` beside native `commands` and `goals`. The same parser and direct UI renderers serve the command Consumer. Goal changes use the selected Program writer, and admitted objective attachments enter its durable inbox. Programs use `executeSessionOperation` for first or cold-restored commands without creating a model turn; root Goal retention and idle notifications reuse the same execution owner for subsequent automatic rounds. Pure command resolution uses the exact current Goal view for status output and unfinished-replacement refusals; mutations remain with the selected Goal domain.
 
 </details>
 

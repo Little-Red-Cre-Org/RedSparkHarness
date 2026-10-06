@@ -2,7 +2,7 @@
 import { isDeepStrictEqual } from 'node:util'
 import type { InboxTarget, NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent, SessionId, TurnEndReason } from '@deepseek-ai/dsh-session/native'
+import type { Session, SessionEvent, SessionId, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session/native'
 
 /** Live Program-owned interaction recipient and the root Session displaying its requests. */
 export interface NativeProgramInteractionOwner {
@@ -19,7 +19,14 @@ export interface NativeStepAdmissionContext {
   readonly step: number
   readonly candidates: readonly UserMessage[]
   readonly signal: AbortSignal
+  /** Register a synchronous final check after preparation; it returns admitted inputs to cancel before commit. */
+  readonly registerCommitCheck: (check: NativeStepAdmissionCommitCheck) => void
 }
+
+/** Synchronously identify admitted inputs invalidated during asynchronous step preparation.
+ * @returns Captured admitted input ids that the Program must cancel before committing the step.
+ */
+export type NativeStepAdmissionCommitCheck = () => readonly MessageId[]
 
 /** Inputs selected from the unchanged captured candidates, or ids rejected without a model request. */
 export type NativeStepAdmissionDecision =
@@ -38,6 +45,12 @@ export interface NativeRootSessionOperations {
   readonly sessionId: SessionId
   /** Agent and Program lifetime; cancellation invalidates future idle admission. */
   readonly signal: AbortSignal
+  /** Interrupt the exact retained root's current turn and await its durable settlement; accepted inbox messages remain queued.
+   * @param reason - recorded cancellation cause for the interrupted turn.
+   * @returns completion after the active turn's cleanup and durable closer.
+   * @throws when the captured root Agent is no longer live.
+   */
+  interruptTurn(reason: TurnEndCancelCause): Promise<void>
   /**
    * Claim idle maintenance and temporarily restore the Program's sole Session writer.
    * The callback must not await disposal of its own Agent or Program execution.
@@ -55,7 +68,7 @@ export interface NativeActiveSessionOwner {
   readonly session: Session
   /** Current Program invocation; a historical child resumed through a root entry remains root. */
   readonly invocation: 'root' | 'delegated'
-  /** Captured live-root maintenance handle; delegated invocations never provide one. */
+  /** Captured live-root turn interruption and maintenance handle; delegated invocations never provide one. */
   readonly rootOperations?: NativeRootSessionOperations | undefined
   readonly inheritedEventCount: number
   /** False after admission closes; closed appends and flushes fail loudly. */
