@@ -30,7 +30,7 @@
 
 自定义 profile 默认实时重载 patch。随附的 `web` profile 使用实时重载；`headless`、`sdk`、`sdk-minimal` 和 `acp` 则只在启动时应用一次所有配置层，因为一次性应用或 stdio 应用拥有工作之后，替换其依赖会破坏该生命周期。
 
-Native profile 使用 `dsh.profile.configReload`：随附的 `native-web` profile 监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，然后替换 Host 安装计划。Native headless、SDK、ACP 和 TUI profile 仍只在启动时加载。该 Host 配置重载独立于兼容模式的 `cordis.patch.yml` 重载和 Web Client 资源重建。
+Native `native-web` 将 `dsh.profile.configReload` 设为 `live`，以监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，再替换 Host 安装计划。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` 仍只在启动时加载。详见 [CLI 重载契约](../Programs/CLI/reference/README.zh.md)；Host 配置重载独立于 Cordis patch 重载和 Web Client 资源重建。
 
 要查看你的机器启动的配置树：
 
@@ -122,9 +122,7 @@ turn/end
 
 ## 会话日志
 
-会话日志是模型所见上下文的来源。`deriveMessages()` 从中投影出模型历史。每个 `assistant/message` 都嵌入产生其组装内容的精确紧凑带时间 stream；`assistant/attempt` 保留已到达 settlement 的失败、重试、取消与 stream error attempt，且不添加模型历史。fork、恢复、transcript（文本记录）、遥测与持久化都从这些持久 settlement 派生，实时 UI 增量则来自 `agent/assistant-stream`；如果进程在 settlement 前硬中断，则不会留下持久 attempt stream（见[决策](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.zh.md)）。
-
-Session 消费方只了解当前逻辑格式。仅 header 的 `stat` 与 `list` 会重新扫描每个 Session 目录，选择数值最高的规范 generation，并在不加载事件或发布后继的情况下转换受支持的历史 header。已存储 Session 的 `open` 选择同一 generation，拒绝未来版本，或只 Decode 并组合一次构建时静态确定的相邻迁移链，再返回经过校验的当前逻辑事件。只读 open 直接使用这份内存结果，不发布后继；写 open 则先编码、校验并在未改变源的旁边排他发布最终版本命名的后继。未被后续事件封住的普通中断尾部仍由句柄消费方修复；只有在后续 `turn/start` 已经封住一种有限的已发布 restart 时，migration 才会插入缺失的 interrupted `turn/end`。JSONL v0 使用 `session.jsonl[.zstd]`，v1 及后续版本使用小写 `session.vN.jsonl[.zstd]`；已提交 generation 路径绝不重命名、替换或删除。JSONL provider 负责物理 framing、压缩、generation 选择与排他发布，每个相邻迁移包只负责一个 `vN -> vN+1` 步骤（[决策](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.zh.md)）。
+会话日志提供模型可见历史；`deriveMessages()` 据此投影请求消息，持久结算记录供恢复、文本记录、遥测与持久化使用。实时 UI 更新来自 `agent/assistant-stream`（[stream 决策](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.zh.md)）。[Session 子系统](subsystems/session.zh.md)负责记录行为；[agent loop](../Engine/core/agent-loop/README.zh.md)负责请求与 stream 行为；[Session 格式版本与发布状态](session-format-status.zh.md)和[已发布格式迁移决策](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.zh.md)规定存储格式。
 
 **模型可见即已记录。** 抵达模型请求的一切都必须能从日志重建，并由一项运行时不变量断言这一点。因此，新增一项模型可见输入就需要新增一个会话事件：扩展 `SessionEventMap` 并从日志渲染。
 
