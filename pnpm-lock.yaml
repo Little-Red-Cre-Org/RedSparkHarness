@@ -195,6 +195,9 @@ importers:
 
   rsh/Compatibility/DSH/bridge/compat-dsh-runtime:
     dependencies:
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/loader
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime

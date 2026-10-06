@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-fs-policy` 将旧文件系统观察策略应用于原生 `fs/*` 事件。它把决策和观察从原生代码转发到共享 Cordis Context，保留逐 Session 的已见状态和陈旧版本防护。兼容 runtime 只会在任一 bridge 正同步转发事件时抑制相同的 `fs/observed` 回声。移除 bridge 只会移除它自己的监听器和状态。
+`dsh-compat-fs-policy` 将旧文件系统观察策略应用于原生 `fs/*` 事件。它把决策和观察从原生代码转发到共享 Cordis Context，保留逐 Session 的已见状态和陈旧版本防护。兼容 runtime 只会在任一 bridge 正同步转发事件时抑制相同的 `fs/observed` 回声。Loader 变更前会排空并移除此 bridge 的原生事件监听器；只有 entry 仍处于启用状态时才会恢复监听器。
 
 ## 目录
 
@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-bridge 不接受配置字段。它提供 `fsObservationPolicy`，所以原生 profile 无法在一个作用域同时选择它和原生 observation-policy Provider。
+bridge 不接受配置字段。兼容 runtime 会按[支持矩阵](../compat-dsh-runtime/README.zh.md#supported-adapter-set)校验已安装包。其 Loader entry 支持空配置更新、停用、启用和移除；每项操作前后都会排空原生事件订阅。它提供 `fsObservationPolicy`，所以原生 profile 无法在一个作用域同时选择它和原生 observation-policy Provider。
 
 <a id="model-experience"></a>
 ## 模型体验

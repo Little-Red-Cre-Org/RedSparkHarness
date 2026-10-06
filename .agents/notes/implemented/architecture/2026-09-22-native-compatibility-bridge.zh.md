@@ -12,7 +12,7 @@ Status: implemented
 
 可选的 `compat-dsh-runtime` 创建一个 Cordis Context，并仅通过 `compatDshRuntime` 服务向选定兼容 bridge 暴露它。bridge 通过 `dsh-plugin-host` 挂载 allowlist 中的插件，由后者持有子 Fiber 和 descriptor 注册。`compat-fs-local` 和 `compat-fs-sandbox` 分别提供 `fs`；sandbox 变体要求选择原生策略。`compat-fs-policy` 将原生 filesystem 事件转发给旧 observation policy，并提供策略权威标记。`compat-tool-fs` 将选定旧工具和提示词 section 注册到原生注册表，而原生 headless 应用校验调用并且只追加一条 Session 结果。
 
-每个 bridge 都会在挂载插件前读取并校验所选包元数据和配置。兼容运行时要求 Cordis 主版本 4，并拒绝 allowlist 以外的插件名。重复 Provider 和策略权威会在解析原生安装时失败。bridge 释放会等待已接收的旧工具执行、移除所属原生贡献并等待子 Fiber 结束；Host 关闭时再排空共享 Context。不含 `compat-dsh-runtime` 的原生安装不会通过此兼容路径加载 Cordis。兼容 profile 通过已发布的 `dsh` 命令运行旧 write 工具，验证 filesystem 变更、模型可见提示词和 schema，以及一条持久结果。
+每个 bridge 都会在将所选包挂载为共享 Cordis Context 中的 Loader entry 前校验元数据和配置。Runtime 会在激活前检查精确的 Cordis 4.0.2、Loader 1.0.3 版本，以及受支持的 DSH 包声明。Loader 更新前会排空已接收的原生工具调用和进行中的提示词组装；策略 entry 变更前会排空策略监听器。Bridge 释放时会移除其拥有的原生贡献，Host 关闭时会排空 Context。不含 `compat-dsh-runtime` 的原生安装不会通过此兼容路径加载 Cordis。兼容 profile 通过已发布的 `dsh` 命令运行旧 write 工具，验证 filesystem 变更、模型可见提示词和 schema，以及一条持久结果。[Loader entry 生命周期决策](2026-10-06-native-compatibility-loader-entry-lifecycle.zh.md)记录支持矩阵和 reload 区分。
 
 ## Alternatives considered
 

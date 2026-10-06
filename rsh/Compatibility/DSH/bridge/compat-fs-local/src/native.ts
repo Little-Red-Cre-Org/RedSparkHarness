@@ -2,23 +2,17 @@
 import { createRequire } from 'node:module'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type {} from '@deepseek-ai/dsh-fs/native'
+import { validateSupportManifest, type CompatPackageManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
+import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
 import LegacyLocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import { resolveLocalFilesystemConfig } from '@deepseek-ai/dsh-fs-local/backend'
-
-interface LegacyManifest {
-  dsh?: { runtime?: { apiVersion?: unknown; role?: unknown; capability?: unknown } }
-}
 
 /**
  * Refuse a changed legacy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
-export function validateLegacyFilesystemManifest(manifest: LegacyManifest): void {
-  const runtime = manifest.dsh?.runtime
-  if (runtime?.apiVersion !== 1 || runtime.role !== 'provider' || runtime.capability !== 'filesystem') {
-    throw new Error('compat-fs-local: unsupported @deepseek-ai/dsh-fs-local runtime declaration')
-  }
+export function validateLegacyFilesystemManifest(manifest: CompatPackageManifest): void {
+  validateSupportManifest('@deepseek-ai/dsh-fs-local', manifest)
 }
 
 /** Native Provider slot backed by one selected legacy filesystem plugin. */
@@ -31,16 +25,13 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
-    validateLegacyFilesystemManifest(require('@deepseek-ai/dsh-fs-local/package.json') as LegacyManifest)
+    validateLegacyFilesystemManifest(require('@deepseek-ai/dsh-fs-local/package.json') as CompatPackageManifest)
     return async (native) => {
       const runtime = native.require('compatDshRuntime')
       const mount = runtime.mount('@deepseek-ai/dsh-fs-local', LegacyLocalFileSystem, config)
       native.own(() => mount.dispose())
       await mount.ready
-      const legacy = runtime.context
-      const filesystem = legacy.get('fs')
-      if (filesystem === undefined) throw new Error('compat-fs-local: legacy Provider did not publish fs')
-      native.provide('fs', filesystem)
+      native.provide('fs', runtime.liveService('fs') as FileSystemOperations)
     }
   },
 }

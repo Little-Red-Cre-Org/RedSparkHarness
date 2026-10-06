@@ -1,26 +1,19 @@
 /** Sandbox filesystem Provider mounted in the shared Cordis Context. */
 import { createRequire } from 'node:module'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
+import { validateSupportManifest, type CompatPackageManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import SandboxedFileSystem from '@deepseek-ai/dsh-fs-sandbox'
 import { resolveLocalFilesystemConfig } from '@deepseek-ai/dsh-fs-local/backend'
 
-interface LegacyManifest {
-  dsh?: { runtime?: { apiVersion?: unknown; role?: unknown; capability?: unknown } }
-}
-
 /**
  * Refuse a changed legacy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
-export function validateLegacySandboxManifest(manifest: LegacyManifest): void {
-  const runtime = manifest.dsh?.runtime
-  if (runtime?.apiVersion !== 1 || runtime.role !== 'provider' || runtime.capability !== 'filesystem') {
-    throw new Error('compat-fs-sandbox: unsupported @deepseek-ai/dsh-fs-sandbox runtime declaration')
-  }
+export function validateLegacySandboxManifest(manifest: CompatPackageManifest): void {
+  validateSupportManifest('@deepseek-ai/dsh-fs-sandbox', manifest)
 }
 
 /** Provide a confining filesystem only when a native policy was selected. */
@@ -30,7 +23,7 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
-    validateLegacySandboxManifest(require('@deepseek-ai/dsh-fs-sandbox/package.json') as LegacyManifest)
+    validateLegacySandboxManifest(require('@deepseek-ai/dsh-fs-sandbox/package.json') as CompatPackageManifest)
     return async (native) => {
       const runtime = native.require('compatDshRuntime')
       const legacy = runtime.context
@@ -49,9 +42,7 @@ export const plugin: NativePlugin = {
       const mount = runtime.mount('@deepseek-ai/dsh-fs-sandbox', SandboxedFileSystem, config)
       native.own(() => mount.dispose())
       await mount.ready
-      const filesystem = legacy.get('fs')
-      if (filesystem === undefined) throw new Error('compat-fs-sandbox: legacy Provider did not publish fs')
-      native.provide('fs', filesystem)
+      native.provide('fs', runtime.liveService('fs') as import('@deepseek-ai/dsh-fs/native').FileSystemOperations)
     }
   },
 }

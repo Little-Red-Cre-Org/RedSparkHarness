@@ -2,7 +2,11 @@
 import { createRequire } from 'node:module'
 import type { Context } from '@deepseek-ai/cordis'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
+import {
+  validateSupportManifest,
+  type CompatDshLifecycleParticipant,
+  type CompatPackageManifest,
+} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -18,19 +22,12 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices { compatToolFs: { readonly kind: 'legacy-tool-fs' } }
 }
 
-interface LegacyManifest {
-  dsh?: { runtime?: { apiVersion?: unknown; role?: unknown; capability?: unknown } }
-}
-
 /**
  * Refuse changed legacy tool metadata before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
-export function validateLegacyToolManifest(manifest: LegacyManifest): void {
-  const runtime = manifest.dsh?.runtime
-  if (runtime?.apiVersion !== 1 || runtime.role !== 'consumer' || runtime.capability !== 'filesystem') {
-    throw new Error('compat-tool-fs: unsupported @deepseek-ai/dsh-tool-fs runtime declaration')
-  }
+export function validateLegacyToolManifest(manifest: CompatPackageManifest): void {
+  validateSupportManifest('@deepseek-ai/dsh-tool-fs', manifest)
 }
 
 /** Explicit supported config fields for the first filesystem tool adapter. */
@@ -56,15 +53,26 @@ function resolveConfig(input: unknown): Config {
 /** Bridge native filesystem, tool, prompt and observation slots to the supported legacy plugin. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-compat-tool-fs', targets: ['host'],
-  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy'], provides: ['compatToolFs'],
+  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy'], provides: ['compatToolFs'],
   resolve(input) {
     const config = resolveConfig(input)
     const require = createRequire(import.meta.url)
-    validateLegacyToolManifest(require('@deepseek-ai/dsh-tool-fs/package.json') as LegacyManifest)
+    validateLegacyToolManifest(require('@deepseek-ai/dsh-tool-fs/package.json') as CompatPackageManifest)
+    validateSupportManifest('@deepseek-ai/dsh-system-prompt', require('@deepseek-ai/dsh-system-prompt/package.json') as CompatPackageManifest)
+    validateSupportManifest('@deepseek-ai/dsh-tools', require('@deepseek-ai/dsh-tools/package.json') as CompatPackageManifest)
     return async (native) => {
       const runtime = native.require('compatDshRuntime')
       const legacy = runtime.context
+      const policyEntrySelected = runtime.hasEntry('@deepseek-ai/dsh-fs-observation-policy')
       const active = new Set<Promise<unknown>>()
+      const trackActive = <T>(work: Promise<T>): Promise<T> => {
+        active.add(work)
+        void work.then(
+          () => { active.delete(work) },
+          () => { active.delete(work) },
+        )
+        return work
+      }
       const nativeFs = native.require('fs') as import('@deepseek-ai/dsh-fs').FileSystem
       const legacyFs = legacy.get('fs')
       if (legacyFs === undefined) {
@@ -102,41 +110,84 @@ export const plugin: NativePlugin = {
       const toolsMount = runtime.mount('@deepseek-ai/dsh-tools', ToolRuntime, { mode: 'native' })
       native.own(() => toolsMount.dispose())
       await toolsMount.ready
+      if (legacy.get('systemPrompt') === undefined || legacy.get('tools') === undefined) {
+        throw new Error('compat-tool-fs: supported Cordis plugins did not provide systemPrompt and tools')
+      }
       const toolMount = runtime.mount('@deepseek-ai/dsh-tool-fs', LegacyToolFs, config)
       native.own(() => toolMount.dispose())
       await toolMount.ready
-      native.own(async () => {
-        await Promise.allSettled([...active])
-      })
       const registry = native.require('tools')
-      for (const schema of legacy.tools.schemas()) {
-        const dispose = registry.register({
-          schema,
-          execute: (call) => {
-            // The selected legacy tools read only session and signal from their Agent argument.
-            const agent = { session: call.session } as Agent
-            const work = legacy.tools.execute({
-              callId: call.callId, name: call.name, arguments: call.arguments, agent,
-              signal: AbortSignal.any([call.signal, native.signal]),
-            }).then(result => ({
-              content: result.content,
-              isError: result.isError,
-              ...result.error?.info === undefined ? {} : { error: result.error.info },
-            }))
-            active.add(work)
-            void work.then(() => active.delete(work), () => active.delete(work))
-            return work
-          },
-        })
-        native.own(dispose)
+      const promptSections = native.require('promptSections')
+      let toolDisposers: (() => Promise<void>)[] = []
+      let promptDispose: (() => void) | undefined
+      let suspended = true
+      const suspend = async (): Promise<void> => {
+        if (suspended) return
+        suspended = true
+        const disposers = toolDisposers
+        toolDisposers = []
+        const prompt = promptDispose
+        promptDispose = undefined
+        prompt?.()
+        const outcomes = await Promise.allSettled([...disposers.map(dispose => dispose()), ...active])
+        const failures = outcomes.filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+          .map(outcome => outcome.reason as unknown)
+        if (failures.length === 1) throw failures[0]
+        if (failures.length > 1) throw new AggregateError(failures, 'compat-tool-fs: Native contributions failed to drain')
       }
-      native.own(native.require('promptSections').register({
-        name: 'compat:tool-fs', order: 1100,
-        text: async () => {
-          const assembly = await legacy.systemPrompt.assemble()
-          return assembly.sections.filter(section => section.name.startsWith('tool:')).map(section => section.text).join('\n\n')
-        },
-      }))
+      const resume = async (): Promise<void> => {
+        if (!suspended) return
+        if (!runtime.isEnabled('@deepseek-ai/dsh-tool-fs')
+          || !runtime.isEnabled('@deepseek-ai/dsh-tools')
+          || !runtime.isEnabled('@deepseek-ai/dsh-system-prompt')
+          || (policyEntrySelected && !runtime.isEnabled('@deepseek-ai/dsh-fs-observation-policy'))
+          || legacy.get('fs') === undefined
+          || legacy.get('tools') === undefined
+          || legacy.get('systemPrompt') === undefined) {
+          return
+        }
+        const disposers: (() => Promise<void>)[] = []
+        try {
+          for (const schema of legacy.tools.schemas()) {
+            disposers.push(registry.register({
+              schema,
+              execute: (call) => {
+                // The selected legacy tools read only Session and signal from their Agent argument.
+                const agent = { session: call.session } as Agent
+                return trackActive(legacy.tools.execute({
+                  callId: call.callId, name: call.name, arguments: call.arguments, agent,
+                  signal: AbortSignal.any([call.signal, native.signal]),
+                }).then(result => ({
+                  content: result.content,
+                  isError: result.isError,
+                  ...result.error?.info === undefined ? {} : { error: result.error.info },
+                })))
+              },
+            }))
+          }
+          const prompt = promptSections.register({
+            name: 'compat:tool-fs', order: 1100,
+            text: () => {
+              if (suspended) return ''
+              return trackActive(legacy.systemPrompt.assemble().then(assembly =>
+                assembly.sections.filter(section => section.name.startsWith('tool:')).map(section => section.text).join('\n\n')))
+            },
+          })
+          toolDisposers = disposers
+          promptDispose = prompt
+          suspended = false
+        } catch (error) {
+          await Promise.allSettled(disposers.map(dispose => dispose()))
+          throw error
+        }
+      }
+      const participant: CompatDshLifecycleParticipant = { suspend, resume }
+      const unregisterParticipant = runtime.registerLifecycleParticipant(participant)
+      native.own(async () => {
+        unregisterParticipant()
+        await suspend()
+      })
+      await resume()
       native.provide('compatToolFs', { kind: 'legacy-tool-fs' })
     }
   },

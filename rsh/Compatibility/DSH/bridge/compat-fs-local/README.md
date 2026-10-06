@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-fs-local` lets a native consumer use the maintained local filesystem backend. It validates the selected legacy package declaration and local-backend configuration before mounting into the optional shared Cordis Context. The bridge provides one native `fs` service and awaits disposal of its plugin during host shutdown.
+`dsh-compat-fs-local` lets a native consumer use the maintained local filesystem backend. It validates the selected legacy package declaration and local-backend configuration before mounting into the optional shared Cordis Context. The bridge provides one native `fs` service through a live proxy that resolves the current Cordis Provider after Loader configuration updates.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The configuration is the documented `dsh-fs-local` configuration, including its optional working directory. Unsupported fields fail before the legacy Context starts. A native profile must select no other `fs` Provider in the same scope.
+The configuration is the documented `dsh-fs-local` configuration, including its optional working directory. Unsupported fields fail before the legacy Context starts. The compatibility runtime accepts only the installed package version recorded in its [support matrix](../compat-dsh-runtime/README.md#supported-adapter-set). Updating the Loader entry configuration replaces the Provider while the native proxy resolves the replacement; disabling or removing the entry makes later service access fail as unavailable. A native profile must select no other `fs` Provider in the same scope.
 
 <a id="model-experience"></a>
 ## Model Experience
