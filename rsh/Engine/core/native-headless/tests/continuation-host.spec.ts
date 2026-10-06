@@ -298,7 +298,7 @@ it('publishes the durable settlement of a retained child when its Program closes
     async execute(call) {
       entered.resolve(undefined)
       await new Promise<void>((resolve) => {
-        call.signal.addEventListener('abort', resolve, { once: true })
+        call.signal.addEventListener('abort', () => { resolve() }, { once: true })
       })
       call.signal.throwIfAborted()
       return { content: [], isError: false }
