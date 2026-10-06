@@ -31,6 +31,8 @@ kind: "package-reference"
 
 在 agent 需要运行 PowerShell 命令的任何组合中加载本插件——通常是 `ctx.shell` 由 PowerShell 执行器支撑的 Windows 组合。一旦挂载执行器提供方与 `dsh-shell-env` 注册表，它就注册 `pwsh` 工具。
 
+默认 Cordis 入口导入 `dsh-tools` 并要求安装其可选 peer；`./native` 入口使用 `dsh-native-tools`，因此仅使用 Native 入口的消费者可以省略 `dsh-tools`。
+
 ### 何时选择
 
 当命令必须用 PowerShell 编写——原生路径与 `$env:` 变量——或部署是 Windows 原生时，选择 pwsh 工具。当命令集是 bash 方言时选择 `dsh-tool-bash`；两者之间没有翻译。当工作依赖跨调用状态（cwd、变量）时，持久对应物 [`dsh-tool-pwsh-persistent`](../tool-pwsh-persistent/README.zh.md) 会保持一个按所有者隔离的 shell 存活。
