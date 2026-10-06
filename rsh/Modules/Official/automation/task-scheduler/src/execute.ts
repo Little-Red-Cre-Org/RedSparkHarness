@@ -1,7 +1,7 @@
 /** The only adapter between scheduled work and the existing Agent runtime. */
 import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-permission-presets'
@@ -81,20 +81,27 @@ export function agentExecutor(ctx: Context): ExecuteTask {
           await delay(200, undefined, { signal })
         }
       }
-      handle.agent.followup(createUserMessage({
-        content: [{ type: 'text', text: `[Scheduled task ${task.id}; occurrence ${new Date(run.scheduledAt).toISOString()}]\nThe scheduled time has arrived. Execute now; relative delays in the original instruction have already elapsed and must not be waited again.\n${task.prompt}` }],
-        source: { kind: 'plugin', plugin: 'task-scheduler' },
-      }))
-      await handle.agent.whenIdle()
-      await ctx.sessions.flush(handle.agent.session)
-      signal.throwIfAborted()
-      // A turn's durable settlement, not the idle lifecycle flag, determines its receipt.
-      const end = handle.agent.session.snapshotEvents().findLast(event => event.type === 'turn/end')
-      const reason = end?.type === 'turn/end' ? end.data.reason.kind : undefined
-      return { sessionId, state: reason === 'completed' ? 'completed' : reason === 'blocked' ? 'blocked' : 'failed',
-        detail: reason === 'completed'
-          ? 'Agent turn completed. This is not a certification that code or tests passed; inspect the execution session.'
-          : `Agent turn did not complete: ${reason ?? 'no durable turn/end'}` }
+      const session = handle.agent.session
+      const firstRunSeq = session.seq
+      let turnEnd: SessionEvent<'turn/end'> | undefined
+      const stopObserving = ctx.on('session/event', (observed, event) => {
+        if (observed === session && event.seq >= firstRunSeq && event.type === 'turn/end') turnEnd = event
+      })
+      try {
+        handle.agent.followup(createUserMessage({
+          content: [{ type: 'text', text: `[Scheduled task ${task.id}; occurrence ${new Date(run.scheduledAt).toISOString()}]\nThe scheduled time has arrived. Execute now; relative delays in the original instruction have already elapsed and must not be waited again.\n${task.prompt}` }],
+          source: { kind: 'plugin', plugin: 'task-scheduler' },
+        }))
+        await handle.agent.whenIdle()
+        await ctx.sessions.flush(session)
+        signal.throwIfAborted()
+        // The latest current-session event supplies its reason; the flush proves the receipt is durable.
+        const reason = turnEnd?.data.reason.kind
+        return { sessionId, state: reason === 'completed' ? 'completed' : reason === 'blocked' ? 'blocked' : 'failed',
+          detail: reason === 'completed'
+            ? 'Agent turn completed. This is not a certification that code or tests passed; inspect the execution session.'
+            : `Agent turn did not complete: ${reason ?? 'no durable turn/end'}` }
+      } finally { stopObserving() }
     } catch (error) {
       return { state: 'failed', sessionId, detail: String(error).slice(0, 2000) }
     } finally {
