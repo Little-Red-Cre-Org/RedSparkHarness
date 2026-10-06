@@ -31,6 +31,8 @@ The native contribution declares the same canonical foreground/background result
 
 Load this plugin in any composition where the agent should run PowerShell commands — typically a Windows composition whose `ctx.shell` is backed by a PowerShell executor. It registers the `pwsh` tool once the executor provider and the `dsh-shell-env` registry are mounted.
 
+The default Cordis entry imports `dsh-tools` and requires its optional peer; `./native` imports `dsh-native-tools`, so Native-only consumers can omit `dsh-tools`.
+
 ### When to choose it
 
 Choose the pwsh tool when commands must be written in PowerShell — native paths and `$env:` variables — or when the deployment is Windows-native. Choose `dsh-tool-bash` when the command set is bash-dialect; there is no translation between the two. When work needs cross-call state (cwd, variables), the persistent counterpart [`dsh-tool-pwsh-persistent`](../tool-pwsh-persistent/README.md) keeps one owner-scoped shell alive.

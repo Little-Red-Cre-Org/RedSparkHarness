@@ -185,6 +185,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/terminal/tool-terminal', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/interaction/user-questions', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/shell/tool-pwsh', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-local', ['@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-observation-policy', ['@deepseek-ai/dsh-plugin-host']],
