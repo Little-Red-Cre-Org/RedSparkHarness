@@ -29,9 +29,9 @@ Model and reasoning choices come from the Host model directory, including provid
 
 The transcript uses the shared Session append-origin and message projection rules. Replacement copies remain model-only; raw Session records remain available in a disclosure, including tool results, permissions, interruptions and opaque ignorable facts. Transport and history failures remain visible; failed submission retains its draft.
 
-Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The page contributes no durable language preference or Settings UI.
+Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The Settings page reads schemas and validated request budgets published by the selected Host, edits user overrides as JSON with revision checks, and derives write-only credential controls from `credential-ref` fields. Credential references are read in bounded batches and aggregated; edits above the advertised operation budget are refused before sending, keeping each revision-checked mutation atomic. Non-secret object entries can be added, removed, or replaced; visible edits below hidden secrets stay leaf-based, and unsafe secret-bearing structure changes are rejected. Array edits use existing indices and unsupported array-structure changes report an error. Credential values are sent only to the Host for storage and are never read back. The page adds no durable language preference or default-profile switch.
 
-React, Session, native model selection, agent preset selection and todo Client values use the application's shared peer instances. The published declarations also reference native-runtime and client-native-session, so those packages are production dependencies for type resolution; their NativePlugins run only when selected by the native profile.
+React, Session, native model selection, agent preset selection, todo Client values and the native Session error class use the application's shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer. `native-runtime` remains a production dependency because published declarations reference it. `client-native-session` is a peer and development dependency because the page imports `NativeSessionRpcError` at runtime and must share its constructor with the selected Consumer.
 
 The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
 
@@ -47,7 +47,7 @@ No invariant companion is published because the view reads the selected Host Con
 
 ## Dev Note
 
-Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md).
+Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md).
 
 ## Model Experience
 
@@ -71,4 +71,5 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
-- File uploads, full Sidebar, layout and Settings remain separate native Client migrations.
+- File uploads, full Sidebar, layout, browser authorization flows, opaque credential grant editing and the complete legacy plugin Settings page remain separate native Client migrations.
+- A Settings owner must explicitly publish its schema metadata; this page does not edit hidden `role('secret')` values or create authorization grants.

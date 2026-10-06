@@ -18,7 +18,7 @@ Status: implemented
 
 用户转录行使用 append-origin Session 事件和共享消息投影。仅用于模型的替换不能擦除用户已经看过的对话。原始持久化记录保留最小页面尚未提供功能卡片或交互决策的工具与权限事实。
 
-首次使用的原生 Client roster 只包含已有安装器的 Provider 和 Consumer。页面拥有完整的类型化英中文字典对，并接受显式 locale 配置。它不创建 Settings 权威，也不切换旧默认装配。
+首次使用的原生 Client roster 只包含已有安装器的 Provider 和 Consumer。页面拥有完整的类型化英中文字典对，并接受显式 locale 配置。Settings 页面通过同一 Connection 消费选定 Host 既有的 Settings 与 Credentials 权威；它不创建这两项权威，也不切换旧默认装配。
 
 ## 考虑过的替代方案
 

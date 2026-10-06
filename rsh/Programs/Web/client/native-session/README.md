@@ -30,6 +30,23 @@ Model controls decode the selected Host catalog and installed preset metadata. M
 
 The optional prompt observer follows accepted durable events and transient assistant text through the selected Connection Fetch response. The maintained eventsource-parser handles SSE framing. Event decoding uses the shared Session parser; missing terminal settlement, malformed frames or observer failure cancel the exact admission and await Host drain before rejection. Caller cancellation detaches following and still awaits durable settlement. A custom RPC carrier without response support rejects observed prompts before admission.
 
+The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`, `credentialsDescribe`, `credentialsSet` and `credentialsUnset` on the selected `/api` carrier. `settingsDescribe` returns the published namespace descriptors with request budgets supplied by the selected Host. The Settings page uses `maxCredentialRefsPerRead` for bounded credential batches and aggregates the results; it refuses edits above `maxSettingsOperations` before sending a mutation, because one revision-checked write stays atomic. The Host defaults these validated limits to 64 refs and 512 operations. Credential reads contain only presence, source and writability facts, and credential writes return acknowledgements without echoing their values. `NativeSessionRpcError` retains the Host code and conflict details for stale-write handling.
+
+```ts type-equiv
+/** Settings views and the Host-validated request budgets used by the Client. */
+interface NativeSettingsDescription {
+  /** Registered, redacted Settings namespaces. */
+  readonly namespaces: readonly NativeSettingsDescriptor[]
+  /** Per-request limits enforced by the selected Host. */
+  readonly limits: {
+    /** Maximum credential refs accepted by one read request. */
+    readonly maxCredentialRefsPerRead: number
+    /** Maximum operations accepted by one atomic Settings mutation. */
+    readonly maxSettingsOperations: number
+  }
+}
+```
+
 Prompt uploads carry ordered encoded raster images; the Host admits them under its root owner. Advertised image limits come from the selected attachment Provider. Image reads send only a Session identity and recorded attachment identity, then validate response media type and byte length before returning a Blob.
 
 `close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.

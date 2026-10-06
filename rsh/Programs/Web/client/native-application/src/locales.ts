@@ -11,6 +11,18 @@ export const zh = {
   facts: '会话记录', user: '用户', assistant: '助手', tool: '工具', error: '请求失败',
   live: '实时助手输出', truncated: '较早的实时文本已截断；结算后的 Session 记录保持权威。',
   settled: '实时输出是临时呈现；重载后恢复结算的 Session 记录。',
+  settings: '设置', backToSessions: '返回会话', refreshSettings: '刷新设置', loadingSettings: '正在读取设置…',
+  noSettings: '当前组合没有公开给原生界面的设置项。', settingsSchema: '设置结构', userOverrides: '用户覆盖（JSON）',
+  appliesLive: '保存后实时生效', appliesRestart: '需要重启后生效', revision: '版本', saveSettings: '保存设置',
+  savingSettings: '正在保存设置…', settingsSaved: '设置已保存，显示值已从主机重新读取。',
+  settingsOperationLimitExceeded: '此更改超过主机允许的单次原子设置操作数。',
+  settingsConflict: '设置已在其他位置更改；已刷新主机值，当前草稿保留，请检查后再次保存。',
+  settingsArrayStructureUnsupported: '数组必须保留现有行数和顺序。',
+  settingsSecretStructureUnsupported: '包含隐藏机密字段的对象不能整体修改；请单独修改可见字段。',
+  credentials: '凭据引用', credential: '凭据', credentialValue: '新凭据值', configured: '已配置',
+  notConfigured: '未配置', saveCredential: '保存凭据', savingCredential: '正在保存凭据…',
+  credentialSaved: '凭据已保存；主机只返回配置状态。', removeCredential: '移除凭据',
+  credentialRemoved: '凭据已移除。', credentialError: '凭据请求失败',
 } as const
 
 /** Complete English pair for the native page's Chinese key set. */
@@ -26,6 +38,18 @@ export const en: Record<keyof typeof zh, string> = {
   facts: 'Session records', user: 'User', assistant: 'Assistant', tool: 'Tool', error: 'Request failed',
   live: 'Live assistant output', truncated: 'Earlier live text was truncated; settled Session records remain authoritative.',
   settled: 'Live output is temporary; settled Session records restore after reload.',
+  settings: 'Settings', backToSessions: 'Back to Sessions', refreshSettings: 'Refresh settings', loadingSettings: 'Loading settings…',
+  noSettings: 'This composition exposes no settings to the native page.', settingsSchema: 'Settings schema', userOverrides: 'User overrides (JSON)',
+  appliesLive: 'Applies immediately', appliesRestart: 'Applies after restart', revision: 'Revision', saveSettings: 'Save settings',
+  savingSettings: 'Saving settings…', settingsSaved: 'Settings saved; values were read back from the Host.',
+  settingsOperationLimitExceeded: 'This edit exceeds the Host limit for one atomic Settings update.',
+  settingsConflict: 'Settings changed elsewhere. Host values were refreshed and this draft was kept; review it before saving again.',
+  settingsArrayStructureUnsupported: 'Settings arrays must keep their existing row count and order.',
+  settingsSecretStructureUnsupported: 'An object containing hidden secret fields cannot be changed as a whole; edit visible fields individually.',
+  credentials: 'Credential references', credential: 'Credential', credentialValue: 'New credential value', configured: 'Configured',
+  notConfigured: 'Not configured', saveCredential: 'Save credential', savingCredential: 'Saving credential…',
+  credentialSaved: 'Credential saved; the Host returned its status only.', removeCredential: 'Remove credential',
+  credentialRemoved: 'Credential removed.', credentialError: 'Credential request failed',
 }
 
 /** Native page translation keys. */

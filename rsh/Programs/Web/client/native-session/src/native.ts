@@ -41,8 +41,106 @@ export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
 }
 
+/** Redacted Settings registration returned by the native Host configuration RPC. */
+export interface NativeSettingsDescriptor {
+  /** Owning Settings namespace. */
+  readonly namespace: string
+  /** Serialized owner schema. */
+  readonly schema: unknown
+  /** Resolved values with schema-declared secret paths omitted. */
+  readonly value: Readonly<Record<string, unknown>>
+  /** Redacted composition base. */
+  readonly base: Readonly<Record<string, unknown>>
+  /** Redacted stored user overrides. */
+  readonly user: Readonly<Record<string, unknown>>
+  /** Owner-declared effect timing. */
+  readonly applies: 'live' | 'restart'
+  /** Hidden secret locations and their current presence. */
+  readonly secrets: readonly { readonly path: readonly string[]; readonly set: boolean }[]
+  /** Current values carrying the `credential-ref` schema role. */
+  readonly credentialRefs: readonly string[]
+  /** Revision expected by the next write. */
+  readonly revision: number
+}
+
+/** Settings views and the Host-validated request budgets used by the Client. */
+export interface NativeSettingsDescription {
+  /** Registered, redacted Settings namespaces. */
+  readonly namespaces: readonly NativeSettingsDescriptor[]
+  /** Per-request limits enforced by the selected Host. */
+  readonly limits: {
+    /** Maximum credential refs accepted by one read request. */
+    readonly maxCredentialRefsPerRead: number
+    /** Maximum operations accepted by one atomic Settings mutation. */
+    readonly maxSettingsOperations: number
+  }
+}
+
+/** One path-addressed Settings edit. */
+export type NativeSettingsPathOp =
+  /** Set one JSON value at the path. */
+  | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
+  /** Remove the path from the user layer. */
+  | { readonly op: 'unset'; readonly path: readonly string[] }
+
+/** Safe credential presence facts; the credential value is never returned. */
+export interface NativeCredentialInfo {
+  /** Whether a credential provider resolves a value for this ref. */
+  readonly configured: boolean
+  /** Provider source label, when configured. */
+  readonly source?: string
+  /** Whether the current provider accepts writes. */
+  readonly writable: boolean
+}
+
+/** Structured rejection from one native Host RPC endpoint. */
+export class NativeSessionRpcError extends Error {
+  /** @param code - stable native RPC failure code.
+   * @param message - Host refusal message.
+   * @param details - safe, endpoint-specific failure facts.
+   */
+  constructor(readonly code: string, message: string, readonly details: object) {
+    super(message)
+    this.name = 'NativeSessionRpcError'
+  }
+}
+
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** Describe schema-published Settings namespaces and Host request budgets.
+   * @param signal - caller cancellation.
+   * @returns the registered views and validated limits for bounded reads and atomic writes.
+   */
+  settingsDescribe(signal?: AbortSignal): Promise<NativeSettingsDescription>
+  /** Apply Settings path edits against the revision the page displayed.
+   * @param namespace - registered Settings namespace.
+   * @param ops - path-addressed user-layer edits.
+   * @param expectedRevision - observed revision; stale writes reject with `native/settings-conflict`.
+   * @param signal - caller cancellation.
+   * @returns the actual redacted view after the write.
+   */
+  settingsMutate(
+    namespace: string, ops: readonly NativeSettingsPathOp[], expectedRevision: number, signal?: AbortSignal,
+  ): Promise<NativeSettingsDescriptor>
+  /** Describe credential refs declared by the active Settings schemas.
+   * @param refs - schema-discovered reference names.
+   * @param signal - caller cancellation.
+   * @returns presence and source facts without values.
+   */
+  credentialsDescribe(refs: readonly string[], signal?: AbortSignal): Promise<Readonly<Record<string, NativeCredentialInfo>>>
+  /** Store one secret value for a schema-declared credential reference.
+   * @param ref - discovered credential reference.
+   * @param value - write-only credential value.
+   * @param signal - caller cancellation.
+   * @returns completion acknowledgement.
+   */
+  credentialsSet(ref: string, value: string, signal?: AbortSignal): Promise<void>
+  /** Remove one schema-declared credential reference.
+   * @param ref - discovered credential reference.
+   * @param signal - caller cancellation.
+   * @returns completion acknowledgement.
+   */
+  credentialsUnset(ref: string, signal?: AbortSignal): Promise<void>
   /** Fetch verified bytes of an image recorded in the selected Session.
    * @param sessionId - recorded Session identity.
    * @param image - image reference obtained from its validated history.
@@ -133,6 +231,50 @@ function fields(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>
 }
 
+function settingsDescriptor(value: unknown): NativeSettingsDescriptor {
+  const data = fields(value)
+  if (typeof data.namespace !== 'string' || data.namespace.length === 0 || typeof data.schema !== 'object' || data.schema === null
+    || typeof data.value !== 'object' || data.value === null || Array.isArray(data.value)
+    || typeof data.base !== 'object' || data.base === null || Array.isArray(data.base)
+    || typeof data.user !== 'object' || data.user === null || Array.isArray(data.user)
+    || data.applies !== 'live' && data.applies !== 'restart'
+    || !Array.isArray(data.secrets) || !data.secrets.every((item) => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) return false
+    const secret = item as Record<string, unknown>
+    return Array.isArray(secret.path) && secret.path.every(part => typeof part === 'string') && typeof secret.set === 'boolean'
+  })
+    || !Array.isArray(data.credentialRefs) || !data.credentialRefs.every(ref => typeof ref === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(ref))
+    || typeof data.revision !== 'number' || !Number.isSafeInteger(data.revision) || data.revision < 0) {
+    throw new TypeError('invalid native Settings descriptor')
+  }
+  return data as unknown as NativeSettingsDescriptor
+}
+
+function settingsDescription(value: unknown): NativeSettingsDescription {
+  const data = fields(value)
+  const limits = fields(data.limits)
+  if (!Array.isArray(data.namespaces)
+    || typeof limits.maxCredentialRefsPerRead !== 'number' || !Number.isSafeInteger(limits.maxCredentialRefsPerRead) || limits.maxCredentialRefsPerRead < 1
+    || typeof limits.maxSettingsOperations !== 'number' || !Number.isSafeInteger(limits.maxSettingsOperations) || limits.maxSettingsOperations < 1) {
+    throw new TypeError('invalid native Settings description')
+  }
+  return { namespaces: data.namespaces.map(settingsDescriptor), limits: {
+    maxCredentialRefsPerRead: limits.maxCredentialRefsPerRead,
+    maxSettingsOperations: limits.maxSettingsOperations,
+  } }
+}
+
+function credentialInfo(value: unknown): NativeCredentialInfo {
+  const data = fields(value)
+  if (typeof data.configured !== 'boolean' || typeof data.writable !== 'boolean'
+    || data.source !== undefined && typeof data.source !== 'string'
+    || Object.keys(data).some(key => !['configured', 'writable', 'source'].includes(key))) {
+    throw new TypeError('invalid native credential description')
+  }
+  return { configured: data.configured, writable: data.writable,
+    ...data.source === undefined ? {} : { source: data.source } }
+}
+
 function header(value: unknown): SessionHeader {
   const data = fields(value)
   if (typeof data.id !== 'string' || data.id.length === 0 || data.version !== SESSION_FORMAT_VERSION
@@ -142,6 +284,18 @@ function header(value: unknown): SessionHeader {
 }
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'settings/describe') {
+    return settingsDescription(value)
+  }
+  if (endpoint === 'settings/mutate') return settingsDescriptor(value)
+  if (endpoint === 'credentials/describe') {
+    const data = fields(value)
+    return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
+  }
+  if (endpoint === 'credentials/set' || endpoint === 'credentials/unset') {
+    if (fields(value).updated !== true) throw new TypeError('invalid native credential write acknowledgement')
+    return undefined
+  }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
@@ -221,7 +375,7 @@ export function createNativeSessionClient(
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
-    if (!result.ok) throw new Error(result.error.message)
+    if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
     return decodeReply(endpoint, result.value) as T
   }
   async function prompt(
@@ -284,6 +438,12 @@ export function createNativeSessionClient(
     } finally { if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId); accepted.removeEventListener('abort', abort) }
   }
   return {
+    settingsDescribe: signal => call('settings/describe', {}, signal),
+    settingsMutate: (namespace, ops, expectedRevision, signal) =>
+      call('settings/mutate', { ns: namespace, ops, expectedRevision }, signal),
+    credentialsDescribe: (refs, signal) => call('credentials/describe', { refs }, signal),
+    async credentialsSet(ref, value, signal) { await call('credentials/set', { ref, value }, signal) },
+    async credentialsUnset(ref, signal) { await call('credentials/unset', { ref }, signal) },
     async image(sessionId, image, signal) {
       const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
       accepted.throwIfAborted()
