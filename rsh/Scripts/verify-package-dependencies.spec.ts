@@ -1261,29 +1261,29 @@ describe('dependency sections', () => {
     rendererManifest.devDependencies = { react: '^17.0.0' }
     expect(collectPackageDependencyViolations(state(renderer))).toContainEqual(expect.stringContaining('react must be matching'))
 
-    const tools = '@deepseek-ai/dsh-tools'
+    const pwshTools = '@deepseek-ai/dsh-tools'
     const toolManifest: PackageDependencyManifest = {
       name: '@deepseek-ai/dsh-tool-pwsh',
       exports: { '.': './lib/index.js', './native': './lib/native.js' },
-      devDependencies: { [tools]: 'workspace:^' },
-      peerDependencies: { [tools]: 'workspace:^' },
-      peerDependenciesMeta: { [tools]: { optional: true } },
+      devDependencies: { [pwshTools]: 'workspace:^' },
+      peerDependencies: { [pwshTools]: 'workspace:^' },
+      peerDependenciesMeta: { [pwshTools]: { optional: true } },
     }
     const tool = {
       ...facts(toolManifest),
       manifestPath: 'rsh/Modules/Official/shell/tool-pwsh/package.json',
       cordisPeerRequired: false,
-      allSourceUses: new Map([[tools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
-      hostRuntimeSourceUses: new Map([[tools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
+      allSourceUses: new Map([[pwshTools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
+      hostRuntimeSourceUses: new Map([[pwshTools, ['rsh/Modules/Official/shell/tool-pwsh/src/index.ts']]]),
       hostRuntimeExportUses: [],
-      workspaceNames: new Set([tools]),
+      workspaceNames: new Set([pwshTools]),
     }
     expect(collectPackageDependencyViolations(state(tool))).toEqual([])
-    toolManifest.peerDependenciesMeta = { [tools]: { optional: false } }
-    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${tools} must be matching`))
-    toolManifest.peerDependenciesMeta = { [tools]: { optional: true } }
+    toolManifest.peerDependenciesMeta = { [pwshTools]: { optional: false } }
+    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${pwshTools} must be matching`))
+    toolManifest.peerDependenciesMeta = { [pwshTools]: { optional: true } }
     delete (toolManifest.exports as Record<string, unknown>)['./native']
-    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${tools} must be matching`))
+    expect(collectPackageDependencyViolations(state(tool))).toContainEqual(expect.stringContaining(`${pwshTools} must be matching`))
   })
 
   it('reports wrong sections, workspace ranges, and stale peer metadata', () => {
