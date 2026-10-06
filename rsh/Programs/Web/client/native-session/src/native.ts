@@ -272,7 +272,7 @@ function credentialInfo(value: unknown): NativeCredentialInfo {
     throw new TypeError('invalid native credential description')
   }
   return { configured: data.configured, writable: data.writable,
-    ...data.source === undefined ? {} : { source: data.source as string } }
+    ...data.source === undefined ? {} : { source: data.source } }
 }
 
 function header(value: unknown): SessionHeader {

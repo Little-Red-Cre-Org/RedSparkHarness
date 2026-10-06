@@ -82,11 +82,11 @@ function Conversation({ controller, client, t, locale }: {
   const [showSettings, setShowSettings] = useState(false)
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
-  if (showSettings) return <SettingsPage client={client} t={t} onBack={() => setShowSettings(false)} />
+  if (showSettings) return <SettingsPage client={client} t={t} onBack={() => { setShowSettings(false) }} />
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <h1>{t('title')}</h1>
     <nav aria-label={t('sessions')}>
-      <button type="button" onClick={() => setShowSettings(true)}>{t('settings')}</button>
+      <button type="button" onClick={() => { setShowSettings(true) }}>{t('settings')}</button>
       <button disabled={!ready} onClick={() => { void controller.create() }}>{t('create')}</button>
       <select aria-label={t('sessions')} value={snapshot.selected ?? ''} disabled={!ready}
         onChange={(event) => {

@@ -248,8 +248,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     })
     const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
-      namespaces: expect.any(Array), limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
+      limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
     } })
+    expect(rawSettingsReply.ok && Array.isArray(rawSettingsReply.value.namespaces)).toBe(true)
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-leaf-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
