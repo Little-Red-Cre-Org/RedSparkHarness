@@ -32,6 +32,7 @@ const snapshotAdapters = [
   'snapshots/desktop/native-session-core.snapshot.ts',
   'snapshots/native-acp/text-turn.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
+  'snapshots/native-headless/fs-sandbox-tool-round.snapshot.ts',
   'snapshots/native-headless/mcp-image-native.snapshot.ts',
   'snapshots/native-headless/model-choice-native.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
