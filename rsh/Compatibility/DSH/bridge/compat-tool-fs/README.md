@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-compat-tool-fs` adapts the legacy read, write, and edit tools into native tool and prompt registries. The native application remains the sole owner of model requests and durable `tool/call` and `tool/result` records. The bridge forwards legacy filesystem decisions into native events and waits for admitted tool work before it disposes its plugin in the shared Cordis Context.
+`dsh-compat-tool-fs` adapts the legacy read, write, and edit tools into native tool and prompt registries. The native application remains the sole owner of model requests and durable `tool/call` and `tool/result` records. The bridge forwards legacy filesystem decisions into native events and waits for admitted tool work before it disposes its plugin in the shared Cordis Context. Its `fs/observed` forwarding uses the compatibility runtime's exact synchronous echo guard so a legacy policy does not send the same event back through both buses.
 
 ## Table of Contents
 

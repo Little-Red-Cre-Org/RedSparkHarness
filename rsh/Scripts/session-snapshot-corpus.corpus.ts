@@ -74,7 +74,7 @@ async function scenarios(): Promise<Scenario[]> {
       const manifest = parseSnapshotManifest(await readFile(path, 'utf8'), path)
       expect(manifest.scenario, `${profile}/${entry.name}: scenario`).toBe(entry.name)
       expect(manifest.profile, `${profile}/${entry.name}: profile`).toBe(
-        profile === 'session' || profile === 'compat' ? 'headless' : profile,
+        profile === 'session' ? 'headless' : profile,
       )
       expect(manifest.composition, `${profile}/${entry.name}: composition`).toBeTypeOf('string')
       expect(manifest.recording, `${profile}/${entry.name}: recording`).toMatch(/^(live|authored)$/)

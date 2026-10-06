@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-dsh-runtime` 让原生兼容 bridge 与选定的一方 DSH 插件共用一个 Cordis Context。它要求已验证的 Cordis 4.0.2，只挂载允许列表中的插件，并随原生 runtime 释放每个挂载。原生安装未选择此包时，不会引入兼容依赖。
+`dsh-compat-dsh-runtime` 让原生兼容 bridge 与选定的一方 DSH 插件共用一个 Cordis Context。它只接受 Cordis 4.0.2，并在创建 Context 前检查版本；它只挂载允许列表中的插件，并随原生 runtime 释放每个挂载。原生安装未选择此包时，不会引入兼容依赖。
 
 ## 目录
 
@@ -41,7 +41,7 @@ kind: "package-reference"
 
 ### 支持的适配器集合
 
-这组仅面向 Host 的适配器对应同版本 RSH 0.1.5-rc.2 工作区包及 Cordis 4.0.2。其他 Cordis 版本在创建 Context 前拒绝。DSH runtime 声明及各适配器接受的配置在挂载前检查；不支持任意插件和应用 bundle。
+这组仅面向 Host 的适配器面向当前 RSH 0.1.5-rc.2 工作区包，并只接受 Cordis 4.0.2。每个选定的 filesystem adapter 会在挂载前检查 DSH runtime API 修订、角色、能力及其接受的配置。这些检查不会将已安装 DSH 包的名称和版本与统一支持记录比较，因此 runtime 不会据此拒绝包版本变更。不支持任意插件和应用 bundle。
 
 | 原生安装器 | 旧插件挂载 | 所需原生服务 | 配置 |
 |---|---|---|---|
@@ -50,7 +50,7 @@ kind: "package-reference"
 | `compat-fs-sandbox` | `fs-sandbox`、内部 `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`；提供 `fs` | 本地后端 `cwd`, `diffBasisMaxBytes` |
 | `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`、内部 `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`；可选 `sandboxPolicy` | 正整数 `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
 
-表内名称使用 `@deepseek-ai/dsh-` 前缀；内部挂载属于该 runtime 的允许列表。原生所有权等待各 Fiber 的异步移除及激活失败清理。不支持 Cordis Loader 配置、HMR 和 Client 适配器；支持原生安装移除。这些安装器都不创建旧 Agent loop 或 Session writer。
+表内名称使用 `@deepseek-ai/dsh-` 前缀；内部挂载属于该 runtime 的允许列表。原生所有权等待各 Fiber 的异步移除及激活失败清理。不支持 Cordis Loader 配置、HMR 和 Client 适配器；支持原生安装移除。`NativeHost.replace` 和 CLI `dsh.profile.configReload: "live"` 会在 profile 或 patch 变更后替换安装，但不会重新加载已变化的 bridge 模块代码。Cordis adapter HMR 替换的是 Cordis 插件挂载，不是原生 bridge 代码。这些安装器都不创建旧 Agent loop 或 Session writer。
 
 -----
 
@@ -60,7 +60,7 @@ kind: "package-reference"
 <details>
 <summary>实现内部——点击展开</summary>
 
-Provider 创建一个 Cordis Context，安装 `RshPluginHost`，并按包名跟踪每个挂载 Fiber。激活前检查允许列表；激活失败时释放部分 Fiber，并同时报告激活与清理错误。原生所有权会在异步激活结束前注册 Context 和挂载清理。
+Provider 创建一个 Cordis Context，安装 `RshPluginHost`，并按包名跟踪每个挂载 Fiber。激活前检查允许列表；激活失败时释放部分 Fiber，并同时报告激活与清理错误。原生所有权会在异步激活结束前注册 Context 和挂载清理。它只会在同一 native scope、target、observation 对象与 actor 正在 Native 和 Cordis 事件总线间同步转发时抑制相同的 `fs/observed` 回声；其他事件和监听器失败仍按原行为传播。
 
 本包不发布运行时不变量伴生入口，因为包名映射只索引由此 Provider 发起的挂载，用于拒绝重复挂载并取得对应 Fiber 的释放函数；adapter 服务与事件仍由 Cordis Context 拥有，该映射不是其状态的第二份投影。
 

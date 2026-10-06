@@ -14,11 +14,13 @@
 
 基线记录四项兼容能力：Cordis Loader 激活与 Fiber 释放、Include YAML 组合与 patch 分层、文件／配置 HMR 刷新，以及兼容插件的所有权与卸载。证据和测试仍位于 `Core/vendor`、`Compatibility/DSH` 以及 filesystem Consumer 的真实 Loader 装配中。原生安装计划和 `NativeContext` 释放是独立机制；清单不会把 Cordis Loader 或 HMR 实现标为原生运行时代码。
 
+混合包仍在 `peerDependencies` 中声明仅供兼容运行时使用的 peer，并通过可选 peer 元数据避免原生消费者被迫安装。源码策略将这些导入限制在兼容入口；原生运行所需的 peer 仍保持必需。
+
 报告将策略覆盖的原生导出（包括混合包子路径）与剩余旧依赖图分开。`framework-free` 表示没有直接生产 Cordis 使用或声明的生产 Cordis 依赖，不证明传递依赖闭包独立。原生替换以及变化的模块代码或 Client 组合的自动交付，需要通过各自应用启动入口验证。Cordis HMR 测试不能证明这些机制。兼容 adapter 可以消费原生服务，但不能创建第二套 Agent、Session 或 Tools 权威。
 
-首批兼容范围是 [compat-dsh-runtime](../../../../rsh/Compatibility/DSH/bridge/compat-dsh-runtime/README.zh.md) 提供的 Host filesystem 能力族：选定的旧 filesystem Provider、观察策略、sandbox 策略适配，以及向原生注册表贡献的文件工具。该范围保留原生审批与 sandbox 决策，并拒绝变化的声明或不支持的配置。任意插件、完整旧应用 bundle、Client 兼容和原生 profile HMR 均不在范围内；Cordis Loader/HMR 基线证据不能证明这些路径受支持。
+首批兼容范围是 [compat-dsh-runtime](../../../../rsh/Compatibility/DSH/bridge/compat-dsh-runtime/README.zh.md) 提供的 Host filesystem 能力族：选定的旧 filesystem Provider、观察策略、sandbox 策略适配，以及向原生注册表贡献的文件工具。该范围保留原生审批与 sandbox 决策，并拒绝变化的声明或不支持的配置。runtime 在 Native 与 Cordis 总线间转发 `fs/observed` 时，使用 native scope 以及 target、observation 对象和 actor 的精确身份作为同步抑制键；相同回声只在 bridge 转发期间被抑制，不同的嵌套事件和其他 scope 的事件仍会转发。`NativeHost.replace` 与 CLI `dsh.profile.configReload: "live"` 会在 profile 或 patch 变更后替换安装，但不会重新加载已变化的模块代码。Cordis adapter HMR 替换 Cordis 插件挂载，不会重载原生 bridge 代码。任意插件、完整旧应用 bundle、Client 兼容和原生 bridge 模块代码 HMR 均不受支持。
 
-当前 checkout 的 Cordis manifest 选择 `4.0.2`；桥验证主版本 4，不承诺每个主版本为 4 的发行版都经过测试。每个选定的 DSH adapter 在挂载前验证所需 runtime 角色与能力。包版本和依赖范围来自生成清单；npm 版本、原生 API 修订与 Session 格式版本是独立权威。
+此桥只接受 Cordis `4.0.2`，并在创建 Context 前拒绝其他版本。选定的 filesystem adapter 会在挂载前检查各自 DSH runtime 声明中的 API 修订、角色与能力。它们不会将已安装 DSH 包的名称和版本与统一支持记录比较，因此这些检查不会拒绝包版本变更。清单中的包版本描述当前 checkout，不是受支持版本声明。npm 版本、原生 API 修订与 Session 格式版本是独立权威。
 
 ## 考虑过的替代方案
 

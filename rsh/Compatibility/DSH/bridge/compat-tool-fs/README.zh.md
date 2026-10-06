@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-compat-tool-fs` 将旧 read、write 和 edit 工具适配进原生工具和提示词注册表。原生应用仍是模型请求以及持久 `tool/call` 和 `tool/result` 记录的唯一所有者。bridge 将旧文件系统决策转发进原生事件，并在释放共享 Cordis Context 中的插件前等待已接收的工具工作。
+`dsh-compat-tool-fs` 将旧 read、write 和 edit 工具适配进原生工具和提示词注册表。原生应用仍是模型请求以及持久 `tool/call` 和 `tool/result` 记录的唯一所有者。bridge 将旧文件系统决策转发进原生事件，并在释放共享 Cordis Context 中的插件前等待已接收的工具工作。其 `fs/observed` 转发使用兼容 runtime 的精确同步回声抑制，避免旧策略把同一事件经两个总线来回发送。
 
 ## 目录
 

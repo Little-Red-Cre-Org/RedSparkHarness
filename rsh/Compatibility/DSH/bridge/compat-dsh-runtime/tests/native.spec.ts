@@ -56,6 +56,29 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
     if (compat === undefined) throw new Error('missing compatibility runtime')
     expect(compat.context.get('compatTest')).toBe('mounted')
     expect(compat.context.get('compatSecond')).toBe('mounted')
+    const target = {}
+    const observation = { kind: 'present' }
+    const actor = {}
+    const scope = {}
+    const secondScope = {}
+    const nestedObservation = { kind: 'absent' }
+    let forwards = 0
+    compat.forwardFsObserved(scope, target, observation, actor, () => {
+      forwards += 1
+      compat.forwardFsObserved(scope, target, observation, actor, () => { forwards += 100 })
+      compat.forwardFsObserved(scope, target, nestedObservation, actor, () => { forwards += 10 })
+      compat.forwardFsObserved(secondScope, target, observation, actor, () => { forwards += 1_000 })
+    })
+    expect(forwards).toBe(1_011)
+    compat.forwardFsObserved(scope, target, nestedObservation, actor, () => {
+      forwards += 100
+      compat.forwardFsObserved(scope, target, nestedObservation, actor, () => { forwards += 1_000 })
+    })
+    expect(forwards).toBe(1_111)
+    expect(() => { compat.forwardFsObserved(scope, target, observation, actor, () => { throw new Error('observer failed') }) })
+      .toThrow('observer failed')
+    compat.forwardFsObserved(scope, target, observation, actor, () => { forwards += 1 })
+    expect(forwards).toBe(1_112)
     expect(() => compat.mount('@third-party/unknown', () => {})).toThrow('unsupported plugin')
     const releaseFirst = disposeFirst
     if (releaseFirst === undefined) throw new Error('missing first mount disposer')
