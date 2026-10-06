@@ -14,17 +14,17 @@
 
 import * as vm from 'node:vm'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import { assertObjectJsonSchema, JsonSchemaError } from '@deepseek-ai/dsh-tools'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
-import { isFatalWorkflowError, WorkflowError } from '@deepseek-ai/dsh-workflow'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { assertObjectJsonSchema, JsonSchemaError } from '@deepseek-ai/dsh-native-tools/json-schema'
+import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
+import { isFatalWorkflowError, WorkflowError } from '@deepseek-ai/dsh-workflow/errors'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
   WorkflowMeta,
   WorkflowResult,
-} from '@deepseek-ai/dsh-workflow'
+} from '@deepseek-ai/dsh-workflow/types'
 import { materializeFromRealm, MaterializeError, renderThrown } from './realm.ts'
 import type { ChildHandle, ChildPort, WorkerLimits } from './types.ts'
 

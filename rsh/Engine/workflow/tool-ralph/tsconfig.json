@@ -33,7 +33,22 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../workflow"
+      "path": "../../core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-prompt"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../subagent/native-subagent"
+    },
+    {
+      "path": "../tool-workflow"
+    },
+    {
+      "path": "../workflow/tsconfig.host.json"
     }
   ]
 }

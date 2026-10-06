@@ -26,12 +26,23 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./foreground": {
+      "types": "./lib/types/foreground.d.ts",
+      "default": "./lib/foreground.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/native.js",
+    "lib/foreground.js",
+    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -43,11 +54,16 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-native-prompt": "workspace:^",
+    "@deepseek-ai/dsh-workflow": "workspace:^",
+    "@deepseek-ai/dsh-util-values": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
@@ -57,9 +73,27 @@
     "@deepseek-ai/dsh-subagent": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^",
     "@deepseek-ai/dsh-workflow-worker-thread": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-agent": { "optional": true },
+    "@deepseek-ai/dsh-invariants": { "optional": true },
+    "@deepseek-ai/dsh-llm": { "optional": true },
+    "@deepseek-ai/dsh-session": { "optional": true },
+    "@deepseek-ai/dsh-system-prompt": { "optional": true },
+    "@deepseek-ai/dsh-tools": { "optional": true },
+    "@deepseek-ai/cordis": { "optional": true }
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["workflow", "tools", "promptSections"],
+      "optional": [],
+      "provides": []
+    }
   }
 }

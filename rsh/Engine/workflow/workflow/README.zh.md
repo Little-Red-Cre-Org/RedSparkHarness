@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-运行一段纯 JavaScript 编排脚本，将工作扇出给 subagent，并返回脚本的最终 JSON 值。脚本可以使用 `agent()`、`parallel()`、`pipeline()`、`phase()` 和 `log()`；模型通常通过 `workflow` 工具访问它们。每次运行都归调用方所有，将每个子 agent（智能体）归属于调用它的 agent，在失败或取消时以结果兑现而不拒绝，并在有界宽限期内完成 dispose（资源释放）。调用方必须提供执行引擎，因此可以更换隔离策略而不改变可见行为。
+运行一段纯 JavaScript 编排脚本，将工作扇出给 subagent，并返回脚本的最终 JSON 值。脚本可以使用 `agent()`、`parallel()`、`pipeline()`、`phase()` 和 `log()`；模型通常通过 `workflow` 工具访问它们。每次运行都归调用方所有，将每个子 agent（智能体）归属于调用它的 agent；失败或取消会以结果兑现而不拒绝。选定引擎拥有子任务清理；Native dispose 可能在脚本终止后继续等待，直到子 Session 释放资源。调用方必须提供执行引擎，因此可以更换隔离策略而不改变可见行为。
 
 ## 目录
 
@@ -31,6 +31,8 @@ kind: "package-reference"
 
 模型通过 `dsh-tool-workflow` 的 `workflow` 工具触达该能力；该工具拥有调用 schema 与结果包络，引擎提供其下的执行。一次工具调用提交 `meta`、`script` 与可选 `args`，运行完成时返回 `{ runId, agentsStarted, result }`。工具会阻塞父级轮次直到整个工作流结算，因此模型只看到最终结果，永远不会看到中间子 agent 消息。
 
+Native 组合会分别安装 `@deepseek-ai/dsh-workflow/native` Definition、一个选定的执行 Provider 与面向模型的 Consumer。worker Provider 经由 Program 已有的 NativeSubagent 与 Session executor 委派工作，因此不会创建第二套 Agent loop 或 Session owner。Native Definition 使用 provider-neutral 的 `@deepseek-ai/dsh-workflow/types` 运行句柄；可选的 `@deepseek-ai/dsh-agent` peer 仅供旧 Cordis 入口使用。
+
 ### 运行工作流脚本
 
 编排脚本是纯 JavaScript 脚本体（不是 TypeScript），以顶层 `await` 运行并以 `return <json-value>` 结尾。`meta` 身份块与任何 `args` 都以普通 JSON 数据到达——绝不作为代码求值。执行期间脚本调用提供的钩子：`agent(prompt, opts)` 启动一个 subagent，并以其最终文本、或在提供 schema 时以经过校验的结构化值兑现；`parallel()` 与 `pipeline()` 组合独立工作；`phase()` 与 `log()` 为观察者叙述进度。
@@ -48,9 +50,9 @@ return { reviewed: reviews.length }
 
 ### 编程方式运行
 
-插件消费方可以直接启动运行：`ctx.workflowEngine.start({ script, meta, args?, parent, signal? })`。`parent` 把每个子 agent 归属于调用它的 agent；`signal` 在中止时取消运行。`start()` 在运行存在之前校验 meta 块并解析脚本，因此格式错误的请求会立即以违规清单失败。
+Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })` 启动运行；这个旧入口使用可选的 `@deepseek-ai/dsh-agent` peer。Native 消费方通过 `context.require('workflow').start(name, request)` 选择 Provider，并可在不安装该 peer 的情况下消费 `./native` Definition。两条路径都会把每个子 agent 归属于调用它的 agent，并接受取消；选定的实现会在发布运行前校验 meta 块并解析脚本。
 
-返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并在有界宽限期内等待脚本与子 agent 完全停稳。
+返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并等待选定 Provider 的脚本与子任务清理策略。必要时，Native Provider 会在脚本宽限期之后继续等待已接受子 Session 清理。
 
 ### 失败与恢复
 
@@ -68,20 +70,21 @@ return { reviewed: reviews.length }
 
 ### 设计理念
 
-本包把脚本、运行、结果与事件约定同执行分开：任何引擎都可以在同一词汇背后实现 `ctx.workflowEngine`，一个上下文同时只有一个引擎——加载第二个引擎会明确报错，因此更换引擎意味着更改组合所加载的引擎插件。`workflow/*` 事件只供观察：payload 携带运行身份快照，绝不携带活动运行，因此监听器无法取得取消或 dispose 权限。
+本包把脚本、运行、结果与事件约定同执行分开：Cordis 与 Native 组合通过不同 Definition 暴露相同词汇，并在各自组合内限定 Provider 选择。`workflow/*` 事件只供观察：payload 携带运行身份快照，绝不携带活动运行，因此监听器无法取得取消或 dispose 权限。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 服务定义、`workflow/*` 事件声明、`WorkflowError` 及其 fatal 标志 |
-| [`src/types.ts`](src/types.ts) | 浏览器安全词汇：`WorkflowMeta`、`WorkflowResult`、运行与 agent 事件信息 |
+| [`src/native.ts`](src/native.ts) | Native workflow Definition 与有作用域的执行 Provider registry |
+| [`src/types.ts`](src/types.ts) | provider-neutral 词汇：`WorkflowRun`、`WorkflowMeta`、`WorkflowResult` 与 agent 事件信息 |
 | [`src/runtime-types.ts`](src/runtime-types.ts) | 仅宿主的 `WorkflowStartRequest` 与 `WorkflowRun` 句柄 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：事件配对与身份校验 |
 
 ### 生命周期与归属
 
-运行由持有方负责：引擎插件卸载会阻止新的启动，但不会撤销已接受的运行，调用方必须 dispose 自己启动的每个运行。`dispose()` 在需要时取消，并在引擎文档规定的期限内等待脚本与子 agent 完全停稳，因此等待 `result` 的消费方绝不会因取消而卡死。
+Cordis 引擎中的运行由调用方负责：卸载引擎会阻止新的启动，但不会撤销已接受的运行，因此调用方必须 dispose 自己启动的每个运行。Native Provider 也会跟踪已接受的运行，并在安装卸载时取消和排空它们。两种模式下，`dispose()` 都会在需要时取消，并应用所选 Provider 的脚本与子任务清理策略；若已接受的子任务仍在释放 Session 写入器与资源，Native 清理可在脚本终止后继续等待。
 
 `workflow/start` 与 `workflow/end` 为运行配对；`workflow/phase` 与 `workflow/log` 携带脚本叙述；`workflow/agent-start` 与 `workflow/agent-end` 按 `seq` 为每次子 agent 调用配对。每个监听器都独立隔离：抛错的监听器只记录日志，不会饿死同级监听器或改变执行，并且每个监听器都会收到自己的 payload 副本。
 
@@ -128,7 +131,7 @@ return { reviewed: reviews.length }
 - **没有日志化或恢复**——脚本、子 agent 进度与中间值均不设检查点，因此进程重启后无法继续运行。
 - **没有已保存或嵌套工作流**——该能力只启动调用方提供的脚本，工作流脚本不会收到用于递归编排的 `workflow()` 钩子。
 - **没有 token 预算词汇**——引擎限制并发、条目与子 agent，但请求与结果都不会统计跨子 agent 的模型 token。
-- **运行由持有方负责，不由服务跟踪**——卸载引擎不会发现独立的活动句柄；每个消费方都必须 dispose 自己启动的运行。
+- **Cordis 运行由持有方负责**——卸载其引擎不会发现独立的活动句柄，因此每个消费方都必须 dispose 自己启动的运行；Native Provider 会另外跟踪并在卸载时排空已接受运行。
 
 <a id="dev-note"></a>
 ### 开发备注

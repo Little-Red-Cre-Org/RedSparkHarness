@@ -26,12 +26,23 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
     },
+    "./errors": {
+      "types": "./lib/types/errors.d.ts",
+      "default": "./lib/errors.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/errors.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -51,5 +62,24 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": ["workflow"]
+    }
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-agent": { "optional": true },
+    "@deepseek-ai/dsh-invariants": { "optional": true },
+    "@deepseek-ai/cordis": { "optional": true }
   }
 }

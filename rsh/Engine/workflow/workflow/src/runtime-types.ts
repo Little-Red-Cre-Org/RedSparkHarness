@@ -1,15 +1,14 @@
 /**
- * Host-only workflow request and live-run handles. The browser-safe durable
- * vocabulary remains in `./types` so Client programs never import Agent or
- * host Cordis context declarations.
+ * Host-only start request. The shared live-run handle and durable vocabulary
+ * remain in `./types` so native and Client consumers avoid the Agent type.
  *
  * @module @deepseek-ai/dsh-workflow
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {
-  WorkflowMeta, WorkflowResult, WorkflowRunId,
-} from './types.ts'
+import type { WorkflowMeta } from './types.ts'
+
+export type { WorkflowRun } from './types.ts'
 
 /**
  * What a caller asks for when starting a workflow run. `meta` and `args` are
@@ -31,19 +30,4 @@ export interface WorkflowStartRequest {
   parent: Agent
   /** Cancels the run when aborted. */
   signal?: AbortSignal
-}
-
-/**
- * Holder-owned live workflow. `result` never rejects; consumers may cancel
- * and must call idempotent `dispose()` to await script and child quiescence.
- */
-export interface WorkflowRun {
-  readonly id: WorkflowRunId
-  /** The validated meta block available before the script body runs. */
-  readonly meta: WorkflowMeta
-  readonly result: Promise<WorkflowResult>
-  /** Cancel the run and its children. */
-  cancel(reason?: string): void
-  /** Cancel if needed and await bounded settlement and cleanup. */
-  dispose(): Promise<void>
 }

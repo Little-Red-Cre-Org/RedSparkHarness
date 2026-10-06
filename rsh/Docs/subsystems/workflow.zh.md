@@ -6,7 +6,7 @@
 
 Service Definition：[dsh-workflow](../../Engine/workflow/workflow)（`ctx.workflowEngine` + 下文词汇）。Service Provider 是 [dsh-workflow-worker-thread](../../Engine/workflow/workflow-worker-thread)（一个 `node:worker_threads` 引擎——每个 run 一个 worker，脚本的 vm 上下文位于其中）；面向模型的 Consumer 是 [dsh-tool-workflow](../../Engine/workflow/tool-workflow)。提案与设计理由见 [dynamic-workflows Agent Note](../../../.agents/notes/implemented/feature/2026-07-05-dynamic-workflows.zh.md)。
 
-源码：浏览器安全词汇位于 [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts)，Host 请求与活跃运行句柄位于 [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts)。
+源码：浏览器安全词汇与 provider-neutral 的 `WorkflowRun` 句柄位于 [`rsh/Engine/workflow/workflow/src/types.ts`](../../Engine/workflow/workflow/src/types.ts)；仅 Host 使用的启动请求位于 [`runtime-types.ts`](../../Engine/workflow/workflow/src/runtime-types.ts)。
 
 ## 启动请求
 
@@ -92,12 +92,13 @@ interface WorkflowResult {
 
 ## 活跃运行：`WorkflowRun`
 
-脚本执行期间消费方持有的句柄。消费方会等待 `result`，可以在运行期间调用 `cancel`，并且必须在每条路径上调用 `dispose`（资源释放）。`result` 不会被拒绝：脚本失败会兑现为 `stopReason: 'error'`。运行被取消后，即使脚本本身永不结算，结果也会在引擎规定的有界宽限期内结算；引擎会强制将其结算为 `cancelled`，随后 worker-thread 引擎会终止脚本所在的 worker。因此，等待 `result` 的消费方不会在取消后无限期挂起。`dispose()` 会执行取消、等待有界结算并等待子 agent 完全停稳，不会因脚本卡死而挂起。
+脚本执行期间消费方持有的句柄。Cordis 与 native Definition 共用此 provider-neutral 运行类型；native 声明不依赖 Cordis 启动请求使用的 Agent 类型。消费方会等待 `result`，可以在运行期间调用 `cancel`，并且必须在每条路径上调用 `dispose`（资源释放）。`result` 不会被拒绝：脚本失败会兑现为 `stopReason: 'error'`。运行被取消后，即使脚本本身永不结算，结果也会在引擎规定的有界宽限期内结算；引擎会强制将其结算为 `cancelled`，随后 worker-thread 引擎会终止脚本所在的 worker。因此，等待 `result` 的消费方不会在取消后无限期挂起。`dispose()` 会执行取消、等待有界结算并等待子 agent 完全停稳，不会因脚本卡死而挂起。
 
 ```ts type-equiv
 /**
- * Holder-owned live workflow. `result` never rejects; consumers may cancel
- * and must call idempotent `dispose()` to await script and child quiescence.
+ * Holder-owned live workflow shared by Cordis and native Consumers. `result`
+ * never rejects; Consumers may cancel and must call idempotent `dispose()` to
+ * await the selected Provider's script and child cleanup policy.
  */
 interface WorkflowRun {
   readonly id: WorkflowRunId
@@ -106,7 +107,7 @@ interface WorkflowRun {
   readonly result: Promise<WorkflowResult>
   /** Cancel the run and its children. */
   cancel(reason?: string): void
-  /** Cancel if needed and await bounded settlement and cleanup. */
+  /** Cancel if needed and await script termination and the Provider's owned child cleanup. */
   dispose(): Promise<void>
 }
 ```

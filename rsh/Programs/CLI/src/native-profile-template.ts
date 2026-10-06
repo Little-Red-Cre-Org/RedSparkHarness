@@ -17,6 +17,16 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session', config: { maxFollowBufferChars: 1000000 } },
 ] as const
 
+const NATIVE_WORKFLOW_INSTALLATIONS = [
+  { id: 'workflow', plugin: '@deepseek-ai/dsh-workflow', scope: ROOT },
+  { id: 'workflow-worker', plugin: '@deepseek-ai/dsh-workflow-worker-thread', scope: ROOT,
+    config: { subagentProvider: 'spawn' } },
+  { id: 'workflow-tool', plugin: '@deepseek-ai/dsh-tool-workflow', scope: ROOT,
+    config: { provider: 'worker-thread' } },
+  { id: 'ralph-tool', plugin: '@deepseek-ai/dsh-tool-ralph', scope: ROOT,
+    config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' } },
+] as const
+
 function cliRuntimeRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
@@ -56,6 +66,7 @@ export function shippedNativeProfileComposition(
       { id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: ROOT },
       { id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: ROOT,
         config: { toolName: 'subagent', maxDepth: 3 } },
+      ...NATIVE_WORKFLOW_INSTALLATIONS,
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
@@ -101,6 +112,8 @@ export function shippedNativeProfileComposition(
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },
+      { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT, config: { providerName: 'spawn' } },
+      ...NATIVE_WORKFLOW_INSTALLATIONS,
       { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
         config: { maxBytes: 65_536 } },
       { id: 'time-context', plugin: '@deepseek-ai/dsh-native-time-context', scope: ROOT },
