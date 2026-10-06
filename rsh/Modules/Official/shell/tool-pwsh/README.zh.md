@@ -11,6 +11,8 @@ kind: "package-reference"
 
 `dsh-tool-pwsh` 通过已挂载的 shell 执行器运行 PowerShell 命令。`./native` 入口基于原生 shell、任务、审批和环境服务注册同一工具。每次调用都启动全新 pwsh 进程；`run_in_background` 创建受管理的后台任务。命令使用原生 `C:\...` 路径与 `$env:NAME` 变量。每次调用都接收受管 `DSH_*` 环境。在沙箱执行器下，工具向模型说明 Windows 语言模式和命名管道限制。请与 PowerShell 执行器及 `dsh-shell-env` 一起挂载。
 
+Cordis 入口会导入 `dsh-tools`；`./native` 入口使用 `dsh-native-tools`，不会导入旧注册表。仅使用 Native 入口的消费者可以省略可选的 `dsh-tools` peer；加载默认入口的 Cordis 组合必须安装该包。
+
 ## 目录
 
 - [使用本包](#use-this-package)

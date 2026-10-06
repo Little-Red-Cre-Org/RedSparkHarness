@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `dsh-tool-pwsh` runs PowerShell commands through the mounted shell executor. Its `./native` entry registers the same tool over native shell, job, approval, and environment services. Each call starts a fresh pwsh process; `run_in_background` creates a managed job. Commands use native `C:\...` paths and `$env:NAME` variables. Every call receives the managed `DSH_*` environment. Under a sandboxing executor, the tool describes Windows language-mode and named-pipe restrictions. Mount it with a PowerShell executor and `dsh-shell-env`.
 
+The Cordis entry imports `dsh-tools`; the `./native` entry uses `dsh-native-tools` and does not import the legacy registry. A Native-only consumer can omit the optional `dsh-tools` peer, while a Cordis composition that loads the default entry must install it.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)
