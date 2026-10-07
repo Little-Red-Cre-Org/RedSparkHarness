@@ -27,7 +27,7 @@ Use this provider when a native Host profile permits `run_code` under `read-only
 <a id="use-this-package"></a>
 ## Use this package
 
-Select the Host `./native` entry beside `dsh-subprocess-local`, `dsh-sandbox-local`, and `dsh-native-sandbox-policy` in an explicitly native `dsh` profile. Its application and sandbox policy must use the same workspace root. This package does not change the default application profile. Its optional `computeMs`, `maxWallMs`, `maxOutputBytes`, and `maxOldGenerationSizeMb` settings use the validated defaults documented by [the code-runtime definition](../../../../Engine/core/native-code-runtime/README.md#configuration).
+Select the Host `./native` entry beside `dsh-subprocess-local`, `dsh-sandbox-local`, and `dsh-native-sandbox-policy` in an explicitly native `dsh` profile. Its application and sandbox policy must use the same workspace root. This package does not change the default application profile. Its optional `computeMs`, `maxWallMs`, `maxOutputBytes`, and `maxOldGenerationSizeMb` settings use the validated defaults documented by [the code-runtime definition](../native-code-runtime/README.md#configuration).
 
 An unavailable runner fails with `SANDBOX_UNAVAILABLE`. A program exception, time budget, abort, invalid JSON value, or output cap returns a structured `run_code` failure; Host shutdown terminates the managed process range before completing.
 
@@ -39,7 +39,7 @@ An unavailable runner fails with `SANDBOX_UNAVAILABLE`. A program exception, tim
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The provider asks `ProcessSandbox.confine()` to wrap the exact Node child command and starts it through `SubprocessOperations`. The child uses the native worker-thread runtime to preserve TypeScript parsing, compute metering, output limits, and hard worker cancellation. JSON lines carry the program, declared binding calls, replies, and one result; the parent validates child frames and resolves only declared host functions. The subprocess service owns process-range termination and quiescence. See [the provider](src/index.ts), [the private child](../../../../Engine/core/native-code-runtime/src/process-child.ts), and [the sandbox definition](../../sandbox/sandbox/src/native.ts).
+The provider asks `ProcessSandbox.confine()` to wrap the exact Node child command and starts it through `SubprocessOperations`. The child uses the native worker-thread runtime to preserve TypeScript parsing, compute metering, output limits, and hard worker cancellation. JSON lines carry the program, declared binding calls, replies, and one result; the parent validates child frames and resolves only declared host functions. The subprocess service owns process-range termination and quiescence. See [the provider](src/index.ts), [the private child](../native-code-runtime/src/process-child.ts), and [the sandbox definition](../../sandbox/sandbox/src/native.ts).
 
 </details>
 
@@ -48,7 +48,7 @@ The provider asks `ProcessSandbox.confine()` to wrap the exact Node child comman
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [Native code runtime](../../../../Engine/core/native-code-runtime/README.md) — program and result semantics.
+- [Native code runtime](../native-code-runtime/README.md) — program and result semantics.
 - [Native headless application](../../../../Engine/core/native-headless/README.md) — `run_code` Session projection.
 - [Local sandbox](../../sandbox/sandbox-local/README.md) — OS enforcement and runner diagnostics.
 - [Subprocess operations](../../../../Core/subprocess/subprocess/README.md) — managed process lifetime.

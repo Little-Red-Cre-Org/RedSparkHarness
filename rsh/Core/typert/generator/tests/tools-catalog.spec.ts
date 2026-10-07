@@ -6,6 +6,8 @@ import { Context } from '@deepseek-ai/cordis'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
 import { EVENT_API, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
+import { hostInspectProviders } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
+import type { HostCordisInspectQueryContext } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
 import { FaceModelEmitter } from '../src/emitter.ts'
 
@@ -17,6 +19,37 @@ afterEach(() => {
 })
 
 describe('model-driven dsh-tools generation', () => {
+  it('returns the specialized approval Service and its public types through Host Inspect', async () => {
+    const provider = hostInspectProviders(new Context()).find(candidate => candidate.manifest.id === 'Service')
+    if (provider === undefined) throw new Error('Host Inspect has no Service provider')
+    const result = await provider.query('listService', { service: 'approval' }, {
+      signal: new AbortController().signal,
+      agent: { id: 'approval-catalog' as HostCordisInspectQueryContext['agent']['id'] },
+    }) as {
+      service: { methods: readonly { signature: string; description: string; throws?: readonly string[] }[] }
+      referencedTypes: readonly { name: string; declaration: string }[]
+    }
+
+    const methods = result.service.methods
+    expect(methods.map(method => method.signature)).toEqual(expect.arrayContaining([
+      'setPolicy(agent: Agent, policy: ApprovalPolicy): void',
+      'request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>',
+    ]))
+    const request = methods.find(method => method.signature === 'request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>')
+    expect(request?.description).toContain('open Session turn')
+    expect(request?.description).toContain('approval/asked')
+    expect(request?.description).toContain('approval/decided')
+    expect(request?.description).toContain('reject before appending')
+    expect(request?.description).toContain('failure before either audit append commits rejects the request')
+    expect(request?.throws).toEqual(expect.arrayContaining([
+      'When the Session has no open turn or either audit append fails before commit.',
+    ]))
+    expect(result.referencedTypes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'ApprovalRequest', declaration: expect.stringContaining('interface ApprovalRequest') }),
+      expect.objectContaining({ name: 'Agent', declaration: expect.stringContaining('interface Agent') }),
+    ]))
+  })
+
   it('round-trips the complete service and event structure through the runtime registry', { timeout: 30_000 }, async () => {
     const workspace = new WorkspaceAnalyzer({
       root: workspaceRoot,

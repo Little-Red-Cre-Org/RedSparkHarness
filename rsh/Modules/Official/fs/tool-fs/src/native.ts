@@ -7,7 +7,7 @@ import type { AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type {} from '@deepseek-ai/dsh-native-approval/native'
+import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type { NativeValueToolContribution, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
 import {

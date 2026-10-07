@@ -794,7 +794,11 @@ export const CORDIS_CATALOG_POLICY: CordisCatalogPolicy = {
   linkedTypePages: LINK_MAP,
   foundationTypeNames: FOUNDATION_TYPE_NAMES,
   typeLinkExemptions: TYPE_LINK_EXEMPTIONS,
-  serviceDefinitionPackages: ['@deepseek-ai/dsh-settings-definition'],
+  serviceDefinitionPackages: [
+    '@deepseek-ai/dsh-settings-definition',
+    '@deepseek-ai/dsh-approval-definition',
+    '@deepseek-ai/dsh-code-runtime-definition',
+  ],
   runtimeServiceExclusions: new Set(['cordisInspect', 'dynamicCordisRunner']),
   runtimeServices: [{
     key: 'timer',

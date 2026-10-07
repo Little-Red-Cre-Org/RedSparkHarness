@@ -18,7 +18,7 @@
       "path": "../native-model-execution/tsconfig.host.json"
     },
     {
-      "path": "../native-code-runtime"
+      "path": "../code-runtime-definition"
     },
     {
       "path": "../../context/native-time-context"
@@ -33,7 +33,7 @@
       "path": "../../../Modules/Official/sandbox/native-sandbox-policy"
     },
     {
-      "path": "../../../Modules/Official/interaction/native-approval"
+      "path": "../approval-definition"
     },
     {
       "path": "../../../Core/runtime-diagnostics/native-runtime"

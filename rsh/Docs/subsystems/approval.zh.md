@@ -2,47 +2,32 @@
 
 [English](approval.md) | 中文
 
-[dsh-user-approval](../../Modules/Official/interaction/user-approval) 的用户审批 seam 回答一个问题：这个具体操作是否可以继续？它拥有共享的请求/结果词汇、`ctx.approval` 分发服务、`approval/request` 应答者 waterfall（瀑布式事件）、仅记录日志的审计事件对，以及按会话的 `ask`/`never` 策略。UI 通道可以提供人类应答者；[ACP（Agent Client Protocol）自动化桥接层](../../Programs/ACP/packages/acp)为其拥有的 agent（智能体）提供一次性机器决策。调用方如 [dsh-tools](../../Engine/core/tools) 和 [dsh-tool-bash](../../Modules/Official/shell/tool-bash) 消费闭合的结果，除非结果为 `allowed-once`，否则一律拒绝。
+[compat-user-approval](../../Compatibility/DSH/bridge/compat-user-approval) 的审批 seam 回答一个问题：这个具体操作是否可以继续？框架无关的审批 Definition 拥有共享请求/结果词汇和持久化策略投影；兼容包提供 `ctx.approval` 分发服务与 `approval/request` 应答者 waterfall（瀑布式事件）。UI 通道可以提供人类应答者；[ACP（Agent Client Protocol）自动化桥接层](../../Programs/ACP/packages/acp)为其拥有的 agent（智能体）提供一次性机器决策。调用方如 [dsh-tools](../../Engine/core/tools) 和 [dsh-tool-bash](../../Modules/Official/shell/tool-bash) 消费闭合的结果，除非结果为 `allowed-once`，否则一律拒绝。
 
-源码：[`rsh/Modules/Official/interaction/user-approval/src/index.ts`](../../Modules/Official/interaction/user-approval/src/index.ts)
+源码：[`rsh/Compatibility/DSH/bridge/compat-user-approval/src/index.ts`](../../Compatibility/DSH/bridge/compat-user-approval/src/index.ts)
 
 ## 标识与结果
 
 每个请求都会获得一个全新的 `ApprovalRequestId`。该品牌类型将 `approval/asked` 与 `approval/decided` 审计事件配对，同时不会让审批 id 与工具调用 id 或 agent/会话 id 互换。
 
 ```ts type-equiv
-/**
- * Pairs one `approval/asked` audit event with its `approval/decided`.
- * Service-issued (one fresh id per {@link ApprovalService.request} call).
- */
+/** Opaque identity pairing one compatibility approval question with its decision. */
 type ApprovalRequestId = Branded<'ApprovalRequestId'>
 ```
 
 `ApprovalOutcome` 是闭合的，且失败时拒绝。`allowed-once` 仅授权所询问的那一个操作；调用方对 `rejected`、`cancelled` 和 `unavailable` 均执行拒绝。缺失、不负责该请求、抛异常或不合规的应答者会产生 `unavailable`，而非放行。
 
 ```ts type-equiv
-/**
- * Closed approval outcomes: a one-shot grant, explicit rejection, withdrawn
- * request, or unavailable answerer. Callers fail closed on `unavailable`.
- */
+/** One-shot outcome returned by the compatibility answerer chain. */
 type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
 ```
 
 ## 按会话策略
 
-`ApprovalPolicy` 决定在交互式应答者运行之前发生什么。`ask` 委托给组合的应答者链，链的无应答默认值为 `unavailable`；`never` 确定性地返回 `rejected`，不分发任何应答者。生效值为会话日志中最后一条 `approval/policy` 事件，回退到服务配置。消费方通过 `ctx.approval.effectivePolicy(session)` 读取；`setApprovalPolicy(session, policy)` 是唯一的写入路径，因此回放能重建覆盖值。
+`ApprovalPolicy` 决定在交互式应答者运行之前发生什么。`ask` 委托给组合的应答者链，链的无应答默认值为 `unavailable`；`never` 确定性地返回 `rejected`，不分发任何应答者。生效值为 Session 日志中最后一条 `approval/policy` 事件，回退到服务配置。兼容服务通过 `overrideOf(session)` 读取显式覆盖；运行期间的变更调用 `ctx.approval.setPolicy(agent, policy)`，初始策略则通过 `setApprovalPolicy(session, policy)` 追加。
 
 ```ts type-equiv
-/**
- * A session's approval policy — what happens to an {@link ApprovalService}
- * ask BEFORE any interactive answerer sees it:
- *
- * - `'ask'` (the default) — delegate to the composed answerers; with none
- *   composed the chain falls through to the fail-closed `'unavailable'`.
- * - `'never'` — never prompt anyone: every ask resolves `'rejected'`
- *   deterministically. The strict headless stance (CI, unattended runs) and
- *   the policy whose outcome is knowable without asking.
- */
+/** Per-Session policy accepted by compatibility approval consumers. */
 type ApprovalPolicy = 'ask' | 'never'
 ```
 
@@ -50,33 +35,15 @@ type ApprovalPolicy = 'ask' | 'never'
 
 ## 审批请求
 
-`ApprovalRequest` 以足够精确的方式标识 agent 和工具操作，以便路由和审计该问题。它有意省略工具参数：应答者通过 `callId` 将提示附加到已流式输出的工具调用上，而非渲染另一份可能漂移的副本。
+`ApprovalRequest<AgentOwner>` 标识请求所有者与工具操作，但不会把 Agent 实现引入纯 Definition。兼容 API 将 `AgentOwner` 专化为完整的 scoped `Agent`，保留服务所用的实时 Session 与注入操作。请求有意省略工具参数：应答者通过 `callId` 将提示附加到已流式输出的工具调用上，而非渲染另一份可能漂移的副本。
 
 ```ts type-equiv
-/**
- * Readonly same-process permission question. `callId` links to an already
- * presented tool call, so arguments are not duplicated here.
- */
-interface ApprovalRequest extends ApprovalRequestEvent {
-  /**
-   * The agent on whose behalf the question is asked. Routes the question (a
-   * UI answerer only answers for agents it owns) and receives the audit
-   * events on its session log.
-   */
-  readonly agent: Agent
-  /** The tool the question is about (presentation and audit). */
+/** Framework-free request passed to the compatibility approval service. */
+interface ApprovalRequest<AgentOwner> {
+  readonly agent: AgentOwner
   readonly toolName: string
-  /**
-   * The exact tool call being decided, when the asker has one — lets a UI
-   * attach the prompt to the tool call it already streamed.
-   */
   readonly callId?: ToolCallId
-  /** The asker's human-readable explanation of WHY it is asking. */
   readonly reason?: string
-  /**
-   * Aborting withdraws the question: the request settles `'cancelled'`
-   * immediately and a late answer from a still-pending answerer is discarded.
-   */
   readonly signal?: AbortSignal
 }
 ```
@@ -103,53 +70,45 @@ interface ApprovalRequest extends ApprovalRequestEvent {
 
 Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
-<a id="ctxapproval--approvalservice"></a>
+<a id="ctxapproval--approvalservicedefinition"></a>
 
-### `ctx.approval` — `ApprovalService`
+### `ctx.approval` — `ApprovalServiceDefinition`
 
-Approval service that applies session policy before answerers and logs every ask/outcome pair to the requesting session. It exposes deterministic policy changes to the model through the runtime-context snapshot and switch notices.
+Cordis implementation specialized to the exact scoped Agent owner.
 
 ```ts cordis-catalog
 /**
- * Switch one live agent's policy and queue the transition for its next model
- * step. Session initialization uses {@link setApprovalPolicy} directly
- * because there is no previously visible policy to change.
- * @param agent - the live agent whose policy is changing.
- * @param policy - the new effective policy.
+ * Set the durable per-Session approval policy for the live agent.
+ * @param agent - live agent whose policy changes.
+ * @param policy - next effective policy.
  */
 setPolicy(agent: Agent, policy: ApprovalPolicy): void
 
 /**
- * Ask the composed answerers to decide one readonly same-process request.
- * The service borrows the request, agent, session, and live signal directly.
- * The request requires an open turn because the audit pair must be enclosed
- * by the durable log's commit/replay boundary; an idle ask rejects before
- * appending anything. The answerer phase always produces an outcome: an
- * aborted signal yields `'cancelled'`, a missing or throwing answerer yields
- * `'unavailable'` (fail closed), and a rogue non-vocabulary return value is
- * normalized to `'unavailable'`. A failure that prevents either audit append
- * from committing still rejects because returning an unlogged decision would
- * violate the pair. Session contains post-commit observer failures, so an
- * authoritative append cannot reject the request or suppress its matching
- * audit event.
- * @param req - the pending decision (agent, tool identity, reason, signal).
- * @returns the closed outcome; `'allowed-once'` is the only grant.
- * @throws when no turn is open or either audit event fails before the session
- *   append commit point.
+ * Ask the compatibility answerer chain for a decision inside the Agent's
+ * open Session turn. The Provider appends `approval/asked` before dispatch
+ * and `approval/decided` after the normalized outcome so the audit pair is
+ * enclosed by that turn's durable log boundary. Calls made while no turn is
+ * open reject before appending; a failure before either audit append commits
+ * rejects the request. Post-commit observer failures are contained by
+ * Session and do not reject the request or suppress its matching event.
+ * @param request - exact operation and owner needing a decision.
+ * @returns the fail-closed outcome.
+ * @throws When the Session has no open turn or either audit append fails before commit.
  */
-async request(req: ApprovalRequest): Promise<ApprovalOutcome>
+request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>
 
 /**
- * Read the session override without applying the configured default.
- * @param session - session whose log supplies the override.
- * @returns the last logged policy, or `undefined` without one.
+ * Read the explicit policy override recorded in the Session log.
+ * @param session - Session with the durable policy fold.
+ * @returns the explicit override or undefined.
  */
 overrideOf(session: Session): ApprovalPolicy | undefined
 ```
 
 Types: [Agent](core.zh.md) · [Session](session.zh.md)
 
-Source: [`rsh/Modules/Official/interaction/user-approval/src/index.ts`](../../Modules/Official/interaction/user-approval/src/index.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-user-approval/src/types.ts`](../../Compatibility/DSH/bridge/compat-user-approval/src/types.ts)
 
 <a id="approval-events"></a>
 
@@ -159,13 +118,12 @@ Source: [`rsh/Modules/Official/interaction/user-approval/src/index.ts`](../../Mo
 
 #### `approval/request` — waterfall
 
-Ask composed answerers for one decision. Return an outcome to claim the request or call `next()` to delegate. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
+Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent's scope.
 
 ```ts cordis-catalog
 /**
- * Ask composed answerers for one decision. Return an outcome to claim the
- * request or call `next()` to delegate. Scope-filtered dispatch
- * (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
+ * Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate.
+ * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent's scope.
  * @param req - pending approval request.
  * @mode waterfall
  */
@@ -174,5 +132,5 @@ Ask composed answerers for one decision. Return an outcome to claim the request 
 
 Types: [Agent](core.zh.md) · [Scoped](scope.zh.md)
 
-Source: [`rsh/Modules/Official/interaction/user-approval/src/types.ts`](../../Modules/Official/interaction/user-approval/src/types.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-user-approval/src/types.ts`](../../Compatibility/DSH/bridge/compat-user-approval/src/types.ts)
 <!-- END GENERATED cordis-surface -->

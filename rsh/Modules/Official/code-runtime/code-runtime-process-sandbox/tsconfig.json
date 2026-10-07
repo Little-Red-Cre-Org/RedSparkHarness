@@ -15,7 +15,7 @@
       "path": "../../../../Core/subprocess/subprocess"
     },
     {
-      "path": "../../../../Engine/core/native-code-runtime"
+      "path": "../native-code-runtime"
     },
     {
       "path": "../../sandbox/sandbox"

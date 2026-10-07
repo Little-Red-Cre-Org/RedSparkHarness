@@ -12,7 +12,7 @@ import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
-import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
 import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
@@ -40,7 +40,7 @@ async function fixture(
   let agents: NativeAgentRegistry | undefined
   let tools: NativeToolRegistry | undefined
   let rootExecution: NativeRootExecutionOperations | undefined
-  let approval: NativeApprovalService | undefined
+  let approval: NativeApprovalServiceDefinition | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },

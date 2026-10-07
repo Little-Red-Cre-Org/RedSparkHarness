@@ -33,7 +33,10 @@
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../../../Modules/Official/interaction/user-approval"
+      "path": "../../../Compatibility/DSH/bridge/compat-user-approval"
+    },
+    {
+      "path": "../../core/approval-definition"
     },
     {
       "path": "../../preset/agent-presets/tsconfig.host.json"

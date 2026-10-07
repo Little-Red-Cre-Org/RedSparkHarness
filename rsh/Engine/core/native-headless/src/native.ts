@@ -28,8 +28,6 @@ import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
-import type {} from '@deepseek-ai/dsh-native-approval/native'
-import type {} from '@deepseek-ai/dsh-native-code-runtime/native'
 import type {} from '@deepseek-ai/dsh-native-time-context/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
@@ -38,8 +36,12 @@ import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import { NativeApprovalRequestId, type NativeApprovalOutcome, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
-import type { NativeCodeRuntime } from '@deepseek-ai/dsh-native-code-runtime'
+import {
+  NativeApprovalRequestId,
+  type NativeApprovalOutcome,
+  type NativeApprovalServiceDefinition,
+} from '@deepseek-ai/dsh-approval-definition'
+import type { NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
 import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import {
@@ -288,7 +290,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly tools: NativeToolRegistry | undefined,
     private readonly promptSections: NativePromptRegistry | undefined,
     private readonly sandboxPolicy: NativeSandboxPolicy | undefined,
-    private readonly approval: NativeApprovalService | undefined,
+    private readonly approval: NativeApprovalServiceDefinition | undefined,
     private readonly codeRuntime: NativeCodeRuntime | undefined,
     private readonly timeContext: NativeTimeContext | undefined,
     private readonly sessionExecution?: NativeSessionExecutionOperations,

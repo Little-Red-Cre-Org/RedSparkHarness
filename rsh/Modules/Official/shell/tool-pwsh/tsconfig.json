@@ -57,7 +57,7 @@
       "path": "../shell-env"
     },
     {
-      "path": "../../interaction/user-approval"
+      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
     },
     {
       "path": "../../sandbox/sandbox"

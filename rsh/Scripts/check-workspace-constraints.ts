@@ -154,6 +154,7 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
   '@deepseek-ai/dsh-commands': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-goal': ['lib/native.js', 'lib/projection.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
@@ -691,18 +692,6 @@ const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
     section: 'peerDependencies',
     dependency: '@deepseek-ai/dsh-host-webserver',
     reason: 'The GitHub webhook adapter integrates with the current Web host API.',
-  },
-  {
-    consumer: '@deepseek-ai/dsh-tools',
-    section: 'peerDependencies',
-    dependency: '@deepseek-ai/dsh-user-approval',
-    reason: 'The tool execution pipeline consumes the published approval capability until interaction contracts move to Engine.',
-  },
-  {
-    consumer: '@deepseek-ai/dsh-tools',
-    section: 'peerDependencies',
-    dependency: '@deepseek-ai/dsh-code-runtime',
-    reason: 'The tool registry carries the existing code-runtime execution integration while that capability remains an official module.',
   },
 ]
 
