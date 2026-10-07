@@ -5,7 +5,8 @@ import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtim
 import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk, type MessageId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import { NativeSubagentContinuations } from './continuation.ts'
-import type { NativeDelegationSetup, NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOwner, NativeDelegationSetup,
+  NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeJobId, NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
 import { assertObjectJsonSchema, type ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
@@ -14,6 +15,12 @@ import { attachNativeStructuredOutput, type NativeStructuredAttachment } from '.
 import type {} from '@deepseek-ai/dsh-native-prompt'
 import type {} from '@deepseek-ai/dsh-native-tools'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativeExternalSubagentDriver, NativeExternalSubagentFinishedEvent, NativeExternalSubagentId,
+  NativeExternalSubagentOutcome, NativeExternalSubagentRequest, NativeExternalSubagentResult,
+  NativeExternalSubagentRouteOverrides, NativeExternalSubagentStartedEvent, NativeExternalSubagentRouteField,
+  NativeSubagentStopReason } from './external-driver.ts'
+
+export type * from './external-driver.ts'
 
 /** Explicit deployment choices for one fresh child. */
 export interface NativeSubagentOptions {
@@ -39,6 +46,8 @@ export interface NativeSubagentRequest {
   readonly prompt: readonly ContentBlock[]
   readonly config: NativeSessionConfiguration
   readonly maxDepth: number
+  /** Explicit product route overrides; an external Provider never receives its parent route or identity objects. */
+  readonly routeOverrides: NativeExternalSubagentRouteOverrides
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
   readonly outputSchema?: ObjectJsonSchema
@@ -51,7 +60,7 @@ export interface NativeSubagentResult {
   readonly output: readonly ContentBlock[]
   /** Accepted schema-valid structured_output value when requested and committed. */
   readonly structured?: unknown
-  readonly stopReason: 'completed' | 'max-tokens' | 'aborted' | 'refusal' | 'error'
+  readonly stopReason: NativeSubagentStopReason
 }
 
 /** One admitted one-shot child whose real Session identity is published after initial facts persist. */
@@ -69,11 +78,32 @@ export interface NativeSubagentFinished {
   readonly result: NativeSubagentResult
 }
 
+/** One external child after its real provider handshake and durable parent lineage commit. */
+export interface NativeExternalSubagentStarted {
+  readonly parentAgent: NativeAgent
+  readonly parentSession: Session
+  readonly event: NativeExternalSubagentStartedEvent
+}
+
+/** Exact parent and durable terminal fact after external range cleanup. */
+export interface NativeExternalSubagentFinished {
+  readonly parentAgent: NativeAgent
+  readonly parentSession: Session
+  readonly event: NativeExternalSubagentFinishedEvent
+  readonly result?: NativeExternalSubagentResult
+}
+
 /** Observer of settled in-process child results; returned promises are observed without delaying settlement.
  * @param finished - exact parent and child result.
  * @returns optional asynchronous observer work; the Provider does not await it.
  */
 export type NativeSubagentFinishedListener = (finished: NativeSubagentFinished) => void | Promise<void>
+
+/** Observer of durably published external child identities. */
+export type NativeExternalSubagentStartedListener = (started: NativeExternalSubagentStarted) => void | Promise<void>
+
+/** Observer of external terminal facts after the parent writer flushed the cleanup fact. */
+export type NativeExternalSubagentFinishedListener = (finished: NativeExternalSubagentFinished) => void | Promise<void>
 
 /** Published Agent-owned child after its first durable turn facts are committed. */
 export interface NativeSubagentBackground {
@@ -121,6 +151,10 @@ export interface NativeSubagentOperations {
    * @returns idempotent observer removal; synchronous throws and rejected observer promises are reported without changing child settlement.
    */
   onFinished(listener: NativeSubagentFinishedListener): () => void
+  /** Observe external children after the selected writer flushed their Native lineage fact. */
+  onExternalStarted(listener: NativeExternalSubagentStartedListener): () => void
+  /** Observe external terminal facts after the owned process range is quiescent and the parent writer flushed. */
+  onExternalFinished(listener: NativeExternalSubagentFinishedListener): () => void
   /**
    * Resolve the latest logged parent route, budgets and scoped deployment choices.
    * @param request - exact active initiating parent, prompt and deployment policy.
@@ -139,7 +173,7 @@ export interface NativeSubagentOperations {
    * @param signal - caller cancellation, owning execution through final cleanup.
    * @returns actual output and terminal reason after writer and resource release.
    */
-  run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult>
+  run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult | NativeExternalSubagentResult>
   /**
    * Publish one child handle only after the selected executor reports durable initial readiness.
    * @param request - resolved child composition.
@@ -187,6 +221,27 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   }
 }
 
+interface ExternalAdmission {
+  readonly request: NativeSubagentRequest
+  readonly driver: NativeExternalSubagentDriver
+  readonly parent: NativeActiveSessionOwner
+  readonly root: NativeActiveSessionOwner
+  readonly parentEpoch: string
+  readonly rootEpoch: string
+  state: 'issued' | 'consumed'
+}
+
+interface ExternalOperation {
+  readonly parent: NativeActiveSessionOwner
+  readonly root: NativeActiveSessionOwner
+  readonly controller: AbortController
+  readonly settled: PromiseWithResolvers<void>
+  readonly drainFailures: unknown[]
+}
+
+type ExternalCleanup = { readonly kind: 'quiescent' } | { readonly kind: 'failed'; readonly error: unknown }
+interface ExternalDrainFailure { readonly error: unknown }
+
 function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['stopReason'] {
   switch (reason?.kind) {
     case 'completed': return 'completed'
@@ -203,10 +258,27 @@ function stopReason(reason: TurnEndReason | undefined): NativeSubagentResult['st
 export class NativeSpawnSubagents implements NativeSubagentOperations {
   private readonly pending = new Map<Promise<unknown>, AbortSignal>()
   private readonly finished = new Set<NativeSubagentFinishedListener>()
+  private readonly externalStarted = new Set<NativeExternalSubagentStartedListener>()
+  private readonly externalFinished = new Set<NativeExternalSubagentFinishedListener>()
+  private readonly externalOperations = new Set<ExternalOperation>()
+  private externalDrainFailure: ExternalDrainFailure | undefined
+  private readonly ownerDrains = new WeakMap<NativeActiveSessionOwner, Promise<void>>()
+  private readonly ownerDrainFailures = new WeakMap<NativeActiveSessionOwner, ExternalDrainFailure>()
+  private readonly epochs = new WeakMap<NativeActiveSessionOwner, string>()
+  private readonly externalAdmissions = new WeakMap<NativeSubagentRequest, ExternalAdmission>()
+  private readonly externalDriver: NativeExternalSubagentDriver | undefined
   private readonly continuations: NativeSubagentContinuations
   private readonly cancellation = new AbortController()
+  private readonly removeDetached: () => Promise<void>
   private closing = false
+  private disposal: Promise<void> | undefined
   constructor(private readonly context: NativeContext, readonly providerName: string) {
+    const driver = context.optional('externalSubagentDriver')
+    if (providerName === 'spawn' ? driver !== undefined : driver === undefined || driver.name !== providerName) {
+      throw new Error(`native-subagent: providerName "${providerName}" does not select the installed external driver`)
+    }
+    this.externalDriver = driver
+    this.removeDetached = context.require('activeSessions').onDetached(owner => this.closeExternalForOwner(owner))
     this.continuations = new NativeSubagentContinuations(context, providerName, (request, setup) => { this.prepare(request, setup) },
       (event) => { this.publishFinished(event) })
   }
@@ -222,6 +294,20 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
     this.finished.add(listener)
     return () => { this.finished.delete(listener) }
+  }
+
+  /** @inheritdoc */
+  onExternalStarted(listener: NativeExternalSubagentStartedListener): () => void {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.externalStarted.add(listener)
+    return () => { this.externalStarted.delete(listener) }
+  }
+
+  /** @inheritdoc */
+  onExternalFinished(listener: NativeExternalSubagentFinishedListener): () => void {
+    if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.externalFinished.add(listener)
+    return () => { this.externalFinished.delete(listener) }
   }
 
   /** @inheritdoc */
@@ -242,25 +328,55 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       assertObjectJsonSchema(options.outputSchema)
       if (this.context.optional('tools') === undefined) throw new Error('native-subagent: outputSchema requires tools')
     }
-    return { agent, session, label: request.label, prompt: [...request.prompt], maxDepth: options.maxDepth,
-      config: { cwd: parent.cwd, provider, model, systemPrompt: parent.systemPrompt,
+    const routeOverrides: NativeExternalSubagentRouteOverrides = {
+      ...options.provider === undefined ? {} : { provider: options.provider },
+      ...options.model === undefined ? {} : { model: options.model },
+      ...options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort },
+    }
+    const canonical: NativeSubagentRequest = Object.freeze({ agent, session, label: request.label,
+      prompt: structuredClone(request.prompt), maxDepth: options.maxDepth,
+      config: Object.freeze({ cwd: parent.cwd, provider, model, systemPrompt: parent.systemPrompt,
         maxSteps: options.maxSteps ?? parent.maxSteps, builtinTools: false,
-        ...reasoningEffort === undefined ? {} : { reasoningEffort }, ...maxTokens === undefined ? {} : { maxTokens } },
+        ...reasoningEffort === undefined ? {} : { reasoningEffort }, ...maxTokens === undefined ? {} : { maxTokens } }),
+      routeOverrides: Object.freeze(routeOverrides),
       ...options.persona === undefined ? {} : { persona: options.persona },
-      ...options.toolFilter === undefined ? {} : { toolFilter: options.toolFilter },
-      ...options.outputSchema === undefined ? {} : { outputSchema: structuredClone(options.outputSchema) } }
+      ...options.toolFilter === undefined ? {} : { toolFilter: structuredClone(options.toolFilter) },
+      ...options.outputSchema === undefined ? {} : { outputSchema: structuredClone(options.outputSchema) } })
+    const resolved: NativeSubagentRequest = Object.freeze({ ...canonical, prompt: structuredClone(canonical.prompt),
+      config: Object.freeze({ ...canonical.config }), routeOverrides: Object.freeze({ ...canonical.routeOverrides }),
+      ...canonical.toolFilter === undefined ? {} : { toolFilter: structuredClone(canonical.toolFilter) },
+      ...canonical.outputSchema === undefined ? {} : { outputSchema: structuredClone(canonical.outputSchema) } })
+    if (this.externalDriver !== undefined) {
+      const owners = this.captureExternalOwners(agent, session)
+      const admission: ExternalAdmission = { request: canonical, driver: this.externalDriver,
+        parent: owners.parent, root: owners.root, parentEpoch: this.epoch(owners.parent), rootEpoch: this.epoch(owners.root), state: 'issued' }
+      this.assertExternalAdmission(admission)
+      this.externalAdmissions.set(resolved, admission)
+    }
+    return resolved
   }
 
   /** @inheritdoc */
-  run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult> {
+  run(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentResult | NativeExternalSubagentResult> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
+    const driver = this.externalDriver
+    if (driver !== undefined) {
+      const admission = this.externalAdmissions.get(request)
+      if (admission === undefined || admission.state !== 'issued' || admission.driver !== driver) {
+        throw new Error('native-subagent: external child requires an unused request issued by this Provider')
+      }
+      this.assertExternalAdmission(admission)
+      admission.state = 'consumed'
+      return this.track(this.executeExternal(admission, effective), effective)
+    }
     return this.track(this.execute(request, effective), effective)
   }
 
   /** @inheritdoc */
   async start(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentRun> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.assertSessionBackedProvider()
     signal.throwIfAborted()
     const cancellation = new AbortController()
     const effective = AbortSignal.any([signal, this.context.signal, cancellation.signal, this.cancellation.signal])
@@ -291,6 +407,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   /** @inheritdoc */
   async startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.assertSessionBackedProvider()
     const jobs = this.backgroundJobs
     if (jobs === undefined) throw new Error('native-subagent: background execution requires jobs')
     signal.throwIfAborted()
@@ -337,6 +454,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   /** @inheritdoc */
   startContinuable(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentContinuation> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    this.assertSessionBackedProvider()
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
     return this.track(this.continuations.start(request, effective), effective)
   }
@@ -361,6 +479,215 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     this.continuations.interrupt(request.agent, request.session, request.target)
   }
 
+  private assertSessionBackedProvider(): void {
+    if (this.externalDriver !== undefined) {
+      throw new Error(`native-subagent: "${this.providerName}" provides external one-shot runs, not local Session children`)
+    }
+  }
+
+  private captureExternalOwners(agent: NativeAgent, session: Session): {
+    readonly parent: NativeActiveSessionOwner
+    readonly root: NativeActiveSessionOwner
+  } {
+    const active = this.context.require('activeSessions')
+    const parent = active.owner(agent, session)
+    if (parent === undefined) throw new Error('native-subagent: external child requires the exact active parent owner')
+    const bySession = new Map(active.owners().map(owner => [owner.session.id, owner]))
+    const visited = new Set<SessionId>([parent.session.id])
+    let root = parent
+    while (root.invocation !== 'root') {
+      const parentId = root.session.header.parentSession
+      if (parentId === undefined || visited.has(parentId)) {
+        throw new Error('native-subagent: active delegated parent has no valid invocation-root lineage')
+      }
+      visited.add(parentId)
+      const ancestor = bySession.get(parentId)
+      if (ancestor === undefined) throw new Error('native-subagent: invocation root is not an active owner')
+      root = ancestor
+    }
+    if (active.owner(parent.agent, parent.session) !== parent || active.owner(root.agent, root.session) !== root) {
+      throw new Error('native-subagent: parent or invocation-root owner was released during admission')
+    }
+    return { parent, root }
+  }
+
+  private assertExternalAdmission(admission: ExternalAdmission): void {
+    const active = this.context.require('activeSessions')
+    if (active.owner(admission.parent.agent, admission.parent.session) !== admission.parent
+      || active.owner(admission.root.agent, admission.root.session) !== admission.root
+      || this.epoch(admission.parent) !== admission.parentEpoch || this.epoch(admission.root) !== admission.rootEpoch) {
+      throw new Error('native-subagent: resolved external child belongs to a released or replaced parent/root owner')
+    }
+  }
+
+  private epoch(owner: NativeActiveSessionOwner): string {
+    let epoch = this.epochs.get(owner)
+    if (epoch === undefined) {
+      epoch = randomUUID()
+      this.epochs.set(owner, epoch)
+    }
+    return epoch
+  }
+
+  private closeExternalForOwner(owner: NativeActiveSessionOwner): Promise<void> {
+    const prior = this.ownerDrains.get(owner)
+    if (prior !== undefined) return prior
+    const drain = this.drainExternalForOwner(owner)
+    this.ownerDrains.set(owner, drain)
+    return drain
+  }
+
+  private async drainExternalForOwner(owner: NativeActiveSessionOwner): Promise<void> {
+    const affected = [...this.externalOperations].filter(operation => operation.parent === owner || operation.root === owner)
+    for (const operation of affected) operation.controller.abort({ kind: 'native-subagent-owner-released' })
+    await Promise.all(affected.map(operation => operation.settled.promise))
+    const failure = this.ownerDrainFailures.get(owner)
+    if (failure !== undefined) throw new AggregateError([failure.error], 'native-subagent: external child owner drain failed')
+  }
+
+  private recordExternalDrainFailure(operation: ExternalOperation, error: unknown): void {
+    operation.drainFailures.push(error)
+  }
+
+  private async executeExternal(admission: ExternalAdmission, signal: AbortSignal): Promise<NativeExternalSubagentResult> {
+    const { request, driver, parent: parentOwner, root: rootOwner, parentEpoch, rootEpoch } = admission
+    const routeFields = Object.keys(request.routeOverrides) as NativeExternalSubagentRouteField[]
+    const unsupported = routeFields.find(field => !driver.routeFields.includes(field))
+    if (unsupported !== undefined) throw new Error(`native-subagent: external driver "${driver.name}" does not support route field "${unsupported}"`)
+    for (const field of ['persona', 'toolFilter', 'outputSchema'] as const) {
+      if (request[field] !== undefined && !driver.capabilities[field]) {
+        throw new Error(`native-subagent: external driver "${driver.name}" does not support "${field}"`)
+      }
+    }
+    const owners = { parent: parentOwner, root: rootOwner }
+    const parentDepth = owners.parent.session.header.delegationDepth ?? 0
+    if (!Number.isSafeInteger(request.maxDepth) || request.maxDepth < 0 || parentDepth + 1 > request.maxDepth) {
+      throw new RangeError('native-subagent: child depth exceeds maxDepth')
+    }
+    const parentConfig = this.context.require('sessionExecution').configuration(request.agent, request.session)
+    if (request.config.cwd !== parentConfig.cwd || request.config.maxSteps > parentConfig.maxSteps
+      || parentConfig.maxTokens !== undefined && request.config.maxTokens !== undefined
+        && request.config.maxTokens > parentConfig.maxTokens
+      || request.routeOverrides.provider !== undefined && request.routeOverrides.provider !== request.config.provider
+      || request.routeOverrides.model !== undefined && request.routeOverrides.model !== request.config.model
+      || request.routeOverrides.reasoningEffort !== undefined
+        && request.routeOverrides.reasoningEffort !== request.config.reasoningEffort) {
+      throw new Error('native-subagent: external child route, workspace, or budget exceeds its parent authority')
+    }
+    if (!Number.isSafeInteger(request.config.maxSteps) || request.config.maxSteps < 1
+      || request.config.maxTokens !== undefined && (!Number.isSafeInteger(request.config.maxTokens) || request.config.maxTokens < 1)) {
+      throw new Error('native-subagent: external child limits must be positive safe integers')
+    }
+    const maxTokens = request.config.maxTokens ?? parentConfig.maxTokens
+    const id = randomUUID() as NativeExternalSubagentId
+    this.assertExternalAdmission(admission)
+    const operation: ExternalOperation = { ...owners, controller: new AbortController(),
+      settled: Promise.withResolvers<void>(), drainFailures: [] }
+    this.externalOperations.add(operation)
+    const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal, operation.controller.signal])
+    let child: Awaited<ReturnType<NativeExternalSubagentDriver['start']>> | undefined
+    let dispose: Promise<ExternalCleanup> | undefined
+    const cleanupFailed = Promise.withResolvers<unknown>()
+    let started: NativeExternalSubagentStartedEvent | undefined
+    let startedPersisted = false
+    let outcome: NativeExternalSubagentOutcome | undefined
+    let failure: { readonly error: unknown } | undefined
+    let cleanupConfirmed = child === undefined
+    let cancelInstalled = false
+    const disposeChild = (): Promise<ExternalCleanup> => dispose ??= Promise.resolve().then(() => child?.dispose()).then(
+      () => ({ kind: 'quiescent' as const }),
+      (error: unknown) => {
+        this.recordExternalDrainFailure(operation, error)
+        cleanupFailed.resolve(error)
+        return { kind: 'failed', error }
+      })
+    const cancelChild = (): void => { void disposeChild() }
+    try {
+      effective.throwIfAborted()
+      const route = Object.freeze({ provider: request.config.provider, model: request.config.model,
+        ...request.config.reasoningEffort === undefined ? {} : { reasoningEffort: request.config.reasoningEffort },
+        overrides: Object.freeze({ ...request.routeOverrides }) })
+      const externalRequest: NativeExternalSubagentRequest = Object.freeze({
+        id, parentSessionId: owners.parent.session.id, rootSessionId: owners.root.session.id, parentEpoch, rootEpoch,
+        parentDepth, maxDepth: request.maxDepth,
+        limits: Object.freeze({ maxSteps: request.config.maxSteps,
+          ...maxTokens === undefined ? {} : { maxTokens } }),
+        label: request.label, cwd: request.config.cwd, prompt: Object.freeze(structuredClone(request.prompt)), route,
+        ...request.persona === undefined ? {} : { persona: request.persona },
+        ...request.toolFilter === undefined ? {} : { toolFilter: structuredClone(request.toolFilter) },
+        ...request.outputSchema === undefined ? {} : { outputSchema: structuredClone(request.outputSchema) },
+      })
+      child = await driver.start(externalRequest, effective)
+      effective.throwIfAborted()
+      if (child.remoteId.length === 0) throw new Error('native-subagent: external driver returned an empty remote identity')
+      effective.addEventListener('abort', cancelChild, { once: true })
+      cancelInstalled = true
+      if (effective.aborted) cancelChild()
+      this.assertExternalAdmission(admission)
+      started = { version: 0, id, provider: driver.name, remoteId: child.remoteId, label: request.label,
+        parentSessionId: owners.parent.session.id, parentEpoch, rootSessionId: owners.root.session.id, rootEpoch,
+        startedAt: Date.now() }
+      try {
+        owners.parent.append('subagent/external-start', started)
+        await owners.parent.flush()
+      } catch (error: unknown) {
+        this.recordExternalDrainFailure(operation, error)
+        throw error
+      }
+      startedPersisted = true
+      this.publishExternalStarted({ parentAgent: owners.parent.agent, parentSession: owners.parent.session, event: started })
+      const terminal = child.result.then(
+        result => ({ kind: 'result' as const, result }),
+        (error: unknown) => ({ kind: 'failure' as const, error }))
+      const cleanupFailure = cleanupFailed.promise.then((error: unknown) => ({ kind: 'cleanup-failure' as const, error }))
+      const settled = await Promise.race([terminal, cleanupFailure])
+      if (settled.kind === 'result') outcome = settled.result
+      else if (settled.kind === 'failure') failure = { error: settled.error }
+    } catch (error: unknown) {
+      failure = { error }
+    }
+    if (cancelInstalled) effective.removeEventListener('abort', cancelChild)
+    if (child !== undefined) {
+      const cleanup = await disposeChild()
+      if (cleanup.kind === 'quiescent') cleanupConfirmed = true
+      else {
+        cleanupConfirmed = false
+        failure = failure === undefined || failure.error === cleanup.error ? { error: cleanup.error } : {
+          error: new AggregateError([failure.error, cleanup.error], 'native-subagent: external result and range cleanup failed') }
+      }
+    }
+    try {
+      if (startedPersisted && started !== undefined && child !== undefined && cleanupConfirmed) {
+        const event: NativeExternalSubagentFinishedEvent = { version: 0, id, provider: driver.name, remoteId: child.remoteId,
+          stopReason: outcome?.stopReason ?? (effective.aborted ? 'aborted' : 'error'), finishedAt: Date.now() }
+        try {
+          owners.parent.append('subagent/external-end', event)
+          await owners.parent.flush()
+          this.publishExternalFinished({ parentAgent: owners.parent.agent, parentSession: owners.parent.session, event,
+            ...outcome === undefined ? {} : { result: { id, provider: driver.name, remoteId: child.remoteId, ...outcome } } })
+        } catch (error: unknown) {
+          this.recordExternalDrainFailure(operation, error)
+          failure = failure === undefined ? { error } : {
+            error: new AggregateError([failure.error, error], 'native-subagent: external result and parent persistence failed') }
+        }
+      }
+    } finally {
+      if (operation.drainFailures.length > 0) {
+        const failure = { error: operation.drainFailures.length === 1 ? operation.drainFailures[0]
+          : new AggregateError(operation.drainFailures, 'native-subagent: external cleanup and persistence failed') }
+        this.externalDrainFailure ??= failure
+        for (const owner of new Set([operation.parent, operation.root])) {
+          this.ownerDrainFailures.set(owner, this.ownerDrainFailures.get(owner) ?? failure)
+        }
+      }
+      this.externalOperations.delete(operation)
+      operation.settled.resolve()
+    }
+    if (failure !== undefined) throw failure.error
+    if (outcome === undefined || child === undefined) throw new Error('native-subagent: external child settled without a result')
+    return { id, provider: driver.name, remoteId: child.remoteId, ...outcome }
+  }
+
   private track<T>(task: Promise<T>, signal: AbortSignal): Promise<T> {
     this.pending.set(task, signal)
     const settled = (): void => { this.pending.delete(task) }
@@ -381,16 +708,55 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     }
   }
 
+  private publishExternalStarted(started: NativeExternalSubagentStarted): void {
+    const reportFailure = (error: unknown): void => { console.warn('native-subagent: external-start observer failed', error) }
+    for (const listener of this.externalStarted) {
+      try {
+        const result = listener(started)
+        if (result !== undefined) void result.catch(reportFailure)
+      } catch (error: unknown) { reportFailure(error) }
+    }
+  }
+
+  private publishExternalFinished(finished: NativeExternalSubagentFinished): void {
+    const reportFailure = (error: unknown): void => { console.warn('native-subagent: external-finish observer failed', error) }
+    for (const listener of this.externalFinished) {
+      try {
+        const result = listener(finished)
+        if (result !== undefined) void result.catch(reportFailure)
+      } catch (error: unknown) { reportFailure(error) }
+    }
+  }
+
   /** Close new starts, cancel accepted execution and await its owned cleanup.
    * @returns settlement after every accepted run releases its resources; cleanup failures reject.
    */
-  async dispose(): Promise<void> {
+  dispose(): Promise<void> {
+    if (this.disposal !== undefined) return this.disposal
     this.closing = true
     this.cancellation.abort(new Error('native-subagent: Provider is closing'))
     const pending = [...this.pending]
-    const results = await Promise.allSettled([...pending.map(([task]) => task), this.continuations.dispose()])
-    const errors = results.flatMap((result, index) => result.status === 'rejected'
-      && result.reason !== pending[index]?.[1].reason ? [result.reason as unknown] : [])
+    this.disposal = this.finishDispose(pending)
+    return this.disposal
+  }
+
+  private async finishDispose(pending: readonly (readonly [Promise<unknown>, AbortSignal])[]): Promise<void> {
+    const results = await Promise.allSettled([...pending.map(([task]) => task), this.continuations.dispose(), this.removeDetached()])
+    this.externalStarted.clear()
+    this.externalFinished.clear()
+    this.finished.clear()
+    const errors = results.flatMap((result, index) => {
+      if (result.status !== 'rejected') return []
+      const run = pending[index]
+      if (run !== undefined && (this.externalDriver !== undefined || isCancellation(result.reason, run[1].reason))) return []
+      return [result.reason as unknown]
+    })
+    const contains = (value: unknown, target: unknown): boolean => value === target
+      || value instanceof AggregateError && value.errors.some(nested => contains(nested, target))
+    const failure = this.externalDrainFailure
+    if (failure !== undefined && !errors.some(error => contains(error, failure.error))) {
+      errors.push(failure.error)
+    }
     if (errors.length > 0) throw new AggregateError(errors, 'native-subagent: accepted run cleanup failed')
   }
 
@@ -472,7 +838,7 @@ function isCancellation(error: unknown, reason: unknown): boolean {
 /** Native in-process spawn Provider; deployment selects its advertised name. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-subagent', targets: ['host'],
-  requires: ['sessionExecution', 'promptSections'], optional: ['tools', 'jobs'], provides: ['subagents'],
+  requires: ['sessionExecution', 'activeSessions', 'promptSections'], optional: ['tools', 'jobs', 'externalSubagentDriver'], provides: ['subagents'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-subagent: configuration must be an object')
     const fields = input as Record<string, unknown>

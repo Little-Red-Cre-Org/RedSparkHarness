@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-native-subagent",
-  "description": "Native one-shot in-process spawn Subagent Definition and Provider",
+  "description": "Native Subagent Definition, selected Provider and external-driver contract",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
@@ -49,11 +49,13 @@
       ],
       "requires": [
         "sessionExecution",
+        "activeSessions",
         "promptSections"
       ],
       "optional": [
         "tools",
-        "jobs"
+        "jobs",
+        "externalSubagentDriver"
       ],
       "provides": [
         "subagents"

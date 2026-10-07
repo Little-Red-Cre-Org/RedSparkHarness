@@ -127,6 +127,12 @@ interface ResolvedConfig extends Config {
   builtinTools: boolean
 }
 
+interface ActiveOwnerRegistration {
+  readonly owner: NativeProgramActiveSession
+  readonly release: () => Promise<void>
+  cleanup?: Promise<void>
+}
+
 const TOOL_SCHEMAS: ToolSchema[] = [
   { name: 'read_file', description: 'Read a UTF-8 file within the selected workspace.', parameters: {
     type: 'object', properties: { path: { type: 'string' } }, required: ['path'], additionalProperties: false,
@@ -268,10 +274,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   private readonly continuationRuntime: NativeContinuationRuntime
   private readonly noticeWakes = new Set<Promise<NativeTurnResult>>()
   private readonly noticeFailures: unknown[] = []
-  private readonly activeOwners = new WeakMap<NativeContinuationSession, {
-    owner: NativeProgramActiveSession
-    release: () => Promise<void>
-  }>()
+  private readonly activeOwners = new WeakMap<NativeContinuationSession, ActiveOwnerRegistration>()
   private readonly rootEpochs = new Map<SessionId, { owner: NativeContinuationSession; activation: NativeContinuationActivation }>()
   private readonly settledRoots = new WeakMap<NativeAgentExecution, NativeTurnResult>()
   private readonly rootChunkObservers = new WeakMap<NativeContinuationSession, Set<(chunk: StreamChunk) => void>>()
@@ -1733,6 +1736,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     if (this.activeSessionRegistry === undefined) return undefined
     const existing = this.activeOwners.get(owner)
     if (existing !== undefined) {
+      if (existing.cleanup !== undefined) throw new Error('native-headless: active Session owner is releasing')
       if (existing.owner.rootOrigin !== rootOrigin) {
         throw new Error('native-headless: root origin differs from its attached owner')
       }
@@ -1760,13 +1764,20 @@ export class NativeHeadlessApplication implements NativeApplication {
     }
   }
 
-  private async releaseActiveOwner(owner: NativeContinuationSession): Promise<void> {
+  private releaseActiveOwner(owner: NativeContinuationSession): Promise<void> {
     const entry = this.activeOwners.get(owner)
-    if (entry === undefined) return
-    this.activeOwners.delete(owner)
-    const outcomes = await Promise.allSettled([entry.release(), entry.owner.dispose()])
-    const failures = outcomes.flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason as unknown] : [])
-    if (failures.length !== 0) throw new AggregateError(failures, 'native-headless: active owner cleanup failed')
+    if (entry === undefined) return Promise.resolve()
+    if (entry.cleanup !== undefined) return entry.cleanup
+    const completed = Promise.withResolvers<void>()
+    entry.cleanup = completed.promise
+    void (async () => {
+      const failures: unknown[] = []
+      try { await entry.release() } catch (error: unknown) { failures.push(error) }
+      try { await entry.owner.dispose() } catch (error: unknown) { failures.push(error) }
+      if (this.activeOwners.get(owner) === entry) this.activeOwners.delete(owner)
+      if (failures.length !== 0) throw new AggregateError(failures, 'native-headless: active owner cleanup failed')
+    })().then(completed.resolve, completed.reject)
+    return completed.promise
   }
 
   /**

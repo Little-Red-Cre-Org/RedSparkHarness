@@ -22,12 +22,14 @@ The native Subagent Definition and selected in-process spawn Provider delegate t
 <a id="configuration"></a>
 ## Configuration
 
-The native entry requires sessionExecution and promptSections, optionally consumes tools and jobs, and provides subagents. Configuration requires providerName. The shipped native-sdk profile installs this Provider with the native tool-subagent Consumer; other native profiles may compose the same modules explicitly.
+The native entry requires sessionExecution, activeSessions and promptSections, optionally consumes tools, jobs and `externalSubagentDriver`, and provides subagents. Configuration requires providerName. `spawn` selects the in-process executor and remains the shipped profile default. Any other name must match the single external driver selected in the same Native Host installation; its optional-service dependency makes the Subagent Provider drain before that driver is disposed. The shipped native-sdk profile installs this Provider with the native tool-subagent Consumer; other profiles must select an external Module explicitly.
 
 <a id="ownership"></a>
 ## Ownership
 
 Resolve captures the exact parent owner, latest logged provider/model/effort, workspace and budgets. Child route overrides clear inherited effort unless explicitly selected. Each fresh child has its own durable Session and descriptor. The existing executor enforces depth, owns the sole writer, and releases child-scoped prompt and tool restrictions. Children disable builtin tools, inherit selected sandbox policy, and cannot request permission expansion. Foreground cancellation and unload drain accepted execution; cleanup failures reject. A child’s recorded model error returns its actual partial output and error stop reason; an unrecorded failure still rejects. `start()` publishes the child id only after the selected executor reports readiness with its initial durable facts committed; failed startup rejects after rollback. With `outputSchema`, the child must commit one schema-valid `structured_output` result. Invalid attempts remain retryable, but another call is rejected after a successful commit, and normal completion without a commit returns an error stop reason.
+
+An external provider is one-shot only. `resolve()` issues a private one-use admission tied to the exact active parent and invocation-root owners, their epochs, the selected driver, and the resolved route, workspace and budgets. Copies, replay and replaced owners are rejected before launch. The driver receives a detached request DTO with Session ids and epochs, never a Native Agent, Session, Cordis Context or writer. Unsupported route fields or child restrictions are rejected before launch; limits come from the parent and can only be reduced. The driver returns from `start()` only after its real child is ready. Native appends and flushes `subagent/external-start` through the parent’s sole writer before publishing readiness, then appends and flushes `subagent/external-end` only after the driver confirms its complete child range is quiescent. Parent detach closes new input admission, cancels and drains accepted children, and keeps that writer available for the terminal fact until detached Consumers finish. An ordinary child-result rejection reaches the caller after successful cleanup; it does not fail owner drains or Provider disposal. Range-cleanup and parent-lineage persistence failures remain sticky for the exact owners and Provider.
 
 Background execution copies the same resolved child permissions and budgets. The Provider exposes its selected registry as backgroundJobs. continuationTools identifies the selected registry for child permission restrictions; continuation controls must select that same registry. Jobs owns bounded live text and final output; job_kill requests cancellation and job_output with wait waits for terminal cleanup. Caller cancellation owns startup until actual child readiness; after publication, the parent Agent, Jobs cancellation and Provider unload own the child independently of ordinary parent turns.
 
@@ -57,7 +59,7 @@ The child starts a fresh conversation; its request does not reuse the parent con
 <a id="known-limitations-and-deferred-work"></a>
 
 - Persona is literal scoped text; template-variable interpolation is unsupported.
-- External backends are not provided by this entry. The native SDK consumes the Provider's settled-result observer for exact in-process child lineage; this package does not send SDK wire notifications itself.
+- This package defines the external-driver contract but ships no concrete SDK or Codex adapter. Product Modules must use the shared child-connection seam and be selected in the Host profile; the native-sdk profile selects `spawn`. The native SDK child observer covers in-process Sessions; external wire notifications are not projected.
 - No invariant companion is published: the Program retains Agent, Session and writer authority; the Provider owns only its accepted calls and scoped setup.
 
 <a id="dev-note"></a>
@@ -70,3 +72,5 @@ The child starts a fresh conversation; its request does not reuse the parent con
 [Continuation ownership](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-continuation.md).
 
 [Settlement admission](../../../../.agents/notes/implemented/architecture/2026-10-05-native-subagent-settlement.md).
+
+[External child ownership](../../../../.agents/notes/implemented/architecture/2026-10-08-native-external-subagent-driver.md).

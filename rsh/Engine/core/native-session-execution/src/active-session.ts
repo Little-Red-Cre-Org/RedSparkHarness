@@ -75,6 +75,8 @@ export interface NativeActiveSessionOwner {
   readonly inheritedEventCount: number
   /** False after admission closes; closed appends and flushes fail loudly. */
   readonly writerAvailable: boolean
+  /** Close new input and lifecycle admission before detach observers drain; terminal writes remain available. */
+  beginDetach?(): void
   readonly append: Session['append']
   /** Admit related facts together through the same retained writer; flush supplies durability. */
   readonly appendBatch: Session['appendBatch']
@@ -167,6 +169,7 @@ export interface NativeActiveSessionOperations {
   /**
    * Observe release after lookup admission closes, before writer teardown.
    * @param observer - exact-owner lifecycle cleanup.
+   * The observer must not await release of its own owner or disposal of this registry; that cleanup is waiting for the observer.
    * @returns removal after accepted observer callbacks drain.
    */
   onDetached(observer: (owner: NativeActiveSessionOwner) => Promise<void>): () => Promise<void>

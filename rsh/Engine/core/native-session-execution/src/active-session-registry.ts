@@ -114,6 +114,7 @@ export class NativeActiveSessionRegistry implements NativeActiveSessionOperation
     if (entry.release !== undefined) return entry.release
     const completed = Promise.withResolvers<void>()
     entry.release = completed.promise
+    entry.owner.beginDetach?.()
     this.releases.add(completed.promise)
     const settled = (): void => { this.releases.delete(completed.promise) }
     void completed.promise.then(settled, settled)
