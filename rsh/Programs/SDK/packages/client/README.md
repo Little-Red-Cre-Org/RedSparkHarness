@@ -33,7 +33,7 @@ Use this client when TypeScript code must drive a complete Harness runtime from 
 
 ```ts
 import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 
 await using harness = new DeepSeekHarness({
   profile: 'sdk',

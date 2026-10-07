@@ -1424,7 +1424,7 @@
     {
       "doc": "rsh/Docs/subsystems/subagent.md",
       "symbol": "SubagentStopReasonMap",
-      "source": "rsh/Engine/subagent/subagent/src/types.ts"
+      "source": "rsh/Engine/subagent/subagent-protocol/src/stop-reason.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/subagent.md",

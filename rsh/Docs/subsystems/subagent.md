@@ -324,14 +324,16 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern) — a backend may add variants, so consumers branch on the known cases and treat an unknown terminal reason as a failure:
+`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern). Providers add variants by declaration-merging `SubagentStopReasonMap` on `@deepseek-ai/dsh-subagent-protocol`; consumers branch on known cases and treat an unknown terminal reason as a failure:
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
- * consumers branch on the known cases and fall through `default`. The known
- * cases mirror the harness turn-end vocabulary so the tool layer can map a
- * non-`completed` result to an `isError` tool result.
+ * consumers branch on the known cases and fall through `default`. Providers
+ * extend this map through declaration merging on
+ * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
+ * turn-end vocabulary so the tool layer can map a non-`completed` result to an
+ * `isError` tool result.
  */
 interface SubagentStopReasonMap {
   /** The child finished its turn normally. */
