@@ -26,7 +26,7 @@ import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/d
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 
 import { NativeWebHumanInteraction } from './human.ts'
-import type { NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeUserQuestionRegistry } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
@@ -189,7 +189,7 @@ export class NativeWebSessionService {
    * @param approval - selected approval Provider.
    * @param questions - selected question Definition.
    */
-  bindHuman(context: Pick<NativeContext, 'own' | 'scope'>, approval?: NativeApprovalService, questions?: NativeUserQuestionRegistry): void {
+  bindHuman(context: Pick<NativeContext, 'own' | 'scope'>, approval?: NativeApprovalServiceDefinition, questions?: NativeUserQuestionRegistry): void {
     if (approval !== undefined) context.own(approval.registerAnswerer((request) => {
       const feed = this.humanFeed(request.agent)
       return feed === undefined ? undefined : this.human.approval(request, feed)

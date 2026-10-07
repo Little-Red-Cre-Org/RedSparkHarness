@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The `code-runtime/` group lets a model write one program that calls host-provided functions as ordinary async calls, then returns only the program's printed output and return value. Choose the TypeScript backend for execution in an isolated Node worker, or the experimental Python backend when a CPython process is required. Each run starts without state from earlier programs. Failures are returned as results so callers can diagnose them or provide them to the model.
+The family separates the portable run contract, the Cordis adapter, and execution backends. Choose the worker-thread TypeScript backend for a fresh Node worker, the process-sandbox backend for an explicitly native confined process, or the private experimental Python backend for CPython. Each run starts without state from earlier programs, and failures are returned as results.
 
 ## Table of Contents
 
@@ -22,13 +22,16 @@ The `code-runtime/` group lets a model write one program that calls host-provide
 <a id="packages"></a>
 ## Packages
 
-These three packages together provide program execution; each README describes what its part does.
+The Definition, compatibility adapter, and runtime Providers divide the portable contract, Cordis service, and execution mechanisms; each README describes its owner.
 
 | Package | Role | ctx key |
 |---|---|---|
-| [`code-runtime/`](code-runtime/README.md) | Defines what a code runtime does: run one program against host-provided bindings and report what it printed and returned | `ctx.codeRuntime` |
+| [`code-runtime-definition`](../../../Engine/core/code-runtime-definition/README.md) | Defines portable code-run requests and provider operations without a framework dependency | — |
+| [`compat-code-runtime/`](../../../Compatibility/DSH/bridge/compat-code-runtime/README.md) | Implements the Cordis `ctx.codeRuntime` service contract | `ctx.codeRuntime` |
+| [`native-code-runtime/`](native-code-runtime/README.md) | Supplies the native worker runtime shared by execution Providers | — |
 | [`code-runtime-worker-thread/`](code-runtime-worker-thread/README.md) | Executes TypeScript programs, each in a fresh Node worker thread | registers `ctx.codeRuntime` |
-| [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.md) | The experimental Python backend: owns the fd-3 wire protocol between a Node host and a CPython subprocess and the CPython runtime implementation | — |
+| [`code-runtime-process-sandbox/`](code-runtime-process-sandbox/README.md) | Provides sandboxed process execution for explicitly native profiles | — |
+| [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.md) | The experimental Python backend: owns the fd-3 wire protocol between a Node host and a CPython subprocess | — |
 
 -----
 

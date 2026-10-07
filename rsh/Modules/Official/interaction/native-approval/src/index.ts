@@ -1,47 +1,26 @@
 /** Native tool-approval policy, answerer dispatch, and durable audit vocabulary. */
-import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {
+  NativeApprovalAnswerer,
+  NativeApprovalAnswererRequest,
+  NativeApprovalRequest,
+  NativeApprovalServiceDefinition,
+} from '@deepseek-ai/dsh-approval-definition'
 import * as approvalTypes from './types.ts'
 
 export {
   NativeApprovalRequestId,
-  type NativeApprovalDecision,
-  type NativeApprovalOutcome,
-  type NativeApprovalPolicy,
 } from './types.ts'
-
-declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { approval: NativeApprovalService }
-}
-
-/** One exact operation that requires an approval decision. */
-export interface NativeApprovalRequest {
-  /** Fresh id the Session owner has already written to `native-approval/asked`. */
-  readonly id: approvalTypes.NativeApprovalRequestId
-  /** Registered Agent that owns the requested operation. */
-  readonly agent: NativeAgent
-  /** Model-visible tool name the application is about to execute. */
-  readonly toolName: string
-  /** Model tool-call identifier, when the application has one. */
-  readonly callId?: ToolCallId
-  /** User-facing reason supplied by the tool contribution or application. */
-  readonly reason?: string
-  /** Cancels the unanswered request and prevents a late answer from applying. */
-  readonly signal?: AbortSignal
-}
-
-/** The immutable request passed to one native answerer. */
-export interface NativeApprovalAnswererRequest extends NativeApprovalRequest {
-  /** Effective policy selected before answerer dispatch. */
-  readonly policy: approvalTypes.NativeApprovalPolicy
-  /** Aborted by the caller or Provider disposal; answerers must stop owned work. */
-  readonly signal: AbortSignal
-}
-
-/** One answerer may claim a request with an outcome or return undefined to delegate. */
-export type NativeApprovalAnswerer = (request: NativeApprovalAnswererRequest) =>
-  approvalTypes.NativeApprovalOutcome | undefined | Promise<approvalTypes.NativeApprovalOutcome | undefined>
+export type {
+  NativeApprovalAnswerer,
+  NativeApprovalAnswererRequest,
+  NativeApprovalDecision,
+  NativeApprovalOutcome,
+  NativeApprovalPolicy,
+  NativeApprovalRequest,
+  NativeApprovalServiceDefinition,
+} from './types.ts'
 
 /** Optional native-provider configuration. */
 export interface Config {
@@ -66,7 +45,7 @@ function resolveConfig(input: unknown): Required<Config> {
  * Applies one deployment policy, dispatches answerers in registration order,
  * and cancels unsettled requests before its Provider releases the Agent authority.
  */
-export class NativeApprovalService {
+export class NativeApprovalService implements NativeApprovalServiceDefinition {
   private readonly answerers = new Set<NativeApprovalAnswerer>()
   private readonly controller = new AbortController()
   private readonly active = new Set<Promise<approvalTypes.NativeApprovalDecision>>()

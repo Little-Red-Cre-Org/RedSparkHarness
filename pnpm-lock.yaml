@@ -193,6 +193,16 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
 
+  rsh/Compatibility/DSH/bridge/compat-code-runtime:
+    dependencies:
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/code-runtime-definition
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+
   rsh/Compatibility/DSH/bridge/compat-dsh-runtime:
     dependencies:
       '@deepseek-ai/cordis-plugin-loader':
@@ -400,6 +410,37 @@ importers:
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence-jsonl
+
+  rsh/Compatibility/DSH/bridge/compat-user-approval:
+    dependencies:
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/approval-definition
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-scope':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/scope
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/system-prompt
 
   rsh/Compatibility/DSH/bundle/acp-app:
     dependencies:
@@ -667,7 +708,7 @@ importers:
         version: link:../../../../Core/typert/registry
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/user-approval
+        version: link:../../bridge/compat-user-approval
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
@@ -1370,6 +1411,12 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
+      '@deepseek-ai/dsh-agent-loop-testkit':
+        specifier: workspace:^
+        version: link:../../../Tests/test-support/agent-loop-testkit
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../Engine/core/session
       '@deepseek-ai/dsh-tool-cordis':
         specifier: workspace:^
         version: link:../../../Modules/Official/extensions/tool-cordis
@@ -2192,7 +2239,7 @@ importers:
         version: link:../agent
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../../Modules/Official/code-runtime/code-runtime
+        version: link:../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../scope
@@ -2205,6 +2252,30 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../tools
+
+  rsh/Engine/core/approval-definition:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
+
+  rsh/Engine/core/code-runtime-definition:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Engine/core/native-agent:
     dependencies:
@@ -2222,12 +2293,6 @@ importers:
         specifier: workspace:^
         version: link:../session
 
-  rsh/Engine/core/native-code-runtime:
-    dependencies:
-      '@deepseek-ai/dsh-native-runtime':
-        specifier: workspace:^
-        version: link:../../../Core/runtime-diagnostics/native-runtime
-
   rsh/Engine/core/native-headless:
     dependencies:
       '@deepseek-ai/dsh-agent-instructions':
@@ -2236,9 +2301,15 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../preset/agent-presets
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../approval-definition
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../code-runtime-definition
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../Modules/Official/fs/fs
@@ -2248,12 +2319,6 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../native-agent
-      '@deepseek-ai/dsh-native-approval':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/interaction/native-approval
-      '@deepseek-ai/dsh-native-code-runtime':
-        specifier: workspace:^
-        version: link:../native-code-runtime
       '@deepseek-ai/dsh-native-model-execution':
         specifier: workspace:^
         version: link:../native-model-execution
@@ -2294,6 +2359,12 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-native-approval':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/native-approval
+      '@deepseek-ai/dsh-native-code-runtime':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/code-runtime/native-code-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
@@ -2462,9 +2533,15 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../agent
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../approval-definition
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../../Modules/Official/code-runtime/code-runtime
+        version: link:../../../Compatibility/DSH/bridge/compat-code-runtime
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../code-runtime-definition
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
@@ -2485,7 +2562,7 @@ importers:
         version: link:../system-prompt
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../Modules/Official/interaction/user-approval
+        version: link:../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Engine/goal/command-goal:
     dependencies:
@@ -3854,6 +3931,9 @@ importers:
 
   rsh/Engine/subagent/subagent:
     dependencies:
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../core/approval-definition
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
@@ -3938,7 +4018,7 @@ importers:
         version: link:../../../Core/typert/protocol
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../Modules/Official/interaction/user-approval
+        version: link:../../../Compatibility/DSH/bridge/compat-user-approval
       '@deepseek-ai/dsh-util-time':
         specifier: workspace:^
         version: link:../../../Core/util/time
@@ -4310,7 +4390,7 @@ importers:
         version: link:../../core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../Modules/Official/interaction/user-approval
+        version: link:../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Engine/subagent/subagent-protocol:
     dependencies:
@@ -4922,7 +5002,7 @@ importers:
         version: link:../../../../Core/vendor/cordis
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../../Official/code-runtime/code-runtime
+        version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
@@ -5312,7 +5392,7 @@ importers:
         version: link:../../../../Core/typert/protocol
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
       '@deepseek-ai/dsh-workspace':
         specifier: workspace:^
         version: link:../../workspace/workspace
@@ -5323,17 +5403,11 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1
 
-  rsh/Modules/Official/code-runtime/code-runtime:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-
   rsh/Modules/Official/code-runtime/code-runtime-process-sandbox:
     dependencies:
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
-        version: link:../../../../Engine/core/native-code-runtime
+        version: link:../native-code-runtime
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -5371,7 +5445,7 @@ importers:
         version: link:../../../../Core/vendor/cordis
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../code-runtime
+        version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -5379,14 +5453,23 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
 
+  rsh/Modules/Official/code-runtime/native-code-runtime:
+    dependencies:
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/code-runtime-definition
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+
   rsh/Modules/Official/code-runtime/tool-code-runtime:
     dependencies:
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/code-runtime-definition
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../fs/fs
-      '@deepseek-ai/dsh-native-code-runtime':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/native-code-runtime
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-prompt
@@ -5921,7 +6004,7 @@ importers:
         version: link:../../attachment/attachment
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../code-runtime/code-runtime
+        version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../fs
@@ -5981,7 +6064,7 @@ importers:
         version: link:../../../../Engine/core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Modules/Official/fs/tool-fs-search:
     dependencies:
@@ -6346,24 +6429,21 @@ importers:
 
   rsh/Modules/Official/interaction/native-approval:
     dependencies:
-      '@deepseek-ai/dsh-brand':
+      '@deepseek-ai/dsh-approval-definition':
         specifier: workspace:^
-        version: link:../../../../Core/util/brand
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
+        version: link:../../../../Engine/core/approval-definition
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/interaction/permission-presets:
     dependencies:
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/approval-definition
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -6403,7 +6483,7 @@ importers:
         version: link:../../shell/shell
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Modules/Official/interaction/tool-ask-user:
     dependencies:
@@ -6459,37 +6539,6 @@ importers:
       '@deepseek-ai/dsh-user-question-broker':
         specifier: workspace:^
         version: link:../user-question-broker
-
-  rsh/Modules/Official/interaction/user-approval:
-    dependencies:
-      '@deepseek-ai/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@deepseek-ai/dsh-agent':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent
-      '@deepseek-ai/dsh-brand':
-        specifier: workspace:^
-        version: link:../../../../Core/util/brand
-      '@deepseek-ai/dsh-invariants':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
-      '@deepseek-ai/dsh-scope':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/scope
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
-      '@deepseek-ai/dsh-system-prompt':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/system-prompt
 
   rsh/Modules/Official/interaction/user-question-broker:
     dependencies:
@@ -6951,7 +7000,7 @@ importers:
         version: link:../../../../Engine/core/agent-loop
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../code-runtime/code-runtime
+        version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../interaction/commands
@@ -7462,7 +7511,7 @@ importers:
         version: link:../../../../Engine/core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Modules/Official/shell/tool-bash-persistent:
     dependencies:
@@ -7602,7 +7651,7 @@ importers:
         version: link:../../../../Engine/core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Modules/Official/shell/tool-pwsh-persistent:
     dependencies:
@@ -8457,13 +8506,16 @@ importers:
         version: link:../../../../Engine/core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
 
   rsh/Programs/ACP/packages/native-acp:
     dependencies:
       '@agentclientprotocol/sdk':
         specifier: 1.4.0
         version: 1.4.0(zod@4.4.3)
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/approval-definition
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../../../Modules/Official/attachment/attachment
@@ -8575,7 +8627,7 @@ importers:
         version: link:../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
-        version: link:../../Engine/core/native-code-runtime
+        version: link:../../Modules/Official/code-runtime/native-code-runtime
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../Engine/core/native-headless
@@ -8801,7 +8853,7 @@ importers:
         version: link:../../Engine/core/tools
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../Modules/Official/interaction/user-approval
+        version: link:../../Compatibility/DSH/bridge/compat-user-approval
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -9366,7 +9418,7 @@ importers:
         version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
-        version: link:../../../../Modules/Official/code-runtime/code-runtime
+        version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
       '@deepseek-ai/dsh-code-runtime-worker-thread':
         specifier: workspace:^
         version: link:../../../../Modules/Official/code-runtime/code-runtime-worker-thread
@@ -9660,7 +9712,7 @@ importers:
         version: link:../../../../Core/typert/protocol
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
@@ -9700,6 +9752,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../Engine/core/approval-definition
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
@@ -9835,6 +9890,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/approval-definition
       '@deepseek-ai/dsh-attachment':
         specifier: workspace:^
         version: link:../../../../Modules/Official/attachment/attachment
@@ -9998,7 +10056,7 @@ importers:
         version: link:../../../../Core/typert/protocol
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/user-approval
+        version: link:../../../../Compatibility/DSH/bridge/compat-user-approval
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions

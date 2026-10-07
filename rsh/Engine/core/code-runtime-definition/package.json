@@ -1,0 +1,24 @@
+{
+  "name": "@deepseek-ai/dsh-code-runtime-definition",
+  "description": "Framework-free code execution vocabulary and consumer operations",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/core/code-runtime-definition"
+  },
+  "type": "module",
+  "dsh": { "runtime": { "apiVersion": 1, "role": "definition", "capability": "code-runtime" } },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+  }
+}

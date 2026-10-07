@@ -2,9 +2,9 @@
 
 [English](code-runtime.md) | 中文
 
-代码执行 seam 是一个[能力 seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)：其 Service Definition（[dsh-code-runtime](../../Modules/Official/code-runtime/code-runtime)，`ctx.codeRuntime`）使用宿主提供的异步绑定运行一段模型编写的程序，并报告其打印内容与返回值。代码执行是**一项可选能力**，不属于 agent loop（智能体循环）主干，因此其词汇定义在此而非 [core.md](core.zh.md) 中。各后端的执行基底与源语言不同，这两项均为服务上的只读描述符；worker-thread Service Provider 与工具注册表 Consumer 的约定见 [PTC mode 基础设计](../../../.agents/notes/implemented/feature/2026-06-15-ptc.zh.md) 和[类型化返回约定](../../../.agents/notes/implemented/feature/2026-07-20-ptc-typed-tool-returns.zh.md)。
+代码执行 seam 是一个[能力 seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)：框架无关的 [code-runtime Definition](../../Engine/core/code-runtime-definition) 描述如何使用宿主提供的异步绑定运行一段模型编写的程序并报告输出；Cordis 兼容 Service 由 [compat-code-runtime](../../Compatibility/DSH/bridge/compat-code-runtime)（`ctx.codeRuntime`）提供。代码执行是**一项可选能力**，不属于 agent loop（智能体循环）主干，因此其词汇定义在此而非 [core.md](core.zh.md) 中。各后端的执行基底与源语言不同，这两项均为服务上的只读描述符；worker-thread Service Provider 与工具注册表 Consumer 的约定见 [PTC mode 基础设计](../../../.agents/notes/implemented/feature/2026-06-15-ptc.zh.md) 和[类型化返回约定](../../../.agents/notes/implemented/feature/2026-07-20-ptc-typed-tool-returns.zh.md)。
 
-源码：[`rsh/Modules/Official/code-runtime/code-runtime/src/types.ts`](../../Modules/Official/code-runtime/code-runtime/src/types.ts)
+源码：[`rsh/Engine/core/code-runtime-definition/src/types.ts`](../../Engine/core/code-runtime-definition/src/types.ts)
 
 ## 运行：请求进，结果出
 
@@ -33,6 +33,22 @@ interface CodeRunRequest {
    * binding calls are the CALLER's to settle — the runtime only stops asking.
    */
   signal?: AbortSignal
+}
+```
+
+原生 Host 还接受 `NativeCodeRunRequest`，它为调用方取消自己拥有的 binding 增加停止回调。已开始的执行停止时，Provider 会在等待这些调用完成前通知一次；执行尚未开始便已解析或拒绝的请求不会触发通知。Cordis `CodeRuntimeDefinition` Provider 只接受共享请求。
+
+```ts type-equiv
+/** Native-only run request with a stop notification for caller-owned bindings. */
+interface NativeCodeRunRequest extends CodeRunRequest {
+  /**
+   * Notify the caller once a started native execution stops, before waiting
+   * for caller-owned binding calls. Use the notification to begin cancelling
+   * those calls without waiting for this run to return. Successful completion
+   * supplies no failure. A request resolved or rejected before execution starts
+   * does not notify.
+   */
+  onStop?: (failure?: CodeRunFailure) => void
 }
 ```
 
@@ -116,7 +132,7 @@ interface CodeBindingNamespace {
 ```
 
 ```ts type-equiv
-/** A lossless JSON value transferable through the dependency-light Service Definition. */
+/** A lossless JSON value transferable through the dependency-light runtime API. */
 type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key: string]: CodeJsonValue }
 ```
 
@@ -162,7 +178,7 @@ interface CodeRunFailure {
 
 ## 服务
 
-`CodeRuntime`（`ctx.codeRuntime`，抽象服务，定义于 [`rsh/Modules/Official/code-runtime/code-runtime/src/index.ts`](../../Modules/Official/code-runtime/code-runtime/src/index.ts)）由 `run(request)` 加两个只读描述符组成：`language`（程序必须使用的语言，已知值为 `'typescript'` 与 `'python'`，即 `dsh-tools` 能呈现的那些，TypeScript 后端已发布、Python 后端为实验性且私有（未发布）；生成语言相关展示的 Consumer 据此切换，遇到无法展示的语言时应显式报错）和 `isolation`（执行基底，`'worker-thread'`、`'process'`、`'container'`；仅为诊断标签，**不构成安全承诺**）。实现必须保证各次运行彼此隔离（无跨运行状态），并在 dispose（资源释放）时等待系统完全停稳：teardown 要等到所有进行中的运行均已终止并结算后才完成。
+`CodeRuntime`（`ctx.codeRuntime`，抽象服务，由 [`compat-code-runtime`](../../Compatibility/DSH/bridge/compat-code-runtime/src/index.ts) 提供）由 `run(request)` 加两个只读描述符组成：`language`（程序必须使用的语言，已知值为 `'typescript'` 与 `'python'`，即 `dsh-tools` 能呈现的那些，TypeScript 后端已发布、Python 后端为实验性且私有（未发布）；生成语言相关展示的 Consumer 据此切换，遇到无法展示的语言时应显式报错）和 `isolation`（执行基底，`'worker-thread'`、`'process'`、`'container'`；仅为诊断标签，**不构成安全承诺**）。实现必须保证各次运行彼此隔离（无跨运行状态），并在 dispose（资源释放）时等待系统完全停稳：teardown 要等到所有进行中的运行均已终止并结算后才完成。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -172,24 +188,20 @@ interface CodeRunFailure {
 
 Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
-<a id="ctxcoderuntime--coderuntime-abstract-seam"></a>
+<a id="ctxcoderuntime--coderuntimedefinition"></a>
 
-### `ctx.codeRuntime` — `CodeRuntime` (abstract seam)
+### `ctx.codeRuntime` — `CodeRuntimeDefinition`
 
-Registers one `ctx.codeRuntime` implementation. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition contract misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, treat programs as hostile peers, isolate runs from one another, and terminate and await in-flight runs during disposal.
+Cordis-free code-execution operations implemented by a selected backend. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, isolate runs from one another, and terminate in-flight runs on disposal.
 
 ```ts cordis-catalog
 /**
- * Execute one program against the request's bindings and capture what it
- * emitted. See the class doc for the resolution contract (error is a result
- * field; rejection means Service Definition contract misuse only).
- * @param request - the program, its bindings, and the abort signal; the
- *   request carries everything the runtime acts on, with no hidden defaults.
- * @returns the run's outcome: completion value (when transferable), the
- *   ordered log capture, and the failure (if any).
+ * Execute one program against its declared bindings and capture its output.
+ * @param request - the program, its bindings, and its abort signal.
+ * @returns the run outcome, including any program or substrate failure.
  */
-abstract run(request: CodeRunRequest): Promise<CodeRunResult>
+run(request: CodeRunRequest): Promise<CodeRunResult>
 ```
 
-Source: [`rsh/Modules/Official/code-runtime/code-runtime/src/index.ts`](../../Modules/Official/code-runtime/code-runtime/src/index.ts)
+Source: [`rsh/Engine/core/code-runtime-definition/src/index.ts`](../../Engine/core/code-runtime-definition/src/index.ts)
 <!-- END GENERATED cordis-surface -->

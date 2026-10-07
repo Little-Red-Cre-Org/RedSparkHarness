@@ -20,8 +20,10 @@ import { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 // Side-effect type import: declaration-merges `ctx.shell` (the capability fact
 // `sandboxMode` this service reads), without a value dependency on the seam.
 import type {} from '@deepseek-ai/dsh-shell'
-import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
-import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
+import type { ApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
+import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
+import type {} from '@deepseek-ai/dsh-user-approval'
+import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 // Type-only: resolves the optional projection and command children.
 import type {} from '@deepseek-ai/dsh-session-projection'

@@ -86,7 +86,7 @@ Completion values and binding arguments cross as exact JSON: values serialize wi
 
 Read these when the runtime contract is not enough. They move from the seam definition to the design record and the companion backend.
 
-- [Code runtime seam](../../../Official/code-runtime/code-runtime/README.md) — the abstract contract this backend implements.
+- [Code runtime seam](../../../../Compatibility/DSH/bridge/compat-code-runtime/README.md) — the abstract contract this backend implements.
 - [fd-3 protocol Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-31-code-runtime-python-fd3-protocol.md) — design rationale and wire contract.
 - [Settlement-fixes Agent Note](../../../../../.agents/notes/archived/bug-fix/2026-07-31-code-runtime-python-settlement-fixes.md) — settlement, metering, and containment fixes and their regression cases.
 - [Worker-thread backend](../../../Official/code-runtime/code-runtime-worker-thread/README.md) — the released TypeScript sibling.

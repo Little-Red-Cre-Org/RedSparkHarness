@@ -9,7 +9,11 @@
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, ToolCallId } from '@deepseek-ai/dsh-llm'
-import type { CodeBindingFunction, CodeRunResult, CodeRuntime } from '@deepseek-ai/dsh-code-runtime'
+import type {
+  CodeBindingFunction,
+  CodeRunResult,
+  CodeRuntimeDefinition,
+} from '@deepseek-ai/dsh-code-runtime-definition'
 import { snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import { defineTool, parameterSchemaSpecToJsonSchema } from './schema.ts'
 import { TOOL_RUNTIME_SCHEDULER } from './index.ts'
@@ -109,7 +113,7 @@ const RUN_CODE_DESCRIPTION_PARAM_DESCRIPTION
  * guard owns is the runtime-supplied language neither table knows, which never
  * yields a wrong-language schema for a real runtime.
  */
-function resolveFlavor(peekRuntime: () => CodeRuntime | undefined): RunCodeFlavor {
+function resolveFlavor(peekRuntime: () => CodeRuntimeDefinition | undefined): RunCodeFlavor {
   const runtime = peekRuntime()
   if (runtime === undefined) {
     // No runtime mounted: reached by definition readers and `schemas()`, of
@@ -265,14 +269,14 @@ type RunCodeOutput = { logs: string[]; result?: JsonValue }
  */
 export interface RunCodeBridgeOptions {
   /** Resolves `ctx.codeRuntime` or throws the loud misconfiguration error (shared with the registry's assembly-time checks). */
-  requireRuntime: () => CodeRuntime
+  requireRuntime: () => CodeRuntimeDefinition
   /**
    * Reads `ctx.codeRuntime` without throwing: `undefined` when none is mounted.
    * Lets schema emission tell "no runtime" (degrade to TS; the readers that
    * reach it are {@link resolveFlavor}'s) apart from "unknown language" (fail
    * loud).
    */
-  peekRuntime: () => CodeRuntime | undefined
+  peekRuntime: () => CodeRuntimeDefinition | undefined
   /** The run's overlap cap for parallel-classified sub-calls (the registry passes its validated `maxParallelSubCalls`). */
   maxParallel: number
   /** Runs the contained `tools/ptc-dispatch-log` waterfall over one settled sub-dispatch (the registry's private invoker). */

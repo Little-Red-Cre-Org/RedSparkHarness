@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-native-approval'
+import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
 import { parseUserQuestionAnswer, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'

@@ -18,8 +18,18 @@ function project(documentation: string, generic: boolean = false) {
   writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({ compilerOptions: { composite: true,
     module: 'ESNext', moduleResolution: 'Bundler', rootDir: 'src', target: 'ES2022' }, include: ['src'] }))
   writeFileSync(join(directory, 'src/index.ts'), `
+    /** Shared health operations. */
+    export interface Supplemental {
+      /** Check readiness.\n       * @returns whether the service is ready.\n       */
+      ready(): Promise<boolean>
+    }
+    /** Internal gateway discovery marker. */
+    export interface GatewayMarker {
+      /** Internal gateway binding. */
+      readonly typertRemote: string
+    }
     /** Shared read operations. */
-    export interface Operations${generic ? '<Value>' : ''} {
+    export interface Operations${generic ? '<Value> extends Supplemental, GatewayMarker' : ''} {
       ${documentation}
       read(id: string): Promise<${generic ? 'Value' : 'string'}>
     }
@@ -28,7 +38,7 @@ function project(documentation: string, generic: boolean = false) {
       /** @inheritdoc */
       abstract read(id: string): Promise<string>
     }
-    declare module '@deepseek-ai/cordis' { interface Context { fixture: FixtureService } }
+    declare module '@deepseek-ai/cordis' { interface Context { fixture: ${generic ? 'Operations<string>' : 'FixtureService'} } }
   `)
   try { return collectServices(root, policy) }
   finally { rmSync(root, { recursive: true, force: true }) }
@@ -49,7 +59,11 @@ it('rejects inheritdoc when the declaring interface omits required method docume
 
 it('retains the authored service signature when documentation comes from a generic interface', () => {
   const services = project('/** Read one value.\n * @param id - exact value identifier.\n * @returns the stored value.\n */', true)
-  expect(services[0]?.methods[0]?.signature).toContain('Promise<string>')
-  expect(services[0]?.methods[0]?.signature).not.toContain('Value')
-  expect(services[0]?.methods[0]?.jsDoc).toContain('@returns')
+  expect(services[0]?.methods.map(method => method.signature)).toEqual(expect.arrayContaining([
+    expect.stringContaining('Promise<string>'),
+    expect.stringContaining('Promise<boolean>'),
+  ]))
+  expect(services[0]?.methods.map(method => method.signature).join('\n')).not.toContain('Value')
+  expect(services[0]?.methods.map(method => method.signature).join('\n')).not.toContain('typertRemote')
+  expect(services[0]?.methods.find(method => method.signature.includes('Promise<string>'))?.jsDoc).toContain('@returns')
 })

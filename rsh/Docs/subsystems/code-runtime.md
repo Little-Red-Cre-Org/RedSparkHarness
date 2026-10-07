@@ -2,9 +2,9 @@
 
 English | [中文](code-runtime.zh.md)
 
-The code-execution seam — a [capability seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md) whose Service Definition ([dsh-code-runtime](../../Modules/Official/code-runtime/code-runtime), `ctx.codeRuntime`) runs one model-written program against host-provided async bindings and reports what it printed and returned. Code execution is **one optional capability**, not part of the agent-loop spine — so its vocabulary lives here, not in [core.md](core.md). Backends differ by execution substrate and source language, both readonly descriptors on the service; the worker-thread Service Provider and tool-registry Consumer are specified by the [PTC mode foundation](../../../.agents/notes/implemented/feature/2026-06-15-ptc.md) and [typed-return contract](../../../.agents/notes/implemented/feature/2026-07-20-ptc-typed-tool-returns.md).
+The code-execution seam — a [capability seam](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md) whose framework-free [code-runtime Definition](../../Engine/core/code-runtime-definition) describes running one model-written program against host-provided async bindings and reporting its output. The Cordis compatibility Service is [compat-code-runtime](../../Compatibility/DSH/bridge/compat-code-runtime) (`ctx.codeRuntime`). Code execution is **one optional capability**, not part of the agent-loop spine — so its vocabulary lives here, not in [core.md](core.md). Backends differ by execution substrate and source language, both readonly descriptors on the service; the worker-thread Service Provider and tool-registry Consumer are specified by the [PTC mode foundation](../../../.agents/notes/implemented/feature/2026-06-15-ptc.md) and [typed-return contract](../../../.agents/notes/implemented/feature/2026-07-20-ptc-typed-tool-returns.md).
 
-Source: [`rsh/Modules/Official/code-runtime/code-runtime/src/types.ts`](../../Modules/Official/code-runtime/code-runtime/src/types.ts)
+Source: [`rsh/Engine/core/code-runtime-definition/src/types.ts`](../../Engine/core/code-runtime-definition/src/types.ts)
 
 ## The run: request in, result out
 
@@ -33,6 +33,22 @@ interface CodeRunRequest {
    * binding calls are the CALLER's to settle — the runtime only stops asking.
    */
   signal?: AbortSignal
+}
+```
+
+Native Hosts also accept `NativeCodeRunRequest`, which adds a stop callback for cancelling caller-owned bindings. It is called once when execution that has started stops, before the Provider waits for those calls to settle; a request resolved or rejected before execution starts does not notify. Cordis `CodeRuntimeDefinition` Providers accept only the shared request.
+
+```ts type-equiv
+/** Native-only run request with a stop notification for caller-owned bindings. */
+interface NativeCodeRunRequest extends CodeRunRequest {
+  /**
+   * Notify the caller once a started native execution stops, before waiting
+   * for caller-owned binding calls. Use the notification to begin cancelling
+   * those calls without waiting for this run to return. Successful completion
+   * supplies no failure. A request resolved or rejected before execution starts
+   * does not notify.
+   */
+  onStop?: (failure?: CodeRunFailure) => void
 }
 ```
 
@@ -116,7 +132,7 @@ interface CodeBindingNamespace {
 ```
 
 ```ts type-equiv
-/** A lossless JSON value transferable through the dependency-light Service Definition. */
+/** A lossless JSON value transferable through the dependency-light runtime API. */
 type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key: string]: CodeJsonValue }
 ```
 
@@ -162,7 +178,7 @@ interface CodeRunFailure {
 
 ## The service
 
-`CodeRuntime` (`ctx.codeRuntime`, abstract — defined in [`rsh/Modules/Official/code-runtime/code-runtime/src/index.ts`](../../Modules/Official/code-runtime/code-runtime/src/index.ts)) is `run(request)` plus two readonly descriptors: `language` (what the program must be written in — `'typescript'` and `'python'` are the well-known values, those `dsh-tools` presents, the TypeScript backend released and the Python backend experimental and private (not published); a consumer generating language-specific presentation switches on it and fails loud on one it cannot present) and `isolation` (the execution substrate — `'worker-thread'`, `'process'`, `'container'`; a diagnostic label, **not a security claim**). Implementations must keep runs isolated from each other (no cross-run state) and dispose to quiescence: in-flight runs are terminated and awaited before teardown completes.
+`CodeRuntime` (`ctx.codeRuntime`, abstract — provided by [`compat-code-runtime`](../../Compatibility/DSH/bridge/compat-code-runtime/src/index.ts)) implements `run(request)` plus two readonly descriptors: `language` (what the program must be written in — `'typescript'` and `'python'` are the well-known values, those `dsh-tools` presents, the TypeScript backend released and the Python backend experimental and private (not published); a consumer generating language-specific presentation switches on it and fails loud on one it cannot present) and `isolation` (the execution substrate — `'worker-thread'`, `'process'`, `'container'`; a diagnostic label, **not a security claim**). Implementations must keep runs isolated from each other (no cross-run state) and dispose to quiescence: in-flight runs are terminated and awaited before teardown completes.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -172,24 +188,20 @@ interface CodeRunFailure {
 
 Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
-<a id="ctxcoderuntime--coderuntime-abstract-seam"></a>
+<a id="ctxcoderuntime--coderuntimedefinition"></a>
 
-### `ctx.codeRuntime` — `CodeRuntime` (abstract seam)
+### `ctx.codeRuntime` — `CodeRuntimeDefinition`
 
-Registers one `ctx.codeRuntime` implementation. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition contract misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, treat programs as hostile peers, isolate runs from one another, and terminate and await in-flight runs during disposal.
+Cordis-free code-execution operations implemented by a selected backend. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, isolate runs from one another, and terminate in-flight runs on disposal.
 
 ```ts cordis-catalog
 /**
- * Execute one program against the request's bindings and capture what it
- * emitted. See the class doc for the resolution contract (error is a result
- * field; rejection means Service Definition contract misuse only).
- * @param request - the program, its bindings, and the abort signal; the
- *   request carries everything the runtime acts on, with no hidden defaults.
- * @returns the run's outcome: completion value (when transferable), the
- *   ordered log capture, and the failure (if any).
+ * Execute one program against its declared bindings and capture its output.
+ * @param request - the program, its bindings, and its abort signal.
+ * @returns the run outcome, including any program or substrate failure.
  */
-abstract run(request: CodeRunRequest): Promise<CodeRunResult>
+run(request: CodeRunRequest): Promise<CodeRunResult>
 ```
 
-Source: [`rsh/Modules/Official/code-runtime/code-runtime/src/index.ts`](../../Modules/Official/code-runtime/code-runtime/src/index.ts)
+Source: [`rsh/Engine/core/code-runtime-definition/src/index.ts`](../../Engine/core/code-runtime-definition/src/index.ts)
 <!-- END GENERATED cordis-surface -->

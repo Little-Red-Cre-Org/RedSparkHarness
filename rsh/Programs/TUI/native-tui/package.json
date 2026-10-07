@@ -46,6 +46,7 @@
     "zod": "^4.3.6",
     "@deepseek-ai/dsh-native-agent": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
