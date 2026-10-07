@@ -104,6 +104,6 @@ The package adds no prompt content itself; the consuming profile's scoped Provid
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
-This package omits an `./invariant` companion because the shared Registry owns registration state and this Provider has no independent runtime relationship to observe.
+No runtime invariant companion is published because the shared Registry owns registration state, and this Provider has no independent runtime relationship to observe.
 
 </details>

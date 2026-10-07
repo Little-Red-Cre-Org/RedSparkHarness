@@ -104,6 +104,6 @@ Provider 在 profile 安装项指定的 scope 中贡献一个 `NativePresetCompo
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 
-本包不提供 `./invariant` companion，因为注册状态由共享 Registry 持有，而此 Provider 没有可独立观察的运行时关系。
+本包不发布 runtime invariant companion，因为注册状态由共享 Registry 持有，而此 Provider 没有可独立观察的运行时关系。
 
 </details>
