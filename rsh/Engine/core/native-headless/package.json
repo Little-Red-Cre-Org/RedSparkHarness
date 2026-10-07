@@ -67,7 +67,9 @@
   "devDependencies": {
     "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-token-meter": "workspace:^"
+    "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-native-code-runtime": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
@@ -80,8 +82,8 @@
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-native-prompt": "workspace:^",
     "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-native-approval": "workspace:^",
-    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-approval-definition": "workspace:^",
+    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",

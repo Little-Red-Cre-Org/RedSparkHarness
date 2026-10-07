@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-23-native-tool-approval.md
-2026-09-23-native-tool-approval.md: 76748d8c2a67977ed45d29bcf878b36c8a4f1e37
-2026-09-23-native-tool-approval.zh.md: 0d238ec38b4ffb76f6e9578577cd08883fc9254f
+2026-09-23-native-tool-approval.md: 4db28a745a718400b8f57f7cc07d9c6f9582ad80
+2026-09-23-native-tool-approval.zh.md: 5d09e3a83db389e35acb7cd5e0e5dce764ff50c1

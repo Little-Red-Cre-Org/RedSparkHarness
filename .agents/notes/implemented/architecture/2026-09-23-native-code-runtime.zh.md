@@ -10,7 +10,7 @@
 
 ## 决策
 
-`@deepseek-ai/dsh-native-code-runtime` 是为 `codeRuntime` 提供服务的无框架 Host Provider。它保留既有 request/result 词汇和 worker 执行行为，同时将可移植类型词汇与 worker 协议移入原生包。Provider 在激活前 resolve 四项显式资源限制，经由 `NativeContext.own()` 拥有 `dispose()`，并在 Host 关闭时终止所有存活 worker。
+`@deepseek-ai/dsh-code-runtime-definition` 拥有可移植的 `CodeRunRequest`/结果词汇与 `CodeRuntimeDefinition`；`NativeCodeRunRequest` 增加原生专用停止回调，用于取消调用方拥有的 binding。`@deepseek-ai/dsh-native-code-runtime` 是为 `codeRuntime` 提供服务的无框架 Host Provider。Provider 保留 worker 执行行为，在激活前 resolve 四项显式资源限制，经由 `NativeContext.own()` 拥有 `dispose()`，并在 Host 关闭时终止所有存活 worker。其源码位于 `rsh/Modules/Official/code-runtime/native-code-runtime`；Cordis `dsh-code-runtime` adapter 仍位于 `rsh/Compatibility/DSH/bridge/compat-code-runtime`，并实现不含原生专用回调的共享 Definition。
 
 本包不导入 Cordis runtime 或 adapter。`dsh-native-headless` 将可选服务消费为固定 `run_code` 操作，不提供宿主 binding，并在下一次模型请求前把有界 JSON 结果作为普通工具结果写入。其他原生应用必须提供自己的 binding，并决定自己的 Session 投影。Cordis worker-thread 包保持不变，因此既有 Cordis profile 会继续使用当前 seam 实现，直到后续 profile 默认迁移。
 

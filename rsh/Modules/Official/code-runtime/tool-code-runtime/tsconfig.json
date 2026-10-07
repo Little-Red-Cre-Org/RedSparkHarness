@@ -18,7 +18,7 @@
       "path": "../../../../Engine/core/native-prompt"
     },
     {
-      "path": "../../../../Engine/core/native-code-runtime"
+      "path": "../../../../Engine/core/code-runtime-definition"
     },
     {
       "path": "../../fs/fs"

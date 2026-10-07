@@ -19,7 +19,7 @@
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-native-prompt": "workspace:^",
-    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
   },

@@ -67,6 +67,8 @@ export interface ServiceModel extends DocumentationModel {
   readonly symbol: SymbolId
   readonly export: ExportModel
   readonly members: readonly string[]
+  /** Context-specialized inherited members when the service key supplies type arguments. */
+  readonly resolvedMembers?: readonly MemberModel[]
   readonly location: SourceLocation
 }
 

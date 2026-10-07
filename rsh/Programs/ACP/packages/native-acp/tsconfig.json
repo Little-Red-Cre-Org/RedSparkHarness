@@ -52,6 +52,9 @@
     },
     {
       "path": "../../../../Modules/Official/interaction/native-approval"
+    },
+    {
+      "path": "../../../../Engine/core/approval-definition"
     }
   ]
 }

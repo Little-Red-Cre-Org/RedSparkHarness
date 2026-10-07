@@ -5,7 +5,7 @@ import {
   nativeCodeRuntimeChildPath, resolveNativeWorkerThreadConfig,
   snapshotCodeJsonValue,
   type NativeCodeRuntime, type ResolvedNativeWorkerThreadCodeRuntimeConfig,
-  type CodeBindingNamespace, type CodeJsonValue, type CodeRunFailure, type CodeRunRequest, type CodeRunResult,
+  type CodeBindingNamespace, type CodeJsonValue, type CodeRunFailure, type CodeRunResult, type NativeCodeRunRequest,
 } from '@deepseek-ai/dsh-native-code-runtime'
 import { classifyRunnerFailure, isRunnerSpawnFailure, SandboxUnavailableError, type ProcessSandbox } from '@deepseek-ai/dsh-sandbox/native'
 import type { SubprocessHandle, SubprocessOperations } from '@deepseek-ai/dsh-subprocess/native'
@@ -17,6 +17,7 @@ interface LiveRun {
 }
 
 type ChildFrame =
+  | { type: 'started' }
   | { type: 'call'; id: number; global: string; name: string; args: CodeJsonValue }
   | { type: 'done'; result: CodeRunResult }
   | { type: 'misuse'; message: string }
@@ -35,6 +36,7 @@ function parseFrame(text: string): ChildFrame {
   const raw: unknown = JSON.parse(text)
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new Error('frame must be an object')
   const frame = raw as Record<string, unknown>
+  if (frame.type === 'started') return { type: 'started' }
   if (frame.type === 'call') {
     if (!Number.isSafeInteger(frame.id) || (frame.id as number) <= 0 || typeof frame.global !== 'string' || typeof frame.name !== 'string') {
       throw new Error('invalid call frame')
@@ -86,7 +88,7 @@ export class ProcessSandboxCodeRuntime implements NativeCodeRuntime {
   }
 
   /** @param request - one model program and the bindings it can call. @returns the bounded program outcome. */
-  async run(request: CodeRunRequest): Promise<CodeRunResult> {
+  async run(request: NativeCodeRunRequest): Promise<CodeRunResult> {
     if (this.disposed) throw new Error('code-runtime-process-sandbox: run() after disposal')
     if (request.signal?.aborted) return failure('abort', String(request.signal.reason))
     const executionPolicy = this.policy.resolve()
@@ -126,10 +128,11 @@ export class ProcessSandboxCodeRuntime implements NativeCodeRuntime {
     let settled: ChildFrame | undefined
     let finishedResolve!: () => void
     const finished = new Promise<void>((resolve) => { finishedResolve = resolve })
+    let executionStarted = false
     let notified = false
     const notificationFailures: unknown[] = []
     const notifyStop = (reason?: CodeRunFailure): void => {
-      if (notified) return
+      if (!executionStarted || notified) return
       notified = true
       try { request.onStop?.(reason) }
       catch (error: unknown) { notificationFailures.push(error) }
@@ -199,7 +202,10 @@ export class ProcessSandboxCodeRuntime implements NativeCodeRuntime {
           pending = Buffer.alloc(0)
           const frame = parseFrame(line)
           if (settled !== undefined) throw new Error('code runtime sent a frame after completion')
-          if (frame.type === 'call') answer(frame)
+          if (frame.type === 'started') {
+            executionStarted = true
+            if (override !== undefined) notifyStop(override)
+          } else if (frame.type === 'call') answer(frame)
           else {
             settled = frame
             if (frame.type === 'done') notifyStop(frame.result.error)

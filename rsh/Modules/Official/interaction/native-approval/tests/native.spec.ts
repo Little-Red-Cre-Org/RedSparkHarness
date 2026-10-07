@@ -3,17 +3,18 @@ import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { NativeApprovalRequestId, NativeApprovalService, plugin as approvalPlugin } from '../src/index.ts'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import { NativeApprovalRequestId, plugin as approvalPlugin } from '../src/index.ts'
 
 async function fixture(policy?: 'ask' | 'never'): Promise<{
   host: NativeHost
   root: NativeScope
   agents: NativeAgentRegistry
-  approval: NativeApprovalService
+  approval: NativeApprovalServiceDefinition
 }> {
   const root = new NativeScope()
   let agents: NativeAgentRegistry | undefined
-  let approval: NativeApprovalService | undefined
+  let approval: NativeApprovalServiceDefinition | undefined
   const capture: NativePlugin = {
     apiVersion: 1, name: 'native-approval-capture', targets: ['host'], requires: ['agents', 'approval'], provides: [],
     resolve: () => (context) => {

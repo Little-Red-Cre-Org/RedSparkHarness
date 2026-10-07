@@ -122,7 +122,7 @@ export interface CordisCatalogPolicy {
   readonly runtimeServices?: readonly ServiceEntry[]
   /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
   readonly runtimeServiceExclusions?: ReadonlySet<string>
-  /** Registered source packages whose declarations extend a projected Service. */
+  /** Registered source packages used as Context Service Definitions or inherited projected Services. */
   readonly serviceDefinitionPackages?: readonly string[]
   /** Manually curated framework events inherited by every plugin. */
   readonly inheritedEvents: readonly InheritedEntry[]
@@ -264,12 +264,14 @@ export class CordisCatalogProjector {
       for (const service of packageModel.services) {
         const declaration = this.renderer.declaration(service.symbol)
         const owner = /^(?:.*\/)?src\//.exec(service.location.file)?.[0]
+        const definitionPackage = service.symbol.slice(0, service.symbol.indexOf(':'))
+        const importedDefinition = this.policy.serviceDefinitionPackages?.includes(definitionPackage) === true
         if ((declaration.kind !== 'class' && declaration.kind !== 'interface')
           || owner === undefined
           || (this.face.face === 'host'
             ? !/^(?:.*\/)?src\/[^/]+\.tsx?$/.test(service.location.file)
             : !/^(?:.*\/)?src\/client\/.+\.tsx?$/.test(service.location.file))
-          || !declaration.location.file.startsWith(owner)) continue
+          || (!declaration.location.file.startsWith(owner) && !importedDefinition)) continue
         const current = chosen.get(service.key)
         if (current !== undefined && this.renderer.declaration(current.symbol).kind === 'class') continue
         chosen.set(service.key, service)
@@ -292,7 +294,13 @@ export class CordisCatalogProjector {
         violations.push(`service ctx.${service.key} (${source}): ${declaration.kind} ${declaration.name} has no JSDoc.`)
       }
       const methods: ServiceMethodEntry[] = []
-      for (const member of this.serviceMembers(declaration, service.members)) {
+      const resolvedMembers = service.resolvedMembers ?? []
+      const resolvedNames = new Set(resolvedMembers.map(member => member.name))
+      const members = [
+        ...resolvedMembers,
+        ...this.serviceMembers(declaration, service.members).filter(member => !resolvedNames.has(member.name)),
+      ]
+      for (const member of members) {
         if (member.name.startsWith('[')) continue
         const inherited = /@inheritdoc\b/u.test(member.jsDoc ?? '')
           ? this.inheritedServiceMember(declaration, member, new Set()) : undefined
@@ -301,7 +309,7 @@ export class CordisCatalogProjector {
         if (parsed.deprecated) continue
         if (member.kind === 'property') {
           if (jsDoc === undefined) continue
-          methods.push({ kind: 'property', signature: member.text, jsDoc })
+          methods.push({ kind: 'property', signature: member.text || this.renderer.renderMember(member), jsDoc })
           continue
         }
         if (member.kind !== 'method') continue
@@ -309,7 +317,7 @@ export class CordisCatalogProjector {
         if (this.face.face === 'host') {
           checkTypeLinks(where, signatureTypeNames(this.renderer, member.signature), this.policy, typeLinkViolations)
         }
-        methods.push({ kind: 'method', signature: member.text, jsDoc: jsDoc ?? '' })
+        methods.push({ kind: 'method', signature: member.text || this.renderer.renderMember(member), jsDoc: jsDoc ?? '' })
         if (jsDoc === undefined) {
           violations.push(`${where} has no JSDoc.`)
           continue
@@ -339,6 +347,7 @@ export class CordisCatalogProjector {
     visited.add(declaration.id)
 
     const members = memberIds.map(memberId => this.renderer.member(memberId))
+      .filter(member => member.name !== 'typertRemote')
     const names = new Set(members.map(member => member.name))
     for (const baseId of declaration.extends) {
       const base = this.renderer.node(baseId)
@@ -375,23 +384,24 @@ export class CordisCatalogProjector {
     services: readonly ServiceEntry[],
     events: readonly EventEntry[],
   ): { name: string; declaration: string }[] {
-    const declarations = new Map<string, string>()
-    const ambiguous = new Set<string>()
+    const candidates = new Map<string, SourceDeclarationModel[]>()
     for (const declaration of this.sourceDeclarations) {
       if (declaration.face !== this.face.face || declaration.kind === 'enum'
         || !/^(?:.*\/)?src\/.+\.tsx?$/.test(declaration.location.file)) continue
-      if (declarations.has(declaration.name)) {
-        ambiguous.add(declaration.name)
-        continue
-      }
-      declarations.set(
-        declaration.name,
-        declaration.text.length > MAX_DECL_CHARS
-          ? `${declaration.text.slice(0, MAX_DECL_CHARS)} /* …truncated — full shape in source */`
-          : declaration.text,
-      )
+      const declarations = candidates.get(declaration.name) ?? []
+      declarations.push(declaration)
+      candidates.set(declaration.name, declarations)
     }
-    for (const name of ambiguous) declarations.delete(name)
+    const definitionPackages = new Set(this.policy.serviceDefinitionPackages ?? [])
+    const declarations = new Map<string, string>()
+    for (const [name, options] of candidates) {
+      const definitions = options.filter(option => definitionPackages.has(option.package))
+      const selected = definitions.length === 1 ? definitions[0] : definitions.length === 0 && options.length === 1 ? options[0] : undefined
+      if (selected === undefined) continue
+      declarations.set(name, selected.text.length > MAX_DECL_CHARS
+        ? `${selected.text.slice(0, MAX_DECL_CHARS)} /* …truncated — full shape in source */`
+        : selected.text)
+    }
     return referencedTypes([
       ...services.flatMap(service => service.methods.map(method => method.signature)),
       ...events.map(event => event.signature),
@@ -416,10 +426,11 @@ export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPoli
     faces: [targetFace],
     checkDiagnostics: false,
     caches,
+    ...(policy.serviceDefinitionPackages === undefined ? {} : { serviceDefinitionPackages: policy.serviceDefinitionPackages }),
   }).discoverPackages(policy.serviceDefinitionPackages)
   for (const packageName of policy.serviceDefinitionPackages ?? []) {
     if (!discovery.some(candidate => candidate.package === packageName && candidate.faces.includes(targetFace))) {
-      throw new Error(`gen-cordis-catalog: service definition package '${packageName}' is not registered for ${targetFace}`)
+      throw new Error(`gen-cordis-catalog: Service Definition package '${packageName}' is not registered for ${targetFace}`)
     }
   }
   const packages = discovery.filter(candidate => candidate.faces.includes(targetFace))
@@ -430,6 +441,7 @@ export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPoli
     packages,
     checkDiagnostics: false,
     caches,
+    ...(policy.serviceDefinitionPackages === undefined ? {} : { serviceDefinitionPackages: policy.serviceDefinitionPackages }),
   }).analyzeInBatches()
   const face = workspace.faces.find(candidate => candidate.face === targetFace)
   if (face === undefined) throw new Error(`gen-cordis-catalog: Typert produced no ${targetFace} face`)

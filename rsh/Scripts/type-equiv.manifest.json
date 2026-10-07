@@ -954,22 +954,22 @@
     {
       "doc": "rsh/Docs/subsystems/approval.md",
       "symbol": "ApprovalRequestId",
-      "source": "rsh/Modules/Official/interaction/user-approval/src/types.ts"
+      "source": "rsh/Engine/core/approval-definition/src/legacy.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/approval.md",
       "symbol": "ApprovalOutcome",
-      "source": "rsh/Modules/Official/interaction/user-approval/src/types.ts"
+      "source": "rsh/Engine/core/approval-definition/src/legacy.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/approval.md",
       "symbol": "ApprovalPolicy",
-      "source": "rsh/Modules/Official/interaction/user-approval/src/index.ts"
+      "source": "rsh/Engine/core/approval-definition/src/legacy.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/approval.md",
       "symbol": "ApprovalRequest",
-      "source": "rsh/Modules/Official/interaction/user-approval/src/index.ts"
+      "source": "rsh/Engine/core/approval-definition/src/legacy.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/attachment.md",
@@ -1164,37 +1164,42 @@
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeJsonValue",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeRunRequest",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/code-runtime.md",
+      "symbol": "NativeCodeRunRequest",
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeRunResult",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeBindingNamespace",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeBindingErrorClass",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeBindingFunction",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeRunFailure",
-      "source": "rsh/Modules/Official/code-runtime/code-runtime/src/types.ts"
+      "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/filesystem.md",

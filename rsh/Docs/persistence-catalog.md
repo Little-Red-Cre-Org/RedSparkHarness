@@ -133,14 +133,7 @@ Source: [`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine
 #### `approval/asked` — log-only
 
 ```ts persistence-catalog
-/**
- * An approval question was put to the answerer chain — log-only audit
- * (like `hook/*`; NOT a surface event, carries no `surfaceOp`). `id` pairs
- * it with the `approval/decided` that always follows; `toolName` is the
- * tool the question is about, `callId` the exact tool call when the asker
- * had one, `reason` the asker's human-readable explanation (e.g. a hook's
- * permission-decision reason).
- */
+/** One compatibility approval question before its matching decision. */
 'approval/asked': {
   id: ApprovalRequestId
   toolName: string
@@ -151,47 +144,33 @@ Source: [`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Modules/Official/interaction/user-approval/src/types.ts:44`](../Modules/Official/interaction/user-approval/src/types.ts)
+Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:97`](../Engine/core/approval-definition/src/legacy.ts)
 
 <a id="approvaldecided--log-only"></a>
 
 #### `approval/decided` — log-only
 
 ```ts persistence-catalog
-/**
- * The outcome of a prior `approval/asked` (same `id`) — log-only audit.
- * Exactly one per ask, appended when the outcome is known: a decision, a
- * cancellation, or the fail-closed `'unavailable'`.
- */
-'approval/decided': {
-  id: ApprovalRequestId
-  outcome: ApprovalOutcome
-}
+/** Closed outcome paired with a preceding compatibility approval question. */
+'approval/decided': { id: ApprovalRequestId; outcome: ApprovalOutcome }
 ```
 
-Source: [`rsh/Modules/Official/interaction/user-approval/src/types.ts:55`](../Modules/Official/interaction/user-approval/src/types.ts)
+Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:104`](../Engine/core/approval-definition/src/legacy.ts)
 
 <a id="approvalpolicy--log-only"></a>
 
 #### `approval/policy` — log-only
 
 ```ts persistence-catalog
-/**
- * The session's approval policy was switched — log-only, durable,
- * replayable, never in the model transcript (the model learns the policy
- * from the runtime-context snapshot and live switch notices). The LAST
- * such event is the session's override.
- * `source: 'delegation'` marks an override seeded into a child; an absent
- * source is a runtime switch.
- */
+/** Durable per-Session policy override, never included in the model transcript. */
 'approval/policy': {
   policy: ApprovalPolicy
-  /** Marks an override seeded into a child at delegation. */
+  /** Marks an override seeded into a child during delegation. */
   source?: 'delegation'
 }
 ```
 
-Source: [`rsh/Modules/Official/interaction/user-approval/src/index.ts:33`](../Modules/Official/interaction/user-approval/src/index.ts)
+Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:106`](../Engine/core/approval-definition/src/legacy.ts)
 
 ### `assistant/*`
 
@@ -556,7 +535,7 @@ Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../E
 #### `native-approval/asked` — log-only
 
 ```ts persistence-catalog
-/** One native approval question before a matching decision is recorded. */
+/** One native approval question before its matching decision is recorded. */
 'native-approval/asked': {
   id: NativeApprovalRequestId
   toolName: string
@@ -567,14 +546,14 @@ Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../E
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:38`](../Modules/Official/interaction/native-approval/src/types.ts)
+Source: [`rsh/Engine/core/approval-definition/src/index.ts:82`](../Engine/core/approval-definition/src/index.ts)
 
 <a id="native-approvaldecided--log-only"></a>
 
 #### `native-approval/decided` — log-only
 
 ```ts persistence-catalog
-/** Closed native approval outcome paired with a preceding native-approval/asked event. */
+/** Closed native approval outcome paired with a preceding native asked event. */
 'native-approval/decided': {
   id: NativeApprovalRequestId
   policy: NativeApprovalPolicy
@@ -582,7 +561,7 @@ Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:38`](../
 }
 ```
 
-Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:45`](../Modules/Official/interaction/native-approval/src/types.ts)
+Source: [`rsh/Engine/core/approval-definition/src/index.ts:89`](../Engine/core/approval-definition/src/index.ts)
 
 ### `permission/*`
 
@@ -600,7 +579,7 @@ Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:45`](../
 'permission/preset': { preset: string }
 ```
 
-Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:54`](../Modules/Official/interaction/permission-presets/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:56`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 ### `plan/*`
 

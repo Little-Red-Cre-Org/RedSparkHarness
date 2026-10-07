@@ -30,7 +30,10 @@
       "path": "../../shell/shell"
     },
     {
-      "path": "../user-approval"
+      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
+    },
+    {
+      "path": "../../../../Engine/core/approval-definition"
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"

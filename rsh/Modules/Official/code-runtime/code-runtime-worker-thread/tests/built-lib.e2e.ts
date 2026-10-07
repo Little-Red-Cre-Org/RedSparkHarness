@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 
 const pkgDir = fileURLToPath(new URL('..', import.meta.url))
 const built = ['lib/index.js', 'lib/worker.cjs'].every(file => existsSync(join(pkgDir, file)))
-  && existsSync(join(pkgDir, '../code-runtime/lib/index.js'))
+  && existsSync(fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-code-runtime')))
 
 describe.skipIf(!built)('built lib real load path (plain node)', () => {
   it('runs a TypeScript program with a binding through lib/index.js and its lib/worker.cjs entry', async () => {

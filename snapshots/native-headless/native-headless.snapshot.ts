@@ -45,7 +45,7 @@ it('executes and restores a native profile through the published dsh command', a
   for (const [name, path] of [
     ['dsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-code-runtime', 'rsh/Engine/core/native-code-runtime'],
+    ['dsh-native-code-runtime', 'rsh/Modules/Official/code-runtime/native-code-runtime'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
     ['dsh-native-jobs', 'rsh/Engine/core/native-jobs'],
     ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
