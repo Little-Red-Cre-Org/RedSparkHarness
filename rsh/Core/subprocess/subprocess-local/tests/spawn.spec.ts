@@ -48,6 +48,7 @@ function shellArgv(command: string): string[] {
     case 'unused': return node('')
     case 'echo "${TERM:-unset}"': return node('console.log(process.env.TERM ?? "unset")')
     case 'echo "$EXTRA_ONE/$EXTRA_TWO"': return node('console.log(process.env.EXTRA_ONE + "/" + process.env.EXTRA_TWO)')
+    case 'echo "${EXTRA_ONE:-absent}/$EXTRA_TWO"': return node('console.log((process.env.EXTRA_ONE ?? "absent") + "/" + process.env.EXTRA_TWO)')
     case 'echo "$EXPLICIT_OVERRIDE_PASSWORD"': return node('console.log(process.env.EXPLICIT_OVERRIDE_PASSWORD)')
     case 'echo "${SUBPROCESS_TOMBSTONE_PROBE:-absent}"': return node('console.log(process.env.SUBPROCESS_TOMBSTONE_PROBE ?? "absent")')
     case 'echo "[${DSH_STALE:-absent}|$DSH_SHELL|$DSH_SESSION_ID]"':
@@ -420,11 +421,22 @@ describe('stdin and extra env (set by in-process plugins)', () => {
     expect(piped.stdout.text).toBe('socket\n')
   })
 
-  it('merges ordinary extra env entries onto the scrubbed environment', async () => {
-    const result = await finish(spawnSubprocess(spec('echo "$EXTRA_ONE/$EXTRA_TWO"', {
-      env: { EXTRA_ONE: 'alpha', EXTRA_TWO: 'beta' },
-    })))
-    expect(result.stdout.text).toBe('alpha/beta\n')
+  it.each([
+    { name: 'scrub-overlay', envMode: undefined, expected: 'ambient/beta\n' },
+    { name: 'complete replacement', envMode: 'replace' as const, expected: 'absent/beta\n' },
+  ])('applies the $name environment contract', async ({ envMode, expected }) => {
+    const previous = process.env.EXTRA_ONE
+    process.env.EXTRA_ONE = 'ambient'
+    try {
+      const result = await finish(spawnSubprocess(spec('echo "${EXTRA_ONE:-absent}/$EXTRA_TWO"', {
+        env: { EXTRA_TWO: 'beta' },
+        envMode,
+      })))
+      expect(result.stdout.text).toBe(expected)
+    } finally {
+      if (previous === undefined) delete process.env.EXTRA_ONE
+      else process.env.EXTRA_ONE = previous
+    }
   })
 
   it('lets an explicit tombstone remove an ordinary ambient env entry', async () => {

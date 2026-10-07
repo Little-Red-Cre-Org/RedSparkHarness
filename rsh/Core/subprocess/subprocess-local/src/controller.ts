@@ -14,6 +14,9 @@ import { delimiter, extname, isAbsolute, resolve } from 'node:path'
 import * as nodePty from 'node-pty'
 import type { IPtyForkOptions } from 'node-pty'
 import type {
+  ChildConnectionDefinition,
+  ChildConnectionHandle,
+  ChildConnectionSpec,
   SubprocessOperations,
   SubprocessHandle,
   SubprocessSpawnSpec,
@@ -47,7 +50,7 @@ import { LocalTerminalHandle } from './terminal.ts'
  * POSIX paths stage TERM before KILL; Windows paths terminate immediately.
  * JavaScript-observable host exit also performs synchronous final termination.
  */
-export class LocalSubprocessController implements SubprocessOperations {
+export class LocalSubprocessController implements SubprocessOperations, ChildConnectionDefinition {
   /** Live handles retained for normal disposal and synchronous host-exit finalization. */
   readonly live = new Set<LocalSubprocessHandle>()
   /** Live terminals retained through normal quiescence or host-exit finalization. */
@@ -189,6 +192,19 @@ export class LocalSubprocessController implements SubprocessOperations {
       handle.waitForExit().then(() => { this.live.delete(handle) })
     void handle.done.then(release, release).catch(() => {})
     return handle
+  }
+
+  /** Connect one subprocess with caller-owned raw stdin, stdout, and stderr. */
+  connect(spec: ChildConnectionSpec): ChildConnectionHandle {
+    const handle = this.spawn({
+      ...spec,
+      stdio: { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' },
+    })
+    if (handle.stdin === undefined || handle.stdout === undefined || handle.stderr === undefined) {
+      handle.terminate()
+      throw new Error('subprocess-local: child connection did not create all stdio pipes')
+    }
+    return { ...handle, stdin: handle.stdin, stdout: handle.stdout, stderr: handle.stderr }
   }
 
   /**

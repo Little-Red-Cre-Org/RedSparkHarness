@@ -43,6 +43,7 @@
  *   attempt arrive before the protocol failure (partial-output retention probe).
  * - `FAKE_IGNORE_EOF` + `FAKE_SIGTERM_FILE`: keep running after stdin EOF; touch the file on SIGTERM (ladder probe).
  * - `FAKE_TRAP_SIGTERM`: with `FAKE_IGNORE_EOF`, survive SIGTERM too (SIGKILL-rung probe).
+ * - `FAKE_NONREADING_STDIN`: never consume stdin; exit after 2.5 seconds as a test-leak failsafe.
  * - `FAKE_EXIT_BEFORE_INIT`: exit 3 immediately (spawn-then-die probe).
  * - `FAKE_STDERR`: write this line to stderr at boot (diagnostics-tail probe).
  * - `FAKE_STDERR_NO_NEWLINE`: write this to stderr WITHOUT a newline (buffer-flush probe).
@@ -221,6 +222,11 @@ function sessionIdOf(params: Record<string, unknown> | undefined): string {
 }
 
 const reader = createInterface({ input: process.stdin })
+if (env.FAKE_NONREADING_STDIN !== undefined) {
+  reader.close()
+  setInterval(() => {}, 1_000)
+  setTimeout(() => { process.exit(0) }, 2_500)
+}
 reader.on('line', (line) => {
   if (line.trim().length === 0) return
   const frame = JSON.parse(line) as { id?: string | number; method?: string; params?: Record<string, unknown> }

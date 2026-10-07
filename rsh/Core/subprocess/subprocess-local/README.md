@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `dsh-subprocess-local` to run child processes on the host. It resolves executables, manages Linux and Windows process ranges, and provides terminal sessions through `node-pty`; unsupported hosts use a documented weaker fallback. Spawn requests supply every stdio disposition, limit, terminal size, and grace period. Output keeps a bounded tail with optional full-stream spill recovery, children start from a scrubbed environment, and shutdown joins owned ranges and sessions.
+Mount `dsh-subprocess-local` to run child processes on the host. It resolves executables, manages Linux and Windows process ranges, and provides terminal sessions through `node-pty`; unsupported hosts use a documented weaker fallback. Spawn requests supply every stdio disposition, limit, terminal size, and grace period. Output keeps a bounded tail with optional full-stream spill recovery. General subprocesses use the scrub-overlay environment; child connections can explicitly request a complete replacement.
 
-Use `./native` to install this owner in a native Host; the root entry remains its Cordis adapter. Neither entry accepts configuration.
+Use `./native` to install the shared `subprocess` and `childConnection` owner in a native Host; the root entry remains its Cordis adapter. Standalone clients can use `./child-connection` to create this same process owner without NativeHost and then dispose it explicitly. These entries accept no configuration.
 
 ## Table of Contents
 
@@ -81,6 +81,7 @@ Each spawn selects one owner for both signalling and quiescence. Supported Linux
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service wiring: live-handle sets, disposal, host-exit finalization, executable lookup |
+| [`src/child-connection.ts`](src/child-connection.ts) | Standalone local owner factory for raw-pipe child connections |
 | [`src/spawn.ts`](src/spawn.ts) | Shared process plumbing: direct outcomes, tail-keep collection, spill files, and fallback spawning |
 | [`src/managed-owner.ts`](src/managed-owner.ts) | Private signal-and-wait owner used by each ordinary handle |
 | [`src/linux-scope.ts`](src/linux-scope.ts) | Linux user-systemd capability checks, scope launch, signalling, and quiescence |

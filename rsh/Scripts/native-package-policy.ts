@@ -227,6 +227,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/llm/llm', ['./message']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
+  ['rsh/Core/subprocess/subprocess-local', ['./child-connection']],
   ['rsh/Modules/Official/fs/tool-fs', ['./image-core']],
   ['rsh/Modules/Official/attachment/attachment-local', ['./backend', './request-store']],
   ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['./types']],
@@ -254,6 +255,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/subprocess/subprocess-local/child-connection', ['host']],
   ['rsh/Programs/Web/client/ui-conversation/tool-records', ['client']],
   ['rsh/Programs/Web/client/ui-conversation/conversation-copy', ['client']],
   ['rsh/Programs/Web/client/ui-tool/tool-renderer', ['client']],

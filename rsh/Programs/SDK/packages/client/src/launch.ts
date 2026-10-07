@@ -23,6 +23,7 @@ export interface RuntimeProcessOptions {
   requestTimeoutMs?: number
   shutdownTimeoutMs?: number
   disposeEofGraceMs?: number
+  /** Provider termination grace for escalation and owned-range confirmation during close. */
   disposeGraceMs?: number
 }
 

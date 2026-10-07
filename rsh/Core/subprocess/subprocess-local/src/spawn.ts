@@ -55,6 +55,16 @@ export function childEnv(extra?: Readonly<NodeJS.ProcessEnv>): NodeJS.ProcessEnv
   return Object.fromEntries(entries)
 }
 
+/** Materialize the selected scrub-overlay or complete-replacement child environment. */
+export function subprocessEnvironment(
+  spec: Pick<SubprocessSpawnSpec, 'env' | 'envMode'>,
+): Record<string, string> {
+  const environment = spec.envMode === 'replace' ? spec.env ?? {} : childEnv(spec.env)
+  return Object.fromEntries(
+    Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  )
+}
+
 /** Injectable process, spill, and platform operations. */
 export interface SpawnInternals {
   /** Process spawner (defaults to `node:child_process` `spawn`). */
@@ -649,7 +659,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
   const [program, ...args] = spec.argv
   const child = (internals.spawn ?? spawn)(program as string, args, {
     cwd: spec.cwd,
-    env: childEnv(spec.env),
+    env: subprocessEnvironment(spec),
     stdio: [
       spec.stdio.stdin === 'ignore' ? 'ignore' : 'pipe',
       spec.stdio.stdout === 'inherit' ? 'inherit' : 'pipe',

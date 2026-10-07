@@ -2,17 +2,18 @@
  * Low-level JSON-RPC client for a DeepSeek Harness SDK runtime subprocess.
  * {@link HarnessClient} owns the child process: it spawns the runtime, speaks
  * the `@deepseek-ai/dsh-sdk-protocol` wire over the child's stdio, fans
- * server notifications out to subscriptions, and tears the child down to
- * quiescence through a private EOF → SIGTERM → SIGKILL ladder. The design
+ * server notifications out to subscriptions, and tears the child down through
+ * Core's managed connection lifetime. The design
  * twin is the Python SDK's `HarnessClient` (`rsh/Programs/SDK/python/sdk`); both drive the
  * same runtime protocol. This client runs OUTSIDE any harness context, so it
- * spawns directly rather than through the `dsh-subprocess` service — the
- * seam's documented exception for SDK-managed transports.
+ * uses the framework-free local `dsh-subprocess` connection Provider without
+ * mounting NativeHost or Cordis.
  *
  * @module @deepseek-ai/dsh-sdk-client/client
  */
 
-import { spawn, type ChildProcess } from 'node:child_process'
+import { disposeChildConnection, type ChildConnectionHandle } from '@deepseek-ai/dsh-subprocess/native'
+import { createLocalChildConnectionProvider, type LocalChildConnectionProvider } from '@deepseek-ai/dsh-subprocess-local/child-connection'
 import {
   JsonRpcLineTransport,
   JsonRpcResponseError,
@@ -21,7 +22,6 @@ import {
   type SessionPromptParams,
   type SdkPromptContentBlock,
 } from '@deepseek-ai/dsh-sdk-protocol'
-import { disposeRuntimeProcess } from './dispose.ts'
 import { resolveDshLaunch, type RuntimeProcessOptions } from './launch.ts'
 import type { HarnessClientOptions, HarnessNotification, NotificationFilter } from './types.ts'
 
@@ -177,15 +177,17 @@ class NotificationSubscriptionImpl implements NotificationSubscription {
  * JSON-RPC client for the DeepSeek Harness SDK runtime over subprocess stdio.
  *
  * The subprocess starts lazily on {@link start} and is owned by this instance
- * until {@link close}, which requests protocol `shutdown` and then walks the
- * shared EOF → SIGTERM → SIGKILL dispose ladder to quiescence. A timed-out request stays running server-side; the explicit native-sdk
+ * until {@link close}, which requests protocol `shutdown`, gives protocol
+ * writes a bounded flush opportunity, then closes stdin and awaits the Provider-managed process range. A
+ * timed-out request stays running server-side; the explicit native-sdk
  * profile supports Session cancellation separately from request timeouts.
  */
 export class HarnessClient {
   /** Original public dsh launch and timeout options for this client. */
   readonly options: HarnessClientOptions
   private readonly runtime: RuntimeProcessOptions
-  private child: ChildProcess | undefined
+  private child: ChildConnectionHandle | undefined
+  private processProvider: LocalChildConnectionProvider | undefined
   private transport: JsonRpcLineTransport | undefined
   private readonly stderrTail: string[] = []
   private readonly subscriptions = new Map<string, NotificationSubscriptionImpl>()
@@ -193,6 +195,7 @@ export class HarnessClient {
   private subscriptionSerial = 0
   private exitCode: number | null | undefined
   private spawnError: Error | undefined
+  private rangeError: Error | undefined
   private streamsSettled: Promise<void> = Promise.resolve()
   private closeTask: Promise<void> | undefined
 
@@ -210,19 +213,23 @@ export class HarnessClient {
   start(): void {
     if (this.closeTask !== undefined) throw new TransportClosedError('DeepSeek Harness runtime client is closed')
     if (this.child !== undefined) return
-    const child = spawn(this.runtime.command, this.runtime.args, {
-      cwd: this.runtime.cwd,
-      env: this.runtime.environment(),
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
+    const processProvider = createLocalChildConnectionProvider()
+    this.processProvider = processProvider
+    let child: ChildConnectionHandle
+    try {
+      child = processProvider.connect({
+        argv: [this.runtime.command, ...this.runtime.args],
+        cwd: this.runtime.cwd ?? process.cwd(),
+        env: this.runtime.environment(),
+        envMode: 'replace',
+        graceMs: this.runtime.disposeGraceMs ?? 3_000,
+      })
+    } catch (error) {
+      void processProvider.dispose().catch(() => {})
+      this.processProvider = undefined
+      throw error
+    }
     this.child = child
-    child.once('error', (error) => {
-      this.spawnError = error
-      // A spawn failure destroys the pipes without an input 'end' edge, so the
-      // transport's pending requests must be failed here.
-      this.transport?.close()
-      this.failSubscriptions(this.closedError('DeepSeek Harness runtime failed to start'))
-    })
     // Writes racing the runtime's death EPIPE on stdin; the exit edge below is
     // the real signal, so the stream-level error only needs to be non-fatal.
     // The timing of that race is not deterministically reproducible.
@@ -249,17 +256,26 @@ export class HarnessClient {
       settled.stderr = true
       maybeSettle()
     })
-    child.once('exit', (code) => {
-      this.exitCode = code
+    void child.done.then((outcome) => {
+      this.exitCode = outcome.exitCode
       settled.exited = true
       maybeSettle()
-      this.failSubscriptions(this.closedError('DeepSeek Harness runtime exited'))
-    })
-    child.once('close', () => {
-      // All stdio has settled: stdout 'end' already drained every tail frame,
-      // so closing now cannot drop responses — it only fails requests that
-      // will never be answered.
+      return child.waitForExit().then(() => {
+        // The managed range is empty, so stdout has delivered any trailing
+        // frames before closing the transport and failing remaining waiters.
+        this.transport?.close()
+        this.failSubscriptions(this.closedError('DeepSeek Harness runtime exited'))
+      }, (error: unknown) => {
+        this.rangeError = error instanceof Error ? error : new Error(String(error))
+        this.transport?.close()
+        this.failSubscriptions(this.closedError('DeepSeek Harness process range could not be confirmed'))
+      })
+    }, (error: unknown) => {
+      this.spawnError = error instanceof Error ? error : new Error(String(error))
+      settled.exited = true
+      maybeSettle()
       this.transport?.close()
+      this.failSubscriptions(this.closedError('DeepSeek Harness runtime failed to start'))
     })
     const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
     transport.onNotification((method, params) => { this.dispatchNotification({ method, params }) })
@@ -352,7 +368,7 @@ export class HarnessClient {
     this.start()
     // A dead runtime cannot answer; fail with process context instead of
     // writing into a destroyed pipe and hanging until the timeout.
-    if (this.exitCode !== undefined || this.spawnError !== undefined) {
+    if (this.exitCode !== undefined || this.spawnError !== undefined || this.rangeError !== undefined) {
       await this.settleStreams()
       throw this.closedError('DeepSeek Harness runtime is not running')
     }
@@ -394,7 +410,7 @@ export class HarnessClient {
     const id = String(this.subscriptionSerial++)
     const state: SubscriptionState = { queue: [], waiters: [], filter, failure: undefined }
     const subscription = new NotificationSubscriptionImpl(state, () => { this.subscriptions.delete(id) })
-    if (this.closeTask !== undefined || this.exitCode !== undefined || this.spawnError !== undefined) {
+    if (this.closeTask !== undefined || this.exitCode !== undefined || this.spawnError !== undefined || this.rangeError !== undefined) {
       subscription.fail(this.closedError('DeepSeek Harness runtime closed'))
       return subscription
     }
@@ -424,8 +440,8 @@ export class HarnessClient {
 
   /**
    * Shut the runtime down and reap it: a best-effort protocol `shutdown`
-   * bounded by `shutdownTimeoutMs`, then the shared stdin-EOF → SIGTERM →
-   * SIGKILL ladder until the process actually exited. Idempotent.
+   * and write flush, each bounded by `shutdownTimeoutMs`, then close stdin and
+   * await the Provider-managed process range. Idempotent.
    * @returns settlement of the complete teardown.
    */
   close(): Promise<void> {
@@ -435,20 +451,62 @@ export class HarnessClient {
 
   private async performClose(): Promise<void> {
     const child = this.child
-    if (child === undefined) return
-    try {
-      await this.request('shutdown', undefined, this.runtime.shutdownTimeoutMs ?? 1_000)
-    } catch (error) {
-      // Diagnostic only: the dispose ladder below is the authoritative teardown
-      // for a runtime that cannot answer shutdown anymore.
-      this.appendStderr([`shutdown request failed: ${errorMessage(error)}`])
+    const failures: unknown[] = []
+    let flushError: Error | undefined
+    let connectionReleased = child === undefined
+    if (child !== undefined) {
+      try {
+        await this.request('shutdown', undefined, this.runtime.shutdownTimeoutMs ?? 1_000)
+      } catch (error) {
+        // Diagnostic only: EOF and Provider termination remain authoritative.
+        this.appendStderr([`shutdown request failed: ${errorMessage(error)}`])
+      }
+      const transport = this.transport
+      if (transport !== undefined) {
+        const flushTimeoutMs = this.runtime.shutdownTimeoutMs ?? 1_000
+        let flushTimer: ReturnType<typeof setTimeout> | undefined
+        try {
+          await Promise.race([
+            transport.flush(),
+            new Promise<never>((_, reject) => {
+              flushTimer = setTimeout(() => { reject(new Error(`stdio flush timed out after ${flushTimeoutMs}ms`)) }, flushTimeoutMs)
+            }),
+          ])
+        } catch (error) {
+          flushError = error instanceof Error ? error : new Error(String(error))
+          this.appendStderr([`stdio flush failed: ${errorMessage(flushError)}`])
+        } finally {
+          if (flushTimer !== undefined) clearTimeout(flushTimer)
+        }
+      }
+      try {
+        await disposeChildConnection(child, {
+          eofGraceMs: this.runtime.disposeEofGraceMs ?? 6_000,
+          terminationGraceMs: this.runtime.disposeGraceMs ?? 3_000,
+        })
+        await child.done.catch(() => {})
+        await this.settleStreams()
+        connectionReleased = true
+      } catch (error) {
+        failures.push(error)
+      }
     }
-    await disposeRuntimeProcess(child, {
-      disposeEofGraceMs: this.runtime.disposeEofGraceMs ?? 6_000,
-      disposeGraceMs: this.runtime.disposeGraceMs ?? 3_000,
-    })
-    this.transport?.close()
-    this.failSubscriptions(this.closedError('DeepSeek Harness runtime closed'))
+    if (connectionReleased) {
+      this.transport?.close()
+      this.failSubscriptions(this.closedError('DeepSeek Harness runtime closed'))
+      const provider = this.processProvider
+      if (provider !== undefined) {
+        try {
+          await provider.dispose()
+          this.processProvider = undefined
+        } catch (error) {
+          failures.push(error)
+        }
+      }
+    }
+    if (flushError !== undefined && failures.length > 0) failures.unshift(flushError)
+    if (failures.length === 1) throw failures[0]
+    if (failures.length > 1) throw new AggregateError(failures, 'runtime connection and process owner cleanup failed')
   }
 
   private dispatchNotification(notification: HarnessNotification): void {
@@ -502,6 +560,7 @@ export class HarnessClient {
   private closedError(reason: string): TransportClosedError {
     const parts = [`${this.runtime.description}: ${reason}`]
     if (this.spawnError !== undefined) parts.push(`spawn error: ${this.spawnError.message}`)
+    if (this.rangeError !== undefined) parts.push(`managed-range error: ${this.rangeError.message}`)
     if (this.exitCode !== undefined) parts.push(`exit code: ${String(this.exitCode)}`)
     if (this.stderrTail.length > 0) parts.push(`stderr tail:\n${this.stderrTail.join('\n')}`)
     return new TransportClosedError(parts.join('\n'))

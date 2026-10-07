@@ -53,7 +53,7 @@ The subprocess starts lazily on first use and stays owned by the instance across
 
 `HarnessClient` is the protocol client under the run API: explicit `start()`, `initialize()`, `prompt()`, `request()`, and `close()`, plus notification subscriptions. `prompt()` returns the queued message id as soon as the runtime accepts it and never waits for agent activity. `subscribe(filter?)` returns a `NotificationSubscription` (awaitable `next()`, non-blocking `tryNext()`, async iteration); `subscribeSessionTree(id)` scopes to one session and the descendants discovered from `subagent.started` lineage edges — the selected runtime defines which Sessions are published, and scoping is client-side, exactly like the Python SDK.
 
-The client exports typed errors for every failure mode: `JsonRpcResponseError` (a wire error response, code and data preserved), `RequestTimeoutError` (a configured bound elapsed), `SdkProtocolError` (a response outside the documented protocol), and `TransportClosedError` (the runtime is gone — the message carries the exit code and a bounded stderr tail). `close()` requests protocol `shutdown` (bounded by `shutdownTimeoutMs`, default 1000 ms), then walks a stdin-EOF → SIGTERM → SIGKILL ladder until the process has exited; it is idempotent, and a closed client refuses reuse. `HarnessClientOptions.env` replaces the child environment entirely when given (`undefined` inherits the parent's); callers own credential policy — `scrubbedParentEnv` from `dsh-subprocess` is the shared scrub base for isolation-minded launches.
+The client exports typed errors for every failure mode: `JsonRpcResponseError` (a wire error response, code and data preserved), `RequestTimeoutError` (a configured bound elapsed), `SdkProtocolError` (a response outside the documented protocol), and `TransportClosedError` (the runtime is gone — the message carries the exit code and a bounded stderr tail). `close()` requests protocol `shutdown` and flushes protocol writes (both bounded by `shutdownTimeoutMs`, default 1000 ms), then closes stdin and awaits the shared Provider's managed-range release; a flush failure is retained in diagnostics while cleanup continues. The Provider owns platform-specific TERM/KILL escalation. It is idempotent, and a closed client refuses reuse. `HarnessClientOptions.env` supplies the complete SDK child environment when given (`undefined` snapshots the parent's environment); the SDK explicitly selects replacement semantics rather than Core's default scrubbed overlay.
 
 -----
 
@@ -67,7 +67,7 @@ This section explains the design behind the client; the observable behavior is f
 
 ### Design concept
 
-The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context, so it spawns the runtime directly rather than through the `dsh-subprocess` service — the seam's documented exception for SDK-managed transports — and its teardown ladder lives in this package. The selected runtime defines which Sessions are published; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
+The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context and uses the framework-free local `dsh-subprocess` connection Provider without mounting NativeHost or Cordis. The selected runtime defines which Sessions are published; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
 
 ### Source map
 
@@ -75,7 +75,6 @@ The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `Har
 |---|---|
 | [`src/api.ts`](src/api.ts) | `DeepSeekHarness` + `HarnessSession`: owned runs, receipt-to-idle collection, `finalResponse` |
 | [`src/client.ts`](src/client.ts) | `HarnessClient`: spawn, handshake, requests, subscription fan-out, typed errors |
-| [`src/dispose.ts`](src/dispose.ts) | Private teardown ladder: stdin EOF → SIGTERM → SIGKILL to actual exit |
 | [`src/types.ts`](src/types.ts) | Launch and timeout options, notification shapes, `RunResult` |
 | [`src/index.ts`](src/index.ts) | Consumer interface: the two client layers and caller-facing types |
 | — | No runtime invariant companion is published; this client library runs outside any harness context (its peer is a separate runtime process); the runtime's own packages own the event-stream relations. |
@@ -86,7 +85,7 @@ A run subscribes to the session tree, queues the prompt, waits until the prompt'
 
 ### Errors and teardown
 
-Every failure mode maps to one exported error class — a wire error response, an elapsed request bound, a response outside the documented protocol, or a dead runtime — so callers branch on failure type; the four classes are exported from [src/index.ts](src/index.ts). Teardown is a private, idempotent escalation (stdin EOF → SIGTERM → SIGKILL) in [src/dispose.ts](src/dispose.ts) that ends only at actual process exit.
+Every failure mode maps to one exported error class — a wire error response, an elapsed request bound, a response outside the documented protocol, or a dead runtime — so callers branch on failure type; the four classes are exported from [src/index.ts](src/index.ts). Teardown uses Core's child-connection disposal and the selected Provider's owned-range observation, after the protocol output barrier and stdin EOF grace.
 
 </details>
 
