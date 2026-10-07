@@ -12,6 +12,8 @@ Status: implemented
 
 在 `native-package-policy.ts` 中维护明确的源码 owner 集合。实际执行的 `verify-native-dependencies` 检查两个编译分面内每份严格原生生产 TypeScript 源码，拒绝计算得出或无法解析的模块目标、解析后指向 Cordis 或兼容层的目标、Program 层目标，以及 Core 源码指向更高层的依赖。它把 alias 与相对路径解析到实际目标，而不只检查 import 字面文本。每个声明原生入口的 Core、Engine 或 Module 包都必须属于严格名单、混合安装器／库名单或安全子路径名单。混合包会分别从声明的原生安装器入口、`./native` 库导出或逐个明确标记的安全导出开始，追踪相对引用与包内引用，包括仅类型引用，不扫描无关的旧入口源码。严格的 P1 名单保留现有源码与 manifest 闭包检查。
 
+TypeScript SDK client 是 Host 编译分面内严格无 Cordis 的 owner。它仍是启动具名 `sdk` profile 的库；这项源码分类不会增加 Cordis 插件入口或其他应用启动器。
+
 具有原生导出、但没有安装器 manifest 的混合库使用单独的显式名单。检查器验证导出的声明路径，并在其声明的每个编译分面检查可达源码。这样凭据的原生 Definition 可以独立导出，Cordis 服务与事件声明则留在旧入口。
 
 过渡期检查不会把仅通过源码检查当作包已无 Cordis 依赖的证明。严格原生包现在不声明 Cordis peer；混合包只可为仍暴露旧根入口保留可选 Cordis peer，其已声明的原生导出必须保持无 Cordis。源码检查覆盖两个编译面的严格包，并追踪每个混合原生入口、库导出或安全子路径。完整已安装产品闭包与独立消费方行为仍是单独的 P5 验收项。

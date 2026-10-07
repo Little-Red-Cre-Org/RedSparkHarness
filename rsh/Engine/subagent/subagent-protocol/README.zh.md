@@ -1,5 +1,5 @@
 ---
-description: "Pure shared Subagent descriptors, assistant-output folding and delegation permission text."
+description: "Pure shared Subagent descriptors, assistant-output folding, stop-reason types and delegation permission text."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-共享的纯 Subagent 描述符、助手输出归并与委派权限文本。
+共享的纯 Subagent 描述符、助手输出归并、结束原因类型与委派权限文本。
 
 ## 目录
 
@@ -28,6 +28,8 @@ kind: "package-reference"
 ## 所有权
 
 描述符记录子任务模式、选定提供者与标签。输出归并消费已接受的 Session 事件，保留真实最终或部分助手内容。它不创建 Session、写入器或执行。
+
+Provider 通过对本包根模块中的 `SubagentStopReasonMap` 做声明合并来扩展结束原因，`SubagentStopReason` 从该 map 派生。Cordis-backed `dsh-subagent` Service Definition 会重新导出这两个类型。
 
 结束通知 helper 从已接纳工作的记录中选择结束状态，并构造共享的运行时通知及子任务来源和结束内容。消费 Provider 负责确认清理完成并通过持久收件箱准入。
 

@@ -251,6 +251,33 @@ describe('Cordis peer classification', () => {
     })).toContain('@deepseek-ai/dsh-native-agent: native runtime must not declare Cordis dependencies')
   })
 
+  it('classifies the TypeScript SDK client as a Cordis-free native package', () => {
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Programs/SDK/packages/client',
+      manifest: {
+        name: '@deepseek-ai/dsh-sdk-client',
+        dependencies: { '@deepseek-ai/dsh': 'workspace:*' },
+        peerDependencies: {
+          '@deepseek-ai/dsh-llm': 'workspace:^',
+          '@deepseek-ai/dsh-sdk-protocol': 'workspace:^',
+          '@deepseek-ai/dsh-session': 'workspace:^',
+        },
+        devDependencies: {
+          '@deepseek-ai/dsh-llm': 'workspace:^',
+          '@deepseek-ai/dsh-sdk-protocol': 'workspace:^',
+          '@deepseek-ai/dsh-session': 'workspace:^',
+        },
+      },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Programs/SDK/packages/client',
+      manifest: {
+        name: '@deepseek-ai/dsh-sdk-client',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toContain('@deepseek-ai/dsh-sdk-client: native runtime must not declare Cordis dependencies')
+  })
+
   it('requires optional Cordis peers for mixed native packages', () => {
     expect(checkCordisPeerPolicy({
       dir: 'rsh/Modules/Official/fs/fs-local',

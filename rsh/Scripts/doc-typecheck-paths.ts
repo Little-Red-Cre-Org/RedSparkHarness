@@ -3,7 +3,7 @@ export function builtDeclarationPath(candidate: string): string {
   // Two workspace path forms exist: whole-package entries end in /src, subpath
   // wildcards (browser-safe /types and /client channels) in /src/*.
   if (candidate.endsWith('/src')) {
-    return `${candidate.slice(0, -'/src'.length)}/lib/types`
+    return `${candidate.slice(0, -'/src'.length)}/lib/types/index.d.ts`
   }
   if (candidate.endsWith('/src/*')) {
     return `${candidate.slice(0, -'/src/*'.length)}/lib/types/*`

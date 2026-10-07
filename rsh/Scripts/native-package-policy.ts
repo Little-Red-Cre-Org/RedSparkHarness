@@ -53,6 +53,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/host/native-web-host',
   'rsh/Programs/ACP/packages/native-acp',
   'rsh/Programs/SDK/packages/native-server',
+  'rsh/Programs/SDK/packages/protocol',
+  'rsh/Programs/SDK/packages/client',
   'rsh/Programs/Web/host/native-web-assets',
   'rsh/Programs/Web/client/store',
   'rsh/Programs/Web/client/ui-slots',
@@ -90,6 +92,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/Web/host/native-web-host', ['host']],
   ['rsh/Programs/ACP/packages/native-acp', ['host']],
   ['rsh/Programs/SDK/packages/native-server', ['host']],
+  ['rsh/Programs/SDK/packages/protocol', ['host']],
+  ['rsh/Programs/SDK/packages/client', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
 ])
 

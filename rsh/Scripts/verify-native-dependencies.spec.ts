@@ -8,6 +8,7 @@ import {
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
+  nativePackageTargets,
   nativeSafeSourceSubpaths,
 } from './native-package-policy.ts'
 import { collectNativeDependencyViolations, nativeSourceViolations } from './verify-native-dependencies.ts'
@@ -30,7 +31,10 @@ function fixture(content: string, dependency?: string): string {
     const exports = Object.fromEntries(entries.map(entry => [entry, {
       types: `./lib/types/${entry.slice(2)}.d.ts`, default: `./lib/${entry.slice(2)}.js`,
     }]))
-    write(`${owner}/package.json`, JSON.stringify({ name: `@deepseek-ai/dsh-${owner.split('/').at(-1)}`, exports }))
+    const name = owner === 'rsh/Programs/SDK/packages/client'
+      ? '@deepseek-ai/dsh-sdk-client'
+      : `@deepseek-ai/dsh-${owner.split('/').at(-1)}`
+    write(`${owner}/package.json`, JSON.stringify({ name, exports }))
     for (const entry of entries) write(`${owner}/src/${entry.slice(2)}.ts`, 'export {}')
     write(`${owner}/src/index.ts`, 'export {}')
   }
@@ -139,6 +143,16 @@ it('admits a strict native local and Node built-in edge', () => {
   writeFileSync(join(root, owner, 'src/index.ts'), 'import type { Local } from "./local.ts"\nimport type { Stats } from "node:fs"')
   writeFileSync(join(root, owner, 'src/local.ts'), 'export interface Local {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
+})
+
+it('checks the Cordis-free SDK client in its Host compiler face', () => {
+  const owner = 'rsh/Programs/SDK/packages/client'
+  expect(nativePackageTargets.get(owner)).toEqual(['host'])
+  const root = fixture('export {}')
+  writeFileSync(join(root, owner, 'src/index.ts'), 'import type { Context } from "hidden-framework"')
+  expect(collectNativeDependencyViolations(root)).toContainEqual(
+    expect.stringContaining('src/index.ts:0: native source cannot reference hidden-framework'),
+  )
 })
 
 it('accepts Client bundle inputs from devDependencies but rejects them from Host runtime sources', () => {

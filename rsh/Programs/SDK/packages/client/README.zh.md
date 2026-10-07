@@ -33,7 +33,7 @@ native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收�
 
 ```ts
 import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 
 await using harness = new DeepSeekHarness({
   profile: 'sdk',
