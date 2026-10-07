@@ -12,6 +12,8 @@ Status: implemented
 
 `@deepseek-ai/dsh-native-approval` 提供原生 `approval` 服务。它接受部署级 `ask` 或 `never` 策略，验证精确登记的原生 Agent，在 `ask` 下分派有序应答者，并返回调用方传入 id 的一次封闭 outcome。Session 所有者会在分派前持久追加 `native-approval/asked` 事件。缺失或失败的应答者会解析为 unavailable；取消会解析为 cancelled；只有 allowed-once 会允许待执行操作。Provider 释放会拒绝新请求、取消应答者工作，并等待其结束。
 
+`@deepseek-ai/dsh-approval-definition` 拥有无框架的原生服务契约，以及用于兼容审计和策略事件的独立 `/legacy` 契约。Cordis `dsh-user-approval` adapter 使用完整既有 Agent 类型专门化 `ApprovalServiceDefinition<Agent>`，保留其 Session 和作用域注入行为。它从 Cordis-free Session 入口导入 `Session`；Cordis 依赖不会进入 Definition 包。
+
 Provider 不写入 Session。原生 headless 拥有 Session，并在分派前记录 `native-approval/asked`，随后在执行获准操作及生成工具结果前持久记录匹配的 `native-approval/decided`。安装该 Provider 时，它会将服务用于固定 `write_file` 调用，并向原生工具贡献传递同一个授权回调。贡献可声明审批 reason；注册表会在 executor 前调用该回调，受保护贡献没有审批 authority 时会拒绝执行。
 
 原生审计名称与 `approval/asked` 和 `approval/decided` 分离；后两者的 payload 及 Cordis Agent 语义属于既有 user-approval 服务。Session 持久化目录包含原生名称，因此当前读取器能识别原生 profile 的持久化记录，而不会重新解释旧审批数据。

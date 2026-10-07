@@ -14,10 +14,8 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 import { assertNever, deepFreeze, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { ToolProviderResult } from '@deepseek-ai/dsh-system-prompt'
-import type { CodeRuntime } from '@deepseek-ai/dsh-code-runtime'
-// Type-only: makes `ctx.get('approval')` resolve to the ApprovalService
-// augmentation. The seam stays optional at runtime — see `serviceAsk`.
-import type {} from '@deepseek-ai/dsh-user-approval'
+import type { ApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition/legacy'
+import type { CodeRuntimeDefinition } from '@deepseek-ai/dsh-code-runtime-definition'
 import type { ToolCallView, ToolResultView } from './presentation.ts'
 import { assertSupportedJsonSchema, validateJsonSchemaValue } from './json-schema.ts'
 import type { JsonSchemaNode } from './json-schema.ts'
@@ -26,6 +24,13 @@ import type { CodeSdkLanguage } from './ptc.ts'
 import { renderToolsSdk } from './ts-types.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
 import { renderToolsSdkPy } from './py-types.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    approval: ApprovalServiceDefinition<Agent>
+    codeRuntime: CodeRuntimeDefinition
+  }
+}
 
 /**
  * Language → SDK-section renderer. The registry looks up the loaded
@@ -1006,7 +1011,7 @@ export class ToolRuntime extends Service {
    * other. Binding it is deferred until a second backend ships (the first
    * point it is testable).
    */
-  private requireCodeRuntime(mode: ToolPresentationMode): CodeRuntime {
+  private requireCodeRuntime(mode: ToolPresentationMode): CodeRuntimeDefinition {
     const runtime = this.ctx.get('codeRuntime')
     if (!runtime) {
       throw new Error(`dsh-tools: mode "${mode}" requires a code runtime — load a ctx.codeRuntime implementation (e.g. @deepseek-ai/dsh-code-runtime-worker-thread) or set tools mode to "native"`)

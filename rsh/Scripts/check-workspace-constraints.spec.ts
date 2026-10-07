@@ -345,9 +345,12 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-task-scheduler', ['lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-subprocess-local', [
+      'lib/native.js', 'lib/child-connection.js', 'lib/shared-*.js', 'lib/runner.js', 'lib/runner-*.js', 'scripts/ensure-spawn-helper.mjs',
+    ]],
     ['@deepseek-ai/dsh-settings', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([

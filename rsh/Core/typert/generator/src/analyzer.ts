@@ -71,6 +71,8 @@ export interface WorkspaceAnalyzerOptions {
   readonly clientConfig?: string
   /** Optional package-name subset for an incremental generation pass. */
   readonly packages?: readonly string[]
+  /** Registered packages allowed to own an imported Service Definition. */
+  readonly serviceDefinitionPackages?: readonly string[]
   /** Independently compiled faces to materialize; both are analyzed by default. */
   readonly faces?: readonly TypertFace[]
   /** Whether to repeat TypeScript project diagnostics before model extraction. */
@@ -288,7 +290,7 @@ export class WorkspaceAnalyzer {
   private readonly options: Required<Pick<
     WorkspaceAnalyzerOptions,
     'root' | 'hostConfig' | 'clientConfig' | 'faces' | 'checkDiagnostics' | 'mode'
-  >> & Pick<WorkspaceAnalyzerOptions, 'packages'>
+  >> & Pick<WorkspaceAnalyzerOptions, 'packages' | 'serviceDefinitionPackages'>
   private queuedEdit: SourceEdit | undefined
   private readonly crossFaceLinks = new Map<string, CrossFaceLink>()
   private readonly checkedProjects = new Set<string>()
@@ -304,6 +306,7 @@ export class WorkspaceAnalyzer {
       checkDiagnostics: options.checkDiagnostics ?? true,
       mode: options.mode ?? 'check',
       ...(options.packages === undefined ? {} : { packages: options.packages }),
+      ...(options.serviceDefinitionPackages === undefined ? {} : { serviceDefinitionPackages: options.serviceDefinitionPackages }),
     }
     this.caches = options.caches ?? new WorkspaceCaches()
   }
@@ -345,6 +348,7 @@ export class WorkspaceAnalyzer {
           host,
           registrations,
           allRegistrations: this.registrations,
+          serviceDefinitionPackages: this.options.serviceDefinitionPackages ?? [],
           mode: this.options.mode,
           queueEdit: (edit) => { this.queueEdit(edit) },
           crossFaceLinks: this.crossFaceLinks,
@@ -385,10 +389,14 @@ export class WorkspaceAnalyzer {
     }
     const batches: WorkspaceModel[] = []
     for (let index = 0; index < this.options.packages.length; index += batchSize) {
+      const packages = [...new Set([
+        ...this.options.packages.slice(index, index + batchSize),
+        ...(this.options.serviceDefinitionPackages ?? []),
+      ])]
       batches.push(new WorkspaceAnalyzer({
         ...this.options,
         caches: this.caches,
-        packages: this.options.packages.slice(index, index + batchSize),
+        packages,
       }).analyze())
     }
     return mergeWorkspaceModels(batches)
@@ -397,7 +405,7 @@ export class WorkspaceAnalyzer {
   /**
    * Discover package faces from public-export-reachable Cordis augmentations,
    * explicit `@typert` roots, and named source packages needed by those types.
-   * @param sourcePackages - registered packages to include even without a Typert root.
+   * @param sourcePackages - registered source packages to include even without a Typert root.
    * @returns contributors grouped by package with deterministic face order.
    */
   discoverPackages(sourcePackages: readonly string[] = []): DiscoveredTypertPackage[] {
@@ -620,6 +628,7 @@ interface FaceAnalyzerOptions {
   readonly host: ts.CompilerHost
   readonly registrations: readonly PackageRegistration[]
   readonly allRegistrations: readonly PackageRegistration[]
+  readonly serviceDefinitionPackages: readonly string[]
   readonly mode: AnalysisMode
   readonly queueEdit: (edit: SourceEdit) => void
   readonly crossFaceLinks: Map<string, CrossFaceLink>
@@ -633,6 +642,7 @@ class FaceAnalyzer {
   private readonly checker: ts.TypeChecker
   private readonly registrations: readonly PackageRegistration[]
   private readonly allRegistrations: readonly PackageRegistration[]
+  private readonly serviceDefinitionPackages: readonly string[]
   private readonly mode: AnalysisMode
   private readonly queueEdit: (edit: SourceEdit) => void
   private readonly crossFaceLinks: Map<string, CrossFaceLink>
@@ -653,6 +663,7 @@ class FaceAnalyzer {
     this.checker = options.program.getTypeChecker()
     this.registrations = options.registrations
     this.allRegistrations = options.allRegistrations
+    this.serviceDefinitionPackages = options.serviceDefinitionPackages
     this.mode = options.mode
     this.queueEdit = options.queueEdit
     this.crossFaceLinks = options.crossFaceLinks
@@ -970,11 +981,6 @@ class FaceAnalyzer {
           && member.type.types.some(node => node.kind === ts.SyntaxKind.UndefinedKeyword))) continue
       const authoredSymbol = this.symbolAtType(member.type)
       if (authoredSymbol === undefined) continue
-      const authoredSymbolId = this.symbolId(authoredSymbol)
-      const exported = bySymbol.get(authoredSymbolId)?.find(record => record.model.name === authoredSymbol.name)
-        ?? bySymbol.get(authoredSymbolId)?.find(record => record.model.name !== 'default')
-        ?? bySymbol.get(authoredSymbolId)?.[0]
-      if (exported === undefined) continue
       let symbol = authoredSymbol
       let declaration = preferredDeclaration(symbol)
       const aliases = new Set<ts.Symbol>()
@@ -991,16 +997,31 @@ class FaceAnalyzer {
       }
       const memberOwner = this.registrationForFile(member.getSourceFile().fileName)
       const declarationOwner = this.registrationForFile(declaration.getSourceFile().fileName)
-      if (memberOwner?.name !== declarationOwner?.name) continue
+      const importedDefinition = memberOwner?.name !== declarationOwner?.name
+        && this.serviceDefinitionPackages.includes(declarationOwner?.name ?? '')
+      if (memberOwner?.name !== declarationOwner?.name && !importedDefinition) continue
+      const authoredSymbolId = this.symbolId(symbol)
+      const exportedRecords = importedDefinition
+        ? (this.exportsByPackage.get(declarationOwner?.name ?? '') ?? [])
+          .filter(record => this.symbolId(record.symbol) === authoredSymbolId)
+        : bySymbol.get(authoredSymbolId) ?? []
+      const exported = exportedRecords.find(record => record.model.name === symbol.name)
+        ?? exportedRecords.find(record => record.model.name !== 'default')
+        ?? exportedRecords[0]
+      if (exported === undefined) continue
       const symbolId = this.symbolId(symbol)
       const model = this.ensureDeclaration(symbol, declaration)
-      const exposed = this.serviceMembers(model)
+      const typeArguments = ts.isTypeReferenceNode(member.type)
+        ? member.type.typeArguments?.map(argument => this.convertType(argument)) ?? []
+        : []
+      const exposed = this.serviceMembers(model, typeArguments)
       result.push({
         ...documentationOf(declaration),
         key: memberName(member.name),
         symbol: symbolId,
         export: exported.model,
-        members: exposed,
+        members: exposed.members,
+        ...(exposed.resolvedMembers === undefined ? {} : { resolvedMembers: exposed.resolvedMembers }),
         location: this.location(member),
       })
     }
@@ -1030,34 +1051,184 @@ class FaceAnalyzer {
         key: words[1] as string,
         symbol: symbolId,
         export: record.model,
-        members: this.serviceMembers(model),
+        members: this.serviceMembers(model).members,
         location: this.location(record.declaration),
       })
     }
     return result
   }
 
-  private serviceMembers(model: TypeDeclarationModel): string[] {
+  private serviceMembers(
+    model: TypeDeclarationModel,
+    typeArguments: readonly TypeNodeId[] = [],
+  ): { members: string[]; resolvedMembers?: MemberModel[] } {
     const result: string[] = []
+    const resolvedMembers: MemberModel[] = []
     const names = new Set<string>()
     const declarations = new Set<SymbolId>()
-    const visit = (declaration: TypeDeclarationModel): void => {
+    const visit = (declaration: TypeDeclarationModel, substitutions: ReadonlyMap<string, TypeNodeId>): void => {
       if (declarations.has(declaration.id)) return
       declarations.add(declaration.id)
       const own = declaration.members.filter(member => exposableMember(member) && member.name !== 'typertRemote')
       for (const member of own) {
-        if (!names.has(member.name)) result.push(member.id)
+        if (!names.has(member.name)) {
+          result.push(member.id)
+          resolvedMembers.push(this.substituteMember(member, substitutions))
+        }
       }
       for (const member of own) names.add(member.name)
       for (const baseId of declaration.extends) {
         const base = this.nodes.get(baseId)
         if (base?.kind !== 'reference' || base.target.kind !== 'declaration') continue
         const inherited = this.declarations.get(base.target.symbol)
-        if (inherited !== undefined) visit(inherited)
+        if (inherited === undefined) continue
+        const inheritedSubstitutions = new Map<string, TypeNodeId>()
+        inherited.typeParameters.forEach((parameter, index) => {
+          const argument = base.arguments[index] ?? parameter.default
+          if (argument !== undefined) {
+            inheritedSubstitutions.set(parameter.id, this.substituteType(argument, substitutions))
+          }
+        })
+        visit(inherited, inheritedSubstitutions)
       }
     }
-    visit(model)
-    return result
+    const rootSubstitutions = new Map<string, TypeNodeId>()
+    model.typeParameters.forEach((parameter, index) => {
+      const argument = typeArguments[index] ?? parameter.default
+      if (argument !== undefined) rootSubstitutions.set(parameter.id, argument)
+    })
+    visit(model, rootSubstitutions)
+    return {
+      members: result,
+      ...(resolvedMembers.length === 0 ? {} : { resolvedMembers }),
+    }
+  }
+
+  private substituteMember(member: MemberModel, substitutions: ReadonlyMap<string, TypeNodeId>): MemberModel {
+    const suffix = encodeURIComponent(JSON.stringify([...substitutions].sort(([left], [right]) => left.localeCompare(right))))
+    if (member.kind === 'property') {
+      const type = this.substituteType(member.type, substitutions)
+      return type === member.type ? member : { ...member, id: `${member.id}#${suffix}`, type, text: '' }
+    }
+    const signature = this.substituteSignature(member.signature, substitutions)
+    return signature === member.signature ? member : { ...member, id: `${member.id}#${suffix}`, signature, text: '' }
+  }
+
+  private substituteSignature(signature: SignatureModel, substitutions: ReadonlyMap<string, TypeNodeId>): SignatureModel {
+    let changed = false
+    const parameters = signature.parameters.map((parameter) => {
+      const type = this.substituteType(parameter.type, substitutions)
+      if (type === parameter.type) return parameter
+      changed = true
+      return { ...parameter, type }
+    })
+    const returns = this.substituteType(signature.returns, substitutions)
+    if (returns !== signature.returns) changed = true
+    return changed ? { ...signature, parameters, returns } : signature
+  }
+
+  private substituteType(id: TypeNodeId, substitutions: ReadonlyMap<string, TypeNodeId>): TypeNodeId {
+    const node = this.nodes.get(id)
+    if (node === undefined) return id
+    if (node.kind === 'reference' && node.target.kind === 'type-parameter') {
+      const replacement = substitutions.get(node.target.parameter)
+      if (replacement !== undefined) return replacement
+    }
+    const map = (child: TypeNodeId): TypeNodeId => this.substituteType(child, substitutions)
+    let updated: TypeNodeModel = node
+    switch (node.kind) {
+      case 'parenthesized':
+      case 'operator': {
+        const type = map(node.type)
+        if (type !== node.type) updated = { ...node, type }
+        break
+      }
+      case 'reference':
+      case 'type-query':
+      case 'import-type': {
+        const arguments_ = node.arguments.map(map)
+        if (arguments_.some((argument, index) => argument !== node.arguments[index])) {
+          updated = { ...node, arguments: arguments_ }
+        }
+        break
+      }
+      case 'union':
+      case 'intersection': {
+        const types = node.types.map(map)
+        if (types.some((type, index) => type !== node.types[index])) updated = { ...node, types }
+        break
+      }
+      case 'array': {
+        const element = map(node.element)
+        if (element !== node.element) updated = { ...node, element }
+        break
+      }
+      case 'tuple': {
+        const elements = node.elements.map(element => ({ ...element, type: map(element.type) }))
+        if (elements.some((element, index) => element.type !== node.elements[index]?.type)) updated = { ...node, elements }
+        break
+      }
+      case 'object': {
+        const members = node.members.map(member => this.substituteMember(member, substitutions))
+        if (members.some((member, index) => member !== node.members[index])) updated = { ...node, members }
+        break
+      }
+      case 'function':
+      case 'constructor': {
+        const signature = this.substituteSignature(node.signature, substitutions)
+        if (signature !== node.signature) updated = { ...node, signature }
+        break
+      }
+      case 'indexed-access': {
+        const object = map(node.object)
+        const index = map(node.index)
+        if (object !== node.object || index !== node.index) updated = { ...node, object, index }
+        break
+      }
+      case 'conditional': {
+        const check = map(node.check)
+        const extendsType = map(node.extends)
+        const whenTrue = map(node.whenTrue)
+        const whenFalse = map(node.whenFalse)
+        if (check !== node.check || extendsType !== node.extends || whenTrue !== node.whenTrue || whenFalse !== node.whenFalse) {
+          updated = { ...node, check, extends: extendsType, whenTrue, whenFalse }
+        }
+        break
+      }
+      case 'mapped': {
+        const nameType = node.nameType === undefined ? undefined : map(node.nameType)
+        const value = node.value === undefined ? undefined : map(node.value)
+        if (nameType !== node.nameType || value !== node.value) {
+          updated = { ...node, ...(nameType === undefined ? {} : { nameType }), ...(value === undefined ? {} : { value }) }
+        }
+        break
+      }
+      case 'template-literal': {
+        const spans = node.spans.map(span => ({ ...span, type: map(span.type) }))
+        if (spans.some((span, index) => span.type !== node.spans[index]?.type)) updated = { ...node, spans }
+        break
+      }
+      case 'predicate': {
+        if (node.type === undefined) break
+        const type = map(node.type)
+        if (type !== node.type) updated = { ...node, type }
+        break
+      }
+      case 'infer':
+      case 'keyword':
+      case 'literal':
+      case 'this':
+        break
+      default: {
+        const neverNode: never = node
+        throw new Error(`unsupported service type substitution node ${JSON.stringify(neverNode)}`)
+      }
+    }
+    if (updated === node) return id
+    const suffix = encodeURIComponent(JSON.stringify([...substitutions].sort(([left], [right]) => left.localeCompare(right))))
+    const specializedId = `${id}#${suffix}`
+    if (!this.nodes.has(specializedId)) this.nodes.set(specializedId, { ...updated, id: specializedId })
+    return specializedId
   }
 
   private collectInvocations(

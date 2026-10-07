@@ -55,7 +55,11 @@ export function childEnv(extra?: Readonly<NodeJS.ProcessEnv>): NodeJS.ProcessEnv
   return Object.fromEntries(entries)
 }
 
-/** Materialize the selected scrub-overlay or complete-replacement child environment. */
+/**
+ * Materialize the selected scrub-overlay or complete-replacement child environment.
+ * @param spec - environment entries and the child environment policy.
+ * @returns the concrete child environment with undefined entries removed.
+ */
 export function subprocessEnvironment(
   spec: Pick<SubprocessSpawnSpec, 'env' | 'envMode'>,
 ): Record<string, string> {

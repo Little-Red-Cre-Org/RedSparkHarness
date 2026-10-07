@@ -8,7 +8,7 @@ kind: "package-bundle"
 
 ## 概述
 
-创建定时提醒、周期任务或按完成标准推进的目标任务。计划在重启后保留，执行结果保存在会话中。周期提醒共用一个会话；目标任务在同一会话继续。应用必须保持运行，系统休眠时不保证提醒送达。
+创建定时提醒、周期任务或按完成标准推进的目标任务。计划在重启后保留，执行结果保存在会话中。周期提醒共用一个会话；目标任务在同一会话继续。Native 模式会把个人提醒追加到创建它的交互式 Session，不调用模型；目标任务使用 Program 管理的定时根 Session 和已安装的 Goal Provider、轮次驱动器。应用必须保持运行，系统休眠时不保证提醒送达。
 
 ## 目录
 
@@ -26,24 +26,26 @@ kind: "package-bundle"
 <a id="use-this-package"></a>
 ## 使用本包
 
-随附的 `native-web` 和 `native-tui` profile 在首次使用时安装原生调度器。各 profile 在自身目录中使用独立的 SQLite 数据库。根 Agent 可通过 `task_schedule` 创建、列出、暂停、恢复、删除定时 Agent 工作并查看历史；到期任务通过所属 Program 的根 Session 执行权运行，结果写入独立 Session。Program 会在发布维护 owner 前持久化计划任务来源，因此即使关闭前没有接纳 prompt，Provider 替换和冷恢复后仍会禁止这些 Session 使用交互式任务管理。重新加载原生 profile 时，管理工具会重新绑定到仍活动的同一交互式根 Session；delegated Agent 和定时执行 Agent 仍不能管理任务。已保存的计划在进程重启后仍可使用，但中断的执行记录不会自动重放。原生入口拒绝兼容层预设记录和 Goal 任务；Goal 续跑与个人提醒投递需要各自的 Provider。现有 profile 文件归用户所有，模板变化不会覆盖它们。
+随附的 `native-web` 和 `native-tui` profile 在首次使用时安装原生调度器。各 profile 在自身目录中使用独立的 SQLite 数据库。根 Agent 可通过 `task_schedule` 创建、列出、暂停、恢复、删除定时 Agent 工作、Goal 任务和个人提醒并查看历史。Agent 与 Goal 执行使用所属 Program 的根 Session 执行权，并将结果写入独立 Session；Goal 轮次在同一个定时根 Session 内继续。Native 个人提醒通过创建时的交互式根 Session 唯一 writer 追加一条稳定标识的提醒记录，且不会启动模型轮次。Program 会在发布维护 owner 前持久化计划任务来源，因此 Provider 替换和冷恢复后仍会禁止定时根 Session 使用交互式任务管理。重新加载原生 profile 时，管理工具会重新绑定到同一活动交互式根 Session；delegated Agent 和定时执行 Agent 仍不能管理任务。已保存的计划在进程重启后仍可使用，但中断记录不会自动重放或重新启用 Goal。Goal 任务需要 Goal Provider 和轮次驱动器；随附的 native-web profile 会安装它们。原生入口拒绝兼容层预设记录。现有 profile 文件归用户所有，模板变化不会覆盖它们。
 
 将插件安装到配置中，并添加 [cordis.patch.yml](cordis.patch.yml)。宿主需要正常的 Agent、预设、权限、工作区和会话持久化服务。数据库必须使用绝对路径和独立的本地 SQLite 文件，不要放在网络文件系统。仅导入包不会启用调度，Cordis 的 `apply` 负责加载。
 
 原生安装不使用 Typert 协议。Cordis 包根入口和 gateway 会加载 `@deepseek-ai/dsh-typert-protocol`，公开 Client 声明也引用其 `RemoteResult` 类型；由于该 peer 对原生消费者为可选，安装此插件的兼容 profile 必须显式提供它。
 
+Native 入口需要 `rootExecution`、`activeSessions`、`agents` 和 `tools`；若需调度 Goal，还要安装 Goal Provider 与 continuation driver。数据库路径必须是绝对路径，并指向独立的本地 SQLite 文件，不要通过网络文件系统共享。仅导入包不会启用调度：由 Cordis 导出的 `apply` 或 Native plugin 将其装入 Host。
+
 Web 和桌面端通过 Web bundle 默认启用本插件，使用 Harness 主目录中的 `task-scheduler.sqlite`。源码完成构建后，可运行 `pnpm dsh web`。侧边栏提供任务创建入口，设置提供任务中心。Profile 补丁可以覆盖 `task-scheduler` 行或显式禁用它。
 
-在普通对话中让 Agent 使用 `task_schedule` 创建任务，提供标题、任务内容、带 UTC 偏移量的未来 RFC 3339 时间 `at`，以及可选的周期秒数 `every_seconds`。周期按照固定经过时间计算，不是日历规则。创建时保存当前工作区、模型、Agent 预设和权限预设，不复制 API 密钥或访问令牌。每次执行仍遵守原有权限及审批机制。
+在普通对话中让 Agent 使用 `task_schedule` 创建任务，提供标题、任务内容、带 UTC 偏移量的未来 RFC 3339 时间 `at`，以及可选的周期秒数 `every_seconds`。周期按照固定经过时间计算，不是日历规则。设置 `kind: "goal"` 和 `completion_criteria` 可创建目标任务；`max_goal_rounds` 设置首次轮数上限。Native 个人提醒会直接追加到创建它的 Session，不调用模型。工作区和模型从创建会话捕获；Cordis 还会捕获 Agent 和权限预设。不复制 API 密钥或访问令牌。每次执行仍遵守原有权限及审批机制。
 
-同一工具支持 `list`、`pause`、`resume`、`delete`、`history`。管理范围限于创建任务的会话，分支会话不能管理父会话的任务。定时执行会话不能再创建定时任务。暂停和删除阻止后续启动，不取消已开始的运行。删除后的保留历史仍可由原会话查看。已结束的单次任务不能恢复。
+同一工具支持 `list`、`pause`、`resume`、`delete`、`history`。管理范围限于创建任务的会话，分支会话不能管理父会话的任务。定时执行会话不能再创建定时任务。暂停和删除 Agent 工作只阻止后续启动，不取消已经开始的轮次；暂停 Goal 也会暂停其活动续跑。恢复已停止的 Goal 必须在直接的人类输入轮次显式恢复任务；仅冷恢复不会重新启用 Goal。删除后的保留历史仍可由原会话查看。已结束的单次任务不能恢复。
 
 过期单次任务在启动后执行一次。错过多个周期时只执行最近一次到期任务，并保持原周期基准。同一任务存在运行记录时不能启动下一次。执行记录超过截止时间后标为 `interrupted`，任务暂停等待检查，因为可能已经产生外部影响。中断的这一次不会自动重放。完成记录依据持久化的 Agent `turn/end` 事件；`completed` 只表示 Agent 轮次完成，不代表代码验证通过。具体回复和工具结果保存在执行会话中。
 
 <a id="goal-tasks"></a>
 ## 目标任务
 
-目标任务填写目标和完成标准，可立即或在指定时间启动一次，使用已有目标服务与目标轮次驱动器，在同一执行会话持续推进，不允许设置周期。每次尝试默认最多十轮，并遵守执行时限。只有持久化目标状态 complete 才算目标完成，普通回复结束不算完成。Agent 按标准判断并保存证据，这不构成独立正确性认证。暂停、阻塞、超时和中断保留原会话；点击“继续任务”恢复该会话，轮次耗尽时允许再执行配置的轮次数。程序重启不自动重放结果不确定的工作。预设必须包含目标工具，Host 必须启用目标轮次驱动器。
+目标任务填写目标和完成标准，在指定未来时间启动一次，使用已有 Goal 服务与轮次驱动器，在同一个定时根 Session 持续推进，不允许设置周期。每次尝试默认最多十轮，并遵守执行时限。只有持久化 Goal 阶段为 complete 且整个根执行已结算，才记录成功；普通回复结束不算完成。Agent 按标准判断并保存证据，这不构成独立正确性认证。暂停、阻塞、超时和中断保留原 Session；在直接的人类输入轮次显式恢复任务后，会恢复同一 Session，轮次耗尽时再增加配置的轮数。程序重启不自动重放结果不确定的工作，也不会重新启用 Goal。profile 必须包含 Goal 工具，并装配 Goal Provider 和轮次驱动器。
 
 <a id="graphical-management"></a>
 ## 图形管理
@@ -101,9 +103,14 @@ flowchart LR
   Runtime --> Session[Independent persisted session]
   Session --> Receipt[Durable turn settlement]
   Receipt --> Store
+  Store --> Root[Native root execution authority]
+  Root --> Goal[Goal driver and Goal-source rounds]
+  Root --> Reminder[Original interactive Session writer]
+  Goal --> Receipt
+  Reminder --> Receipt
 ```
 
-`store.ts` 负责校验和事务认领；`engine.ts` 负责轮询与取消；`execute.ts` 对接 Agent；`tools.ts` 注册会话范围的管理工具；`index.ts` 负责插件组合。不修改 AgentLoop。SQLite 管理任务计划，会话日志管理执行过程，两者不复制对方的完整状态。不发布 invariant 配套模块：跨进程认领在所属数据库事务中串行化，生命周期通过测试直接验证。
+`store.ts` 负责校验和事务认领；`engine.ts` 负责轮询与取消；`execute.ts` 是 Cordis 执行适配器；`native-registry.ts` 通过所选 Program 路由 Native 执行；`tools.ts` 注册 Cordis 管理工具；`index.ts` 负责兼容层组合。不修改 AgentLoop。Native 提醒沿用原根维护 owner，并在 receipt 结算前 flush；Native Goal 只有在持久化任务 claim、精确的定时根 owner 和 Goal driver 都通过 admission 后才会排入 Goal-source 输入。SQLite 管理任务计划，会话日志管理提醒和 Goal 执行过程，两者不复制对方的完整状态。不发布 invariant 配套模块：跨进程认领在所属数据库事务中串行化，生命周期通过测试直接验证。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -140,7 +147,7 @@ flowchart LR
 
 同一周期计划在提醒面板只显示一张卡片，更新最近提醒时间与保留的记录数。每轮仍有独立的已读状态及执行记录；新一轮照常弹窗，重启时只展示每个计划最新一轮的提醒。纯提醒不创建 Agent 执行会话。
 
-周期个人提醒使用单一持久化会话追加全部提醒记录。独立日志写入器在提醒发出后补写记录，不占模型执行槽；记录消息标识由执行记录标识确定，重启重放不产生重复。首次接入时将现有保留记录补入同一个会话，并统一历史与提醒的查看入口。删除该会话后不会自动恢复它。
+Cordis 周期个人提醒使用单一持久化会话追加全部提醒记录。独立日志写入器在提醒发出后补写记录，不占模型执行槽；记录消息标识由执行记录标识确定，重启重放不产生重复。首次接入时将现有保留记录补入同一个会话，并统一历史与提醒的查看入口。Native 个人提醒则在认领期间由 Program 唯一 root writer 追加到创建它的交互式 Session，并在标记 receipt 成功前完成 durable flush。删除会话后不会自动恢复旧会话。
 
 创建定时任务时可直接在任务内容中写“5分钟后”“今天下午16:30”“明天上午9点05分”“每5分钟”“持续1小时”或“直到手动停止”。具体时刻固定按北京时间解析。界面默认显示解析后的计划摘要，时间字段收进“调整时间”；描述中的明确规则为只读权威来源。没有写明时间时不会默认立即执行。周期任务以创建成功时间作为计时起点，不再显示起始时间，首次执行发生在一个完整间隔之后。
 

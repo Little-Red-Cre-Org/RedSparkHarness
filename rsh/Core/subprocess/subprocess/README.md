@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`ctx.subprocess` resolves executables, starts managed child processes and terminal sessions, captures bounded output, and terminates their owned ranges. Each request supplies argv, working directory, stdio, environment, grace, and cancellation; callers own deadlines, teardown policy, and model-facing rendering. The default child environment scrubs ambient credentials and `DSH_*` values before explicit overrides; a caller can explicitly select full replacement when its public contract owns the complete environment.
+`ctx.subprocess` resolves executables, starts managed processes and terminal sessions, captures bounded output, and terminates owned ranges. Requests supply argv, cwd, stdio, environment, grace, and cancellation; callers own deadlines, teardown, and model rendering. Environment defaults to a scrubbed parent overlay plus explicit overrides; callers may select full replacement.
 
-Use `./native` for the Cordis-free `SubprocessOperations` and `ChildConnectionDefinition` contracts, the shared child-connection disposer, and the environment helper. `childConnection.connect()` always requests raw stdin/stdout/stderr pipes and returns direct outcome plus managed-range ownership. The package root remains the Cordis service for existing compositions.
+`./native` exposes Cordis-free `SubprocessOperations` and `ChildConnectionDefinition` contracts, a disposer, and an environment helper. `childConnection.connect()` always pipes stdin/stdout/stderr and returns exit facts with managed-range ownership. The root remains the Cordis service.
 
 ## Table of Contents
 
@@ -28,6 +28,8 @@ Use `./native` for the Cordis-free `SubprocessOperations` and `ChildConnectionDe
 ## Use this package
 
 Mount a subprocess provider in any composition that must run child processes, and call `ctx.subprocess` from the capability that owns the command. The common path is explicit: resolve the executable, spawn with a fully specified request, read the output you asked for, and terminate the managed range when the work is done.
+
+No runtime invariant companion is published because this package only defines the process contract; provider-specific validation and lifecycle checks remain with each provider.
 
 ### Mounting the service
 

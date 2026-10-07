@@ -9,9 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-挂载 `dsh-subprocess-local` 可在宿主机上运行子进程。它解析可执行文件、管理 Linux 和 Windows 进程范围，并通过 `node-pty` 提供终端会话；不受支持的宿主使用已说明的较弱 fallback。spawn 请求提供全部 stdio 处置方式、限制、终端尺寸和宽限期。输出保留有界尾部，并可选地通过 spill 文件恢复完整流。普通 subprocess 使用 scrub-overlay 环境；child connection 可显式请求完整替换。
+挂载 `dsh-subprocess-local` 可在宿主运行子进程。它解析可执行文件、管理 Linux/Windows 进程范围，并通过 `node-pty` 提供终端会话；不支持的宿主使用已说明的较弱 fallback。spawn 请求指定 stdio、限制、终端尺寸和宽限期。输出保留有界尾部，可选 spill 文件恢复完整流。普通子进程采用 scrub-overlay；child connection 可请求完整环境替换。
 
-使用 `./native` 可将 `subprocess` 和 `childConnection` 共用进程所有者安装到原生 Host；包根入口仍是其 Cordis 适配器。独立客户端可使用 `./child-connection`，无需构造 NativeHost 即可创建相同进程所有者，并显式释放它。这些入口均不接受配置。
+`./native` 将共享进程所有者安装到 Native Host；包根入口仍是 Cordis 适配器。独立客户端可通过 `./child-connection` 创建并显式释放相同所有者，无需 `NativeHost`。两个入口均不接受配置。
 
 ## 目录
 

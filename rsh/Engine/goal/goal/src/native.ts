@@ -102,6 +102,41 @@ export interface NativeGoalOperations {
   clear(agent: NativeAgent, ref: GoalRef): Promise<GoalRef>
 }
 
+declare const scheduledGoalAdmission: unique symbol
+
+/** Opaque single-use claim issued only by the selected scheduler Provider. */
+export interface NativeScheduledGoalAdmission {
+  readonly [scheduledGoalAdmission]: true
+}
+
+/** A redeemed claim revalidates its durable receipt and exact root epoch until released. */
+export interface NativeScheduledGoalAdmissionLease {
+  verify(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<void>
+  release(): void
+}
+
+/** Fixed scheduler authority; callers may redeem issued claims but cannot mint them. */
+export interface NativeScheduledGoalAdmissionAuthority {
+  redeem(admission: NativeScheduledGoalAdmission, owner: NativeActiveSessionOwner,
+    signal: AbortSignal): Promise<NativeScheduledGoalAdmissionLease>
+}
+
+/** Operations the selected Goal driver lends to the scheduler for durable Goal runs. */
+export interface NativeScheduledGoalExecutor {
+  startScheduled(owner: NativeActiveSessionOwner, request: CreateGoalRequest,
+    admission: NativeScheduledGoalAdmission, signal: AbortSignal): Promise<GoalView>
+  resumeScheduled(owner: NativeActiveSessionOwner, ref: GoalRef, additionalRounds: number,
+    admission: NativeScheduledGoalAdmission, signal: AbortSignal): Promise<GoalView>
+  get(owner: NativeActiveSessionOwner): GoalView | undefined
+  pause(owner: NativeActiveSessionOwner, ref: GoalRef, signal?: AbortSignal): Promise<GoalView>
+}
+
+/** Scheduler-owned port consumed optionally by the Goal driver during Native Host installation. */
+export interface NativeScheduledGoalHost {
+  readonly authority: NativeScheduledGoalAdmissionAuthority
+  registerExecutor(executor: NativeScheduledGoalExecutor): () => Promise<void>
+}
+
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices { goals: NativeGoalOperations }
 }

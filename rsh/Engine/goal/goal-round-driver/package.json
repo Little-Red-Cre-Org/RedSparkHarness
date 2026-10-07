@@ -85,10 +85,12 @@
         "goals",
         "activeSessions"
       ],
+      "optional": [
+        "scheduledGoalHost"
+      ],
       "provides": [
         "goalContinuation"
-      ],
-      "optional": []
+      ]
     }
   }
 }

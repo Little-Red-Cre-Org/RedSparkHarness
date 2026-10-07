@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-`code-runtime/` 组让模型编写一个程序，以普通异步调用的方式调用宿主提供的函数，然后只返回程序的打印输出和返回值。如需在隔离的 Node Worker 中执行，请选择 TypeScript 后端；如需 CPython 进程，请选择实验性 Python 后端。每次运行都不会保留之前程序的状态。失败会作为结果返回，供调用方诊断或提供给模型。
+此能力家族分离可移植运行契约、Cordis 适配器与执行后端。需要在全新 Node Worker 中执行时选择 worker-thread TypeScript 后端；需要明确使用原生受限进程时选择 process-sandbox；需要 CPython 时选择私有实验性 Python 后端。每次运行均不继承此前程序的状态，失败会作为结果返回。
 
 ## 目录
 
@@ -22,13 +22,16 @@ kind: "package-group"
 <a id="packages"></a>
 ## 包
 
-这三个包共同提供程序执行能力；每个 README 描述其各自部分做什么。
+Definition、Compatibility 适配器与运行时 Provider 分别拥有可移植契约、Cordis 服务和具体执行机制；各 README 说明对应所有者。
 
 | 包 | 角色 | ctx 键 |
 |---|---|---|
-| [`code-runtime/`](code-runtime/README.zh.md) | 定义代码运行时做什么：针对宿主提供的绑定运行一个程序，并报告其打印和返回的内容 | `ctx.codeRuntime` |
+| [`code-runtime-definition`](../../../Engine/core/code-runtime-definition/README.zh.md) | 定义与框架无关的代码运行请求和 Provider 操作 | — |
+| [`compat-code-runtime/`](../../../Compatibility/DSH/bridge/compat-code-runtime/README.zh.md) | 实现 Cordis `ctx.codeRuntime` 服务契约 | `ctx.codeRuntime` |
+| [`native-code-runtime/`](native-code-runtime/README.zh.md) | 提供执行 Provider 共用的原生 Worker 运行时 | — |
 | [`code-runtime-worker-thread/`](code-runtime-worker-thread/README.zh.md) | 在全新的 Node Worker 线程中执行 TypeScript 程序 | 注册 `ctx.codeRuntime` |
-| [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.zh.md) | 实验性 Python 后端：负责 Node 宿主与 CPython 子进程之间的 fd-3 协议，以及 CPython 运行时实现 | — |
+| [`code-runtime-process-sandbox/`](code-runtime-process-sandbox/README.zh.md) | 为明确选择原生运行时的 profile 提供受沙箱限制的进程执行 | — |
+| [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.zh.md) | 实验性 Python 后端：负责 Node 宿主与 CPython 子进程之间的 fd-3 协议 | — |
 
 -----
 

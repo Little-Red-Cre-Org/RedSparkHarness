@@ -9,9 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-`ctx.subprocess` 可解析可执行文件、启动受管子进程和终端会话、有界收集输出，并终止其拥有的进程范围。每次请求都指定 argv、工作目录、stdio、环境、宽限期与取消信号；时限、拆卸策略和面向模型的渲染由调用方负责。子进程环境默认先清除环境中的凭据与 `DSH_*` 值，再应用显式覆盖；调用方也可显式选择完整替换，以满足由自己拥有完整环境的公开契约。
+`ctx.subprocess` 可解析可执行文件、启动受管进程和终端会话、有界收集输出，并终止其拥有的进程范围。请求指定 argv、cwd、stdio、环境、宽限期与取消信号；调用方负责时限、拆卸策略和模型渲染。环境默认采用已清理的父环境叠加显式条目，也可选择完整替换。
 
-原生提供方与消费方可从 `./native` 获取不依赖 Cordis 的 `SubprocessOperations` 和 `ChildConnectionDefinition` 契约、共享子进程连接释放函数及环境辅助函数。`childConnection.connect()` 始终请求原始 stdin/stdout/stderr 管道，并返回直接退出结果与受管范围所有权。包根入口仍是现有组合使用的 Cordis 服务。
+`./native` 提供不依赖 Cordis 的 `SubprocessOperations` 与 `ChildConnectionDefinition` 契约、释放器和环境辅助函数。`childConnection.connect()` 始终连接 stdin/stdout/stderr 管道，并返回退出事实及受管范围所有权。包根入口仍是 Cordis 服务。
 
 ## 目录
 
@@ -28,6 +28,8 @@ kind: "package-reference"
 ## 使用本包
 
 在需要运行子进程的组合中挂载一个 subprocess 提供方，并从拥有该命令的能力调用 `ctx.subprocess`。常用路径是显式的：解析可执行文件、用完全明确的请求 spawn、读取你要的输出，并在工作完成时终止受管范围。
+
+不发布运行时不变式伴随包，因为本包只定义进程契约；提供方专属的校验与生命周期检查由各提供方负责。
 
 ### 挂载服务
 

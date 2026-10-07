@@ -9,7 +9,8 @@ import type { TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session
 import { renderGoalRoundPrompt } from './prompt.ts'
 import { GoalError } from '@deepseek-ai/dsh-goal/native'
 import type { CreateGoalRequest, GoalRef } from '@deepseek-ai/dsh-goal/types'
-import type { NativeGoalContinuationOperations, NativeGoalContinuationSource } from './continuation-types.ts'
+import type { NativeGoalContinuationOperations, NativeGoalContinuationSource, NativeScheduledGoalAdmission,
+  NativeScheduledGoalAdmissionAuthority, NativeScheduledGoalAdmissionLease } from './continuation-types.ts'
 
 export type * from './continuation-types.ts'
 
@@ -48,9 +49,11 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
    * @param sessions - exact active-owner routing.
    * @param config - resolved admission priority.
    * @param signal - contribution lifetime cancellation.
+   * @param scheduledAuthority - selected scheduler's fixed claim verifier, when installed.
    */
   constructor(private readonly goals: NativeGoalOperations, private readonly sessions: NativeActiveSessionOperations,
-    private readonly config: NativeGoalDriverConfig, private readonly signal: AbortSignal) {
+    private readonly config: NativeGoalDriverConfig, private readonly signal: AbortSignal,
+    private readonly scheduledAuthority?: NativeScheduledGoalAdmissionAuthority) {
     this.releases = [sessions.onAttached(async (owner) => {
       if (owner.invocation !== 'root') return
       if (owner.rootOperations === undefined) {
@@ -94,10 +97,40 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
     return this.goals.create(owner.agent, request)
   }
 
+  async startScheduled(owner: NativeActiveSessionOwner, request: CreateGoalRequest,
+    admission: NativeScheduledGoalAdmission, signal: AbortSignal): Promise<GoalView> {
+    const lease = await this.redeemScheduledAdmission(owner, admission, signal)
+    try {
+      const state = this.states.get(owner)
+      if (state === undefined) throw new Error('Scheduled Goal start requires the exact root owner with active driver hooks')
+      const goal = await this.goals.create(owner.agent, request)
+      try { await this.enqueueRound(state, goal, signal, lease) } catch (failure: unknown) {
+        state.attempt = undefined
+        this.goals.disarm(owner.agent)
+        throw failure
+      }
+      return goal
+    } finally { lease.release() }
+  }
+
   /** @inheritdoc */
   async resume(owner: NativeActiveSessionOwner, ref: GoalRef, additionalRounds: number,
-    source: NativeGoalContinuationSource): Promise<GoalView> {
-    this.assertOwner(owner)
+    source: NativeGoalContinuationSource, signal = this.signal): Promise<GoalView> {
+    this.assertOwner(owner, signal)
+    if (owner.rootOrigin === 'scheduled') throw new GoalError('Scheduled Goal resume requires a persisted task admission', 'GOAL_INVALID_TRANSITION')
+    return await this.resumeGoal(owner, ref, additionalRounds, source, signal)
+  }
+
+  async resumeScheduled(owner: NativeActiveSessionOwner, ref: GoalRef, additionalRounds: number,
+    admission: NativeScheduledGoalAdmission, signal: AbortSignal): Promise<GoalView> {
+    const lease = await this.redeemScheduledAdmission(owner, admission, signal)
+    try { return await this.resumeGoal(owner, ref, additionalRounds, 'human', signal, lease) }
+    finally { lease.release() }
+  }
+
+  private async resumeGoal(owner: NativeActiveSessionOwner, ref: GoalRef, additionalRounds: number,
+    source: NativeGoalContinuationSource, signal: AbortSignal, admission?: NativeScheduledGoalAdmissionLease): Promise<GoalView> {
+    this.assertOwner(owner, signal)
     let goal = this.goals.get(owner.agent)
     if (goal === undefined || goal.id !== ref.id || goal.revision !== ref.revision) {
       throw new GoalError('Goal revision changed before continuation admission', 'GOAL_STALE_REVISION')
@@ -106,31 +139,89 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
     if (goal.phase === 'paused' && source !== 'human') {
       throw new GoalError('A paused Goal requires an explicit human resume operation', 'GOAL_INVALID_TRANSITION')
     }
+    if (admission !== undefined) await admission.verify(owner, signal)
     if (goal.roundsStarted >= goal.maxGoalRounds) {
       goal = await this.goals.edit(owner.agent, goal, { maxGoalRounds: goal.roundsStarted + additionalRounds })
-      this.assertOwner(owner)
+      this.assertOwner(owner, signal)
     }
-    return this.goals.resume(owner.agent, goal)
+    if (admission !== undefined) await admission.verify(owner, signal)
+    goal = await this.goals.resume(owner.agent, goal)
+    this.assertOwner(owner, signal)
+    if (admission !== undefined) {
+      const state = this.states.get(owner)
+      if (state === undefined) throw new Error('Scheduled Goal resume requires the exact root owner with active driver hooks')
+      try { await this.enqueueRound(state, goal, signal, admission) } catch (failure: unknown) {
+        state.attempt = undefined
+        this.goals.disarm(owner.agent)
+        throw failure
+      }
+    }
+    return goal
   }
 
-  async pause(owner: NativeActiveSessionOwner, ref: GoalRef): Promise<GoalView> {
-    this.assertOwner(owner)
+  async pause(owner: NativeActiveSessionOwner, ref: GoalRef, signal = this.signal): Promise<GoalView> {
+    this.assertOwner(owner, signal)
     const state = this.states.get(owner)
     if (state === undefined) throw new Error('Goal continuation requires the exact root owner with active driver hooks')
     const goal = await this.goals.pause(owner.agent, ref)
-    this.assertOwner(owner)
+    this.assertOwner(owner, signal)
     if (state.runningGoal?.id === goal.id && this.ownsAutomaticTurn(state)) {
       await this.interrupt(state, { kind: 'hook', reason: 'goal-pause' })
     }
     return goal
   }
 
-  private assertOwner(owner: NativeActiveSessionOwner): void {
+  private assertOwner(owner: NativeActiveSessionOwner, signal = this.signal): void {
     const state = this.states.get(owner)
     this.signal.throwIfAborted()
+    signal.throwIfAborted()
     if (state === undefined || state.stopping || this.stopping || owner.invocation !== 'root' || !this.available(state)) {
       throw new Error('Goal continuation requires the exact root owner with active driver hooks')
     }
+  }
+
+  private async redeemScheduledAdmission(owner: NativeActiveSessionOwner, admission: NativeScheduledGoalAdmission,
+    signal: AbortSignal): Promise<NativeScheduledGoalAdmissionLease> {
+    this.assertOwner(owner, signal)
+    const root = owner.rootOperations
+    if (owner.rootOrigin !== 'scheduled' || root === undefined || root.agent !== owner.agent
+      || root.sessionId !== owner.session.id || root.signal.aborted) {
+      throw new Error('Scheduled Goal admission requires the exact active Program root epoch')
+    }
+    if (this.scheduledAuthority === undefined) throw new Error('Scheduled Goal admission requires the selected scheduler authority')
+    const lease = await this.scheduledAuthority.redeem(admission, owner, signal)
+    try {
+      await lease.verify(owner, signal)
+      this.assertOwner(owner, signal)
+      root.signal.throwIfAborted()
+      if (owner.rootOperations !== root) throw new Error('Scheduled Goal root epoch closed during admission')
+      return lease
+    } catch (failure: unknown) {
+      lease.release()
+      throw failure
+    }
+  }
+
+  private async enqueueRound(state: DriverState, goal: GoalView, signal: AbortSignal,
+    admission?: NativeScheduledGoalAdmissionLease): Promise<void> {
+    if (admission !== undefined) await admission.verify(state.owner, signal)
+    this.assertOwner(state.owner, signal)
+    const current = this.goals.get(state.owner.agent)
+    if (current === undefined || current.id !== goal.id || current.revision !== goal.revision
+      || current.phase !== 'active' || current.activation !== 'armed') {
+      throw new GoalError('Goal changed before its scheduled round was admitted', 'GOAL_STALE_REVISION')
+    }
+    if (state.attempt !== undefined || state.owner.messages('next-turn').length > 0
+      || state.owner.messages('next-step').length > 0) {
+      throw new GoalError('Scheduled Goal cannot replace pending root input', 'GOAL_INVALID_TRANSITION')
+    }
+    const round = current.roundsStarted + 1
+    if (round > current.maxGoalRounds) throw new GoalError('Goal round budget is exhausted', 'GOAL_INVALID_TRANSITION')
+    const message = createUserMessage({ content: renderGoalRoundPrompt(current, round),
+      source: { kind: 'goal', goalId: current.id, revision: current.revision, round } })
+    state.attempt = message
+    try { await state.owner.enqueue(message, 'next-turn', true, signal) }
+    catch (failure: unknown) { state.attempt = undefined; throw failure }
   }
 
   /**
@@ -247,6 +338,8 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
   private async idle(state: DriverState, reason: TurnEndReason): Promise<void> {
     const goal = this.active(state)
     if (goal === undefined) return
+    if (reason.kind === 'completed'
+      && (state.owner.messages('next-turn').length > 0 || state.owner.messages('next-step').length > 0)) return
     state.attempt = undefined
     if (reason.kind === 'aborted' || reason.kind === 'error' || reason.kind === 'interrupted'
       || reason.kind === 'blocked' || reason.kind === 'max-tokens') {
@@ -281,14 +374,23 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
 
 /** Native Goal driver; it contributes no independent execution authority. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-goal-round-driver', targets: ['host'], requires: ['goals', 'activeSessions'], provides: ['goalContinuation'],
+  apiVersion: 1, name: '@deepseek-ai/dsh-goal-round-driver', targets: ['host'], requires: ['goals', 'activeSessions'],
+  optional: ['scheduledGoalHost'], provides: ['goalContinuation'],
   resolve(input) {
     const config = resolveNativeGoalDriverConfig(input)
     return (context) => {
-      const driver = new NativeGoalRoundDriver(context.require('goals'), context.require('activeSessions'),
-        config, context.signal)
+      const goals = context.require('goals')
+      const host = context.optional('scheduledGoalHost')
+      const driver = new NativeGoalRoundDriver(goals, context.require('activeSessions'),
+        config, context.signal, host?.authority)
       context.own(() => driver.dispose())
       context.provide('goalContinuation', driver)
+      if (host !== undefined) {
+        context.effect(host.registerExecutor({ startScheduled: (owner, request, admission, signal) =>
+          driver.startScheduled(owner, request, admission, signal),
+        resumeScheduled: (owner, ref, rounds, admission, signal) => driver.resumeScheduled(owner, ref, rounds, admission, signal),
+        get: owner => goals.get(owner.agent), pause: (owner, ref, signal) => driver.pause(owner, ref, signal) }))
+      }
     }
   },
 }

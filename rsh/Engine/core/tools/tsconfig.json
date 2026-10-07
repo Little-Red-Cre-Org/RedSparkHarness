@@ -12,7 +12,10 @@
       "path": "../session"
     },
     {
-      "path": "../../../Modules/Official/code-runtime/code-runtime"
+      "path": "../code-runtime-definition"
+    },
+    {
+      "path": "../approval-definition"
     },
     {
       "path": "../../../Core/vendor/cosmokit"
@@ -31,9 +34,6 @@
     },
     {
       "path": "../scope"
-    },
-    {
-      "path": "../../../Modules/Official/interaction/user-approval"
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"

@@ -1,0 +1,9 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Engine/core/code-runtime-definition" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" }
+  ]
+}

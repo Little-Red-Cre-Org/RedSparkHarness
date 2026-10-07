@@ -92,7 +92,7 @@ interface SubprocessStdio {
 
 ## The fully-explicit spawn spec
 
-The seam applies no defaults: every disposition, limit, and directory is explicit on the spec, so the caller's own config — not a hidden subprocess-service default — decides them. `argv` is never shell-interpreted.
+The spec explicitly supplies `argv`, `cwd`, each stdio disposition, limits, and grace. Omitted `envMode` keeps the scrub-overlay environment; `'replace'` passes only `env`. `argv` is never shell-interpreted.
 
 ```ts type-equiv
 /**
@@ -131,6 +131,12 @@ interface SubprocessSpawnSpec {
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
+  /**
+   * Environment materialization policy. Omission preserves the scrub-overlay
+   * contract above; `replace` passes only `env` entries to the child, matching
+   * Node's full-environment spawn behavior.
+   */
+  envMode?: SubprocessEnvironmentMode | undefined
 }
 ```
 

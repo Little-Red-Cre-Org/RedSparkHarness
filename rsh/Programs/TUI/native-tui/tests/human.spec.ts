@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import { NativeHost, NativeScope, ResourceOwner, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeApprovalRequestId, type NativeApprovalAnswerer, type NativeApprovalAnswererRequest } from '@deepseek-ai/dsh-native-approval'
+import {
+  NativeApprovalRequestId,
+  type NativeApprovalAnswerer,
+  type NativeApprovalAnswererRequest,
+} from '@deepseek-ai/dsh-approval-definition'
 import type { NativeActiveSessionOwner, NativeActiveSessionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeUserQuestionAnswerer } from '@deepseek-ai/dsh-user-questions/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'

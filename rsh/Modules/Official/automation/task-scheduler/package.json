@@ -32,7 +32,8 @@
       ],
       "optional": [],
       "provides": [
-        "taskScheduler"
+        "taskScheduler",
+        "scheduledGoalHost"
       ]
     }
   },
@@ -89,6 +90,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-goal": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",

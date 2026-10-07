@@ -8,6 +8,7 @@
     "src"
   ],
   "references": [
+    { "path": "../../../../Engine/goal/goal-round-driver" },
     { "path": "../../../../Engine/goal/goal/tsconfig.host.json" },
     {
       "path": "../../../../Core/vendor/cosmokit"

@@ -87,6 +87,7 @@
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^"
   },

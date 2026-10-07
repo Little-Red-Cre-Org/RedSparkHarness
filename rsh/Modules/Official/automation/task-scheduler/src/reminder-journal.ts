@@ -8,7 +8,8 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type { Task, Run } from './types.ts'
 import type { TaskStore } from './store.ts'
-import { isDirectReminder, readableBeijingTime } from './time.ts'
+import { isDirectReminder } from './time.ts'
+import { formatReminderRecord } from './reminder-format.ts'
 
 /** Replay is idempotent: a committed message identity is the durable occurrence checkpoint.
  * @param session - Shared reminder conversation.
@@ -18,15 +19,12 @@ import { isDirectReminder, readableBeijingTime } from './time.ts'
 export function appendReminderRecords(session: Session, task: Task, runs: Run[]): void {
   const seen = new Set(session.deriveMessages().map(message => String(message.id)))
   for (const run of [...runs].sort((a, b) => a.scheduledAt - b.scheduledAt)) {
-    const id = `reminder-${run.id}`
-    if (run.state === 'running' || seen.has(id)) continue
-    const when = readableBeijingTime(run.finishedAt ?? run.startedAt)
-    const status = run.state === 'completed' ? '已提醒' : '未完成'
-    const summary = `${when} · ${task.title} · ${status}`.slice(0, 120)
-    const message = createUserMessage({ source: { kind: 'plugin', plugin: 'task-scheduler', form: 'notice', summary },
-      content: [{ type: 'text', text: `${summary}\n${task.prompt}\n计划时间：${readableBeijingTime(run.scheduledAt)}\n实际时间：${when}` }] })
-    session.append('user/message', { ...message, id: brandString<typeof message.id>(id) }, { surfaceOp: 'append' })
-    seen.add(id)
+    const record = formatReminderRecord(task, run)
+    if (run.state === 'running' || seen.has(record.id)) continue
+    const message = createUserMessage({ source: { kind: 'plugin', plugin: 'task-scheduler', form: 'notice', summary: record.summary },
+      content: [{ type: 'text', text: record.text }] })
+    session.append('user/message', { ...message, id: brandString<typeof message.id>(record.id) }, { surfaceOp: 'append' })
+    seen.add(record.id)
   }
 }
 

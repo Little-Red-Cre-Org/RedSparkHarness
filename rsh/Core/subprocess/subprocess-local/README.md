@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `dsh-subprocess-local` to run child processes on the host. It resolves executables, manages Linux and Windows process ranges, and provides terminal sessions through `node-pty`; unsupported hosts use a documented weaker fallback. Spawn requests supply every stdio disposition, limit, terminal size, and grace period. Output keeps a bounded tail with optional full-stream spill recovery. General subprocesses use the scrub-overlay environment; child connections can explicitly request a complete replacement.
+Mount `dsh-subprocess-local` to run host processes. It resolves executables, manages Linux and Windows process ranges, and provides `node-pty` sessions; unsupported hosts use the documented weaker fallback. Spawn requests set stdio, limits, terminal dimensions, and grace. Output keeps a bounded tail, with optional spill recovery. Ordinary subprocesses use scrub-overlay; child connections can request full environment replacement.
 
-Use `./native` to install the shared `subprocess` and `childConnection` owner in a native Host; the root entry remains its Cordis adapter. Standalone clients can use `./child-connection` to create this same process owner without NativeHost and then dispose it explicitly. These entries accept no configuration.
+`./native` installs the shared process owner in a Native Host; the root remains its Cordis adapter. Standalone clients can use `./child-connection` to create and explicitly dispose the same owner without `NativeHost`. Neither entry accepts configuration.
 
 ## Table of Contents
 

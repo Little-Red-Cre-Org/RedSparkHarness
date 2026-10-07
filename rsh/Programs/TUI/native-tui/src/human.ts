@@ -1,5 +1,9 @@
 /** Owned terminal presentations; the selected Providers retain authority and audit writes. */
-import type { NativeApprovalAnswererRequest, NativeApprovalService, NativeApprovalOutcome } from '@deepseek-ai/dsh-native-approval'
+import type {
+  NativeApprovalAnswererRequest,
+  NativeApprovalOutcome,
+  NativeApprovalServiceDefinition,
+} from '@deepseek-ai/dsh-approval-definition'
 import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
@@ -150,7 +154,7 @@ export function bindTerminalHumanAnswerers(human: TerminalHumanInteraction, acti
     readonly rootExecution: Pick<NativeRootExecutionOperations, 'capture' | 'cancel'>
   },
   owns: (id: SessionId) => boolean, context: Pick<NativeContext, 'own' | 'scope'>,
-  approval?: Pick<NativeApprovalService, 'registerAnswerer'>, questions?: Pick<NativeUserQuestionRegistry, 'registerAnswerer'>): void {
+  approval?: Pick<NativeApprovalServiceDefinition, 'registerAnswerer'>, questions?: Pick<NativeUserQuestionRegistry, 'registerAnswerer'>): void {
   const cancellation = (agent: NativeApprovalAnswererRequest['agent'], session?: NativeAdmittedUserQuestionRequest['session']) => {
     const recipient = executor.interactionOwner(agent)
     if (recipient === undefined || recipient.agent !== recipient.displayRootAgent || !owns(recipient.displayRootSessionId)

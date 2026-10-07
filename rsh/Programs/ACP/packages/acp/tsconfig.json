@@ -39,7 +39,7 @@
       "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
     },
     {
-      "path": "../../../../Modules/Official/interaction/user-approval"
+      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
     }
   ]
 }

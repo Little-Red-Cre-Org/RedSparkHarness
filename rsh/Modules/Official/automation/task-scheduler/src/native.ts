@@ -27,6 +27,8 @@ const Configuration = z.object({
 }).strict()
 const Request = z.object({
   action: z.enum(['create', 'list', 'pause', 'resume', 'delete', 'history']),
+  kind: z.enum(['goal', 'scheduled']).optional(), completion_criteria: z.string().trim().min(1).max(8000).optional(),
+  max_goal_rounds: z.number().int().min(1).max(100).optional(),
   id: z.string().min(1).optional(), title: z.string().optional(), prompt: z.string().optional(),
   at: z.string().optional(), after_seconds: z.number().int().positive().optional(),
   end_at: z.string().optional(), every_seconds: z.number().int().positive().optional(),
@@ -44,7 +46,7 @@ export function resolveNativeTaskSchedulerConfig(input: unknown): NativeTaskSche
 /** Complete native Definition/Provider and scoped model-tool Consumer. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-task-scheduler', targets: ['host'],
-  requires: ['rootExecution', 'activeSessions', 'agents', 'tools'], optional: [], provides: ['taskScheduler'],
+  requires: ['rootExecution', 'activeSessions', 'agents', 'tools'], optional: [], provides: ['taskScheduler', 'scheduledGoalHost'],
   resolve(input) {
     const config = resolveNativeTaskSchedulerConfig(input)
     return (context) => {
@@ -55,11 +57,13 @@ export const plugin: NativePlugin = {
       const contributions = new WeakMap<NativeAgent, () => Promise<void>>()
       let scheduler: NativeTaskSchedulerRegistry
       try {
-        scheduler = new NativeTaskSchedulerRegistry(store, context.require('rootExecution'), agents, owners, async (agent) => { await contributions.get(agent)?.() },
-          config, (error) => { console.warn(`native-task-scheduler: ${String(error)}`) })
+        scheduler = new NativeTaskSchedulerRegistry(store, context.require('rootExecution'), agents, owners,
+          async (agent) => { await contributions.get(agent)?.() }, config,
+          (error) => { console.warn(`native-task-scheduler: ${String(error)}`) })
       } catch (failure: unknown) { store.close(); throw failure }
       context.own(() => scheduler.dispose())
       context.provide('taskScheduler', scheduler)
+      context.provide('scheduledGoalHost', scheduler.nativeScheduledGoalHost)
       const installed = new WeakSet<NativeAgent>()
       const attachOwner = (owner: NativeActiveSessionOwner): Promise<void> => {
         if (installed.has(owner.agent)) return Promise.resolve()
@@ -68,13 +72,16 @@ export const plugin: NativePlugin = {
         if (!accepted && !tools.schemas(owner.agent.scope).some(tool => tool.name === 'task_schedule')) return Promise.resolve()
         const registration = accepted ? tools.registerValueTool({
           schema: { name: 'task_schedule', description:
-            'Manage explicitly requested persistent scheduled Agent work: create, list, pause, resume, delete or history. '
-            + 'Each due occurrence executes in an independent root Session with this Program route and permissions. '
-            + 'Plans survive restart; missed recurring periods coalesce. Pause/delete stops future starts, not running work. '
-            + 'Interrupted receipts are not replayed. Completed records an Agent turn, not verified code correctness. '
-            + 'Personal reminder delivery is unavailable. Scheduled runs cannot schedule tasks.',
+            'Manage explicitly requested persistent scheduled work: create Agent work or a durable Goal, list, pause, resume, delete or inspect history. '
+            + 'Agent and Goal occurrences use an independent root Session with this Program route and permissions. '
+            + 'Personal reminders are appended to the creating Session without invoking a model. Plans survive restart; missed recurring periods coalesce. '
+            + 'Pausing a Goal pauses its continuation; pause/delete on Agent work only stops future starts. Interrupted receipts are not replayed. '
+            + 'A Goal is completed only after its durable phase is complete and its root settles. Resuming a stopped Goal requires a direct human turn. '
+            + 'Scheduled runs cannot schedule tasks.',
           parameters: { type: 'object', properties: {
             action: { type: 'string', enum: ['create', 'list', 'pause', 'resume', 'delete', 'history'] },
+            kind: { type: 'string', enum: ['goal', 'scheduled'] }, completion_criteria: { type: 'string' },
+            max_goal_rounds: { type: 'integer' },
             id: { type: 'string' }, title: { type: 'string' }, prompt: { type: 'string' }, at: { type: 'string' },
             after_seconds: { type: 'integer' }, end_at: { type: 'string' }, every_seconds: { type: 'integer' },
           }, required: ['action'], additionalProperties: false } },
@@ -87,6 +94,9 @@ export const plugin: NativePlugin = {
             const id = args.id === undefined ? undefined : brandString<TaskId>(args.id)
             if (args.action === 'create') return JSON.stringify(scheduler.create(active, {
               title: args.title ?? '', prompt: args.prompt ?? '', at: args.at ?? '',
+              ...args.kind === undefined ? {} : { kind: args.kind },
+              ...args.completion_criteria === undefined ? {} : { completionCriteria: args.completion_criteria },
+              ...args.max_goal_rounds === undefined ? {} : { maxGoalRounds: args.max_goal_rounds },
               ...args.after_seconds === undefined ? {} : { delaySeconds: args.after_seconds },
               ...args.end_at === undefined ? {} : { endAt: args.end_at },
               ...args.every_seconds === undefined ? {} : { everySeconds: args.every_seconds },

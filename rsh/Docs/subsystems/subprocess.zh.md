@@ -92,7 +92,7 @@ interface SubprocessStdio {
 
 ## 完全显式的 spawn spec
 
-该 seam 不应用任何默认值：每项处置方式、限制与目录都在 spec 上显式给出，因此由调用方自己的配置决定它们，而不是由某个隐藏的子进程服务默认值决定。`argv` 绝不经过 shell 解释。
+spec 显式提供 `argv`、`cwd`、每条流的 stdio 处置方式、限制与 grace。省略 `envMode` 时保留 scrub-overlay 环境；`'replace'` 只传递 `env`。`argv` 绝不经过 shell 解释。
 
 ```ts type-equiv
 /**
@@ -131,6 +131,12 @@ interface SubprocessSpawnSpec {
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
+  /**
+   * Environment materialization policy. Omission preserves the scrub-overlay
+   * contract above; `replace` passes only `env` entries to the child, matching
+   * Node's full-environment spawn behavior.
+   */
+  envMode?: SubprocessEnvironmentMode | undefined
 }
 ```
 

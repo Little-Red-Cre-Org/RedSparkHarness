@@ -247,11 +247,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the standing scope key readers pass as a registry view scope.',
         throws: ['when the preset is unknown or its composition is unusable.'],
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -438,35 +433,30 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'agent', description: 'exact live Team member authorizing the mutation.' }, { name: 'request', description: 'task identity, expected revision, action, and action fields.' }],
         returns: 'the committed task or a typed Team rejection.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
     key: 'approval',
-    summary: 'Approval service that applies session policy before answerers and logs every ask/outcome pair to the requesting session.',
-    description: 'Approval service that applies session policy before answerers and logs every ask/outcome pair to the requesting session. It exposes deterministic policy changes to the model through the runtime-context snapshot and switch notices.',
+    summary: 'Cordis implementation specialized to the exact scoped Agent owner.',
+    description: 'Cordis implementation specialized to the exact scoped Agent owner.',
     methods: [
       {
         signature: 'setPolicy(agent: Agent, policy: ApprovalPolicy): void',
-        description: 'Switch one live agent\'s policy and queue the transition for its next model step. Session initialization uses setApprovalPolicy directly because there is no previously visible policy to change.',
-        parameters: [{ name: 'agent', description: 'the live agent whose policy is changing.' }, { name: 'policy', description: 'the new effective policy.' }],
+        description: 'Set the durable per-Session approval policy for the live agent.',
+        parameters: [{ name: 'agent', description: 'live agent whose policy changes.' }, { name: 'policy', description: 'next effective policy.' }],
       },
       {
-        signature: 'async request(req: ApprovalRequest): Promise<ApprovalOutcome>',
-        description: 'Ask the composed answerers to decide one readonly same-process request. The service borrows the request, agent, session, and live signal directly. The request requires an open turn because the audit pair must be enclosed by the durable log\'s commit/replay boundary; an idle ask rejects before appending anything. The answerer phase always produces an outcome: an aborted signal yields `\'cancelled\'`, a missing or throwing answerer yields `\'unavailable\'` (fail closed), and a rogue non-vocabulary return value is normalized to `\'unavailable\'`. A failure that prevents either audit append from committing still rejects because returning an unlogged decision would violate the pair. Session contains post-commit observer failures, so an authoritative append cannot reject the request or suppress its matching audit event.',
-        parameters: [{ name: 'req', description: 'the pending decision (agent, tool identity, reason, signal).' }],
-        returns: 'the closed outcome; `\'allowed-once\'` is the only grant.',
-        throws: ['when no turn is open or either audit event fails before the session append commit point.'],
+        signature: 'request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>',
+        description: 'Ask the compatibility answerer chain for a decision inside the Agent\'s open Session turn. The Provider appends `approval/asked` before dispatch and `approval/decided` after the normalized outcome so the audit pair is enclosed by that turn\'s durable log boundary. Calls made while no turn is open reject before appending; a failure before either audit append commits rejects the request. Post-commit observer failures are contained by Session and do not reject the request or suppress its matching event.',
+        parameters: [{ name: 'request', description: 'exact operation and owner needing a decision.' }],
+        returns: 'the fail-closed outcome.',
+        throws: ['When the Session has no open turn or either audit append fails before commit.'],
       },
       {
         signature: 'overrideOf(session: Session): ApprovalPolicy | undefined',
-        description: 'Read the session override without applying the configured default.',
-        parameters: [{ name: 'session', description: 'session whose log supplies the override.' }],
-        returns: 'the last logged policy, or `undefined` without one.',
+        description: 'Read the explicit policy override recorded in the Session log.',
+        parameters: [{ name: 'session', description: 'Session with the durable policy fold.' }],
+        returns: 'the explicit override or undefined.',
       },
     ],
   },
@@ -630,11 +620,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Decline the prompt currently displayed for one attempt.',
         parameters: [{ name: 'attemptId', description: 'Opaque identifier returned by the stream.' }, { name: 'promptId', description: 'Opaque identifier of the pending prompt.' }],
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -688,24 +673,24 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'codeRuntime',
-    summary: 'Registers one `ctx.codeRuntime` implementation.',
-    description: 'Registers one `ctx.codeRuntime` implementation. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition contract misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, treat programs as hostile peers, isolate runs from one another, and terminate and await in-flight runs during disposal.',
+    summary: 'Cordis-free code-execution operations implemented by a selected backend.',
+    description: 'Cordis-free code-execution operations implemented by a selected backend. Program, budget, abort, and substrate failures resolve in CodeRunResult; only Service Definition misuse rejects. Implementations bridge structured-cloneable bindings, materialize each declared namespace rejection class, isolate runs from one another, and terminate in-flight runs on disposal.',
     methods: [
       {
-        signature: 'abstract readonly language: string',
-        description: 'The source language run expects `program` to be written in, as a lowercase identifier. Informational, not gating — a consumer that generates language-specific presentation (typed SDK stubs, usage instructions) switches on it and fails loud on a language it cannot present. Well-known values: `\'typescript\'` and `\'python\'`, those `dsh-tools` presents; the TypeScript backend is released, the Python backend is experimental and private (not published).',
+        signature: 'readonly language: string',
+        description: 'Source language run expects in `program`, as a lowercase identifier. Informational rather than gating: consumers that generate language-specific presentation switch on this value and fail loudly when they cannot present it. The current tool SDK presents `\'typescript\'` and `\'python\'`.',
         parameters: [],
       },
       {
-        signature: 'abstract readonly isolation: string',
-        description: 'The execution substrate, as a lowercase identifier. Informational, not gating — a descriptor so deployments and diagnostics can tell backends apart, not a security claim. Well-known values: `\'worker-thread\'`, `\'process\'`, `\'container\'`.',
+        signature: 'readonly isolation: string',
+        description: 'Execution substrate as a lowercase identifier. Informational rather than a security claim; known values include `\'worker-thread\'`, `\'process\'`, and `\'container\'`.',
         parameters: [],
       },
       {
-        signature: 'abstract run(request: CodeRunRequest): Promise<CodeRunResult>',
-        description: 'Execute one program against the request\'s bindings and capture what it emitted. See the class doc for the resolution contract (error is a result field; rejection means Service Definition contract misuse only).',
-        parameters: [{ name: 'request', description: 'the program, its bindings, and the abort signal; the request carries everything the runtime acts on, with no hidden defaults.' }],
-        returns: 'the run\'s outcome: completion value (when transferable), the ordered log capture, and the failure (if any).',
+        signature: 'run(request: CodeRunRequest): Promise<CodeRunResult>',
+        description: 'Execute one program against its declared bindings and capture its output.',
+        parameters: [{ name: 'request', description: 'the program, its bindings, and its abort signal.' }],
+        returns: 'the run outcome, including any program or substrate failure.',
       },
     ],
   },
@@ -743,11 +728,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Parse and execute a known command without sending it to the model.\n\nA resolved command\'s lifecycle is logged: `command/run` is appended before the handler is invoked and `command/done` after settlement (a thrown or aborted handler settles as `kind: \'error\'`). Both are direct log-only appends — no turn wraps them, and persistence drains them at ordinary checkpoints. Admission misses (syntax or unknown name) log nothing — they never entered a handler. A `command/run` append failure fails the execution loud; a `command/done` append failure on the handler-failure path is contained so the handler\'s own error stays the reported failure.\n\nAttachment admission is enforced here, not in the composer: attachments sent to a command that does not declare `input.attachments`, an absent attachment store, and an exceeded image limit each settle as an error result before the handler runs. Validation rejection starts no attachment writes; a storage failure can leave only unreachable content-addressed objects for deferred collection.',
         parameters: [{ name: 'agent', description: 'exact receiving agent.' }, { name: 'line', description: 'complete slash-command line.' }, { name: 'submittedAttachments', description: 'encoded images and staged file receipts accompanying the line, in submission order; empty for a plain invocation.' }, { name: 'signal', description: 'cancellation signal owned by the UI request.' }],
         returns: 'the settled execution (result + lifecycle pairing id), or `undefined` when syntax or name does not resolve.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -860,11 +840,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'ref', description: 'reference name to remove.' }],
         throws: ['RemoteError when the request is invalid, no provider is mounted, or the provider refuses the write.'],
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -921,11 +896,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one child directory for a Remote caller\'s in-app browser.',
         parameters: [{ name: 'path', description: 'absolute existing parent directory.' }, { name: 'name', description: 'single non-blank path segment.' }],
         returns: 'the created directory\'s absolute path.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -1005,11 +975,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'retirePrompt(agent: Agent, requestId: string): void',
         description: 'Retire every receipt accepted by one removed queue occurrence.',
         parameters: [{ name: 'agent', description: 'receiving Agent.' }, { name: 'requestId', description: 'prompt identity carried by the queue occurrence.' }],
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -1169,11 +1134,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one Goal through the remote boundary.',
         parameters: [{ name: 'agent', description: 'exact live Agent resolved from the wire identity.' }, { name: 'request', description: 'objective, optional round cap and observed Goal reference.' }],
         returns: 'the created Goal identity.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -1364,11 +1324,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'options', description: 'the full request; `options.provider` selects the adapter.' }],
         returns: 'the chunk stream, possibly wrapped by `llm/stream` listeners.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -1412,11 +1367,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Delete one item after checking its version; absence succeeds without an event.',
         parameters: [{ name: 'request', description: 'Session, message, and observed item version.' }],
         returns: 'the stable absent postcondition or an explicit failure.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -1664,11 +1614,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'signal', description: 'cancellation owned by the Remote stream carrier.' }],
         returns: 'one complete baseline followed by live replacement frames.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -1682,11 +1627,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'target Session plus the optional text and category.' }],
         returns: 'the recorded postcondition, or `session-not-found` when no live Session carries the id.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -1699,11 +1639,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'List file and directory candidates for one Agent\'s working directory.',
         parameters: [{ name: 'agent', description: 'target Agent resolved from the Session identity on the wire.' }, { name: 'query', description: 'path text following `@` or `@"`.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'deterministic path-only candidates from the composed provider.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -1986,11 +1921,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'agent', description: 'target agent; references to it are rejected.' }, { name: 'content', description: 'already host-normalized readable message content.' }, { name: 'references', description: 'structured source sessions in mention order.' }, { name: 'signal', description: 'optional cancellation boundary for the active turn.' }],
         returns: 'detached content and optional referenced-session context.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -2063,11 +1993,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'Session identity whose cwd and preset select the catalog view.' }, { name: 'signal', description: 'caller lifetime carried by the Remote transport; admitted catalog reads retain their existing completion semantics.' }],
         returns: 'user-invocable skill metadata without loading skill bodies.',
         throws: ['RemoteError when the Session cannot be inspected or no registry can serve it.'],
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -2248,11 +2173,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'agentPreset', description: 'preset id resolved against Host-owned roots.' }, { name: 'signal', description: 'caller lifetime; abort terminates the native command.' }],
         returns: 'an opened confirmation or the resolved directory for text display.',
         throws: ['RemoteError when the preset is missing, read-only, invalid, or cannot be opened.'],
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -2516,11 +2436,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'name', description: 'the provider to use.' }, { name: 'request', description: 'child label, prompt, parent, signal, and optional capabilities.' }],
         returns: 'the published holder-owned run.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -2674,11 +2589,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Change future admission of an owned task, without cancelling an active occurrence.',
         parameters: [{ name: 'agent', description: 'Owning root session resolved by the Remote Agent lookup.' }, { name: 'id', description: 'Task identifier belonging to that session.' }, { name: 'action', description: 'Pause, resume or delete.' }],
         returns: 'Persisted owner-scoped state after the change.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -3139,11 +3049,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'signal', description: 'generation cancellation.' }],
         returns: 'baseline followed by ordered Workspace increments.',
       },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
-      },
     ],
   },
   {
@@ -3192,11 +3097,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Stream every `fs/observed` observation of a file inside the Session\'s workspace. Only instrumented filesystem operations report here; the OS is not watched.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'signal', description: 'generation cancellation.' }],
         returns: '`ready` once the Host observation queue is active and the workspace root is resolved, then queued and live observations in emission order.',
-      },
-      {
-        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
-        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
-        parameters: [],
       },
     ],
   },
@@ -3418,7 +3318,7 @@ export const EVENT_API: readonly EventApiEntry[] = [
     mode: 'waterfall',
     signature: '\'approval/request\'( this: Scoped<Agent>, req: ApprovalRequestEvent, next: () => Promise<ApprovalOutcome>, ): Promise<ApprovalOutcome>',
     summary: 'Ask composed answerers for one decision.',
-    description: 'Ask composed answerers for one decision. Return an outcome to claim the request or call `next()` to delegate. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.',
+    description: 'Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent\'s scope.',
     parameters: [{ name: 'req', description: 'pending approval request.' }],
   },
   {
@@ -3895,11 +3795,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ApprovalRequest',
-    declaration: 'export interface ApprovalRequest extends ApprovalRequestEvent {\n    readonly agent: Agent;\n    readonly toolName: string;\n    readonly callId?: ToolCallId;\n    readonly reason?: string;\n    readonly signal?: AbortSignal;\n}',
+    declaration: 'export interface ApprovalRequest<AgentOwner> {\n    readonly agent: AgentOwner;\n    readonly toolName: string;\n    readonly callId?: ToolCallId;\n    readonly reason?: string;\n    readonly signal?: AbortSignal;\n}',
   },
   {
     name: 'ApprovalRequestEvent',
     declaration: 'export interface ApprovalRequestEvent {\n    readonly agent: Agent;\n    readonly toolName: string;\n    readonly callId?: ToolCallId;\n    readonly reason?: string;\n    readonly signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'ApprovalRequestId',
+    declaration: 'export type ApprovalRequestId = Branded<\'ApprovalRequestId\'>;',
   },
   {
     name: 'AskUserQuestionAnswer',
@@ -4068,6 +3972,34 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ClientArtifactBaseline',
     declaration: 'export interface ClientArtifactBaseline {\n    readonly path: string;\n    readonly mtimeMs: number;\n    readonly size: number;\n}',
+  },
+  {
+    name: 'CodeBindingErrorClass',
+    declaration: 'export interface CodeBindingErrorClass {\n    name: string;\n    memberNameProperty: string;\n}',
+  },
+  {
+    name: 'CodeBindingFunction',
+    declaration: 'export type CodeBindingFunction = (args: unknown) => Promise<CodeJsonValue>;',
+  },
+  {
+    name: 'CodeBindingNamespace',
+    declaration: 'export interface CodeBindingNamespace {\n    global: string;\n    functions: Record<string, CodeBindingFunction>;\n    errorClass?: CodeBindingErrorClass;\n}',
+  },
+  {
+    name: 'CodeJsonValue',
+    declaration: 'export type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | {\n    [key: string]: CodeJsonValue;\n};',
+  },
+  {
+    name: 'CodeRunFailure',
+    declaration: 'export interface CodeRunFailure {\n    kind: \'exception\' | \'timeout\' | \'abort\' | \'worker-exit\' | \'invalid-output\' | \'output-limit\';\n    message: string;\n}',
+  },
+  {
+    name: 'CodeRunRequest',
+    declaration: 'export interface CodeRunRequest {\n    program: string;\n    bindings: CodeBindingNamespace[];\n    signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'CodeRunResult',
+    declaration: 'export interface CodeRunResult {\n    value?: CodeJsonValue;\n    logs: string[];\n    error?: CodeRunFailure;\n}',
   },
   {
     name: 'CollectedOutput',
@@ -5854,6 +5786,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SettingsRegisterOptions<T> {\n    base?: Partial<T>;\n    applies?: SettingsApplies;\n    validate?: (value: T) => void;\n}',
   },
   {
+    name: 'SettingsScope',
+    declaration: 'export interface SettingsScope<T> {\n    get(): T;\n    watch(callback: (next: T, prev: T) => void | Promise<void>): () => void;\n    update(patch: object): Promise<void>;\n    replace(section: object): Promise<void>;\n}',
+  },
+  {
     name: 'SettingsSecret',
     declaration: 'export interface SettingsSecret {\n    path: string[];\n    set: boolean;\n}',
   },
@@ -6094,6 +6030,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SubprocessCollectedOutputs {\n    readonly stdout?: SubprocessOutputReader;\n    readonly stderr?: SubprocessOutputReader;\n}',
   },
   {
+    name: 'SubprocessEnvironmentMode',
+    declaration: 'export type SubprocessEnvironmentMode = \'scrub-overlay\' | \'replace\';',
+  },
+  {
     name: 'SubprocessHandle',
     declaration: 'export interface SubprocessHandle {\n    readonly stdin: Writable | undefined;\n    readonly stdout: Readable | undefined;\n    readonly stderr: Readable | undefined;\n    readonly collected: SubprocessCollectedOutputs;\n    readonly done: Promise<SubprocessOutcome>;\n    terminate(): void;\n    waitForExit(signal?: AbortSignal): Promise<boolean>;\n}',
   },
@@ -6115,7 +6055,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SubprocessSpawnSpec',
-    declaration: 'export interface SubprocessSpawnSpec {\n    argv: readonly string[];\n    cwd: string;\n    stdio: SubprocessStdio;\n    graceMs: number;\n    signal?: AbortSignal | undefined;\n    env?: NodeJS.ProcessEnv | undefined;\n}',
+    declaration: 'export interface SubprocessSpawnSpec {\n    argv: readonly string[];\n    cwd: string;\n    stdio: SubprocessStdio;\n    graceMs: number;\n    signal?: AbortSignal | undefined;\n    env?: NodeJS.ProcessEnv | undefined;\n    envMode?: SubprocessEnvironmentMode | undefined;\n}',
   },
   {
     name: 'SubprocessStdinMode',

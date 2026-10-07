@@ -1643,7 +1643,7 @@ export interface PresetSpec {
 
 依赖：[`ApprovalPolicy`](subsystems/approval.zh.md) · [`SandboxMode`](subsystems/sandbox.zh.md)
 
-来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:144`](../Modules/Official/interaction/permission-presets/src/index.ts)
+来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:146`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 <a id="deepseek-aidsh-persona"></a>
 
@@ -2762,7 +2762,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/tool-bash/src/index.ts:34`](../Modules/Official/shell/tool-bash/src/index.ts)
+来源：[`rsh/Modules/Official/shell/tool-bash/src/index.ts:33`](../Modules/Official/shell/tool-bash/src/index.ts)
 
 <a id="deepseek-aidsh-tool-bash-persistent"></a>
 
@@ -2806,7 +2806,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/fs/tool-fs/src/index.ts:25`](../Modules/Official/fs/tool-fs/src/index.ts)
+来源：[`rsh/Modules/Official/fs/tool-fs/src/index.ts:24`](../Modules/Official/fs/tool-fs/src/index.ts)
 
 <a id="deepseek-aidsh-tool-fs-search"></a>
 
@@ -3231,7 +3231,7 @@ export interface Config {
 export type ToolPresentationMode = 'native' | 'ptc' | 'both'
 ```
 
-来源：[`rsh/Engine/core/tools/src/index.ts:647`](../Engine/core/tools/src/index.ts)
+来源：[`rsh/Engine/core/tools/src/index.ts:652`](../Engine/core/tools/src/index.ts)
 
 <a id="deepseek-aidsh-typert-loader"></a>
 
@@ -3264,21 +3264,11 @@ export interface Config {
    */
   readonly policy?: ApprovalPolicy
 }
-
-/**
- * A session's approval policy — what happens to an {@link ApprovalService}
- * ask BEFORE any interactive answerer sees it:
- *
- * - `'ask'` (the default) — delegate to the composed answerers; with none
- *   composed the chain falls through to the fail-closed `'unavailable'`.
- * - `'never'` — never prompt anyone: every ask resolves `'rejected'`
- *   deterministically. The strict headless stance (CI, unattended runs) and
- *   the policy whose outcome is knowable without asking.
- */
-export type ApprovalPolicy = 'ask' | 'never'
 ```
 
-来源：[`rsh/Modules/Official/interaction/user-approval/src/index.ts:128`](../Modules/Official/interaction/user-approval/src/index.ts)
+依赖：[`ApprovalPolicy`](subsystems/approval.zh.md)
+
+来源：[`rsh/Compatibility/DSH/bridge/compat-user-approval/src/index.ts:64`](../Compatibility/DSH/bridge/compat-user-approval/src/index.ts)
 
 <a id="deepseek-aidsh-web"></a>
 
@@ -3576,7 +3566,7 @@ export interface Config {
 抽象服务类——部署时应改为加载具体的实现包（参见[能力 seam](../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)）。
 
 - `@deepseek-ai/dsh-attachment` — 抽象 `AttachmentStore`（[`rsh/Modules/Official/attachment/attachment/src/index.ts`](../Modules/Official/attachment/attachment/src/index.ts)）
-- `@deepseek-ai/dsh-code-runtime` — 抽象 `CodeRuntime`（[`rsh/Modules/Official/code-runtime/code-runtime/src/index.ts`](../Modules/Official/code-runtime/code-runtime/src/index.ts)）
+- `@deepseek-ai/dsh-code-runtime` — 抽象 `CodeRuntime`（[`rsh/Compatibility/DSH/bridge/compat-code-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-compaction` — 抽象 `CompactionEngine`（[`rsh/Engine/compaction/compaction/src/index.ts`](../Engine/compaction/compaction/src/index.ts)）
 - `@deepseek-ai/dsh-credentials` — 抽象 `Credentials`（[`rsh/Modules/Official/credentials/credentials/src/index.ts`](../Modules/Official/credentials/credentials/src/index.ts)）
 - `@deepseek-ai/dsh-file-reference` — 抽象 `FileReferenceService`（[`rsh/Engine/context/file-reference/src/index.ts`](../Engine/context/file-reference/src/index.ts)）
@@ -3599,6 +3589,7 @@ export interface Config {
 - `@deepseek-ai/dsh-agent-preset-standing`（[`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts)）
 - `@deepseek-ai/dsh-anonymous-user-id`（[`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts)）
 - `@deepseek-ai/dsh-app-boot`（[`rsh/Compatibility/DSH/boot/app-boot/src/index.ts`](../Compatibility/DSH/boot/app-boot/src/index.ts)）
+- `@deepseek-ai/dsh-approval-definition`（[`rsh/Engine/core/approval-definition/src/index.ts`](../Engine/core/approval-definition/src/index.ts)）
 - `@deepseek-ai/dsh-atomic-write`（[`rsh/Core/util/atomic-write/src/index.ts`](../Core/util/atomic-write/src/index.ts)）
 - `@deepseek-ai/dsh-base`（[`rsh/Compatibility/DSH/bundle/base/src/index.ts`](../Compatibility/DSH/bundle/base/src/index.ts)）
 - `@deepseek-ai/dsh-brand`（[`rsh/Core/util/brand/src/index.ts`](../Core/util/brand/src/index.ts)）
@@ -3612,6 +3603,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-slots`（[`rsh/Programs/Web/client/ui-slots/src/index.ts`](../Programs/Web/client/ui-slots/src/index.ts)）
 - `@deepseek-ai/dsh-client-web`（[`rsh/Programs/Web/client/web/src/index.ts`](../Programs/Web/client/web/src/index.ts)）
 - `@deepseek-ai/dsh-cmdline`（[`rsh/Compatibility/DSH/boot/cmdline/src/index.ts`](../Compatibility/DSH/boot/cmdline/src/index.ts)）
+- `@deepseek-ai/dsh-code-runtime-definition`（[`rsh/Engine/core/code-runtime-definition/src/index.ts`](../Engine/core/code-runtime-definition/src/index.ts)）
 - `@deepseek-ai/dsh-code-runtime-process-sandbox`（[`rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts`](../Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts)）
 - `@deepseek-ai/dsh-compat-dsh-runtime`（[`rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-compat-fs-local`（[`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts)）
@@ -3636,7 +3628,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-acp`（[`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts)）
 - `@deepseek-ai/dsh-native-agent`（[`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts)）
 - `@deepseek-ai/dsh-native-approval`（[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts)）
-- `@deepseek-ai/dsh-native-code-runtime`（[`rsh/Engine/core/native-code-runtime/src/index.ts`](../Engine/core/native-code-runtime/src/index.ts)）
+- `@deepseek-ai/dsh-native-code-runtime`（[`rsh/Modules/Official/code-runtime/native-code-runtime/src/index.ts`](../Modules/Official/code-runtime/native-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-command`（[`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts)）
 - `@deepseek-ai/dsh-native-headless`（[`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts)）
 - `@deepseek-ai/dsh-native-jobs`（[`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts)）

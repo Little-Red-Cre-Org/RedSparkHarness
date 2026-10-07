@@ -40,7 +40,7 @@ export interface HarnessClientOptions {
    * for the shared scrub-then-merge base).
    */
   env?: NodeJS.ProcessEnv
-  /** Bound (ms) on the initial profile handshake (default 10000). */
+  /** Bound (ms) for the initial profile-ready handshake (default 30000). */
   initializeTimeoutMs?: number
   /** Per-request timeout (ms); `undefined` waits indefinitely (a turn can legitimately run long). */
   requestTimeoutMs?: number
