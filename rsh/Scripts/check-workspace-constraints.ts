@@ -178,7 +178,22 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
+  '@deepseek-ai/dsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
+  '@deepseek-ai/dsh-agent-presets': [
+    'presets', 'lib/native.js', 'lib/selection.js', 'lib/compat-settings.js',
+    'lib/settings-owner-*.js', 'lib/shared-*.js',
+  ],
+  '@deepseek-ai/dsh-tool-subagent': [
+    'lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js',
+  ],
+  '@deepseek-ai/dsh-compat-settings-adapters': [
+    'lib/agent-loop.js', 'lib/agent-default-model.js', 'lib/agent-presets.js', 'lib/tool-subagent.js',
+    'lib/settings-entry-*.js',
+  ],
   '@deepseek-ai/dsh-settings': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-settings-definition': ['lib/native.js'],
+  '@deepseek-ai/dsh-compat-settings-definition': ['lib/events.js'],
   '@deepseek-ai/dsh-settings-file': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
@@ -189,7 +204,6 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // The CPython side ships as source .py files, published as-is rather than built.
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
-  '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
@@ -267,7 +281,6 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
-  '@deepseek-ai/dsh-tool-subagent': ['lib/model-selection-settings.js', 'lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
@@ -667,12 +680,6 @@ interface RuntimeLayerException {
  * rejected when it becomes stale.
  */
 const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
-  {
-    consumer: '@deepseek-ai/dsh-agent-loop',
-    section: 'peerDependencies',
-    dependency: '@deepseek-ai/dsh-settings',
-    reason: 'Agent-loop configuration still reads the published settings capability during the adapter-first transition.',
-  },
   {
     consumer: '@deepseek-ai/dsh-subagent-dsh-sdk',
     section: 'peerDependencies',

@@ -46,6 +46,8 @@ describe('release families', () => {
     const members = releaseFamily('dsh').members(resolve(import.meta.dirname, '../../..'))
     expect(members.find(entry => entry.name === '@deepseek-ai/dsh-web-frontend')?.directory)
       .toBe('rsh/Programs/Web/application')
+    expect(members.find(entry => entry.name === '@deepseek-ai/dsh-settings-definition')?.directory)
+      .toBe('rsh/Core/settings/settings-definition')
   })
 
   it('publishes Agent Teams while excluding private experimental packages', () => {

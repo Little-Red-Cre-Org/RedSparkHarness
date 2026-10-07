@@ -43,6 +43,9 @@
     },
     {
       "path": "../commands"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

@@ -91,6 +91,9 @@
     },
     {
       "path": "../../../../Core/util/workspace-path"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ],
   "exclude": [

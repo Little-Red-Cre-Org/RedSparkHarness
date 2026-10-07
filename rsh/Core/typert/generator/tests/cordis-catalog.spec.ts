@@ -100,5 +100,18 @@ describe('Typert-backed Cordis catalog', () => {
     expect(byKey.has('headlessIo')).toBe(false)
     expect(byKey.has('dshHomePath')).toBe(false)
     expect(byKey.has('launcherEnvironment')).toBe(false)
+
+    const settingsMethods = byKey.get('settings')?.methods.map(method => method.signature) ?? []
+    expect(settingsMethods).toEqual(expect.arrayContaining([
+      expect.stringContaining('writable'),
+      expect.stringContaining('documentPath'),
+      expect.stringContaining('prepareDocument'),
+      expect.stringContaining('describe'),
+      expect.stringContaining('get'),
+      expect.stringContaining('update'),
+      expect.stringContaining('replace'),
+      expect.stringContaining('mutate'),
+    ]))
+    expect(projection().projector.renderRuntimeApi(projection().model)).toContain('SettingsDescriptor')
   })
 })

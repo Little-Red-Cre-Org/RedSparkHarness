@@ -5,7 +5,8 @@ import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { patchNode } from './yaml-patch.ts'
 import { watch as watchFile } from 'chokidar'
-import { NativeSettings, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
+import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
+import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
 
 interface NativeConfig {
   path?: string

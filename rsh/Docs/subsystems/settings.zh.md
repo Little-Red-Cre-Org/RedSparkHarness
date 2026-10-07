@@ -2,44 +2,63 @@
 
 [English](settings.md) | 中文
 
-[dsh-settings](../../Modules/Official/settings/settings) 的用户设置 seam 持有一份按 namespace 分节的用户文档，并把每个已注册 namespace 解析为：schema 默认值，然后注册方的组合 `base`，最后用户分节。[dsh-settings-file](../../Modules/Official/settings/settings-file) 这类提供方存储原始文档并推送外部编辑；消费方插件注册 schema 后读取或观察解析值。组合配置仍留在 `cordis.yml`——namespace 只承载用户可编辑子集。
+[dsh-settings](../../Modules/Official/settings/settings) 的用户设置 seam 持有一份按 namespace 分节的用户文档，并把每个已注册 namespace 解析为：schema 默认值，然后注册方的组合 `base`，最后用户分节。共享与 Native 服务声明位于 [dsh-settings-definition](../../Core/settings/settings-definition)；Cordis `ctx.settings` augmentation 和注册选项位于 [compat-settings-definition](../../Compatibility/DSH/bridge/compat-settings-definition)。[dsh-settings-file](../../Modules/Official/settings/settings-file) 这类提供方存储原始文档并推送外部编辑；消费方插件注册 schema 后读取或观察解析值。组合配置仍留在 `cordis.yml`——namespace 只承载用户可编辑子集。
 
-来源：[`rsh/Modules/Official/settings/settings/src/index.ts`](../../Modules/Official/settings/settings/src/index.ts)
+来源：[`rsh/Core/settings/settings-definition/src/index.ts`](../../Core/settings/settings-definition/src/index.ts)、[`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)
 
 ## 原生 Host
 
-[原生定义](../../Modules/Official/settings/settings/src/native.ts) 在 Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve, validateWrite, presentation)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。
+[Native Settings 声明](../../Core/settings/settings-definition/src/native.ts) 定义了由 [dsh-settings](../../Modules/Official/settings/settings/src/native.ts) Provider 实现的 `NativeSettingsService`。Provider 加载文档后提供 `NativeSettings.register(namespace, base, resolve, validateWrite, presentation)`。返回的 owner scope 读取深冻结值，只合并或替换自己的原始用户分节，支持可选的预期 revision，监听有效的解析值变化，并在释放时注销。原生 watcher 回调按各自的提交顺序串行执行；同步抛错和异步拒绝都会记入日志。释放 watcher 会跳过排队中的调用，Host 卸载会等待已开始的回调。[文件 Provider](../../Modules/Official/settings/settings-file/src/native.ts) 在跨进程锁下读写同一份 YAML/JSON 文档；`llm-pi-ai` 在下一次模型请求消费其 namespace。
 
 原生配置界面通过 `presentation` 选择性公开注册项。`describe()` 只返回带 presentation metadata 的活动注册；descriptor 包含序列化 schema、脱敏后的解析值/base/user、机密路径及其存在状态、当前凭据引用、生效时机和用户分节 revision。`mutate(namespace, ops, expectedRevision)` 在一次 revision 检查提交中按路径编辑用户分节。调用方必须发送路径修改，不能从脱敏视图重建整个分节。只要 owner validator 通过，Service 允许对非机密数组字段的父路径执行整体 `set`，因此可替换为长度或顺序不同的数组。沿数组索引下钻时只能使用现有索引；不能创建空位，也不能 `unset` 删除数组项。Service 会拒绝触及 schema 声明机密字段的修改，也会拒绝替换包含机密字段的祖先。单独作为页面策略，JSON 编辑器会拒绝数组扩缩或行重排；只有数组长度和行顺序不变时才生成路径修改。
 
 ```ts type-equiv
-/** Optional metadata required before a registration is exposed to configuration UI. */
-interface NativeSettingsPresentation {
-  /** Live schema whose `toJSON()` form and role metadata describe this registration. */
-  readonly schema: { toJSON(): unknown }
-  /** When the owner applies committed changes; defaults to `live`. */
-  readonly applies?: 'live' | 'restart'
+/** Raw per-namespace overrides in the Settings document. */
+type NativeSettingsSection = Record<string, unknown>
+```
+
+```ts type-equiv
+/** Storage commits a complete document against its latest durable revision. */
+interface NativeSettingsStorage {
+  /** Read the complete persisted settings document. @returns the stored raw sections. */
+  load(): Promise<NativeSettingsSection>
+  /**
+   * Commit a document update against the latest persisted version.
+   * @param update - transforms the latest raw document.
+   * @returns the committed raw document.
+   */
+  persist(update: (document: NativeSettingsSection) => NativeSettingsSection): Promise<NativeSettingsSection>
 }
 ```
 
 ```ts type-equiv
-/** One redacted, schema-backed registration exposed to a native settings page. */
+/** Optional metadata needed before a registration is exposed to Native UI. */
+interface NativeSettingsPresentation {
+  /** Live schema whose JSON and role metadata describe this registration. */
+  readonly schema: { toJSON(): unknown }
+  /** When the owner applies changes; defaults to `live`. */
+  readonly applies?: SettingsApplies
+}
+```
+
+```ts type-equiv
+/** One redacted registration exposed to a Native settings page. */
 interface NativeSettingsDescriptor {
   /** Owning Settings namespace. */
   readonly namespace: string
-  /** Serialized schema used to discover supported fields and credential refs, without default values. */
+  /** Serialized schema without defaults. */
   readonly schema: unknown
-  /** Effective resolved values with schema-declared secrets removed. */
+  /** Redacted resolved values. */
   readonly value: unknown
-  /** Composition base with schema-declared secrets removed. */
+  /** Redacted composition base. */
   readonly base: unknown
-  /** Stored user overrides with schema-declared secrets removed. */
+  /** Redacted stored user overrides. */
   readonly user: unknown
-  /** When the owner applies committed changes. */
-  readonly applies: 'live' | 'restart'
+  /** When the owner applies changes. */
+  readonly applies: SettingsApplies
   /** Secret paths and whether each hidden value is currently present. */
   readonly secrets: readonly { readonly path: string[]; readonly set: boolean }[]
-  /** Active values at schema fields marked `credential-ref`. */
+  /** Active credential references. */
   readonly credentialRefs: readonly string[]
   /** Revision of the stored user section. */
   readonly revision: number
@@ -49,37 +68,108 @@ interface NativeSettingsDescriptor {
 ```ts type-equiv
 /** One path-addressed change to a registered namespace's raw user section. */
 type NativeSettingsPathOp =
-  /** Set a JSON value at this path. */
   | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
-  /** Remove the value at this path. */
   | { readonly op: 'unset'; readonly path: readonly string[] }
 ```
 
 ```ts type-equiv
-/** A resolved namespace owner, with writes restricted to its own user section. */
+/** Resolved namespace owner with writes restricted to its raw user section. */
 interface NativeSettingsScope<T> {
+  /** Read the current resolved namespace value. @returns the frozen value. */
   get(): T
+  /** Current persisted revision of this namespace's user section. */
   readonly revision: number
+  /**
+   * Merge changes into this namespace's user section.
+   * @param patch - raw user-section fields to merge.
+   * @param expectedRevision - required current revision.
+   * @returns a promise settled after persistence and resolved-value publication.
+   *   Watcher callbacks run asynchronously and are drained at service disposal.
+   */
   update(patch: NativeSettingsSection, expectedRevision?: number): Promise<void>
+  /**
+   * Replace this namespace's user section.
+   * @param section - complete raw user section.
+   * @param expectedRevision - required current revision.
+   * @returns a promise settled after persistence and resolved-value publication.
+   *   Watcher callbacks run asynchronously and are drained at service disposal.
+   */
   replace(section: NativeSettingsSection, expectedRevision?: number): Promise<void>
   /**
-   * Observe committed values in order for this callback. Rejections are logged.
-   * Disposal skips queued invocations and waits for started ones to settle.
+   * Observe committed resolved values serially in commit order. The disposer
+   * prevents queued callbacks from starting; a started callback settles
+   * normally, and service disposal waits for started callbacks to finish.
    * @param callback - receives the next and previous resolved values.
-   * @returns a disposer that prevents further invocations from starting.
+   * @returns a disposer that stops queued and future callbacks from starting.
    */
   watch(callback: (next: T, previous: T) => void | Promise<void>): () => void
+  /** Stop observing and release this registered namespace. */
   dispose(): void
+}
+```
+
+```ts type-equiv
+/** State service implemented by the selected Native Settings Provider. */
+interface NativeSettingsService {
+  /**
+   * Load persisted state before namespace owners register.
+   * @returns a promise settled when the document is ready.
+   */
+  start(): Promise<void>
+  /**
+   * Register one namespace owner.
+   * @param namespace - lowercase namespace identifier.
+   * @param base - composition values beneath stored user overrides.
+   * @param resolve - validates and resolves the effective section.
+   * @param validateWrite - optionally rejects a candidate before persistence.
+   * @param presentation - metadata required for Native UI exposure.
+   * @returns an owner scope for reads, updates, observation, and disposal.
+   */
+  register<const Namespace extends string, T>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>,
+    base: NativeSettingsSection,
+    resolve: (value: NativeSettingsSection) => T,
+    validateWrite?: (next: T, previous: T) => void,
+    presentation?: NativeSettingsPresentation,
+  ): NativeSettingsScope<T>
+  /** Describe registrations exposed to Native configuration surfaces. @returns redacted descriptors. */
+  describe(): NativeSettingsDescriptor[]
+  /**
+   * Apply ordered path edits to a namespace's raw user section.
+   * @param namespace - namespace to edit.
+   * @param ops - ordered path operations.
+   * @param expectedRevision - required current revision.
+   * @returns a promise settled after persistence and resolved-value publication.
+   *   Watcher callbacks run asynchronously and are drained at service disposal.
+   */
+  mutate<const Namespace extends string>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>,
+    ops: readonly NativeSettingsPathOp[], expectedRevision: number,
+  ): Promise<void>
+  /** Reload the stored document and publish valid resolved changes. @returns a promise settled after all work completes. */
+  reload(): Promise<void>
+  /** Drain writes and observers before releasing the service. @returns a promise settled after disposal. */
+  dispose(): Promise<void>
 }
 ```
 
 ## 标识
 
-namespace 命名用户文档中一个归插件所有的分节。brand 防止调用方将设置 namespace 与在包或进程之间传递的其他 id 混用；构造时校验小写 kebab-case 语法。
+namespace 命名用户文档中一个归插件所有的分节。brand 防止调用方将设置 namespace 与在包或进程之间传递的其他 id 混用；构造时校验小写 kebab-case 语法。API 的字面量参数在编译期按此语法检查；动态字符串和带品牌的 namespace id 仍可使用。
 
 ```ts type-equiv
 /** Nominal id of one registered settings namespace. */
 type SettingsNamespace = Branded<'SettingsNamespace'>
+```
+
+```ts type-equiv
+/** One schema-declared secret position exposed without its value. */
+interface SettingsSecret {
+  /** Path from the section root to the removed field. */
+  path: string[]
+  /** Whether the field held a value before redaction. */
+  set: boolean
+}
 ```
 
 ## 注册
@@ -87,30 +177,16 @@ type SettingsNamespace = Branded<'SettingsNamespace'>
 注册把 schemastery schema 绑定到调用方插件 fiber 上的 namespace——dispose（资源释放）该 fiber 即移除 namespace 及其观察者。options 携带组合层、owner 的生效时机，以及一个可选的、用于校验 schema 表达不了的约束的钩子。
 
 ```ts type-equiv
-/** Registration options beyond the namespace schema. */
+/** Registration options accepted by the Cordis Settings Provider. */
 interface SettingsRegisterOptions<T> {
-  /** Composition-layer values resolved below the user layer (entry-config subset). */
+  /** Composition-layer values resolved below the user layer. */
   base?: Partial<T>
-  /** Owner's effect timing, surfaced to configuration UIs; defaults to `live`. */
+  /** Owner's effect timing, surfaced to configuration UIs. */
   applies?: SettingsApplies
   /**
-   * Reject a resolved section the owner could not act on, for constraints its
-   * schema cannot express — a cross-field requirement, or one field's validity
-   * depending on another's. Throwing here refuses the *write* that produced the
-   * value, so a caller learns at `update`/`replace`/`mutate` instead of storing
-   * something that would silently disable the owner.
-   *
-   * Kept separate from the schema because the schema is also what a
-   * configuration surface renders and what an absent section resolves through;
-   * folding a cross-field check into it would change both.
-   *
-   * Once the owner is registered, a stored section that fails this keeps the
-   * namespace's last good value and warns, exactly as a schema failure does,
-   * so an externally edited document cannot strand a running owner. At
-   * registration there is no last good value yet, so a stored section that
-   * already fails rejects the registration itself — again exactly as a schema
-   * failure does.
-   * @param value - the resolved section, schema-valid by construction.
+   * Reject a schema-valid resolved section the owner cannot act on. An invalid
+   * stored section rejects initial registration; a later invalid stored edit
+   * keeps the last good value when the provider reloads.
    */
   validate?: (value: T) => void
 }
@@ -127,7 +203,7 @@ type SettingsApplies = 'live' | 'restart'
 
 ## Owner scope
 
-scope 是面向 owner 的句柄。`update` 把稀疏 patch 只合并进用户分节（绝不进 `base`）；`replace` 整体替换分节，是删除/重置路径——替换中缺席的键重新继承 `base` 与 schema 默认值。同一 namespace 的写入按调用顺序串行，解析值是深冻结快照。
+scope 是面向 owner 的句柄。`update` 把稀疏 patch 只合并进用户分节（绝不进 `base`）；`replace` 整体替换分节，是删除/重置路径——替换中缺席的键重新继承 `base` 与 schema 默认值。同一 namespace 的写入按调用顺序串行；JSON 不兼容的写入会在持久化前失败；解析值是深冻结快照。
 
 ```ts type-equiv
 /** Owner-facing handle for one registered namespace. */
@@ -135,34 +211,90 @@ interface SettingsScope<T> {
   /** Current resolved value: schema defaults, then `base`, then the user layer. */
   get(): T
   /**
-   * Observe committed changes to this namespace's resolved value. Invocations
-   * of one callback run asynchronously, one at a time, in commit order; a
-   * rejection is contained and logged like a sync throw. After the disposer
-   * returns, no further invocation starts — one already queued is skipped;
-   * one already started still settles, and service disposal waits for it.
-   * @param callback - invoked after each commit with the next and previous values.
-   * @returns the disposer removing this observer.
+   * Observe resolved changes serially in commit order. The disposer prevents
+   * queued callbacks from starting; a started callback settles normally, and
+   * service disposal waits for started callbacks to finish.
+   * @param callback - receives the next and previous resolved value.
+   * @returns a disposer that stops queued and future callbacks from starting.
    */
   watch(callback: (next: T, prev: T) => void | Promise<void>): () => void
   /**
-   * Merge a partial patch into this namespace's user layer and persist it.
-   * @param patch - plain-object patch over the user section; JSON-compatible data
-   * only (non-JSON values reject with their path before anything persists).
+   * Merge a patch into the namespace's user section.
+   * @param patch - plain-object changes to merge.
+   * @returns a promise settled after the provider commits the write.
    */
   update(patch: object): Promise<void>
   /**
-   * Replace this namespace's user section wholesale; absent keys re-inherit
-   * the composition `base` and schema defaults (`replace({})` resets all).
-   * @param section - the complete next user section; JSON-compatible data only,
-   * as for {@link update}.
+   * Replace the namespace's user section wholesale.
+   * @param section - complete next user section.
+   * @returns a promise settled after the provider commits the write.
    */
   replace(section: object): Promise<void>
 }
 ```
 
+核心服务接口保留 Cordis 消费方已有的 namespace 类型约束：小写 kebab-case 字面量会在编译期检查；动态字符串与带品牌的 namespace id 仍可使用。
+
+```ts type-equiv
+/** Framework-neutral operations used by the Cordis Settings service. */
+interface SettingsService {
+  /** Whether the provider accepts writes. */
+  readonly writable: boolean
+  /** Absolute path of a provider-owned local document, when applicable. */
+  readonly documentPath: string | undefined
+  /**
+   * Prepare and return the provider-owned document path when one exists.
+   * @returns the prepared path, or `undefined` when the provider has no document.
+   */
+  prepareDocument(): Promise<string | undefined>
+  /**
+   * Describe registered namespaces for configuration surfaces.
+   * @param options - optional secret-redaction settings.
+   * @returns descriptors for active namespaces.
+   */
+  describe(options?: SettingsDescribeOptions): SettingsDescriptor[]
+  /**
+   * Read a namespace's resolved value, or `undefined` while unregistered.
+   * @param namespace - namespace to read.
+   * @returns the resolved value, or `undefined` when unregistered.
+   */
+  get<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>): unknown
+  /**
+   * Merge and persist a namespace's user section.
+   * @param namespace - namespace to update.
+   * @param patch - plain-object changes to merge into the user section.
+   * @param expectedRevision - optional revision required for the write.
+   * @returns a promise settled after the provider commits the write.
+   */
+  update<const Namespace extends string>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number,
+  ): Promise<void>
+  /**
+   * Replace and persist a namespace's user section.
+   * @param namespace - namespace to replace.
+   * @param section - complete next user section.
+   * @param expectedRevision - optional revision required for the write.
+   * @returns a promise settled after the provider commits the write.
+   */
+  replace<const Namespace extends string>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number,
+  ): Promise<void>
+  /**
+   * Apply ordered path edits to a namespace's user section.
+   * @param namespace - namespace to edit.
+   * @param ops - ordered path edits.
+   * @param expectedRevision - optional revision required for the write.
+   * @returns a promise settled after the provider commits the write.
+   */
+  mutate<const Namespace extends string>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number,
+  ): Promise<void>
+}
+```
+
 ## 描述符
 
-`describe()` 为配置界面序列化每个已注册 namespace：schemastery 的 `toJSON()` 封装结构驱动 schema 渲染的表单，解析值填充表单，分离出的 `base`/`user` 层让表单按字段是否出现在 user 层标注「用户已覆盖」。`describe({ redactSecrets: true })`——每个对外传输接口都必须传入——从三层剥离 `role('secret')` 字段并枚举其 `{path, set}` slot，页面因此能渲染只写输入框而永远收不到机密值。
+`describe()` 为配置界面序列化每个已注册 namespace：schemastery 的 `toJSON()` 封装结构驱动 schema 渲染的表单，解析值填充表单，分离出的 `base`/`user` 层让表单按字段是否出现在 user 层标注「用户已覆盖」。脱敏默认值为 `false`，descriptor 会保留机密字段。每个对外传输接口都必须调用 `describe({ redactSecrets: true })`；该选项会从三层剥离 `role('secret')` 字段并枚举 `{path, set}` slot，让页面渲染只写输入框而收不到机密值。
 
 ```ts type-equiv
 /** One registered namespace as surfaced to configuration UIs. */
@@ -173,47 +305,34 @@ interface SettingsDescriptor {
   schema: unknown
   /** Current resolved value. */
   value: unknown
-  /**
-   * Monotonic revision of the raw user section this descriptor was read at.
-   * Send it back as `expectedRevision` on a write to refuse a stale one.
-   */
+  /** Monotonic revision of the raw user section. */
   revision: number
-  /** Registrant's composition `base` layer (detached), when one was declared. */
+  /** Registrant's composition `base` layer, when one was declared. */
   base?: unknown
-  /**
-   * Raw user section from the stored document (detached), when one exists and
-   * is well-formed; a field's presence here is what marks it user-overridden.
-   */
+  /** Raw user section, when one exists and is well-formed. */
   user?: unknown
   /** Owner's declared effect timing. */
   applies: SettingsApplies
-  /** Schema-declared secret positions; present only under `redactSecrets`. */
-  secrets?: RedactedSecret[]
+  /** Schema-declared secret positions; present only when redaction is requested. */
+  secrets?: SettingsSecret[]
 }
 ```
 
 只持有脱敏 descriptor 的调用方无法安全地重建分节，因此删除改以路径 op 传递。每个 descriptor 还携带针对原始分节的 `revision`；写入可以把它作为 `expectedRevision` 送回，不再匹配的写入会被拒绝，而不会覆盖先落地的写入。
 ```ts type-equiv
-/**
- * One path-addressed edit to a namespace's user section. Path mutation exists
- * for a caller holding an INCOMPLETE view of the section — a configuration UI
- * reads the redacted descriptor, which by construction never received the
- * `role('secret')` fields. Such a caller can name the field it means without
- * restating the section: a wholesale `replace` rebuilt from a redacted
- * document silently deletes every secret the wire never returned.
- */
+/** One path-addressed edit to a namespace's raw user section. */
 type SettingsPathOp =
   | { op: 'set'; path: readonly string[]; value: unknown }
   | { op: 'unset'; path: readonly string[] }
 ```
 
 ```ts type-equiv
-/** Options for {@link SettingsProvider.describe}. */
+/** Options controlling secret removal from provider descriptors. */
 interface SettingsDescribeOptions {
   /**
-   * Strip `role('secret')` fields from `value`/`base`/`user` and enumerate
-   * them in each descriptor's `secrets`. Every wire surface MUST pass this;
-   * the verbatim default exists for same-process configuration UIs only.
+   * Remove schema-declared secrets and return only their paths and presence.
+   * Defaults to false, which leaves secret values in descriptors; every wire
+   * surface must request `true`.
    */
   redactSecrets?: boolean
 }
@@ -284,108 +403,84 @@ Host owner of the generated `ctx.remote.authorization` namespace.
 
 Source: [`rsh/Programs/Web/api/settings-controller/src/authorization.ts`](../../Programs/Web/api/settings-controller/src/authorization.ts)
 
-<a id="ctxsettings--settingsprovider-abstract-seam"></a>
+<a id="ctxsettings--cordissettingsservice"></a>
 
-### `ctx.settings` — `SettingsProvider` (abstract seam)
+### `ctx.settings` — `CordisSettingsService`
 
-Abstract settings service. Providers implement raw-document storage (`load`/`persist`) and push external changes through Settings.publish; the base class owns namespace registration, resolution, validation, change detection, and the `settings/updated` commit event.
+Cordis-facing extension of the framework-neutral Settings service.
 
 ```ts cordis-catalog
 /**
- * Prepare the provider's user-editable document for a native editor. File
- * providers may materialize an absent document before returning its path;
- * non-file providers return undefined.
- * @returns the absolute local document path, or undefined for non-file storage.
+ * Register a namespace schema and receive its owner scope. The registration
+ * is tied to the owner's Cordis fiber. Invalid stored data rejects initial
+ * registration; a later invalid edit keeps the last good value on reload.
+ * @param namespace - unique lowercase namespace; duplicates fail loud.
+ * @param schema - schemastery schema resolving the namespace's value.
+ * @param options - composition base, effect timing, and owner validation.
+ * @returns the scope for reads, observation, and updates.
+ */
+register<const Namespace extends string, T>( namespace: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, options?: SettingsRegisterOptions<T>, ): SettingsScope<T>
+
+/**
+ * Install a settings section owned by another Cordis plugin.
+ * @param owner - plugin fiber that receives the registered section.
+ * @param namespace - unique lowercase namespace for the entry.
+ * @param schema - schema resolving the entry and future user edits.
+ * @param entry - composition-layer value used when the provider is absent.
+ * @param hooks - callbacks for current values, changes, and owner validation.
+ * @returns nothing; the registration is disposed with the owner's fiber.
+ */
+installSection<const Namespace extends string, T>( owner: Context, namespace: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, entry: T, hooks: SettingsSectionHooks<T>, ): void
+
+/**
+ * Prepare and return the provider-owned document path when one exists.
+ * @returns the prepared path, or `undefined` when the provider has no document.
  */
 prepareDocument(): Promise<string | undefined>
 
 /**
- * Register a namespace schema and receive its owner scope. The registration
- * is an effect on the calling plugin's fiber: disposing that fiber removes
- * the namespace and its observers. An invalid stored section fails the
- * registration itself — the earliest point where the schema can judge it.
- * @param ns - unique namespace; duplicate registration fails loud.
- * @param schema - schemastery schema resolving this namespace's value.
- * @param options - composition `base` layer and effect timing.
- * @returns the owner scope for reads, observation, and updates.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
- */
-register<const Namespace extends string, T>( ns: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, options?: SettingsRegisterOptions<T>, ): SettingsScope<T>
-
-/**
- * Attach one optional-settings consumer to this provider. The consumer
- * registers its composition entry as the base layer while this provider is
- * present, then falls back to that entry if the provider detaches.
- * @param owner - consumer context whose unload suppresses fallback work.
- * @param ns - consumer-owned settings namespace.
- * @param schema - schema resolving the namespace.
- * @param entry - composition entry used as the base and fallback value.
- * @param hooks - source sink, change notification, and optional validation.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
- */
-installSection<const Namespace extends string, T>( owner: Context, ns: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, entry: T, hooks: SettingsSectionHooks<T>, ): void
-
-/**
- * Describe every registered namespace for configuration surfaces, including
- * the composition `base` and raw user layers so a form can mark which fields
- * the user overrode (presence in `user`) and what a reset returns to.
- * @param options - redaction switch; wire surfaces must redact.
- * @returns one descriptor per registered namespace, in registration order.
+ * Describe registered namespaces for configuration surfaces.
+ * @param options - optional secret-redaction settings.
+ * @returns descriptors for active namespaces.
  */
 describe(options?: SettingsDescribeOptions): SettingsDescriptor[]
 
 /**
- * Read one registered namespace's resolved value.
- * @param ns - the namespace to read.
- * @returns the resolved value, or `undefined` while unregistered.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
+ * Read a namespace's resolved value, or `undefined` while unregistered.
+ * @param namespace - namespace to read.
+ * @returns the resolved value, or `undefined` when unregistered.
  */
-get<const Namespace extends string>(ns: Namespace & SettingsNamespaceInput<Namespace>): unknown
+get<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>): unknown
 
 /**
- * Merge a patch into one registered namespace's user layer, validate the
- * resolved candidate, persist through the provider, then commit and emit.
- * A validation failure rejects before anything is persisted. Writes to one
- * namespace are serialized: concurrent updates apply in call order, each
- * merging over the previous write's committed section.
- * @param ns - the registered namespace to update.
- * @param patch - plain-object patch over the user section.
- * @param expectedRevision - the descriptor `revision` the caller read; a
- *   namespace that moved past it rejects with {@link SettingsConflictError}.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
+ * Merge and persist a namespace's user section.
+ * @param namespace - namespace to update.
+ * @param patch - plain-object changes to merge into the user section.
+ * @param expectedRevision - optional revision required for the write.
+ * @returns a promise settled after the provider commits the write.
  */
-async update<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number, ): Promise<void>
+update<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number, ): Promise<void>
 
 /**
- * Replace one registered namespace's user section wholesale, validate,
- * persist, then commit and emit. Keys absent from `section` fall back to the
- * composition `base` and schema defaults — this is the removal/reset path a
- * merge-only patch cannot express (`replace({})` re-inherits everything).
- * @param ns - the registered namespace to replace.
- * @param section - the complete next user section.
- * @param expectedRevision - the descriptor `revision` the caller read; a
- *   namespace that moved past it rejects with {@link SettingsConflictError}.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
+ * Replace and persist a namespace's user section.
+ * @param namespace - namespace to replace.
+ * @param section - complete next user section.
+ * @param expectedRevision - optional revision required for the write.
+ * @returns a promise settled after the provider commits the write.
  */
-async replace<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number, ): Promise<void>
+replace<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number, ): Promise<void>
 
 /**
- * Apply path-addressed edits to one registered namespace's user section,
- * validate, persist, then commit and emit. The ops are applied to the
- * section as it stands when the write reaches the front of the queue, so a
- * caller never has to restate fields it did not touch — and, crucially,
- * cannot delete fields it never saw. This is the write path for any caller
- * holding a redacted view; `replace` remains the wholesale reset.
- * @param ns - the registered namespace to edit.
- * @param ops - ordered path edits; later ops observe earlier ones.
- * @param expectedRevision - the descriptor `revision` the caller read; a
- *   namespace that moved past it rejects with {@link SettingsConflictError}.
- * @throws {TypeError} when `ns` is not a lowercase hyphenated identifier.
+ * Apply ordered path edits to a namespace's user section.
+ * @param namespace - namespace to edit.
+ * @param ops - ordered path edits.
+ * @param expectedRevision - optional revision required for the write.
+ * @returns a promise settled after the provider commits the write.
  */
-async mutate<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number, ): Promise<void>
+mutate<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number, ): Promise<void>
 ```
 
-Source: [`rsh/Modules/Official/settings/settings/src/index.ts`](../../Modules/Official/settings/settings/src/index.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)
 
 <a id="ctxsettingscontroller--settingscontroller"></a>
 
@@ -468,16 +563,14 @@ Source: [`rsh/Programs/Web/api/settings-controller/src/index.ts`](../../Programs
 
 #### `settings/document-updated` — emit
 
-One registered namespace's RAW user section changed, whether or not the resolved value did. `settings/updated` is the consumer-facing event and stays deep-equal-gated; this one exists for configuration surfaces, which must learn that a field went from inherited to overridden (same resolved value, different meaning) and that their held revision is stale. Listener containment matches `settings/updated`.
+One registered namespace's raw user section changed, whether or not the resolved value did. `settings/updated` is the consumer-facing event and stays deep-equal-gated; this event tells configuration surfaces that a field became overridden and their held revision is stale.
 
 ```ts cordis-catalog
 /**
- * One registered namespace's RAW user section changed, whether or not the
+ * One registered namespace's raw user section changed, whether or not the
  * resolved value did. `settings/updated` is the consumer-facing event and
- * stays deep-equal-gated; this one exists for configuration surfaces,
- * which must learn that a field went from inherited to overridden (same
- * resolved value, different meaning) and that their held revision is
- * stale. Listener containment matches `settings/updated`.
+ * stays deep-equal-gated; this event tells configuration surfaces that a
+ * field became overridden and their held revision is stale.
  * @param ns - the namespace whose stored section changed.
  * @param revision - the namespace's new revision.
  * @mode emit
@@ -485,7 +578,7 @@ One registered namespace's RAW user section changed, whether or not the resolved
 'settings/document-updated'(ns: SettingsNamespace, revision: number): void
 ```
 
-Source: [`rsh/Modules/Official/settings/settings/src/types.ts`](../../Modules/Official/settings/settings/src/types.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/events.ts`](../../Compatibility/DSH/bridge/compat-settings-definition/src/events.ts)
 
 <a id="settingsupdated--emit"></a>
 
@@ -512,5 +605,5 @@ Committed change to one registered namespace's resolved value. Emitted after the
 'settings/updated'(ns: SettingsNamespace, next: unknown, prev: unknown, source: SettingsUpdateSource): void
 ```
 
-Source: [`rsh/Modules/Official/settings/settings/src/types.ts`](../../Modules/Official/settings/settings/src/types.ts)
+Source: [`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/events.ts`](../../Compatibility/DSH/bridge/compat-settings-definition/src/events.ts)
 <!-- END GENERATED cordis-surface -->

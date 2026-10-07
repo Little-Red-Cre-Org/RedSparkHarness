@@ -1,0 +1,35 @@
+{
+  "name": "@deepseek-ai/dsh-settings-definition",
+  "description": "Framework-neutral Settings service and Native interfaces",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Core/settings/settings-definition"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types/types.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-util-values": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-util-values": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+  }
+}

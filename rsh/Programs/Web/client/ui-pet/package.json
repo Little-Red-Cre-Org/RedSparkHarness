@@ -2,7 +2,9 @@
   "name": "@deepseek-ai/dsh-client-ui-pet",
   "description": "Extensible state-aware desktop-pet registry, Conversation presentation, and personalization settings",
   "version": "0.1.5-rc.2",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
@@ -12,8 +14,14 @@
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -31,12 +39,17 @@
       "platform": "web"
     }
   },
-  "scripts": { "bundle": "tsdown", "watch": "tsdown --watch" },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^"
   },
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-api-remotes": "workspace:^",
@@ -52,6 +65,7 @@
     "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-compaction": "workspace:^",
+    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
@@ -61,5 +75,9 @@
     "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/dsh-util-crypto": "workspace:^"
   },
-  "files": ["lib/index.js", "lib/client.js", "lib/types/**/*.d.ts"]
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ]
 }

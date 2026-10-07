@@ -30,9 +30,6 @@
       "path": "../../core/scope"
     },
     {
-      "path": "../../../Modules/Official/settings/settings"
-    },
-    {
       "path": "../../llm/llm"
     },
     {

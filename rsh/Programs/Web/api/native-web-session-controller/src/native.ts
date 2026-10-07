@@ -33,8 +33,9 @@ import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/hu
 import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
-import { NativeSettingsConflictError, type NativeSettings, type NativeSettingsPathOp } from '@deepseek-ai/dsh-settings/native'
-import type {} from '@deepseek-ai/dsh-settings/native'
+import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
+import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
+import type {} from '@deepseek-ai/dsh-settings-definition/native'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -130,7 +131,7 @@ export interface NativeWebSelectionProviders {
   } | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
   readonly attachments?: AttachmentOperations | undefined
-  readonly settings?: NativeSettings | undefined
+  readonly settings?: NativeSettingsService | undefined
   readonly credentials?: NativeCredentials | undefined
 }
 
@@ -510,7 +511,7 @@ export class NativeWebSessionService {
     throw new Error(`native web session: unsupported endpoint "${endpoint}"`)
   }
 
-  private settings(): NativeSettings {
+  private settings(): NativeSettingsService {
     if (this.selections.settings === undefined) throw new Error('native settings: this composition has no settings service')
     return this.selections.settings
   }

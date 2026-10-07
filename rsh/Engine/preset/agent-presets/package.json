@@ -50,6 +50,10 @@
       "types": "./lib/types/selection.d.ts",
       "default": "./lib/selection.js"
     },
+    "./compat-settings": {
+      "types": "./lib/types/compat-settings.d.ts",
+      "default": "./lib/compat-settings.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -59,6 +63,8 @@
     "presets",
     "lib/native.js",
     "lib/selection.js",
+    "lib/compat-settings.js",
+    "lib/settings-owner-*.js",
     "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
@@ -77,7 +83,7 @@
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
@@ -89,7 +95,8 @@
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-util-values": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-group": "workspace:^",
@@ -105,6 +112,8 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-compat-settings-adapters": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-settings-file": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
@@ -134,9 +143,6 @@
       "optional": true
     },
     "@deepseek-ai/dsh-session-projection": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-settings": {
       "optional": true
     },
     "@deepseek-ai/dsh-system-prompt": {

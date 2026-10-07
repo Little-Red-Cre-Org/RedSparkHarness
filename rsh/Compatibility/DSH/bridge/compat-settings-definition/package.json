@@ -1,0 +1,31 @@
+{
+  "name": "@deepseek-ai/dsh-compat-settings-definition",
+  "description": "Cordis Settings service and event augmentation for the DSH compatibility face",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Compatibility/DSH/bridge/compat-settings-definition"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./events": { "types": "./lib/types/events.d.ts", "default": "./lib/events.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/events.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^"
+  }
+}

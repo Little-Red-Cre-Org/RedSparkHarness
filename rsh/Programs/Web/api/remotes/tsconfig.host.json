@@ -67,6 +67,12 @@
     },
     {
       "path": "../../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

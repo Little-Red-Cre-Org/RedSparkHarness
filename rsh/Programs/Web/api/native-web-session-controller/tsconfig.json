@@ -58,6 +58,9 @@
     },
     {
       "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

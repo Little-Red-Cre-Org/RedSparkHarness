@@ -1689,32 +1689,42 @@
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsNamespace",
-      "source": "rsh/Modules/Official/settings/settings/src/types.ts"
+      "source": "rsh/Core/settings/settings-definition/src/types.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsSecret",
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsRegisterOptions",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsApplies",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsScope",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "SettingsService",
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsDescriptor",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsUpdateSource",
-      "source": "rsh/Modules/Official/settings/settings/src/types.ts"
+      "source": "rsh/Core/settings/settings-definition/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/credentials.md",
@@ -1729,7 +1739,7 @@
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsDescribeOptions",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/llm-streaming.md",
@@ -1739,27 +1749,42 @@
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsPathOp",
-      "source": "rsh/Modules/Official/settings/settings/src/index.ts"
+      "source": "rsh/Core/settings/settings-definition/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "NativeSettingsPresentation",
-      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsSection",
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsStorage",
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "NativeSettingsDescriptor",
-      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "NativeSettingsPathOp",
-      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "NativeSettingsScope",
-      "source": "rsh/Modules/Official/settings/settings/src/native.ts"
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/settings.md",
+      "symbol": "NativeSettingsService",
+      "source": "rsh/Core/settings/settings-definition/src/native.ts"
     },
     {
       "doc": "rsh/Programs/Web/client/native-session/README.md",

@@ -52,6 +52,12 @@
     },
     {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

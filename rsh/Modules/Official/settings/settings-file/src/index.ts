@@ -15,7 +15,8 @@ import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { canonicalizeWatchPath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { SettingsProvider, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
+import { SettingsProvider } from '@deepseek-ai/dsh-settings'
+import type { SettingsNamespace } from '@deepseek-ai/dsh-settings-definition/types'
 import { isMapLike, patchNode } from './yaml-patch.ts'
 
 /** Plugin config: file location and hot-reload behavior. */

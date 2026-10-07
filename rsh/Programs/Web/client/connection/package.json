@@ -50,10 +50,14 @@
     "native": {
       "apiVersion": 1,
       "entry": "./native",
-      "targets": ["client"],
+      "targets": [
+        "client"
+      ],
       "requires": [],
       "optional": [],
-      "provides": ["clientConnection"]
+      "provides": [
+        "clientConnection"
+      ]
     }
   },
   "license": "MIT",
@@ -78,7 +82,9 @@
     "@deepseek-ai/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -92,6 +98,7 @@
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-util-values": "workspace:^"
   }

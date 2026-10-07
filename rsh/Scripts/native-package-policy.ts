@@ -20,6 +20,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/output-retention',
   'rsh/Core/util/timeout',
   'rsh/Core/util/values',
+  'rsh/Core/settings/settings-definition',
   'rsh/Engine/session/session-format',
   'rsh/Engine/session/session-format-catalog',
   'rsh/Engine/session/session-format-v0-to-v1',

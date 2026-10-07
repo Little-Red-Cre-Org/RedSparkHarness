@@ -43,7 +43,7 @@ kind: "package-reference"
 
 提供方上线后 `ctx.settings` 即出现。完整配置面由提供方 README 负责；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)列出每个受支持字段。
 
-原生 Host 使用不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。只有 owner 显式传入 `presentation` 元数据的注册项才会向原生配置界面公开；原生 descriptor 会剥离 schema 声明的机密值并省略所有 schema 默认值，且拒绝无法通过 `object`、`dict` 或 `array` 路径到达机密字段的 presentation schema。标记为 `credential-ref` 的 schema 字段只提供应由 Credentials 管理的引用。
+原生 Host 使用 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md) 中不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。只有 owner 显式传入 `presentation` 元数据的注册项才会向原生配置界面公开；原生 descriptor 会剥离 schema 声明的机密值并省略所有 schema 默认值，且拒绝无法通过 `object`、`dict` 或 `array` 路径到达机密字段的 presentation schema。标记为 `credential-ref` 的 schema 字段只提供应由 Credentials 管理的引用。Cordis 兼容面使用声明专用的 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)，为 `Context.settings` 与注册选项提供类型声明。
 
 ### 注册 namespace
 
@@ -99,11 +99,13 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition：namespace 校验、注册、解析、写队列、describe/脱敏、事件、`installSection` |
-| [`src/native.ts`](src/native.ts) | 原生定义：namespace 注册、revision 写入、重载与 owner scope |
+| [`src/index.ts`](src/index.ts) | Cordis Provider：namespace 校验、注册、解析、写队列、describe/脱敏与事件 |
+| [`src/native.ts`](src/native.ts) | Native Provider：namespace 注册、revision 写入、重载与 owner scope |
 | [`src/redact.ts`](src/redact.ts) | `redactSecrets` 遍历器：剥离 `role('secret')` 字段并枚举其 slot |
-| [`src/types.ts`](src/types.ts) | 客户端安全类型面：事件声明、`SettingsNamespace`、`SettingsUpdateSource` |
+| [`src/types.ts`](src/types.ts) | 重导出共享的 Client 安全 Settings 类型 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`settings/updated` 只对已注册 namespace、只在解析值变化时、且携带权威值触发 |
+
+共享服务声明位于 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md)；Cordis Context 与事件 augmentation 位于 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)。
 
 ### 解析与写入路径
 
@@ -115,7 +117,7 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 
 ### 客户端安全类型
 
-`./types` 子路径出口持有事件声明及其签名点名的 `SettingsNamespace`、`SettingsUpdateSource` 类型，包根继续 re-export 这些类型。于是 Host 编译面之外的消费方读到的正是 Host 发射的那一份签名，而不必再写一遍。
+`./types` 子路径出口与包根都重导出共享 namespace 和协议值类型。Cordis 事件声明由兼容定义包拥有。因此 Host 编译面以外的消费方读取 Host 发射的同一份签名，不必重新声明。
 
 </details>
 

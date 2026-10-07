@@ -58,6 +58,9 @@
     },
     {
       "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition/tsconfig.client.json"
     }
   ]
 }

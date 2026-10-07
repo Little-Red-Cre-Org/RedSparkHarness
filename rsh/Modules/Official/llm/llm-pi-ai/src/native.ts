@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-settings/native'
+import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from './adapter.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
@@ -32,7 +32,7 @@ export const plugin: NativePlugin = {
       const fs = context.optional('fs')
       const settings = context.optional('settings')
       if (settings !== undefined) {
-        const selection = settings.register<Config>('llm-pi-ai', { providers: base.providers ?? {} }, (value) => {
+        const selection = settings.register<'llm-pi-ai', Config>('llm-pi-ai', { providers: base.providers ?? {} }, (value) => {
           const config = Config(value)
           resolveProfiles(config.providers, 'deferred')
           return config

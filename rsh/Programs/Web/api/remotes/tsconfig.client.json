@@ -82,6 +82,12 @@
     },
     {
       "path": "../../../../Modules/Official/feedback/command-feedback"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition/tsconfig.client.json"
     }
   ]
 }

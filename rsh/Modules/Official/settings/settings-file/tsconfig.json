@@ -28,6 +28,9 @@
     },
     {
       "path": "../settings"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

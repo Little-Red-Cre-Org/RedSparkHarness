@@ -12,7 +12,18 @@
   },
   "type": "module",
   "dsh": {
-    "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": [], "provides": ["settings"] }
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [],
+      "optional": [],
+      "provides": [
+        "settings"
+      ]
+    }
   },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -40,11 +51,16 @@
     "@deepseek-ai/dsh-atomic-write": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-runtime": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@deepseek-ai/dsh-util-values": "workspace:^",
@@ -57,6 +73,7 @@
     "@deepseek-ai/dsh-atomic-write": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^"
   }
 }

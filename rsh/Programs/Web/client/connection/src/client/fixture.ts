@@ -38,7 +38,7 @@ import type { CommandDefinitionId, CommandId } from '@deepseek-ai/dsh-commands/b
 import type { CommandDescriptor, CommandExecution, CommandResult } from '@deepseek-ai/dsh-commands/types'
 import type { CredentialInfo } from '@deepseek-ai/dsh-credentials/types'
 import type { DirectoryListing as FixtureDirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
-import type { SettingsDescribeValue, SettingsNamespaceView } from '@deepseek-ai/dsh-settings/types'
+import type { SettingsDescribeValue, SettingsNamespaceView } from '@deepseek-ai/dsh-settings-definition/types'
 import { deriveEventMessage, foldSurface } from '@deepseek-ai/dsh-session/surface'
 import type { RpcResult } from './api.ts'
 import { randomUuid } from './random-uuid.ts'

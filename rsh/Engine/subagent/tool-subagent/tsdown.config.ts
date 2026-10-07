@@ -19,5 +19,6 @@ export default defineConfig([
     outputOptions: { chunkFileNames: 'shared-[hash].js' },
   },
   { ...nodeOutput, entry: ['lib/types/model-selection-settings.js'] },
+  { ...nodeOutput, entry: ['lib/types/compat-settings.js'] },
   { ...nodeOutput, entry: ['lib/types/invariant.js'] },
 ])

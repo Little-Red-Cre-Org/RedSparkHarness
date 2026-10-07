@@ -22,7 +22,7 @@ import { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-shell'
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
 import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
-import type {} from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 // Type-only: resolves the optional projection and command children.
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-commands'

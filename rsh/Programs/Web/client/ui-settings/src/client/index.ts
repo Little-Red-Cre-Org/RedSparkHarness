@@ -19,7 +19,7 @@ import type {} from '@deepseek-ai/dsh-api-remotes/client'
 // artifact into the Host graph (rationale beside the same pair in
 // settings-scope.ts).
 import type {} from '@deepseek-ai/dsh-api-remotes/types'
-import type {} from '@deepseek-ai/dsh-settings/types'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition/events'
 import { SettingsSchemaService } from './schema.ts'
 import { SettingsScopeBinder } from './settings-scope.ts'
 import { SettingsDescribeMirror } from './settings-mirror.ts'

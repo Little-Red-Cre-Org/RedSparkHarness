@@ -20,7 +20,7 @@ import z from '@deepseek-ai/schemastery'
 import { SHELL_SETTINGS_NAMESPACE, ShellExecutor } from '@deepseek-ai/dsh-shell'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead, ShellRunResult, CollectedOutput } from '@deepseek-ai/dsh-shell'
 import type { SubprocessCollect, SubprocessHandle, SubprocessOutputReader, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
-import type {} from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 import { clampTimeout, deadline, MAX_TIMER_DELAY_MS, timeoutOf } from '@deepseek-ai/dsh-timeout'
 /* jscpd:ignore-end */
 import { resolvePwshPath } from './resolve.ts'

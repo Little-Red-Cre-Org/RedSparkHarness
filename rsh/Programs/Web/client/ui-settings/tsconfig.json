@@ -28,6 +28,9 @@
     },
     {
       "path": "../../../../Modules/Official/settings/settings"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

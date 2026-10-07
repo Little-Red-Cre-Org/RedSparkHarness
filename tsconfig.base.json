@@ -354,6 +354,8 @@
       // session-log-export lives under session-query/, so the generated aliases map only its
       // bare name; the browser half needs this explicit subpath for source-mode dynamic imports.
       "@deepseek-ai/dsh-session-log-export/client": ["./rsh/Engine/session-query/session-log-export/src/client"],
+      // Keep the public Settings wire-type subpath on its exact source declaration.
+      "@deepseek-ai/dsh-settings-definition/types": ["./rsh/Core/settings/settings-definition/src/types.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
       "@deepseek-ai/dsh-acp": ["./rsh/Programs/ACP/packages/acp/src"],
       "@deepseek-ai/dsh-acp-app": ["./rsh/Compatibility/DSH/bundle/acp-app/src"],
@@ -396,6 +398,8 @@
       "@deepseek-ai/dsh-compat-fs-local": ["./rsh/Compatibility/DSH/bridge/compat-fs-local/src"],
       "@deepseek-ai/dsh-compat-fs-policy": ["./rsh/Compatibility/DSH/bridge/compat-fs-policy/src"],
       "@deepseek-ai/dsh-compat-fs-sandbox": ["./rsh/Compatibility/DSH/bridge/compat-fs-sandbox/src"],
+      "@deepseek-ai/dsh-compat-settings-adapters": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src"],
+      "@deepseek-ai/dsh-compat-settings-definition": ["./rsh/Compatibility/DSH/bridge/compat-settings-definition/src"],
       "@deepseek-ai/dsh-compat-tool-fs": ["./rsh/Compatibility/DSH/bridge/compat-tool-fs/src"],
       "@deepseek-ai/dsh-credentials": ["./rsh/Modules/Official/credentials/credentials/src"],
       "@deepseek-ai/dsh-credentials/invariant": ["./rsh/Modules/Official/credentials/credentials/src/invariant.ts"],
@@ -502,6 +506,7 @@
       "@deepseek-ai/dsh-session-turn-outline": ["./rsh/Engine/session/session-turn-outline/src"],
       "@deepseek-ai/dsh-settings": ["./rsh/Modules/Official/settings/settings/src"],
       "@deepseek-ai/dsh-settings/invariant": ["./rsh/Modules/Official/settings/settings/src/invariant.ts"],
+      "@deepseek-ai/dsh-settings-definition": ["./rsh/Core/settings/settings-definition/src"],
       "@deepseek-ai/dsh-settings-file": ["./rsh/Modules/Official/settings/settings-file/src"],
       "@deepseek-ai/dsh-shell": ["./rsh/Modules/Official/shell/shell/src"],
       "@deepseek-ai/dsh-shell-process-local": ["./rsh/Modules/Official/shell/shell-process-local/src"],
@@ -633,6 +638,7 @@
       "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
       "@deepseek-ai/dsh-sandbox/roots": ["./rsh/Modules/Official/sandbox/sandbox/src/roots.ts"],
       "@deepseek-ai/dsh-session/event-validation": ["./rsh/Engine/core/session/src/event-validation.ts"],
+      "@deepseek-ai/dsh-settings-definition/native": ["./rsh/Core/settings/settings-definition/src/native.ts"],
       "@deepseek-ai/dsh-shell-env/definition": ["./rsh/Modules/Official/shell/shell-env/src/definition.ts"],
       "@deepseek-ai/dsh-shell-env/native": ["./rsh/Modules/Official/shell/shell-env/src/native.ts"],
       "@deepseek-ai/dsh-shell/native": ["./rsh/Modules/Official/shell/shell/src/native.ts"],
