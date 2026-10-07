@@ -126,6 +126,11 @@ export function shippedNativeProfileComposition(
         { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: ROOT },
         { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'standard' },
       ] : []),
+      ...(profile === 'native-web' ? [
+        { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: ROOT },
+        { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: ROOT },
+        { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: ROOT },
+      ] : []),
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },

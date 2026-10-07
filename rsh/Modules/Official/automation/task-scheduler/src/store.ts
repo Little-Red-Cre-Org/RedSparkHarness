@@ -255,10 +255,12 @@ export class TaskStore {
    * @param now - Current Unix time in milliseconds.
    * @param timeoutMs - Maximum occurrence execution duration.
    * @param maxConcurrent - Database-wide running claim limit.
-   * @param mode - Restrict admission to reminders, Agent work, or both.
+   * @param mode - Restrict admission to reminders, Agent/Goal work, or both.
+   * @param allowGoals - Whether an installed Goal executor may receive a Goal claim.
    * @returns The admitted occurrence, or undefined when no work can be admitted.
    */
-  claim(now: number, timeoutMs: number, maxConcurrent: number, mode: 'all' | 'reminder' | 'agent' = 'all'): { task: Task; run: ClaimedRun } | undefined {
+  claim(now: number, timeoutMs: number, maxConcurrent: number, mode: 'all' | 'reminder' | 'agent' = 'all',
+    allowGoals = true): { task: Task; run: ClaimedRun } | undefined {
     return this.transaction(() => {
       const runs = this.runs()
       for (const plan of this.tasks()) {
@@ -268,7 +270,8 @@ export class TaskStore {
         }
       }
       if (mode !== 'reminder' && runs.filter(run => run.state === 'running').length >= maxConcurrent) return undefined
-      const task = this.tasks().filter(task => (mode === 'all' || isDirectReminder(task) === (mode === 'reminder')) && task.state === 'active' && task.nextAt !== null && task.nextAt <= now
+      const task = this.tasks().filter(task => (mode === 'all' || isDirectReminder(task) === (mode === 'reminder'))
+        && (allowGoals || task.kind !== 'goal') && task.state === 'active' && task.nextAt !== null && task.nextAt <= now
         && !runs.some(run => run.taskId === task.id && run.state === 'running')).sort((a, b) => (a.nextAt ?? 0) - (b.nextAt ?? 0))[0]
       if (!task || task.nextAt === null) return undefined
       const period = task.everySeconds === undefined ? undefined : task.everySeconds * 1000

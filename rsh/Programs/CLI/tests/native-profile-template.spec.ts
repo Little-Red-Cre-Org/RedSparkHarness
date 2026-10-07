@@ -19,6 +19,11 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
     expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
     expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
+    expect(profile.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))).toEqual([
+      { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: 'root' },
+      { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
+      { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'root' },
+    ])
     expect(profile.installations.find(row => row.id === 'task-scheduler')).toMatchObject({
       plugin: '@deepseek-ai/dsh-task-scheduler',
       config: { path: join(home, 'profiles', 'native-web', 'task-scheduler.sqlite') },
