@@ -70,6 +70,8 @@ type CordisApproval = ApprovalServiceDefinition<Agent>
 
 本包不会新增或重排模型请求内容。
 
+<a id="known-limitations-and-deferred-work"></a>
+
 ## 已知限制与后续工作
 
 - 本包不实现应答者分派、UI 呈现或应用 Session 所有权；应选择对应的原生或 Compatibility Provider。

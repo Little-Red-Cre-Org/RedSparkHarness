@@ -65,6 +65,8 @@ import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from
 
 本包不会新增或重排模型请求内容。
 
+<a id="known-limitations-and-deferred-work"></a>
+
 ## 已知限制与后续工作
 
 - 本包不执行程序，也不校验后端配置；这些操作由所选 Provider 负责。

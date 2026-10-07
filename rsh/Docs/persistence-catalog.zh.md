@@ -581,7 +581,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'permission/preset': { preset: string }
 ```
 
-来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:54`](../Modules/Official/interaction/permission-presets/src/index.ts)
+来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:56`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 ### `plan/*`
 

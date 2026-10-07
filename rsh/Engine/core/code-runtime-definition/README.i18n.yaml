@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Engine/core/code-runtime-definition/README.md
 README.md: 5c9060edf3129492f72d534bd1622e55c549814b
-README.zh.md: bd0395e928b8f6d335f19fff7847b768a6bcc86b
+README.zh.md: 10474d6d7092999db584d9cccb9384752be7e657

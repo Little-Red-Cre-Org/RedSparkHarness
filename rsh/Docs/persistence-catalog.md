@@ -579,7 +579,7 @@ Source: [`rsh/Engine/core/approval-definition/src/index.ts:89`](../Engine/core/a
 'permission/preset': { preset: string }
 ```
 
-Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:55`](../Modules/Official/interaction/permission-presets/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:56`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 ### `plan/*`
 
