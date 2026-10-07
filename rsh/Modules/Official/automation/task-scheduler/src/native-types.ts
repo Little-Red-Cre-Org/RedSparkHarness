@@ -1,14 +1,15 @@
-/** Native management of persisted scheduled Agent tasks in one selected Program route. */
+/** Native management of persisted scheduled work and personal reminders in one selected Program route. */
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
 import type { CreateTaskRequest } from './gui-types.ts'
 import type { Run, Task, TaskId } from './types.ts'
 
 /** Owner-scoped durable management; management never sends a model request. */
 export interface NativeTaskSchedulerOperations {
   /**
-   * Capture the current Program route and save future scheduled Agent work.
+   * Capture the current Program route and save future Agent work, Goal work, or a personal reminder.
    * @param owner - exact attached interactive root owner.
-   * @param request - explicit task timing and instructions; Goal mode requires its Providers, reminders are unsupported.
+   * @param request - explicit task timing and instructions; Goal mode requires the Goal Provider and driver.
    * @param signal - caller cancellation before durable admission.
    * @returns the saved plan without starting execution.
    */
@@ -20,7 +21,7 @@ export interface NativeTaskSchedulerOperations {
    */
   list(owner: NativeActiveSessionOwner): readonly Task[]
   /**
-   * Change future admission; already running work continues.
+   * Change future admission; pausing a Goal also pauses its exact live continuation.
    * @param owner - exact attached interactive root owner.
    * @param id - exact saved plan identity.
    * @param state - future admission state.
@@ -40,5 +41,6 @@ export interface NativeTaskSchedulerOperations {
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     taskScheduler: NativeTaskSchedulerOperations
+    scheduledGoalHost: NativeScheduledGoalHost
   }
 }

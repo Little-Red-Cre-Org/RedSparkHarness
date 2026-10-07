@@ -16,6 +16,7 @@ import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRoo
   NativeRootExecutionRequest, NativeRootRoute, NativeRootRouteId, NativeRootSessionRequest } from '@deepseek-ai/dsh-native-session-execution'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import type { NativeScheduledGoalAdmission, NativeScheduledGoalExecutor } from '@deepseek-ai/dsh-goal/native'
 
 import { textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 
@@ -23,12 +24,17 @@ import { TaskStore } from '../src/store.ts'
 import type { TaskId, TaskInput } from '../src/types.ts'
 import { NativeTaskSchedulerRegistry } from '../src/native-registry.ts'
 import { plugin as nativeSchedulerPlugin } from '../src/native.ts'
+import { appendNativeReminderRecord } from '../src/native-reminder.ts'
 
 import { fixture } from './native-fixture.ts'
 
 vi.setConfig({ testTimeout: 15_000 })
 
 let nextToolCall = 0
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 async function invokeTaskTool(state: Awaited<ReturnType<typeof fixture>>, owner: NativeActiveSessionOwner,
   signal: AbortSignal, args: unknown, initiator = true) {
   const appendEvent: NativeToolExecution['appendEvent'] = async (type, data, ...opts) => owner.append(type, data, ...opts)
@@ -118,9 +124,9 @@ it('preserves a v4 database and admits a persisted plan after restart only on it
   } finally { await pausedDrift.close() }
 
   const invalidPlans = [
-    { prompt: '请提醒我晚上看报告。', error: 'cannot adopt personal reminder modes' },
-    { prompt: 'Finish the goal.', kind: 'goal' as const, completionCriteria: 'Verified', error: 'requires the Goal Provider batch' },
-    { prompt: 'Inspect this project.', resumeSessionId: 'prior-session', error: 'cannot resume a previous execution Session' },
+    { prompt: 'Finish the goal.', kind: 'goal' as const, completionCriteria: 'Verified', invalidateCompletionCriteria: true,
+      error: 'Native Goal task requires its persisted completion criteria' },
+    { prompt: 'Inspect this project.', resumeSessionId: 'prior-session', error: 'Only a Goal task can resume' },
   ]
   for (const [index, invalid] of invalidPlans.entries()) {
     const path = join(root, `invalid-native-${index}.sqlite`)
@@ -130,11 +136,12 @@ it('preserves a v4 database and admits a persisted plan after restart only on it
         prompt: invalid.prompt, at: new Date(Date.now() + 60_000).toISOString(),
         ...('kind' in invalid ? { kind: invalid.kind } : {}),
         ...('completionCriteria' in invalid ? { completionCriteria: invalid.completionCriteria } : {}) }, Date.now(), 300)
-      if ('resumeSessionId' in invalid) {
+      if ('resumeSessionId' in invalid || 'invalidateCompletionCriteria' in invalid) {
         const database = new DatabaseSync(path)
         try {
           const body = JSON.parse(String(database.prepare('SELECT body FROM tasks WHERE id=?').get(task.id)?.['body'])) as Record<string, unknown>
-          body.resumeSessionId = invalid.resumeSessionId
+          if ('resumeSessionId' in invalid) body.resumeSessionId = invalid.resumeSessionId
+          if ('invalidateCompletionCriteria' in invalid) delete body.completionCriteria
           database.prepare('UPDATE tasks SET body=? WHERE id=?').run(JSON.stringify(body), task.id)
         } finally { database.close() }
       }
@@ -233,18 +240,26 @@ it('executes a due persisted plan through an independent root with durable settl
         const route: NativeRootRoute = { id: routeId, configuration }
         const outcomes: readonly (SessionEvent<'turn/end'> | undefined)[] = [blocked, failed, undefined]
         let nextOutcome = 0
+        const classificationAgent = { id: NativeAgentId('classification'), scope: new NativeScope() }
+        let classificationOwner: NativeActiveSessionOwner | undefined
         const rootOperations = {
           ready: async (_signal: AbortSignal) => {},
           resolve: (_id: NativeRootRouteId) => route,
           maintenance: async (_request: NativeRootSessionRequest,
-            operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<unknown>, signal: AbortSignal) =>
-            operation({ agent: { id: NativeAgentId('classification'), scope: new NativeScope() } } as unknown as NativeActiveSessionOwner, signal),
+            operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<unknown>, signal: AbortSignal) => {
+            classificationOwner = { agent: classificationAgent, session: { id: _request.id } as NativeActiveSessionOwner['session'],
+              invocation: 'root', rootOrigin: 'scheduled' } as unknown as NativeActiveSessionOwner
+            return operation(classificationOwner, signal)
+          },
+          capture: (_owner: NativeActiveSessionOwner) => route,
           execute: async (request: NativeRootExecutionRequest) => {
             const outcome = outcomes[nextOutcome++]
             if (outcome !== undefined) request.onEvent?.(outcome)
             return { exitCode: 0 }
           },
         } as unknown as NativeRootExecutionOperations
+        const classificationAgents = { get: (id: NativeAgentId) => id === classificationAgent.id ? classificationAgent : undefined }
+        const classificationOwners = { owner: () => classificationOwner }
         const classificationPath = join(state.root, 'classification.sqlite')
         const classificationStore = new TaskStore(classificationPath)
         const ids: TaskId[] = []
@@ -255,7 +270,8 @@ it('executes a due persisted plan through an independent root with durable settl
             provider: route.configuration.provider, model: route.configuration.model, at: classificationAt }, Date.now(), 300).id)
         }
         const classificationRegistry = new NativeTaskSchedulerRegistry(classificationStore, rootOperations,
-          {} as unknown as NativeAgentRegistry, {} as unknown as NativeActiveSessionOperations, async () => {},
+          classificationAgents as unknown as NativeAgentRegistry,
+          classificationOwners as unknown as NativeActiveSessionOperations, async () => {},
           { pollMs: 100, runTimeoutMs: 1000, maxConcurrent: 1, historyLimit: 50, minEverySeconds: 300 }, () => {})
         const classificationReader = new TaskStore(classificationPath)
         try {
@@ -292,9 +308,26 @@ it('persists owner management without model turns and publishes canonical root t
       expect(state.scheduler.accepts(owner)).toBe(true)
       expect(state.scheduler.accepts({ ...owner, invocation: 'delegated' })).toBe(false)
       expect(() => state.schedules.create(owner, { title: 'Goal', prompt: 'Finish work.', kind: 'goal',
-        completionCriteria: 'Verified', at: new Date(Date.now() + 60000).toISOString() }, signal)).toThrow('requires the Goal Provider batch')
-      expect(() => state.schedules.create(owner, { title: 'Reminder', prompt: '提醒我晚上看报告。',
-        at: new Date(Date.now() + 60000).toISOString() }, signal)).toThrow('does not support personal reminder modes')
+        completionCriteria: 'Verified', at: new Date(Date.now() + 60000).toISOString() }, signal)).toThrow('requires the Goal Provider and driver')
+      const route = state.rootExecution.capture(owner)
+      const unhandledGoals = new TaskStore(join(state.root, 'tasks.sqlite'))
+      try {
+        const pending = unhandledGoals.create(owner.session.id, { title: 'Unclaimed Goal', prompt: 'Finish work.', kind: 'goal',
+          completionCriteria: 'Verified', workspace: route.configuration.cwd, nativeRoute: route.id,
+          nativeConfiguration: route.configuration, provider: route.configuration.provider, model: route.configuration.model,
+          at: new Date(Date.now() + 60_000).toISOString() }, Date.now(), 300)
+        const database = new DatabaseSync(join(state.root, 'tasks.sqlite'))
+        try {
+          const body = JSON.parse(String(database.prepare('SELECT body FROM tasks WHERE id=?').get(pending.id)?.['body'])) as Record<string, unknown>
+          body.nextAt = Date.now() - 1
+          database.prepare('UPDATE tasks SET body=? WHERE id=?').run(JSON.stringify(body), pending.id)
+        } finally { database.close() }
+        await new Promise(resolve => setTimeout(resolve, 350))
+        expect(unhandledGoals.runs().filter(run => run.taskId === pending.id)).toHaveLength(0)
+      } finally { unhandledGoals.close() }
+      const reminder = state.schedules.create(owner, { title: 'Reminder', prompt: '提醒我晚上看报告。',
+        at: new Date(Date.now() + 60000).toISOString() }, signal)
+      expect(reminder.ownerSessionId).toBe(owner.session.id)
       expect(() => state.schedules.create(owner, { title: 'Past countdown', prompt: 'Check work.',
         at: new Date(Date.now() - 1000).toISOString(), delaySeconds: 60, delayFromAt: true }, signal))
         .toThrow('Countdown start must not be in the past')
@@ -306,7 +339,7 @@ it('persists owner management without model turns and publishes canonical root t
       expect((await state.schedules.change(owner, task.id, 'deleted', signal)).state).toBe('deleted')
       expect(Date.parse(task.at)).toBeGreaterThan(Date.parse(target))
       expect(task.countdownStartedAt).toBe(target)
-      expect(state.schedules.list(owner)).toHaveLength(0)
+      expect(state.schedules.list(owner)).toContainEqual(expect.objectContaining({ id: reminder.id }))
       expect(state.schedules.history(owner, task.id)).toHaveLength(0)
       expect(() => state.schedules.history(owner, brandString<TaskId>('missing'))).toThrow('task not found in this Session')
 
@@ -318,7 +351,9 @@ it('persists owner management without model turns and publishes canonical root t
         kind: 'goal', completionCriteria: 'verified', at: new Date(Date.now() + 60 * 60_000).toISOString() }, Date.now(), 300)
       legacyStore.close()
       await expect(state.schedules.change(owner, legacyGoal.id, 'deleted', signal))
-        .rejects.toThrow('Native Goal scheduling requires the Goal Provider batch')
+        .rejects.toThrow('Native task scheduling cannot adopt compatibility presets')
+      const legacyCleanup = new DatabaseSync(join(state.root, 'tasks.sqlite'))
+      try { legacyCleanup.prepare('DELETE FROM tasks WHERE id=?').run(legacyGoal.id) } finally { legacyCleanup.close() }
       await expect(invokeTaskTool(state, owner, signal, { action: 'create' })).rejects.toThrow()
       const endAt = new Date(Date.now() + 60 * 60_000).toISOString()
       const toolTask = JSON.parse(toolText(await invokeTaskTool(state, owner, signal, { action: 'create', title: 'Tool plan',
@@ -379,6 +414,242 @@ it('persists owner management without model turns and publishes canonical root t
       await vi.waitFor(() => { expect(warning).toHaveBeenCalledWith(expect.stringContaining('native-task-scheduler:')) })
     } finally { warning.mockRestore() }
   } finally { await state.close() }
+})
+
+it('delivers a reminder through its creating Session writer and deduplicates a durable replay', async () => {
+  const state = await fixture([])
+  const id = SessionId('native-reminder-owner')
+  const signal = new AbortController().signal
+  let taskId: TaskId | undefined
+  try {
+    await state.app.executeSessionOperation({ id, resume: false }, async (owner) => {
+      const task = state.schedules.create(owner, { title: 'Drink water', prompt: '提醒我喝水。',
+        at: new Date(Date.now() + 300).toISOString() }, signal)
+      taskId = task.id
+      expect(task.ownerSessionId).toBe(id)
+    }, signal)
+    if (taskId === undefined) throw new Error('Native reminder plan was not created')
+    const store = new TaskStore(join(state.root, 'tasks.sqlite'))
+    try {
+      await vi.waitFor(() => {
+        expect(store.runs().find(run => run.taskId === taskId)?.state).toBe('completed')
+      }, { timeout: 5000, interval: 50 })
+      const task = store.tasks().find(candidate => candidate.id === taskId)
+      const run = store.runs().find(candidate => candidate.taskId === taskId)
+      if (task === undefined || run === undefined) throw new Error('Native reminder receipt disappeared')
+      expect(run).toMatchObject({ state: 'completed', sessionId: id, detail: 'Reminder dispatched' })
+      const read = async () => {
+        const writer = await state.storage.open(id, 'read')
+        try { return (await writer.read()).events } finally { await writer.close() }
+      }
+      const first = await read()
+      const messages = first.filter(event => event.type === 'user/message' && event.data.source.kind === 'plugin'
+        && event.data.source.plugin === 'task-scheduler')
+      expect(messages).toHaveLength(1)
+      expect(messages[0]).toMatchObject({ data: { id: `reminder-${run.id}`, source: {
+        kind: 'plugin', plugin: 'task-scheduler', form: 'notice',
+      } } })
+      const source: unknown = messages[0]?.data.source
+      if (!isRecord(source) || typeof source.summary !== 'string') throw new Error('reminder message has no summary')
+      expect(source.summary).toContain('Drink water')
+      expect(JSON.stringify(messages[0])).toContain('提醒我喝水。')
+
+      await state.rootExecution.maintenance({ route: brandString<NativeRootRouteId>('root'), id, resume: true },
+        async (owner, effective) => { await appendNativeReminderRecord(owner, task, run, effective) }, signal)
+      const replay = await read()
+      expect(replay.filter(event => event.type === 'user/message'
+        && event.data.id === `reminder-${run.id}`)).toHaveLength(1)
+    } finally { store.close() }
+    expect(state.model.requests).toHaveLength(0)
+  } finally { await state.close() }
+})
+
+it('rejects copied, stale, released, and replayed scheduled Goal claims', async () => {
+  const state = await fixture([])
+  const creator = SessionId('native-goal-claim-owner')
+  const receiptStore = new TaskStore(join(state.root, 'tasks.sqlite'))
+  let taskId: TaskId | undefined
+  let admission: NativeScheduledGoalAdmission | undefined
+  let owner: NativeActiveSessionOwner | undefined
+  let claimSignal: AbortSignal | undefined
+  let probesComplete = false
+  let probeFailure: unknown
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const scheduledHost = state.scheduledGoalHost
+  if (scheduledHost === undefined) throw new Error('task scheduler did not provide its selected Goal authority')
+  const executor: NativeScheduledGoalExecutor = {
+    startScheduled: async (activeOwner, _request, issued, signal) => {
+      admission = issued
+      owner = activeOwner
+      claimSignal = signal
+      let lease: Awaited<ReturnType<typeof scheduledHost.authority.redeem>> | undefined
+      try {
+        const copy = { ...issued } as NativeScheduledGoalAdmission
+        await expect(scheduledHost.authority.redeem(copy, activeOwner, signal))
+          .rejects.toThrow('Scheduled Goal claim was not freshly issued by this scheduler')
+        lease = await scheduledHost.authority.redeem(issued, activeOwner, signal)
+        await expect(lease.verify(activeOwner, signal)).resolves.toBeUndefined()
+        if (taskId === undefined) throw new Error('Goal task identity was not saved')
+        receiptStore.change(creator, taskId, 'paused')
+        await expect(lease.verify(activeOwner, signal))
+          .rejects.toThrow('Scheduled Goal claim no longer has its exact durable running task receipt')
+        lease.release()
+        await expect(lease.verify(activeOwner, signal)).rejects.toThrow('Scheduled Goal claim was released or replayed')
+        await expect(scheduledHost.authority.redeem(issued, activeOwner, signal))
+          .rejects.toThrow('Scheduled Goal claim was not freshly issued by this scheduler')
+        probesComplete = true
+      } catch (failure: unknown) {
+        probeFailure = failure
+        throw failure
+      } finally { lease?.release() }
+      throw new Error('scheduled Goal claim probes finished without running a model turn')
+    },
+    resumeScheduled: async () => { throw new Error('unexpected scheduled Goal resume') },
+    get: () => undefined,
+    pause: async () => { throw new Error('unexpected scheduled Goal pause') },
+  }
+  const releaseExecutor = scheduledHost.registerExecutor(executor)
+  try {
+    expect(() => scheduledHost.registerExecutor(executor))
+      .toThrow('Native Goal driver executor is already registered or scheduler is stopping')
+    await state.app.executeSessionOperation({ id: creator, resume: false }, async (activeOwner, signal) => {
+      const task = state.schedules.create(activeOwner, { title: 'Claim probe', prompt: 'Check the report.', kind: 'goal',
+        completionCriteria: 'The report is ready.', at: new Date(Date.now() + 500).toISOString() }, signal)
+      taskId = task.id
+    }, new AbortController().signal)
+    await vi.waitFor(() => { expect(probesComplete || probeFailure !== undefined).toBe(true) }, { timeout: 5000, interval: 50 })
+    if (probeFailure !== undefined) throw probeFailure
+    await vi.waitFor(() => { expect(receiptStore.runs().find(run => run.taskId === taskId)?.state).toBe('failed') },
+      { timeout: 5000, interval: 50 })
+    expect(receiptStore.tasks().find(task => task.id === taskId)?.state).toBe('paused')
+    expect(state.model.requests).toHaveLength(0)
+    if (admission === undefined || owner === undefined || claimSignal === undefined) throw new Error('scheduled Goal claim was not captured')
+    await releaseExecutor()
+    const replacementRelease = scheduledHost.registerExecutor(executor)
+    try {
+      await expect(scheduledHost.authority.redeem(admission, owner, claimSignal))
+        .rejects.toThrow('Scheduled Goal claim was not freshly issued by this scheduler')
+    } finally { await replacementRelease() }
+  } finally {
+    await releaseExecutor()
+    warning.mockRestore()
+    receiptStore.close()
+    await state.close()
+  }
+})
+
+it('requires a durable Goal claim, stays disarmed across cold restore, and resumes only in a direct human turn', async () => {
+  let activeState: Awaited<ReturnType<typeof fixture>> | undefined
+  let taskId: TaskId | undefined
+  const root = await mkdtemp(join(tmpdir(), 'rsh-task-goal-admission-'))
+  const creator = SessionId('native-goal-task-owner')
+  const route = brandString<NativeRootRouteId>('root')
+  const state = await fixture([
+    (options) => {
+      expect(JSON.stringify(options.messages)).toContain('Check whether the report is ready.')
+      return textResponse('The report is not ready yet.')
+    },
+  ], root, true, undefined, undefined, true)
+  activeState = state
+  try {
+    await state.rootExecution.maintenance({ route, id: SessionId('unclaimed-goal-root'), resume: false, rootOrigin: 'scheduled' },
+      async (owner, signal) => {
+        let forgedVerificationCalls = 0
+        const admission = { taskId: 'unclaimed-task', runId: 'unclaimed-run', sessionId: owner.session.id, route,
+          verify: async () => { forgedVerificationCalls++ } } as unknown as NativeScheduledGoalAdmission
+        const store = new TaskStore(join(state.root, 'tasks.sqlite'))
+        try {
+          expect(store.tasks()).toHaveLength(0)
+          expect(store.runs()).toHaveLength(0)
+          await expect(state.goalContinuation!.startScheduled(owner,
+            { objective: 'Unclaimed Goal.', maxGoalRounds: 1 }, admission, signal))
+            .rejects.toThrow('Scheduled Goal claim was not freshly issued by this scheduler')
+          expect(forgedVerificationCalls).toBe(0)
+          expect(state.goals!.get(owner.agent)).toBeUndefined()
+          expect(store.tasks()).toHaveLength(0)
+          expect(store.runs()).toHaveLength(0)
+        } finally { store.close() }
+      }, new AbortController().signal)
+    await state.app.executeSessionOperation({ id: creator, resume: false }, async (owner, signal) => {
+      const task = state.schedules.create(owner, { title: 'Report readiness', prompt: 'Check whether the report is ready.',
+        kind: 'goal', completionCriteria: 'The report is ready and its location is recorded.', maxGoalRounds: 1,
+        at: new Date(Date.now() + 500).toISOString() }, signal)
+      taskId = task.id
+    }, new AbortController().signal)
+    if (taskId === undefined) throw new Error('Native Goal task was not created')
+
+    const store = new TaskStore(join(state.root, 'tasks.sqlite'))
+    let firstRun!: ReturnType<TaskStore['runs']>[number]
+    try {
+      await vi.waitFor(() => {
+        const run = store.runs().find(candidate => candidate.taskId === taskId)
+        expect(run?.state, run?.detail).toBe('blocked')
+      }, { timeout: 7000, interval: 50 })
+      const run = store.runs().find(candidate => candidate.taskId === taskId)
+      if (run === undefined || run.sessionId === null) throw new Error('Stopped Goal omitted its execution Session')
+      firstRun = run
+      expect(run.sessionId).not.toBe(creator)
+    } finally { store.close() }
+    await state.close()
+    activeState = undefined
+
+    const restored = await fixture([
+      (options) => {
+        expect((options.tools ?? []).some(tool => tool.name === 'task_schedule')).toBe(true)
+        if (taskId === undefined) throw new Error('Goal task identity is unavailable to the direct resume turn')
+        return toolCallResponse('resume-goal-task', 'task_schedule', { action: 'resume', id: taskId })
+      },
+      textResponse('The Goal continuation was explicitly admitted.'),
+      () => {
+        const owner = activeState?.activeSessions.owners().find(candidate => candidate.rootOrigin === 'scheduled')
+        const goal = owner === undefined ? undefined : activeState?.goals?.get(owner.agent)
+        if (goal === undefined) throw new Error('Resumed Goal is unavailable')
+        expect(goal.phase).toBe('active')
+        return toolCallResponse('complete-goal-task', 'update_goal', { goal_id: goal.id, revision: goal.revision, action: 'complete' })
+      },
+      textResponse('The completion criteria are satisfied.'),
+    ], state.root, true, undefined, undefined, true)
+    activeState = restored
+    try {
+      await restored.rootExecution.maintenance({ route, id: SessionId(firstRun.sessionId!), resume: true, rootOrigin: 'scheduled' },
+        async (owner) => {
+          expect(restored.goals!.get(owner.agent)).toMatchObject({ phase: 'blocked', activation: 'disarmed' })
+        }, new AbortController().signal)
+      await new Promise(resolve => setTimeout(resolve, 300))
+      expect(restored.model.requests).toHaveLength(0)
+
+      const resume = await restored.app.executeRootTurn({ id: creator, resume: true,
+        message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Resume the report readiness Goal.' }] }),
+      }, new AbortController().signal)
+      expect(resume.answer).toBe('The Goal continuation was explicitly admitted.')
+      const reader = new TaskStore(join(restored.root, 'tasks.sqlite'))
+      try {
+        await vi.waitFor(() => {
+          const history = reader.runs().filter(run => run.taskId === taskId)
+          expect(history.some(run => run.state === 'completed')).toBe(true)
+        }, { timeout: 7000, interval: 50 })
+        const history = reader.runs().filter(run => run.taskId === taskId)
+        expect(history).toHaveLength(2)
+        expect(history.map(run => run.state)).toContain('blocked')
+        expect(history.map(run => run.state)).toContain('completed')
+        expect(new Set(history.map(run => run.sessionId))).toEqual(new Set([firstRun.sessionId]))
+      } finally { reader.close() }
+      expect(restored.model.requests).toHaveLength(4)
+      const writer = await restored.storage.open(SessionId(firstRun.sessionId!), 'read')
+      try {
+        const events = (await writer.read()).events
+        expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'goal')).toHaveLength(2)
+        const latestGoalChange = events.findLast(event => event.type === 'goal/change' && 'goal' in event.data)
+        if (latestGoalChange?.type !== 'goal/change' || !('goal' in latestGoalChange.data)) {
+          throw new Error('Completed Goal change is unavailable')
+        }
+        expect(latestGoalChange.data.goal.phase).toBe('complete')
+      } finally { await writer.close() }
+    } finally { await restored.close() }
+  } finally {
+    if (activeState !== undefined) await activeState.close()
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 it('reattaches management to the same live root on Host replacement and keeps child and scheduled Agents denied', async () => {
