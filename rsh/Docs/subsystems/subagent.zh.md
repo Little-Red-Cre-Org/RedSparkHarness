@@ -12,6 +12,94 @@ Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subag
 
 原生一次性组合使用 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 作为可替换服务定义与选定派生提供者，以 [tool-subagent 的原生入口](../../Engine/subagent/tool-subagent/README.zh.md) 为消费者。NativeSubagentOperations 解析精确活跃父配置，并通过 sessionExecution 委派；Program 保留 Agent 执行与唯一 Session 写入器。共享 [subagent-protocol](../../Engine/subagent/subagent-protocol/README.zh.md) 拥有描述符载荷、输出归并与委派权限文本。原生 Agent 所有的后台执行使用 NativeJobs 与既有 job_output/job_kill 消费者；可持续子任务复用 Program 可持续权威，通过[原生控制工具](../../Engine/subagent/tool-subagent-control/README.zh.md)实现相邻消息、打断与基于描述符的冷恢复。Program 还向独立的[原生 list_agents 工具](../../Engine/subagent/native-tool-subagent-list-agents/README.zh.md)提供选定的持久目录。完成结果投影仍为兼容能力。
 
+## 原生外部驱动
+
+Native Host 可为一次性子任务选择一个外部产品驱动。适配器接收一个分离 DTO，其中绑定精确活跃父 Session 与调用根 Session 的 id 和 owner epoch；Program 与 Native Provider 保留 Agent、Session 和 writer 权威。驱动通过 `start()` 报告就绪，通过 `result` 报告终止输出，通过 `dispose()` 确认完整子任务范围已经静止。Provider 在这些时点前后刷新父级所有的 start 与 end 事实，并为受影响所有者和 Provider 保留清理或 lineage 持久化失败。详见 [native 包契约](../../Engine/subagent/native-subagent/README.zh.md)与[所有权决策](../../../.agents/notes/implemented/architecture/2026-10-08-native-external-subagent-driver.zh.md)。
+
+```ts type-equiv
+/** Detached input to one external child. It has no Agent, Session, Cordis Context, or writer. */
+interface NativeExternalSubagentRequest {
+  /** Identity minted by Native and persisted with this child's parent-owned lineage. */
+  readonly id: NativeExternalSubagentId
+  /** Exact live Native parent and invocation root selected during admission. */
+  readonly parentSessionId: SessionId
+  readonly rootSessionId: SessionId
+  /** Private per-owner epochs distinguish replacements that reuse a Session id. */
+  readonly parentEpoch: string
+  readonly rootEpoch: string
+  /** Current persisted delegation depth and configured child ceiling. */
+  readonly parentDepth: number
+  readonly maxDepth: number
+  /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
+  readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
+  /** Task label and exact Program-selected workspace. */
+  readonly label: string
+  readonly cwd: string
+  /** Detached authored task only; parent conversation history is not transferred. */
+  readonly prompt: readonly ContentBlock[]
+  /** Engine-resolved route and explicit deployment overrides, never selected by the remote child. */
+  readonly route: {
+    readonly provider: string
+    readonly model: string
+    readonly reasoningEffort?: ReasoningEffortId
+    readonly overrides: NativeExternalSubagentRouteOverrides
+  }
+  /** Already-resolved child restrictions from the Native deployment. */
+  readonly persona?: string
+  readonly toolFilter?: NativeToolRestriction
+  readonly outputSchema?: ObjectJsonSchema
+}
+```
+
+```ts type-equiv
+/** Terminal data returned by the external product after its real child has settled. */
+interface NativeExternalSubagentOutcome {
+  /** Final child output reported by the selected product. */
+  readonly output: readonly ContentBlock[]
+  /** Schema-valid product value when the request carries an output schema. */
+  readonly structured?: unknown
+  /** Product terminal reason after child execution settles. */
+  readonly stopReason: NativeSubagentStopReason
+}
+```
+
+```ts type-equiv
+/** Product-owned run returned only after its actual readiness handshake. */
+interface NativeExternalSubagentRun {
+  /** Product-owned session/thread identity established by that handshake. */
+  readonly remoteId: string
+  /** Settle with the product terminal result or cancellation after the owned range stops. */
+  readonly result: Promise<NativeExternalSubagentOutcome>
+  /** Cancel if needed and resolve only after the complete owned process range is quiescent. */
+  dispose(): Promise<void>
+}
+```
+
+```ts type-equiv
+/** Trusted product adapter mounted as a Native Module for one selected provider name. */
+interface NativeExternalSubagentDriver {
+  /** Exact name configured by the selected Native Subagent Provider. */
+  readonly name: string
+  /** Supported explicit route overrides; an unsupported field is rejected before launch. */
+  readonly routeFields: readonly NativeExternalSubagentRouteField[]
+  /** Optional request features that this product actually enforces. */
+  readonly capabilities: {
+    /** Whether the product applies the resolved persona. */
+    readonly persona: boolean
+    /** Whether the product applies the resolved tool filter. */
+    readonly toolFilter: boolean
+    /** Whether the product validates and returns the requested structured output. */
+    readonly outputSchema: boolean
+  }
+  /** Start the selected product child and return only after a genuine readiness handshake.
+   * @param request - detached, resolved child input.
+   * @param signal - Native cancellation for this child.
+   * @returns the product-owned child after its readiness handshake.
+   */
+  start(request: NativeExternalSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentRun>
+}
+```
+
 ## 两类能力，两种发现方式
 
 提供方通过一个静态描述符公布其**启动时**功能，服务会在单次 run 存在之前即行检查；如果请求依赖提供方不具备的功能，会被明确拒绝（`SubagentError('UNSUPPORTED_CAPABILITY')`），绝不会被接受后静默忽略。这些 flag 仅描述单次 [`start()`](#the-provider-contract-subagentprovider) 路径，即由提供方组合子 agent 的路径。**可继续**子 agent 由继续执行管理器自行组合，因此它们由唯一一个可选方法把关，方法存在即为能力，并以 TypeScript 的类型收窄作为发现机制：[`SubagentProvider.prepareContinuable`](#the-provider-contract-subagentprovider)。

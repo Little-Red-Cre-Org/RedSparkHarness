@@ -33,6 +33,7 @@ export interface NativeActiveSessionDriver {
 export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   readonly admission = new NativeStepAdmission()
   private readonly idle = new Set<IdleListener>()
+  private admissionOpen = true
   private closing: Promise<void> | undefined
 
   /**
@@ -54,6 +55,8 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   get inheritedEventCount() { return this.owner.writer.inheritedEventCount }
   /** @inheritdoc */
   get writerAvailable(): boolean { return this.closing === undefined && !this.owner.isClosing }
+  /** @inheritdoc */
+  beginDetach(): void { this.admissionOpen = false }
   /** @inheritdoc */
   readonly append: NativeActiveSessionOwner['append'] = (type, data, ...options) => {
     this.assertAvailable()
@@ -84,7 +87,7 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   messages(target: InboxTarget): readonly UserMessage[] { this.assertAvailable(); return this.owner.messages(target) }
   /** @inheritdoc */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId> {
-    this.assertAvailable()
+    this.assertAdmitting()
     return this.driver.enqueue(message, target, wake, signal)
   }
   /** @inheritdoc */
@@ -94,12 +97,12 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
     return this.owner.remove(this.owner.messages(target).filter(message => selected.has(message.id)).map(message => message.id), 'canceled', signal)
   }
   /** @inheritdoc */
-  retain(): () => void { this.assertAvailable(); return this.driver.retain() }
+  retain(): () => void { this.assertAdmitting(); return this.driver.retain() }
   /** @inheritdoc */
-  onEvent(observer: (event: SessionEvent) => void): () => void { this.assertAvailable(); return this.owner.onEvent(observer) }
+  onEvent(observer: (event: SessionEvent) => void): () => void { this.assertAdmitting(); return this.owner.onEvent(observer) }
   /** @inheritdoc */
   onIdle(observer: (reason: TurnEndReason) => Promise<void>): () => Promise<void> {
-    this.assertAvailable()
+    this.assertAdmitting()
     const entry: IdleListener = { observer, pending: new Set() }
     this.idle.add(entry)
     let disposal: Promise<void> | undefined
@@ -110,7 +113,7 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   }
   /** @inheritdoc */
   beforeStep(hook: NativeStepAdmissionHook, order: number): () => Promise<void> {
-    this.assertAvailable()
+    this.assertAdmitting()
     return this.admission.register(hook, order)
   }
 
@@ -134,6 +137,7 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   /** Close hook admission and await accepted callbacks. @returns the memoized quiescent hook release. */
   dispose(): Promise<void> {
     if (this.closing !== undefined) return this.closing
+    this.beginDetach()
     const pending = [...this.idle].flatMap(entry => [...entry.pending])
     this.idle.clear()
     const completion = Promise.withResolvers<void>()
@@ -147,4 +151,8 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   }
 
   private assertAvailable(): void { if (!this.writerAvailable) throw new Error('native-active-session: writer admission is closed') }
+  private assertAdmitting(): void {
+    this.assertAvailable()
+    if (!this.admissionOpen) throw new Error('native-active-session: owner is detaching')
+  }
 }

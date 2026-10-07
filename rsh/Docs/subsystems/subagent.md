@@ -12,6 +12,94 @@ The `subagentCatalog` projection exposes `SubagentCatalogEntry[]` in parent even
 
 The native one-shot composition uses [native-subagent](../../Engine/subagent/native-subagent/README.md) as its replaceable Definition and selected spawn Provider, with [tool-subagent’s native entry](../../Engine/subagent/tool-subagent/README.md) as Consumer. NativeSubagentOperations resolves exact active parent configuration and delegates through sessionExecution; the Program retains Agent execution and the sole Session writer. The shared [subagent-protocol](../../Engine/subagent/subagent-protocol/README.md) owns descriptor payloads, output folding and delegation permission text. Native Agent-owned background execution uses NativeJobs and the existing job_output/job_kill Consumers; continuable children reuse the Program continuation authority with [native control tools](../../Engine/subagent/tool-subagent-control/README.md) for adjacent messaging, interruption and descriptor-based cold resume. The Program also supplies the selected durable catalog to the separate [native list_agents tool](../../Engine/subagent/native-tool-subagent-list-agents/README.md). Finished-result projection remains a compatibility capability.
 
+## Native external driver
+
+A Native Host may select one external product driver for one-shot children. The adapter receives a detached DTO bound to the exact active parent and invocation-root Session ids and owner epochs; the Program and Native Provider keep Agent, Session and writer authority. The driver reports readiness from `start()` and terminal output through `result`, while `dispose()` confirms full child-range quiescence. The Provider flushes parent-owned start and end facts around those milestones and keeps cleanup or lineage-persistence failures sticky for the affected owners and Provider. See the [native package contract](../../Engine/subagent/native-subagent/README.md) and [ownership decision](../../../.agents/notes/implemented/architecture/2026-10-08-native-external-subagent-driver.md).
+
+```ts type-equiv
+/** Detached input to one external child. It has no Agent, Session, Cordis Context, or writer. */
+interface NativeExternalSubagentRequest {
+  /** Identity minted by Native and persisted with this child's parent-owned lineage. */
+  readonly id: NativeExternalSubagentId
+  /** Exact live Native parent and invocation root selected during admission. */
+  readonly parentSessionId: SessionId
+  readonly rootSessionId: SessionId
+  /** Private per-owner epochs distinguish replacements that reuse a Session id. */
+  readonly parentEpoch: string
+  readonly rootEpoch: string
+  /** Current persisted delegation depth and configured child ceiling. */
+  readonly parentDepth: number
+  readonly maxDepth: number
+  /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
+  readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
+  /** Task label and exact Program-selected workspace. */
+  readonly label: string
+  readonly cwd: string
+  /** Detached authored task only; parent conversation history is not transferred. */
+  readonly prompt: readonly ContentBlock[]
+  /** Engine-resolved route and explicit deployment overrides, never selected by the remote child. */
+  readonly route: {
+    readonly provider: string
+    readonly model: string
+    readonly reasoningEffort?: ReasoningEffortId
+    readonly overrides: NativeExternalSubagentRouteOverrides
+  }
+  /** Already-resolved child restrictions from the Native deployment. */
+  readonly persona?: string
+  readonly toolFilter?: NativeToolRestriction
+  readonly outputSchema?: ObjectJsonSchema
+}
+```
+
+```ts type-equiv
+/** Terminal data returned by the external product after its real child has settled. */
+interface NativeExternalSubagentOutcome {
+  /** Final child output reported by the selected product. */
+  readonly output: readonly ContentBlock[]
+  /** Schema-valid product value when the request carries an output schema. */
+  readonly structured?: unknown
+  /** Product terminal reason after child execution settles. */
+  readonly stopReason: NativeSubagentStopReason
+}
+```
+
+```ts type-equiv
+/** Product-owned run returned only after its actual readiness handshake. */
+interface NativeExternalSubagentRun {
+  /** Product-owned session/thread identity established by that handshake. */
+  readonly remoteId: string
+  /** Settle with the product terminal result or cancellation after the owned range stops. */
+  readonly result: Promise<NativeExternalSubagentOutcome>
+  /** Cancel if needed and resolve only after the complete owned process range is quiescent. */
+  dispose(): Promise<void>
+}
+```
+
+```ts type-equiv
+/** Trusted product adapter mounted as a Native Module for one selected provider name. */
+interface NativeExternalSubagentDriver {
+  /** Exact name configured by the selected Native Subagent Provider. */
+  readonly name: string
+  /** Supported explicit route overrides; an unsupported field is rejected before launch. */
+  readonly routeFields: readonly NativeExternalSubagentRouteField[]
+  /** Optional request features that this product actually enforces. */
+  readonly capabilities: {
+    /** Whether the product applies the resolved persona. */
+    readonly persona: boolean
+    /** Whether the product applies the resolved tool filter. */
+    readonly toolFilter: boolean
+    /** Whether the product validates and returns the requested structured output. */
+    readonly outputSchema: boolean
+  }
+  /** Start the selected product child and return only after a genuine readiness handshake.
+   * @param request - detached, resolved child input.
+   * @param signal - Native cancellation for this child.
+   * @returns the product-owned child after its readiness handshake.
+   */
+  start(request: NativeExternalSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentRun>
+}
+```
+
 ## Two kinds of capability, discovered two ways
 
 A provider advertises its **start-time** features on a static descriptor the service checks BEFORE a one-shot run exists; a request that needs one the provider lacks is rejected loud (`SubagentError('UNSUPPORTED_CAPABILITY')`), never accepted-then-ignored. Those flags describe only the one-shot [`start()`](#the-provider-contract-subagentprovider) path, where the provider composes the child. **Continuable** children are composed by the continuation manager itself, so they are gated by one optional method whose presence IS the capability, with TS narrowing as the discovery mechanism: [`SubagentProvider.prepareContinuable`](#the-provider-contract-subagentprovider).

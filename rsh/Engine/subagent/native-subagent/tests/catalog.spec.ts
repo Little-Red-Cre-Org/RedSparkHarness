@@ -17,9 +17,12 @@ it('reports a finished-listener failure and continues without changing the settl
     request.onEvent?.({ type: 'turn/end', data: { reason: { kind: 'completed' } } } as SessionEvent)
     return { exitCode: 0 }
   } }
-  const context = { signal: new AbortController().signal, require: () => execution, optional: () => undefined } as unknown as NativeContext
+  const activeSessions = { onDetached: () => async () => {} }
+  const context = { signal: new AbortController().signal, require: (name: string) => name === 'activeSessions' ? activeSessions : execution,
+    optional: () => undefined } as unknown as NativeContext
   const provider = new NativeSpawnSubagents(context, 'spawn')
   const request: NativeSubagentRequest = { agent: parent, session, label: 'child', prompt: [], maxDepth: 1,
+    routeOverrides: {},
     config: { cwd: '/selected', provider: 'model', model: 'test', systemPrompt: '', maxSteps: 1, builtinTools: false } }
   provider.onFinished(() => { throw failure })
   provider.onFinished(async () => { throw failure })

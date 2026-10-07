@@ -2,7 +2,8 @@
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeSubagentOptions, NativeSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
+import type { NativeSubagentOptions, NativeSubagentResult, NativeExternalSubagentResult,
+  NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
 import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type {} from '@deepseek-ai/dsh-native-tool-jobs'
 
@@ -62,6 +63,10 @@ export const plugin: NativePlugin = {
     const config = resolveConfig(input)
     return (context) => {
       const subagents = context.require('subagents')
+      const external = subagents.providerName !== 'spawn'
+      if (external && config.backgroundMode === 'continuable') {
+        throw new Error('native tool-subagent: external providers support one-shot runs only')
+      }
       const tools = context.require('tools')
       const controls = context.optional('jobControls')
       const jobs = context.optional('jobs')
@@ -74,7 +79,7 @@ export const plugin: NativePlugin = {
         || subagents.continuationTools !== tools)) {
         throw new Error('native tool-subagent: continuable mode requires controls bound to the same Provider and tool registry')
       }
-      const background = continuation || controls !== undefined
+      const background = !external && (continuation || controls !== undefined)
       const contribution: NativeValueToolContribution = {
         schema: { name: config.toolName, description: 'Delegate one task to a fresh child without your conversation. '
           + (continuation ? 'By default start a durable continuable child and return after its initial input is accepted. Use send_message for follow-ups and interrupt_agent to stop current work; run_in_background:false waits for a one-shot result.'
@@ -93,10 +98,15 @@ export const plugin: NativePlugin = {
             id: { type: 'string' }, jobId: { type: 'string' }, provider: { type: 'string' },
           } }, ...continuation ? [{ type: 'object' as const, additionalProperties: false, required: ['id', 'provider', 'messageId'], properties: {
             id: { type: 'string' as const }, provider: { type: 'string' as const }, messageId: { type: 'string' as const },
-          } }] : []] },
+          } }] : [], { type: 'object', additionalProperties: false, required: ['id', 'provider', 'remoteId', 'stopReason', 'output'], properties: {
+            id: { type: 'string' }, provider: { type: 'string' }, remoteId: { type: 'string' },
+            stopReason: { type: 'string', enum: ['completed', 'max-tokens', 'aborted', 'refusal', 'error'] },
+            output: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          } }] },
           render: (_call, value) => {
             // The Provider supplies typed content; NativeTools owns its lossless JSON snapshot.
-            const result = value as unknown as NativeSubagentResult | NativeSubagentBackground | NativeSubagentContinuation
+            const result = value as unknown as NativeSubagentResult | NativeExternalSubagentResult
+              | NativeSubagentBackground | NativeSubagentContinuation
             if ('messageId' in result) return { isError: false, content: [{ type: 'text', text: `started subagent ${result.id}` }],
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, messageId: result.messageId } }
             if ('jobId' in result) return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Child session: ${result.id}. Use job_output to read output or wait; job_kill requests cancellation.` }],
@@ -104,7 +114,8 @@ export const plugin: NativePlugin = {
             const content: ContentBlock[] = [...result.output]
             if (result.stopReason !== 'completed') content.unshift({ type: 'text', text: `Subagent ended: ${result.stopReason}. Partial output follows.` })
             return { content, isError: result.stopReason !== 'completed', meta: {
-              kind: 'subagent', childSessionId: result.id, provider: result.provider, stopReason: result.stopReason,
+              kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }
+                : { childSessionId: result.id }, provider: result.provider, stopReason: result.stopReason,
             } }
           },
         },

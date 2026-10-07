@@ -210,6 +210,7 @@ export class NativeSubagentContinuations {
         provider: descriptor.agentProvider ?? observed.defaults.provider,
         model: descriptor.agentModel ?? observed.defaults.model,
         ...descriptor.agentReasoningEffort === undefined ? {} : { reasoningEffort: descriptor.agentReasoningEffort } },
+      routeOverrides: {},
       ...descriptor.persona === undefined ? {} : { persona: descriptor.persona },
       ...descriptor.toolFilter === undefined ? {} : { toolFilter: descriptor.toolFilter },
     }

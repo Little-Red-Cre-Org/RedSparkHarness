@@ -1442,6 +1442,26 @@
       "source": "rsh/Engine/subagent/subagent/src/types.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeExternalSubagentRequest",
+      "source": "rsh/Engine/subagent/native-subagent/src/external-driver.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeExternalSubagentOutcome",
+      "source": "rsh/Engine/subagent/native-subagent/src/external-driver.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeExternalSubagentRun",
+      "source": "rsh/Engine/subagent/native-subagent/src/external-driver.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeExternalSubagentDriver",
+      "source": "rsh/Engine/subagent/native-subagent/src/external-driver.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/web.md",
       "symbol": "WebSearchRequest",
       "source": "rsh/Modules/Official/web/web/src/types.ts"

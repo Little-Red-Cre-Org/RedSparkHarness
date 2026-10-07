@@ -401,6 +401,46 @@ it('drains every retained root and unregisters Agents after one writer close fai
   }
 })
 
+it('keeps the active Session writer open until detached Consumers finish', async () => {
+  const state = await fixture([])
+  const id = SessionId('detached-writer-drain')
+  const detached = Promise.withResolvers<undefined>()
+  const observerStarted = Promise.withResolvers<undefined>()
+  const releaseObserver = Promise.withResolvers<undefined>()
+  let applicationDisposal: Promise<void> | undefined
+  const remove = state.activeSessions.onDetached(async (owner) => {
+    if (owner.session.id !== id) return
+    expect(owner.writerAvailable).toBe(true)
+    expect(() => owner.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Late input.' }] }),
+      'next-turn', false, new AbortController().signal)).toThrow('owner is detaching')
+    applicationDisposal = state.app.dispose()
+    observerStarted.resolve(undefined)
+    await releaseObserver.promise
+    await owner.flush()
+    detached.resolve(undefined)
+  })
+  try {
+    const operation = state.app.executeSessionOperation({ id, resume: false }, async (owner) => {
+      expect(owner.writerAvailable).toBe(true)
+    }, new AbortController().signal)
+    await observerStarted.promise
+    let disposed = false
+    void applicationDisposal?.then(() => { disposed = true }, () => { disposed = true })
+    await Promise.resolve()
+    expect(disposed).toBe(false)
+    releaseObserver.resolve(undefined)
+    await operation
+    await detached.promise
+    await applicationDisposal
+    expect(disposed).toBe(true)
+    expect(state.activeSessions.owners().some(owner => owner.session.id === id)).toBe(false)
+  } finally {
+    releaseObserver.resolve(undefined)
+    await remove()
+    await state.close()
+  }
+})
+
 it.each(['initial-turn', 'already-aborted-settlement'] as const)('drains a retained root before rejecting %s cancellation', async (mode) => {
   const state = await fixture(mode === 'initial-turn' ? ['hang'] : [textResponse('Root settled.')])
   const id = SessionId('cancelled-retained-root')

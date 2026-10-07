@@ -833,6 +833,37 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:40`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
+<a id="subagentexternal-end--log-only"></a>
+
+#### `subagent/external-end` — log-only
+
+```ts persistence-catalog
+/**
+ * Records settlement only after the product confirms complete owned-range cleanup; a failed startup has no pair.
+ */
+'subagent/external-end': NativeExternalSubagentFinishedEvent
+```
+
+类型：[NativeExternalSubagentFinishedEvent](subsystems/subagent.zh.md)
+
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:142`](../Engine/subagent/native-subagent/src/external-driver.ts)
+
+<a id="subagentexternal-start--log-only"></a>
+
+#### `subagent/external-start` — log-only
+
+```ts persistence-catalog
+/**
+ * Records a product child only after its real readiness handshake, with the exact Native parent and active-root lineage.
+ * The owning parent Session writer flushes this event before Native publishes the child to consumers.
+ */
+'subagent/external-start': NativeExternalSubagentStartedEvent
+```
+
+类型：[NativeExternalSubagentStartedEvent](subsystems/subagent.zh.md)
+
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:138`](../Engine/subagent/native-subagent/src/external-driver.ts)
+
 <a id="subagentmodel-selection-policy--log-only"></a>
 
 #### `subagent/model-selection-policy` — 仅日志
