@@ -69,10 +69,10 @@ describe('model-driven dsh-tools generation', () => {
       expect(request?.throws).toEqual(expect.arrayContaining([
         'When the Session has no open turn or either audit append fails before commit.',
       ]))
-      expect(result.referencedTypes).toEqual(expect.arrayContaining([
-        expect.objectContaining({ name: 'ApprovalRequest', declaration: expect.stringContaining('interface ApprovalRequest') }),
-        expect.objectContaining({ name: 'Agent', declaration: expect.stringContaining('interface Agent') }),
-      ]))
+      const approvalRequest = result.referencedTypes.find(type => type.name === 'ApprovalRequest')
+      const agentType = result.referencedTypes.find(type => type.name === 'Agent')
+      expect(approvalRequest?.declaration).toContain('export interface ApprovalRequest<AgentOwner>')
+      expect(agentType?.declaration).toContain('export interface Agent')
     } finally { await ctx.fiber.dispose() }
   })
 
