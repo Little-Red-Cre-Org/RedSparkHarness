@@ -89,6 +89,7 @@ kind: "package-reference"
 
 - 同一 Cordis 组合必须包含所选适配器对应的 Engine 服务；本包不会提供该服务。
 - 本包只适配 Settings 注册；选中的 Settings Provider 负责存储与持久化。
+- 本桥接包不持有共享可变状态：Cordis effect 负责绑定与清理，Engine binding 负责值校验与回退，Settings 提供方负责持久化，因此不发布 invariant companion。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -118,6 +118,7 @@
     { "path": "./rsh/Programs/Web/api/session-controller/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/api/workspace-controller/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/api/remotes/tsconfig.client.json" },
+    { "path": "./rsh/Core/settings/settings-definition/tsconfig.client.json" },
     { "path": "./rsh/Modules/Official/extensions/cordis-client-runner" },
     { "path": "./rsh/Modules/Official/extensions/ui-cordis" },
     { "path": "./rsh/Tests/test-support/client-runtime" },

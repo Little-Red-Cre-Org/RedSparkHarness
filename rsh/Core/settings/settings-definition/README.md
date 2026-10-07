@@ -1,6 +1,6 @@
 ---
 description: "Shared Settings interfaces for providers, APIs, and consumers, including a Cordis-free Native service definition."
-kind: "package-library"
+kind: "package-reference"
 ---
 
 # @deepseek-ai/dsh-settings-definition
@@ -67,13 +67,26 @@ The root export defines the provider-neutral Settings service and registration s
 <a id="model-experience"></a>
 ## Model Experience
 
-This package defines types only and has no direct model-visible behavior. Providers and consumers decide whether a setting changes a model request.
+### Provider-owned Settings values
+
+#### What the model sees
+
+`SettingsNamespaceView` and `NativeSettingsDescriptor` describe configuration surfaces; these declarations add no content to a model request. A Settings value affects a request only when its provider or consuming plugin explicitly reads it and applies it; that consumer owns the model-visible contract.
+
+#### Token effect
+
+None from these declarations. A consumer determines whether a configured value changes request content or token use.
+
+#### KV Cache effect
+
+None from this package. A consumer that changes prompt content determines whether that change affects its provider's cache key.
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
 - **No provider implementation** — importing these declarations does not load storage or make settings available at runtime.
+- No invariant companion is published because this package exports service contracts only; Settings providers own persistence and runtime behavior.
 
 <a id="dev-note"></a>
 ### Dev Note

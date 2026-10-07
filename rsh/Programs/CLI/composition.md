@@ -38,6 +38,8 @@ flowchart LR
   cfg --> plugin_dsh_base_plugin_package_inventory_deepseek
   plugin_dsh_base_agent_default_model["agent-default-model<br/>@deepseek-ai/dsh-agent-default-model"]
   cfg --> plugin_dsh_base_agent_default_model
+  plugin_dsh_base_agent_default_model_settings["agent-default-model-settings<br/>@deepseek-ai/dsh-compat-settings-adapters/agent-default-model"]
+  cfg --> plugin_dsh_base_agent_default_model_settings
   plugin_dsh_base_jobs["jobs<br/>@deepseek-ai/dsh-jobs-local"]
   cfg --> plugin_dsh_base_jobs
   plugin_dsh_base_llm_retry["llm-retry<br/>@deepseek-ai/dsh-llm-retry"]
@@ -176,6 +178,8 @@ flowchart LR
   cfg --> plugin_dsh_base_system_prompt
   plugin_dsh_base_agent_loop["agent-loop<br/>@deepseek-ai/dsh-agent-loop"]
   cfg --> plugin_dsh_base_agent_loop
+  plugin_dsh_base_agent_loop_settings["agent-loop-settings<br/>@deepseek-ai/dsh-compat-settings-adapters/agent-loop"]
+  cfg --> plugin_dsh_base_agent_loop_settings
   plugin_dsh_base_fs_sandbox["fs-sandbox<br/>@deepseek-ai/dsh-fs-sandbox/runtime"]
   cfg --> plugin_dsh_base_fs_sandbox
   plugin_dsh_base_llm_deepseek["llm-deepseek<br/>@deepseek-ai/dsh-llm-deepseek"]
@@ -199,6 +203,7 @@ flowchart LR
 | `agent` | `@deepseek-ai/dsh-agent` |
 | `plugin-package-inventory-deepseek` | `@deepseek-ai/dsh-plugin-package-inventory-deepseek` |
 | `agent-default-model` | `@deepseek-ai/dsh-agent-default-model` |
+| `agent-default-model-settings` | `@deepseek-ai/dsh-compat-settings-adapters/agent-default-model` |
 | `jobs` | `@deepseek-ai/dsh-jobs-local` |
 | `llm-retry` | `@deepseek-ai/dsh-llm-retry` |
 | `settings` | `@deepseek-ai/dsh-settings-file` |
@@ -268,6 +273,7 @@ flowchart LR
 | `tools` | `@deepseek-ai/dsh-tools` |
 | `system-prompt` | `@deepseek-ai/dsh-system-prompt` |
 | `agent-loop` | `@deepseek-ai/dsh-agent-loop` |
+| `agent-loop-settings` | `@deepseek-ai/dsh-compat-settings-adapters/agent-loop` |
 | `fs-sandbox` | `@deepseek-ai/dsh-fs-sandbox/runtime` |
 | `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` |
 

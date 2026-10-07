@@ -3671,6 +3671,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-session-snapshot` ([`rsh/Tests/test-support/session-snapshot/src/index.ts`](../Tests/test-support/session-snapshot/src/index.ts))
 - `@deepseek-ai/dsh-session-telemetry` ([`rsh/Engine/session/session-telemetry/src/index.ts`](../Engine/session/session-telemetry/src/index.ts))
 - `@deepseek-ai/dsh-session-title-llm` ([`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts))
+- `@deepseek-ai/dsh-settings-definition` ([`rsh/Core/settings/settings-definition/src/index.ts`](../Core/settings/settings-definition/src/index.ts))
 - `@deepseek-ai/dsh-shell-process-local` ([`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts))
 - `@deepseek-ai/dsh-shell-sandbox-core` ([`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts))
 - `@deepseek-ai/dsh-subagent-in-process-driver` ([`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts))

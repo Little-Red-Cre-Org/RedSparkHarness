@@ -1,6 +1,6 @@
 ---
 description: "供设置提供方、API 与消费方共用的 Settings 接口，包含不依赖 Cordis 的 Native 服务定义。"
-kind: "package-library"
+kind: "package-reference"
 ---
 
 # @deepseek-ai/dsh-settings-definition
@@ -67,13 +67,26 @@ import type { NativeSettingsService } from '@deepseek-ai/dsh-settings-definition
 <a id="model-experience"></a>
 ## 模型体验
 
-本包只定义类型，不直接产生模型可见行为。设置是否改变模型请求由提供方与消费方决定。
+### 提供方拥有的 Settings 值
+
+#### What the model sees
+
+`SettingsNamespaceView` 和 `NativeSettingsDescriptor` 用于描述配置界面；这些声明不会向模型请求添加内容。只有提供方或消费插件显式读取并应用某个 Settings 值时，它才会影响请求；该消费方负责说明模型可见约定。
+
+#### Token effect
+
+这些声明本身不产生影响。配置值是否改变请求内容或 Token 用量由消费方决定。
+
+#### KV Cache effect
+
+本包本身不产生影响。消费方若更改提示内容，则由其决定该变化是否影响提供方的缓存键。
 
 ## 已知限制与延期工作
 
 <a id="known-limitations-and-deferred-work"></a>
 
 - **不包含提供方实现**——导入这些声明不会加载存储，也不会在运行时提供设置服务。
+- 本包只导出服务约定，因此不发布 invariant companion；Settings 提供方负责持久化和运行时行为。
 
 <a id="dev-note"></a>
 ### 开发备注

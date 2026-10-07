@@ -89,6 +89,7 @@ No request content is added or reordered.
 
 - These adapters require a matching Engine service in the same Cordis composition; they do not provide one.
 - The package adapts Settings registration only; the selected Settings provider owns storage and persistence.
+- No invariant companion is published because the adapters hold no shared mutable state: Cordis effects own attachment and cleanup, Engine bindings own value validation and fallback, and the Settings provider owns persistence.
 
 <a id="dev-note"></a>
 ### Dev Note

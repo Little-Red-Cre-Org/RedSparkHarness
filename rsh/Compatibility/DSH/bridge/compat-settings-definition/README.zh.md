@@ -66,6 +66,7 @@ import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 
 - **仅限 Cordis**——本包描述 `Context.settings`；Native 消费方改用 `dsh-settings-definition`。
 - **没有运行时提供方**——这些声明不会挂载或存储 Settings 服务。
+- 本包只添加 Cordis 编译期声明，因此不发布 invariant companion；运行时行为和持久化由 Settings 提供方负责。
 
 <a id="dev-note"></a>
 ### 开发备注

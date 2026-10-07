@@ -66,6 +66,7 @@ The root export extends Cordis `Context` with `CordisSettingsService`, which bui
 
 - **Cordis only** — this package describes `Context.settings`; Native consumers use `dsh-settings-definition` instead.
 - **No runtime provider** — declarations do not mount or store a Settings service.
+- No invariant companion is published because this package adds compile-time Cordis declarations only; Settings providers own runtime behavior and persistence.
 
 <a id="dev-note"></a>
 ### Dev Note
