@@ -8,7 +8,7 @@ import z from '@deepseek-ai/schemastery'
 import { SHELL_SETTINGS_NAMESPACE, ShellExecutor } from '@deepseek-ai/dsh-shell'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-subprocess'
-import type {} from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 import { LocalBashController, assertServiceableBashConfig, resolveConfig } from './controller.ts'
 import type { Config, ResolvedConfig } from './controller.ts'
 

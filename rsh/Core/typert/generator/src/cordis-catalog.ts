@@ -122,6 +122,8 @@ export interface CordisCatalogPolicy {
   readonly runtimeServices?: readonly ServiceEntry[]
   /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
   readonly runtimeServiceExclusions?: ReadonlySet<string>
+  /** Registered source packages whose declarations extend a projected Service. */
+  readonly serviceDefinitionPackages?: readonly string[]
   /** Manually curated framework events inherited by every plugin. */
   readonly inheritedEvents: readonly InheritedEntry[]
   /** Manually curated framework context members inherited by every plugin. */
@@ -290,8 +292,7 @@ export class CordisCatalogProjector {
         violations.push(`service ctx.${service.key} (${source}): ${declaration.kind} ${declaration.name} has no JSDoc.`)
       }
       const methods: ServiceMethodEntry[] = []
-      for (const memberId of service.members) {
-        const member = this.renderer.member(memberId)
+      for (const member of this.serviceMembers(declaration, service.members)) {
         if (member.name.startsWith('[')) continue
         const inherited = /@inheritdoc\b/u.test(member.jsDoc ?? '')
           ? this.inheritedServiceMember(declaration, member, new Set()) : undefined
@@ -330,6 +331,28 @@ export class CordisCatalogProjector {
     reportViolations('gen-cordis-catalog', violations)
     reportTypeLinkViolations('gen-cordis-catalog', typeLinkViolations)
     return entries.sort((left, right) => left.key.localeCompare(right.key))
+  }
+
+  private serviceMembers(declaration: TypeDeclarationModel, memberIds: readonly string[],
+    visited = new Set<SymbolId>()): MemberModel[] {
+    if (visited.has(declaration.id)) return []
+    visited.add(declaration.id)
+
+    const members = memberIds.map(memberId => this.renderer.member(memberId))
+    const names = new Set(members.map(member => member.name))
+    for (const baseId of declaration.extends) {
+      const base = this.renderer.node(baseId)
+      if (base.kind !== 'reference' || base.target.kind !== 'declaration') continue
+      const baseDeclaration = this.renderer.declaration(base.target.symbol)
+      const inherited = this.serviceMembers(baseDeclaration, baseDeclaration.members.map(member => member.id), visited)
+      const inheritedNames = new Set(inherited.map(member => member.name))
+      for (const name of inheritedNames) {
+        if (names.has(name)) continue
+        members.push(...inherited.filter(member => member.name === name))
+        names.add(name)
+      }
+    }
+    return members
   }
 
   private inheritedServiceMember(owner: TypeDeclarationModel, member: MemberModel,
@@ -393,7 +416,12 @@ export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPoli
     faces: [targetFace],
     checkDiagnostics: false,
     caches,
-  }).discoverPackages()
+  }).discoverPackages(policy.serviceDefinitionPackages)
+  for (const packageName of policy.serviceDefinitionPackages ?? []) {
+    if (!discovery.some(candidate => candidate.package === packageName && candidate.faces.includes(targetFace))) {
+      throw new Error(`gen-cordis-catalog: service definition package '${packageName}' is not registered for ${targetFace}`)
+    }
+  }
   const packages = discovery.filter(candidate => candidate.faces.includes(targetFace))
     .map(candidate => candidate.package)
   const workspace = new WorkspaceAnalyzer({

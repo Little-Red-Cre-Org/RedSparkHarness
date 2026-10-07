@@ -9,141 +9,44 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type z from '@deepseek-ai/schemastery'
 import { deepEqualJson, deepFreeze } from '@deepseek-ai/dsh-util-values'
+import type {
+  SettingsApplies,
+  SettingsDescribeOptions,
+  SettingsDescriptor,
+  SettingsPathOp,
+  SettingsNamespaceInput,
+  SettingsScope,
+} from '@deepseek-ai/dsh-settings-definition'
+import type { SettingsNamespace, SettingsUpdateSource } from '@deepseek-ai/dsh-settings-definition/types'
+import type {
+  CordisSettingsService,
+  SettingsRegisterOptions,
+  SettingsSectionHooks,
+} from '@deepseek-ai/dsh-compat-settings-definition'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type {} from '@deepseek-ai/dsh-compat-settings-definition/events'
 import { redactSecrets } from './redact.ts'
-import type { RedactedSecret } from './redact.ts'
-import type { SettingsNamespace, SettingsUpdateSource } from './types.ts'
+
+export type {
+  SettingsApplies,
+  SettingsDescribeOptions,
+  SettingsDescriptor,
+  SettingsPathOp,
+  SettingsScope,
+} from '@deepseek-ai/dsh-settings-definition'
+export type { SettingsNamespace, SettingsUpdateSource } from '@deepseek-ai/dsh-settings-definition/types'
+export type { SettingsRegisterOptions, SettingsSectionHooks } from '@deepseek-ai/dsh-compat-settings-definition'
 
 export { redactSecrets } from './redact.ts'
 export type { RedactedSecret, RedactedValue } from './redact.ts'
-export type { SettingsNamespace, SettingsUpdateSource } from './types.ts'
 
 const NAMESPACE_PATTERN = /^[a-z][a-z0-9-]*$/
-type LowercaseLetter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
-  | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
-type DecimalDigit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-type NamespaceCharacter = LowercaseLetter | DecimalDigit | '-'
-type ValidNamespaceTail<Value extends string> = Value extends ''
-  ? true
-  : Value extends `${NamespaceCharacter}${infer Rest}`
-    ? ValidNamespaceTail<Rest>
-    : false
-type SettingsNamespaceInput<Value extends string> = Value extends SettingsNamespace
-  ? Value
-  : string extends Value
-    ? string
-    : Value extends `${LowercaseLetter}${infer Rest}`
-      ? ValidNamespaceTail<Rest> extends true ? Value : never
-      : never
 
 function parseSettingsNamespace(value: string): SettingsNamespace {
   if (!NAMESPACE_PATTERN.test(value)) {
     throw new TypeError(`settings namespace "${value}" must match ${String(NAMESPACE_PATTERN)}`)
   }
   return value as SettingsNamespace
-}
-
-/** When a namespace's changes take effect for its owner. */
-export type SettingsApplies = 'live' | 'restart'
-
-/** Registration options beyond the namespace schema. */
-export interface SettingsRegisterOptions<T> {
-  /** Composition-layer values resolved below the user layer (entry-config subset). */
-  base?: Partial<T>
-  /** Owner's effect timing, surfaced to configuration UIs; defaults to `live`. */
-  applies?: SettingsApplies
-  /**
-   * Reject a resolved section the owner could not act on, for constraints its
-   * schema cannot express — a cross-field requirement, or one field's validity
-   * depending on another's. Throwing here refuses the *write* that produced the
-   * value, so a caller learns at `update`/`replace`/`mutate` instead of storing
-   * something that would silently disable the owner.
-   *
-   * Kept separate from the schema because the schema is also what a
-   * configuration surface renders and what an absent section resolves through;
-   * folding a cross-field check into it would change both.
-   *
-   * Once the owner is registered, a stored section that fails this keeps the
-   * namespace's last good value and warns, exactly as a schema failure does,
-   * so an externally edited document cannot strand a running owner. At
-   * registration there is no last good value yet, so a stored section that
-   * already fails rejects the registration itself — again exactly as a schema
-   * failure does.
-   * @param value - the resolved section, schema-valid by construction.
-   */
-  validate?: (value: T) => void
-}
-
-/** One registered namespace as surfaced to configuration UIs. */
-export interface SettingsDescriptor {
-  // TODO(settings-namespace-vocabulary): Rename `ns` to `namespace` across the
-  // public API, provider contract, implementations, tests, and consumers.
-  /** The registered namespace. */
-  ns: SettingsNamespace
-  /** Serialized schemastery schema (`schema.toJSON()`). */
-  schema: unknown
-  /** Current resolved value. */
-  value: unknown
-  /**
-   * Monotonic revision of the raw user section this descriptor was read at.
-   * Send it back as `expectedRevision` on a write to refuse a stale one.
-   */
-  revision: number
-  /** Registrant's composition `base` layer (detached), when one was declared. */
-  base?: unknown
-  /**
-   * Raw user section from the stored document (detached), when one exists and
-   * is well-formed; a field's presence here is what marks it user-overridden.
-   */
-  user?: unknown
-  /** Owner's declared effect timing. */
-  applies: SettingsApplies
-  /** Schema-declared secret positions; present only under `redactSecrets`. */
-  secrets?: RedactedSecret[]
-}
-
-/** Options for {@link SettingsProvider.describe}. */
-export interface SettingsDescribeOptions {
-  /**
-   * Strip `role('secret')` fields from `value`/`base`/`user` and enumerate
-   * them in each descriptor's `secrets`. Every wire surface MUST pass this;
-   * the verbatim default exists for same-process configuration UIs only.
-   */
-  redactSecrets?: boolean
-}
-
-/** Owner-facing handle for one registered namespace. */
-export interface SettingsScope<T> {
-  /** Current resolved value: schema defaults, then `base`, then the user layer. */
-  get(): T
-  /**
-   * Observe committed changes to this namespace's resolved value. Invocations
-   * of one callback run asynchronously, one at a time, in commit order; a
-   * rejection is contained and logged like a sync throw. After the disposer
-   * returns, no further invocation starts — one already queued is skipped;
-   * one already started still settles, and service disposal waits for it.
-   * @param callback - invoked after each commit with the next and previous values.
-   * @returns the disposer removing this observer.
-   */
-  watch(callback: (next: T, prev: T) => void | Promise<void>): () => void
-  /**
-   * Merge a partial patch into this namespace's user layer and persist it.
-   * @param patch - plain-object patch over the user section; JSON-compatible data
-   * only (non-JSON values reject with their path before anything persists).
-   */
-  update(patch: object): Promise<void>
-  /**
-   * Replace this namespace's user section wholesale; absent keys re-inherit
-   * the composition `base` and schema defaults (`replace({})` resets all).
-   * @param section - the complete next user section; JSON-compatible data only,
-   * as for {@link update}.
-   */
-  replace(section: object): Promise<void>
-}
-
-declare module '@deepseek-ai/cordis' {
-  interface Context {
-    settings: SettingsProvider
-  }
 }
 
 /**
@@ -178,18 +81,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   const proto: unknown = Object.getPrototypeOf(value)
   return proto === Object.prototype || proto === null
 }
-
-/**
- * One path-addressed edit to a namespace's user section. Path mutation exists
- * for a caller holding an INCOMPLETE view of the section — a configuration UI
- * reads the redacted descriptor, which by construction never received the
- * `role('secret')` fields. Such a caller can name the field it means without
- * restating the section: a wholesale `replace` rebuilt from a redacted
- * document silently deletes every secret the wire never returned.
- */
-export type SettingsPathOp =
-  | { op: 'set'; path: readonly string[]; value: unknown }
-  | { op: 'unset'; path: readonly string[] }
 
 /** Apply one path op to a detached section, returning the next section. */
 function applyPathOp(section: Record<string, unknown>, op: SettingsPathOp): Record<string, unknown> {
@@ -330,7 +221,7 @@ interface SettingsRegistration {
  * the base class owns namespace registration, resolution, validation, change
  * detection, and the `settings/updated` commit event.
  */
-export abstract class SettingsProvider extends Service {
+export abstract class SettingsProvider extends Service implements CordisSettingsService {
   private readonly registrations = new Map<SettingsNamespace, SettingsRegistration>()
   /** Latest published raw document; empty until the provider's first publish. */
   private document: Record<string, unknown> = {}
@@ -866,28 +757,6 @@ const FIBER_UNLOADING = 5
 function isUnloading(ctx: Context): boolean {
   const state: number = ctx.fiber.state
   return state === FIBER_UNLOADING || state === FIBER_DISPOSED
-}
-
-/** Hooks a consumer hands to {@link SettingsProvider.installSection}. */
-export interface SettingsSectionHooks<T> {
-  /**
-   * Receive the active configuration source: the resolved settings scope
-   * while one is attached, the composition entry otherwise. Called before
-   * the matching `onChange` at attach and at detach.
-   * @param current - thunk returning the currently authoritative value.
-   */
-  setSource(current: () => T): void
-  /**
-   * Re-judge anything derived from the source — registration-level facts,
-   * memoized resolutions — after an attach, a detach, or a committed change.
-   */
-  onChange(): void
-  /**
-   * Reject a resolved section this consumer could not act on, for constraints
-   * its schema cannot express. See {@link SettingsRegisterOptions.validate}.
-   * @param value - the resolved section, schema-valid by construction.
-   */
-  validate?: (value: T) => void
 }
 
 export default SettingsProvider

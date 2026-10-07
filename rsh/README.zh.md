@@ -38,8 +38,9 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`identity/`](Core/identity/README.zh.md) | 共享匿名身份 |
 | [`llm/`](Engine/llm/README.zh.md) | LLM（大语言模型）能力：Engine 服务与[官方提供方包](Modules/Official/llm/README.zh.md) |
 | [`e2b/`](Modules/Official/e2b/README.zh.md) | E2B 远程运行时提供方 |
-| [`subprocess/`](Core/subprocess/README.zh.md) | 子进程能力系列：Service Definition + 本地进程树提供方 |
-| [`shell/`](Modules/Official/shell/README.zh.md) | Bash 能力系列：执行器 seam、本地实现、面向模型的工具 |
+| [`subprocess/`](Core/subprocess/README.zh.md) | 子进程 API 与进程树提供方 |
+| [`core/settings/`](Core/settings/README.zh.md) | Core Settings 定义 |
+| [`shell/`](Modules/Official/shell/README.zh.md) | Bash 执行器、本地实现与工具 |
 | [`terminal/`](Modules/Official/terminal/README.zh.md) | 持久 PTY 能力系列：限定所有者范围的会话、本地实现、面向模型的工具 |
 | [`code-runtime/`](Modules/Official/code-runtime/README.zh.md) | 代码执行能力系列：Service Definition + worker 线程提供方 + PTC mode Consumer |
 | [`sandbox/`](Modules/Official/sandbox/README.zh.md) | 进程限制 seam；bwrap、Landlock、Seatbelt 后端 |

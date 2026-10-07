@@ -23,7 +23,6 @@ import type {
   TurnBoundaryProjection,
 } from '@deepseek-ai/dsh-agent'
 import { errorChain, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-settings'
 import { interruptedTurnClosers, SessionLogOffset, SessionPreparation, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { Session, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-system-prompt'
@@ -34,6 +33,7 @@ import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persis
 import type { SessionHandle, SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import { ReactLoopAgent } from './agent.ts'
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts'
+import { retainSettingsOwner } from './settings-owner.ts'
 
 /** Fiber states that cannot own or serve a new lifecycle. */
 const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
@@ -384,6 +384,8 @@ export class AgentLoop extends Service implements AgentFactory {
   /** Validated configuration owned by the agent-loop service. */
   readonly config: ResolvedConfig
   private readonly ownership: FactoryOwnership
+  private readonly settingsEntry: AgentLoopSettings
+  private settingsSource: () => AgentLoopSettings
   /** Plain holder prevents Cordis from re-tracing the factory's dependency context through a caller shadow. */
   private readonly runtime: { ctx: Context }
 
@@ -393,7 +395,16 @@ export class AgentLoop extends Service implements AgentFactory {
     const entry: AgentLoopSettings = {
       maxParallelToolCalls: resolveMaxParallelToolCalls(config.maxParallelToolCalls),
     }
-    let source: () => AgentLoopSettings = () => entry
+    this.settingsEntry = entry
+    this.settingsSource = () => entry
+    retainSettingsOwner(this, ctx, {
+      entry: { ...entry },
+      bindSource: (source?: () => AgentLoopSettings) => {
+        this.settingsSource = source ?? (() => this.settingsEntry)
+      },
+      validate: (value: AgentLoopSettings) => resolveMaxParallelToolCalls(value.maxParallelToolCalls),
+    })
+    const readMaxParallelToolCalls = () => this.settingsSource().maxParallelToolCalls
     this.config = {
       ...config,
       agents: applyLauncherIdentities(config.agents, ctx.get(CONFIGURED_AGENT_IDENTITIES_KEY)),
@@ -401,22 +412,9 @@ export class AgentLoop extends Service implements AgentFactory {
       // this at the start of each group, so a committed change caps the next
       // group without disturbing the one in flight.
       get maxParallelToolCalls() {
-        return source().maxParallelToolCalls
+        return readMaxParallelToolCalls()
       },
     }
-    ctx.inject(['settings'], (settingsCtx) => {
-      settingsCtx.settings.installSection(ctx, AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, entry, {
-        // The schema admits any integer above zero; `resolveMaxParallelToolCalls`
-        // owns the whole rule, so refusing here keeps the running scheduler on
-        // its last good cap instead of failing at the next tool group.
-        validate: value => void resolveMaxParallelToolCalls(value.maxParallelToolCalls),
-        setSource: (current) => {
-          source = current
-        },
-        // Nothing is derived from the cap: the getter above is the only reader.
-        onChange: () => {},
-      })
-    })
     validateConfiguredAgents(this.config.agents)
     // Register only after every config validation above has passed, so a
     // rejected constructor leaves no projection unit behind.

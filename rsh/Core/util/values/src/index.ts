@@ -1,7 +1,42 @@
-/** Duplicate-install-safe JSON and immutable-value helpers. @module @deepseek-ai/dsh-util-values */
+/** Duplicate-install-safe value helpers. @module @deepseek-ai/dsh-util-values */
 
 /** A value that round-trips through JSON without loss. */
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
+
+/**
+ * Attach a caller-owned value as a non-enumerable, immutable symbol property.
+ * @param target - object that owns the value.
+ * @param key - caller-owned symbol key.
+ * @param value - value to retain on the target.
+ * @returns nothing; the property cannot be replaced or removed.
+ */
+export function setSymbolValue(target: object, key: symbol, value: unknown): void {
+  Object.defineProperty(target, key, { value })
+}
+
+/**
+ * Read a value previously attached under a symbol key.
+ * @param target - object carrying the value.
+ * @param key - symbol used to attach the value.
+ * @returns the attached value, or `undefined` when no value is present.
+ */
+export function getSymbolValue(target: object, key: symbol): unknown {
+  return Reflect.get(target, key) as unknown
+}
+
+/**
+ * Read a required value previously attached under a symbol key.
+ * @param target - object carrying the value.
+ * @param key - symbol used to attach the value.
+ * @param message - error message used when the value is missing.
+ * @returns the attached value.
+ * @throws when the target has no value under the key.
+ */
+export function requireSymbolValue(target: object, key: symbol, message: string): unknown {
+  const value = getSymbolValue(target, key)
+  if (value === undefined) throw new Error(message)
+  return value
+}
 
 /**
  * Mark an unreachable closed-union branch.

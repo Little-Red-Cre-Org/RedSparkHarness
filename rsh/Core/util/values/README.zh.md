@@ -1,5 +1,5 @@
 ---
-description: "供运行时包使用的无损 JSON 校验、分离式快照、深度冻结、结构相等与穷尽联合类型辅助函数。"
+description: "供运行时包使用的无损 JSON 校验、分离式快照、symbol 键值、深度冻结、结构相等与穷尽联合类型辅助函数。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-util-values` 为运行时包提供统一的无损 JSON 值、不可变对象图、JSON 结构相等和封闭联合类型穷尽失败实现。调用方可以校验不受信任的值、创建分离的 JSON 快照、冻结待发布值、比较 JSON 兼容数据，或终止不可达分支，而无需导入某个能力包。这些 helper 不持有共享注册表、constructor identity 或可变模块状态。
+`dsh-util-values` 为运行时包提供统一的 symbol 键私有值、无损 JSON 值、不可变对象图、JSON 结构相等和封闭联合类型穷尽失败实现。调用方可以在所属对象上保留值、校验不受信任的 JSON、创建分离快照、冻结待发布值、比较 JSON 兼容数据，或终止不可达分支，而无需导入某个能力包。值保存在调用方的目标对象上；本包不持有共享注册表、constructor identity 或可变模块状态。
 
 ## 目录
 
@@ -23,6 +23,19 @@ kind: "package-library"
 
 <a id="use-this-package"></a>
 ## 使用本包
+
+### 保留私有值
+
+当包专属的 `Symbol.for()` 键必须跨重复安装的包副本保持一致时，使用 `setSymbolValue()` 和 `getSymbolValue()`。当调用方需要在缺值时立即失败，可使用 `requireSymbolValue()`。值保存在调用方对象的不可枚举、不可写属性中；本包不维护注册表。
+
+```ts
+import { getSymbolValue, setSymbolValue } from '@deepseek-ai/dsh-util-values'
+
+const key = Symbol.for('@deepseek-ai/example/private-value')
+const target = {}
+setSymbolValue(target, key, { value: 1 })
+const retained = getSymbolValue(target, key) as { value: number } | undefined
+```
 
 ### 校验 JSON 数据或创建快照
 
@@ -59,7 +72,8 @@ JSON 校验器使用显式工作栈，并只跟踪当前祖先链，因此深层
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | JSON 值类型、校验与快照遍历、结构相等、深度冻结和穷尽联合类型失败 |
+| [`src/index.ts`](src/index.ts) | symbol 键值访问、JSON 值类型、校验与快照遍历、结构相等、深度冻结和穷尽联合类型失败 |
+| [`tests/symbol-value.spec.ts`](tests/symbol-value.spec.ts) | 不可枚举值保留及键与目标对象隔离 |
 | — | 不发布运行时不变量伴生入口；这些值操作没有共享运行时状态，其代数行为由单元测试覆盖。 |
 
 </details>

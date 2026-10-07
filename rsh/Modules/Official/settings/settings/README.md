@@ -43,7 +43,7 @@ The service stores nothing by itself; mount a provider such as the shipped file-
 
 `ctx.settings` appears once the provider is live. The provider README owns the full configuration surface; the generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) lists every accepted field.
 
-Native Hosts use the Cordis-free `./native` definition: a Provider loads the document before Consumers register namespace resolvers. Each owner reads frozen values, writes only its own user section, and observes valid committed changes. Native watcher invocations run asynchronously in commit order per callback; synchronous throws and asynchronous rejections are logged without failing a write. A watcher disposer skips queued invocations, while Host teardown waits for started callbacks to settle. A registration is exposed to a native configuration surface only when its owner supplies `presentation` metadata; the native descriptor strips schema-declared secret values and all schema defaults, and rejects presentation schemas whose secret fields cannot be reached through `object`, `dict` or `array`. Schema fields marked `credential-ref` provide the references whose values belong in Credentials.
+Native Hosts use the Cordis-free `./native` definition from [dsh-settings-definition](../../../../Core/settings/settings-definition/README.md): a Provider loads the document before Consumers register namespace resolvers. Each owner reads frozen values, writes only its own user section, and observes valid committed changes. Native watcher invocations run asynchronously in commit order per callback; synchronous throws and asynchronous rejections are logged without failing a write. A watcher disposer skips queued invocations, while Host teardown waits for started callbacks to settle. A registration is exposed to a native configuration surface only when its owner supplies `presentation` metadata; the native descriptor strips schema-declared secret values and all schema defaults, and rejects presentation schemas whose secret fields cannot be reached through `object`, `dict` or `array`. Schema fields marked `credential-ref` provide the references whose values belong in Credentials. The Cordis compatibility face uses declaration-only [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.md) for `Context.settings` and registration options.
 
 ### Registering a namespace
 
@@ -99,11 +99,13 @@ This section explains the design decisions behind the service and points at the 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition: namespace validation, registration, resolution, write queue, describe/redaction, events, `installSection` |
-| [`src/native.ts`](src/native.ts) | Native definition: namespace registration, revisioned writes, reload and owner scopes |
+| [`src/index.ts`](src/index.ts) | Cordis Provider: namespace validation, registration, resolution, write queue, describe/redaction, and events |
+| [`src/native.ts`](src/native.ts) | Native Provider: namespace registration, revisioned writes, reload, and owner scopes |
 | [`src/redact.ts`](src/redact.ts) | `redactSecrets` walker: strip `role('secret')` fields and enumerate their slots |
-| [`src/types.ts`](src/types.ts) | Client-safe type surface: event declarations, `SettingsNamespace`, `SettingsUpdateSource` |
+| [`src/types.ts`](src/types.ts) | Re-exports the shared Client-safe Settings types |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `settings/updated` fires only for a registered namespace, only on a resolved-value change, with the authoritative value |
+
+The shared service declarations are in [dsh-settings-definition](../../../../Core/settings/settings-definition/README.md); Cordis Context and event augmentation are in [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.md).
 
 ### Resolution and write paths
 
@@ -115,7 +117,7 @@ Each write snapshots its input at call time (detaching and validating JSON-shape
 
 ### Client-safe types
 
-The `./types` subpath export holds the event declarations together with the `SettingsNamespace` and `SettingsUpdateSource` types their signatures name, and the package root re-exports those types. A consumer outside the Host compilation face reads the exact signature the Host emits instead of restating it.
+The `./types` subpath export and package root re-export the shared namespace and wire-value types. Cordis event declarations are owned by the compatibility definition package. A consumer outside the Host compilation face reads the exact signature the Host emits instead of restating it.
 
 </details>
 

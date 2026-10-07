@@ -80,6 +80,7 @@
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
@@ -93,6 +94,7 @@
     "bundle": "tsdown"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "@deepseek-ai/dsh-native-web-assets": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",

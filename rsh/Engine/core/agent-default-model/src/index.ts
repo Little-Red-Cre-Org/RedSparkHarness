@@ -8,7 +8,8 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { ModelSelection } from '@deepseek-ai/dsh-agent'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-settings'
+import type { SettingsService } from '@deepseek-ai/dsh-settings-definition'
+import { retainSettingsOwner } from './settings-owner.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -67,19 +68,23 @@ export class AgentDefaultModelConfig extends Service {
     model: z.string().required(),
   })
 
+  private readonly entry: AgentDefaultModelSettings
   private source: () => AgentDefaultModelSettings
+  private settingsService: SettingsService | undefined
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'agentDefaultModel')
     const entry: AgentDefaultModelSettings = { provider: config.provider, model: config.model }
+    this.entry = entry
     this.source = () => entry
-    ctx.inject(['settings'], (settingsCtx) => {
-      settingsCtx.settings.installSection(ctx, AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE, AGENT_DEFAULT_MODEL_SETTINGS_SCHEMA, entry, {
-        setSource: (current) => { this.source = current },
-        // Every consumer reads through currentSelection(), so no registration-level fact
-        // needs rebuilding when the settings document changes.
-        onChange: () => {},
-      })
+    retainSettingsOwner(this, ctx, {
+      entry: { ...entry },
+      bindSource: (source?: () => AgentDefaultModelSettings) => {
+        this.source = source ?? (() => this.entry)
+      },
+      bindWriter: (service?: SettingsService) => {
+        this.settingsService = service
+      },
     })
   }
 
@@ -98,7 +103,7 @@ export class AgentDefaultModelConfig extends Service {
    * @returns fulfillment after the optional settings write settles.
    */
   async saveSelection(next: ModelSelection): Promise<void> {
-    await this.ctx.get('settings')?.replace(AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE, {
+    await this.settingsService?.replace(AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE, {
       provider: next.provider,
       model: next.model,
       ...next.reasoningEffort === undefined ? {} : { reasoningEffort: String(next.reasoningEffort) },

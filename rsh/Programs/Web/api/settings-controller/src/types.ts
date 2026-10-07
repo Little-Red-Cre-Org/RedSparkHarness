@@ -1,8 +1,8 @@
 /**
  * Browser-safe failure vocabulary of the configuration surfaces this package
  * serves. The redacted views themselves live with their seam in
- * `@deepseek-ai/dsh-settings/types`, whose Cordis event declarations already
- * register that file for the Client compilation face.
+ * `@deepseek-ai/dsh-settings-definition/types`, which carries the Client-safe
+ * Settings values without importing the Cordis compatibility face.
  *
  * @module @deepseek-ai/dsh-api-settings-controller/types
  */

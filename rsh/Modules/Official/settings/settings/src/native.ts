@@ -2,73 +2,29 @@
 import { deepEqualJson, deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
 import type z from '@deepseek-ai/schemastery'
 import { redactSecrets } from './redact.ts'
-import type {} from '@deepseek-ai/dsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { settings: NativeSettings }
-}
+import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import type {
+  NativeSettingsDescriptor,
+  NativeSettingsPathOp,
+  NativeSettingsPresentation,
+  NativeSettingsScope,
+  NativeSettingsSection,
+  NativeSettingsService,
+  NativeSettingsStorage,
+  SettingsNamespaceInput,
+} from '@deepseek-ai/dsh-settings-definition/native'
 
-/** One namespace's raw user overrides. */
-export type NativeSettingsSection = Record<string, unknown>
-
-/** Storage commits a complete document against its latest durable revision. */
-export interface NativeSettingsStorage {
-  load(): Promise<NativeSettingsSection>
-  persist(update: (document: NativeSettingsSection) => NativeSettingsSection): Promise<NativeSettingsSection>
-}
-
-/** One redacted, schema-backed registration exposed to a native settings page. */
-export interface NativeSettingsDescriptor {
-  /** Owning Settings namespace. */
-  readonly namespace: string
-  /** Serialized schema used to discover supported fields and credential refs, without default values. */
-  readonly schema: unknown
-  /** Effective resolved values with schema-declared secrets removed. */
-  readonly value: unknown
-  /** Composition base with schema-declared secrets removed. */
-  readonly base: unknown
-  /** Stored user overrides with schema-declared secrets removed. */
-  readonly user: unknown
-  /** When the owner applies committed changes. */
-  readonly applies: 'live' | 'restart'
-  /** Secret paths and whether each hidden value is currently present. */
-  readonly secrets: readonly { readonly path: string[]; readonly set: boolean }[]
-  /** Active values at schema fields marked `credential-ref`. */
-  readonly credentialRefs: readonly string[]
-  /** Revision of the stored user section. */
-  readonly revision: number
-}
-
-/** One path-addressed change to a registered namespace's raw user section. */
-export type NativeSettingsPathOp =
-  /** Set a JSON value at this path. */
-  | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
-  /** Remove the value at this path. */
-  | { readonly op: 'unset'; readonly path: readonly string[] }
-
-/** Optional metadata required before a registration is exposed to configuration UI. */
-export interface NativeSettingsPresentation {
-  /** Live schema whose `toJSON()` form and role metadata describe this registration. */
-  readonly schema: { toJSON(): unknown }
-  /** When the owner applies committed changes; defaults to `live`. */
-  readonly applies?: 'live' | 'restart'
-}
-
-/** A resolved namespace owner, with writes restricted to its own user section. */
-export interface NativeSettingsScope<T> {
-  get(): T
-  readonly revision: number
-  update(patch: NativeSettingsSection, expectedRevision?: number): Promise<void>
-  replace(section: NativeSettingsSection, expectedRevision?: number): Promise<void>
-  /**
-   * Observe committed values in order for this callback. Rejections are logged.
-   * Disposal skips queued invocations and waits for started ones to settle.
-   * @param callback - receives the next and previous resolved values.
-   * @returns a disposer that prevents further invocations from starting.
-   */
-  watch(callback: (next: T, previous: T) => void | Promise<void>): () => void
-  dispose(): void
-}
+export type {
+  NativeSettingsDescriptor,
+  NativeSettingsPathOp,
+  NativeSettingsPresentation,
+  NativeSettingsScope,
+  NativeSettingsSection,
+  NativeSettingsService,
+  NativeSettingsStorage,
+  SettingsNamespaceInput,
+} from '@deepseek-ai/dsh-settings-definition/native'
 
 interface NativeSettingsWatcher<T> {
   callback: (next: T, previous: T) => void | Promise<void>
@@ -99,7 +55,7 @@ export class NativeSettingsConflictError extends Error {
 }
 
 /** Owns namespace resolution, ordered writes and reloads for one native Host. */
-export class NativeSettings {
+export class NativeSettings implements NativeSettingsService {
   private document: NativeSettingsSection = {}
   private readonly registrations = new Map<string, Registration<unknown>>()
   private readonly pendingNotifications = new Set<Promise<void>>()
@@ -125,7 +81,9 @@ export class NativeSettings {
    * @param presentation - optional schema and timing metadata for native configuration surfaces.
    * @returns the owner scope, which must be disposed with its installation.
    */
-  register<T>(namespace: string, base: NativeSettingsSection, resolve: (value: NativeSettingsSection) => T,
+  register<const Namespace extends string, T>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>,
+    base: NativeSettingsSection, resolve: (value: NativeSettingsSection) => T,
     validateWrite?: (next: T, previous: T) => void, presentation?: NativeSettingsPresentation): NativeSettingsScope<T> {
     this.assertReady()
     if (this.closed) throw new Error('settings service is disposed')
@@ -203,7 +161,10 @@ export class NativeSettings {
    * @throws {@link NativeSettingsConflictError} when the revision is stale.
    * @throws {TypeError} when a path creates an array gap or removes an array entry.
    */
-  mutate(namespace: string, ops: readonly NativeSettingsPathOp[], expectedRevision: number): Promise<void> {
+  mutate<const Namespace extends string>(
+    namespace: Namespace & SettingsNamespaceInput<Namespace>,
+    ops: readonly NativeSettingsPathOp[], expectedRevision: number,
+  ): Promise<void> {
     const registration = this.registrations.get(namespace)
     if (registration === undefined) return Promise.reject(new Error(`settings namespace "${namespace}" is not registered`))
     if (registration.presentation === undefined) return Promise.reject(new Error(`settings namespace "${namespace}" is not published for native editing`))

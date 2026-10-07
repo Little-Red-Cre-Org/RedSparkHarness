@@ -247,6 +247,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the standing scope key readers pass as a registry view scope.',
         throws: ['when the preset is unknown or its composition is unusable.'],
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -432,6 +437,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Apply one task mutation and preserve Team rejections as business results.',
         parameters: [{ name: 'agent', description: 'exact live Team member authorizing the mutation.' }, { name: 'request', description: 'task identity, expected revision, action, and action fields.' }],
         returns: 'the committed task or a typed Team rejection.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -620,6 +630,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Decline the prompt currently displayed for one attempt.',
         parameters: [{ name: 'attemptId', description: 'Opaque identifier returned by the stream.' }, { name: 'promptId', description: 'Opaque identifier of the pending prompt.' }],
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -728,6 +743,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Parse and execute a known command without sending it to the model.\n\nA resolved command\'s lifecycle is logged: `command/run` is appended before the handler is invoked and `command/done` after settlement (a thrown or aborted handler settles as `kind: \'error\'`). Both are direct log-only appends — no turn wraps them, and persistence drains them at ordinary checkpoints. Admission misses (syntax or unknown name) log nothing — they never entered a handler. A `command/run` append failure fails the execution loud; a `command/done` append failure on the handler-failure path is contained so the handler\'s own error stays the reported failure.\n\nAttachment admission is enforced here, not in the composer: attachments sent to a command that does not declare `input.attachments`, an absent attachment store, and an exceeded image limit each settle as an error result before the handler runs. Validation rejection starts no attachment writes; a storage failure can leave only unreachable content-addressed objects for deferred collection.',
         parameters: [{ name: 'agent', description: 'exact receiving agent.' }, { name: 'line', description: 'complete slash-command line.' }, { name: 'submittedAttachments', description: 'encoded images and staged file receipts accompanying the line, in submission order; empty for a plain invocation.' }, { name: 'signal', description: 'cancellation signal owned by the UI request.' }],
         returns: 'the settled execution (result + lifecycle pairing id), or `undefined` when syntax or name does not resolve.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -840,6 +860,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'ref', description: 'reference name to remove.' }],
         throws: ['RemoteError when the request is invalid, no provider is mounted, or the provider refuses the write.'],
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -896,6 +921,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one child directory for a Remote caller\'s in-app browser.',
         parameters: [{ name: 'path', description: 'absolute existing parent directory.' }, { name: 'name', description: 'single non-blank path segment.' }],
         returns: 'the created directory\'s absolute path.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -975,6 +1005,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'retirePrompt(agent: Agent, requestId: string): void',
         description: 'Retire every receipt accepted by one removed queue occurrence.',
         parameters: [{ name: 'agent', description: 'receiving Agent.' }, { name: 'requestId', description: 'prompt identity carried by the queue occurrence.' }],
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -1134,6 +1169,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one Goal through the remote boundary.',
         parameters: [{ name: 'agent', description: 'exact live Agent resolved from the wire identity.' }, { name: 'request', description: 'objective, optional round cap and observed Goal reference.' }],
         returns: 'the created Goal identity.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -1324,6 +1364,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'options', description: 'the full request; `options.provider` selects the adapter.' }],
         returns: 'the chunk stream, possibly wrapped by `llm/stream` listeners.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -1367,6 +1412,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Delete one item after checking its version; absence succeeds without an event.',
         parameters: [{ name: 'request', description: 'Session, message, and observed item version.' }],
         returns: 'the stable absent postcondition or an explicit failure.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -1614,6 +1664,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'signal', description: 'cancellation owned by the Remote stream carrier.' }],
         returns: 'one complete baseline followed by live replacement frames.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -1627,6 +1682,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'target Session plus the optional text and category.' }],
         returns: 'the recorded postcondition, or `session-not-found` when no live Session carries the id.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -1639,6 +1699,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'List file and directory candidates for one Agent\'s working directory.',
         parameters: [{ name: 'agent', description: 'target Agent resolved from the Session identity on the wire.' }, { name: 'query', description: 'path text following `@` or `@"`.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'deterministic path-only candidates from the composed provider.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -1921,6 +1986,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'agent', description: 'target agent; references to it are rejected.' }, { name: 'content', description: 'already host-normalized readable message content.' }, { name: 'references', description: 'structured source sessions in mention order.' }, { name: 'signal', description: 'optional cancellation boundary for the active turn.' }],
         returns: 'detached content and optional referenced-session context.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -1994,6 +2064,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'user-invocable skill metadata without loading skill bodies.',
         throws: ['RemoteError when the Session cannot be inspected or no registry can serve it.'],
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -2058,63 +2133,66 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'settings',
-    summary: 'Abstract settings service.',
-    description: 'Abstract settings service. Providers implement raw-document storage (`load`/`persist`) and push external changes through Settings.publish; the base class owns namespace registration, resolution, validation, change detection, and the `settings/updated` commit event.',
+    summary: 'Cordis-facing extension of the framework-neutral Settings service.',
+    description: 'Cordis-facing extension of the framework-neutral Settings service.',
     methods: [
       {
-        signature: 'abstract readonly writable: boolean',
-        description: 'Whether update may persist through this provider.',
+        signature: 'register<const Namespace extends string, T>( namespace: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, options?: SettingsRegisterOptions<T>, ): SettingsScope<T>',
+        description: 'Register a namespace schema and receive its owner scope. The registration is tied to the owner\'s Cordis fiber. Invalid stored data rejects initial registration; a later invalid edit keeps the last good value on reload.',
+        parameters: [{ name: 'namespace', description: 'unique lowercase namespace; duplicates fail loud.' }, { name: 'schema', description: 'schemastery schema resolving the namespace\'s value.' }, { name: 'options', description: 'composition base, effect timing, and owner validation.' }],
+        returns: 'the scope for reads, observation, and updates.',
+      },
+      {
+        signature: 'installSection<const Namespace extends string, T>( owner: Context, namespace: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, entry: T, hooks: SettingsSectionHooks<T>, ): void',
+        description: 'Install a settings section owned by another Cordis plugin.',
+        parameters: [{ name: 'owner', description: 'plugin fiber that receives the registered section.' }, { name: 'namespace', description: 'unique lowercase namespace for the entry.' }, { name: 'schema', description: 'schema resolving the entry and future user edits.' }, { name: 'entry', description: 'composition-layer value used when the provider is absent.' }, { name: 'hooks', description: 'callbacks for current values, changes, and owner validation.' }],
+        returns: 'nothing; the registration is disposed with the owner\'s fiber.',
+      },
+      {
+        signature: 'readonly writable: boolean',
+        description: 'Whether the provider accepts writes.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly documentPath: string | undefined',
+        description: 'Absolute path of a provider-owned local document, when applicable.',
         parameters: [],
       },
       {
         signature: 'prepareDocument(): Promise<string | undefined>',
-        description: 'Prepare the provider\'s user-editable document for a native editor. File providers may materialize an absent document before returning its path; non-file providers return undefined.',
+        description: 'Prepare and return the provider-owned document path when one exists.',
         parameters: [],
-        returns: 'the absolute local document path, or undefined for non-file storage.',
-      },
-      {
-        signature: 'register<const Namespace extends string, T>( ns: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, options?: SettingsRegisterOptions<T>, ): SettingsScope<T>',
-        description: 'Register a namespace schema and receive its owner scope. The registration is an effect on the calling plugin\'s fiber: disposing that fiber removes the namespace and its observers. An invalid stored section fails the registration itself — the earliest point where the schema can judge it.',
-        parameters: [{ name: 'ns', description: 'unique namespace; duplicate registration fails loud.' }, { name: 'schema', description: 'schemastery schema resolving this namespace\'s value.' }, { name: 'options', description: 'composition `base` layer and effect timing.' }],
-        returns: 'the owner scope for reads, observation, and updates.',
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
-      },
-      {
-        signature: 'installSection<const Namespace extends string, T>( owner: Context, ns: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, entry: T, hooks: SettingsSectionHooks<T>, ): void',
-        description: 'Attach one optional-settings consumer to this provider. The consumer registers its composition entry as the base layer while this provider is present, then falls back to that entry if the provider detaches.',
-        parameters: [{ name: 'owner', description: 'consumer context whose unload suppresses fallback work.' }, { name: 'ns', description: 'consumer-owned settings namespace.' }, { name: 'schema', description: 'schema resolving the namespace.' }, { name: 'entry', description: 'composition entry used as the base and fallback value.' }, { name: 'hooks', description: 'source sink, change notification, and optional validation.' }],
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
+        returns: 'the prepared path, or `undefined` when the provider has no document.',
       },
       {
         signature: 'describe(options?: SettingsDescribeOptions): SettingsDescriptor[]',
-        description: 'Describe every registered namespace for configuration surfaces, including the composition `base` and raw user layers so a form can mark which fields the user overrode (presence in `user`) and what a reset returns to.',
-        parameters: [{ name: 'options', description: 'redaction switch; wire surfaces must redact.' }],
-        returns: 'one descriptor per registered namespace, in registration order.',
+        description: 'Describe registered namespaces for configuration surfaces.',
+        parameters: [{ name: 'options', description: 'optional secret-redaction settings.' }],
+        returns: 'descriptors for active namespaces.',
       },
       {
-        signature: 'get<const Namespace extends string>(ns: Namespace & SettingsNamespaceInput<Namespace>): unknown',
-        description: 'Read one registered namespace\'s resolved value.',
-        parameters: [{ name: 'ns', description: 'the namespace to read.' }],
-        returns: 'the resolved value, or `undefined` while unregistered.',
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
+        signature: 'get<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>): unknown',
+        description: 'Read a namespace\'s resolved value, or `undefined` while unregistered.',
+        parameters: [{ name: 'namespace', description: 'namespace to read.' }],
+        returns: 'the resolved value, or `undefined` when unregistered.',
       },
       {
-        signature: 'async update<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number, ): Promise<void>',
-        description: 'Merge a patch into one registered namespace\'s user layer, validate the resolved candidate, persist through the provider, then commit and emit. A validation failure rejects before anything is persisted. Writes to one namespace are serialized: concurrent updates apply in call order, each merging over the previous write\'s committed section.',
-        parameters: [{ name: 'ns', description: 'the registered namespace to update.' }, { name: 'patch', description: 'plain-object patch over the user section.' }, { name: 'expectedRevision', description: 'the descriptor `revision` the caller read; a namespace that moved past it rejects with {@link SettingsConflictError}.' }],
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
+        signature: 'update<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number, ): Promise<void>',
+        description: 'Merge and persist a namespace\'s user section.',
+        parameters: [{ name: 'namespace', description: 'namespace to update.' }, { name: 'patch', description: 'plain-object changes to merge into the user section.' }, { name: 'expectedRevision', description: 'optional revision required for the write.' }],
+        returns: 'a promise settled after the provider commits the write.',
       },
       {
-        signature: 'async replace<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number, ): Promise<void>',
-        description: 'Replace one registered namespace\'s user section wholesale, validate, persist, then commit and emit. Keys absent from `section` fall back to the composition `base` and schema defaults — this is the removal/reset path a merge-only patch cannot express (`replace({})` re-inherits everything).',
-        parameters: [{ name: 'ns', description: 'the registered namespace to replace.' }, { name: 'section', description: 'the complete next user section.' }, { name: 'expectedRevision', description: 'the descriptor `revision` the caller read; a namespace that moved past it rejects with {@link SettingsConflictError}.' }],
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
+        signature: 'replace<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number, ): Promise<void>',
+        description: 'Replace and persist a namespace\'s user section.',
+        parameters: [{ name: 'namespace', description: 'namespace to replace.' }, { name: 'section', description: 'complete next user section.' }, { name: 'expectedRevision', description: 'optional revision required for the write.' }],
+        returns: 'a promise settled after the provider commits the write.',
       },
       {
-        signature: 'async mutate<const Namespace extends string>( ns: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number, ): Promise<void>',
-        description: 'Apply path-addressed edits to one registered namespace\'s user section, validate, persist, then commit and emit. The ops are applied to the section as it stands when the write reaches the front of the queue, so a caller never has to restate fields it did not touch — and, crucially, cannot delete fields it never saw. This is the write path for any caller holding a redacted view; `replace` remains the wholesale reset.',
-        parameters: [{ name: 'ns', description: 'the registered namespace to edit.' }, { name: 'ops', description: 'ordered path edits; later ops observe earlier ones.' }, { name: 'expectedRevision', description: 'the descriptor `revision` the caller read; a namespace that moved past it rejects with {@link SettingsConflictError}.' }],
-        throws: ['{TypeError} when `ns` is not a lowercase hyphenated identifier.'],
+        signature: 'mutate<const Namespace extends string>( namespace: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number, ): Promise<void>',
+        description: 'Apply ordered path edits to a namespace\'s user section.',
+        parameters: [{ name: 'namespace', description: 'namespace to edit.' }, { name: 'ops', description: 'ordered path edits.' }, { name: 'expectedRevision', description: 'optional revision required for the write.' }],
+        returns: 'a promise settled after the provider commits the write.',
       },
     ],
   },
@@ -2170,6 +2248,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'agentPreset', description: 'preset id resolved against Host-owned roots.' }, { name: 'signal', description: 'caller lifetime; abort terminates the native command.' }],
         returns: 'an opened confirmation or the resolved directory for text display.',
         throws: ['RemoteError when the preset is missing, read-only, invalid, or cannot be opened.'],
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -2433,6 +2516,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'name', description: 'the provider to use.' }, { name: 'request', description: 'child label, prompt, parent, signal, and optional capabilities.' }],
         returns: 'the published holder-owned run.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -2586,6 +2674,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Change future admission of an owned task, without cancelling an active occurrence.',
         parameters: [{ name: 'agent', description: 'Owning root session resolved by the Remote Agent lookup.' }, { name: 'id', description: 'Task identifier belonging to that session.' }, { name: 'action', description: 'Pause, resume or delete.' }],
         returns: 'Persisted owner-scoped state after the change.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -3046,6 +3139,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'signal', description: 'generation cancellation.' }],
         returns: 'baseline followed by ordered Workspace increments.',
       },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -3094,6 +3192,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Stream every `fs/observed` observation of a file inside the Session\'s workspace. Only instrumented filesystem operations report here; the OS is not watched.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'signal', description: 'generation cancellation.' }],
         returns: '`ready` once the Host observation queue is active and the workspace root is resolved, then queued and live observations in emission order.',
+      },
+      {
+        signature: 'readonly typertRemote: TypertGatewayBinding<this>',
+        description: 'Visible binding consumed by the Gateway\'s source-mode discovery.',
+        parameters: [],
       },
     ],
   },
@@ -3514,8 +3617,8 @@ export const EVENT_API: readonly EventApiEntry[] = [
     name: 'settings/document-updated',
     mode: 'emit',
     signature: '\'settings/document-updated\'(ns: SettingsNamespace, revision: number): void',
-    summary: 'One registered namespace\'s RAW user section changed, whether or not the resolved value did.',
-    description: 'One registered namespace\'s RAW user section changed, whether or not the resolved value did. `settings/updated` is the consumer-facing event and stays deep-equal-gated; this one exists for configuration surfaces, which must learn that a field went from inherited to overridden (same resolved value, different meaning) and that their held revision is stale. Listener containment matches `settings/updated`.',
+    summary: 'One registered namespace\'s raw user section changed, whether or not the resolved value did.',
+    description: 'One registered namespace\'s raw user section changed, whether or not the resolved value did. `settings/updated` is the consumer-facing event and stays deep-equal-gated; this event tells configuration surfaces that a field became overridden and their held revision is stale.',
     parameters: [{ name: 'ns', description: 'the namespace whose stored section changed.' }, { name: 'revision', description: 'the namespace\'s new revision.' }],
   },
   {
@@ -5023,10 +5126,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ReasoningEffortId = Branded<\'ReasoningEffortId\'>;',
   },
   {
-    name: 'RedactedSecret',
-    declaration: 'export interface RedactedSecret {\n    path: string[];\n    set: boolean;\n}',
-  },
-  {
     name: 'RemoteError',
     declaration: 'export class RemoteError<Code extends RemoteErrorCode = RemoteErrorCode> extends Error {\n    readonly isDSHRemoteError: true;\n    constructor(readonly code: Code, message: string, readonly details: RemoteErrorDetailsMap[Code], options?: ErrorOptions);\n}',
   },
@@ -5724,7 +5823,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SettingsDescriptor',
-    declaration: 'export interface SettingsDescriptor {\n    ns: SettingsNamespace;\n    schema: unknown;\n    value: unknown;\n    revision: number;\n    base?: unknown;\n    user?: unknown;\n    applies: SettingsApplies;\n    secrets?: RedactedSecret[];\n}',
+    declaration: 'export interface SettingsDescriptor {\n    ns: SettingsNamespace;\n    schema: unknown;\n    value: unknown;\n    revision: number;\n    base?: unknown;\n    user?: unknown;\n    applies: SettingsApplies;\n    secrets?: SettingsSecret[];\n}',
   },
   {
     name: 'SettingsDocumentOpenValue',
@@ -5733,6 +5832,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SettingsNamespace',
     declaration: 'export type SettingsNamespace = Branded<\'SettingsNamespace\'>;',
+  },
+  {
+    name: 'SettingsNamespaceInput',
+    declaration: 'export type SettingsNamespaceInput<Value extends string> = Value extends SettingsNamespace ? Value : string extends Value ? string : Value extends `${LowercaseLetter}${infer Rest}` ? ValidNamespaceTail<Rest> extends true ? Value : never : never;',
   },
   {
     name: 'SettingsNamespaceView',
@@ -5749,6 +5852,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SettingsRegisterOptions',
     declaration: 'export interface SettingsRegisterOptions<T> {\n    base?: Partial<T>;\n    applies?: SettingsApplies;\n    validate?: (value: T) => void;\n}',
+  },
+  {
+    name: 'SettingsSecret',
+    declaration: 'export interface SettingsSecret {\n    path: string[];\n    set: boolean;\n}',
   },
   {
     name: 'SettingsSecretView',

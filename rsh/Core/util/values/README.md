@@ -1,5 +1,5 @@
 ---
-description: "Lossless JSON validation, detached snapshots, deep freezing, structural equality, and exhaustive-union helpers for runtime packages."
+description: "Lossless JSON validation, detached snapshots, symbol-keyed values, deep freezing, structural equality, and exhaustive-union helpers for runtime packages."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-util-values` gives runtime packages one implementation for lossless JSON values, immutable object graphs, structural JSON equality, and exhaustive closed-union failures. Callers can validate untrusted values, detach a JSON snapshot, freeze a published value, compare JSON-compatible data, or terminate an unreachable branch without importing a capability package. The helpers hold no shared registry, constructor identity, or mutable module state.
+`dsh-util-values` gives runtime packages one implementation for symbol-keyed private values, lossless JSON values, immutable object graphs, structural JSON equality, and exhaustive closed-union failures. Callers can retain a value on its owning object, validate untrusted JSON, detach a snapshot, freeze a published value, compare JSON-compatible data, or terminate an unreachable branch without importing a capability package. Values stay on their target objects; the package holds no shared registry, constructor identity, or mutable module state.
 
 ## Table of Contents
 
@@ -23,6 +23,19 @@ English | [中文](README.zh.md)
 
 <a id="use-this-package"></a>
 ## Use this package
+
+### Retain a private value
+
+Use `setSymbolValue()` and `getSymbolValue()` when a package-specific `Symbol.for()` key must survive duplicate package copies. Use `requireSymbolValue()` when the caller owns a fail-loud missing-value path. The value lives on the caller's object as a non-enumerable, non-writable property; this package stores no registry.
+
+```ts
+import { getSymbolValue, setSymbolValue } from '@deepseek-ai/dsh-util-values'
+
+const key = Symbol.for('@deepseek-ai/example/private-value')
+const target = {}
+setSymbolValue(target, key, { value: 1 })
+const retained = getSymbolValue(target, key) as { value: number } | undefined
+```
 
 ### Validate or snapshot JSON data
 
@@ -59,7 +72,8 @@ The JSON validator uses an explicit work stack and tracks only the active ancest
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | JSON value type, validation and snapshot traversal, structural equality, deep freezing, and exhaustive-union failure |
+| [`src/index.ts`](src/index.ts) | Symbol-keyed value access, JSON value type, validation and snapshot traversal, structural equality, deep freezing, and exhaustive-union failure |
+| [`tests/symbol-value.spec.ts`](tests/symbol-value.spec.ts) | Non-enumerable value retention and key/target isolation |
 | — | No runtime invariant companion is published because these value operations have no shared runtime state; unit tests cover their algebra. |
 
 </details>

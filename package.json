@@ -14,6 +14,7 @@
     "rsh/Core/native/system",
     "rsh/Core/native/system/packages/*",
     "rsh/Core/runtime-diagnostics/*",
+    "rsh/Core/settings/*",
     "rsh/Core/storage/*",
     "rsh/Core/subprocess/*",
     "rsh/Core/typert/*",

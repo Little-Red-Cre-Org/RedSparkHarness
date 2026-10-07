@@ -5,6 +5,24 @@ import { SettingsProvider, SettingsConflictError, type SettingsNamespace, type S
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { MemorySettings } from './memory.ts'
 
+export async function typeCheckSettingsNamespaceInputs(context: Context): Promise<void> {
+  const settings = context.settings
+  const dynamicNamespace: string = 'runtime-namespace'
+  await settings.get('valid-namespace2')
+  await settings.get(dynamicNamespace)
+  await settings.update('valid-namespace2', {})
+  await settings.replace('valid-namespace2', {})
+  await settings.mutate('valid-namespace2', [])
+  // @ts-expect-error Uppercase characters are invalid in a namespace literal.
+  await settings.get('Invalid.Name')
+  // @ts-expect-error Uppercase characters are invalid in a namespace literal.
+  await settings.update('Invalid.Name', {})
+  // @ts-expect-error Uppercase characters are invalid in a namespace literal.
+  await settings.replace('Invalid.Name', {})
+  // @ts-expect-error Uppercase characters are invalid in a namespace literal.
+  await settings.mutate('Invalid.Name', [])
+}
+
 /** A provider implementing only the three primitives: the Service Definition owns initialization. */
 class BareProvider extends SettingsProvider {
   doc: Record<string, unknown>

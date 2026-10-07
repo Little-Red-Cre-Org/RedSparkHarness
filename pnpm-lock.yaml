@@ -294,6 +294,40 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/vendor/loader
 
+  rsh/Compatibility/DSH/bridge/compat-settings-adapters:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-agent-default-model':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/agent-default-model
+      '@deepseek-ai/dsh-agent-loop':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/agent-loop
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../compat-settings-definition
+      '@deepseek-ai/dsh-tool-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/tool-subagent
+
+  rsh/Compatibility/DSH/bridge/compat-settings-definition:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
+
   rsh/Compatibility/DSH/bridge/compat-tool-fs:
     dependencies:
       '@deepseek-ai/dsh-agent':
@@ -436,6 +470,9 @@ importers:
       '@deepseek-ai/dsh-compaction-tool-result-pruner':
         specifier: workspace:^
         version: link:../../../../Engine/compaction/compaction-tool-result-pruner
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../bridge/compat-settings-adapters
       '@deepseek-ai/dsh-credentials-local':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials-local
@@ -720,6 +757,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../bridge/compat-settings-adapters
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -1032,6 +1072,9 @@ importers:
       '@deepseek-ai/dsh-code-runtime-worker-thread':
         specifier: workspace:^
         version: link:../../../../Modules/Official/code-runtime/code-runtime-worker-thread
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../bridge/compat-settings-adapters
       '@deepseek-ai/dsh-cordis-client-runner':
         specifier: workspace:^
         version: link:../../../../Modules/Official/extensions/cordis-client-runner
@@ -1186,6 +1229,18 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../util/brand
+
+  rsh/Core/settings/settings-definition:
+    devDependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../util/brand
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../util/values
 
   rsh/Core/storage/storage:
     dependencies:
@@ -2039,6 +2094,9 @@ importers:
 
   rsh/Engine/core/agent-default-model:
     dependencies:
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -2049,12 +2107,18 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../agent
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/bridge/compat-settings-adapters
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../Core/settings/settings-definition
 
   rsh/Engine/core/agent-loop:
     dependencies:
@@ -2077,6 +2141,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../agent
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/bridge/compat-settings-adapters
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
@@ -2939,6 +3006,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -2970,6 +3040,9 @@ importers:
       '@deepseek-ai/dsh-atomic-write':
         specifier: workspace:^
         version: link:../../../Core/util/atomic-write
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/bridge/compat-settings-adapters
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../Core/util/home-paths
@@ -2988,6 +3061,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-settings-file':
         specifier: workspace:^
         version: link:../../../Modules/Official/settings/settings-file
@@ -4323,6 +4399,9 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../../core/native-tools
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../Core/util/values
       '@deepseek-ai/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -4339,6 +4418,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../core/agent
+      '@deepseek-ai/dsh-compat-settings-adapters':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/bridge/compat-settings-adapters
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
@@ -6295,6 +6377,9 @@ importers:
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../commands
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
@@ -6491,6 +6576,9 @@ importers:
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../attachment/attachment-local
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../credentials/credentials
@@ -6558,6 +6646,9 @@ importers:
       '@deepseek-ai/dsh-authorization':
         specifier: workspace:^
         version: link:../../credentials/authorization
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../credentials/credentials
@@ -6579,6 +6670,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
@@ -7010,6 +7104,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
@@ -7019,6 +7116,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
 
   rsh/Modules/Official/settings/settings-file:
     dependencies:
@@ -7050,6 +7150,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
 
   rsh/Modules/Official/shell/bash-local:
     dependencies:
@@ -7066,6 +7169,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../settings/settings
@@ -7140,6 +7246,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../settings/settings
@@ -7205,6 +7314,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -8100,6 +8212,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../credentials/credentials
@@ -9762,6 +9877,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
@@ -9836,6 +9954,9 @@ importers:
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/commands
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-cordis-host-runner':
         specifier: workspace:^
         version: link:../../../../Modules/Official/extensions/cordis-host-runner
@@ -9866,6 +9987,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-subagent':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/subagent
@@ -10029,6 +10153,12 @@ importers:
 
   rsh/Programs/Web/api/settings-controller:
     dependencies:
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -10276,6 +10406,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../../../Modules/Official/todo/tool-todo
@@ -10378,6 +10511,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-settings':
         specifier: workspace:^
         version: link:../ui-settings
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -10753,6 +10889,9 @@ importers:
       '@deepseek-ai/dsh-compaction':
         specifier: workspace:^
         version: link:../../../../Engine/compaction/compaction
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -10913,6 +11052,9 @@ importers:
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/commands
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-goal':
         specifier: workspace:^
         version: link:../../../../Engine/goal/goal
@@ -11620,6 +11762,9 @@ importers:
       '@deepseek-ai/dsh-compaction':
         specifier: workspace:^
         version: link:../../../../Engine/compaction/compaction
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-llm-retry':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm-retry
@@ -11934,6 +12079,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -11992,6 +12140,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-remote-mock':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/remote-mock
@@ -12546,6 +12697,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-host-webserver':
         specifier: workspace:^
         version: link:../../host/webserver

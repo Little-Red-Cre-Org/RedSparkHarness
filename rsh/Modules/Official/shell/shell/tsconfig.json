@@ -25,6 +25,9 @@
     },
     {
       "path": "../../settings/settings/tsconfig.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

@@ -34,9 +34,9 @@ import type { AgentPresetDocument, AgentPresetRoster } from './types.ts'
 import type {} from '@deepseek-ai/dsh-session-projection'
 // Type-only: resolves the registry notification emitted after scope reparenting.
 import type {} from '@deepseek-ai/dsh-tools'
-import type SettingsService from '@deepseek-ai/dsh-settings'
-import type { SettingsScope } from '@deepseek-ai/dsh-settings'
+import type { SettingsScope, SettingsService } from '@deepseek-ai/dsh-settings-definition'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
+import { retainSettingsOwner } from './settings-owner.ts'
 import { discoverPresets, SHIPPED_PRESET_ROOT, USER_PRESET_DIR } from './discovery.ts'
 import { copyComposition, deleteComposition, presetExists, readComposition } from './authoring.ts'
 import { livePresetMounts, mountPreset, serviceForAgent, standingMountFor } from './mount.ts'
@@ -166,6 +166,15 @@ export class AgentPresets extends TypertRemoteService {
   constructor(ctx: Context, public config: Config) {
     super(ctx, 'agentPresets')
     this.selfCtx = ctx
+    retainSettingsOwner(this, ctx, {
+      bind: (
+        scope?: SettingsScope<AgentPresetSettings>,
+        service?: SettingsService,
+      ) => {
+        this.settings = scope
+        this.settingsService = service
+      },
+    })
     const { baseUrl } = ctx
     if (baseUrl === undefined) {
       // Self-contained misconfiguration, so it fails at load: without a base
@@ -183,24 +192,6 @@ export class AgentPresets extends TypertRemoteService {
       ...config.roots,
       ...config.includeUserRoot ? [{ path: dshHomePath(USER_PRESET_DIR), trust: 'user' } satisfies PresetRoot] : [],
     ]
-    // Deliberately not `settings.installSection`: that method exists to re-judge
-    // what a consumer DERIVED from the source — memoized resolutions,
-    // registration-level facts — across attach, detach, and change. Nothing
-    // here is derived. `defaultId` reads through on every call, so both of its
-    // hooks would be no-ops and the source thunk would restate this field.
-    ctx.inject(['settings'], (settingsCtx) => {
-      this.settings = settingsCtx.settings.register(
-        SETTINGS_NAMESPACE,
-        AgentPresetSettingsSchema,
-        { base: { default: config.default, modeSelectionEnabled: true } },
-      )
-      this.settingsService = settingsCtx.settings
-      settingsCtx.effect(() => () => {
-        this.settings = undefined
-        this.settingsService = undefined
-      }, 'agentPresets.settings()')
-    })
-
     ctx.sessionProjections.register(agentPresetProjectionDefinition)
 
     // Advisory, not fatal: a synchronous `agent/created` listener that throws

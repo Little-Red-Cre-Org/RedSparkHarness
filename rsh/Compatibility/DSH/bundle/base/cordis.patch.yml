@@ -78,6 +78,9 @@
         provider: deepseek-official
         model: deepseek-flash
 
+    - id: agent-default-model-settings
+      name: '@deepseek-ai/dsh-compat-settings-adapters/agent-default-model'
+
     - id: jobs
       name: '@deepseek-ai/dsh-jobs-local'
 
@@ -483,6 +486,9 @@
       name: '@deepseek-ai/dsh-agent-loop'
       config:
         agents: []
+
+    - id: agent-loop-settings
+      name: '@deepseek-ai/dsh-compat-settings-adapters/agent-loop'
 
     # The sandboxed filesystem provider. `cwd` defaults to `process.cwd()`; an
     # overlay can pin another workspace.

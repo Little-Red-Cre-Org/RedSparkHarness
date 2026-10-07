@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeSettings } from '@deepseek-ai/dsh-settings/native'
+import type { NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
 import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
 import { plugin as credentials } from '@deepseek-ai/dsh-credentials-local/native'
@@ -15,7 +15,7 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
   const filename = join(root, 'settings.yaml')
   await writeFile(filename, '# user notes\neditor:\n  theme: light\nunloaded:\n  keep: true\n')
   const scope = new NativeScope()
-  let settings: NativeSettings | undefined
+  let settings: NativeSettingsService | undefined
   const consumer: NativePlugin = {
     apiVersion: 1, name: 'settings-reader', targets: ['host'], requires: ['settings'], provides: [],
     resolve: () => (context) => { settings = context.require('settings') },
@@ -60,7 +60,7 @@ it('keeps unrelated YAML fields and comments while rejecting a stale or invalid 
 it('publishes a stored pi-ai route to the next native model resolution', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-native-model-settings-'))
   const scope = new NativeScope()
-  let settings: NativeSettings | undefined
+  let settings: NativeSettingsService | undefined
   let model: NativeModel | undefined
   const consumer: NativePlugin = {
     apiVersion: 1, name: 'model-settings-reader', targets: ['host'], requires: ['settings', 'model'], provides: [],

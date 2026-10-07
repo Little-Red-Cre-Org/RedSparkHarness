@@ -103,6 +103,9 @@
     },
     {
       "path": "../ui-input-trigger"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

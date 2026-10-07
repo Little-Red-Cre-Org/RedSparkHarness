@@ -47,7 +47,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/core/agent-default-model/src/index.ts:41`](../Engine/core/agent-default-model/src/index.ts)
+Source: [`rsh/Engine/core/agent-default-model/src/index.ts:42`](../Engine/core/agent-default-model/src/index.ts)
 
 <a id="deepseek-aidsh-agent-instructions"></a>
 
@@ -229,7 +229,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Programs/Web/api/settings-controller/src/index.ts:38`](../Programs/Web/api/settings-controller/src/index.ts)
+Source: [`rsh/Programs/Web/api/settings-controller/src/index.ts:39`](../Programs/Web/api/settings-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-workspace-files"></a>
 
@@ -2161,7 +2161,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/settings/settings-file/src/index.ts:22`](../Modules/Official/settings/settings-file/src/index.ts)
+Source: [`rsh/Modules/Official/settings/settings-file/src/index.ts:23`](../Modules/Official/settings/settings-file/src/index.ts)
 
 <a id="deepseek-aidsh-shell-env"></a>
 
@@ -3616,6 +3616,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-compat-fs-local` ([`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts))
 - `@deepseek-ai/dsh-compat-fs-policy` ([`rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-policy/src/index.ts))
 - `@deepseek-ai/dsh-compat-fs-sandbox` ([`rsh/Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts))
+- `@deepseek-ai/dsh-compat-settings-adapters` ([`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts))
+- `@deepseek-ai/dsh-compat-settings-definition` ([`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts))
 - `@deepseek-ai/dsh-compat-tool-fs` ([`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts))
 - `@deepseek-ai/dsh-deque` ([`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts))
 - `@deepseek-ai/dsh-errors` ([`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts))

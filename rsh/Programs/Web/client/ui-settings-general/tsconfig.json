@@ -46,6 +46,9 @@
     },
     {
       "path": "../ui-sidebar"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

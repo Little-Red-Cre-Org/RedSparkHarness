@@ -38,6 +38,7 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
   'rsh/Core/util/workspace-path': 'The package only formats Workspace paths for browser UI; it never constructs model input.',
   'rsh/Core/util/values': 'The package only validates, snapshots, compares, freezes, or rejects caller-owned values; consumers own every model-facing use.',
   'rsh/Core/util/json-rpc-line': 'The transport frames caller-owned bytes and registers nothing model-facing.',
+  'rsh/Compatibility/DSH/bridge/compat-settings-definition': 'Cordis Settings declarations only; providers and consuming services own any model-facing effect.',
 }
 
 /**
@@ -64,6 +65,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Compatibility/DSH/bridge/compat-fs-local': { kind: 'indirect', reason: 'The bridge delegates every model-visible filesystem outcome to its native consumer.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-policy': { kind: 'indirect', reason: 'The bridge changes filesystem decisions but delegates model rendering to the native tool consumer.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-sandbox': { kind: 'indirect', reason: 'The bridge delegates sandbox-denial rendering and durable result recording to its native consumer.' },
+  'rsh/Compatibility/DSH/bridge/compat-settings-adapters': { kind: 'indirect', reason: 'The adapters connect Settings values to Engine consumers; those services own every model-visible effect.' },
   'rsh/Modules/Official/attachment/attachment': { kind: 'indirect', reason: 'The storage seam delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/attachment/attachment-local': { kind: 'indirect', reason: 'The local backend delegates model request rendering to provider adapters.' },
   'rsh/Modules/Official/shell/shell': { kind: 'indirect', reason: 'The service interface delegates all model rendering to dsh-tool-bash.' },

@@ -57,10 +57,16 @@
     - id: subagent-model-selection-settings
       name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 
+    - id: subagent-model-selection-settings-adapter
+      name: '@deepseek-ai/dsh-compat-settings-adapters/tool-subagent'
+
     - id: agent-presets
       name: '@deepseek-ai/dsh-agent-presets'
       config:
         default: standard
+
+    - id: agent-presets-settings
+      name: '@deepseek-ai/dsh-compat-settings-adapters/agent-presets'
 
     - id: tui-runner
       name: '@deepseek-ai/dsh-rsh'

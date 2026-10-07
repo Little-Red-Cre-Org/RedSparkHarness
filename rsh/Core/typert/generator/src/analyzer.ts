@@ -395,14 +395,16 @@ export class WorkspaceAnalyzer {
   }
 
   /**
-   * Discover package faces from public-export-reachable Cordis augmentations
-   * and explicit `@typert` roots without constructing a type-checker program.
+   * Discover package faces from public-export-reachable Cordis augmentations,
+   * explicit `@typert` roots, and named source packages needed by those types.
+   * @param sourcePackages - registered packages to include even without a Typert root.
    * @returns contributors grouped by package with deterministic face order.
    */
-  discoverPackages(): DiscoveredTypertPackage[] {
+  discoverPackages(sourcePackages: readonly string[] = []): DiscoveredTypertPackage[] {
+    const includedSourcePackages = new Set(sourcePackages)
     const registrations = this.loadRegistrations()
       .filter(registration => this.options.faces.includes(registration.face))
-      .filter(registration => this.registrationHasSurface(registration))
+      .filter(registration => includedSourcePackages.has(registration.name) || this.registrationHasSurface(registration))
     const packages = new Map<string, { root: string; faces: Set<TypertFace> }>()
     for (const registration of registrations) {
       const current = packages.get(registration.name) ?? {

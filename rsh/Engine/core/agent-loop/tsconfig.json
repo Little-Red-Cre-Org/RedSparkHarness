@@ -39,9 +39,6 @@
       "path": "../scope"
     },
     {
-      "path": "../../../Modules/Official/settings/settings"
-    },
-    {
       "path": "../../../Core/runtime-diagnostics/invariants"
     },
     {

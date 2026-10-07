@@ -28,6 +28,12 @@
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

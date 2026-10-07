@@ -38,8 +38,9 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`identity/`](Core/identity/README.md) | Shared anonymous identity |
 | [`llm/`](Engine/llm/README.md) | LLM capability: Engine services and [official provider packages](Modules/Official/llm/README.md) |
 | [`e2b/`](Modules/Official/e2b/README.md) | E2B remote-runtime providers |
-| [`subprocess/`](Core/subprocess/README.md) | Subprocess capability family: Service Definition + local process-tree provider |
-| [`shell/`](Modules/Official/shell/README.md) | Bash capability family: executor seam, local impl, model-facing tools |
+| [`subprocess/`](Core/subprocess/README.md) | Subprocess API and process-tree provider |
+| [`core/settings/`](Core/settings/README.md) | Core Settings definitions |
+| [`shell/`](Modules/Official/shell/README.md) | Bash executor, local implementation, and tools |
 | [`terminal/`](Modules/Official/terminal/README.md) | Persistent PTY capability family: owner-scoped sessions, local implementation, model-facing tools |
 | [`code-runtime/`](Modules/Official/code-runtime/README.md) | Code-execution capability family: Service Definition + worker-thread provider + PTC mode Consumer |
 | [`sandbox/`](Modules/Official/sandbox/README.md) | Process-confinement seam; bwrap/Landlock/Seatbelt backends |

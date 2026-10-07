@@ -12,6 +12,7 @@ import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import AgentLoop, { AGENT_LOOP_SETTINGS_NAMESPACE } from '@deepseek-ai/dsh-agent-loop'
+import AgentLoopSettingsAdapter from '@deepseek-ai/dsh-compat-settings-adapters/agent-loop'
 
 /** The smallest real provider: one in-memory document, always writable. */
 class MemorySettings extends SettingsProvider {
@@ -31,7 +32,7 @@ class MemorySettings extends SettingsProvider {
   }
 }
 
-async function boot(): Promise<{ ctx: Context; settingsFiber: Fiber; loopFiber: Fiber }> {
+async function boot(): Promise<{ ctx: Context; settingsFiber: Fiber; loopFiber: Fiber; adapterFiber: Fiber }> {
   const ctx = new Context()
   await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
@@ -43,7 +44,9 @@ async function boot(): Promise<{ ctx: Context; settingsFiber: Fiber; loopFiber: 
   await settingsFiber.await()
   const loopFiber = ctx.plugin(AgentLoop, { agents: [], maxParallelToolCalls: 4 })
   await loopFiber.await()
-  return { ctx, settingsFiber, loopFiber }
+  const adapterFiber = ctx.plugin(AgentLoopSettingsAdapter)
+  await adapterFiber.await()
+  return { ctx, settingsFiber, loopFiber, adapterFiber }
 }
 
 describe('agent-loop settings section', () => {
@@ -103,6 +106,27 @@ describe('agent-loop settings section', () => {
     await bench.loopFiber.dispose()
 
     expect(bench.ctx.settings.describe().map(row => String(row.ns))).not.toContain('agent-loop')
+
+    const replacement = bench.ctx.plugin(AgentLoop, { agents: [], maxParallelToolCalls: 6 })
+    await replacement.await()
+
+    expect(bench.ctx.settings.describe().filter(row => String(row.ns) === 'agent-loop')).toHaveLength(1)
+    await bench.ctx.settings.update(AGENT_LOOP_SETTINGS_NAMESPACE, { maxParallelToolCalls: 2 })
+    expect(bench.ctx.agentLoop.config.maxParallelToolCalls).toBe(2)
+
+    await replacement.dispose()
+    expect(bench.ctx.settings.describe().map(row => String(row.ns))).not.toContain('agent-loop')
+    await bench.ctx.fiber.dispose()
+  })
+
+  it('releases the registration when the compatibility adapter unloads', async () => {
+    const bench = await boot()
+    await bench.ctx.settings.update(AGENT_LOOP_SETTINGS_NAMESPACE, { maxParallelToolCalls: 2 })
+
+    await bench.adapterFiber.dispose()
+
+    expect(bench.ctx.settings.describe().map(row => String(row.ns))).not.toContain('agent-loop')
+    expect(bench.ctx.agentLoop.config.maxParallelToolCalls).toBe(4)
     await bench.ctx.fiber.dispose()
   })
 })

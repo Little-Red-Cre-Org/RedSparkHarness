@@ -4,6 +4,7 @@
 export const RELEASE_MANIFEST_GLOBS = [
   'rsh/Core/identity/*/package.json',
   'rsh/Core/runtime-diagnostics/*/package.json',
+  'rsh/Core/settings/*/package.json',
   'rsh/Core/storage/*/package.json',
   'rsh/Core/subprocess/*/package.json',
   'rsh/Core/typert/*/package.json',
@@ -33,6 +34,8 @@ export const PACKAGE_SOURCE_GLOBS = [
   'rsh/Core/identity/*/src/**/*.tsx',
   'rsh/Core/runtime-diagnostics/*/src/**/*.ts',
   'rsh/Core/runtime-diagnostics/*/src/**/*.tsx',
+  'rsh/Core/settings/*/src/**/*.ts',
+  'rsh/Core/settings/*/src/**/*.tsx',
   'rsh/Core/storage/*/src/**/*.ts',
   'rsh/Core/storage/*/src/**/*.tsx',
   'rsh/Core/subprocess/*/src/**/*.ts',
