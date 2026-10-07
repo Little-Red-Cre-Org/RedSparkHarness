@@ -51,6 +51,7 @@ const snapshotAdapters = [
   'snapshots/native-tui/task-schedule.snapshot.ts',
   'snapshots/native-tui/model-controls.snapshot.ts',
   'snapshots/native-tui/preset-controls.snapshot.ts',
+  'snapshots/native-tui/commands-presets.snapshot.ts',
   'snapshots/native-tui/human-interaction.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',

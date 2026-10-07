@@ -45,6 +45,9 @@
       "path": "../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
+      "path": "../../../Modules/Official/interaction/commands"
+    },
+    {
       "path": "../../../Core/util/brand"
     }
   ]

@@ -190,6 +190,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-presets': ['presets', 'lib/native.js', 'lib/selection.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.

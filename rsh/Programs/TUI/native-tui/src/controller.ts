@@ -12,11 +12,30 @@ import { applyModelSelectionProjection, type ModelSelectionProjectionState } fro
 import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/native'
+
+/** Human command operations routed through the selected root Session owner. */
+export interface TerminalCommandOperations {
+  /**
+   * @param id - selected Session.
+   * @param signal - command-list cancellation.
+   * @returns visible command metadata.
+   */
+  list(id: SessionId, signal: AbortSignal): Promise<readonly CommandDescriptor[]>
+  /**
+   * @param id - selected Session.
+   * @param line - exact human input.
+   * @param signal - command cancellation.
+   * @returns settled result when a command matches.
+   */
+  dispatch(id: SessionId, line: string, signal: AbortSignal): Promise<CommandExecution | undefined>
+}
 
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
   readonly presets?: TerminalPresetOperations | undefined
+  readonly commands?: TerminalCommandOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -44,6 +63,7 @@ export class TerminalController implements TerminalInteraction {
   private readonly shutdown = new AbortController()
   private readonly queue: UserMessage[] = []
   private readonly listeners = new Set<() => void>()
+  private readonly commandDrains = new Set<Promise<void>>()
   private selectedId: SessionId
   private state: TerminalState = { events: [], chunks: [], busy: false, queued: 0 }
   private active: AbortController | undefined
@@ -211,6 +231,40 @@ export class TerminalController implements TerminalInteraction {
     return this.presetOperation((presets, signal) => presets.select(this.selectedId, request, signal))
   }
 
+  /** @returns visible commands for the selected Agent's exact scope. */
+  commands(): Promise<readonly CommandDescriptor[]> {
+    const commands = this.execution.commands
+    if (commands === undefined) return Promise.resolve([])
+    this.assertCommandAdmission()
+    const id = this.selectedId
+    return this.trackCommandDrain(() => commands.list(id, this.lifetime))
+  }
+
+  /** Dispatch explicit slash input outside the turn queue through the same root Session owner.
+   * @param line - complete unmodified terminal input.
+   * @returns the durable command result, or undefined when no installed command matches.
+   */
+  async dispatchCommand(line: string): Promise<CommandExecution | undefined> {
+    const commands = this.execution.commands
+    if (commands === undefined) return undefined
+    this.assertCommandAdmission()
+    const id = this.selectedId
+    return this.trackCommandDrain(() => commands.dispatch(id, line, this.lifetime))
+  }
+
+  private assertCommandAdmission(): void {
+    const copy = terminalCopy(this.config.locale)
+    if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
+    if (this.maintenance || this.cancelling !== undefined) throw new Error(copy.modelBusy)
+  }
+
+  private trackCommandDrain<Result>(operation: () => Promise<Result>): Promise<Result> {
+    const pending = Promise.resolve().then(operation)
+    const drained = pending.then(() => undefined, () => undefined).finally(() => { this.commandDrains.delete(drained) })
+    this.commandDrains.add(drained)
+    return pending
+  }
+
   private presetOperation(
     operation: (presets: TerminalPresetOperations, signal: AbortSignal) => Promise<TerminalPresetState>,
   ): Promise<TerminalPresetState> {
@@ -226,7 +280,8 @@ export class TerminalController implements TerminalInteraction {
   private async idleOperation<Result>(operation: (signal: AbortSignal) => Promise<Result>): Promise<Result> {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
-    if (this.draining !== undefined || this.cancelling !== undefined || this.queue.length !== 0 || this.state.human !== undefined) {
+    if (this.draining !== undefined || this.cancelling !== undefined || this.commandDrains.size > 0
+      || this.queue.length !== 0 || this.state.human !== undefined) {
       throw new Error(copy.modelBusy)
     }
     const controller = new AbortController()
@@ -319,7 +374,7 @@ export class TerminalController implements TerminalInteraction {
   }
 
   /** @returns completion after all currently admitted inputs settle. */
-  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling]) }
+  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling, ...this.commandDrains]) }
 
   /** Close input admission and await the selected executor before resource withdrawal.
    * @returns idempotent completion after accepted work drains.

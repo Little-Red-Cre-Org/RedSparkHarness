@@ -4,6 +4,8 @@ import { CHINESE_ROWS, ENGLISH_ROWS } from '@deepseek-ai/dsh-terminal-ui'
 const english = {
   rows: ENGLISH_ROWS, working: 'Working', idle: 'Ready', queued: 'queued', hint: 'Enter send · Esc stop · Ctrl+C stop/exit',
   placeholder: 'Ask anything', help: '/help · /sessions · /mode · /model · /reasoning · /clear · /retry · /exit; Enter queues input while working.',
+  commandsAvailable: 'Commands:', noCommands: 'No contributed commands are available.', commandCompleted: 'Command completed.',
+  localCommandArguments: 'This terminal control does not accept arguments.',
   sessions: 'Select Session', noSessions: 'No stored Sessions in this workspace.', sessionOpened: 'Session restored.',
   menuInterrupted: 'Selection menu closed for the human request.',
   history: 'History', scrollHint: 'Page Up / Page Down to scroll',
@@ -24,6 +26,8 @@ const english = {
 const chinese: typeof english = {
   rows: CHINESE_ROWS, working: '运行中', idle: '就绪', queued: '排队', hint: 'Enter 发送 · Esc 停止 · Ctrl+C 停止/退出',
   placeholder: '输入问题', help: '/help · /sessions · /mode · /model · /reasoning · /clear · /retry · /exit；执行时 Enter 将输入排队。',
+  commandsAvailable: '可用命令：', noCommands: '没有已安装的扩展命令。', commandCompleted: '命令已完成。',
+  localCommandArguments: '此终端控制不接受参数。',
   sessions: '选择会话', noSessions: '此工作区没有已存储的会话。', sessionOpened: '会话已恢复。',
   menuInterrupted: '选择菜单已关闭，请先处理人机请求。',
   history: '历史', scrollHint: 'Page Up / Page Down 滚动',

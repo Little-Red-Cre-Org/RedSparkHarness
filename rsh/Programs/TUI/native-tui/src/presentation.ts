@@ -13,6 +13,8 @@ import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-
 import type { TerminalHumanPrompt } from './human.ts'
 import type { TerminalPresetState } from './presets.ts'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/native'
+import { parseCommand } from '@deepseek-ai/dsh-commands/native'
 
 /** Renderer state; completed rows originate in the durable Session log. */
 export interface TerminalState {
@@ -57,12 +59,18 @@ export interface TerminalInteraction {
   presets(): Promise<TerminalPresetState>
   /** @param request - installed composition and observed revision. @returns committed blank-Session selection. */
   selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState>
+  /** @returns command names visible to the selected Agent. */
+  commands(): Promise<readonly CommandDescriptor[]>
+  /** @param line - complete human command input. @returns settled command result or undefined when unavailable. */
+  dispatchCommand(line: string): Promise<CommandExecution | undefined>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
    */
   answerHuman(value: string, expected: TerminalHumanPrompt): void
 }
+
+const localCommands = new Set(['help', 'sessions', 'mode', 'model', 'reasoning', 'clear', 'retry', 'exit', 'quit'])
 
 /** Render the input composer and the shared safe transcript rows.
  * @param props - narrow application interaction and locale.
@@ -181,10 +189,27 @@ export function TerminalView({ interaction, locale, model, background }: {
       }, (error: unknown) => { setNotice(String(error)) })
       return
     }
-    if (text === '/help') { setNotice(copy.help); return }
+    if (text === '/help') {
+      void interaction.commands().then((commands) => {
+        const contributed = commands.filter(command => !localCommands.has(command.name)).map(command =>
+          `/${command.name}${command.input?.hint === undefined ? '' : ' ' + command.input.hint} — ${command.description}`)
+        setNotice([copy.help, contributed.length === 0 ? copy.noCommands : `${copy.commandsAvailable}\n${contributed.join('\n')}`].join('\n'))
+      }, (error: unknown) => setNotice(`${copy.help}\n${String(error)}`))
+      return
+    }
     if (text === '/clear') { setFirst(state.events.at(-1)?.seq ?? -1); setScrollLines(0); setNotice(''); return }
     if (text === '/retry') { if (last === '') setNotice(copy.noRetry); else send(last); return }
-    if (text.startsWith('/')) { setNotice(`${copy.unknownCommand}: ${text}`); return }
+    const parsedCommand = parseCommand(text)
+    if (parsedCommand !== undefined && localCommands.has(parsedCommand.name) && parsedCommand.rawInput.trim() !== '') {
+      setNotice(copy.localCommandArguments)
+      return
+    }
+    if (text.startsWith('/')) {
+      void interaction.dispatchCommand(value).then((execution) => {
+        setNotice(execution?.result.text ?? (execution === undefined ? `${copy.unknownCommand}: ${text}` : copy.commandCompleted))
+      }, (error: unknown) => setNotice(String(error)))
+      return
+    }
     send(text)
   }
   const send = (text: string): void => {

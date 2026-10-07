@@ -48,6 +48,7 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-commands": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^"
   },
   "devDependencies": {
@@ -80,6 +81,7 @@
         "codeRuntime",
         "timeContext",
         "agentPresets",
+        "commands",
         "workspaceRegistry",
         "agentInstructions",
         "modelSelection",

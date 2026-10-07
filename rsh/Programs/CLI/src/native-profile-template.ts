@@ -83,7 +83,7 @@ export function shippedNativeProfileComposition(
   const windows = platform === 'win32'
   return {
     formatVersion: 1,
-    scopes: [{ id: ROOT }],
+    scopes: profile === 'native-tui' ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }] : [{ id: ROOT }],
     installations: [
       {
         id: 'app',
@@ -106,13 +106,25 @@ export function shippedNativeProfileComposition(
       ...(profile === 'native-tui' ? [
         { id: 'user-questions', plugin: '@deepseek-ai/dsh-user-questions', scope: ROOT },
         { id: 'ask-user-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT },
+        { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
+        { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: ROOT },
+        { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
+        { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
+          config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+        { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
+          config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
       ] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
-      ...(profile === 'native-headless' || profile === 'native-tui' ? [
+      ...(profile === 'native-headless' ? [
         { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: ROOT },
         { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: ROOT },
         { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: ROOT },
+      ] : []),
+      ...(profile === 'native-tui' ? [
+        { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: ROOT },
+        { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: ROOT },
+        { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'standard' },
       ] : []),
       { id: 'jobs', plugin: '@deepseek-ai/dsh-native-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
@@ -123,8 +135,10 @@ export function shippedNativeProfileComposition(
         config: { maxBytes: 65_536 } },
       { id: 'time-context', plugin: '@deepseek-ai/dsh-native-time-context', scope: ROOT },
       { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
-      { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: ROOT,
+      { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: profile === 'native-tui' ? 'standard' : ROOT,
         config: { allowParallelInProgress: true } },
+      ...(profile === 'native-tui' ? [{ id: 'tool-todo-minimal', plugin: '@deepseek-ai/dsh-tool-todo', scope: 'minimal',
+        config: { allowParallelInProgress: true } }] : []),
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
