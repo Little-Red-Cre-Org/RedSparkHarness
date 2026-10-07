@@ -194,7 +194,7 @@ export function TerminalView({ interaction, locale, model, background }: {
         const contributed = commands.filter(command => !localCommands.has(command.name)).map(command =>
           `/${command.name}${command.input?.hint === undefined ? '' : ' ' + command.input.hint} — ${command.description}`)
         setNotice([copy.help, contributed.length === 0 ? copy.noCommands : `${copy.commandsAvailable}\n${contributed.join('\n')}`].join('\n'))
-      }, (error: unknown) => setNotice(`${copy.help}\n${String(error)}`))
+      }, (error: unknown) => { setNotice(`${copy.help}\n${String(error)}`) })
       return
     }
     if (text === '/clear') { setFirst(state.events.at(-1)?.seq ?? -1); setScrollLines(0); setNotice(''); return }
@@ -207,7 +207,7 @@ export function TerminalView({ interaction, locale, model, background }: {
     if (text.startsWith('/')) {
       void interaction.dispatchCommand(value).then((execution) => {
         setNotice(execution?.result.text ?? (execution === undefined ? `${copy.unknownCommand}: ${text}` : copy.commandCompleted))
-      }, (error: unknown) => setNotice(String(error)))
+      }, (error: unknown) => { setNotice(String(error)) })
       return
     }
     send(text)

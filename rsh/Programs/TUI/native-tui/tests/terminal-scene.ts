@@ -295,7 +295,7 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
       const evidenceDirectory = process.env.DSH_TUI_EVIDENCE_DIR
       if (evidenceDirectory !== undefined) {
         mkdirSync(evidenceDirectory, { recursive: true })
-        terminals.forEach((terminal, index) => writeFileSync(join(evidenceDirectory, `terminal-${index + 1}.txt`), terminal.output()))
+        terminals.forEach((terminal, index) => { writeFileSync(join(evidenceDirectory, `terminal-${index + 1}.txt`), terminal.output()) })
         const sessionName = sessionFixtureName(0, SESSION_FORMAT_VERSION)
         const session = readdirSync(fixture.storage, { recursive: true }).map(String).find(name => name.endsWith(sessionName))
         if (session !== undefined) copyFileSync(join(fixture.storage, session), join(evidenceDirectory, sessionName))
