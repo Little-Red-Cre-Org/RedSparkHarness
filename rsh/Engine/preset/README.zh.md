@@ -25,6 +25,7 @@ preset 组提供按会话的 agent（智能体）组装：agent preset 是一个
 | 包 | 职责 | ctx 键 |
 |---|---|---|
 | [`agent-presets`](agent-presets/README.zh.md) | preset 名单、对受信任根目录与用户根目录的发现、按 agent 组装、仅通过复制创建 preset | `ctx.agentPresets` |
+| [`agent-preset-standing`](agent-preset-standing/README.zh.md) | 在已安装 scope 中注册一个常驻装配的原生 profile 贡献项 | — |
 | [`persona`](persona/README.zh.md) | preset 挂载的可组装人设行，用于遮蔽或替换部署级人设 | — |
 
 -----

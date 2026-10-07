@@ -1,17 +1,19 @@
 /** Recorded human input and model responses exercised through the actual dsh terminal. */
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { expect, vi } from 'vitest'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
+import type { StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
 import { terminalFixture } from './pty-profile.ts'
 
 type SnapshotRecord = Record<string, unknown>
-type TerminalSceneOptions = { modelControls?: boolean; presets?: boolean; taskScheduler?: boolean }
+type TerminalSceneOptions = { modelControls?: boolean; presets?: boolean; presetMode?: 'legacy' | 'shipped'; taskScheduler?: boolean }
 type SavedTask = {
   id: string
   ownerSessionId: string
@@ -76,24 +78,31 @@ function normalizeScheduledTaskIds(raw: string, cwd: string): string {
   return replacements.reduce((output, [id, token]) => output.split(id).join(token), serialized)
 }
 
-/** Replay a committed terminal scene through dsh with its declared native controls.
- * @param scenario - owning committed Session scenario directory.
- * @param options - independently select model controls, presets, and scheduled tasks.
+/** Replay a committed terminal scene through dsh, optionally selecting model or preset controls.
+ * @param scenario - owning expected Session scenario directory.
+ * @param options - optional model controls, preset composition or scheduled-task provider.
+ * @param recordingScenario - committed user/model recording used as terminal input.
  * @returns completion after both real terminal processes and persistence handles close.
  */
-export async function terminalScene(scenario: string, options: TerminalSceneOptions = {}): Promise<void> {
-  const { modelControls = false, presets = false, taskScheduler = false } = options
-  const scene = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
+export async function terminalScene(scenario: string, options: TerminalSceneOptions = {}, recordingScenario = scenario): Promise<void> {
+  const modelControls = options.modelControls ?? false
+  const taskScheduler = options.taskScheduler ?? false
+  const presetMode = options.presetMode ?? (options.presets ? 'legacy' : undefined)
+  const presets = presetMode !== undefined
+  const scene = join(recordingScenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
   const recorded = parseSessionLog(readFileSync(scene, 'utf8'))
   const tasks = recorded.filter(event => event.type === 'user/message' && event.data.source.kind === 'user')
     .map(event => event.type === 'user/message' ? event.data.content.filter(block => block.type === 'text').map(block => block.text).join('') : '')
   expect(tasks).toHaveLength(3)
-  const script = deriveReplayScript(recorded)
-  const fixture = terminalFixture(false, script, false, modelControls, false, presets, taskScheduler)
+  const script = presetMode === 'shipped' ? textReplay(tasks.map((_, index) => `Terminal answer ${String(index + 1)}.`))
+    : deriveReplayScript(recorded)
+  const fixture = terminalFixture(false, script, false, modelControls, false, presetMode, taskScheduler)
   const resumesSession = modelControls || presets || taskScheduler
+  const terminals: { output: () => string }[] = []
   let scheduledTaskId: string | undefined
   try {
     const terminal = fixture.launch()
+    terminals.push(terminal)
     await terminal.waitFor('Ready')
     if (presets) {
       await terminal.submit('/sessions')
@@ -102,9 +111,26 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
       await terminal.waitFor('Enter a displayed number.')
       terminal.write('\x1b')
       await terminal.submit('/mode')
-      await terminal.waitFor('2. alternate (alternate)')
+      await terminal.waitFor(presetMode === 'legacy' ? '2. alternate (alternate)' : '2. Minimal')
       await terminal.submit('2')
       await terminal.waitFor('Agent preset saved.')
+      if (presetMode === 'shipped') {
+        await terminal.submit('/help')
+        await terminal.waitFor('/goal')
+        expect(existsSync(join(fixture.home, 'help-command-ran'))).toBe(false)
+        await terminal.submit('/help extra')
+        await terminal.waitFor('This terminal control does not accept arguments.')
+        expect(existsSync(join(fixture.home, 'help-command-ran'))).toBe(false)
+        await terminal.submit('/missing')
+        await terminal.waitFor('Unavailable command: /missing')
+        await terminal.submit('/goal Pause the active request from the TUI')
+        await terminal.waitFor('Goal created')
+        await vi.waitFor(() => { expect(existsSync(join(fixture.home, 'goal-request-started'))).toBe(true) }, { timeout: 30000 })
+        await terminal.submit('/goal pause')
+        await terminal.waitFor('Goal paused')
+        await vi.waitFor(() => { expect(existsSync(join(fixture.home, 'goal-request-aborted'))).toBe(true) }, { timeout: 30000 })
+        writeFileSync(join(fixture.home, 'release'), 'release')
+      }
     }
     await terminal.submit(tasks[0]!)
     await vi.waitFor(() => { expect(existsSync(join(fixture.home, 'started'))).toBe(true) }, { timeout: 30000 })
@@ -116,7 +142,7 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
     }
     writeFileSync(join(fixture.home, 'release'), 'release')
     await terminal.waitFor('Terminal answer 1.')
-    await terminal.waitFor('visible file contents')
+    if (presetMode !== 'shipped') await terminal.waitFor('visible file contents')
     await terminal.waitFor('Terminal answer 2.')
     await vi.waitFor(() => { expect(terminal.output().lastIndexOf('Ready')).toBeGreaterThan(terminal.output().lastIndexOf('Working')) }, { timeout: 30000 })
     if (presets) {
@@ -151,6 +177,7 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
     try { id = (await storage.list())[0]?.header.id } finally { await storage.close() }
     if (id === undefined) throw new Error('native-tui: terminal did not persist a Session')
     const resumed = fixture.launch(resumesSession ? ['--resume', id] : [])
+    terminals.push(resumed)
     if (!resumesSession) {
       await resumed.waitFor('Ready')
       await resumed.submit('/sessions')
@@ -200,7 +227,7 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
       try { expect(JSON.parse(reopened.prepare('SELECT body FROM tasks').get()?.['body'] as string)).toMatchObject({ id: savedTask.id, state: 'active' }) }
       finally { reopened.close() }
     }
-    expect(fixture.fixtureText('request.json')).toContain('visible file contents')
+    if (presetMode !== 'shipped') expect(fixture.fixtureText('request.json')).toContain('visible file contents')
     if (modelControls) expect(JSON.parse(fixture.fixtureText('config.json'))).toEqual({
       provider: 'fixture', model: 'fixture-alt', reasoningEffort: 'high',
     })
@@ -220,8 +247,8 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
       const reader = await backend.open(id, 'read')
       try {
         const events = (await reader.read()).events
-        expect(events.filter(event => event.type === 'tool/result')).toHaveLength(taskScheduler ? 3 : 1)
-        expect(events.filter(event => event.type === 'turn/end')).toHaveLength(3)
+        expect(events.filter(event => event.type === 'tool/result')).toHaveLength(taskScheduler ? 3 : presetMode === 'shipped' ? 0 : 1)
+        expect(events.filter(event => event.type === 'turn/end')).toHaveLength(presetMode === 'shipped' ? 4 : 3)
         expect(events.filter(event => event.type === 'model/selection')).toHaveLength(modelControls ? 2 : 0)
         if (taskScheduler) {
           const scheduledCalls = []
@@ -239,12 +266,55 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
         }
         if (presets) {
           expect(events.filter(event => event.type === 'agent-preset/selected')).toHaveLength(1)
-          expect(JSON.stringify(events)).toContain('alternate')
+          expect(JSON.stringify(events)).toContain(presetMode === 'legacy' ? 'alternate' : 'minimal')
+          expect(events.filter(event => event.type === 'command/run').map(event => event.data.name))
+            .toEqual(presetMode === 'shipped' ? ['goal', 'goal'] : [])
+          expect(events.filter(event => event.type === 'command/done').map(event => event.data.kind))
+            .toEqual(presetMode === 'shipped' ? ['success', 'success'] : [])
+          const humanMessages = events.filter(event => event.type === 'user/message' && event.data.source.kind === 'user')
+          expect(humanMessages).toHaveLength(3)
+          expect(JSON.stringify(humanMessages)).not.toContain('/goal')
+          if (presetMode === 'shipped') {
+            expect(JSON.stringify(events.filter(event => event.type === 'agent-preset/selected'))).toContain('minimal')
+            expect(JSON.stringify(events.filter(event => event.type === 'command/run'))).not.toContain('help')
+            expect(JSON.stringify(events.filter(event => event.type === 'command/run'))).not.toContain('missing')
+            const headers = events.filter(event => event.type === 'request/header')
+            expect(headers.length).toBeGreaterThan(0)
+            const firstTools = headers[0]?.type === 'request/header' ? JSON.stringify(headers[0].data.header.tools) : ''
+            expect(firstTools).toContain('todo_write')
+            expect(firstTools).not.toContain('get_goal')
+            expect(firstTools).not.toContain('create_goal')
+            expect(firstTools).not.toContain('update_goal')
+          }
         }
       } finally { await reader.close() }
     } finally { await backend.close() }
     verifyTerminalSession(fixture, scenario, id)
-  } finally { await fixture.cleanup() }
+  } finally {
+    try {
+      const evidenceDirectory = process.env.DSH_TUI_EVIDENCE_DIR
+      if (evidenceDirectory !== undefined) {
+        mkdirSync(evidenceDirectory, { recursive: true })
+        terminals.forEach((terminal, index) => { writeFileSync(join(evidenceDirectory, `terminal-${index + 1}.txt`), terminal.output()) })
+        const sessionName = sessionFixtureName(0, SESSION_FORMAT_VERSION)
+        const session = readdirSync(fixture.storage, { recursive: true }).map(String).find(name => name.endsWith(sessionName))
+        if (session !== undefined) copyFileSync(join(fixture.storage, session), join(evidenceDirectory, sessionName))
+        for (const name of ['goal-request.json', 'request.json', 'config.json', 'goal-request-started', 'goal-request-aborted']) {
+          const source = join(fixture.home, name)
+          if (existsSync(source)) copyFileSync(source, join(evidenceDirectory, name))
+        }
+      }
+    } finally { await fixture.cleanup() }
+  }
+}
+
+function textReplay(responses: readonly string[]): ReplayEntry[] {
+  return responses.map((text): ReplayEntry => ({ kind: 'chunks', chunks: [
+    { type: 'block-start', index: 0, blockType: 'text' },
+    { type: 'text-delta', index: 0, text },
+    { type: 'block-end', index: 0, block: { type: 'text', text } },
+    { type: 'finish', reason: { kind: 'stop' } },
+  ] satisfies StreamChunk[] }))
 }
 
 /** Compare an actual terminal Session and its model input sidecars with its owned recording.

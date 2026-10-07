@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The native terminal supports multiple conversation turns, live output and file tool results. Users can queue input, stop a turn and resume the same durable conversation. Launch requires an interactive terminal and an explicit native Provider composition.
+The native terminal supports multiple conversation turns, live output, contributed slash commands and profile-installed Agent presets. Users can queue input, stop a turn and resume the same durable conversation. Launch requires an interactive terminal and an explicit native Provider composition.
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ The native terminal supports multiple conversation turns, live output and file t
 
 The `./native` entry is assembled by `dsh --profile native-tui`. It uses the [shared executor configuration](../../../Engine/core/native-headless/README.md#configuration) and requires `locale` (`en` or `zh`), `background` (`#rrggbb`), and positive safe integers `maxQueuedInputs`, `maxHistoryEvents`, `maxTranscriptEvents`, `maxStreamChunks`, and `maxPendingHumanRequests`. History reads exceeding their limit fail; presentation and streamed chunks retain their configured recent counts.
 
-New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input. Outside a human request, Esc stops the active turn and sends a nonempty draft. Ctrl+C stops while busy or exits while idle. `/help`, `/sessions`, `/mode`, `/model`, `/reasoning`, `/clear`, `/retry`, `/exit`, and `/quit` are available; other commands report an error. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
+New conversations accept no positional arguments; `--resume <session-id>` opens the same conversation. Enter queues input. Outside a human request, Esc stops the active turn and sends a nonempty draft. Ctrl+C stops while busy or exits while idle. `/help`, `/sessions`, `/mode`, `/model`, `/reasoning`, `/clear`, `/retry`, `/exit`, and `/quit` stay local; `/help` lists other installed commands. Local command names remain reserved even when a contribution uses the same name, and unsupported arguments are rejected locally. Other slash input goes only to the installed command registry and unknown names report an error; slash input never becomes a model message. `/clear` affects only the view. Stopping discards unstarted input; exit cancels and drains accepted execution before withdrawing Ink. Ink is withdrawn even when execution cleanup rejects; simultaneous execution and terminal cleanup failures remain in an `AggregateError`.
 
 The shipped profile installs `modelSelection`; its adapter provides `modelDirectory`. `/model` reads advertised models and isolated Provider failures; `/reasoning` reads the selected model's actual efforts. Enter a displayed number to commit the complete choice, or Esc to dismiss. Both require an idle terminal without queued input. Selections compare the observed durable revision under the shared executor's exclusive Session maintenance and persist before affecting the next turn. Cold restore retains the choice. The header shows the selected route and effective effort; input modalities and context capacity come from the actual Provider, with unknown metadata marked explicitly. Custom compositions without both Providers report unavailable controls.
 
@@ -34,7 +34,9 @@ Tool approvals offer `/allow` for one operation or `/deny`; model questions acce
 
 The application declares the shared executor’s optional `modelSelection` service; a configured Provider applies durable selections to subsequent turns.
 
-`/mode` lists standing compositions from the selected `agentPresets` Registry before the first turn. A numbered choice goes through the root executor's durable revision check and Agent replacement; the terminal receives only metadata and recorded selection facts. Started Sessions refuse changes, including after cold restore. The menu submits no model request. Custom profiles install the Registry and its standing compositions explicitly; the shipped template does not yet install them, and unavailable controls report that missing Provider.
+The shipped `native-tui` profile installs a Registry with `standard` and `minimal` standing compositions. `standard` includes Goal and Todo tools; `minimal` includes Todo without Goal tools. Custom profiles may install other scope-owned compositions. `/mode` lists the selected Registry before the first turn. A numbered choice goes through the root executor's durable revision check and Agent replacement; the terminal receives only metadata and recorded selection facts. Started Sessions refuse changes, including after cold restore. The menu submits no model request.
+
+The profile installs the shared `commands` Provider and Goal command. `/goal <request>` records and runs a Goal command through the selected root Session owner; `/goal pause` can interrupt its active model request without waiting behind that turn. Command run and result events are durable, and command input is not added to the model conversation.
 
 <a id="implementation"></a>
 ## Implementation
@@ -42,14 +44,14 @@ The application declares the shared executor’s optional `modelSelection` servi
 <details>
 <summary>Implementation internals</summary>
 
-The [bootstrap](src/native.ts) assembles Ink; the [controller](src/controller.ts) owns input admission, restore and settlement. It passes the selected `sessionExecution` and `activeSessions` Providers to the shared executor; the terminal creates no second writer. Completed rows originate in durable events, while temporary stream frames only affect presentation. The [presentation library](../terminal-ui/README.md) also serves the compatibility terminal. No invariant companion is published: queue and view have no independent observers; Session and its Providers own durable consistency validation.
+The [bootstrap](src/native.ts) assembles Ink; the [controller](src/controller.ts) owns input admission, restore and settlement. It passes the selected `sessionExecution` and `activeSessions` Providers to the shared executor; the terminal creates no second writer. Command dispatch captures the selected Session and uses that same executor outside the model-input queue, so a command can pause the turn it interrupts. Completed rows originate in durable events, while temporary stream frames only affect presentation. The [presentation library](../terminal-ui/README.md) also serves the compatibility terminal. No invariant companion is published: queue and view have no independent observers; Session and its Providers own durable consistency validation.
 
 </details>
 
 <a id="model-experience"></a>
 ## Model Experience
 
-Indirectly, through the [shared native executor](../../../Engine/core/native-headless/README.md#model-experience); the terminal adds no prompts, tools or durable event types.
+Indirectly, through the [shared native executor](../../../Engine/core/native-headless/README.md#model-experience) and the selected standing composition. The terminal adds no model prompt or tool; command input is recorded as command events rather than user messages.
 
 #### KV Cache effect
 
@@ -59,7 +61,8 @@ Presentation and input admission do not rewrite recorded model prefixes; the exe
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Shipped preset installation, permission selectors, Plan/Todo panels and contributed commands are not connected.
+- The shipped profile offers `standard` and `minimal` compositions; custom profiles must install a Registry and each standing composition in its intended scope.
+- Permission selectors and Plan/Todo panels are not part of this terminal interface.
 - Page Up and Page Down browse retained transcript rows using the shared rendered-line estimate. Sending input, restoring a Session or clearing the view returns to the bottom. Large individual messages and streamed output remain presentation-limited while complete accepted output stays in Session.
 - The complete `native-tui` template depends on native entries owned by other modules; standalone terminal evidence uses explicit filesystem and external model Providers.
 

@@ -2916,6 +2916,18 @@ importers:
         specifier: workspace:^
         version: link:../../session/session-projection
 
+  rsh/Engine/preset/agent-preset-standing:
+    dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../agent-presets
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
   rsh/Engine/preset/agent-presets:
     dependencies:
       '@deepseek-ai/dsh-brand':
@@ -8709,6 +8721,9 @@ importers:
       '@deepseek-ai/dsh-acp-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/acp-app
+      '@deepseek-ai/dsh-agent-preset-standing':
+        specifier: workspace:^
+        version: link:../../Engine/preset/agent-preset-standing
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../Engine/preset/agent-presets
@@ -8739,6 +8754,9 @@ importers:
       '@deepseek-ai/dsh-command-goal':
         specifier: workspace:^
         version: link:../../Engine/goal/command-goal
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-compaction-basic':
         specifier: workspace:^
         version: link:../../Engine/compaction/compaction-basic
@@ -9570,6 +9588,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../Engine/llm/llm

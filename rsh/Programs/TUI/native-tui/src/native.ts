@@ -21,6 +21,7 @@ import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selec
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { TerminalPresetState } from './presets.ts'
+import type {} from '@deepseek-ai/dsh-commands/native'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -38,6 +39,8 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
   constructor(context: NativeContext, executor: NativeHeadlessApplication, config: Config,
     selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     const registry = context.optional('agentPresets')
+    const commands = context.optional('commands')
+    const route = config.rootRouteId ?? brandString<NativeRootRouteId>('root')
     const history = (id: SessionId, signal: AbortSignal) => readNativeSessionHistory(id, {
       active: context.require('activeSessions'), persistence: context.require('sessionPersistence'),
       maxHistoryEvents: config.maxHistoryEvents, label: 'native-tui',
@@ -54,9 +57,15 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
       presets: readPresets === undefined ? undefined : {
         read: readPresets,
         select: async (id, request, signal) => {
-          await executor.rootExecution.selectPreset({ ...request, id, route: config.rootRouteId ?? brandString<NativeRootRouteId>('root') }, signal)
+          await executor.rootExecution.selectPreset({ ...request, id, route }, signal)
           return readPresets(id, signal)
         },
+      },
+      commands: commands === undefined ? undefined : {
+        list: (id, signal) => executor.executeSessionOperation({ id, resume: true, route }, owner =>
+          Promise.resolve(commands.list(owner.agent.scope)), signal),
+        dispatch: (id, line, signal) => executor.executeSessionOperation({ id, resume: true, route }, (owner, ownerSignal) =>
+          commands.dispatch({ agent: owner.agent, session: owner.session, line, attachments: [], signal: ownerSignal }), signal),
       },
       sessions: async signal => (await context.require('sessionPersistence').list({ signal }))
         .filter(row => row.header.cwd === config.cwd).map(row => row.header.id),
@@ -113,7 +122,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'commands', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeTuiConfig(input)

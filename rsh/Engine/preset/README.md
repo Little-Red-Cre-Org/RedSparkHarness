@@ -25,6 +25,7 @@ The preset group provides per-session agent composition: an agent preset is a di
 | Package | Role | ctx key |
 |---|---|---|
 | [`agent-presets`](agent-presets/README.md) | Preset roster, discovery over trusted and user roots, per-agent composition, copy-only authoring | `ctx.agentPresets` |
+| [`agent-preset-standing`](agent-preset-standing/README.md) | Native profile contribution that registers one standing composition in its installed scope | — |
 | [`persona`](persona/README.md) | The composable persona row a preset mounts to shadow or replace the deployment persona | — |
 
 -----

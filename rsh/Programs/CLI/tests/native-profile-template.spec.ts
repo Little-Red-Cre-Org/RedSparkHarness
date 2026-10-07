@@ -92,8 +92,21 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   expect(profile.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))).toEqual([
     { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: 'root' },
     { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
-    { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'root' },
+    { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'standard' },
   ])
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }])
+  expect(profile.installations.filter(row => ['commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal', 'tool-todo', 'tool-todo-minimal'].includes(row.id)))
+    .toEqual([
+      { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: 'root' },
+      { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: 'root' },
+      { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'standard' } },
+      { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
+        config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+      { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
+        config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+      { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: 'standard', config: { allowParallelInProgress: true } },
+      { id: 'tool-todo-minimal', plugin: '@deepseek-ai/dsh-tool-todo', scope: 'minimal', config: { allowParallelInProgress: true } },
+    ])
   expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
 })
 
