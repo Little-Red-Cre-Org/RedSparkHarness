@@ -443,8 +443,8 @@ it('delivers a reminder through its creating Session writer and deduplicates a d
         try { return (await writer.read()).events } finally { await writer.close() }
       }
       const first = await read()
-      const messages = first.filter(event => event.type === 'user/message' && event.data.source.kind === 'plugin'
-        && event.data.source.plugin === 'task-scheduler')
+      const messages = first.filter((event): event is SessionEvent<'user/message'> => event.type === 'user/message')
+        .filter(event => event.data.source.kind === 'plugin' && event.data.source.plugin === 'task-scheduler')
       expect(messages).toHaveLength(1)
       expect(messages[0]).toMatchObject({ data: { id: `reminder-${run.id}`, source: {
         kind: 'plugin', plugin: 'task-scheduler', form: 'notice',
