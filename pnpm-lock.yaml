@@ -1411,6 +1411,12 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
+      '@deepseek-ai/dsh-agent-loop-testkit':
+        specifier: workspace:^
+        version: link:../../../Tests/test-support/agent-loop-testkit
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../Engine/core/session
       '@deepseek-ai/dsh-tool-cordis':
         specifier: workspace:^
         version: link:../../../Modules/Official/extensions/tool-cordis
