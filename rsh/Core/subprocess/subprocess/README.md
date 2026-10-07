@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`ctx.subprocess` resolves executables, starts managed child processes and terminal sessions, captures bounded output, and terminates their owned ranges. Each request supplies argv, working directory, stdio, environment, grace, and cancellation; callers own deadlines, teardown policy, and model-facing rendering. Child environments scrub ambient credentials and `DSH_*` values before explicit overrides.
+`ctx.subprocess` resolves executables, starts managed processes and terminal sessions, captures bounded output, and terminates owned ranges. Requests supply argv, cwd, stdio, environment, grace, and cancellation; callers own deadlines, teardown, and model rendering. Environment defaults to a scrubbed parent overlay plus explicit overrides; callers may select full replacement.
 
-Use `./native` for the Cordis-free `SubprocessOperations` definition and environment helper. The package root remains the Cordis service for existing compositions.
+`./native` exposes Cordis-free `SubprocessOperations` and `ChildConnectionDefinition` contracts, a disposer, and an environment helper. `childConnection.connect()` always pipes stdin/stdout/stderr and returns exit facts with managed-range ownership. The root remains the Cordis service.
 
 ## Table of Contents
 
@@ -28,6 +28,8 @@ Use `./native` for the Cordis-free `SubprocessOperations` definition and environ
 ## Use this package
 
 Mount a subprocess provider in any composition that must run child processes, and call `ctx.subprocess` from the capability that owns the command. The common path is explicit: resolve the executable, spawn with a fully specified request, read the output you asked for, and terminate the managed range when the work is done.
+
+No runtime invariant companion is published because this package only defines the process contract; provider-specific validation and lifecycle checks remain with each provider.
 
 ### Mounting the service
 
@@ -72,11 +74,11 @@ For interactive programs, `spawnTerminal` allocates a real PTY: write text, read
 
 ### Environment every child starts from
 
-Children never inherit the harness's ambient secrets: credential-shaped names and ambient `DSH_*` facts are scrubbed, and the caller's explicit `env` merges after that scrub. A deliberately forwarded credential or a current `DSH_*` deployment fact still reaches the child; an explicit `undefined` tombstone removes an ordinary ambient entry.
+General subprocess requests use the scrub-overlay mode: credential-shaped names and ambient `DSH_*` facts are scrubbed, explicit entries merge afterward, and an explicit `undefined` tombstone removes an ordinary ambient entry. Child connections may instead use `envMode: 'replace'`, which passes only the supplied environment entries to the child and performs no ambient scrub or inheritance.
 
 ### What can go wrong
 
-An executable that cannot be resolved fails loudly with a stable error. A spawn that never starts rejects `done`; there is no buffered output for a process that never ran. `waitForExit()` also rejects when the provider cannot prove its selected range is empty, and a provider fallback may not own descendants that escape its process group or observed session. When a transport owns its own spawn (the SDK client, MCP), route around the service and import `scrubbedParentEnv` directly so environment policy stays single-sourced.
+An executable that cannot be resolved fails loudly with a stable error. A spawn that never starts rejects `done`; there is no buffered output for a process that never ran. `waitForExit()` also rejects when the provider cannot prove its selected range is empty, and a provider fallback may not own descendants that escape its process group or observed session. Standalone protocol clients can use `ChildConnectionDefinition` without constructing NativeHost; Programs still owns command resolution and environment policy.
 
 -----
 
@@ -96,9 +98,11 @@ The seam is built on one separation: the service owns process coordinates and li
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: abstract `SubprocessRuntime`, `ctx.subprocess` registration, the shared `scrubbedParentEnv` scrub |
-| [`src/types.ts`](src/types.ts) | Vocabulary: spawn spec, stdio modes, handles, readers, outcomes, `DSH_*` namespace |
-| — | No runtime invariant companion is published; this stateless Service Definition owns spawn-spec/handle types, while Service Providers own observations. |
+| [`src/index.ts`](src/index.ts) | Cordis service entry: abstract `SubprocessRuntime`, `ctx.subprocess` registration, the shared `scrubbedParentEnv` scrub |
+| [`src/native.ts`](src/native.ts) | Framework-free `SubprocessOperations` and `ChildConnectionDefinition` service contracts |
+| [`src/connection.ts`](src/connection.ts) | EOF, Provider termination, and managed-range disposal for a connected child |
+| [`src/types.ts`](src/types.ts) | Vocabulary: spawn/connection specs, environment modes, stdio handles, readers, outcomes, `DSH_*` namespace |
+| — | Providers own process observations and OS signalling; connection consumers own protocol shutdown and grace values. |
 
 ### Data model and flow
 
@@ -144,8 +148,8 @@ No direct invalidation; the named consumers own any request-prefix changes.
 
 These limits define when the seam is a poor fit or leaves work to its consumers. They are current package constraints, not a comparison or a backlog.
 
-- **SDK-managed spawns remain outside** — a transport that owns its internal spawn (the SDK client, MCP) cannot route that call through this service; it can still import `scrubbedParentEnv` so environment policy stays single-sourced.
-- **Teardown ladders are consumer-owned** — the seam ships signalling verbs and the managed-range wait, not a canned quiesce sequence; each out-of-process consumer encodes its child's cooperation shape itself (the ACP backend's stdin-EOF-first ladder is the in-repo template).
+- **Protocol shutdown stays consumer-owned** — the SDK client uses the shared child connection Definition and lifetime helper without constructing NativeHost; each protocol consumer still owns its shutdown exchange and EOF/final-wait graces.
+- **Provider termination stays provider-owned** — the shared disposer sends stdin EOF, waits, then starts the Provider's documented termination and waits for managed-range release; OS-specific signal escalation remains inside the selected Provider.
 - **Observability is provider-specific** — native providers may own escaped descendants through systemd scopes or Windows Jobs, while fallback providers expose weaker process-group, tree, or session visibility. The seam adds no continuous process-table monitor.
 
 <a id="dev-note"></a>

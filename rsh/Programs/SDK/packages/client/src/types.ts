@@ -40,15 +40,15 @@ export interface HarnessClientOptions {
    * for the shared scrub-then-merge base).
    */
   env?: NodeJS.ProcessEnv
-  /** Bound (ms) on the initial profile handshake (default 10000). */
+  /** Bound (ms) for the initial profile-ready handshake (default 30000). */
   initializeTimeoutMs?: number
   /** Per-request timeout (ms); `undefined` waits indefinitely (a turn can legitimately run long). */
   requestTimeoutMs?: number
-  /** Bound (ms) on the protocol `shutdown` exchange inside `close()` (default 1000). */
+  /** Bound (ms) on the protocol `shutdown` exchange and stdio flush inside `close()` (default 1000). */
   shutdownTimeoutMs?: number
   /** Grace (ms) for the runtime's stdin-EOF quiesce during `close()` (default 6000). */
   disposeEofGraceMs?: number
-  /** Termination confirmation window (ms) after SIGTERM/SIGKILL during `close()` (default 3000). */
+  /** Provider termination grace for escalation and owned-range confirmation during `close()` (default 3000). */
   disposeGraceMs?: number
 }
 

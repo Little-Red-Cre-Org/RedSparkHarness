@@ -16,11 +16,15 @@ export { DSH_ENV_PREFIX } from './types.ts'
 export { scrubbedParentEnv, SENSITIVE_ENV_PATTERN } from './environment.ts'
 export type {
   CollectedOutput,
+  ChildConnectionDefinition,
+  ChildConnectionHandle,
+  ChildConnectionSpec,
   DshEnvironment,
   DshEnvironmentKey,
   SubprocessCollect,
   SubprocessCollectedOutputs,
   SubprocessHandle,
+  SubprocessEnvironmentMode,
   SubprocessOutcome,
   SubprocessOperations,
   SubprocessOutputMode,

@@ -6,7 +6,6 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  DEFAULT_INITIALIZE_TIMEOUT_MS,
   installedDshBin,
   resolveDshNodeLaunchFromManifests,
   resolveDshBinFromManifests,
@@ -45,7 +44,7 @@ describe('SDK dsh launch resolution', () => {
         '--profile', 'sdk',
         '--patch', resolve(bin, '..', '..', 'src/sdk-source.cordis.patch.yml'),
       ])
-    expect(launch.initializeTimeoutMs).toBe(DEFAULT_INITIALIZE_TIMEOUT_MS)
+    expect(launch.initializeTimeoutMs).toBe(30_000)
     expect(launch.description).toBe('dsh profile "sdk"')
   })
 

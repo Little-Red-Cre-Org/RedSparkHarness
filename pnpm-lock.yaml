@@ -9226,6 +9226,12 @@ importers:
       '@deepseek-ai/dsh':
         specifier: workspace:*
         version: link:../../../CLI
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
+      '@deepseek-ai/dsh-subprocess-local':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess-local
     devDependencies:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
@@ -9401,6 +9407,9 @@ importers:
       '@deepseek-ai/dsh-app-boot':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/boot/app-boot
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/approval-definition
       '@deepseek-ai/dsh-atomic-write':
         specifier: workspace:^
         version: link:../../../../Core/util/atomic-write
@@ -9419,6 +9428,9 @@ importers:
       '@deepseek-ai/dsh-code-runtime':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/compat-code-runtime
+      '@deepseek-ai/dsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/code-runtime-definition
       '@deepseek-ai/dsh-code-runtime-worker-thread':
         specifier: workspace:^
         version: link:../../../../Modules/Official/code-runtime/code-runtime-worker-thread
@@ -9440,6 +9452,9 @@ importers:
       '@deepseek-ai/dsh-compaction-tool-result-pruner':
         specifier: workspace:^
         version: link:../../../../Engine/compaction/compaction-tool-result-pruner
+      '@deepseek-ai/dsh-compat-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
       '@deepseek-ai/dsh-cordis-host-runner':
         specifier: workspace:^
         version: link:../../../../Modules/Official/extensions/cordis-host-runner
@@ -9593,6 +9608,9 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
       '@deepseek-ai/dsh-shell':
         specifier: workspace:^
         version: link:../../../../Modules/Official/shell/shell
@@ -9620,6 +9638,9 @@ importers:
       '@deepseek-ai/dsh-subagent-in-process-driver':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/subagent-in-process-driver
+      '@deepseek-ai/dsh-subagent-protocol':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/subagent-protocol
       '@deepseek-ai/dsh-subagent-spawn-in-process':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/subagent-spawn-in-process

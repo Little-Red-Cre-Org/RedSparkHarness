@@ -9,7 +9,7 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-subprocess-local',
   targets: ['host'],
   requires: [],
-  provides: ['subprocess'],
+  provides: ['subprocess', 'childConnection'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
       throw new Error('subprocess-local: native Provider accepts no configuration')
@@ -18,6 +18,7 @@ export const plugin: NativePlugin = {
       const controller = new LocalSubprocessController((message) => { process.emitWarning(message) })
       context.own(() => controller.dispose())
       context.provide('subprocess', controller)
+      context.provide('childConnection', controller)
     }
   },
 }

@@ -9,9 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-挂载 `dsh-subprocess-local` 可在宿主机上运行子进程。它解析可执行文件、管理 Linux 和 Windows 进程范围，并通过 `node-pty` 提供终端会话；不受支持的宿主使用已说明的较弱 fallback。spawn 请求提供全部 stdio 处置方式、限制、终端尺寸和宽限期。输出保留有界尾部，并可选地通过 spill 文件恢复完整流；子进程从清理后的环境起步，停止时会等待拥有的进程范围和会话退出。
+挂载 `dsh-subprocess-local` 可在宿主运行子进程。它解析可执行文件、管理 Linux/Windows 进程范围，并通过 `node-pty` 提供终端会话；不支持的宿主使用已说明的较弱 fallback。spawn 请求指定 stdio、限制、终端尺寸和宽限期。输出保留有界尾部，可选 spill 文件恢复完整流。普通子进程采用 scrub-overlay；child connection 可请求完整环境替换。
 
-使用 `./native` 可将该进程所有者安装到原生 Host；包根入口仍是其 Cordis 适配器。两个入口均不接受配置。
+`./native` 将共享进程所有者安装到 Native Host；包根入口仍是 Cordis 适配器。独立客户端可通过 `./child-connection` 创建并显式释放相同所有者，无需 `NativeHost`。两个入口均不接受配置。
 
 ## 目录
 
@@ -82,6 +82,7 @@ Windows PTY 启动可能在 shell 就绪前返回 PID 0。句柄在首次正 she
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 服务接线：存活句柄集合、dispose、宿主退出最终清理、可执行文件查找 |
+| [`src/child-connection.ts`](src/child-connection.ts) | 面向 standalone raw-pipe child connection 的本地进程所有者工厂 |
 | [`src/spawn.ts`](src/spawn.ts) | 共享进程管道：直接结果、保尾收集、spill 文件与 fallback spawn |
 | [`src/managed-owner.ts`](src/managed-owner.ts) | 每个普通句柄使用的私有信号与等待 owner |
 | [`src/linux-scope.ts`](src/linux-scope.ts) | Linux user-systemd 能力检查、scope 启动、信号发送与完全停稳 |

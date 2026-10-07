@@ -23,7 +23,7 @@
       "targets": ["host"],
       "requires": [],
       "optional": [],
-      "provides": ["subprocess"]
+      "provides": ["subprocess", "childConnection"]
     }
   },
   "main": "lib/index.js",
@@ -37,6 +37,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./child-connection": {
+      "types": "./lib/types/child-connection.d.ts",
+      "default": "./lib/child-connection.js"
+    },
     "./runner": {
       "types": "./lib/types/bin.d.ts",
       "default": "./lib/runner.js"
@@ -47,6 +51,7 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/child-connection.js",
     "lib/shared-*.js",
     "lib/runner.js",
     "lib/runner-*.js",

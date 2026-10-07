@@ -6030,6 +6030,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SubprocessCollectedOutputs {\n    readonly stdout?: SubprocessOutputReader;\n    readonly stderr?: SubprocessOutputReader;\n}',
   },
   {
+    name: 'SubprocessEnvironmentMode',
+    declaration: 'export type SubprocessEnvironmentMode = \'scrub-overlay\' | \'replace\';',
+  },
+  {
     name: 'SubprocessHandle',
     declaration: 'export interface SubprocessHandle {\n    readonly stdin: Writable | undefined;\n    readonly stdout: Readable | undefined;\n    readonly stderr: Readable | undefined;\n    readonly collected: SubprocessCollectedOutputs;\n    readonly done: Promise<SubprocessOutcome>;\n    terminate(): void;\n    waitForExit(signal?: AbortSignal): Promise<boolean>;\n}',
   },
@@ -6051,7 +6055,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SubprocessSpawnSpec',
-    declaration: 'export interface SubprocessSpawnSpec {\n    argv: readonly string[];\n    cwd: string;\n    stdio: SubprocessStdio;\n    graceMs: number;\n    signal?: AbortSignal | undefined;\n    env?: NodeJS.ProcessEnv | undefined;\n}',
+    declaration: 'export interface SubprocessSpawnSpec {\n    argv: readonly string[];\n    cwd: string;\n    stdio: SubprocessStdio;\n    graceMs: number;\n    signal?: AbortSignal | undefined;\n    env?: NodeJS.ProcessEnv | undefined;\n    envMode?: SubprocessEnvironmentMode | undefined;\n}',
   },
   {
     name: 'SubprocessStdinMode',

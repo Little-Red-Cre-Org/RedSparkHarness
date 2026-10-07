@@ -70,6 +70,9 @@ export interface SubprocessStdio {
   stderr: SubprocessOutputMode
 }
 
+/** Child environment base policy; the default is the credential-scrubbed parent overlay. */
+export type SubprocessEnvironmentMode = 'scrub-overlay' | 'replace'
+
 /**
  * A fully-specified spawn request. This seam applies no defaults: every
  * disposition, limit, and directory is explicit, so the caller's own config —
@@ -106,6 +109,35 @@ export interface SubprocessSpawnSpec {
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
+  /**
+   * Environment materialization policy. Omission preserves the scrub-overlay
+   * contract above; `replace` passes only `env` entries to the child, matching
+   * Node's full-environment spawn behavior.
+   */
+  envMode?: SubprocessEnvironmentMode | undefined
+}
+
+/**
+ * Fully specified child stdio connection. Unlike general subprocess requests,
+ * all three streams are always piped and owned by the connection consumer.
+ */
+export interface ChildConnectionSpec extends Omit<SubprocessSpawnSpec, 'stdio' | 'envMode'> {
+  /** Required so the caller chooses between the Core default and a full environment replacement. */
+  envMode: SubprocessEnvironmentMode
+}
+
+/**
+ * Framework-free child connection Definition shared by external protocols and
+ * selected process Providers. Its streams and process range stay under the
+ * returned handle's lifetime contract.
+ */
+export interface ChildConnectionDefinition {
+  /**
+   * Connect one child process over raw stdin/stdout/stderr pipes.
+   * @param spec - argv, cwd, environment policy, termination grace, and cancellation.
+   * @returns a live connection with direct outcome and managed-range ownership.
+   */
+  connect(spec: ChildConnectionSpec): ChildConnectionHandle
 }
 
 /**
@@ -193,6 +225,16 @@ export interface SubprocessHandle {
    * @throws when the selected provider can no longer observe its managed range.
    */
   waitForExit(signal?: AbortSignal): Promise<boolean>
+}
+
+/** One child connection with all three stdio streams requested as pipes. */
+export interface ChildConnectionHandle extends SubprocessHandle {
+  /** The child's stdin, present because ChildConnectionDefinition always requests a pipe. */
+  readonly stdin: Writable
+  /** The child's stdout, present because ChildConnectionDefinition always requests a pipe. */
+  readonly stdout: Readable
+  /** The child's stderr, present because ChildConnectionDefinition always requests a pipe. */
+  readonly stderr: Readable
 }
 
 /**

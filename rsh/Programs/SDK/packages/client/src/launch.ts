@@ -8,8 +8,8 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { HarnessClientOptions } from './types.ts'
 
-/** Default bound for a profile to answer the SDK initialize handshake. */
-export const DEFAULT_INITIALIZE_TIMEOUT_MS = 10_000
+/** Default bound for the SDK profile-ready handshake across a cold startup. */
+export const DEFAULT_INITIALIZE_TIMEOUT_MS = 30_000
 
 /** Internal generic process launch used by the transport and fake-runtime tests. */
 export interface RuntimeProcessOptions {
@@ -23,6 +23,7 @@ export interface RuntimeProcessOptions {
   requestTimeoutMs?: number
   shutdownTimeoutMs?: number
   disposeEofGraceMs?: number
+  /** Provider termination grace for escalation and owned-range confirmation during close. */
   disposeGraceMs?: number
 }
 

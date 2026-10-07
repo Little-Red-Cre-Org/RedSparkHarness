@@ -277,6 +277,7 @@ describe('package dependency scope', () => {
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
       '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
+      '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
       '@deepseek-ai/dsh-brand',

@@ -9,6 +9,12 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess-local"
+    },
+    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {

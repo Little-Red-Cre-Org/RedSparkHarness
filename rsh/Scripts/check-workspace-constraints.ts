@@ -295,6 +295,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // runner chunk beside the existing node-pty permission repair.
   '@deepseek-ai/dsh-subprocess-local': [
     'lib/native.js',
+    'lib/child-connection.js',
     'lib/shared-*.js',
     'lib/runner.js',
     'lib/runner-*.js',

@@ -432,6 +432,21 @@ describe('HarnessClient', () => {
     await untouched.close()
   })
 
+  it('bounds a blocked stdio flush and still confirms child-range release', async () => {
+    const client = processClient(fakeLaunch(
+      { FAKE_NONREADING_STDIN: '1' },
+      { shutdownTimeoutMs: 50, disposeEofGraceMs: 50, disposeGraceMs: 50 },
+    ))
+    const notifications = client.subscribe()
+    await expect(client.request('large', { payload: 'x'.repeat(8 * 1024 * 1024) }, 50))
+      .rejects.toBeInstanceOf(RequestTimeoutError)
+
+    const closedAt = Date.now()
+    await client.close()
+    expect(Date.now() - closedAt).toBeLessThan(1_500)
+    await expect(notifications.next()).rejects.toThrow(/stdio flush failed: stdio flush timed out after 50ms/)
+  })
+
   it('escalates through SIGTERM when the runtime ignores EOF', async () => {
     const dir = await tempDir('sdk-client-ladder-')
     const sigtermFile = join(dir, 'sigterm.txt')

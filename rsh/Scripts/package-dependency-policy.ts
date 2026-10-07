@@ -46,6 +46,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
 /** Published type imports whose provider must be installed by the consumer. */
 const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
+  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Development-only package relationships not represented by source imports. */
