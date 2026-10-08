@@ -22,11 +22,13 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，空 Session 已持久化。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
+Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，Engine 通过 root 维护操作持久化空 Session。此操作要求宿主组合安装原生 `activeSessions` Provider；缺少该服务时，安装规划会在激活前拒绝此 profile。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
 
-原生预设组合安装模型适配器、原生 Agent 与模型执行、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。只有精确的执行取消原因会转换为取消响应；清理失败及无关的执行失败仍作为协议错误上报。
+Program 将 `rootExecution` 作为原生 application service 提供。它依据精确附着的 root Agent 和 Session 身份找到所属的 per-Session Engine executor，再通过该 root 的 branded route 分派；maintenance 和 fork 的新目标 ID 无须等于 ACP wire Session ID。route 准入会拒绝 foreign、delegated、released 和 closing root owner。清理期间，`capture` 与 `cancel` 会继续按精确身份解析正在关闭的 owner，使取消能在 Engine detach 之前完成。必需的 `releaseIdle` 操作会委托给所属 Engine；Engine 仅接受已准入动态 Workspace route 上精确且已结算的 owner，ACP 的 per-Session base route 不满足该条件。此 profile 未配置动态 Workspace 准入，因此不提供可选的 `createWorkspaceRoute` 能力。该设计保留每条 route 不可变的 cwd 与执行作用域，并把 root permission 请求投递到所属 ACP wire Session。route 活动时，已安装的 Provider 可以使用 root 操作；关闭 Session 或连接会释放其 executor 和 root。ACP wire 方法提供提示取消与 Session 关闭；settle、maintenance、fork、预设选择和按 route 授权的存储操作仍是内部 service。仅当所选持久化 Provider 支持可恢复删除时才提供该能力。动态 `selectWorkspace` 仍受 Engine 已注册 Workspace 和显式 route 准入配置约束；此 ACP profile 不启用该准入，继续通过标准 ACP `session/new` 与 `session/resume` 选择 cwd。
 
-应用声明共享执行器的可选 `modelSelection` 服务，并使用其 Host 编译配置。
+原生预设组合安装模型适配器、原生 Agent、active Session 与模型执行 Provider、本地文件系统、凭据和 Session 持久化。可通过 profile patch 安装其他原生工具。只有精确的执行取消原因会转换为取消响应；清理失败及无关的执行失败仍作为协议错误上报。
+
+应用声明共享执行器的可选 `modelSelection` 服务，并使用其 Host 编译配置。Session 新建、模型配置、提示执行、精确 root 取消与清理都会使用公开的 `rootExecution` 操作；ACP 提示取消仍保持协议层的轮次取消语义。
 
 新建和恢复的 Session 返回所选模型目录提供的标准 `configOptions`。`session/set_config_option` 接受已公布的不透明模型值与声明的推理档位，通过独占 Session 维护持久化完整选择，并发送 `config_option_update`。提示执行期间收到的请求等待该提示结算，选择用于下一轮；配置待结算时拒绝另一提示。调用方取消会中断排队的发现与修改；关闭和 EOF 会取消并排空已接收的控制操作。缺少目录或选择 Provider 时返回空选项并拒绝修改。目录缺项不会清除当前已记录的路由。
 

@@ -2030,18 +2030,22 @@ export class NativeHeadlessApplication implements NativeApplication {
  * @param context - Host installation that owns these capabilities.
  * @param config - validated Program configuration.
  * @param executionScope - selected descendant scope for Agent contributions.
- * @param authority - explicit services when a Program requires Session execution and live ownership.
- * @returns the executor released by the installation.
+ * @param authority - explicit service selection. When supplied, its active and execution values are used as-is;
+ * an omitted execution value does not fall back to context. Without this object, both optional services are read
+ * from context.
+ * @returns the executor registered for disposal with the installation.
+ * @throws if `executionScope` does not belong to the installation tree.
  */
 export function createNativeHeadlessApplication(context: NativeContext, config: Config,
   executionScope: NativeScope = context.scope,
-  authority?: { readonly execution: NativeSessionExecutionOperations; readonly active: NativeActiveSessionOperations },
+  authority?: { readonly execution?: NativeSessionExecutionOperations; readonly active: NativeActiveSessionOperations },
 ): NativeHeadlessApplication {
   if (!context.scope.contains(executionScope)) throw new Error('native-headless: execution scope belongs to another installation tree')
   const application = new NativeHeadlessApplication(
     context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveNativeHeadlessConfig(config), context.require('agents'),
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
-    context.optional('codeRuntime'), context.optional('timeContext'), authority === undefined ? context.optional('sessionExecution') : authority.execution,
+    context.optional('codeRuntime'), context.optional('timeContext'),
+    authority === undefined ? context.optional('sessionExecution') : authority.execution,
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
     context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
   )

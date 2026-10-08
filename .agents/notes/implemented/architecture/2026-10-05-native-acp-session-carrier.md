@@ -6,20 +6,26 @@ English | [中文](2026-10-05-native-acp-session-carrier.zh.md)
 
 ## Problem
 
-The explicit `native-acp` profile names a missing application and inherits native module declarations unavailable on a clean production tree. Standard ACP callers need a working native carrier while remaining compatibility features are migrated separately.
+The explicit `native-acp` profile must provide standard ACP transport while the Engine remains the only Agent, Session writer, and model-turn owner. Its declared installation requirements must cover every Engine operation the carrier uses before a Session becomes available.
 
 ## Decision
 
-The native ACP application uses the maintained ACP SDK for wire validation and stdio framing and the shared native-headless executor for all model, Agent, Tools, and Session work. Each connection-owned Session has its own workspace route and cancellation controller; durable storage owns Session identities and history. New Sessions materialize before acknowledgement, resume replays committed updates, and close releases execution without deleting history. Transport termination cancels accepted requests, waits for model initialization to settle, and drains executor teardown.
+The native ACP application uses the maintained ACP SDK for wire validation and stdio framing and the shared `native-headless` executor for model, Agent, tool, and Session work. The host installation requires the native `activeSessions` Provider because `session/new` creates an empty durable Session through Engine root maintenance before acknowledging it. Installation planning rejects the carrier before activation when that Provider is absent; the carrier does not create a second persistence or Session writer path.
 
-The shipped native ACP profile uses the proven SDK carrier providers and keeps compatibility ACP selection unchanged. Text prompts, durable assistant/tool updates, cancellation, close, list, and resume are supported. Per-session MCP mounts, multimodal admission, mutable model controls, permission/question channels, and attachment presentation remain separate parity batches. Unsupported MCP declarations and prompt content reject explicitly, and the capability response advertises the supported input.
+Each ACP Session owns an Engine executor, a branded route, a cancellation controller, and its protocol resources. Root execution resolves the exact attached root Agent and Session before dispatching through that route; a fresh Engine Session identity may differ from its ACP wire id. Admission rejects foreign, delegated, released, and closing owners. Exact-owner `capture` and `cancel` remain available while an owner is closing so cleanup can cancel and drain accepted work before Engine detachment. The required `releaseIdle` operation delegates through the selected route, while the Engine accepts retirement only for a settled owner on an admitted dynamic Workspace route; ACP's per-Session base route is not such a route. The optional `createWorkspaceRoute` capability is not exposed because this profile does not configure dynamic Workspace admission. Persistence retains the durable Session log after the live executor closes.
+
+The carrier accepts standard text and image prompts, declared model controls, stdio and Streamable HTTP MCP tool connections, and permission requests. Model selection and permission outcomes stay attached to the exact Session owner. The compatibility `acp` profile remains the default composition; the `native-acp` profile is selected explicitly.
+
+Input EOF and Host cancellation stop admission, cancel accepted work, and drain model initialization, permission requests, protocol resources, and executor teardown. Only the exact reason from an aborted execution signal maps to an ACP cancelled response; cleanup failures and unrelated execution errors remain protocol errors. The native carrier does not expose ACP question requests, attachment presentation, MCP resources or prompts, audio or embedded-context input, or a shutdown request. Dynamic workspace selection is not enabled by this profile; standard `session/new` and `session/resume` select and validate the Session workspace.
 
 ## Alternatives considered
 
-**A protocol-owned Agent loop.** This duplicates writer and model admission ownership already provided by native-headless.
+**A protocol-owned Agent loop or Session writer.** Rejected because it would duplicate the Engine's execution admission, durable writer, and owner lifecycle.
 
-**Advertising complete ACP parity.** Unavailable modules and interaction channels would fail after clients relied on their capability declaration, so native selection remains explicit.
+**Leave `activeSessions` optional and create empty Sessions through persistence directly.** Rejected because every creation must follow Engine root maintenance; a separate persistence path would violate the single Session owner.
+
+**Advertise complete ACP parity.** Rejected because unsupported interaction and presentation channels would fail after clients relied on their capability declaration. The native profile remains explicit and advertises only its supported input.
 
 ## Consequences
 
-ACP clients can exercise native persistent Session turns through the supported `dsh` launcher without Cordis boot. Only an executor rejection equal to the aborted execution signal's reason becomes a cancelled reply; cleanup failures remain protocol errors. A recorded Session protocol snapshot verifies ordered replies and durable replay; focused lifecycle verification covers prompt cancellation and transport drain. Default switching belongs to the later parity milestone.
+ACP clients can create and operate durable native Sessions through the supported launcher without booting Cordis. The protocol Session id and the Engine root Session id remain distinct identities connected by the owned route. Existing lifecycle coverage exercises the built launcher with a local controlled model server and the native Engine composition with deterministic adapters; it proves protocol and lifecycle behavior, not authenticated provider inference. The active-session planning regression proves a missing required Provider is rejected before activation.

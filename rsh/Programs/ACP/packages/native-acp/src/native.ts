@@ -9,8 +9,9 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
-import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
+  NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
 import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
@@ -43,7 +44,9 @@ export interface Config {
 type ResolvedConfig = Config & { readonly maxPendingPermissions: number; readonly mcpToolCallTimeoutMs: number }
 
 interface OwnedSession {
+  readonly id: SessionId
   readonly executor: NativeHeadlessApplication
+  readonly rootRoute: NativeRootRouteId
   readonly lifetime: AbortController
   readonly resources: ResourceOwner
   readonly scope: NativeScope
@@ -52,6 +55,11 @@ interface OwnedSession {
   notifications: Promise<void>
   current?: { readonly abort: AbortController; readonly done: Promise<PromptResponse> }
   closing?: Promise<void>
+}
+
+interface RootExecutionWaiter {
+  readonly wake: () => void
+  readonly fail: (cause: unknown) => void
 }
 
 function resolveConfig(input: unknown): ResolvedConfig {
@@ -107,7 +115,12 @@ function updates(event: SessionEvent): SessionUpdate[] {
 
 /** Owns one ACP connection and its independently cancellable native Sessions. */
 export class NativeAcpApplication implements NativeApplication {
+  /** ACP Program root operations routed to their exact Engine-owned workspace route. */
+  readonly rootExecution: NativeRootExecutionOperations
   private readonly sessions = new Map<string, OwnedSession>()
+  private readonly rootRoutes = new Map<NativeRootRouteId, OwnedSession>()
+  private readonly ownedExecutors = new Set<OwnedSession>()
+  private readonly rootExecutionWaiters = new Set<RootExecutionWaiter>()
   private readonly lifetime = new AbortController()
   private initialized = false
   private initializing = false
@@ -119,17 +132,164 @@ export class NativeAcpApplication implements NativeApplication {
 
   constructor(private readonly context: NativeContext, private readonly config: ResolvedConfig,
     private readonly input: Readable = process.stdin, private readonly output: Writable = process.stdout) {
+    const storage = context.require('sessionPersistence')
+    const deletions: NativeRootSessionDeletionOperations | undefined = storage.deletions === undefined ? undefined : {
+      list: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        const operations = record.executor.rootExecution.deletions
+        if (operations === undefined) throw new Error('native ACP: route does not support Session deletion')
+        return operations.list(request, this.routeSignal(record, signal))
+      },
+      delete: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        const operations = record.executor.rootExecution.deletions
+        if (operations === undefined) throw new Error('native ACP: route does not support Session deletion')
+        return operations.delete(request, this.routeSignal(record, signal))
+      },
+      restore: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        const operations = record.executor.rootExecution.deletions
+        if (operations === undefined) throw new Error('native ACP: route does not support Session deletion')
+        return operations.restore(request, this.routeSignal(record, signal))
+      },
+    }
+    this.rootExecution = Object.freeze({
+      ...deletions === undefined ? {} : { deletions },
+      ready: async (signal) => {
+        await this.waitForInitialization(signal)
+        await Promise.all(this.routeRecords().map(record => record.executor.rootExecution.ready(this.routeSignal(record, signal))))
+      },
+      resolve: id => this.routeOwner(id).executor.rootExecution.resolve(id),
+      workspaceRoutes: () => [...new Map(this.routeRecords()
+        .flatMap(record => record.executor.rootExecution.workspaceRoutes().map(route => [route.id, route] as const))).values()],
+      selectWorkspace: async (request, signal) => {
+        const record = this.routeOwner(request.baseRoute)
+        const route = await record.executor.rootExecution.selectWorkspace(request, this.routeSignal(record, signal))
+        this.rootRoutes.set(route.id, record)
+        return route
+      },
+      releaseWorkspace: async (id, signal) => {
+        const record = this.routeOwner(id)
+        await record.executor.rootExecution.releaseWorkspace(id, this.routeSignal(record, signal))
+        if (id !== record.rootRoute && this.rootRoutes.get(id) === record) this.rootRoutes.delete(id)
+      },
+      capture: owner => this.ownerRoute(owner, true).executor.rootExecution.capture(owner),
+      cancel: owner => this.ownerRoute(owner, true).executor.rootExecution.cancel(owner),
+      releaseIdle: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.releaseIdle(request, this.routeSignal(record, signal))
+      },
+      execute: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.execute(request, this.routeSignal(record, signal))
+      },
+      settle: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.settle(request, this.routeSignal(record, signal))
+      },
+      maintenance: <T>(request: NativeRootSessionRequest,
+        operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.maintenance(request, operation, this.routeSignal(record, signal))
+      },
+      fork: (request: NativeRootForkRequest, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.fork(request, this.routeSignal(record, signal))
+      },
+      selectPreset: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.selectPreset(request, this.routeSignal(record, signal))
+      },
+    } satisfies NativeRootExecutionOperations)
     const approval = context.optional('approval')
     if (approval !== undefined) context.own(approval.registerAnswerer(request => this.permission(request)))
+  }
+
+  private async waitForInitialization(signal: AbortSignal): Promise<void> {
+    signal.throwIfAborted()
+    this.assertOpen()
+    if (this.initialized) return
+    await new Promise<void>((resolve, reject) => {
+      const cleanup = (): void => {
+        signal.removeEventListener('abort', abort)
+        this.rootExecutionWaiters.delete(waiter)
+      }
+      const waiter: RootExecutionWaiter = {
+        wake: () => { cleanup(); resolve() },
+        fail: (cause) => {
+          cleanup()
+          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
+          reject(cause)
+        },
+      }
+      const abort = (): void => { waiter.fail(signal.reason) }
+      this.rootExecutionWaiters.add(waiter)
+      signal.addEventListener('abort', abort, { once: true })
+      if (signal.aborted) abort()
+      else if (this.initialized) waiter.wake()
+      else if (this.closing) waiter.fail(new Error('native ACP: connection is closing'))
+    })
+    signal.throwIfAborted()
+    this.assertOpen()
+  }
+
+  private routeOwner(id: NativeRootRouteId): OwnedSession {
+    const record = this.rootRoutes.get(id)
+    if (record === undefined || record.closing !== undefined || record.lifetime.signal.aborted) {
+      throw new Error('native ACP: unknown or closing root route')
+    }
+    return record
+  }
+
+  private routeRecords(): OwnedSession[] {
+    return [...new Set(this.rootRoutes.values())].filter(record => record.closing === undefined && !record.lifetime.signal.aborted)
+  }
+
+  private ownerRoute(owner: NativeActiveSessionOwner, allowClosing = false): OwnedSession {
+    if (owner.invocation !== 'root') throw new Error('native ACP: active root owner has no live Session route')
+    const matches = [...this.ownedExecutors].filter((record) => {
+      if (!allowClosing && (record.closing !== undefined || record.lifetime.signal.aborted)) return false
+      try {
+        const route = record.executor.rootExecution.capture(owner)
+        return this.rootRoutes.get(route.id) === record
+      } catch { return false }
+    })
+    const [record] = matches
+    if (matches.length !== 1 || record === undefined) {
+      throw new Error('native ACP: active root owner has no live Session route')
+    }
+    return record
+  }
+
+  private interactionRoute(record: OwnedSession, agent: NativeApprovalAnswererRequest['agent']): {
+    readonly interaction: NonNullable<ReturnType<NativeHeadlessApplication['interactionOwner']>>
+    readonly rootOwner: NativeActiveSessionOwner
+  } | undefined {
+    const interaction = record.executor.interactionOwner(agent)
+    if (interaction === undefined) return undefined
+    const rootOwner = this.context.require('activeSessions').owners().find(owner =>
+      owner.agent === interaction.displayRootAgent && owner.session.id === interaction.displayRootSessionId)
+    if (rootOwner === undefined) return undefined
+    try {
+      if (this.ownerRoute(rootOwner) !== record) return undefined
+    } catch { return undefined }
+    return { interaction, rootOwner }
+  }
+
+  private routeSignal(record: OwnedSession, signal: AbortSignal): AbortSignal {
+    return AbortSignal.any([signal, record.lifetime.signal, this.lifetime.signal])
   }
 
   private permission(request: NativeApprovalAnswererRequest): Promise<NativeApprovalOutcome> | undefined {
     const callId = request.callId
     if (callId === undefined) return undefined
-    for (const [id, record] of this.sessions) {
-      const owner = record.executor.interactionOwner(request.agent)
-      if (owner === undefined || owner.agent !== owner.displayRootAgent || owner.session.id !== id) continue
-      if (this.permissions.has(owner.session.id) || this.permissions.size >= this.config.maxPendingPermissions) return Promise.resolve('unavailable')
+    for (const record of this.ownedExecutors) {
+      const id = String(record.id)
+      if (this.sessions.get(id) !== record || record.closing !== undefined || record.lifetime.signal.aborted) continue
+      const owned = this.interactionRoute(record, request.agent)
+      if (owned === undefined) continue
+      const { interaction, rootOwner } = owned
+      if (this.permissions.has(record.id) || this.permissions.size >= this.config.maxPendingPermissions) return Promise.resolve('unavailable')
       const connection = this.connection
       if (connection === undefined) return Promise.resolve('unavailable')
       const signal = AbortSignal.any([request.signal, record.lifetime.signal, this.lifetime.signal])
@@ -143,12 +303,14 @@ export class NativeAcpApplication implements NativeApplication {
           ],
         }, { cancellationSignal: signal })
         signal.throwIfAborted()
-        const current = record.executor.interactionOwner(request.agent)
-        if (this.sessions.get(id) !== record || current?.session !== owner.session || current.displayRootAgent !== owner.displayRootAgent) return 'cancelled'
+        const current = this.interactionRoute(record, request.agent)
+        if (this.sessions.get(id) !== record || current?.rootOwner !== rootOwner
+          || current.interaction.session !== interaction.session || current.interaction.displayRootAgent !== interaction.displayRootAgent
+          || current.interaction.displayRootSessionId !== interaction.displayRootSessionId) return 'cancelled'
         return outcome.outcome === 'cancelled' ? 'cancelled' : outcome.optionId === 'allow-once' ? 'allowed-once' : 'rejected'
       })()
-      this.permissions.set(owner.session.id, task)
-      const release = (): void => { this.permissions.delete(owner.session.id) }
+      this.permissions.set(record.id, task)
+      const release = (): void => { this.permissions.delete(record.id) }
       void task.then(release, release)
       return task
     }
@@ -171,6 +333,7 @@ export class NativeAcpApplication implements NativeApplication {
           await this.context.require('model').resolveModel?.(this.config.provider, this.config.model, requestSignal)
           this.assertOpen()
           this.initialized = true
+          for (const waiter of [...this.rootExecutionWaiters]) waiter.wake()
         } finally { this.initializing = false }
         return { protocolVersion: PROTOCOL_VERSION, agentInfo: { name: 'redspark-harness-native-acp', version: '0.0.1' },
           agentCapabilities: { promptCapabilities: { image: this.context.optional('attachments') !== undefined
@@ -198,9 +361,20 @@ export class NativeAcpApplication implements NativeApplication {
             }
           } finally { await handle.close() }
           const record = this.createExecutor(params.sessionId, cwd)
-          const configOptions = await this.activate(record, params.sessionId, servers, requestSignal)
-          this.sessions.set(params.sessionId, record)
-          return { configOptions }
+          try {
+            const configOptions = await this.activate(record, params.sessionId, servers, requestSignal)
+            this.sessions.set(params.sessionId, record)
+            return { configOptions }
+          } catch (error: unknown) {
+            if (this.ownedExecutors.has(record)) {
+              try { await this.releaseSession(record) }
+              catch (cleanup: unknown) {
+                this.sessions.set(params.sessionId, record)
+                throw new AggregateError([error, cleanup], 'native ACP Session resume cleanup failed')
+              }
+            }
+            throw error
+          }
         } finally { this.activating.delete(params.sessionId) }
       })()))
       .onRequest(methods.agent.session.list, ({ params, signal: requestSignal }) => this.track((async () => {
@@ -253,12 +427,14 @@ export class NativeAcpApplication implements NativeApplication {
     } finally {
       this.closing = true
       this.lifetime.abort(new Error('ACP transport closed'))
+      for (const waiter of [...this.rootExecutionWaiters]) waiter.fail(new Error('native ACP: connection is closing'))
       connection.close(this.lifetime.signal.reason)
       for (const record of this.sessions.values()) record.current?.abort.abort(this.lifetime.signal.reason)
       await Promise.allSettled([...this.pending])
       await Promise.allSettled([...this.permissions.values()])
-      const results = await Promise.allSettled([...this.sessions.values()].map(record => this.releaseSession(record)))
+      const results = await Promise.allSettled([...this.ownedExecutors].map(record => this.releaseSession(record)))
       this.sessions.clear()
+      this.rootRoutes.clear()
       signal.removeEventListener('abort', cancel)
       connection.close()
       this.input.pause()
@@ -305,10 +481,16 @@ export class NativeAcpApplication implements NativeApplication {
     const { maxPendingPermissions: _permissionCapacity, mcpToolCallTimeoutMs: _mcpTimeout, ...turn } = this.config
     const resources = new ResourceOwner()
     const scope = new NativeScope(this.context.scope)
-    return { executor: createNativeHeadlessApplication(this.context, { ...turn, cwd,
-      rootRouteId: brandString<NativeRootRouteId>(`acp:${id}`) }, scope), resources, scope, lifetime: resources.controller,
-    controlTail: Promise.resolve(), controls: 0,
-    notifications: Promise.resolve() }
+    const rootRoute = brandString<NativeRootRouteId>(`acp:${id}`)
+    const execution = this.context.optional('sessionExecution')
+    const authority = { active: this.context.require('activeSessions'), ...(execution === undefined ? {} : { execution }) }
+    const record: OwnedSession = { id: SessionId(id), rootRoute,
+      executor: createNativeHeadlessApplication(this.context, { ...turn, cwd, rootRouteId: rootRoute }, scope, authority),
+      resources, scope, lifetime: resources.controller, controlTail: Promise.resolve(), controls: 0,
+      notifications: Promise.resolve() }
+    this.rootRoutes.set(rootRoute, record)
+    this.ownedExecutors.add(record)
+    return record
   }
 
   private async activate(record: OwnedSession, id: string, servers: readonly McpConfig[],
@@ -328,13 +510,8 @@ export class NativeAcpApplication implements NativeApplication {
           effect: dispose => record.resources.effect(dispose) }, config)
       }
       admitted.throwIfAborted()
-      if (freshCwd !== undefined) {
-        const handle = await this.context.require('sessionPersistence').create({ version: SESSION_FORMAT_VERSION,
-          id: SessionId(id), cwd: freshCwd, createdAt: Date.now(), isSeeded: false }, { signal: admitted })
-        try { await handle.flush({ signal: admitted }) } finally { await handle.close() }
-      }
       const options = await this.modelOperation(record, id, admitted,
-        (control, owner, admitted) => control.options(owner, admitted))
+        (control, owner, admitted) => control.options(owner, admitted), freshCwd === undefined)
       this.assertOpen()
       return options
     } catch (error: unknown) {
@@ -347,20 +524,32 @@ export class NativeAcpApplication implements NativeApplication {
   private async releaseSession(record: OwnedSession): Promise<void> {
     record.lifetime.abort(new Error('ACP Session released'))
     const failures: unknown[] = []
+    const owner = this.context.require('activeSessions').owners().find(candidate => candidate.session.id === record.id)
+    if (owner !== undefined) {
+      try {
+        if (this.rootExecution.capture(owner).id !== record.rootRoute) throw new Error('native ACP: root owner route changed before release')
+        await this.rootExecution.cancel(owner)
+      } catch (error: unknown) { failures.push(error) }
+    }
     for (const release of [() => record.executor.dispose(), () => record.resources.dispose()]) {
       try { await release() } catch (error: unknown) { failures.push(error) }
     }
     if (failures.length > 0) throw new AggregateError(failures, 'native ACP Session resource cleanup failed')
+    this.ownedExecutors.delete(record)
+    for (const [route, owner] of this.rootRoutes) if (owner === record) this.rootRoutes.delete(route)
   }
 
   private modelOperation(record: OwnedSession, id: string, signal: AbortSignal,
     operation: (control: NativeAcpModelControls, owner: NativeActiveSessionOwner,
-      signal: AbortSignal) => Promise<SessionConfigOption[]>): Promise<SessionConfigOption[]> {
+      signal: AbortSignal) => Promise<SessionConfigOption[]>, resume = true): Promise<SessionConfigOption[]> {
     const selection = this.context.optional('modelSelection')
     const directory = this.context.optional('modelDirectory')
-    if (selection === undefined || directory === undefined) return Promise.resolve([])
+    const request = { route: record.rootRoute, id: SessionId(id), resume }
+    if (selection === undefined || directory === undefined) {
+      return resume ? Promise.resolve([]) : this.rootExecution.maintenance(request, () => Promise.resolve([]), signal)
+    }
     const control = new NativeAcpModelControls(selection, directory, this.config)
-    return record.executor.executeSessionOperation({ id: SessionId(id), resume: true }, (owner, admitted) => {
+    return this.rootExecution.maintenance(request, (owner, admitted) => {
       const execution = this.context.require('agents').execution(owner.agent)
       return execution.status === 'maintenance' ? operation(control, owner, admitted)
         : execution.runMaintenance(agentSignal => operation(control, owner, AbortSignal.any([agentSignal, admitted])))
@@ -390,9 +579,17 @@ export class NativeAcpApplication implements NativeApplication {
     if (info?.type !== 'directory') throw RequestError.invalidParams(undefined, 'cwd must be a directory')
     const id = SessionId(randomUUID())
     const record = this.createExecutor(id, cwd)
-    const configOptions = await this.activate(record, id, servers, signal, cwd)
-    this.sessions.set(id, record)
-    return { sessionId: id, configOptions }
+    try {
+      const configOptions = await this.activate(record, id, servers, signal, cwd)
+      this.sessions.set(id, record)
+      return { sessionId: id, configOptions }
+    } catch (error: unknown) {
+      if (this.ownedExecutors.has(record)) {
+        try { await this.releaseSession(record) }
+        catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native ACP Session creation cleanup failed') }
+      }
+      throw error
+    }
   }
 
   private async notify(notification: SessionNotification): Promise<void> {
@@ -455,7 +652,8 @@ export class NativeAcpApplication implements NativeApplication {
           input = { message: createUserMessage({ content, source: { kind: 'user' } }) }
         }
         signal.throwIfAborted()
-        const result = await record.executor.executeRootTurn({ id: SessionId(params.sessionId), resume: true,
+        const result = await this.rootExecution.execute({ route: record.rootRoute,
+          id: SessionId(params.sessionId), resume: true,
           ...input, onEvent: (event) => {
             for (const update of updates(event)) {
               record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
@@ -501,11 +699,15 @@ export class NativeAcpApplication implements NativeApplication {
 /** Host installation for the explicitly selected native-acp profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
-  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents'],
+  requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'activeSessions', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory'], provides: ['application'],
+    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory'], provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)
-    return (context) => { context.provide('application', new NativeAcpApplication(context, config)) }
+    return (context) => {
+      const application = new NativeAcpApplication(context, config)
+      context.provide('application', application)
+      context.provide('rootExecution', application.rootExecution)
+    }
   },
 }

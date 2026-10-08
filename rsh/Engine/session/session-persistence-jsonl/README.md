@@ -46,7 +46,7 @@ Recoverable deletion moves the entire Session directory into `.rsh-session-trash
 
 The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. The native host awaits open-handle closure when it removes the Provider.
 
-The built native entry loads without Cordis through the current Session, persistence, format, and model-value dependencies; the package root remains the Cordis plugin entry.
+The published native entry and CommonJS migration verifier run without Cordis installed; the package root remains the Cordis plugin entry.
 
 | Field | Default | Meaning |
 |---|---|---|

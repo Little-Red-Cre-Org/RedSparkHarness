@@ -1,5 +1,5 @@
 /** ACP cancellation and EOF drain through the built public launcher. */
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -14,8 +14,13 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as persistencePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
 import { plugin as executionPlugin } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelectionPlugin } from '@deepseek-ai/dsh-native-model-selection/native'
+import { NativeApprovalRequestId, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
+import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { MockAdapter, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as carrierPlugin, NativeAcpApplication } from '../src/native.ts'
 
@@ -28,9 +33,14 @@ async function failedClose(home: string): Promise<void> {
   const entered = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
   const failure = new Error('ACP retained writer close failed')
+  let failClose = false
   const causes = (error: unknown): readonly unknown[] => error instanceof AggregateError ? error.errors.flatMap(causes) : [error]
   const model = new MockAdapter([textResponse('Retained ACP turn.')])
   let app: NativeAcpApplication | undefined
+  let rootExecution: NativeRootExecutionOperations | undefined
+  let activeSessions: NativeActiveSessionOperations | undefined
+  let approval: NativeApprovalService | undefined
+  const permissionRequests: Record<string, unknown>[] = []
   const modelProvider: NativePlugin = { apiVersion: 1, name: 'close-model', targets: ['host'],
     requires: [], provides: ['model', 'modelDirectory'], resolve: () => (context) => {
       context.provide('model', model)
@@ -40,37 +50,57 @@ async function failedClose(home: string): Promise<void> {
         resolve: (provider, id) => model.resolveModel(provider, id) })
     } }
   const capture: NativePlugin = { apiVersion: 1, name: 'close-capture', targets: ['host'],
-    requires: ['application', 'sessionPersistence', 'activeSessions'], provides: [], resolve: () => (context) => {
+    requires: ['application', 'sessionPersistence', 'activeSessions', 'rootExecution', 'approval'], provides: [], resolve: () => (context) => {
       const application = context.require('application')
       if (!(application instanceof NativeAcpApplication)) throw new Error('ACP close carrier missing')
       app = application
-      context.effect(context.require('activeSessions').onAttached(async (owner) => { context.own(owner.retain()) }))
+      rootExecution = context.require('rootExecution')
+      activeSessions = context.require('activeSessions')
+      approval = context.require('approval')
+      context.effect(activeSessions.onAttached(async (owner) => { context.own(owner.retain()) }))
       const storage = context.require('sessionPersistence')
+      const create = storage.create.bind(storage)
+      const createSpy = vi.spyOn(storage, 'create').mockImplementation(async (...args) => {
+        const writer = await create(...args)
+        const close = writer.close.bind(writer)
+        vi.spyOn(writer, 'close').mockImplementation(async (...closeArgs) => {
+          if (!failClose) return close(...closeArgs)
+          entered.resolve(undefined)
+          await release.promise
+          await close(...closeArgs)
+          throw failure
+        })
+        return writer
+      })
       const open = storage.open.bind(storage)
       const spy = vi.spyOn(storage, 'open').mockImplementation(async (...args) => {
         const writer = await open(...args)
         if (args[1] === 'write') {
           const close = writer.close.bind(writer)
-          vi.spyOn(writer, 'close').mockImplementation(async () => {
+          vi.spyOn(writer, 'close').mockImplementation(async (...closeArgs) => {
+            if (!failClose) return close(...closeArgs)
             entered.resolve(undefined)
             await release.promise
-            await close()
+            await close(...closeArgs)
             throw failure
           })
         }
         return writer
       })
-      context.own(() => { spy.mockRestore() })
+      context.own(() => { createSpy.mockRestore(); spy.mockRestore() })
     } }
   const carrier: NativePlugin = { ...carrierPlugin, resolve: () => (context) => {
-    context.provide('application', new NativeAcpApplication(context, { provider: 'mock', model: 'mock',
-      systemPrompt: 'ACP retained close.', maxSteps: 1, maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output))
+    const application = new NativeAcpApplication(context, { provider: 'mock', model: 'mock',
+      systemPrompt: 'ACP retained close.', maxSteps: 1, maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output)
+    context.provide('application', application)
+    context.provide('rootExecution', application.rootExecution)
   } }
   const host = new NativeHost(resolveInstallation([
     { plugin: carrier, scope, config: undefined }, { plugin: modelProvider, scope, config: undefined },
     { plugin: capture, scope, config: undefined }, { plugin: executionPlugin, scope, config: undefined },
     { plugin: modelSelectionPlugin, scope, config: undefined },
-    { plugin: agentPlugin, scope, config: undefined }, { plugin: modelExecutionPlugin, scope, config: undefined },
+    { plugin: agentPlugin, scope, config: undefined }, { plugin: approvalPlugin, scope, config: { policy: 'ask' } },
+    { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: home } },
     { plugin: persistencePlugin, scope, config: { root: join(home, 'failed-close-sessions'), compression: 'none' } },
   ], 'host'))
@@ -79,11 +109,72 @@ async function failedClose(home: string): Promise<void> {
   const application = app
   const done = host.run(scope, { kind: 'test' }, invocation => application.run([], invocation.signal)).catch((error: unknown) => error)
   const transport = new JsonRpcLineTransport(output, input)
+  transport.onRequest(async (method, params) => {
+    if (method !== 'session/request_permission') throw new Error(`unexpected ACP request ${method}`)
+    permissionRequests.push(params)
+    return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
+  })
   transport.start()
   const signal = AbortSignal.timeout(10_000)
   try {
+    if (rootExecution === undefined) throw new Error('ACP root execution service was not installed')
+    const ready = rootExecution.ready(signal)
     await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
+    await ready
     const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
+    const owner = activeSessions?.owners().find(candidate => candidate.session.id === created.sessionId)
+    if (owner === undefined) throw new Error('ACP root owner was not attached')
+    const route = rootExecution.capture(owner)
+    expect(route).toMatchObject({ id: `acp:${created.sessionId}`, configuration: { cwd: home } })
+    expect(rootExecution.workspaceRoutes()).toEqual([])
+    expect('createWorkspaceRoute' in rootExecution).toBe(false)
+    await expect(rootExecution.releaseIdle({ route: route.id, id: owner.session.id, expectedOwner: owner }, signal))
+      .rejects.toThrow('native-headless: idle retirement route or Agent identity changed')
+    const secondCwd = join(home, 'other-workspace')
+    await mkdir(secondCwd)
+    const second = await transport.request('session/new', { cwd: secondCwd, mcpServers: [] }, signal) as { sessionId: string }
+    const secondOwner = activeSessions?.owners().find(candidate => candidate.session.id === second.sessionId)
+    if (secondOwner === undefined) throw new Error('second ACP root owner was not attached')
+    expect(rootExecution.capture(secondOwner)).toMatchObject({ id: `acp:${second.sessionId}`, configuration: { cwd: secondCwd } })
+    await transport.request('session/close', { sessionId: second.sessionId }, signal)
+    expect(() => rootExecution.capture(secondOwner)).toThrow('active root owner has no live Session route')
+    expect(rootExecution.capture(owner)).toBe(route)
+
+    const freshId = SessionId('review-provider-fresh-root')
+    await rootExecution.maintenance({ route: route.id, id: freshId, resume: false }, async (fresh) => {
+      // Seed the fork boundary through the exact Engine owner and its only writer.
+      fresh.append('turn/start', { turn: 1 })
+      fresh.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+      await fresh.flush()
+    }, signal)
+    const freshOwner = activeSessions?.owners().find(candidate => candidate.session.id === freshId)
+    if (freshOwner === undefined) throw new Error('Provider-created fresh root owner was not attached')
+    expect(rootExecution.capture(freshOwner)).toBe(route)
+    if (approval === undefined) throw new Error('native approval Provider was not installed')
+    await expect(approval.request({ id: NativeApprovalRequestId('provider-fresh-permission'), agent: freshOwner.agent,
+      toolName: 'write_file', callId: ToolCallId('provider-fresh-call'), signal })).resolves.toMatchObject({ outcome: 'allowed-once' })
+    expect(permissionRequests).toHaveLength(1)
+    expect(permissionRequests[0]).toMatchObject({ sessionId: created.sessionId,
+      toolCall: { toolCallId: 'provider-fresh-call' } })
+    const lookalikeOwner = { ...freshOwner }
+    expect(() => rootExecution.capture(lookalikeOwner)).toThrow('active root owner has no live Session route')
+    expect(() => rootExecution.cancel(lookalikeOwner)).toThrow('active root owner has no live Session route')
+    const delegatedOwner = { ...freshOwner, invocation: 'delegated' as const }
+    expect(() => rootExecution.capture(delegatedOwner)).toThrow('active root owner has no live Session route')
+    expect(() => rootExecution.cancel(delegatedOwner)).toThrow('active root owner has no live Session route')
+    await rootExecution.cancel(freshOwner)
+    expect(() => rootExecution.capture(freshOwner)).toThrow('active root owner has no live Session route')
+    expect(rootExecution.capture(owner)).toBe(route)
+
+    const forkId = SessionId('review-provider-fork-root')
+    await rootExecution.fork({ route: route.id, source: freshId, id: forkId }, signal)
+    const forkOwner = activeSessions?.owners().find(candidate => candidate.session.id === forkId)
+    if (forkOwner === undefined) throw new Error('Provider-created fork owner was not attached')
+    expect(rootExecution.capture(forkOwner)).toBe(route)
+    await rootExecution.cancel(forkOwner)
+    expect(rootExecution.capture(owner)).toBe(route)
+
+    failClose = true
     const closing = transport.request('session/close', { sessionId: created.sessionId }, signal).catch((error: unknown) => error)
     await entered.promise
     const rejected = async (): Promise<void> => {
@@ -279,7 +370,11 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       .toMatchObject([{ outcome: 'rejected' }, { outcome: 'cancelled' }, { outcome: 'unavailable' }, { outcome: 'cancelled' }])
     expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)
     expect(events.at(-1)?.type).toBe('turn/end')
-    await failedClose(home)
+  } catch (error: unknown) {
+    child.kill('SIGKILL')
+    const exit = await child
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`${message}\nACP launcher stderr:\n${exit.stderr}`, { cause: error })
   } finally {
     permissionRelease.resolve(undefined)
     transport.close()
@@ -290,4 +385,9 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await new Promise<void>(resolve => server.close(() => { resolve() }))
     await rm(home, { recursive: true, force: true })
   }
+})
+
+it('routes fresh and forked Provider roots through their exact ACP Session route', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-root-owner-'))
+  try { await failedClose(home) } finally { await rm(home, { recursive: true, force: true }) }
 })

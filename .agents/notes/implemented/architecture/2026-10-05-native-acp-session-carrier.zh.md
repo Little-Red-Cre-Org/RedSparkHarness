@@ -6,20 +6,26 @@ Status: implemented
 
 ## 问题
 
-显式 `native-acp` profile 指向不存在的应用，并继承了干净生产目录中不可用的原生模块声明。标准 ACP 调用方需要可用的原生承载层，剩余兼容能力分别迁移。
+显式 `native-acp` profile 必须提供标准 ACP 传输，同时由 Engine 独占 Agent、Session writer 与模型轮次。其安装声明必须在 Session 可用之前覆盖承载层调用的全部 Engine 操作。
 
 ## 决策
 
-原生 ACP 应用使用持续维护的 ACP SDK 处理线路校验和标准输入输出分帧，使用共享的 native-headless 执行器处理全部模型、Agent、Tools 与 Session 工作。连接拥有的每个 Session 具有独立的工作目录路由和取消控制器；持久化存储拥有 Session 身份与历史。新 Session 在确认之前落盘，恢复重放已提交的更新，关闭释放执行但不删除历史。传输终止会取消已接收的请求，等待模型初始化结束，并等待执行器清理结束。
+原生 ACP 应用使用持续维护的 ACP SDK 校验线路并处理标准输入输出分帧，使用共享 `native-headless` 执行模型、Agent、工具与 Session 工作。Host installation 要求原生 `activeSessions` Provider，因为 `session/new` 会在确认之前通过 Engine root maintenance 创建空的持久化 Session。如果缺少该 Provider，installation planning 会在应用激活之前拒绝承载层；承载层不会另建持久化或 Session writer 路径。
 
-原生 ACP 预设使用已验证的 SDK 承载层提供方，并保持兼容 ACP 选择不变。支持文本提示、持久助手／工具更新、取消、关闭、列出和恢复。Session 专属 MCP 挂载、多模态接收、可变模型控制、权限／提问通道和附件展示属于独立的对等能力批次。不支持的 MCP 声明与提示内容显式拒绝，能力响应声明支持的输入。
+每个 ACP Session 拥有一个 Engine executor、一个 branded route、一个 cancellation controller 和对应协议资源。Root execution 先解析精确挂接的 root Agent 与 Session，再通过该 route 分发；新建的 Engine Session identity 可以不同于 ACP wire id。Admission 会拒绝 foreign、delegated、released 和 closing owner。Owner closing 时，精确 owner 的 `capture` 与 `cancel` 仍可用，使清理过程能在 Engine detach 前取消并排空已接收工作。必需的 `releaseIdle` 操作按选定 route 委托；Engine 仅接受已准入动态 Workspace route 上已结算 owner 的 retirement，ACP 的 per-Session base route 不属于此类 route。此 profile 未配置动态 Workspace 准入，因此不提供可选的 `createWorkspaceRoute` 能力。Live executor 关闭后，持久化仍保留 durable Session log。
+
+承载层接受标准文本与图像提示、已声明的模型控制、stdio 与 Streamable HTTP MCP 工具连接以及 permission requests。模型选择与权限结果仍绑定到精确 Session owner。兼容 `acp` profile 仍是默认组合；`native-acp` profile 需要显式选择。
+
+输入 EOF 与 Host cancellation 会停止 admission、取消已接收工作，并排空模型初始化、permission requests、协议资源和 executor teardown。只有来自已中止 execution signal 的完全相同 reason 才映射为 ACP cancelled response；清理失败和其他 execution error 仍作为协议错误。原生承载层不提供 ACP question requests、attachment presentation、MCP resources 或 prompts、audio 或 embedded-context input，也没有 shutdown request。该 profile 未启用动态 workspace selection；标准 `session/new` 与 `session/resume` 负责选择并验证 Session workspace。
 
 ## 考虑过的替代方案
 
-**协议拥有的 Agent 循环。** 这会重复 native-headless 已提供的写入与模型接收所有权。
+**由协议层自建 Agent loop 或 Session writer。**不采用，因为这会重复 Engine 的 execution admission、durable writer 与 owner 生命周期。
 
-**声明完整 ACP 对等能力。** 客户端依赖声明之后才会因缺少模块或交互通道而失败，因此原生选择保持显式。
+**保持 `activeSessions` optional，并直接通过 persistence 创建空 Session。**不采用，因为每次创建都必须经过 Engine root maintenance；独立 persistence 路径会破坏唯一 Session owner。
+
+**声明完整 ACP 对等能力。**不采用，因为客户端依赖能力声明后，缺失的交互与展示通道仍可能失败。原生 profile 保持显式选择，并只声明其支持的输入。
 
 ## 影响
 
-ACP 客户端可以通过受支持的 `dsh` 启动器执行原生持久化 Session 轮次，无需 Cordis 启动。只有执行器拒绝原因与已取消执行信号的原因相等时才返回取消响应；清理失败仍作为协议错误上报。录制 Session 协议快照验证有序响应与持久重放；定向生命周期验证覆盖提示取消与传输排空。默认切换属于后续对等能力里程碑。
+ACP 客户端可以通过受支持的启动器操作持久化的原生 Session，无需启动 Cordis。协议 Session id 与 Engine root Session id 仍是经由 owned route 关联的不同 identity。现有生命周期覆盖使用构建后的 launcher 和本地受控模型服务器，并使用确定性 adapter 检验原生 Engine 组合；它证明协议与生命周期行为，但不证明已认证 Provider 推理。缺失 Provider 的规划回归证明 installation 在激活前拒绝不完整组合。
