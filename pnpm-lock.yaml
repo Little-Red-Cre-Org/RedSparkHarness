@@ -2393,18 +2393,27 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-llm-retry':
+        specifier: workspace:^
+        version: link:../../llm/llm-retry
       '@deepseek-ai/dsh-native-approval':
         specifier: workspace:^
         version: link:../../../Modules/Official/interaction/native-approval
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../../Modules/Official/code-runtime/native-code-runtime
+      '@deepseek-ai/dsh-repeat-tool-reminder':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/guard/repeat-tool-reminder
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
       '@deepseek-ai/dsh-token-meter':
         specifier: workspace:^
         version: link:../../llm/token-meter
+      '@deepseek-ai/dsh-tool-call-timeout-policy':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/guard/timeout-policy
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../../Modules/Official/code-runtime/tool-code-runtime
@@ -2995,6 +3004,12 @@ importers:
       '@deepseek-ai/dsh-llm-mock-server':
         specifier: workspace:^
         version: link:../../../Tests/test-support/llm-mock-server
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -6286,6 +6301,15 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -6304,6 +6328,12 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
@@ -8695,6 +8725,9 @@ importers:
       '@deepseek-ai/dsh-llm-pi-ai':
         specifier: workspace:^
         version: link:../../Modules/Official/llm/llm-pi-ai
+      '@deepseek-ai/dsh-llm-retry':
+        specifier: workspace:^
+        version: link:../../Engine/llm/llm-retry
       '@deepseek-ai/dsh-native-acp':
         specifier: workspace:^
         version: link:../ACP/packages/native-acp
@@ -8758,6 +8791,9 @@ importers:
       '@deepseek-ai/dsh-native-web-session-controller':
         specifier: workspace:^
         version: link:../Web/api/native-web-session-controller
+      '@deepseek-ai/dsh-repeat-tool-reminder':
+        specifier: workspace:^
+        version: link:../../Modules/Official/guard/repeat-tool-reminder
       '@deepseek-ai/dsh-sandbox-local':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-local
@@ -8773,6 +8809,9 @@ importers:
       '@deepseek-ai/dsh-tool-ask-user':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/tool-ask-user
+      '@deepseek-ai/dsh-tool-call-timeout-policy':
+        specifier: workspace:^
+        version: link:../../Modules/Official/guard/timeout-policy
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/tool-code-runtime

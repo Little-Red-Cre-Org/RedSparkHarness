@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This package helps a model escape loops in which it calls the same tool with identical arguments without making progress. At configured repeat counts, it asks the model to inspect the previous result and change approach or finish. The reminder is advisory: it never blocks or delays a legitimate repeated call. Repeats are tracked separately for each agent and cleared by a new user message. The `dsh` base bundle enables the package with reminders at 3, 5, and 8 repeats.
+This package helps a model escape loops in which it calls the same tool with identical arguments without making progress. At configured repeat counts, it asks the model to inspect the previous result and change approach or finish. The reminder is advisory: it never blocks or delays a legitimate repeated call. Repeats are tracked separately for each agent and cleared by a new user message. The `dsh` base bundle and every shipped native profile enable the package with reminders at 3, 5, and 8 repeats.
 
 ## Table of Contents
 
@@ -57,6 +57,10 @@ Invalid configuration fails at startup with a clear error — an empty `threshol
 
 With the defaults, a model that repeats the same call with identical arguments receives a short reminder on the third repeat — to analyze the previous result before calling again — and detailed reminders on the fifth and eighth, naming the tool and the repeated arguments so it can decide whether to change approach, gather more evidence, or finish. A new user message clears the count, so a fresh instruction is never treated as a loop. Reminders appear in the conversation after the repeated call's result, attributed to the plugin, so the model reads them like any other message.
 
+### Native profiles
+
+The Cordis-free `./native` installer accepts the same four fields with the same defaults and the same fail-loud checks, and also rejects unknown fields. It requires the selected `tools` registry and produces the same reminder text, source and thresholds. It counts every recorded tool result for an Agent, including failed and denied calls and the calls a `run_code` program makes. Reminders are appended as `user/message` events after the call's `tool/result`, before any context the tool itself adds.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -90,11 +94,17 @@ Each agent's chain is keyed by `(tool name, canonical arguments)` — two calls 
 
 Reminders ride the post-execute decision's `additionalContexts` (source `{kind: 'plugin', plugin: 'repeat-tool-reminder', form: 'notice', summary: '<tool> × <count>'}`), never a `content` replacement: the `tool/result` event stays the tool's own output for audit. The loop buffers the context and appends it as an injected `user/message` after the step's tool results, which the session renders as a plain synthetic user message — model-visible, source-attributed, and reconstructable from the session log with no new session event. The guard always delegates via `next()` and prepends its reminder to the downstream decision's context array, so both decision variants (a blocked call included) still get the nudge while every entry retains its own source and metadata.
 
+### Native settlement policy
+
+[`src/native.ts`](src/native.ts) compiles the same detector from [`src/core.ts`](src/core.ts) when the installation resolves, then registers it with `tools.onSettlement`. The native registry calls settlement policies once for each recorded result, both in the headless loop and for nested program calls, and passes a frozen copy of the parsed arguments and recorded result. Chains are kept in a `WeakMap` keyed by native Agent. Native Agents have no `agent/pre-step` event, so the policy stores the newest user-authored message from `session.deriveMessages()` with each chain and starts a new chain when that message changes.
+
 ### Source map
 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, fail-loud validation, chain listeners |
+| [`src/core.ts`](src/core.ts) | Shared configuration schema and defaults, validation, canonical identity, chain detection and reminder text |
+| [`src/native.ts`](src/native.ts) | Native installer and configuration resolver |
 | — | No runtime invariant companion is published; the repeat chain is private to one post-execute listener and exposes no package-owned event or snapshot that an independent companion can observe. |
 
 </details>
@@ -167,7 +177,7 @@ Append-only; newly visible content follows the reusable request prefix and does 
 These limits define when the guard is a poor fit. They are current package constraints, not a task backlog.
 
 - **Exact-match detection only** — canonicalization is a deep key-sort, so near-identical variants (a tweaked path, extra whitespace inside a value) evade the chain; fuzzy matching is rejected pending evidence of need.
-- **Compaction does not reset chains** — a chain spanning a compaction checkpoint keeps counting.
+- **Compaction resets differ by runtime** — under Cordis a chain spanning a compaction checkpoint keeps counting; in native profiles a compaction that replaces the latest user message starts a new chain.
 - **Advisory only** — escalating to a blocking form at a high threshold is not implemented, though `PostToolDecision` already supports blocking.
 - **No subagent chain-sharing** — chains stay isolated per agent; a parent and its subagent repeating the same call never combine.
 - **Legitimate idempotent polling still draws nudges** past the thresholds — the pressure valves are the `thresholds`/`exclude` config.

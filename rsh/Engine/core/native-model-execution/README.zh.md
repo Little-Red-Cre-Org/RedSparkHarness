@@ -21,7 +21,9 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` Provider 不接受配置。`execute` 调用需要开放的 Session、turn 与 step 编号、`GenerateOptions`，以及由 Session writer 拥有的追加和持久化回调。调用方负责构建请求、执行工具、关闭 turn 及管理存储生命周期。模型流必须以一条终止 `finish` 结束，之后不能再输出 chunk。终止原因为 error 或 aborted 时，服务记录 attempt 后让步骤失败。
+`./native` Provider 不接受配置。`execute` 调用需要开放的 Session、turn 与 step 编号、`GenerateOptions`，以及由 Session writer 拥有的追加和持久化回调。调用方负责构建请求、执行工具、关闭 turn 及管理存储生命周期。模型流必须以一条终止 `finish` 结束，之后不能再输出 chunk。终止原因为 error 或 aborted 时，服务记录 attempt 后让步骤失败，除非恢复策略重试它。
+
+`onRecovery(policy)` 安装恢复策略并返回其移除函数。失败的 attempt 记录后，策略收到规范化的失败、该路由的重试策略以及 Session writer 回调。重试策略来自模型的 `retryPolicy(provider)`；模型未声明时使用 LLM 运行时默认值。后注册的策略先运行；每个策略至多调用一次 `next()`，不调用而直接返回即认领该失败。`{ kind: 'retry' }` 决定会为同一步骤发起新的 attempt。抛出异常的适配器也以同样方式提交；没有策略重试时，重新抛出原始错误。已取消的请求不会提交给恢复。
 
 可选 `onChunk` 观察者接收同一次 dispatch 已接纳的流块。观察者失败会中断尝试并保留其已记录的部分流；观察者不会创建另一次模型请求或另一个 writer。
 

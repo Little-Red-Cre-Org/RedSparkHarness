@@ -208,6 +208,12 @@ function toolArguments(raw: string, name: string): { path: string; content?: str
   return { path }
 }
 
+/** Settlement policies observe the model's raw argument text when it is not valid JSON. */
+function settlementArguments(raw: string): unknown {
+  try { return JSON.parse(raw) as unknown }
+  catch (_invalidJson: unknown) { return raw }
+}
+
 function codeProgram(raw: string): string {
   const value = object(JSON.parse(raw) as unknown)
   for (const key of Object.keys(value)) {
@@ -915,10 +921,13 @@ export class NativeHeadlessApplication implements NativeApplication {
               ...meta === undefined ? {} : { meta },
             }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
             await persist()
-            if (execution !== undefined) this.tools?.acceptResult(execution, {
-              content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta },
-            })
-            for (const context of additionalContexts) {
+            const recorded = { content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta } }
+            if (execution !== undefined) this.tools?.acceptResult(execution, recorded)
+            const settlementContexts = this.tools?.settlementContexts({
+              agent, session, callId: call.id, name: call.name,
+              arguments: execution === undefined ? settlementArguments(call.arguments) : execution.arguments, result: recorded,
+            }) ?? []
+            for (const context of [...settlementContexts, ...additionalContexts]) {
               track(session.append('user/message', context, { surfaceOp: 'append' }))
               await persist()
             }

@@ -1,4 +1,4 @@
-/** Owned asynchronous policy registrations and exactly-once waterfall delegation. */
+/** Owned asynchronous policy registrations, exactly-once waterfall delegation and surrounding execution. */
 import type { NativeContributions, NativeScope } from '@deepseek-ai/dsh-native-runtime'
 
 /** One captured policy whose removal cancels and drains its accepted operations. */
@@ -78,4 +78,40 @@ export function processAsyncWaterfall<T>(
     return selected
   }
   return delegate(0)
+}
+
+/**
+ * Run surrounding execution policies around one body; each policy owns the outcome it returns.
+ * @param count - number of captured execution policies.
+ * @param signal - admitted invocation cancellation, fused into every delegated signal.
+ * @param body - terminal operation receiving the fused signal.
+ * @param invoke - one policy receiving its current signal and an exactly-once downstream delegate.
+ * @returns the outcome selected by the outermost policy after every delegated branch settles.
+ */
+export function processExecutionChain<T>(
+  count: number, signal: AbortSignal, body: (signal: AbortSignal) => Promise<T>,
+  invoke: (index: number, signal: AbortSignal, next: (signal: AbortSignal) => Promise<T>) => Promise<T>,
+): Promise<T> {
+  const delegate = async (index: number, current: AbortSignal): Promise<T> => {
+    current.throwIfAborted()
+    if (index === count) return body(current)
+    let downstream: Promise<T> | undefined
+    let primary: { error: unknown } | undefined
+    let selected!: T
+    try {
+      selected = await invoke(index, current, (replacement) => {
+        if (downstream !== undefined) throw new Error('native-tools: execution policy delegated more than once')
+        if (!(replacement instanceof AbortSignal)) throw new TypeError('native-tools: execution policy must delegate an AbortSignal')
+        downstream = delegate(index + 1, replacement === current ? current : AbortSignal.any([current, replacement]))
+        return downstream
+      })
+      if (downstream === undefined) throw new Error('native-tools: execution policy did not delegate')
+    } catch (error: unknown) { primary = { error } }
+    // Unlike result policies, a surrounding policy may translate its downstream failure (for example a timeout),
+    // so the downstream branch is awaited for quiescence while the policy's own outcome is authoritative.
+    if (downstream !== undefined) await downstream.then(() => undefined, () => undefined)
+    if (primary !== undefined) throw primary.error
+    return selected
+  }
+  return delegate(0, signal)
 }

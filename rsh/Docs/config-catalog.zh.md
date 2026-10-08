@@ -1460,7 +1460,7 @@ export interface ReplayModelConfig {
 export type Config = Readonly<Record<string, never>>
 ```
 
-来源：[`rsh/Engine/llm/llm-retry/src/index.ts:25`](../Engine/llm/llm-retry/src/index.ts)
+来源：[`rsh/Engine/llm/llm-retry/src/index.ts:24`](../Engine/llm/llm-retry/src/index.ts)
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -1783,7 +1783,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:28`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
+来源：[`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:27`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
 
 <a id="deepseek-aidsh-sandbox-local"></a>
 
