@@ -406,6 +406,7 @@
     { "path": "./rsh/Engine/workflow/tool-ralph" },
     { "path": "./rsh/Modules/Official/webhook/webhook" },
     { "path": "./rsh/Modules/Official/webhook/webhook-github" },
+    { "path": "./rsh/Modules/Official/webhook/webhook-github/tsconfig.host.json" },
     { "path": "./rsh/Modules/Official/todo/tool-todo" },
     { "path": "./rsh/Modules/Official/plan/plan-mode" },
     { "path": "./rsh/Engine/preset/agent-presets/tsconfig.host.json" },
