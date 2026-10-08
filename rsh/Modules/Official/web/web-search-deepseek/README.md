@@ -67,6 +67,10 @@ A search running under an initiating agent appends the log-only `web/deepseek-se
 
 Failures throw `WebError` with a machine-routable code: a missing credential is `WEB_PROVIDER_CREDENTIAL_MISSING`, caller cancellation is `WEB_ABORTED`, and provider or transport failures — including a response with no `web_search_tool_result` block — are `WEB_PROVIDER_ERROR`. HTTP redirects are rejected before the `Location` target is contacted. Every failure after dispatch names the resolved search endpoint and explains that search endpoint configuration is separate from chat. If the endpoint is unintended, the message tells the conversation model to guide the user to the Endpoint field under Settings > Plugins > Plugin configuration > Web search and save the change. When that page is unavailable, it names `DEEPSEEK_SEARCH_BASE_URL` and `web-search-deepseek.baseURL` as deployment configuration alternatives. The model must not choose or change the endpoint. The model-facing `web_search` tool surfaces this text under its own error wrapper.
 
+### Native entry
+
+Native compositions import `./native`, which requires `web` and `launchEnvironment` and optionally `settings` and `credentials`. It shares configuration, key resolution (credentials service first, then the launch environment), base-URL precedence and the provider with the Cordis entry. Its settings section registers with the native settings service and applies live. Before each auxiliary request leaves the process, it awaits a `web/deepseek-search-llm-request` event appended to the consuming invocation's Session; if recording fails, the request is not sent ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+
 -----
 
 <a id="understand-the-implementation"></a>

@@ -6,13 +6,13 @@
  * @module @deepseek-ai/dsh-web-search-perplexity/provider
  */
 
-import { WebError } from '@deepseek-ai/dsh-web'
+import { WebError } from '@deepseek-ai/dsh-web/native'
 import type {
   WebSearchProvider,
   WebSearchRequest,
   WebSearchResult,
   WebSearchSource,
-} from '@deepseek-ai/dsh-web'
+} from '@deepseek-ai/dsh-web/native'
 import type { PerplexityError, PerplexityResponse, PerplexitySearchResult } from './types.ts'
 
 /** Stable id this provider registers under. */

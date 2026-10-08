@@ -3168,7 +3168,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/tool-web/src/index.ts:37`](../Modules/Official/web/tool-web/src/index.ts)
+Source: [`rsh/Modules/Official/web/tool-web/src/config.ts:20`](../Modules/Official/web/tool-web/src/config.ts)
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 
@@ -3280,7 +3280,7 @@ export interface WebRuntimeConfig {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/web/src/index.ts:55`](../Modules/Official/web/web/src/index.ts)
+Source: [`rsh/Modules/Official/web/web/src/index.ts:47`](../Modules/Official/web/web/src/index.ts)
 
 <a id="deepseek-aidsh-web-app"></a>
 
@@ -3331,7 +3331,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/web-fetch-http/src/index.ts:32`](../Modules/Official/web/web-fetch-http/src/index.ts)
+Source: [`rsh/Modules/Official/web/web-fetch-http/src/config.ts:15`](../Modules/Official/web/web-fetch-http/src/config.ts)
 
 <a id="deepseek-aidsh-web-search-deepseek"></a>
 
@@ -3359,7 +3359,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/web-search-deepseek/src/index.ts:46`](../Modules/Official/web/web-search-deepseek/src/index.ts)
+Source: [`rsh/Modules/Official/web/web-search-deepseek/src/config.ts:24`](../Modules/Official/web/web-search-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-web-search-exa"></a>
 
@@ -3383,7 +3383,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/web-search-exa/src/index.ts:35`](../Modules/Official/web/web-search-exa/src/index.ts)
+Source: [`rsh/Modules/Official/web/web-search-exa/src/config.ts:17`](../Modules/Official/web/web-search-exa/src/config.ts)
 
 <a id="deepseek-aidsh-web-search-perplexity"></a>
 
@@ -3407,7 +3407,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/web/web-search-perplexity/src/index.ts:30`](../Modules/Official/web/web-search-perplexity/src/index.ts)
+Source: [`rsh/Modules/Official/web/web-search-perplexity/src/config.ts:17`](../Modules/Official/web/web-search-perplexity/src/config.ts)
 
 <a id="deepseek-aidsh-webhook-github"></a>
 

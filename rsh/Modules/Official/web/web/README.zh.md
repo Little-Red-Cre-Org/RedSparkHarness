@@ -81,6 +81,10 @@ const page = await ctx.web.fetch({ url: 'https://example.com' })
 
 失败抛出 `WebError`，携带稳定、可按机器路由的 code；消息补充细节，例如缺失的提供方 id 或歧义候选集合。调用方按 code 路由并决定如何降级。要改变一次调用使用的后端，请重新配置固定的 id、挂载或卸载提供方，或修正提供方配置使其可用性检查通过。
 
+### 原生入口
+
+原生组合导入 `./native`。该入口提供 `web` 服务并依赖 `launchEnvironment`，复用共享 `selection.ts` 中相同的选择规则、重复 id 拒绝、`maxResults` 截断与 `WebError` 错误码。配置中的固定选择优先于从 process 层读取的 `$DSH_WEB_SEARCH_PROVIDER` / `$DSH_WEB_FETCH_PROVIDER`。原生 Provider 会收到发起调用的取消信号与 Session `appendEvent`；移除 Provider 时会关闭其准入、取消已接受的操作，并在其结束后完成。随附的 `native-headless`、`native-web` 与 `native-tui` 组合以 `searchProvider: deepseek-official` 与 `fetchProvider: http` 安装它（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+
 -----
 
 <a id="understand-the-implementation"></a>

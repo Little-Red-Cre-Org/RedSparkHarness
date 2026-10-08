@@ -60,6 +60,10 @@ kind: "package-reference"
 
 提供方失败——HTTP 错误、网络失败、响应体无法解析或结构不符——以 `WebError` `WEB_PROVIDER_ERROR` 呈现；中止请求以 `WEB_ABORTED` 呈现。HTTP 重定向会在访问 `Location` 指向的目标之前被拒绝，并以 `WEB_PROVIDER_ERROR` 呈现。调用方根据错误码进行路由；面向模型的 `web_search` 工具会在自己的错误包装层内把失败呈现给模型。
 
+### 原生入口
+
+原生组合导入 `./native`。该入口依赖 `web` 与 `launchEnvironment`，以与 Cordis 入口相同的配置与 `$PERPLEXITY_API_KEY` 回退注册同一个 `perplexity` Provider。移除安装时会取消已接受的搜索，并等待其结束。随附的原生组合不安装它；如需使用，请添加该行并固定 `searchProvider: perplexity`（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+
 -----
 
 <a id="understand-the-implementation"></a>

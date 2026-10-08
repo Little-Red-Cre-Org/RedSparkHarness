@@ -40,6 +40,15 @@
     },
     {
       "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }
