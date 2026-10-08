@@ -35,6 +35,10 @@ kind: "package-library"
 
 `provider` 与 `model` 覆盖项都是可选的，但必须同时作为非空字符串提供。如果没有这一对取值，辅助函数使用当前会话已记录 `request/header` 中捕获的确切提供方／模型路由，因此在任何路由出现前显式刷新时必须提供覆盖项。辅助函数在记录或分发前，依据 `maxInputBytes` 检查最终 JSON 封装用户提示词的大小，而不是将其截断，并在消费流期间与完成后重新检查超时与调用方取消，因此即使拦截器或适配器忽略 abort，也不能接受迟到的成功结果。格式错误或空输出、工具调用与非 stop 结束原因都会拒绝；会话标题服务决定该拒绝属于自动警告还是显式调用方失败。
 
+### 原生运行时
+
+`./native` 入口导出同一套框架无关的生成逻辑（`generateSessionTitle`、配置校验以及 `selectFirstPrompt`/`selectAllPrompts` 选择器），并提供 `nativeSessionTitleLlmPlugin(spec)`，用于构建依赖 `sessionTitles` 与 `model` 的原生提供方插件。它通过选定的 `model` 适配器流式请求，并在分发前经标题服务的 `appendEvent` 记录 `session/title-llm-request`。Cordis 辅助函数与原生插件调用同一份生成代码，只有模型流与记录写入方式不同。
+
 ### 配置
 
 <a id="configuration"></a>
@@ -68,7 +72,9 @@ kind: "package-library"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 配置 schema 与校验、提供方注册辅助、请求封装、分发与输出校验 |
+| [`src/core.ts`](src/core.ts) | 两个入口共享的框架无关策略：请求事件、配置校验、路由解析、封装、分发、输出校验与消息选择器 |
+| [`src/index.ts`](src/index.ts) | Cordis 胶水层：Loader 配置 schema 与基于 `ctx.sessionTitle`、`ctx.llm` 的提供方注册辅助 |
+| [`src/native.ts`](src/native.ts) | 原生胶水层：基于原生 `sessionTitles` 与 `model` 服务的 `nativeSessionTitleLlmPlugin` |
 
 ### 请求流程
 

@@ -214,6 +214,11 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-plan-mode': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-first-prompt-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-all-prompts-llm': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
@@ -270,6 +275,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
   '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
   '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],

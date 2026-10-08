@@ -69,11 +69,18 @@ jobs:
         env:
           VERSION: ${{ steps.compatibility-version.outputs.version }}
         run: |
-          python -m pip install \
+          set -euo pipefail
+          venv="$(python -c 'import tempfile; print(tempfile.mkdtemp(prefix="dsh-sdk-release-venv-"))')"
+          python -m venv "$venv"
+          smoke_python="$venv/bin/python"
+          "$smoke_python" -m pip install \
             "dist/deepseek_harness_sdk-$VERSION-py3-none-any.whl" \
             "dist/deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl"
-          python rsh/Scripts/smoke-python-runtime.py --scenario sdk-default
-          python rsh/Scripts/smoke-python-runtime.py --scenario sdk-mcp
+          smoke_root="$(python -c 'import tempfile; print(tempfile.mkdtemp(prefix="dsh-sdk-release-smoke-"))')"
+          cd "$smoke_root"
+          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-default --installed-wheel
+          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-mcp --installed-wheel
+          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-native --installed-wheel
 
   validate:
     name: Validate release candidate

@@ -107,6 +107,18 @@ it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
   })
 
+it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
+  'installs the Cordis base guards natively in %s', (profileName) => {
+    const profile = shippedNativeProfileComposition('C:/rsh-native-guards', profileName, 'win32')
+    expect(profile.installations.filter(row => ['llm-retry', 'timeout-policy', 'repeat-tool-reminder'].includes(row.id))).toEqual([
+      { id: 'llm-retry', plugin: '@deepseek-ai/dsh-llm-retry', scope: 'root' },
+      { id: 'timeout-policy', plugin: '@deepseek-ai/dsh-tool-call-timeout-policy', scope: 'root' },
+      // Same settings as the Cordis base bundle row.
+      { id: 'repeat-tool-reminder', plugin: '@deepseek-ai/dsh-repeat-tool-reminder', scope: 'root',
+        config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
+    ])
+  })
+
 it('defines a native-tui composition over the shared headless Providers', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
@@ -166,4 +178,36 @@ it('ships a complete one-shot shell seam in the native headless profile', () => 
     expect(installed.resolve(`${provider}/package.json`)).toBeTruthy()
     expect(plugins).toContain(tool)
   }
+})
+
+it.each(['native-web', 'native-tui'] as const)('installs native session titles with the Cordis base policy in %s', (profileName) => {
+  const installed = createRequire(new URL('../package.json', import.meta.url))
+  const profile = shippedNativeProfileComposition('/tmp/rsh-title', profileName, 'linux')
+  expect(profile.installations.filter(row => row.id === 'session-title' || row.id === 'session-title-llm')).toEqual([
+    { id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
+      config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
+    { id: 'session-title-llm', plugin: '@deepseek-ai/dsh-session-title-first-prompt-llm', scope: 'root',
+      config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
+  ])
+  for (const name of ['@deepseek-ai/dsh-session-title', '@deepseek-ai/dsh-session-title-first-prompt-llm']) {
+    expect(installed.resolve(`${name}/package.json`)).toBeTruthy()
+  }
+})
+
+it.each(['native-headless', 'native-sdk', 'native-acp'] as const)('keeps title and plan Consumers out of %s', (profileName) => {
+  const plugins = shippedNativeProfileComposition('/tmp/rsh-title', profileName, 'linux').installations.map(row => row.plugin)
+  expect(plugins).not.toContain('@deepseek-ai/dsh-session-title')
+  expect(plugins).not.toContain('@deepseek-ai/dsh-plan-mode')
+})
+
+it('installs plan mode beside the native TUI command registry', () => {
+  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', 'native-tui', 'linux')
+  const ids = profile.installations.map(row => row.id)
+  const plan = profile.installations.find(row => row.id === 'plan-mode')
+  expect(plan).toMatchObject({ plugin: '@deepseek-ai/dsh-plan-mode', scope: 'root' })
+  expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
+  expect(ids).toContain('commands')
+  expect(ids).toContain('user-questions')
+  expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
+    .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
 })

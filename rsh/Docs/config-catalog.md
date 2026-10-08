@@ -1458,7 +1458,7 @@ Requires: `agents` · `sessionProjections`
 export type Config = Readonly<Record<string, never>>
 ```
 
-Source: [`rsh/Engine/llm/llm-retry/src/index.ts:25`](../Engine/llm/llm-retry/src/index.ts)
+Source: [`rsh/Engine/llm/llm-retry/src/index.ts:24`](../Engine/llm/llm-retry/src/index.ts)
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -1671,12 +1671,12 @@ Requires: `tools` · `systemPrompt` · `sessionProjections`
 ```ts config-catalog
 /** Deployment-owned plan guidance. */
 export interface PlanModeConfig {
-  /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
+  /** Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active. */
   section: string
 }
 ```
 
-Source: [`rsh/Modules/Official/plan/plan-mode/src/index.ts:64`](../Modules/Official/plan/plan-mode/src/index.ts)
+Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:66`](../Modules/Official/plan/plan-mode/src/common.ts)
 
 <a id="deepseek-aidsh-plugin-package-inventory-deepseek"></a>
 
@@ -1781,7 +1781,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:28`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
+Source: [`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:27`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
 
 <a id="deepseek-aidsh-sandbox-local"></a>
 
@@ -2091,7 +2091,10 @@ Requires: `sessions` · `sessionProjections`
 
 ```ts config-catalog
 /** Required deterministic fallback and accepted-title limits. */
-export interface Config {
+export interface Config extends SessionTitleConfig {}
+
+/** Required deterministic fallback and accepted-title limits. */
+export interface SessionTitleConfig {
   /** Maximum whitespace-delimited words in the built-in fallback. */
   readonly fallbackMaxWords: number
   /** Maximum UTF-8 bytes in the built-in fallback. */
@@ -2101,7 +2104,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/session/session-title/src/index.ts:56`](../Engine/session/session-title/src/index.ts)
+Source: [`rsh/Engine/session/session-title/src/index.ts:57`](../Engine/session/session-title/src/index.ts)
 
 <a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
 
@@ -2116,7 +2119,7 @@ export type Config = SessionTitleLlmConfig
 
 Depends on: [`SessionTitleLlmConfig`](../Engine/session/session-title-llm/src/index.ts)
 
-Source: [`rsh/Engine/session/session-title-all-prompts-llm/src/index.ts:15`](../Engine/session/session-title-all-prompts-llm/src/index.ts)
+Source: [`rsh/Engine/session/session-title-all-prompts-llm/src/index.ts:16`](../Engine/session/session-title-all-prompts-llm/src/index.ts)
 
 <a id="deepseek-aidsh-session-title-first-prompt-llm"></a>
 
@@ -2131,7 +2134,7 @@ export type Config = SessionTitleLlmConfig
 
 Depends on: [`SessionTitleLlmConfig`](../Engine/session/session-title-llm/src/index.ts)
 
-Source: [`rsh/Engine/session/session-title-first-prompt-llm/src/index.ts:15`](../Engine/session/session-title-first-prompt-llm/src/index.ts)
+Source: [`rsh/Engine/session/session-title-first-prompt-llm/src/index.ts:16`](../Engine/session/session-title-first-prompt-llm/src/index.ts)
 
 <a id="deepseek-aidsh-settings-file"></a>
 

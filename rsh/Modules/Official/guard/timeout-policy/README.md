@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to give tool calls their configured cooperative time limits and return a clear timeout error to the model after cancellation settles. Calls that finish in time are unchanged. A tool that ignores or slowly handles cancellation can keep the caller waiting because the package cannot hard-stop downstream work. Each tool supplies its own limit; the package has no configuration and is enabled in the `dsh` base bundle.
+Use this package to give tool calls their configured cooperative time limits and return a clear timeout error to the model after cancellation settles. Calls that finish in time are unchanged. A tool that ignores or slowly handles cancellation can keep the caller waiting because the package cannot hard-stop downstream work. Each tool supplies its own limit; the package has no configuration and is enabled in the `dsh` base bundle and every shipped native profile.
 
 ## Table of Contents
 
@@ -45,6 +45,10 @@ The limit is set where the tool is configured. For example, `dsh-tool-web`'s `fe
 
 When the deadline fires, the plugin aborts the derived `exec.signal`. After downstream code honors cancellation and `next()` settles, the model receives `Error: tool call timed out after <ms>ms` as an error result, so it can decide to retry, adjust, or give up. A tool that ignores or slowly handles the signal keeps the caller waiting and produces no timeout result until it settles; calls that finish in time are unchanged.
 
+### Native profiles
+
+The Cordis-free `./native` installer is part of every shipped native profile. It requires the selected `tools` registry, accepts no settings and installs one execution policy for the tools visible in its scope. A native tool declares its budget as `timeoutMs` on its contribution; `dsh-tool-fs-search` declares its `glob` and `grep` budgets this way. A timed-out call records the same `Error: tool call timed out after <ms>ms` text and `{ name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' }` error as the Cordis wrapper. Calls made from a `run_code` program pass through the same registry, so they get the same deadline.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -68,6 +72,10 @@ The wrapper is built on four commitments:
 
 One `tools/execute` listener reads the dispatched tool's declared limit from the registry (`ctx.tools.get(exec.name, exec.agent)?.timeoutMs`); a tool without a limit delegates untouched. For a limited tool, `deadline(exec.signal, timeoutMs, TOOL_TIMEOUT)` builds a fused signal that the wrapper swaps onto `exec` for dispatch and restores in a `finally`, so `tools/post-execute` listeners never see the derived signal. When the wrapper's own timer fired — `timeoutOf(d.signal, 'TOOL_TIMEOUT')` scoped by the code, so a nested outer deadline reads as an ordinary upstream cancel — the dispatched result, already normalized into an error result by dispatch, is replaced with the structured result: `isError: true`, content `Error: tool call timed out after <ms>ms`, and error info `{ name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' }`.
 
+### Native execution policy
+
+[`src/native.ts`](src/native.ts) registers `nativeToolTimeoutPolicy` with `tools.aroundExecution`. The registry hands each policy the tool's frozen declaration, so the policy reads `timeoutMs` without a registry lookup. It calls the same `runWithToolDeadline` from [`src/core.ts`](src/core.ts) as the Cordis wrapper, passing `next` as the dispatch, and returns `nativeToolTimeoutResult(ms)` when its own timer fired, whether the body returned or threw. Only the result shape and signal hand-off differ between the two entries. The registry skips output-schema validation for that error result because it carries no canonical value. Earlier registrations surround later ones. One difference from Cordis: if the caller cancels after the deadline fired but before the body settles, the native registry reports the caller's cancellation, which already ends the turn.
+
 ### Composing with other wrappers
 
 Multiple `tools/execute` listeners compose by Cordis registration order, which chooses the semantics: the timeout registered outer covers a whole retry operation, the timeout registered inner covers each attempt.
@@ -77,6 +85,8 @@ Multiple `tools/execute` listeners compose by Cordis registration order, which c
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `TOOL_TIMEOUT`, `name`/`inject`/`apply`, the `tools/execute` wrapper |
+| [`src/core.ts`](src/core.ts) | Shared `TOOL_TIMEOUT` code, error name, message text and the `runWithToolDeadline` enforcement both entries call |
+| [`src/native.ts`](src/native.ts) | Native installer, `nativeToolTimeoutPolicy` and `nativeToolTimeoutResult` |
 | — | No runtime invariant companion is published; this stateless policy plugin owns no package-local event history or mutable data relation beyond the seam it intercepts. |
 
 </details>
@@ -121,6 +131,7 @@ These limits define when the policy is a poor fit. They are current package cons
 
 - **Cooperative, never a hard kill** — the deadline only notifies via `exec.signal`; a tool that ignores the signal does not stop on timeout, the wrapper remains inside `await next()`, and the model receives no timeout result until downstream settles.
 - **No blanket budget** — only tools that declare `timeoutMs` on their `ToolDefinition` get a deadline; undeclared tools (the shipped `bash`, `read`, `write`, and `edit` declare none) have no registry-wide default.
+- **Native budgets are opt-in per tool** — a native tool that keeps an internal timer and declares no `timeoutMs` still reports its own error shape; `dsh-tool-fs-search` keeps its internal timer as a fallback behind the declared budget.
 
 <a id="dev-note"></a>
 ### Dev Note

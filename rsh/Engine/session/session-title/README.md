@@ -64,6 +64,10 @@ One optional asynchronous provider may be registered through `ctx.sessionTitle.r
 
 Automatic failures warn and retain the latest title; explicit `refresh()` rejects on provider error or caller cancellation, and cancellation does not roll back an already accepted fallback event. Automatic work never delays the main agent response, its late completion appends a standalone log-only event without opening a turn, and a stale completion cannot append. Forks inherit title events in their seed unchanged.
 
+### Native runtime
+
+The `./native` entry provides the same titles for native profiles as the `sessionTitles` service. It requires `activeSessions`, folds each attached Session owner's log, and writes `session/title` through that owner. `get(agent)`, `rename(owner, title)`, `refresh(owner)`, and `register(provider)` behave like the Cordis methods; a native provider also receives `appendEvent` for its own log-only records. Automatic provider work starts after the main request's `request/header`, or after `step/end` when the route is unchanged, and keeps the owner open until the title is persisted. The shipped `native-tui` and `native-web` profiles install it with the first-prompt provider and the Cordis base bundle's limits.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -82,9 +86,16 @@ Titles are durable, log-only state: every accepted revision is a `session/title`
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service: config, fold, fallback scheduling, provider registry, concurrency, `title` projection unit |
+| [`src/index.ts`](src/index.ts) | Cordis glue: config schema, `title` and `titleInput` projection units, event and `llm/stream` wiring, service lifetime |
+| [`src/engine.ts`](src/engine.ts) | Framework-free title behavior shared by both entries: provider registry, revisions and supersession, cadence, fallback, rename, refresh, acceptance |
+| [`src/facts.ts`](src/facts.ts) | Framework-free facts: the `session/title` event, provider id, message extraction, result validation, the log fold, config validation |
+| [`src/native.ts`](src/native.ts) | Native glue: owner attachment and folds, event forwarding, persistence, owner retention, provider `appendEvent` |
 | [`src/normalize.ts`](src/normalize.ts) | Title-text cleaning, UTF-8-safe truncation, and the deterministic fallback |
 | [`src/types.ts`](src/types.ts) | One home of the `title` projection-key declaration |
+
+### One engine, two runtimes
+
+[`src/engine.ts`](src/engine.ts) owns every title decision once. Each runtime adapts one Session as a target: its folded title and input facts, eligible messages, liveness, and the append through the sole writer, plus persistence and owner retention on native. Cordis forwards `session/event` and marked loop requests; native forwards `user/message`, `request/header`, and `step/end` from the owner's durable observer.
 
 ### Lifecycle and concurrency
 
@@ -136,6 +147,7 @@ None for the main request; title events do not change its reconstructed content 
 These limits define what the title service does not provide. They are current package constraints.
 
 - **No title deletion, search, or list indexing** — unpinning back to automatic titles without an explicit `refresh`, search, and list indexing are outside this service.
+- **Native profiles** — `native-headless`, `native-sdk`, and `native-acp` do not install titles: their one-shot runs have no title surface and their snapshot fixtures pin every model request.
 - **At most one provider** — the registry deliberately accepts a single implementation, so a deployment cannot compose competing title strategies without writing one provider that owns their precedence.
 
 <a id="dev-note"></a>

@@ -130,8 +130,8 @@ interface SessionTitleProviderResult {
 ```
 
 ```ts type-equiv
-/** One optional asynchronous title implementation registered with the service. */
-interface SessionTitleProvider {
+/** Title implementation contract shared by both runtimes; `R` is the runtime's request shape. */
+interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = SessionTitleProviderRequest> {
   /** Stable id of the provider recorded with the title. */
   readonly id: SessionTitleProviderId
   /** When new human prompts start automatic generation. */
@@ -141,8 +141,13 @@ interface SessionTitleProvider {
    * @param request - message snapshot, current route, session, and cancellation.
    * @returns proposed title plus exact input seqs and the optional provider/model route used to generate it.
    */
-  generate(request: SessionTitleProviderRequest): Promise<SessionTitleProviderResult>
+  generate(request: R): Promise<SessionTitleProviderResult>
 }
+```
+
+```ts type-equiv
+/** One optional asynchronous title implementation registered with the service. */
+interface SessionTitleProvider extends SessionTitleEngineProvider {}
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
@@ -157,7 +162,7 @@ Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by 
 
 ### `ctx.sessionTitle` — `SessionTitleService`
 
-Log-backed title fold plus asynchronous fallback generation.
+Log-backed title fold plus asynchronous fallback generation. The title behavior is the shared framework-free SessionTitleEngine; this service is the Cordis glue: projections, event wiring, and lifetime.
 
 ```ts cordis-catalog
 /**

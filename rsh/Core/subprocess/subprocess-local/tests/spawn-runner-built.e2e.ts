@@ -12,6 +12,7 @@ import {
 import {
   runnerEnvironment,
   runnerInvocationAvailable,
+  spawnRunnerInvocation,
   SUBPROCESS_RUNNER_ENV,
   targetEnvironment,
 } from '../src/runner-launch.ts'
@@ -19,7 +20,7 @@ import type { RunnerInvocation } from '../src/runner-launch.ts'
 import { bindManagedProcess } from '../src/spawn.ts'
 import { launchWindowsJob } from '../src/windows-job.ts'
 
-const repoRoot = resolve(import.meta.dirname, '../../../..')
+const repoRoot = resolve(import.meta.dirname, '../../../../..')
 const sourceRunner = resolve(repoRoot, 'rsh/Core/subprocess/subprocess-local/src/bin.ts')
 const builtRunner = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-subprocess-local/runner'))
 
@@ -95,7 +96,9 @@ async function execute(invocation: RunnerInvocation): Promise<{ status: number |
 
 describe('subprocess-local runner artifacts', () => {
   it('executes the source entry through the provider-owned core', async () => {
-    const result = await execute([process.execPath, '--import', 'tsx/esm', sourceRunner])
+    const invocation = spawnRunnerInvocation()
+    expect(invocation).toEqual([process.execPath, '--import', import.meta.resolve('tsx/esm'), sourceRunner])
+    const result = await execute(invocation)
     expect(result).toEqual({
       status: 0,
       stdout: `${process.execPath}|${repoRoot}|target-collision-restored`,

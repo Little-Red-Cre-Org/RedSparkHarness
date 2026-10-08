@@ -226,6 +226,12 @@ function toolArguments(raw: string, name: string): { path: string; content?: str
   return { path }
 }
 
+/** Settlement policies observe the model's raw argument text when it is not valid JSON. */
+function settlementArguments(raw: string): unknown {
+  try { return JSON.parse(raw) as unknown }
+  catch (_invalidJson: unknown) { return raw }
+}
+
 function codeProgram(raw: string): string {
   const value = object(JSON.parse(raw) as unknown)
   for (const key of Object.keys(value)) {
@@ -964,10 +970,13 @@ export class NativeHeadlessApplication implements NativeApplication {
               ...meta === undefined ? {} : { meta },
             }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
             await persist()
-            if (execution !== undefined) this.tools?.acceptResult(execution, {
-              content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta },
-            })
-            for (const context of additionalContexts) {
+            const recorded = { content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta } }
+            if (execution !== undefined) this.tools?.acceptResult(execution, recorded)
+            const settlementContexts = this.tools?.settlementContexts({
+              agent, session, callId: call.id, name: call.name,
+              arguments: execution === undefined ? settlementArguments(call.arguments) : execution.arguments, result: recorded,
+            }) ?? []
+            for (const context of [...settlementContexts, ...additionalContexts]) {
               track(session.append('user/message', context, { surfaceOp: 'append' }))
               await persist()
             }
@@ -1066,7 +1075,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         throw error
       }
       if (observation.epoch === undefined) return result
-      await this.waitRootEpoch(request.id, signal, observation.epoch)
+      await this.waitRootEpoch(request.id, signal, observation.epoch, true)
       return observation.epoch.lastResult ?? result
     } finally { observation.release?.() }
   }
@@ -1330,7 +1339,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   }
 
   private async waitRootEpoch(id: SessionId, signal: AbortSignal,
-    selected?: NativeContinuationActivation): Promise<NativeTurnResult | undefined> {
+    selected?: NativeContinuationActivation, foreground = false): Promise<NativeTurnResult | undefined> {
     const activation = selected ?? this.rootEpochs.get(id)?.activation
     if (activation === undefined) {
       signal.throwIfAborted()
@@ -1344,7 +1353,13 @@ export class NativeHeadlessApplication implements NativeApplication {
     signal.addEventListener('abort', onAbort, { once: true })
     try {
       if (signal.aborted) onAbort()
-      try { await activation.done }
+      try {
+        if (foreground && !signal.aborted) {
+          await activation.waitForeground()
+          const stillCancelled = (): boolean => signal.aborted
+          if (stillCancelled()) await activation.done
+        } else await activation.done
+      }
       catch (error: unknown) {
         throw new AggregateError([...signal.aborted ? [signal.reason as unknown] : [], error],
           'native-headless: root epoch cleanup failed')
@@ -1950,6 +1965,10 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (invocation !== 'root') throw new Error('native-headless: one-shot delegation cannot retain residency')
         return this.retainRoot(owner, agent, config)
       },
+      retainBackground: () => {
+        if (invocation !== 'root') throw new Error('native-headless: background retention requires a root owner')
+        return this.retainRootBackground(owner, agent, config)
+      },
       ...invocation === 'root' ? { rootOperations: this.rootSessionOperations(agent, owner.session.id) } : {},
       enqueue: (message, target, wake, signal) =>
         this.continuationRuntime.forParent(agent, owner.session).deliver(owner.session.id, message, target, wake, signal),
@@ -2026,6 +2045,17 @@ export class NativeHeadlessApplication implements NativeApplication {
   }
 
   private retainRoot(owner: NativeContinuationSession, agent: NativeAgent, config: Config): () => void {
+    return this.ensureRootEpoch(owner, agent, config).activation.retainChild()
+  }
+
+  private retainRootBackground(owner: NativeContinuationSession, agent: NativeAgent, config: Config): () => void {
+    return this.ensureRootEpoch(owner, agent, config).activation.retainBackground()
+  }
+
+  private ensureRootEpoch(owner: NativeContinuationSession, agent: NativeAgent, config: Config): {
+    owner: NativeContinuationSession
+    activation: NativeContinuationActivation
+  } {
     const id = owner.session.id
     let epoch = this.rootEpochs.get(id)
     if (epoch === undefined) {
@@ -2053,7 +2083,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (turn !== undefined) turn.release = activation.retainChild()
     }
     if (epoch.owner !== owner) throw new Error('native-headless: root retention requires the exact resident writer')
-    return epoch.activation.retainChild()
+    return epoch
   }
 
   private async disposeInternal(): Promise<void> {

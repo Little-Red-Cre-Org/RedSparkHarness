@@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
   registerSessionTitleLlmProvider,
+  selectAllPrompts,
   SessionTitleLlmConfigFields,
 } from '@deepseek-ai/dsh-session-title-llm'
 import type { SessionTitleLlmConfig } from '@deepseek-ai/dsh-session-title-llm'
@@ -32,5 +33,5 @@ export const Config: z<Config> = z.object({
  * @param config - required route, target, byte, token, and timeout policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  registerSessionTitleLlmProvider(ctx, config, name, 'all-prompts', messages => messages)
+  registerSessionTitleLlmProvider(ctx, config, name, 'all-prompts', selectAllPrompts)
 }
