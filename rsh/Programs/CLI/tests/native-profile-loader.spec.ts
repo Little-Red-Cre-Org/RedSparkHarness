@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { loadNativeProfile } from '../src/native-profile-loader.ts'
+import { loadNativeProfile, readNativeProfile } from '../src/native-profile-loader.ts'
 import { runNativeProfile } from '../src/native-profile-boot.ts'
 
 async function fixture() {
@@ -30,6 +30,25 @@ async function packageEntry(profileDir: string, name: string, marker: string, va
   }))
   await writeFile(join(dir, 'native.mjs'), `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'loaded'); export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'], requires: [], provides: ['fs'], resolve: () => context => context.provide('fs', { read: () => 1 }) }\n`)
 }
+
+it('inherits the selected pi-ai provider catalog into the opt-in SDK child profile', async () => {
+  const { home, profileDir } = await fixture()
+  try {
+    const selectedProviders = {
+      'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', models: [{ id: 'current-route' }] },
+      'operator-catalog-route': { apiKeyEnv: 'OPERATOR_ROUTE_KEY', baseURL: 'https://provider.invalid/v1' },
+    }
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1, scopes: [{ id: 'root' }], installations: [
+        { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: selectedProviders } },
+        { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'root', config: { providerName: 'dsh-sdk' } },
+      ],
+    }))
+    const profile = readNativeProfile({ profile: 'probe', patchFiles: [], home, profileDir })
+    expect(profile.installations.find(row => row.id === 'dsh-sdk-child')?.config)
+      .toEqual({ providerName: 'dsh-sdk', providers: selectedProviders })
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
 
 it('loads a named package export through a native profile and owns its lifecycle', async () => {
   const { home, profileDir, installAnchor } = await fixture()

@@ -42,7 +42,7 @@ const EXECUTABLE_SOURCE_ALLOWLIST = new Map<string, string>([
   ['rsh/Engine/subagent/subagent-acp/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
   ['rsh/Engine/subagent/subagent-claude-code/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
   ['rsh/Engine/subagent/subagent-codex/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
-  ['rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
+  ['rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
   ['rsh/Tests/test-support/loader-smoke/tests/fixtures/headless-driver.ts', 'test-only subprocess driver'],
   ['rsh/Tests/test-support/llm-mock-server/src/bin.ts', 'test-only model server'],
   ['rsh/Programs/SDK/python/sdk-runtime/runtime-bootstrap.mjs', 'private packaging-only runtime dispatcher'],

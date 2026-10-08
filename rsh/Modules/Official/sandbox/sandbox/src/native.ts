@@ -12,6 +12,12 @@ export interface ProcessSandbox {
    * @returns enforcing runner argv and classification facts.
    */
   confine(argv: readonly string[], policy: SandboxPolicy): ConfinedArgv
+  /**
+   * Prepare and return the existing per-session writable temp root for a policy, when this backend owns one.
+   * @param policy - complete workspace-write policy for the owning session.
+   * @returns the runner temp root reused by {@link confine}, or `undefined` when this backend does not expose one.
+   */
+  prepareWritableTempRoot?(policy: SandboxPolicy): string | undefined
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {

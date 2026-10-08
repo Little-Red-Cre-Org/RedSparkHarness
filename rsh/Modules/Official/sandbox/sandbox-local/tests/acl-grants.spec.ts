@@ -109,9 +109,11 @@ describe('windows-acl write grants (LocalSandboxProvider)', () => {
       scratch.push(ws)
       const policy: SandboxPolicy = { mode: 'workspace-write', workspaceRoot: ws, sessionId: SessionId('sess-1') }
 
+      const preparedTemp = sandbox.prepareWritableTempRoot(policy)
       const confined = sandbox.confine(['pwsh', '/Command', 'x'], policy)
       const tempDir = flag(confined.argv, '--temp')
       const tempSid = flag(confined.argv, '--temp-write-sid')
+      expect(preparedTemp).toBe(tempDir)
       expect(tempDir).toBeDefined()
       expect(basename(tempDir ?? '')).toMatch(/^dsh-[A-Za-z0-9_-]{6}$/u)
       expect(tempSid).toBe(`TEMP:${tempDir}`)
@@ -151,6 +153,7 @@ describe('windows-acl write grants (LocalSandboxProvider)', () => {
       const readOnly: SandboxPolicy = { mode: 'read-only', workspaceRoot: ws, sessionId: SessionId('switch') }
       const workspaceWrite: SandboxPolicy = { mode: 'workspace-write', workspaceRoot: ws, sessionId: SessionId('switch') }
 
+      expect(sandbox.prepareWritableTempRoot(readOnly)).toBeUndefined()
       expect(sandbox.confine(['true'], readOnly).argv).toEqual([
         'node', 'windows-acl-runner.js',
         '--workspace', ws,
@@ -298,7 +301,9 @@ describe('windows-acl write grants (LocalSandboxProvider)', () => {
   it('agentless calls pass a temp root and no capabilities; the runner owns the private child lifecycle', async () => {
     try {
       const { sandbox, fiber } = await setup()
-      const confined = sandbox.confine(['pwsh', '/Command', 'x'], { mode: 'workspace-write', workspaceRoot: '/ws' })
+      const policy: SandboxPolicy = { mode: 'workspace-write', workspaceRoot: '/ws' }
+      expect(sandbox.prepareWritableTempRoot(policy)).toBeUndefined()
+      const confined = sandbox.confine(['pwsh', '/Command', 'x'], policy)
       expect(confined.argv).toEqual([
         'node', 'windows-acl-runner.js',
         '--workspace', '/ws',

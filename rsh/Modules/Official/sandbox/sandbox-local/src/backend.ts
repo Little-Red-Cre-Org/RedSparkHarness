@@ -355,6 +355,18 @@ export class LocalSandboxBackend {
     }
   }
 
+  /**
+   * Prepare the existing session-owned Windows temp capability for `confine` to reuse.
+   * @param policy - complete per-call file policy.
+   * @returns the Windows session temp root when this backend owns one, otherwise `undefined`.
+   */
+  prepareWritableTempRoot(policy: SandboxPolicy): string | undefined {
+    if (this.runnerCommand !== undefined || policy.mode !== 'workspace-write' || policy.sessionId === undefined) return undefined
+    const selected = this.selectRunner(policy.mode)
+    if (selected.runner !== 'windows-acl') return undefined
+    return this.materializeAclGrant(policy.sessionId, policy.workspaceRoot).dir
+  }
+
   /** The selected rung's runner invocation (program + profile arguments) for one policy. */
   private runnerArgv(runner: SelectedRunner['runner'], policy: SandboxPolicy): string[] {
     switch (runner) {

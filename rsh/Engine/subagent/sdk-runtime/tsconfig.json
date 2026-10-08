@@ -1,0 +1,33 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../Core/subprocess/subprocess-local"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../sdk-protocol"
+    },
+    {
+      "path": "../../../Modules/Official/sandbox/sandbox"
+    }
+  ]
+}

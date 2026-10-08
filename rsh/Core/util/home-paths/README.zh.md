@@ -40,6 +40,8 @@ const cache = dshCachePath('models')         // $DSH_HOME/cache/models, default 
 
 `dshCachePath(...segments)` 从解析出的主目录下的 `cache` 目录派生路径。不传路径段时返回缓存目录本身。传入首个选项对象 `dshCachePath({ dshHome: home }, ...segments)` 可使用显式配置的主目录，遵循相同的优先级与波浪号展开规则。它返回绝对路径，不会创建目录。
 
+`resolveDshProfileExecution(name, home)` 会读取所选 profile 的 `package.json`，并返回其声明的 runtime 与 reload mode。profile manifest 缺失时选择 legacy execution；Native marker 必须使用 `rsh.profile.json`，并拒绝未知的 profile 字段。CLI 与 SDK 共用此解析器，因此 source launcher 的选择与 CLI 启动行为一致。
+
 ### 展示主目录
 
 面向用户的路径请以符号形式渲染根目录，而不是机器路径：默认主目录显示为 `~/.dsh`，任何已配置的主目录显示为 `$DSH_HOME`。展示形式绝不会泄露机器的绝对路径。
@@ -67,6 +69,7 @@ const cache = dshCachePath('models')         // $DSH_HOME/cache/models, default 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 主目录解析、路径拼接、展示、波浪号展开与监听路径规范化 |
+| [`src/profile-runtime.ts`](src/profile-runtime.ts) | 与 CLI launcher 共用的严格 profile runtime marker 解析 |
 | — | 不发布运行时不变式伴生入口；这个纯工具包不持有事件流或可变运行时数据；其解析规则和值代数由单元测试保障。 |
 
 ### 解析规则

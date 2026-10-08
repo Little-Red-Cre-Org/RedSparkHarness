@@ -133,6 +133,15 @@ export class HarnessSdkJsonRpcServer {
    * @returns server identity for the handshake.
    */
   async initialize(params: InitializeParams): Promise<InitializeResult> {
+    if (params.maxSteps !== undefined) {
+      throw new Error('initialize maxSteps is supported only by the native-sdk profile')
+    }
+    if (params.allowedTools !== undefined) {
+      throw new Error('initialize allowedTools is supported only by the native-sdk profile')
+    }
+    if (params.workspaceWriteRoot !== undefined) {
+      throw new Error('initialize workspaceWriteRoot is supported only by the native-sdk profile')
+    }
     if (params.reasoningEffort !== undefined
       && (typeof params.reasoningEffort !== 'string' || params.reasoningEffort.length === 0)) {
       throw new TypeError('initialize reasoningEffort must be a non-empty string')

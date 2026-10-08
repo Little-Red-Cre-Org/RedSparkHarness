@@ -45,6 +45,15 @@ export class LocalSandboxProvider extends SandboxProvider {
   confine(argv: readonly string[], policy: SandboxPolicy): ConfinedArgv {
     return this.backend.confine(argv, policy)
   }
+
+  /**
+   * Prepare the existing session temp capability for a confined runtime home.
+   * @param policy - complete per-call file policy.
+   * @returns the Windows session temp root used by `confine`, when available.
+   */
+  prepareWritableTempRoot(policy: SandboxPolicy): string | undefined {
+    return this.backend.prepareWritableTempRoot(policy)
+  }
 }
 
 export default LocalSandboxProvider

@@ -7,7 +7,7 @@ from typing import Callable
 
 from .client import HarnessClient, HarnessConfig
 from .errors import SdkProtocolError
-from .models import JsonObject, Notification
+from .models import InitializeResponse, JsonObject, Notification
 
 
 @dataclass(slots=True)
@@ -23,6 +23,9 @@ class DeepSeekHarnessConfig:
     model: str = "deepseek-v4-flash"
     reasoning_effort: str | None = None
     max_tokens: int | None = None
+    max_steps: int | None = None
+    allowed_tools: tuple[str, ...] | None = None
+    workspace_write_root: str | None = None
     cwd: str | None = None
     runtime_cwd: str | None = None
     dsh_bin: str | None = None
@@ -88,6 +91,7 @@ class DeepSeekHarness:
             _launch_args=_launch_args,
         )
         self._initialized = False
+        self._initialize_result: InitializeResponse | None = None
 
     def __enter__(self) -> "DeepSeekHarness":
         self.start()
@@ -100,22 +104,31 @@ class DeepSeekHarness:
     def client(self) -> HarnessClient:
         return self._client
 
+    @property
+    def initialize_result(self) -> InitializeResponse | None:
+        """The selected runtime's response to initialize, after a successful start."""
+        return self._initialize_result
+
     def start(self) -> None:
         if self._initialized:
             return
         self._client.start()
-        self._client.initialize(
+        self._initialize_result = self._client.initialize(
             cwd=self._cwd,
             provider=self.config.provider,
             model=self.config.model,
             reasoning_effort=self.config.reasoning_effort,
             max_tokens=self.config.max_tokens,
+            max_steps=self.config.max_steps,
+            allowed_tools=self.config.allowed_tools,
+            workspace_write_root=self.config.workspace_write_root,
         )
         self._initialized = True
 
     def close(self) -> None:
         self._client.close()
         self._initialized = False
+        self._initialize_result = None
 
     def start_session(self, session_id: str | None = None) -> "Session":
         self.start()

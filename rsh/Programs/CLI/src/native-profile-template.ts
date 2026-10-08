@@ -1,5 +1,5 @@
 /** First-use compositions for the explicitly selected native profiles. */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
@@ -7,8 +7,18 @@ import { profileRuntime, type NativeProfileConfig } from './native-profile-confi
 
 const ROOT = 'root'
 
+interface CliManifest {
+  dsh?: { nativeProfileTemplates?: unknown }
+}
+
+const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as CliManifest
+const nativeProfileTemplates = manifest.dsh?.nativeProfileTemplates
+if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
+  throw new Error('dsh: CLI package must declare its native profile templates')
+}
+
 /** Profile names whose first-use compositions ship with the CLI. */
-export const SHIPPED_NATIVE_PROFILES = ['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const
+export const SHIPPED_NATIVE_PROFILES: readonly string[] = nativeProfileTemplates
 
 const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application', config: { maxLiveTextChars: 100000, maxLiveEvents: 100000 } },
@@ -17,22 +27,24 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session', config: { maxFollowBufferChars: 1000000 } },
 ] as const
 
-const NATIVE_WORKFLOW_INSTALLATIONS = [
-  { id: 'workflow', plugin: '@deepseek-ai/dsh-workflow', scope: ROOT },
-  { id: 'workflow-worker', plugin: '@deepseek-ai/dsh-workflow-worker-thread', scope: ROOT,
-    config: { subagentProvider: 'spawn' } },
-  { id: 'workflow-tool', plugin: '@deepseek-ai/dsh-tool-workflow', scope: ROOT,
-    config: { provider: 'worker-thread' } },
-  { id: 'ralph-tool', plugin: '@deepseek-ai/dsh-tool-ralph', scope: ROOT,
-    config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' } },
-] as const
+function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
+  return [
+    { id: 'workflow', plugin: '@deepseek-ai/dsh-workflow', scope: ROOT },
+    { id: 'workflow-worker', plugin: '@deepseek-ai/dsh-workflow-worker-thread', scope: ROOT,
+      config: { subagentProvider } },
+    { id: 'workflow-tool', plugin: '@deepseek-ai/dsh-tool-workflow', scope: ROOT,
+      config: { provider: 'worker-thread' } },
+    ...(structuredOutput ? [{ id: 'ralph-tool', plugin: '@deepseek-ai/dsh-tool-ralph', scope: ROOT,
+      config: { workflowProvider: 'worker-thread', subagentProvider } }] : []),
+  ] as const
+}
 
 function cliRuntimeRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
 
-function isShippedNativeProfile(name: string): name is (typeof SHIPPED_NATIVE_PROFILES)[number] {
-  return (SHIPPED_NATIVE_PROFILES as readonly string[]).includes(name)
+function isShippedNativeProfile(name: string): boolean {
+  return SHIPPED_NATIVE_PROFILES.includes(name)
 }
 
 /**
@@ -44,10 +56,11 @@ function isShippedNativeProfile(name: string): name is (typeof SHIPPED_NATIVE_PR
  */
 export function shippedNativeProfileComposition(
   home: string,
-  profile: (typeof SHIPPED_NATIVE_PROFILES)[number],
+  profile: string,
   platform: NodeJS.Platform = process.platform,
 ): NativeProfileConfig {
-  if (profile === 'native-sdk' || profile === 'native-acp') return {
+  if (!isShippedNativeProfile(profile)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(profile)}`)
+  if (profile === 'native-sdk' || profile === 'native-sdk-dsh-child' || profile === 'native-acp') return {
     formatVersion: 1,
     scopes: [{ id: ROOT }],
     installations: [
@@ -61,19 +74,29 @@ export function shippedNativeProfileComposition(
       { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },
-      { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT, config: { providerName: 'spawn' } },
+      { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT,
+        config: { providerName: profile === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn' } },
+      ...(profile === 'native-sdk-dsh-child' ? [
+        { id: 'child-subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: ROOT },
+        { id: 'sandbox-policy', plugin: '@deepseek-ai/dsh-native-sandbox-policy', scope: ROOT,
+          config: { mode: 'workspace-write', workspaceRoot: process.cwd() } },
+        { id: 'process-sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: ROOT },
+        { id: 'approval', plugin: '@deepseek-ai/dsh-native-approval', scope: ROOT, config: { policy: 'ask' } },
+        { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: ROOT,
+          config: { providerName: 'dsh-sdk' } },
+      ] : []),
       { id: 'subagent-controls', plugin: '@deepseek-ai/dsh-tool-subagent-control', scope: ROOT },
       { id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: ROOT },
       { id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: ROOT,
         config: { toolName: 'subagent', maxDepth: 3 } },
-      ...NATIVE_WORKFLOW_INSTALLATIONS,
+      ...nativeWorkflowInstallations(profile === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn', profile !== 'native-sdk-dsh-child'),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
       { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,
         config: { dshHome: home } },
-      { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: ROOT },
+      { id: 'fs', plugin: profile === 'native-sdk-dsh-child' ? '@deepseek-ai/dsh-fs-sandbox' : '@deepseek-ai/dsh-fs-local', scope: ROOT },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
         config: { providers: { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',
@@ -135,7 +158,7 @@ export function shippedNativeProfileComposition(
       { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: ROOT },
       { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: ROOT },
       { id: 'subagents', plugin: '@deepseek-ai/dsh-native-subagent', scope: ROOT, config: { providerName: 'spawn' } },
-      ...NATIVE_WORKFLOW_INSTALLATIONS,
+      ...nativeWorkflowInstallations('spawn'),
       { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
         config: { maxBytes: 65_536 } },
       { id: 'time-context', plugin: '@deepseek-ai/dsh-native-time-context', scope: ROOT },
