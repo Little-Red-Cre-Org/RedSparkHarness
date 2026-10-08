@@ -9,7 +9,9 @@ import type {
 import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validateJsonSchemaValue } from './json-schema.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
 import type { NativeToolRestriction } from './types.ts'
-import { registerAsyncPolicy, processAsyncWaterfall, type AsyncPolicyRegistration } from './result-processing.ts'
+import {
+  registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, type AsyncPolicyRegistration,
+} from './result-processing.ts'
 export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.ts'
 
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
@@ -96,6 +98,8 @@ export interface NativeValueToolContribution {
   readonly isConcurrencySafe?: NativeToolConcurrencyClassifier
   /** Await tool-owned decoration after result policies and before Session persistence. */
   readonly finalizeResult?: NativeToolResultFinalizer
+  /** Cooperative body budget in milliseconds, enforced only by an installed execution policy. */
+  readonly timeoutMs?: number
   readonly output: {
     readonly schema: JsonSchemaNode
     /**
@@ -139,6 +143,8 @@ export interface NativeToolContribution {
   readonly approval?: NativeToolApproval
   /** Await tool-owned decoration after result policies and before Session persistence. */
   readonly finalizeResult?: NativeToolResultFinalizer
+  /** Cooperative body budget in milliseconds, enforced only by an installed execution policy. */
+  readonly timeoutMs?: number
   execute(call: NativeToolExecution): Promise<NativeToolResult>
 }
 
@@ -185,6 +191,42 @@ export type NativeToolResultFinalizer = (
   call: NativeToolExecution, original: Readonly<NativeToolResult>, selected: NativeToolResult,
 ) => Promise<NativeToolResult>
 
+/** Registered facts about the dispatched contribution that execution policies may enforce. */
+export interface NativeToolDeclaration {
+  /** Positive cooperative body budget declared by the contribution; absent declares none. */
+  readonly timeoutMs?: number
+}
+
+/**
+ * Surround one admitted body dispatch, for example to enforce its declared timeout.
+ * @param call - admitted invocation; its signal already carries registry, policy and caller cancellation.
+ * @param tool - immutable declaration of the dispatched contribution.
+ * @param next - delegate exactly once; the supplied signal is fused with `call.signal`, so it can only add cancellation.
+ * @returns the body outcome, or a replacement result selected after `next` settles; the registry still awaits `next`.
+ */
+export type NativeToolExecutionPolicy = (
+  call: NativeToolExecution, tool: NativeToolDeclaration, next: (signal: AbortSignal) => Promise<NativeToolResult>,
+) => Promise<NativeToolResult>
+
+/** Final model-visible outcome of one tool call after its Session owner recorded it. */
+export interface NativeToolSettlement {
+  readonly agent: NativeAgent
+  readonly session: Session
+  readonly callId: ToolCallId
+  readonly name: string
+  /** Parsed JSON arguments, or the raw argument text when the model sent invalid JSON. */
+  readonly arguments: unknown
+  /** Recorded outcome, including denials, failures and application built-ins. */
+  readonly result: Readonly<NativeToolResult>
+}
+
+/**
+ * Derive sourced model context from a recorded tool outcome, including failures and denials.
+ * @param settlement - detached immutable facts of the recorded call.
+ * @returns user messages placed before the result's own additional contexts; empty when nothing applies.
+ */
+export type NativeToolSettlementPolicy = (settlement: NativeToolSettlement) => readonly UserMessage[]
+
 /** Log-only projection of one nested dispatch; program results remain unchanged. */
 export interface NativePtcDispatchLog {
   readonly content: readonly ContentBlock[]
@@ -220,6 +262,7 @@ export interface NativePreparedToolInvocation {
 
 interface ToolRegistration {
   readonly tool: NativeToolContribution
+  readonly declaration: NativeToolDeclaration
   readonly schema: ToolSchema
   readonly outputSchema?: JsonSchemaNode
   readonly isConcurrencySafe?: NativeToolConcurrencyClassifier
@@ -230,6 +273,10 @@ interface ToolRegistration {
 }
 
 type ResultPolicyRegistration = AsyncPolicyRegistration<NativeToolResultPolicy>
+type ExecutionPolicyRegistration = AsyncPolicyRegistration<NativeToolExecutionPolicy>
+
+/** Node schedules longer delays as one millisecond, so a larger declared budget cannot be enforced. */
+const MAX_TOOL_TIMEOUT_MS = 2_147_483_647
 type PtcLogPolicyRegistration = AsyncPolicyRegistration<NativePtcDispatchLogPolicy>
 
 /** A registry whose disposer cancels and drains only the contribution it installed. */
@@ -239,6 +286,11 @@ export class NativeToolRegistry {
   private readonly restrictions: NativeContributions<CompiledToolRestriction>
   private readonly resultObservers: NativeContributions<NativeToolResultObserver>
   private readonly resultPolicies: NativeContributions<ResultPolicyRegistration>
+  private readonly executionPolicies: NativeContributions<ExecutionPolicyRegistration>
+  private readonly executionPolicyRegistrations = new Set<ExecutionPolicyRegistration>()
+  private executionPolicySequence = 0
+  private readonly settlementPolicies: NativeContributions<NativeToolSettlementPolicy>
+  private settlementPolicySequence = 0
   private readonly ptcLogPolicies: NativeContributions<PtcLogPolicyRegistration>
   private readonly ptcLogPolicyRegistrations = new Set<PtcLogPolicyRegistration>()
   private readonly ptcLogPending = new Set<Promise<void>>()
@@ -265,6 +317,8 @@ export class NativeToolRegistry {
     this.guards = new NativeContributions(scope)
     this.resultObservers = new NativeContributions(scope)
     this.resultPolicies = new NativeContributions(scope)
+    this.executionPolicies = new NativeContributions(scope)
+    this.settlementPolicies = new NativeContributions(scope)
     this.ptcLogPolicies = new NativeContributions(scope)
     this.restrictions = new NativeContributions(scope)
   }
@@ -349,6 +403,57 @@ export class NativeToolRegistry {
   }
 
   /**
+   * Surround admitted body dispatch in the executing Agent's scope, including nested program calls.
+   * @param policy - wrapper that delegates exactly once and may replace the body outcome after delegation settles.
+   * @param scope - installation scope, defaulting to the Provider scope.
+   * @returns disposer that closes admission, cancels captured calls and awaits their settlement.
+   */
+  aroundExecution(policy: NativeToolExecutionPolicy, scope?: NativeScope): () => Promise<void> {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const entry = registerAsyncPolicy(this.executionPolicies, this.executionPolicyRegistrations,
+      `execution:${this.executionPolicySequence++}`, policy, scope)
+    return () => entry.dispose()
+  }
+
+  /**
+   * Register a synchronous context policy over every recorded call outcome in the executing Agent's scope.
+   * @param policy - derives sourced user messages from a detached settlement; a throw fails the recording owner.
+   * @param scope - installation scope, defaulting to the Provider scope.
+   * @returns an exact idempotent disposer owned by the installing module.
+   */
+  onSettlement(policy: NativeToolSettlementPolicy, scope?: NativeScope): () => void {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    return this.settlementPolicies.register(`settlement:${this.settlementPolicySequence++}`, policy, scope)
+  }
+
+  /**
+   * Collect settlement contexts after the Session owner recorded one tool outcome.
+   * @param settlement - recorded call facts; builtin, denied and failed calls are included.
+   * @returns detached sourced messages in policy registration order, to append before the result's own contexts.
+   */
+  settlementContexts(settlement: NativeToolSettlement): UserMessage[] {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    if (this.agents.get(settlement.agent.id) !== settlement.agent) {
+      throw new Error(`native-tools: Agent "${settlement.agent.id}" is not registered`)
+    }
+    const policies = [...this.settlementPolicies.visible(settlement.agent.scope).values()]
+    if (policies.length === 0) return []
+    const detached: NativeToolSettlement = Object.freeze({
+      agent: settlement.agent, session: settlement.session, callId: settlement.callId, name: settlement.name,
+      arguments: deepFreeze(structuredClone(settlement.arguments)), result: deepFreeze(structuredClone(settlement.result)),
+    })
+    const contexts: UserMessage[] = []
+    for (const policy of policies) {
+      for (const message of policy(detached)) {
+        // Policies are third-party code; their declared type is not trusted at runtime.
+        if ((message as { readonly role: unknown }).role !== 'user') throw new Error('native-tools: settlement policies may only add user messages')
+        contexts.push(structuredClone(message))
+      }
+    }
+    return contexts
+  }
+
+  /**
    * Register a scoped log-only waterfall for nested program dispatch settlement.
    * @param policy - projection that delegates exactly once and honors its independent cancellation signal.
    * @param scope - installation scope, defaulting to the Provider scope.
@@ -397,8 +502,17 @@ export class NativeToolRegistry {
 
   private async processResult(
     call: NativeToolExecution, entry: ToolRegistration, policies: readonly ResultPolicyRegistration[],
+    wrappers: readonly ExecutionPolicyRegistration[],
   ): Promise<NativeToolResult> {
-    const executed = await entry.tool.execute(call)
+    const executed = wrappers.length === 0
+      ? await entry.tool.execute(call)
+      : await processExecutionChain(wrappers.length, call.signal,
+        signal => entry.tool.execute(signal === call.signal ? call : { ...call, signal }),
+        (index, signal, next) => {
+          const wrapper = wrappers[index]
+          if (wrapper === undefined) throw new Error('native-tools: captured execution policy is missing')
+          return wrapper.policy(signal === call.signal ? call : { ...call, signal }, entry.declaration, next)
+        })
     call.signal.throwIfAborted()
     if (policies.length === 0 && entry.tool.finalizeResult === undefined) return executed
     const original = deepFreeze(executed)
@@ -412,7 +526,8 @@ export class NativeToolRegistry {
     call.signal.throwIfAborted()
     const snapshot = snapshotJsonValue(finalized)
     if (snapshot === undefined) throw new HarnessError(`tool "${call.name}" returned non-lossless JSON`, 'INVALID_TOOL_OUTPUT')
-    if (entry.outputSchema !== undefined) {
+    // A policy-selected failure (for example a timeout) has no canonical value; bindings reject it by isError.
+    if (entry.outputSchema !== undefined && !(finalized.isError && finalized.value === undefined)) {
       const violations = validateJsonSchemaValue(entry.outputSchema, finalized.value, 'value')
       if (violations.length > 0) throw new HarnessError(`tool "${call.name}" returned invalid output: ${violations.join('; ')}`, 'INVALID_TOOL_OUTPUT')
     }
@@ -467,6 +582,7 @@ export class NativeToolRegistry {
       schema: tool.schema, ...(tool.approval === undefined ? {} : { approval: tool.approval }),
       ...(tool.finalizeResult === undefined ? {} : { finalizeResult: tool.finalizeResult }),
       ...(tool.isConcurrencySafe === undefined ? {} : { isConcurrencySafe: tool.isConcurrencySafe }),
+      ...(tool.timeoutMs === undefined ? {} : { timeoutMs: tool.timeoutMs }),
       async execute(call) {
         const candidate = await tool.execute(call)
         const value = snapshotJsonValue(candidate.value)
@@ -501,9 +617,14 @@ export class NativeToolRegistry {
     const schema = structuredClone(tool.schema)
     const parameters = schema.parameters
     assertSupportedJsonSchema(parameters)
+    const { timeoutMs } = tool
+    if (timeoutMs !== undefined && !(Number.isFinite(timeoutMs) && timeoutMs > 0 && timeoutMs <= MAX_TOOL_TIMEOUT_MS)) {
+      throw new Error(`native-tools: tool ${schema.name} timeoutMs must be a positive finite number no greater than ${MAX_TOOL_TIMEOUT_MS}`)
+    }
     let completion: Promise<void> | undefined
     const entry: ToolRegistration = {
       tool, schema, controller: new AbortController(), pending: new Set(),
+      declaration: Object.freeze(timeoutMs === undefined ? {} : { timeoutMs }),
       ...(outputSchema === undefined ? {} : { outputSchema }),
       ...(tool.isConcurrencySafe === undefined ? {} : { isConcurrencySafe: tool.isConcurrencySafe }),
       validate: (args) => {
@@ -617,7 +738,9 @@ export class NativeToolRegistry {
     const argumentsValue = snapshotJsonValue(call.arguments)
     if (argumentsValue === undefined) throw new ToolArgsError(['arguments must be lossless JSON'])
     const policies = [...this.resultPolicies.visible(call.agent.scope).values()]
-    const signal = AbortSignal.any([call.signal, entry.controller.signal, ...policies.map(policy => policy.controller.signal)])
+    const wrappers = [...this.executionPolicies.visible(call.agent.scope).values()]
+    const owners = [...policies, ...wrappers]
+    const signal = AbortSignal.any([call.signal, entry.controller.signal, ...owners.map(policy => policy.controller.signal)])
     const authority = call.approvalAuthority
     const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal): NativeToolApprovalRequest => ({
       agent: call.agent, session: call.session, callId: call.callId, toolName: call.name,
@@ -633,13 +756,13 @@ export class NativeToolRegistry {
     }
     const completion = Promise.withResolvers<void>()
     entry.pending.add(completion.promise)
-    for (const policy of policies) policy.pending.add(completion.promise)
+    for (const policy of owners) policy.pending.add(completion.promise)
     let phase: 'preparing' | 'ready' | 'running' | 'closed' = 'preparing'
     const release = (): void => {
       phase = 'closed'
       signal.removeEventListener('abort', cancelled)
       entry.pending.delete(completion.promise)
-      for (const policy of policies) policy.pending.delete(completion.promise)
+      for (const policy of owners) policy.pending.delete(completion.promise)
       completion.resolve()
     }
     const cancelled = (): void => { if (phase === 'ready') release() }
@@ -663,7 +786,7 @@ export class NativeToolRegistry {
       const agents = this.agents
       const assertGuards = (): void => { this.assertGuards(admitted) }
       const assertVisible = (): void => { this.assertVisible(admitted, entry) }
-      const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies)
+      const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies, wrappers)
       return {
         async execute() {
           signal.throwIfAborted()
@@ -695,11 +818,13 @@ export class NativeToolRegistry {
     this.disposal = completion.promise
     this.guards.clear()
     this.resultObservers.clear()
+    this.settlementPolicies.clear()
     this.restrictions.clear()
     this.ptcLogController.abort()
     const completions = [
       ...[...this.registrations].map(entry => entry.dispose()),
       ...[...this.policyRegistrations].map(entry => entry.dispose()),
+      ...[...this.executionPolicyRegistrations].map(entry => entry.dispose()),
       ...[...this.ptcLogPolicyRegistrations].map(entry => entry.dispose()),
       ...this.ptcLogPending,
     ]

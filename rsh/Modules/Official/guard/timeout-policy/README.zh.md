@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可为工具调用执行其配置的协作式时间上限，并在取消完成后向模型返回清晰的超时错误。按时完成的调用保持不变。忽略或缓慢处理取消的工具仍可能让调用方继续等待，因为本包无法硬性停止下游工作。每个工具分别提供自己的限时；本包无需配置，并随 `dsh` 基础组合包默认启用。
+使用本包可为工具调用执行其配置的协作式时间上限，并在取消完成后向模型返回清晰的超时错误。按时完成的调用保持不变。忽略或缓慢处理取消的工具仍可能让调用方继续等待，因为本包无法硬性停止下游工作。每个工具分别提供自己的限时；本包无需配置，并随 `dsh` 基础组合包与每个随附原生配置默认启用。
 
 ## 目录
 
@@ -45,6 +45,10 @@ kind: "package-reference"
 
 截止时间触发时，插件会中止派生的 `exec.signal`。下游代码遵守取消且 `next()` 完成后，模型会收到标记为错误的 `Error: tool call timed out after <ms>ms` 工具结果，从而决定重试、调整或放弃。忽略或缓慢处理该信号的工具会让调用方继续等待，并且在自身完成前不会产生超时结果；按时完成的调用保持不变。
 
+### 原生配置
+
+不依赖 Cordis 的 `./native` 安装器包含在每个随附原生配置中。它需要所选的 `tools` 注册表，不接受任何设置，并为其作用域内可见的工具安装一个执行策略。原生工具在其贡献上以 `timeoutMs` 声明预算；`dsh-tool-fs-search` 正是这样声明 `glob` 与 `grep` 的预算。超时的调用会记录与 Cordis 包装层相同的 `Error: tool call timed out after <ms>ms` 文本和 `{ name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' }` 错误。`run_code` 程序发起的调用经过同一个注册表，因此获得同样的截止时间。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -68,6 +72,10 @@ kind: "package-reference"
 
 一个 `tools/execute` 监听器从注册表读取已分发工具声明的限时（`ctx.tools.get(exec.name, exec.agent)?.timeoutMs`）；没有限时的工具原样委派。对有限时的工具，`deadline(exec.signal, timeoutMs, TOOL_TIMEOUT)` 构建融合信号，包装层在分发时把它换到 `exec` 上并在 `finally` 中恢复，使 `tools/post-execute` 监听器永远看不到派生信号。当包装层自己的计时器触发时——`timeoutOf(d.signal, 'TOOL_TIMEOUT')` 以代码限定作用域，因此嵌套的外层截止时间读作普通的上游取消——已被分发规范化为错误结果的分发结果会被替换为结构化结果：`isError: true`、内容 `Error: tool call timed out after <ms>ms`、错误信息 `{ name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' }`。
 
+### 原生执行策略
+
+[`src/native.ts`](src/native.ts) 通过 `tools.aroundExecution` 注册 `nativeToolTimeoutPolicy`。注册表把工具冻结后的声明交给每个策略，因此策略无需查询注册表即可读取 `timeoutMs`。它调用与 Cordis 包装层相同的 [`src/core.ts`](src/core.ts) 中的 `runWithToolDeadline`，把 `next` 作为分发传入，并在自身计时器触发时返回 `nativeToolTimeoutResult(ms)`，无论工具主体是返回还是抛出。两个入口之间只有结果形态与信号交接不同。由于该错误结果不携带规范值，注册表会跳过输出 schema 校验。先注册的策略包在后注册的策略外层。与 Cordis 有一处不同：若截止时间已触发、工具主体尚未完成时调用方又取消，原生注册表会报告调用方的取消，而该取消本身已经结束本轮。
+
 ### 与其他包装层组合
 
 多个 `tools/execute` 监听器按 Cordis 注册顺序组合，注册顺序决定语义：超时注册在外层时覆盖整个重试操作，注册在内层时覆盖每次尝试。
@@ -77,6 +85,8 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`TOOL_TIMEOUT`、`name`／`inject`／`apply`、`tools/execute` 包装层 |
+| [`src/core.ts`](src/core.ts) | 共享的 `TOOL_TIMEOUT` 代码、错误名、消息文本，以及两个入口都调用的 `runWithToolDeadline` 强制执行 |
+| [`src/native.ts`](src/native.ts) | 原生安装器、`nativeToolTimeoutPolicy` 与 `nativeToolTimeoutResult` |
 | — | 不发布运行时不变式伴生入口；此无状态策略插件不拥有包级事件历史，也不拥有所拦截 seam 之外的可变数据关系。 |
 
 </details>
@@ -121,6 +131,7 @@ kind: "package-reference"
 
 - **协作式，绝不是硬终止**——截止时间只通过 `exec.signal` 通知；忽略该信号的工具不会在超时时停止，包装层仍停留在 `await next()` 内，模型要等下游完成后才可能收到超时结果。
 - **没有统一预算**——只有声明 `timeoutMs` 并将其放在 `ToolDefinition` 上的工具才会获得截止时间；未声明工具（随附的 `bash`、`read`、`write`、`edit` 有意不声明）没有注册表级默认值。
+- **原生预算由各工具自行选择**——保留内部计时器但不声明 `timeoutMs` 的原生工具仍报告其自身的错误形态；`dsh-tool-fs-search` 在声明的预算之后保留内部计时器作为兜底。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -91,6 +91,9 @@ export function createNativePtcDispatch(
           if (!result.isError && result.content.some(block => block.type === 'image')) {
             contexts.push(createUserMessage({ content: structuredClone([...result.content]), source: { kind: 'plugin', plugin: 'tools-ptc' } }))
           }
+          contexts.push(...tools.settlementContexts({
+            agent: call.agent, session: call.session, callId: id, name, arguments: argumentsValue, result,
+          }))
           contexts.push(...structuredClone(result.additionalContexts ?? []))
           if (!result.isError && result.concludesTurn === true) concludesTurn = true
           completion.resolve(result)

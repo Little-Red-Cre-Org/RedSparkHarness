@@ -502,6 +502,45 @@ function walkSchemaExpr(
 
 /** Find a plugin's schemastery schema expression: an exported `const Config`
  * in the entry file, else a `static Config` on the plugin class. */
+/**
+ * Follow a schema expression that is a bare identifier to the expression it
+ * names: a `const` initializer in the same file, or an exported `const` in a
+ * package-local `./x.ts` module (a mixed package keeps its schema in shared
+ * framework-free code so the Cordis and native entries validate identically).
+ * Anything else is returned unchanged for the walk to accept or reject.
+ */
+function resolveSchemaBinding(
+  world: World,
+  ctx: FileCtx,
+  expr: ts.Expression,
+  seen = new Set<string>(),
+): { ctx: FileCtx; expr: ts.Expression } {
+  const e = unwrapExpr(expr)
+  if (!ts.isIdentifier(e)) return { ctx, expr: e }
+  const key = `${ctx.abs}#${e.text}`
+  if (seen.has(key)) return { ctx, expr: e }
+  seen.add(key)
+  const local = findConstInitializer(ctx, e.text, false)
+  if (local) return resolveSchemaBinding(world, ctx, local, seen)
+  const imp = ctx.imports.get(e.text)
+  if (!imp || !imp.specifier.startsWith('./') || !imp.specifier.endsWith('.ts')) return { ctx, expr: e }
+  const target = loadRelative(world, ctx, imp.specifier)
+  const exported = findConstInitializer(target, imp.imported, true)
+  return exported ? resolveSchemaBinding(world, target, exported, seen) : { ctx, expr: e }
+}
+
+/** Find the initializer of a top-level `const <name> = …`, optionally requiring `export`. */
+function findConstInitializer(ctx: FileCtx, name: string, exported: boolean): ts.Expression | null {
+  for (const stmt of ctx.sf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue
+    if (exported && !stmt.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)) continue
+    for (const decl of stmt.declarationList.declarations) {
+      if (ts.isIdentifier(decl.name) && decl.name.text === name && decl.initializer) return decl.initializer
+    }
+  }
+  return null
+}
+
 function findSchemaExpr(ctx: FileCtx, pluginClass: ts.ClassDeclaration | null): ts.Expression | null {
   for (const stmt of ctx.sf.statements) {
     if (!ts.isVariableStatement(stmt)) continue
@@ -720,7 +759,8 @@ export function collectConfigCatalog(scanRoot: string = root): CatalogEntry[] {
     // Statically walk the runtime schema (when one exists) for the subset check.
     const schemaExpr = findSchemaExpr(ctx, pluginClass)
     if (schemaExpr) {
-      const { keys, composes } = walkSchemaExpr(ctx, unwrapExpr(schemaExpr), `${pkg} (${entryRel})`, violations)
+      const schema = resolveSchemaBinding(world, ctx, schemaExpr)
+      const { keys, composes } = walkSchemaExpr(schema.ctx, schema.expr, `${pkg} (${entryRel})`, violations)
       entry.schemaKeys = keys
       entry.schemaComposes = composes
     } else {

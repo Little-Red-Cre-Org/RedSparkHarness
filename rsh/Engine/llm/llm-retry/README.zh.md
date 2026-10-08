@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-挂载 `@deepseek-ai/dsh-llm-retry`，可在持久 agent 步骤边界重试失败的模型请求。提供方的 `retryPolicy` 设置可选择有界的 normal mode 重试或无上限的 always mode 重试；计划的尝试会在退避前写入会话日志，取消后历史仍保持一致。重试会在同一个打开的轮次内重跑失败步骤，而直接 `ctx.llm.stream()` 调用仍只尝试一次。每次重试都会产生另一次提供方请求计费，always mode 会持续到成功、取消或释放。
+挂载 `@deepseek-ai/dsh-llm-retry`，可在持久 agent 步骤边界重试失败的模型请求。提供方的 `retryPolicy` 设置可选择有界的 normal mode 重试或无上限的 always mode 重试；计划的尝试会在退避前写入会话日志，取消后历史仍保持一致。重试会在同一个打开的轮次内重跑失败步骤，而直接 `ctx.llm.stream()` 调用仍只尝试一次。不依赖 Cordis 的 `./native` 安装器在每个随附原生配置中应用相同策略。每次重试都会产生另一次提供方请求计费，always mode 会持续到成功、取消或释放。
 
 ## 目录
 
@@ -57,6 +57,10 @@ kind: "package-reference"
 
 在任何最终适配器被选中之前发生的失败没有提供方策略，原样委派下游。normal mode 中，不在合格集合内的失败 code 或已耗尽的预算会委派；always mode 中，超上限的提供方延迟使用配置的本地退避，因此策略不会因该指令终止。这里没有任何模型可见内容：重试事件、延迟、提供方错误或失败的部分输出都不会到达模型或派生消息。
 
+### 原生配置
+
+`./native` 安装器不接受任何设置，需要所选的 `modelExecution` 服务，并注册一个恢复策略。它写入相同的 `llm/retry` 与 `llm/retry-started` 事件，在等待前持久化每一条，并使用相同的合格性、预算、延迟与抖动规则。提供方策略来自所选模型；未声明策略的模型获得与 Cordis LLM 运行时相同的 normal 默认值。原生模型执行会同时提交终止性的错误 finish 与抛出异常的适配器；当没有策略重试抛出的失败时，本轮保留原始错误。每次失败的尝试都会记录为 `assistant/attempt`，实时流观察者会先看到失败尝试的分片，再看到重试尝试的分片。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -79,10 +83,16 @@ kind: "package-reference"
 | [`src/history.ts`](src/history.ts) | 从会话日志查找持久重试历史 |
 | [`src/types.ts`](src/types.ts) | 浏览器安全的 `llm/retry` 与 `llm/retry-started` 事件载荷类型 |
 | [`src/brand.ts`](src/brand.ts) | 事件载荷共享的 `RetryId` 品牌 |
+| [`src/core.ts`](src/core.ts) | 两个入口共享的运行时无关重试决策、延迟计算与可取消等待 |
+| [`src/native.ts`](src/native.ts) | 基于 `modelExecution.onRecovery` 的原生安装器 |
 
 ### 恢复流程
 
 失败步骤连同其提供方与解析后的策略一起到达 waterfall。always mode 先结算下游恢复，并遵循下游的 `retry` 决定；normal mode 先检查失败 code 是否合格、预算是否未耗尽。插件计算延迟——有效且在边界内的提供方 `Retry-After`，否则带对称抖动的本地有界指数退避——追加 `llm/retry` 事件，在可取消定时器上等待，追加 `llm/retry-started`，然后返回 `{ kind: 'retry' }`。loop 随后在同一个打开的轮次内重跑失败步骤（仍基于同一份持久历史）。
+
+### 原生恢复
+
+[`src/native.ts`](src/native.ts) 运行 [`src/core.ts`](src/core.ts) 中同一个 `recoverWithRetry` 算法。它不使用 Cordis 会话投影，而是在内存中保存每个会话当前轮次与步骤的重试历史，并在新步骤开始时清除。后注册的恢复策略先运行，每个策略至多委派下一个一次，与 Cordis waterfall 一致。移除安装会中止进行中的等待，并等待已在运行的恢复结束。
 
 ### Waterfall 组合
 
@@ -134,6 +144,7 @@ kind: "package-reference"
 - **有界插件预算相加**——normal mode 只统计其配置的 code 与精确提供方策略，而上下文溢出压缩（compaction）拥有独立预算。任何重叠策略都必须定义注册顺序行为。
 - **恢复策略按 waterfall 顺序组合**——always mode 先接受下游重试，再应用其回退。之后忽略取消且永不结算的策略也会阻止回退、轮次完全停稳与插件释放完成。
 - **`llm/retry` 记录调度，而非完成**——后续步骤与轮次事件才确立成功、耗尽或取消。
+- **原生重试预算在重启后重新开始**——原生安装器在内存中保存当前步骤的历史，因此在重试链中途崩溃后恢复的会话会开始新的预算，而不会读取先前的 `llm/retry` 事件。
 
 <a id="dev-note"></a>
 ### 开发备注
