@@ -41,8 +41,9 @@ import {
 
 /** Model-facing `web_search` over the selected native web service. */
 function searchTool(web: NativeWebService, config: ResolvedConfig): NativeValueToolContribution {
-  const { searchMaxResults: maxResults, searchMaxQueries: maxQueries } = config
+  const { searchMaxResults: maxResults, searchMaxQueries: maxQueries, searchTimeoutMs: timeoutMs } = config
   return {
+    timeoutMs,
     schema: {
       name: 'web_search', description: webSearchDescription(maxQueries),
       parameters: {
@@ -89,8 +90,9 @@ function searchTool(web: NativeWebService, config: ResolvedConfig): NativeValueT
 
 /** Model-facing `web_fetch` over the selected native web service. */
 function fetchTool(web: NativeWebService, config: ResolvedConfig): NativeValueToolContribution {
-  const { fetchMaxOutputChars: maxOutputChars } = config
+  const { fetchMaxOutputChars: maxOutputChars, fetchTimeoutMs: timeoutMs } = config
   return {
+    timeoutMs,
     schema: {
       name: 'web_fetch', description: WEB_FETCH_DESCRIPTION,
       parameters: {

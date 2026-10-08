@@ -97,6 +97,8 @@ tab 的 `kind` 是不透明字符串。种子 tab 是工厂（`DockControllerOpt
 <a id="dev-note"></a>
 ### 开发备注
 
+发布的引擎与组件不依赖 Cordis，无框架 peer 或安装器。Client 消费方无需安装 Cordis 即可打包同一产物。
+
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 

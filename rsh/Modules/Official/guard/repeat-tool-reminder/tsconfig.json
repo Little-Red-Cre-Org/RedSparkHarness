@@ -25,6 +25,18 @@
     },
     {
       "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-agent/tsconfig.host.json"
     }
   ]
 }

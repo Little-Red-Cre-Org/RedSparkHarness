@@ -32,7 +32,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
-    for (const name of ['native-headless', 'native-sdk', 'native-acp', 'native-tui']) {
+    for (const name of ['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
       ensureShippedNativeProfile(name, home)
       expect(nativeProfileReloadMode(name, home)).toBe('startup')
     }
@@ -48,6 +48,20 @@ it('defines a native-web Host composition and Client profile without Cordis rows
   }
 })
 
+it('keeps the child SDK sandbox opt-in and confines its selected file provider', () => {
+  const child = new Map(shippedNativeProfileComposition('C:/rsh-child', 'native-sdk-dsh-child', 'win32').installations.map(row => [row.id, row]))
+  expect(child.get('sandbox-policy')).toMatchObject({ plugin: '@deepseek-ai/dsh-native-sandbox-policy',
+    config: { mode: 'workspace-write', workspaceRoot: process.cwd() } })
+  expect(child.get('process-sandbox')?.plugin).toBe('@deepseek-ai/dsh-sandbox-local')
+  expect(child.get('fs')?.plugin).toBe('@deepseek-ai/dsh-fs-sandbox')
+
+  const standard = new Map(shippedNativeProfileComposition('C:/rsh-standard', 'native-sdk', 'win32').installations.map(row => [row.id, row]))
+  expect(standard.get('fs')?.plugin).toBe('@deepseek-ai/dsh-fs-local')
+  expect(standard.has('sandbox-policy')).toBe(false)
+  expect(standard.has('process-sandbox')).toBe(false)
+  expect(standard.has('dsh-sdk-child')).toBe(false)
+})
+
 it('defines a native-acp Host composition without Cordis rows', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-acp', 'native-acp', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
@@ -58,30 +72,51 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   expect(profile.installations.some(row => row.id === 'task-scheduler')).toBe(false)
 })
 
-it.each(['native-sdk', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
+it.each(['native-sdk', 'native-sdk-dsh-child', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-subagent', profileName, 'win32')
   expect(profile.installations.filter(row => row.id === 'subagent-directory')).toEqual([{
     id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: 'root',
   }])
 })
 
-it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
+it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 'native-acp', 'native-tui'] as const)(
   'selects one shared workflow engine and both model-facing consumers in %s', (profileName) => {
     const profile = shippedNativeProfileComposition('C:/rsh-native-workflow', profileName, 'win32')
     const byId = new Map(profile.installations.map(row => [row.id, row]))
-    expect(byId.get('subagents')).toMatchObject({ plugin: '@deepseek-ai/dsh-native-subagent', config: { providerName: 'spawn' } })
+    expect(byId.get('subagents')).toMatchObject({ plugin: '@deepseek-ai/dsh-native-subagent',
+      config: { providerName: profileName === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn' } })
+    expect(profileName === 'native-sdk-dsh-child' ? byId.get('dsh-sdk-child')?.plugin : undefined)
+      .toBe(profileName === 'native-sdk-dsh-child' ? '@deepseek-ai/dsh-sdk-child' : undefined)
     expect(byId.get('workflow')?.plugin).toBe('@deepseek-ai/dsh-workflow')
     expect(byId.get('workflow-worker')).toMatchObject({
-      plugin: '@deepseek-ai/dsh-workflow-worker-thread', config: { subagentProvider: 'spawn' },
+      plugin: '@deepseek-ai/dsh-workflow-worker-thread',
+      config: { subagentProvider: profileName === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn' },
     })
     expect(byId.get('workflow-tool')).toMatchObject({
       plugin: '@deepseek-ai/dsh-tool-workflow', config: { provider: 'worker-thread' },
     })
-    expect(byId.get('ralph-tool')).toMatchObject({
-      plugin: '@deepseek-ai/dsh-tool-ralph', config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' },
-    })
+    if (profileName === 'native-sdk-dsh-child') {
+      expect(byId.has('ralph-tool')).toBe(false)
+    } else {
+      expect(byId.get('ralph-tool')).toMatchObject({
+        plugin: '@deepseek-ai/dsh-tool-ralph',
+        config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' },
+      })
+    }
     expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
+  })
+
+it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
+  'installs the Cordis base guards natively in %s', (profileName) => {
+    const profile = shippedNativeProfileComposition('C:/rsh-native-guards', profileName, 'win32')
+    expect(profile.installations.filter(row => ['llm-retry', 'timeout-policy', 'repeat-tool-reminder'].includes(row.id))).toEqual([
+      { id: 'llm-retry', plugin: '@deepseek-ai/dsh-llm-retry', scope: 'root' },
+      { id: 'timeout-policy', plugin: '@deepseek-ai/dsh-tool-call-timeout-policy', scope: 'root' },
+      // Same settings as the Cordis base bundle row.
+      { id: 'repeat-tool-reminder', plugin: '@deepseek-ai/dsh-repeat-tool-reminder', scope: 'root',
+        config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
+    ])
   })
 
 it('defines a native-tui composition over the shared headless Providers', () => {

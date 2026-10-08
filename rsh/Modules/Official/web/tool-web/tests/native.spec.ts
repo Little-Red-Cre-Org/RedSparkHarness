@@ -5,6 +5,7 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import { NativeAgentId, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
+import { plugin as timeoutPolicyPlugin } from '@deepseek-ai/dsh-tool-call-timeout-policy/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
@@ -75,6 +76,7 @@ async function mountNative(config: unknown, providers: {
     { plugin: launchEnvironmentProvider(createLaunchEnvironmentSnapshot([{ source: 'process', values: {} }])), scope, config: undefined },
     { plugin: webPlugin, scope, config: undefined },
     { plugin: toolsPlugin, scope, config: undefined },
+    { plugin: timeoutPolicyPlugin, scope, config: undefined },
     { plugin: promptPlugin, scope, config: undefined },
     { plugin: agentPlugin, scope, config: undefined },
     { plugin: fixtures, scope, config: undefined },
@@ -152,19 +154,43 @@ describe('native tool-web parity', () => {
     expect(await fetchOnly.prompt.render(fetchOnly.scope)).toBe(GUIDANCE.fetch.replace(' (for example a result from web_search)', ''))
   })
 
-  it('forwards invocation cancellation to the provider without arming its own timer', async () => {
+  it.each([
+    { name: 'web_search', config: { searchTimeoutMs: 1 }, args: { queries: ['slow'] }, provider: 'search' },
+    { name: 'web_fetch', config: { fetchTimeoutMs: 1 }, args: { url: 'https://a.test/slow' }, provider: 'fetch' },
+  ] as const)('declares the $name budget and drains an aborted provider before returning TOOL_TIMEOUT', async ({ name, config, args, provider }) => {
     let observed: AbortSignal | undefined
-    const native = await mountNative({ fetchTimeoutMs: 1 }, { fetch: {
+    let settled = false
+    const waitForAbort = (signal: AbortSignal) => new Promise<never>((_resolve, reject) => {
+      observed = signal
+      signal.addEventListener('abort', () => {
+        settled = true
+        reject(new Error('provider aborted'))
+      }, { once: true })
+    })
+    const providers: Parameters<typeof mountNative>[1] = provider === 'search'
+      ? { search: { search: (_request, operation) => waitForAbort(operation.signal) } }
+      : { fetch: { fetch: (_request, operation) => waitForAbort(operation.signal) } }
+    const native = await mountNative(config, providers)
+    const result = await native.call(name, args)
+    expect(result).toMatchObject({ isError: true, error: { name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' } })
+    expect(result.value).toBeUndefined()
+    expect(observed?.aborted).toBe(true)
+    expect(settled).toBe(true)
+  })
+
+  it('forwards caller cancellation through the declared deadline without reporting a timeout', async () => {
+    let observed: AbortSignal | undefined
+    const started = Promise.withResolvers<undefined>()
+    const native = await mountNative({ fetchTimeoutMs: 10_000 }, { fetch: {
       fetch: (_request, operation) => new Promise((_resolve, reject) => {
         observed = operation.signal
-        operation.signal.addEventListener('abort', () => { reject(new Error('provider aborted')) }, { once: true })
+        started.resolve(undefined)
+        operation.signal.addEventListener('abort', () => reject(new Error('provider aborted')), { once: true })
       }),
     } })
     const controller = new AbortController()
     const pending = native.call('web_fetch', { url: 'https://a.test/slow' }, controller.signal)
-    // The configured budget is enforced by the tool-call timeout guard, never inside the tool.
-    await new Promise(resolve => setTimeout(resolve, 20))
-    expect(observed?.aborted).toBe(false)
+    await started.promise
     controller.abort()
     await expect(pending).rejects.toThrow('provider aborted')
     expect(observed?.aborted).toBe(true)

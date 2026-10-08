@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Engine/core/native-model-execution/README.md
-README.md: 11e8065021036adffb48c9fe0e8044885f2ed7d9
-README.zh.md: 3747f81d7248806c6c1509af0eee4d0d01a3bced
+README.md: eaf92f6a4ae479e0c860c41cc6e1ed87b188243f
+README.zh.md: 0cdcf2601797cc0ec0fe8f2ccf47921024ce8571

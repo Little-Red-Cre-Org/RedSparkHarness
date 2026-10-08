@@ -17,6 +17,7 @@ import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
+import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as nativeToolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
@@ -30,6 +31,7 @@ import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin, validateLegacyToolManifest } from '../src/native.ts'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 
 it('rejects unsupported declarations, config and missing native registries before activation', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/tool-fs/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacyToolManifest>[0]
@@ -445,6 +447,169 @@ it('uses the legacy observation policy for native file tools', async () => {
       expect(await readFile(join(directory, 'sample.txt'), 'utf8')).toBe('edited read\n')
     } finally { await unregister() }
   } finally {
+    await host.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it.each([
+  { operation: 'write', policy: 'never', allowed: false, changeWhilePending: false },
+  { operation: 'edit', policy: 'never', allowed: false, changeWhilePending: false },
+  { operation: 'write', policy: 'ask', allowed: true, changeWhilePending: true },
+  { operation: 'edit', policy: 'ask', allowed: true, changeWhilePending: false },
+] as const)('applies Native $policy approval to compatibility $operation calls', async ({ operation, policy, allowed, changeWhilePending }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-approval-'))
+  const workspace = join(directory, 'work')
+  const sessions = join(directory, 'sessions')
+  await mkdir(workspace)
+  await writeFile(join(workspace, 'sample.txt'), 'before\n')
+  const scope = new NativeScope()
+  const secondMutationArguments = operation === 'write'
+    ? { file_path: 'sample.txt', content: 'second\n' }
+    : { file_path: 'sample.txt', old_string: 'after', new_string: 'second' }
+  const responses = [
+    toolCallResponse('approval-read', 'read', { file_path: 'sample.txt' }),
+    toolCallResponse('approval-mutation', operation, operation === 'write'
+      ? { file_path: 'sample.txt', content: 'after\n' }
+      : { file_path: 'sample.txt', old_string: 'before', new_string: 'after' }),
+  ]
+  if (changeWhilePending) responses.push(toolCallResponse('approval-lifecycle-mutation', operation, secondMutationArguments))
+  responses.push(textResponse('complete'))
+  const model = new MockAdapter(responses)
+  const modelPlugin: NativePlugin = {
+    apiVersion: 1, name: 'compat-approval-test-model', targets: ['host'], requires: [], provides: ['model'],
+    resolve: () => (context) => { context.provide('model', model) },
+  }
+  let app: NativeApplication | undefined
+  let runtime: CompatDshRuntime | undefined
+  let tools: NativeToolRegistry | undefined
+  let approval: NativeApprovalServiceDefinition | undefined
+  const capture: NativePlugin = {
+    apiVersion: 1, name: 'compat-approval-capture', targets: ['host'],
+    requires: ['application', 'approval', 'compatDshRuntime', 'tools'], provides: [],
+    resolve: () => (context) => {
+      app = context.require('application')
+      approval = context.require('approval')
+      runtime = context.require('compatDshRuntime')
+      tools = context.require('tools')
+    },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: capture, scope, config: undefined },
+    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Update the file.', maxSteps: 3 } },
+    { plugin: agentPlugin, scope, config: undefined },
+    { plugin: approvalPlugin, scope, config: { policy } },
+    { plugin: modelExecutionPlugin, scope, config: undefined },
+    { plugin: modelPlugin, scope, config: undefined },
+    { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
+    { plugin: compatFsLocalPlugin, scope, config: { cwd: workspace } },
+    { plugin: toolsPlugin, scope, config: undefined },
+    { plugin: promptPlugin, scope, config: undefined },
+    { plugin, scope, config: undefined },
+    { plugin: compatPolicyPlugin, scope, config: undefined },
+    { plugin: compatRuntimePlugin, scope, config: undefined },
+  ], 'host'))
+  let unregisterAnswerer: (() => void) | undefined
+  let running: Promise<unknown> | undefined
+  let disabling: Promise<void> | undefined
+  let approvalCancellationMessage: string | undefined
+  try {
+    await host.start()
+    if (app === undefined || approval === undefined || runtime === undefined || tools === undefined) {
+      throw new Error('missing Native approval test services')
+    }
+    const answers: string[] = []
+    const lifecycleApproval = Promise.withResolvers<AbortSignal>()
+    const lifecycleAnswererSettled = Promise.withResolvers<undefined>()
+    unregisterAnswerer = approval.registerAnswerer((request) => {
+      answers.push(request.toolName)
+      if (changeWhilePending && answers.length === 2) {
+        lifecycleApproval.resolve(request.signal)
+        const pending = new Promise<'allowed-once'>((resolve) => {
+          const finish = (): void => { resolve('allowed-once') }
+          if (request.signal.aborted) finish()
+          else request.signal.addEventListener('abort', finish, { once: true })
+        })
+        void pending.then(() => { lifecycleAnswererSettled.resolve(undefined) })
+        return pending
+      }
+      return 'allowed-once'
+    })
+    const activeApp = app
+    running = host.run(scope, { kind: 'test' }, invocation => activeApp.run(['Update the file.'], invocation.signal))
+
+    if (changeWhilePending) {
+      const approvalSignal = await lifecycleApproval.promise
+      disabling = runtime.setEnabled('@deepseek-ai/dsh-tool-fs', false)
+      const aborted = Promise.withResolvers<undefined>()
+      if (approvalSignal.aborted) aborted.resolve(undefined)
+      else approvalSignal.addEventListener('abort', () => { aborted.resolve(undefined) }, { once: true })
+      await aborted.promise
+      expect(approvalSignal.aborted).toBe(true)
+      approvalCancellationMessage = approvalSignal.reason instanceof Error
+        ? approvalSignal.reason.message : String(approvalSignal.reason)
+      expect(tools.schemas()).toEqual([])
+      expect(await readFile(join(workspace, 'sample.txt'), 'utf8')).toBe('after\n')
+      await lifecycleAnswererSettled.promise
+      await disabling
+      expect(runtime.isEnabled('@deepseek-ai/dsh-tool-fs')).toBe(false)
+      expect(tools.schemas()).toEqual([])
+    }
+    await running
+    if (changeWhilePending) {
+      await runtime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
+      expect(runtime.isEnabled('@deepseek-ai/dsh-tool-fs')).toBe(true)
+      expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
+    }
+
+    expect(answers).toEqual(allowed ? changeWhilePending ? [operation, operation] : [operation] : [])
+    expect(await readFile(join(workspace, 'sample.txt'), 'utf8')).toBe(allowed ? 'after\n' : 'before\n')
+
+    const storage = new JsonlSessionBackend({ root: sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('missing approval Session')
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        const asked = events.filter(event => event.type === 'native-approval/asked')
+        const decided = events.filter(event => event.type === 'native-approval/decided')
+        expect(asked).toHaveLength(changeWhilePending ? 2 : 1)
+        expect(decided).toHaveLength(changeWhilePending ? 2 : 1)
+        expect(asked[0]?.data).toMatchObject({
+          toolName: operation, callId: 'approval-mutation',
+          reason: operation === 'write'
+            ? 'Writing a file changes the selected workspace.'
+            : 'Editing a file changes the selected workspace.',
+        })
+        expect(decided[0]?.data).toMatchObject({
+          id: asked[0]?.data.id, policy, outcome: allowed ? 'allowed-once' : 'rejected',
+        })
+        if (changeWhilePending) {
+          expect(asked[1]?.data).toMatchObject({
+            toolName: operation, callId: 'approval-lifecycle-mutation',
+          })
+          expect(decided[1]?.data).toMatchObject({
+            id: asked[1]?.data.id, policy: 'ask', outcome: 'cancelled',
+          })
+          expect(events.filter(event => event.type === 'tool/result').at(-1)).toMatchObject({
+            type: 'tool/result', data: {
+              error: { name: 'AbortError' },
+              message: { content: [{
+                type: 'tool-result', toolCallId: 'approval-lifecycle-mutation', isError: true,
+                content: [{ type: 'text', text: approvalCancellationMessage }],
+              }] },
+            },
+          })
+        }
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    unregisterAnswerer?.()
+    const pending: Promise<unknown>[] = []
+    if (running !== undefined) pending.push(running)
+    if (disabling !== undefined) pending.push(disabling)
+    await Promise.allSettled(pending)
     await host.stop()
     await rm(directory, { recursive: true, force: true })
   }

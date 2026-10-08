@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-bridge 只接受 `dsh-tool-fs` 支持的正整数限制：`readLimit`、`readMaxLineLength`、`readMaxBytes` 和 `readStreamMinSize`。兼容 runtime 会按[支持矩阵](../compat-dsh-runtime/README.zh.md#supported-adapter-set)校验已安装包。更新 entry 配置前会排空工具调用和提示词组装，再替换注册的 schema 和提示文本；停用和移除会撤销它们，只有所选策略与所需 Cordis 服务仍可用时才会在启用后恢复。Profile 必须提供 `fs`、`tools` 和 `promptSections`；选定策略提供方时，可选的 `fsObservationPolicy` 服务会建立启动顺序。当文件系统具有 sandbox mode 且存在 `sandboxPolicy` 时，旧 write 和 edit 会接收当前 Session 策略。
+bridge 只接受 `dsh-tool-fs` 支持的正整数限制：`readLimit`、`readMaxLineLength`、`readMaxBytes` 和 `readStreamMinSize`。兼容 runtime 会按[支持矩阵](../compat-dsh-runtime/README.zh.md#supported-adapter-set)校验已安装包。更新 entry 配置前会排空工具调用和提示词组装，再替换注册的 schema 和提示文本；停用和移除会撤销它们，只有所选策略与所需 Cordis 服务仍可用时才会在启用后恢复。Profile 必须提供 `fs`、`tools` 和 `promptSections`；选定策略提供方时，可选的 `fsObservationPolicy` 服务会建立启动顺序。当文件系统具有 sandbox mode 且存在 `sandboxPolicy` 时，旧 write 和 edit 会接收当前 Session 策略。选择 Native `approval` 后，普通旧 `write` 和 `edit` 会在进入 Cordis 前请求授权；`read` 不会询问。同时提供两个 sandbox escalation 字段的调用仍走旧升级路径，没有其 approval 服务时会拒绝。未选择 Native `approval` 时，普通兼容变更沿用原有行为。
 
 <a id="model-experience"></a>
 ## 模型体验

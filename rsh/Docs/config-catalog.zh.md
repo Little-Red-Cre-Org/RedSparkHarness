@@ -1460,7 +1460,7 @@ export interface ReplayModelConfig {
 export type Config = Readonly<Record<string, never>>
 ```
 
-来源：[`rsh/Engine/llm/llm-retry/src/index.ts:25`](../Engine/llm/llm-retry/src/index.ts)
+来源：[`rsh/Engine/llm/llm-retry/src/index.ts:24`](../Engine/llm/llm-retry/src/index.ts)
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -1783,7 +1783,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:28`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
+来源：[`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:27`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
 
 <a id="deepseek-aidsh-sandbox-local"></a>
 
@@ -2529,7 +2529,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Engine/subagent/subagent-dsh-sdk/src/index.ts:34`](../Engine/subagent/subagent-dsh-sdk/src/index.ts)
+来源：[`rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-fork-in-process"></a>
 
@@ -3645,9 +3645,11 @@ export interface Config {
 - `@deepseek-ai/dsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))
 - `@deepseek-ai/dsh-sandbox-windows-acl`（[`rsh/Modules/Official/sandbox/sandbox-windows-acl/src/index.ts`](../Modules/Official/sandbox/sandbox-windows-acl/src/index.ts)）
 - `@deepseek-ai/dsh-scope`（[`rsh/Engine/core/scope/src/index.ts`](../Engine/core/scope/src/index.ts)）
+- `@deepseek-ai/dsh-sdk-child`（[`rsh/Modules/Official/subagent/sdk-child/src/index.ts`](../Modules/Official/subagent/sdk-child/src/index.ts)）
 - `@deepseek-ai/dsh-sdk-client`（[`rsh/Programs/SDK/packages/client/src/index.ts`](../Programs/SDK/packages/client/src/index.ts)）
 - `@deepseek-ai/dsh-sdk-minimal`（[`rsh/Compatibility/DSH/bundle/sdk-minimal/src/index.ts`](../Compatibility/DSH/bundle/sdk-minimal/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-protocol`（[`rsh/Programs/SDK/packages/protocol/src/index.ts`](../Programs/SDK/packages/protocol/src/index.ts)）
+- `@deepseek-ai/dsh-sdk-protocol`（[`rsh/Engine/subagent/sdk-protocol/src/index.ts`](../Engine/subagent/sdk-protocol/src/index.ts)）
+- `@deepseek-ai/dsh-sdk-runtime`（[`rsh/Engine/subagent/sdk-runtime/src/index.ts`](../Engine/subagent/sdk-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-session-format`（[`rsh/Engine/session/session-format/src/index.ts`](../Engine/session/session-format/src/index.ts)）
 - `@deepseek-ai/dsh-session-format-catalog`（[`rsh/Engine/session/session-format-catalog/src/index.ts`](../Engine/session/session-format-catalog/src/index.ts)）
 - `@deepseek-ai/dsh-session-format-v0-to-v1`（[`rsh/Engine/session/session-format-v0-to-v1/src/index.ts`](../Engine/session/session-format-v0-to-v1/src/index.ts)）

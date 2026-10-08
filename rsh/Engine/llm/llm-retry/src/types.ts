@@ -1,4 +1,4 @@
-import type { LlmFailure } from '@deepseek-ai/dsh-llm/types'
+import type { LlmFailure } from '@deepseek-ai/dsh-llm/native'
 import type { RetryId } from './brand.ts'
 
 export type { RetryId }

@@ -80,6 +80,8 @@ The Seatbelt profile is allow-default with `(deny file-write*)` plus write allow
 
 The Windows rung keeps one deterministic write SID and standing ACE per workspace, while every live session/workspace pair gets a random private temp directory with a distinct SID and revocable ACE — sessions sharing a workspace share its intended write authority without inheriting one another's temp authority. A fresh provider always chooses a new temp path and SID, so crash residue cannot block or authorize a resumed session. The rung reports `partial` enforcement because the restricted token must retain Everyone and NTFS hard links alias one file object across paths.
 
+The native `ProcessSandbox` can prepare that existing per-session temp root for the same workspace-write policy that `confine()` will use. A child runtime can put one connection's home below the returned root; it owns and removes only its child directory, while this provider keeps the shared root and its ACL for the session/workspace pair. Agentless policies and backends without a stable temp-root capability return no path.
+
 ### Denial and runner-failure dialects
 
 Each runner's kernel speaks its own denial dialect, carried on every wrap as `denialSignatures`, and `runnerFailureRules` give each runner's fatal signature, so consumers classify a runner refusal before checking denial signatures. The exact strings and exit codes live in [`src/index.ts`](src/index.ts).

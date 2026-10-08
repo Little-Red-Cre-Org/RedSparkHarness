@@ -22,8 +22,8 @@ This is a framework migration, not a reimplementation. Each of the six packages 
 
 Re-implementing the tools natively would have forked validation, query merging, rendering and the DeepSeek request recording, so every future fix would need to land twice.
 
-Enforcing `searchTimeoutMs` / `fetchTimeoutMs` inside the native tools would copy the tool-call timeout guard. Deadline enforcement stays with that guard, as it does on the Cordis path; the native tools only honor the invocation signal.
+Enforcing `searchTimeoutMs` / `fetchTimeoutMs` inside the native tools would copy the tool-call timeout guard. Each native contribution declares its configured budget to that guard; it supplies the derived invocation signal, drains the provider operation, and records `TOOL_TIMEOUT` only after the operation settles.
 
 ## Consequences
 
-The Cordis path is unchanged in behavior and output. Until the native tool-call timeout guard can read a per-tool budget, the native tools accept the timeout fields but do not arm a timer themselves. `native-sdk` and `native-acp` compositions do not install the web rows yet.
+The Cordis path is unchanged in behavior and output. The shipped native headless, Web, and TUI compositions install the timeout policy with the web tools; `native-sdk` and `native-acp` compositions do not install the web rows.

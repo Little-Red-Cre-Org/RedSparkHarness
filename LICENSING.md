@@ -14,8 +14,12 @@ Where a file combines upstream and RedSpark material, each copyright notice and 
 
 ## Planned MIT release
 
-The RedSpark original material will remain under the research license until the maintainers publish the related technical report or formal paper and explicitly mark a release or commit as MIT-licensed. Publication alone does not silently change the license of earlier versions. The explicit release notice is the authority for the transition.
+The RedSpark original material will remain under the RedSpark Restricted Evaluation License until the maintainers publish the related technical report or formal paper and explicitly mark a release or commit as MIT-licensed. Publication alone does not silently change the license of earlier versions. The explicit release notice is the authority for the transition.
 
-This repository is publicly viewable for software evaluation. RedSpark-licensed material may not be used for a thesis, dissertation, journal article, conference paper, technical report, academic project, grant-funded research, public benchmark, commercial product, paid service, resale, or commercial redistribution without a separate written license from the copyright holder.
+## Licensee restrictions and licensor rights
+
+This repository is publicly viewable for software evaluation. Licensees may not use RedSpark-licensed material for a thesis, dissertation, journal article, conference paper, technical report, academic project, grant-funded research, public benchmark, commercial product, paid service, resale, or commercial redistribution without a separate written license from the copyright holder.
+
+These restrictions bind licensees, not the licensor. Little Red Cre (the RedSpark project), as copyright holder and licensor, retains all rights in RedSpark original material. Little Red Cre and the RedSpark Harness maintainers may freely write and publish papers, technical reports, and other publications about RedSpark Harness.
 
 This document is a project licensing notice, not legal advice. Preserve all upstream and third-party notices when copying or redistributing any part of the repository.

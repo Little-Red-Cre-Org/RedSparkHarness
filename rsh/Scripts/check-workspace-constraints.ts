@@ -154,6 +154,8 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
+  '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
   '@deepseek-ai/dsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-webhook-github': ['lib/native.js'],
@@ -273,6 +275,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
   '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
   '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],
@@ -317,12 +322,18 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // resolve at install time, before the build produces lib/bin.js.
   '@deepseek-ai/dsh-experimental-webworker-packer': ['bin.js', 'lib/repository-*.js'],
 }
+const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
+  // tsdown emits the SDK client's public entries and shared chunks together.
+  '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
+}
 
 function sameStringList(actual: readonly string[] | undefined, expected: readonly string[]): boolean {
   return !!actual && actual.length === expected.length && actual.every((value, index) => value === expected[index])
 }
 
 export function expectedDshPackageFiles(manifest: PackageManifest): readonly string[] {
+  const override = manifest.name ? packageFileOverrides[manifest.name] : undefined
+  if (override !== undefined) return override
   const declaredPatch = manifest.dsh?.bundle?.patch
   const bundleFiles = declaredPatch === undefined ? [] : [declaredPatch.replace(/^\.\//, '')]
   const extras = [
@@ -692,14 +703,7 @@ interface RuntimeLayerException {
  * their ordinary runtime layer. Every exception names one manifest edge and is
  * rejected when it becomes stale.
  */
-const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
-  {
-    consumer: '@deepseek-ai/dsh-subagent-dsh-sdk',
-    section: 'peerDependencies',
-    dependency: '@deepseek-ai/dsh-sdk-client',
-    reason: 'The DSH SDK subagent bridge consumes the current Program-owned client API.',
-  },
-]
+const runtimeLayerExceptions: readonly RuntimeLayerException[] = []
 
 /** Classify a workspace package by its physical owner. */
 export function runtimeLayerOf(dir: string): RuntimeLayer {

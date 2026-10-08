@@ -49,13 +49,13 @@ function fixture(content: string, dependency?: string): string {
   write(`${dir}/src/index.ts`, content)
   write(`${dir}/src/local.ts`, 'export interface Local {}')
   write('rsh/Core/vendor/cordis/src/index.ts', 'export interface Context {}')
-  write('rsh/Programs/SDK/packages/protocol/src/index.ts', 'export interface Protocol {}')
+  write('rsh/Programs/SDK/packages/native-server/src/index.ts', 'export interface ProgramServer {}')
   write('tsconfig.host.json', JSON.stringify({
     compilerOptions: {
       noLib: true, moduleResolution: 'bundler', module: 'esnext',
       paths: {
         'hidden-framework': ['./rsh/Core/vendor/cordis/src/index.ts'],
-        'hidden-program': ['./rsh/Programs/SDK/packages/protocol/src/index.ts'],
+        'hidden-program': ['./rsh/Programs/SDK/packages/native-server/src/index.ts'],
         'hidden-engine': ['./rsh/Engine/core/native-agent/src/index.ts'],
       },
     },

@@ -19,6 +19,14 @@
     "lib/types/**/*.d.ts"
   ],
   "dsh": {
+    "nativeProfileTemplates": [
+      "native-headless",
+      "native-sdk",
+      "native-sdk-dsh-child",
+      "native-web",
+      "native-acp",
+      "native-tui"
+    ],
     "configTrees": [
       {
         "mount": "config/agent-presets",
@@ -31,7 +39,13 @@
   "dependencies": {
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-subprocess": "workspace:^",
     "@deepseek-ai/dsh-subprocess-local": "workspace:^",
+    "@deepseek-ai/dsh-attachment": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
+    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
     "commander": "^15.0.0",
     "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-code-runtime-process-sandbox": "workspace:^",
@@ -40,6 +54,8 @@
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-sdk-server": "workspace:^",
+    "@deepseek-ai/dsh-sdk-client": "workspace:^",
+    "@deepseek-ai/dsh-sdk-child": "workspace:^",
     "@deepseek-ai/dsh-native-acp": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-credentials-local": "workspace:^",
@@ -78,7 +94,12 @@
     "@deepseek-ai/dsh-tool-subagent-control": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
     "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
-    "@deepseek-ai/dsh-tool-goal": "workspace:^"
+    "@deepseek-ai/dsh-tool-goal": "workspace:^",
+    "@deepseek-ai/dsh-llm-retry": "workspace:^",
+    "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
+    "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^",
+    "@deepseek-ai/dsh-sandbox": "workspace:^",
+    "@deepseek-ai/dsh-fs-sandbox": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

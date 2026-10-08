@@ -62,6 +62,8 @@ None of its own. The consumer that injects a zone-derived line into a request ow
 <a id="dev-note"></a>
 ### Dev Note
 
+The published validator is Cordis-free and has no framework peer or installer. Native and compatibility consumers import the same module.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

@@ -96,6 +96,8 @@ Nothing here enters a model request, so provider cache reuse is unaffected.
 <a id="dev-note"></a>
 ### Dev Note
 
+The published deque is Cordis-free and has no framework peer or installer. Native and compatibility consumers import the same module.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

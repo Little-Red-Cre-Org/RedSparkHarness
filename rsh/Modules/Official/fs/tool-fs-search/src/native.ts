@@ -63,6 +63,8 @@ function globTool(context: NativeContext, config: Config): NativeValueToolContri
         pattern: { type: 'string', description: GLOB_PATTERN_DESCRIPTION },
         path: { type: 'string', description: 'Directory to search in. Defaults to the session workspace; a relative path resolves against it.' },
       }, required: ['pattern'], additionalProperties: false } },
+    // Enforced by an installed timeout policy; the internal search timer remains the fallback without one.
+    timeoutMs: config.timeoutMs,
     output: {
       schema: { type: 'object', properties: { root: { type: 'string' },
         paths: { type: 'array', items: { type: 'string' } } }, required: ['root', 'paths'], additionalProperties: false },
@@ -102,6 +104,7 @@ function grepTool(context: NativeContext, caps: Config): NativeValueToolContribu
       path: { type: 'string', description: 'File or directory to search. Defaults to the session workspace; a relative path resolves against it.' },
       include: { type: 'string', description: 'One glob filter for which files to search (e.g. "*.ts", "*.{js,jsx}"). Not a list; negation is not supported.' },
     }, required: ['pattern'], additionalProperties: false } },
+    timeoutMs: caps.timeoutMs,
     output: {
       schema: { type: 'object', properties: { matches: { type: 'array', items: {
         type: 'object', properties: { path: { type: 'string' }, lineNumber: { type: 'integer' }, line: { type: 'string' } },

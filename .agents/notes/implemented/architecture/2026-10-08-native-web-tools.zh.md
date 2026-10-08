@@ -22,8 +22,8 @@ Status: implemented
 
 为原生路径重新实现这些工具，会使参数校验、查询合并、渲染与 DeepSeek 请求记录产生分叉，今后每个修复都需要提交两次。
 
-在原生工具内部执行 `searchTimeoutMs` / `fetchTimeoutMs` 会复制工具调用超时守卫。截止时间仍由该守卫负责，与 Cordis 路径一致；原生工具只遵循调用信号。
+在原生工具内部执行 `searchTimeoutMs` / `fetchTimeoutMs` 会复制工具调用超时守卫。每个原生工具贡献会向该守卫声明配置的预算；守卫提供派生调用信号，排空 Provider 操作，并在操作结束后记录 `TOOL_TIMEOUT`。
 
 ## 后果
 
-Cordis 路径的行为与输出保持不变。在原生工具调用超时守卫能够读取单个工具的预算之前，原生工具接受超时字段，但不会自行启动计时器。`native-sdk` 与 `native-acp` 组合暂不安装 web 相关行。
+Cordis 路径的行为与输出保持不变。随附的 native-headless、Native Web 与 Native TUI 组合会同时安装超时策略和 web 工具；`native-sdk` 与 `native-acp` 组合暂不安装 web 相关行。

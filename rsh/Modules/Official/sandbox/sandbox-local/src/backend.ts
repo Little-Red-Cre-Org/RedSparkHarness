@@ -355,6 +355,18 @@ export class LocalSandboxBackend {
     }
   }
 
+  /**
+   * Prepare the existing session-owned Windows temp capability for `confine` to reuse.
+   * @param policy - complete per-call file policy.
+   * @returns the Windows session temp root when this backend owns one, otherwise `undefined`.
+   */
+  prepareWritableTempRoot(policy: SandboxPolicy): string | undefined {
+    if (this.runnerCommand !== undefined || policy.mode !== 'workspace-write' || policy.sessionId === undefined) return undefined
+    const selected = this.selectRunner(policy.mode)
+    if (selected.runner !== 'windows-acl') return undefined
+    return this.materializeAclGrant(policy.sessionId, policy.workspaceRoot).dir
+  }
+
   /** The selected rung's runner invocation (program + profile arguments) for one policy. */
   private runnerArgv(runner: SelectedRunner['runner'], policy: SandboxPolicy): string[] {
     switch (runner) {
@@ -580,7 +592,7 @@ export class LocalSandboxBackend {
     const builtEntry = this.internals.windowsAclRunnerEntry ?? fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-sandbox-windows-acl/runner'))
     if (existsSync(builtEntry)) return [process.execPath, builtEntry]
     const sourceEntry = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-sandbox-windows-acl/src/runner.ts'))
-    return [process.execPath, '--import', 'tsx/esm', sourceEntry]
+    return [process.execPath, '--import', import.meta.resolve('tsx/esm'), sourceEntry]
   }
 }
 
