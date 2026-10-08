@@ -61,7 +61,6 @@ overrides:
   'source-map-js@<1.2.2': '^1.2.2'
   'http-cache-semantics@<4.2.1': '^4.2.1'
   'browserslist@<4.28.7': '^4.28.7'
-  '@vue/server-renderer@<3.5.42': '^3.5.42'
   'proxy-addr@<2.0.8': '^2.0.8'
   'fast-uri@>=3.0.0 <3.1.8': '^3.1.8'
   'ip-address@>=10.0.0 <10.7.1': '^10.7.1'
@@ -69,6 +68,21 @@ overrides:
   # before the SDK fix.
   '@modelcontextprotocol/server-everything>@modelcontextprotocol/sdk': '^1.32.1'
   '@modelcontextprotocol/server-filesystem>@modelcontextprotocol/sdk': '^1.32.1'
+  # The documentation site's Vue packages move together: vue pins its
+  # runtime, compiler, and SSR renderer packages to its own exact version, and
+  # a renderer from another release loads a second runtime-core whose
+  # rendering-instance state the app's components cannot see, which empties
+  # every server-rendered page. 3.5.42+ carries the GHSA-g2v6-rqmx-r4w6 fix.
+  vue: '3.5.43'
+  '@vue/compiler-core': '3.5.43'
+  '@vue/compiler-dom': '3.5.43'
+  '@vue/compiler-sfc': '3.5.43'
+  '@vue/compiler-ssr': '3.5.43'
+  '@vue/reactivity': '3.5.43'
+  '@vue/runtime-core': '3.5.43'
+  '@vue/runtime-dom': '3.5.43'
+  '@vue/server-renderer': '3.5.43'
+  '@vue/shared': '3.5.43'
 
 peerDependencyRules:
   allowedVersions:

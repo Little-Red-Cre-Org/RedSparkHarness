@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-08-dependency-advisory-floors-and-image-signature-gate.md
-2026-10-08-dependency-advisory-floors-and-image-signature-gate.md: fea11080e008ab4e2fc816a9fdb41dcdca4ea89c
-2026-10-08-dependency-advisory-floors-and-image-signature-gate.zh.md: 047eba3bb87e1d5b09916ec786e2d4b2bc463c65
+2026-10-08-dependency-advisory-floors-and-image-signature-gate.md: 9e1fc03949a5f2323bfc1f7328888520b6582de9
+2026-10-08-dependency-advisory-floors-and-image-signature-gate.zh.md: 3db64d9de1b339ca9ab3a96a37137af5a54cb465
