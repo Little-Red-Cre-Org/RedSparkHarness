@@ -185,7 +185,7 @@ describe('native tool-web parity', () => {
       fetch: (_request, operation) => new Promise((_resolve, reject) => {
         observed = operation.signal
         started.resolve(undefined)
-        operation.signal.addEventListener('abort', () => reject(new Error('provider aborted')), { once: true })
+        operation.signal.addEventListener('abort', () => { reject(new Error('provider aborted')) }, { once: true })
       }),
     } })
     const controller = new AbortController()
