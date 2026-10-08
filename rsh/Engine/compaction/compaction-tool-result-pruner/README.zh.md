@@ -85,10 +85,16 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`ToolResultPruner` 服务、`pruneSession` / `pruneContent` / `measureContent` |
+| [`src/index.ts`](src/index.ts) | 兼容插件入口：`ToolResultPruner` 服务、`pruneSession` / `pruneContent` / `measureContent` |
+| [`src/core.ts`](src/core.ts) | 与运行时无关的测量、内容剪枝与稳定表层处理 |
+| [`src/native.ts`](src/native.ts) | 原生 `toolResultPruner` 提供者（`./native`） |
 | [`src/config.ts`](src/config.ts) | `PRUNE_MARKER`、默认值、码点计数、预算验证 |
 | [`src/types.ts`](src/types.ts) | `ToolResultPruneConfig`、`ResolvedConfig`、`PrunedEntry`、`PruneResult` |
 | — | 不发布运行时不变式伴生入口；Session 会验证每次仅改写内容的操作，其伴生条目负责维护跨事件包围关系。 |
+
+### 原生 profile
+
+原生 profile 在原生 `tokenMeter` 旁选择 `./native`。它提供带有 `measureContent(blocks)`、`pruneContent(blocks)` 与 `pruneSession(owner)` 的 `toolResultPruner`，配置、预算与替换协议均与兼容服务相同；两个入口都委托给 `src/core.ts`。owner 提供会话与 Program writer 的 `append`。原生压缩在范围选择前调用 `pruneSession()`，因此替换与兼容 profile 中一样落在开放轮次内。
 
 </details>
 

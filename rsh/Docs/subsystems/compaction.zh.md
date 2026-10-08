@@ -87,6 +87,60 @@ type ManualCompactionErrorCode =
 
 该 Service Definition 导出 `toolPairingBalancedBefore(session, seq)` 与 `toolPairingBalancedAfter(session, seq)`，用于检查 seq 之前与之后的工具调用/结果配对。两者都会验证当前 surface 成员关系，并拒绝缺失的 seq 与遗留结果；[包约定](../../Engine/compaction/compaction/README.zh.md#tool-pairing-boundaries)定义其缓存行为。
 
+## 原生 Definition
+
+原生 profile 通过无 Cordis 的 `@deepseek-ai/dsh-compaction/native` 子路径使用同一契约，该子路径为 `NativeServices.compaction` 增补类型。Program 为每个会话提供的 writer 视图取代 Cordis `Agent`；事件形状、标记对、检查点辅助函数、工具配对辅助函数、`CompactionTrigger` 与 `ManualCompactionError` 与兼容入口导出的值相同。`dsh-compaction-basic/native` 提供该服务，并在 `beforeStep` admission hook 中运行压力压缩；原生 profile 尚不会从提供方的溢出响应中恢复。
+
+```ts type-equiv
+/**
+ * Exact live Session access a native compaction Provider writes through. A
+ * Program's active Session owner satisfies it; every append uses the Program's
+ * sole retained writer and `flush()` is its durability barrier.
+ */
+interface NativeCompactionOwner {
+  readonly session: Session
+  /** False after the Program closes writer admission; appends then fail loudly. */
+  readonly writerAvailable: boolean
+  readonly append: Session['append']
+  /**
+   * Persist tracked appends through the Program's writer.
+   * @returns completion of the durability barrier.
+   */
+  flush(): Promise<void>
+}
+```
+
+```ts type-equiv
+/**
+ * Native compaction Definition. A Provider owns trigger policy, retention and
+ * summarization; a successful run replaces one balanced surface span with one
+ * checkpoint `user/message` inside a durable `compaction/start`/`compaction/end`
+ * bracket that is also the Session compaction lock.
+ */
+interface NativeCompactionOperations {
+  /**
+   * Consider automatic compaction inside the owner's open turn.
+   * @param owner - exact live Session owner with an open turn.
+   * @param trigger - normal pressure or provider-confirmed context overflow.
+   * @param signal - turn cancellation forwarded to summarization.
+   * @returns the latest committed result, or `null` when no compaction was needed or possible.
+   */
+  compactIfNeeded(owner: NativeCompactionOwner, trigger: CompactionTrigger, signal: AbortSignal): Promise<CompactionResult | null>
+  /**
+   * Compact one useful span below the automatic threshold between turns. The
+   * caller supplies an owner whose idle Session operation excludes new turns.
+   * @param owner - exact live Session owner without an open turn.
+   * @param signal - cancellation scoped to this request.
+   * @param sourceCommandId - initiating human command, when present.
+   * @returns the durably flushed result, or `null` when no safe useful span exists.
+   * @throws {@link ManualCompactionError} for expected busy, changed-span,
+   * summarization, commit-stage or persistence failures; an aborted request
+   * preserves its abort reason.
+   */
+  compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null>
+}
+```
+
 ## 工具结果剪枝产出
 
 可选的工具结果剪枝服务会报告每次持久内容替换以及 Unicode code point 的总减少量。其公开结果类型位于 [`compaction-tool-result-pruner/src/types.ts`](../../Engine/compaction/compaction-tool-result-pruner/src/types.ts)。

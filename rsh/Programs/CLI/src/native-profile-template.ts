@@ -39,6 +39,12 @@ function nativeWorkflowInstallations(subagentProvider: string, structuredOutput 
   ] as const
 }
 
+const NATIVE_COMPACTION_INSTALLATIONS = [
+  { id: 'token-meter', plugin: '@deepseek-ai/dsh-token-meter', scope: ROOT },
+  { id: 'tool-result-pruner', plugin: '@deepseek-ai/dsh-compaction-tool-result-pruner', scope: ROOT },
+  { id: 'compaction', plugin: '@deepseek-ai/dsh-compaction-basic', scope: ROOT },
+] as const
+
 /** Plan guidance shared with the Cordis base bundle's `plan-mode` installation. */
 const PLAN_MODE_SECTION = [
   'You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user\'s conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.\n\n',
@@ -153,6 +159,7 @@ export function shippedNativeProfileComposition(
         { id: 'ask-user-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT },
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
         { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: ROOT },
+        { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
         { id: 'plan-mode', plugin: '@deepseek-ai/dsh-plan-mode', scope: ROOT, config: { section: PLAN_MODE_SECTION } },
         { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
         { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
@@ -196,6 +203,7 @@ export function shippedNativeProfileComposition(
       { id: 'timeout-policy', plugin: '@deepseek-ai/dsh-tool-call-timeout-policy', scope: ROOT },
       { id: 'repeat-tool-reminder', plugin: '@deepseek-ai/dsh-repeat-tool-reminder', scope: ROOT,
         config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
+      ...NATIVE_COMPACTION_INSTALLATIONS,
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
         config: { path: join(home, 'profiles', profile, 'task-scheduler.sqlite') },

@@ -87,6 +87,60 @@ Pressure compaction runs at the `agent/pre-step` waterfall before request deriva
 
 The Service Definition exports `toolPairingBalancedBefore(session, seq)` and `toolPairingBalancedAfter(session, seq)` for the tool-call/result pairing checks before and after a seq. Both validate current surface membership and reject missing seqs and orphan results; the [package contract](../../Engine/compaction/compaction/README.md#tool-pairing-boundaries) defines their cache behavior.
 
+## Native Definition
+
+Native profiles consume the same contract through the Cordis-free `@deepseek-ai/dsh-compaction/native` subpath, which augments `NativeServices.compaction`. The Program's per-session writer view replaces the Cordis `Agent`; event shapes, the bracket, checkpoint helpers, tool-pairing helpers, `CompactionTrigger`, and `ManualCompactionError` are the same values the compatibility entry exports. `dsh-compaction-basic/native` provides it and runs pressure compaction from a `beforeStep` admission hook; native profiles do not yet recover from provider overflow responses.
+
+```ts type-equiv
+/**
+ * Exact live Session access a native compaction Provider writes through. A
+ * Program's active Session owner satisfies it; every append uses the Program's
+ * sole retained writer and `flush()` is its durability barrier.
+ */
+interface NativeCompactionOwner {
+  readonly session: Session
+  /** False after the Program closes writer admission; appends then fail loudly. */
+  readonly writerAvailable: boolean
+  readonly append: Session['append']
+  /**
+   * Persist tracked appends through the Program's writer.
+   * @returns completion of the durability barrier.
+   */
+  flush(): Promise<void>
+}
+```
+
+```ts type-equiv
+/**
+ * Native compaction Definition. A Provider owns trigger policy, retention and
+ * summarization; a successful run replaces one balanced surface span with one
+ * checkpoint `user/message` inside a durable `compaction/start`/`compaction/end`
+ * bracket that is also the Session compaction lock.
+ */
+interface NativeCompactionOperations {
+  /**
+   * Consider automatic compaction inside the owner's open turn.
+   * @param owner - exact live Session owner with an open turn.
+   * @param trigger - normal pressure or provider-confirmed context overflow.
+   * @param signal - turn cancellation forwarded to summarization.
+   * @returns the latest committed result, or `null` when no compaction was needed or possible.
+   */
+  compactIfNeeded(owner: NativeCompactionOwner, trigger: CompactionTrigger, signal: AbortSignal): Promise<CompactionResult | null>
+  /**
+   * Compact one useful span below the automatic threshold between turns. The
+   * caller supplies an owner whose idle Session operation excludes new turns.
+   * @param owner - exact live Session owner without an open turn.
+   * @param signal - cancellation scoped to this request.
+   * @param sourceCommandId - initiating human command, when present.
+   * @returns the durably flushed result, or `null` when no safe useful span exists.
+   * @throws {@link ManualCompactionError} for expected busy, changed-span,
+   * summarization, commit-stage or persistence failures; an aborted request
+   * preserves its abort reason.
+   */
+  compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null>
+}
+```
+
 ## Tool-result pruning outcomes
 
 The optional tool-result pruning service reports each durable content replacement and the aggregate Unicode-code-point reduction. Its public result types live in [`compaction-tool-result-pruner/src/types.ts`](../../Engine/compaction/compaction-tool-result-pruner/src/types.ts).

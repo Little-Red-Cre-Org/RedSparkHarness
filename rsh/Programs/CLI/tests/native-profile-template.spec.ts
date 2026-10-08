@@ -162,6 +162,29 @@ it('installs the native Goal Definition, driver, and model tools in headless pro
   }
 })
 
+it('installs native compaction in shared profiles and /compact where commands are exposed', () => {
+  const installed = createRequire(new URL('../package.json', import.meta.url))
+  const compaction = [
+    { id: 'token-meter', plugin: '@deepseek-ai/dsh-token-meter', scope: 'root' },
+    { id: 'tool-result-pruner', plugin: '@deepseek-ai/dsh-compaction-tool-result-pruner', scope: 'root' },
+    { id: 'compaction', plugin: '@deepseek-ai/dsh-compaction-basic', scope: 'root' },
+  ]
+  for (const name of ['native-headless', 'native-web', 'native-tui'] as const) {
+    const profile = shippedNativeProfileComposition('/tmp/rsh-compaction', name, 'linux')
+    expect(profile.installations.filter(row => compaction.some(expected => expected.id === row.id))).toEqual(compaction)
+    expect(profile.installations.some(row => row.plugin === '@deepseek-ai/dsh-command-compact')).toBe(name === 'native-tui')
+  }
+  expect(shippedNativeProfileComposition('/tmp/rsh-compaction', 'native-tui', 'linux').installations
+    .find(row => row.id === 'command-compact')).toEqual({ id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: 'root' })
+  for (const name of ['native-sdk', 'native-acp'] as const) {
+    const plugins = shippedNativeProfileComposition('/tmp/rsh-compaction', name, 'linux').installations.map(row => row.plugin)
+    expect(plugins).not.toContain('@deepseek-ai/dsh-compaction-basic')
+  }
+  for (const row of [...compaction, { plugin: '@deepseek-ai/dsh-command-compact' }]) {
+    expect(installed.resolve(`${row.plugin}/package.json`)).toBeTruthy()
+  }
+})
+
 it('ships a complete one-shot shell seam in the native headless profile', () => {
   const installed = createRequire(new URL('../package.json', import.meta.url))
   for (const [platform, provider, tool] of [

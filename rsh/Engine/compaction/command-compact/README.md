@@ -94,8 +94,14 @@ Every resolved invocation records the executor-owned log-only pair `command/run`
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `/compact` registration, argument rejection, error-code mapping, lifecycle drain |
+| [`src/index.ts`](src/index.ts) | Compatibility plugin entry: `/compact` registration and lifecycle drain |
+| [`src/common.ts`](src/common.ts) | Runtime-neutral definition, argument rejection, and error-code mapping |
+| [`src/native.ts`](src/native.ts) | Native `/compact` registration (`./native`) |
 | — | No runtime invariant companion is published; this command adapter owns no state or event stream; the compaction seam owns the balanced durable transaction and the command registry owns registration and dispatch lifecycle. |
+
+### Native profile
+
+Native profiles select `./native` beside native `commands` and `compaction`; the entry takes no configuration. Both entries share `src/common.ts`, so the grammar, usage text, error-code mapping, and rendered results are identical. Programs run the command as a session operation without opening a model turn, and the handler passes the session's writer view and command id to `compaction.compactNow()`. The shipped `native-tui` profile mounts it; native Web and other profiles without a command surface rely on automatic pressure compaction. On cancellation the native command registry reports the abort reason as the result text.
 
 </details>
 

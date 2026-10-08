@@ -28,6 +28,9 @@
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

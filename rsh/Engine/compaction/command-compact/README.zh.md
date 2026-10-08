@@ -94,8 +94,14 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`/compact` 注册、参数拒绝、错误码映射、生命周期排空 |
+| [`src/index.ts`](src/index.ts) | 兼容插件入口：`/compact` 注册与生命周期排空 |
+| [`src/common.ts`](src/common.ts) | 与运行时无关的定义、参数拒绝与错误码映射 |
+| [`src/native.ts`](src/native.ts) | 原生 `/compact` 注册（`./native`） |
 | — | 不发布运行时不变式伴随条目；该命令适配器不拥有任何状态或事件流；压缩 seam 拥有平衡且具持久性的事务，命令注册表拥有注册与分发生命周期。 |
+
+### 原生 profile
+
+原生 profile 在原生 `commands` 与 `compaction` 旁选择 `./native`；该入口不接受配置。两个入口共享 `src/common.ts`，因此语法、用法文本、错误码映射与渲染结果完全一致。Program 以会话操作运行该命令，不打开模型轮次；处理器将会话的 writer 视图与命令 id 传给 `compaction.compactNow()`。随附的 `native-tui` profile 挂载它；原生 Web 及其他没有命令界面的 profile 依赖自动压力压缩。取消时，原生命令注册表以中止原因作为结果文本。
 
 </details>
 
