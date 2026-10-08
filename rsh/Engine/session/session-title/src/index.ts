@@ -32,9 +32,10 @@ import type {
 } from './types.ts'
 import {
   collectSessionTitleMessages,
+  EMPTY_TITLE_INPUT,
   foldSessionTitle,
+  foldTitleInput,
   resolveSessionTitleConfig,
-  sessionTitleUserMessageOf,
   type SessionTitleConfig,
 } from './facts.ts'
 import {
@@ -63,8 +64,6 @@ declare module '@deepseek-ai/cordis' {
 
 /** One optional asynchronous title implementation registered with the service. */
 export interface SessionTitleProvider extends SessionTitleEngineProvider {}
-
-const EMPTY_TITLE_INPUT: TitleInputState = { first: null, count: 0, lastSeq: null }
 
 const sessionTitleUserMessageSchema: ZodType<SessionTitleUserMessage> = zod.object({
   seq: zod.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).transform(SessionSeq),
@@ -143,15 +142,7 @@ export class SessionTitleService extends Service {
       stateVersion: 3,
       stateSchema: titleInputStateSchema,
       init: () => EMPTY_TITLE_INPUT,
-      apply: (state, event) => {
-        const message = sessionTitleUserMessageOf(event)
-        if (message === undefined) return state
-        return {
-          first: state.first ?? message,
-          count: state.count + 1,
-          lastSeq: message.seq,
-        }
-      },
+      apply: foldTitleInput,
     })
 
     ctx.on('session/event', (session, event) => {

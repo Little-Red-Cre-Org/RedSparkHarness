@@ -2106,7 +2106,7 @@ export interface SessionTitleConfig {
 }
 ```
 
-来源：[`rsh/Engine/session/session-title/src/index.ts:56`](../Engine/session/session-title/src/index.ts)
+来源：[`rsh/Engine/session/session-title/src/index.ts:57`](../Engine/session/session-title/src/index.ts)
 
 <a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
 

@@ -730,7 +730,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/
 
 Types: [SessionTitleEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title/src/facts.ts:29`](../Engine/session/session-title/src/facts.ts)
+Source: [`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/session-title/src/facts.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 

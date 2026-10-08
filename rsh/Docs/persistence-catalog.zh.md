@@ -732,7 +732,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[SessionTitleEventData](subsystems/session-title.zh.md)
 
-来源：[`rsh/Engine/session/session-title/src/facts.ts:29`](../Engine/session/session-title/src/facts.ts)
+来源：[`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/session-title/src/facts.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 

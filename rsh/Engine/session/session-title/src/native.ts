@@ -24,9 +24,10 @@ import {
 } from './engine.ts'
 import {
   collectSessionTitleMessages,
+  EMPTY_TITLE_INPUT,
+  foldTitleInput,
   resolveSessionTitleConfig,
-  sessionTitleUserMessageOf,
-  titleSnapshotFromState,
+  titleSnapshotOfEvent,
   type SessionTitleConfig,
 } from './facts.ts'
 import type { SessionTitleSnapshot, TitleInputState } from './types.ts'
@@ -163,7 +164,7 @@ class NativeSessionTitleService implements NativeSessionTitles {
       owner,
       session: owner.session,
       snapshot: undefined,
-      facts: { first: null, count: 0, lastSeq: null },
+      facts: EMPTY_TITLE_INPUT,
       detached: false,
       stop: () => {},
       title: () => target.snapshot,
@@ -239,16 +240,10 @@ class NativeSessionTitleService implements NativeSessionTitles {
  */
 function fold(target: OwnerTarget, event: SessionEvent): void {
   if (event.type === 'session/title') {
-    if (target.snapshot?.eventSeq === event.seq) return
-    target.snapshot = titleSnapshotFromState({
-      title: event.data.title, messageSeqs: event.data.messageSeqs, source: event.data.source,
-      eventSeq: event.seq, updatedAt: event.time,
-    })
+    if (target.snapshot?.eventSeq !== event.seq) target.snapshot = titleSnapshotOfEvent(event)
     return
   }
-  const message = sessionTitleUserMessageOf(event)
-  if (message === undefined || (target.facts.lastSeq !== null && message.seq <= target.facts.lastSeq)) return
-  target.facts = { first: target.facts.first ?? message, count: target.facts.count + 1, lastSeq: message.seq }
+  target.facts = foldTitleInput(target.facts, event)
 }
 
 /** Native session-title Provider over the selected active Session registry. */

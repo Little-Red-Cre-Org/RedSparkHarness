@@ -17,6 +17,7 @@ import type {
   SessionTitleSnapshot,
   SessionTitleSource,
   SessionTitleUserMessage,
+  TitleInputState,
   TitleProjection,
 } from './types.ts'
 
@@ -131,7 +132,15 @@ export function titleSnapshotFromState(state: TitleProjection): SessionTitleSnap
  */
 export function foldSessionTitle(events: readonly SessionEvent[]): SessionTitleSnapshot | undefined {
   const event = events.findLast(item => item.type === 'session/title')
-  if (event === undefined) return undefined
+  return event === undefined ? undefined : titleSnapshotOfEvent(event)
+}
+
+/**
+ * Convert one logged `session/title` event into an immutable snapshot.
+ * @param event - durable title event.
+ * @returns the immutable snapshot.
+ */
+export function titleSnapshotOfEvent(event: Extract<SessionEvent, { type: 'session/title' }>): SessionTitleSnapshot {
   return titleSnapshotFromState({
     title: event.data.title,
     messageSeqs: event.data.messageSeqs,
@@ -139,6 +148,23 @@ export function foldSessionTitle(events: readonly SessionEvent[]): SessionTitleS
     eventSeq: event.seq,
     updatedAt: event.time,
   })
+}
+
+/** Title input facts before any eligible human message. */
+export const EMPTY_TITLE_INPUT: TitleInputState = deepFreeze({ first: null, count: 0, lastSeq: null })
+
+/**
+ * Fold one event into the title input facts: the first eligible message, the
+ * eligible count, and the newest eligible seq. Shared by the Cordis
+ * `titleInput` projection and the native owner fold.
+ * @param state - facts folded so far.
+ * @param event - next logged event.
+ * @returns the advanced facts, or `state` itself when the event is not a new eligible message.
+ */
+export function foldTitleInput(state: TitleInputState, event: SessionEvent): TitleInputState {
+  const message = sessionTitleUserMessageOf(event)
+  if (message === undefined || (state.lastSeq !== null && message.seq <= state.lastSeq)) return state
+  return { first: state.first ?? message, count: state.count + 1, lastSeq: message.seq }
 }
 
 /**
