@@ -587,12 +587,13 @@ Source: [`rsh/Modules/Official/interaction/permission-presets/src/types.ts:57`](
 /**
  * Whether plan mode is in force from this point on: log-only, non-surface,
  * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through the projection unit's fold.
+ * inactive through the projection unit's fold (Cordis) or the native
+ * plan state fold.
  */
 'plan/mode': { active: boolean }
 ```
 
-Source: [`rsh/Modules/Official/plan/plan-mode/src/index.ts:47`](../Modules/Official/plan/plan-mode/src/index.ts)
+Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Official/plan/plan-mode/src/common.ts)
 
 ### `request/*`
 
@@ -729,7 +730,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/
 
 Types: [SessionTitleEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title/src/index.ts:77`](../Engine/session/session-title/src/index.ts)
+Source: [`rsh/Engine/session/session-title/src/facts.ts:29`](../Engine/session/session-title/src/facts.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 
@@ -742,7 +743,7 @@ Source: [`rsh/Engine/session/session-title/src/index.ts:77`](../Engine/session/s
 
 Types: [SessionTitleLlmRequestEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title-llm/src/index.ts:45`](../Engine/session/session-title-llm/src/index.ts)
+Source: [`rsh/Engine/session/session-title-llm/src/core.ts:41`](../Engine/session/session-title-llm/src/core.ts)
 
 ### `session-log-deepseek/*`
 

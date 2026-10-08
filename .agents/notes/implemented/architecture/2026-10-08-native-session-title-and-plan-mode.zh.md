@@ -28,6 +28,8 @@
 
 Cordis 行为与测试不变；两个运行时执行相同的标题与计划决策。原生差异仅限于投递方式：计划指导是历史中的通知而非提示词段落；空闲时的 `/plan <消息>` 等待下一条提示，而不是唤醒一个 TUI 不显示的 turn；标题提供方调用只有在比主请求更久时才会延长 turn。原生 Web 计划模式、`native-headless`、`native-sdk` 与 `native-acp` 中的标题界面以及原生标题命令仍为延期工作。
 
+在兼容性清单中，`dsh-plan-mode`、`dsh-session-title-llm`、`dsh-session-title-first-prompt-llm` 与 `dsh-session-title-all-prompts-llm` 从 `migration-required` 变为 `native-mixed`（154 → 150，75 → 79），`dsh-session-title` 仍为 `native-mixed` 并新增 `./native` 入口。直接 Cordis 使用数保持 1,783，因为 Cordis 入口作为同一核心之上的胶水层保留。
+
 ## 验证
 
 使用模拟模型的原生测试覆盖空闲与 turn 中的 `/plan` 选择、通知撤回、批准／继续规划／关闭评审／非计划模式退出路径、回退标题、使用已记录路由的提供方标题、`session/title-llm-request` 记录、重命名固定与刷新。五个包及其依赖方的既有 Cordis 测试保持不变地通过，CLI profile 测试检查内置行。

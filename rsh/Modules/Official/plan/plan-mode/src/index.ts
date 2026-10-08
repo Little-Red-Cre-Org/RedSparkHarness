@@ -38,7 +38,7 @@ import type { PlanProjection, PlanUnitState } from './types.ts'
 import {
   EXIT_APPROVED_TEXT, EXIT_DESCRIPTION, EXIT_PLAN_ARGUMENT_DESCRIPTION, EXIT_PLAN_MODE, firstHeading,
   PLAN_COMMAND_DESCRIPTION, PLAN_COMMAND_HINT, PLAN_COMMAND_NAME, planCommandText, planSwitchText, resolveConfig,
-  type PlanModeConfig, type PlanSelectionOutcome,
+  type PlanModeConfig,
 } from './common.ts'
 import { parsePlanCommand, PlanModeSelections, reviewPlanExit, type PlanSessionView } from './selection.ts'
 export type * from './types.ts'
@@ -281,7 +281,7 @@ export class PlanModeController extends Service {
    * was cleared; the logged state already matches), or `noop` (already in that
    * state).
    */
-  set(agent: Agent, active: boolean): PlanSelectionOutcome {
+  set(agent: Agent, active: boolean): 'committed' | 'queued' | 'cancelled' | 'noop' {
     const selection = this.selections.select(agent.session, this.view(agent.session), active)
     if (selection.narration !== undefined) agent.inject(selection.narration)
     return selection.outcome

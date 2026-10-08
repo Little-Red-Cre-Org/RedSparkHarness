@@ -91,7 +91,7 @@ export const plugin: NativePlugin = {
   optional: ['commands', 'userQuestions'],
   provides: ['planMode'],
   resolve(input: unknown) {
-    const { section } = resolveConfig(input as PlanModeConfig)
+    const { section } = resolveConfig((input ?? {}) as PlanModeConfig)
     const enterText = `${planSwitchText(true)}\n\n${section}`
     return async (context) => {
       const tools = context.require('tools')

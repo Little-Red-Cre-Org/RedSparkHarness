@@ -32,7 +32,7 @@ export class SessionTitleInvalidError extends Error {
   override readonly name = 'SessionTitleInvalidError'
 }
 
-/** Runtime-independent input of one title-provider call. */
+/** Immutable input supplied to one title-provider call. */
 export interface SessionTitleProviderRequest {
   /** Live session being titled. */
   readonly session: Session
@@ -44,7 +44,7 @@ export interface SessionTitleProviderRequest {
   readonly signal: AbortSignal
 }
 
-/** One optional asynchronous title implementation. */
+/** Title implementation contract shared by both runtimes; `R` is the runtime's request shape. */
 export interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = SessionTitleProviderRequest> {
   /** Stable id of the provider recorded with the title. */
   readonly id: SessionTitleProviderId
@@ -53,7 +53,7 @@ export interface SessionTitleEngineProvider<R extends SessionTitleProviderReques
   /**
    * Produce one title revision.
    * @param request - message snapshot, current route, session, and cancellation.
-   * @returns proposed title plus exact input seqs and the optional route used.
+   * @returns proposed title plus exact input seqs and the optional provider/model route used to generate it.
    */
   generate(request: R): Promise<SessionTitleProviderResult>
 }
@@ -217,6 +217,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
   /**
    * Reject a malformed or duplicate provider before the runtime publishes a registration.
    * @param provider - candidate provider.
+   * @returns nothing; narrows `provider` when it does not throw.
    */
   assertRegistrable(provider: unknown): asserts provider is SessionTitleEngineProvider<R> {
     if (provider === null || typeof provider !== 'object') {

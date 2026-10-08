@@ -170,7 +170,7 @@ class NativeSessionTitleService implements NativeSessionTitles {
       input: () => target.facts,
       messages: async (throughSeq, signal) => collectSessionTitleMessages(await owner.readEvents({ signal }), throughSeq),
       live: () => !target.detached && owner.writerAvailable,
-      commit: (data) => { fold(target, owner.append('session/title', data) as SessionEvent) },
+      commit: (data) => { fold(target, owner.append('session/title', data)) },
       persist: () => owner.flush(),
       hold: () => owner.retain(),
     }
@@ -265,7 +265,10 @@ export const plugin: NativePlugin = {
       const service = new NativeSessionTitleService(config, (message) => { console.warn(message) })
       context.own(() => service.dispose())
       context.effect(sessions.onAttached(owner => service.attach(owner)))
-      context.effect(sessions.onDetached(async (owner) => { service.detach(owner) }))
+      context.effect(sessions.onDetached((owner) => {
+        service.detach(owner)
+        return Promise.resolve()
+      }))
       for (const owner of sessions.owners()) await service.attach(owner)
       context.provide('sessionTitles', service)
     }

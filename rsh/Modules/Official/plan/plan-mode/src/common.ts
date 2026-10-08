@@ -13,9 +13,8 @@ declare module '@deepseek-ai/dsh-session/types' {
     /**
      * Whether plan mode is in force from this point on: log-only, non-surface,
      * whole-value replace. The last `plan/mode` wins; a log with none folds to
-     * inactive.
-     * @mode serial
-     * @param active - plan mode state recorded from this event onward.
+     * inactive through the projection unit's fold (Cordis) or the native
+     * plan state fold.
      */
     'plan/mode': { active: boolean }
   }
@@ -65,7 +64,7 @@ export const PLAN_OFF_ATTACHMENTS_TEXT = 'Attachments cannot accompany /plan off
 
 /** Deployment-owned plan guidance. */
 export interface PlanModeConfig {
-  /** Guidance shown to the model while plan mode is active. */
+  /** Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active. */
   section: string
 }
 
@@ -86,9 +85,6 @@ const KEEP_PLANNING_LABEL = 'Keep planning'
  * @returns A detached validated config.
  */
 export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
-  if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-    throw new Error('PlanModeConfig needs a string `section`')
-  }
   const section = (config as Partial<PlanModeConfig>).section
   if (typeof section !== 'string') {
     throw new Error('PlanModeConfig needs a string `section`')

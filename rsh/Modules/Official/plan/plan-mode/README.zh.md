@@ -45,7 +45,7 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `section` | 必填 | 计划模式激活时作为 `plan:policy` 提示词段落渲染的引导 |
+| `section` | 必填 | 计划模式激活时作为 `plan:policy` 提示词段落渲染（Cordis）或由进入计划模式的通知携带（原生）的引导 |
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-plan-mode)完整列出了所有受支持的字段及其 JSDoc。
 

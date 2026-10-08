@@ -25,10 +25,6 @@ declare module '@deepseek-ai/dsh-session/types' {
     /**
      * Latest-wins session title snapshot. Log-only: it never enters the model
      * surface or derived history.
-     * @mode serial
-     * @param title - accepted normalized title text.
-     * @param messageSeqs - exact human message seqs the title was derived from.
-     * @param source - fallback, provider, or explicit user rename.
      */
     'session/title': SessionTitleEventData
   }
@@ -53,13 +49,17 @@ export type SessionTitleAutomaticMode = 'first-prompt' | 'all-prompts'
 export interface SessionTitleProviderResult {
   /** Proposed title text. */
   readonly title: string
-  /** Exact seqs from the request used by this result. */
+  /** Exact seqs from `request.messages` used by this result. */
   readonly messageSeqs: readonly SessionSeq[]
   /** Auxiliary LLM route, when generation used a model. */
   readonly model?: SessionTitleModelProvenance
 }
 
-/** Extract one eligible human text message from a session event. */
+/**
+ * Extract one eligible human text message from a session event.
+ * @param event - logged session event.
+ * @returns the message seq and joined text, or undefined when the event is not an eligible human prompt.
+ */
 export function sessionTitleUserMessageOf(event: SessionEvent): SessionTitleUserMessage | undefined {
   if (event.type !== 'user/message' || event.data.source.kind !== 'user') return undefined
   const content = event.data.content
@@ -71,7 +71,11 @@ export function sessionTitleUserMessageOf(event: SessionEvent): SessionTitleUser
   return { seq: event.seq, text }
 }
 
-/** Defensive copy of a logged title source (the snapshot must not alias log-owned objects). */
+/**
+ * Defensive copy of a logged title source (the snapshot must not alias log-owned objects).
+ * @param source - logged title source.
+ * @returns a structurally equal copy.
+ */
 export function copySessionTitleSource(source: SessionTitleSource): SessionTitleSource {
   switch (source.kind) {
     case 'fallback': return { kind: 'fallback' }

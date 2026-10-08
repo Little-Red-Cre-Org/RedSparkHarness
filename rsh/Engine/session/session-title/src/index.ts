@@ -40,7 +40,6 @@ import {
 import {
   SessionTitleEngine,
   type SessionTitleEngineProvider,
-  type SessionTitleProviderRequest,
   type SessionTitleTarget,
 } from './engine.ts'
 export {
@@ -63,7 +62,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 /** One optional asynchronous title implementation registered with the service. */
-export interface SessionTitleProvider extends SessionTitleEngineProvider<SessionTitleProviderRequest> {}
+export interface SessionTitleProvider extends SessionTitleEngineProvider {}
 
 const EMPTY_TITLE_INPUT: TitleInputState = { first: null, count: 0, lastSeq: null }
 

@@ -62,7 +62,11 @@ export class PlanModeSelections<K> {
    */
   constructor(private readonly intents: PlanIntentStore<K>, private readonly noticeText: (active: boolean) => string) {}
 
-  /** Selection awaiting the next accepted in-turn step, if any. */
+  /**
+   * Selection awaiting the next accepted in-turn step, if any.
+   * @param key - session key.
+   * @returns the pending intent, or undefined.
+   */
   pending(key: K): PlanIntent | undefined { return this.intents.get(key) }
 
   /**

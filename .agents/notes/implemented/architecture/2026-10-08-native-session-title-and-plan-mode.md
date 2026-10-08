@@ -28,6 +28,8 @@ Migrate the framework, not the behavior. Each package keeps one framework-free c
 
 Cordis behavior and tests are unchanged; both runtimes run the same title and plan decisions. Native differences are limited to delivery: plan guidance is a history notice rather than a prompt section, idle `/plan <message>` waits for the next prompt instead of waking a turn the TUI would not show, and a title provider call can extend a turn only when it outlasts the main request. Native web plan mode, title surfaces in `native-headless`, `native-sdk` and `native-acp`, and a native title command remain deferred.
 
+In the compatibility inventory, `dsh-plan-mode`, `dsh-session-title-llm`, `dsh-session-title-first-prompt-llm` and `dsh-session-title-all-prompts-llm` move from `migration-required` to `native-mixed` (154 → 150 and 75 → 79), and `dsh-session-title` stays `native-mixed` with a new `./native` entry. Direct Cordis uses stay at 1,783 because the Cordis entries are kept as glue over the same cores.
+
 ## Verification
 
 Mocked-model native specs cover `/plan` idle and mid-turn selection, notice withdrawal, the approve, keep-planning, dismissal and inactive exit paths, the fallback title, provider titles with the logged route, the `session/title-llm-request` record, rename pinning and refresh. The existing Cordis specs of all five packages and their dependents pass unchanged, and the CLI profile spec checks the shipped rows.

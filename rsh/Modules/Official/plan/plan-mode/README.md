@@ -45,7 +45,7 @@ The only required configuration is the guidance text the agent follows while pla
 
 | Field | Default | Meaning |
 |---|---|---|
-| `section` | required | Guidance rendered as the `plan:policy` prompt section while plan mode is active |
+| `section` | required | Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active |
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-plan-mode) is the exhaustive source for every accepted field and its JSDoc.
 
