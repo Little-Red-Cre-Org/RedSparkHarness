@@ -589,12 +589,13 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 /**
  * Whether plan mode is in force from this point on: log-only, non-surface,
  * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through the projection unit's fold.
+ * inactive through the projection unit's fold (Cordis) or the native
+ * plan state fold.
  */
 'plan/mode': { active: boolean }
 ```
 
-来源：[`rsh/Modules/Official/plan/plan-mode/src/index.ts:47`](../Modules/Official/plan/plan-mode/src/index.ts)
+来源：[`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Official/plan/plan-mode/src/common.ts)
 
 ### `request/*`
 
@@ -731,7 +732,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[SessionTitleEventData](subsystems/session-title.zh.md)
 
-来源：[`rsh/Engine/session/session-title/src/index.ts:77`](../Engine/session/session-title/src/index.ts)
+来源：[`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/session-title/src/facts.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 
@@ -744,7 +745,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[SessionTitleLlmRequestEventData](subsystems/session-title.zh.md)
 
-来源：[`rsh/Engine/session/session-title-llm/src/index.ts:45`](../Engine/session/session-title-llm/src/index.ts)
+来源：[`rsh/Engine/session/session-title-llm/src/core.ts:41`](../Engine/session/session-title-llm/src/core.ts)
 
 ### `session-log-deepseek/*`
 

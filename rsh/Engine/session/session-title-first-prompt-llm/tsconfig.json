@@ -8,6 +8,7 @@
     { "path": "../../../Core/vendor/schemastery" },
     { "path": "../../llm/llm" },
     { "path": "../session-title" },
-    { "path": "../session-title-llm" }
+    { "path": "../session-title-llm" },
+    { "path": "../../../Core/runtime-diagnostics/native-runtime" }
   ]
 }

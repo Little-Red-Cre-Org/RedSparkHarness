@@ -31,6 +31,10 @@ Mount this plugin beside the title service when a session should be titled from 
 
 Automatic generation runs only for a fresh session with no parent and no prior title: after its first eligible human message, the fallback is created and one auxiliary request summarizes that message. Later prompts, explicit user renames, and inherited fork history do not trigger another automatic call. An automatic failure keeps the fallback; `ctx.sessionTitle.refresh()` is the explicit retry. Forks keep their inherited title and never run this provider automatically, even when their seeded first message came from the parent.
 
+### Native runtime
+
+The `./native` entry is the same provider for native profiles: it requires `sessionTitles` and `model`, registers as `session-title-first-prompt-llm` with the `first-prompt` cadence, and accepts the same configuration. It is built with the shared `nativeSessionTitleLlmPlugin` and the shared first-message selector, so both entries run identical generation. The shipped `native-tui` and `native-web` profiles install it.
+
 ### Configuration
 
 The plugin accepts the complete required [shared LLM configuration](../session-title-llm/README.md#configuration): `targetWords`, `targetCjkCharacters`, `maxInputBytes`, `maxOutputTokens`, `timeoutMs`, and the optional paired `provider`/`model` route. Omit both to inherit the exact route from the current logged main request, or set both to route title generation independently. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-title-first-prompt-llm) is the exhaustive source for every accepted field.
@@ -57,7 +61,8 @@ A thin provider plugin: it registers the `first-prompt` cadence with a selector 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: shared config schema, provider registration with the first-message selector |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry: shared config schema, provider registration with the shared first-message selector |
+| [`src/native.ts`](src/native.ts) | Native plugin entry built with `nativeSessionTitleLlmPlugin` and the same selector |
 
 ### Scheduling
 

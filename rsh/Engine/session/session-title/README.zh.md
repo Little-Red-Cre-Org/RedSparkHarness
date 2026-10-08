@@ -64,6 +64,10 @@ kind: "package-reference"
 
 自动失败会发出警告并保留最新标题；显式 `refresh()` 在提供方错误或调用方取消时拒绝，取消不会回滚已接受的回退事件。自动工作绝不会延迟主 agent 响应，其延迟完成会追加一个独立纯日志事件而不打开轮次，陈旧的完成结果无法追加。fork 出的会话会原样继承种子中的标题事件。
 
+### 原生运行时
+
+`./native` 入口以 `sessionTitles` 服务为原生 profile 提供同样的标题。它依赖 `activeSessions`，折叠每个已附着 Session owner 的日志，并通过该 owner 写入 `session/title`。`get(agent)`、`rename(owner, title)`、`refresh(owner)` 与 `register(provider)` 的行为与 Cordis 方法一致；原生提供方还会收到 `appendEvent`，用于写入自己的纯日志记录。自动提供方工作在主请求的 `request/header` 之后启动，路由未变时在 `step/end` 之后启动，并在标题持久化前保持 owner 打开。内置 `native-tui` 与 `native-web` profile 以首消息提供方和 Cordis 基础 bundle 的上限安装它。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -82,9 +86,16 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 服务：配置、折叠、回退调度、提供方注册表、并发、`title` 投影单元 |
+| [`src/index.ts`](src/index.ts) | Cordis 胶水层：配置 schema、`title` 与 `titleInput` 投影单元、事件与 `llm/stream` 接线、服务生命周期 |
+| [`src/engine.ts`](src/engine.ts) | 两个入口共享的框架无关标题行为：提供方注册表、修订与取代、调度节奏、回退、重命名、刷新与接受 |
+| [`src/facts.ts`](src/facts.ts) | 框架无关事实：`session/title` 事件、提供方 id、消息提取、结果校验、日志折叠与配置校验 |
+| [`src/native.ts`](src/native.ts) | 原生胶水层：owner 附着与折叠、事件转发、持久化、owner 驻留与提供方 `appendEvent` |
 | [`src/normalize.ts`](src/normalize.ts) | 标题文本清洗、UTF-8 安全截断与确定性回退 |
 | [`src/types.ts`](src/types.ts) | `title` 投影键声明的归属位置 |
+
+### 一个引擎，两个运行时
+
+[`src/engine.ts`](src/engine.ts) 只实现一次所有标题决策。每个运行时把一个 Session 适配为 target：折叠的标题与输入事实、合格消息、存活状态、经唯一 writer 的追加，原生入口另有持久化与 owner 驻留。Cordis 转发 `session/event` 与带标记的循环请求；原生入口从 owner 的持久观察者转发 `user/message`、`request/header` 与 `step/end`。
 
 ### 生命周期与并发
 
@@ -135,6 +146,7 @@ kind: "package-reference"
 
 这些限制说明标题服务不提供什么。它们是当前包约束。
 
+- **原生 profile**：`native-headless`、`native-sdk` 与 `native-acp` 不安装标题：它们的一次性运行没有标题界面，快照夹具也固定了每个模型请求。
 - **没有标题删除、搜索或列表索引**——不经显式 `refresh` 就解钉回自动标题、搜索与列表索引不属于此服务。
 - **至多一个提供方**——注册表有意只接受一个实现，因此部署若要组合相互竞争的标题策略，必须编写一个自行负责优先级的提供方。
 

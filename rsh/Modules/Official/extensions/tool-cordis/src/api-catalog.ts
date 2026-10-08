@@ -1424,7 +1424,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   {
     key: 'planMode',
     summary: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool.',
-    description: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. Client carriers expose the projection\'s cropped `{ active, pending }` view.',
+    description: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. Client carriers expose the projection\'s cropped `{ active, pending }` view. The selection state machine and the reviewed exit are the shared framework-free core in `./selection.ts`; this class is the Cordis glue.',
     methods: [
       {
         signature: 'get(agent: Agent): { active: boolean; pending?: boolean }',
@@ -2045,7 +2045,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   {
     key: 'sessionTitle',
     summary: 'Log-backed title fold plus asynchronous fallback generation.',
-    description: 'Log-backed title fold plus asynchronous fallback generation.',
+    description: 'Log-backed title fold plus asynchronous fallback generation. The title behavior is the shared framework-free SessionTitleEngine; this service is the Cordis glue: projections, event wiring, and lifetime.',
     methods: [
       {
         signature: 'get(session: Session): SessionTitleSnapshot | undefined',
@@ -5748,6 +5748,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SessionTitleAutomaticMode = \'first-prompt\' | \'all-prompts\';',
   },
   {
+    name: 'SessionTitleEngineProvider',
+    declaration: 'export interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = SessionTitleProviderRequest> {\n    readonly id: SessionTitleProviderId;\n    readonly automatic: SessionTitleAutomaticMode;\n    generate(request: R): Promise<SessionTitleProviderResult>;\n}',
+  },
+  {
     name: 'SessionTitleEventData',
     declaration: 'export interface SessionTitleEventData {\n    readonly title: string;\n    readonly messageSeqs: SessionSeq[];\n    readonly source: SessionTitleSource;\n}',
   },
@@ -5765,7 +5769,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionTitleProvider',
-    declaration: 'export interface SessionTitleProvider {\n    readonly id: SessionTitleProviderId;\n    readonly automatic: SessionTitleAutomaticMode;\n    generate(request: SessionTitleProviderRequest): Promise<SessionTitleProviderResult>;\n}',
+    declaration: 'export interface SessionTitleProvider extends SessionTitleEngineProvider {\n}',
   },
   {
     name: 'SessionTitleProviderRequest',

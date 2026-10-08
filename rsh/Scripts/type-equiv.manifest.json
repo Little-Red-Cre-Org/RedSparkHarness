@@ -724,7 +724,7 @@
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
       "symbol": "SessionTitleLlmRequestEventData",
-      "source": "rsh/Engine/session/session-title-llm/src/index.ts"
+      "source": "rsh/Engine/session/session-title-llm/src/core.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
@@ -734,17 +734,22 @@
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
       "symbol": "SessionTitleAutomaticMode",
-      "source": "rsh/Engine/session/session-title/src/index.ts"
+      "source": "rsh/Engine/session/session-title/src/facts.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
       "symbol": "SessionTitleProviderRequest",
-      "source": "rsh/Engine/session/session-title/src/index.ts"
+      "source": "rsh/Engine/session/session-title/src/engine.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
       "symbol": "SessionTitleProviderResult",
-      "source": "rsh/Engine/session/session-title/src/index.ts"
+      "source": "rsh/Engine/session/session-title/src/facts.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-title.md",
+      "symbol": "SessionTitleEngineProvider",
+      "source": "rsh/Engine/session/session-title/src/engine.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-title.md",
@@ -1839,7 +1844,7 @@
     {
       "doc": "rsh/Docs/subsystems/plan.md",
       "symbol": "PlanModeConfig",
-      "source": "rsh/Modules/Official/plan/plan-mode/src/index.ts"
+      "source": "rsh/Modules/Official/plan/plan-mode/src/common.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/invariants.md",
