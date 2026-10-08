@@ -53,9 +53,13 @@ function eventData(events: readonly unknown[], type: string): Record<string, unk
 
 function modelToolNames(value: unknown): string[] {
   if (typeof value !== 'object' || value === null || !('tools' in value) || !Array.isArray(value.tools)) return []
-  return value.tools.flatMap(tool => typeof tool === 'object' && tool !== null && 'function' in tool
-    && typeof tool.function === 'object' && tool.function !== null && 'name' in tool.function
-    && typeof tool.function.name === 'string' ? [tool.function.name] : [])
+  return value.tools.flatMap((tool: unknown): string[] => {
+    if (typeof tool !== 'object' || tool === null || !('function' in tool)) return []
+    const callable = tool.function
+    if (typeof callable !== 'object' || callable === null || !('name' in callable)
+      || typeof callable.name !== 'string') return []
+    return [callable.name]
+  })
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -218,8 +222,8 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     const approval = await receive(frame => frame.method === 'approval/request')
     const approvalParams = approval.params as Record<string, unknown>
     expect(approval.id).not.toBeUndefined()
-    expect(approvalParams).toMatchObject({ toolName: 'write_file', operationId: expect.any(String),
-      requestId: expect.any(String), sessionId: expect.any(String), callId: expect.any(String) })
+    expect(approvalParams).toMatchObject({ toolName: 'write_file', operationId: expect.any(String) as unknown,
+      requestId: expect.any(String) as unknown, sessionId: expect.any(String) as unknown, callId: expect.any(String) as unknown })
     child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: approval.id, result: {
       operationId: approvalParams.operationId, requestId: approvalParams.requestId, outcome: 'allowed-once',
     } }) + '\n')
@@ -243,8 +247,8 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     await slowChildRequest.promise
     const secondApproval = await receive(frame => frame.method === 'approval/request')
     const secondApprovalParams = secondApproval.params as Record<string, unknown>
-    expect(secondApprovalParams).toMatchObject({ toolName: 'write_file', operationId: expect.any(String),
-      requestId: expect.any(String), sessionId: expect.any(String), callId: expect.any(String) })
+    expect(secondApprovalParams).toMatchObject({ toolName: 'write_file', operationId: expect.any(String) as unknown,
+      requestId: expect.any(String) as unknown, sessionId: expect.any(String) as unknown, callId: expect.any(String) as unknown })
     expect(secondApprovalParams.requestId).not.toBe(approvalParams.requestId)
     const starts = eventData(parentEvents, 'subagent/external-start')
     expect(starts).toHaveLength(2)
@@ -377,7 +381,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
       const readOnlyStart = eventData(readOnlyEvents, 'subagent/external-start')[0]
       expect(eventData(readOnlyEvents, 'subagent/external-end')).toContainEqual(expect.objectContaining({
         id: readOnlyStart?.id, provider: 'dsh-sdk', stopReason: 'completed',
-      }))
+      }) as unknown)
       expect(readOnlyFrames.some(frame => frame.method === 'approval/request')).toBe(false)
       expect(await pathExists(noWriterHome!)).toBe(false)
       readOnlyChild.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'shutdown' })}\n`)
@@ -387,7 +391,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
       const durableReadOnlyStart = eventData(readOnlyDurable, 'subagent/external-start')[0]
       expect(eventData(readOnlyDurable, 'subagent/external-end')).toContainEqual(expect.objectContaining({
         id: durableReadOnlyStart?.id, provider: 'dsh-sdk', stopReason: 'completed',
-      }))
+      }) as unknown)
       expect(await childHomes(runnerTempRoot)).toEqual([])
     } finally {
       if (!readOnlyExited) readOnlyChild.kill('SIGKILL')
@@ -406,8 +410,8 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
       expect(run.events).toContainEqual(expect.objectContaining({
         type: 'turn/end',
         data: expect.objectContaining({ reason: expect.objectContaining({
-          kind: 'error', error: expect.objectContaining({ code: 'STEP_LIMIT' }),
-        }) }),
+          kind: 'error', error: expect.objectContaining({ code: 'STEP_LIMIT' }) as unknown,
+        }) as unknown }) as unknown,
       }))
       expect(directCalls).toBe(1)
       expect(await import('node:fs/promises').then(fs => fs.readFile(join(home, 'direct-write.txt'), 'utf8')))

@@ -159,6 +159,15 @@ function nonempty(value: unknown, name: string): string {
   return value
 }
 
+function allowedToolNames(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native-headless: allowedTools must be an array of unique non-empty names'
+  if (!Array.isArray(value)) throw new Error(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new Error(message)
+  return names
+}
+
 /** Validate native Program turn settings.
  * @param input - profile settings.
  * @returns explicit workspace, model and execution limits.
@@ -184,12 +193,7 @@ export function resolveNativeHeadlessConfig(input: unknown): ResolvedConfig {
     throw new Error('native-headless: maxTokens must be a positive integer')
   }
   const reasoningEffort = fields.reasoningEffort === undefined ? undefined : ReasoningEffortId(nonempty(fields.reasoningEffort, 'reasoningEffort'))
-  const allowedTools = fields.allowedTools
-  if (allowedTools !== undefined && (!Array.isArray(allowedTools)
-    || allowedTools.some(name => typeof name !== 'string' || name.length === 0)
-    || new Set(allowedTools).size !== allowedTools.length)) {
-    throw new Error('native-headless: allowedTools must be an array of unique non-empty names')
-  }
+  const allowedTools = allowedToolNames(fields.allowedTools)
   const workspaceWriteRoot = fields.workspaceWriteRoot === undefined ? undefined : nonempty(fields.workspaceWriteRoot, 'workspaceWriteRoot')
   if (workspaceWriteRoot !== undefined && !isAbsolute(workspaceWriteRoot)) throw new Error('native-headless: workspaceWriteRoot must be absolute')
   return {
@@ -197,7 +201,7 @@ export function resolveNativeHeadlessConfig(input: unknown): ResolvedConfig {
     ...workspaceRoutes === undefined ? {} : { workspaceRoutes },
     ...maxTokens === undefined ? {} : { maxTokens },
     ...reasoningEffort === undefined ? {} : { reasoningEffort },
-    ...allowedTools === undefined ? {} : { allowedTools: Object.freeze([...allowedTools] as string[]) },
+    ...allowedTools === undefined ? {} : { allowedTools: Object.freeze([...allowedTools]) },
     ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
     cwd: resolve(cwd), provider: nonempty(fields.provider, 'provider'), model: nonempty(fields.model, 'model'),
     systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps, builtinTools,

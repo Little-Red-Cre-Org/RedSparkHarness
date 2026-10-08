@@ -39,6 +39,19 @@ function nonempty(value: unknown, name: string): string {
   return value
 }
 
+function allowedToolNames(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native SDK: allowedTools must be an array of unique non-empty names'
+  if (!Array.isArray(value)) throw new TypeError(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new TypeError(message)
+  return names
+}
+
+function signalAborted(signal: AbortSignal): boolean {
+  return signal.aborted
+}
+
 function isApprovalOutcome(value: unknown): value is NativeApprovalOutcome {
   return value === 'allowed-once' || value === 'rejected' || value === 'cancelled' || value === 'unavailable'
 }
@@ -315,12 +328,7 @@ export class NativeSdkApplication implements NativeApplication {
       if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isSafeInteger(maxTokens) || maxTokens <= 0)) {
         throw new TypeError('native SDK: maxTokens must be a positive integer')
       }
-      const allowedTools = raw.allowedTools
-      if (allowedTools !== undefined && (!Array.isArray(allowedTools)
-        || allowedTools.some(name => typeof name !== 'string' || name.length === 0)
-        || new Set(allowedTools).size !== allowedTools.length)) {
-        throw new TypeError('native SDK: allowedTools must be an array of unique non-empty names')
-      }
+      const allowedTools = allowedToolNames(raw.allowedTools)
       const workspaceWriteRoot = raw.workspaceWriteRoot
       if (workspaceWriteRoot !== undefined && (typeof workspaceWriteRoot !== 'string' || workspaceWriteRoot.length === 0 || !isAbsolute(workspaceWriteRoot))) {
         throw new TypeError('native SDK: workspaceWriteRoot must be an absolute path')
@@ -333,7 +341,7 @@ export class NativeSdkApplication implements NativeApplication {
         rootRouteId: SDK_ROOT_ROUTE, cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps,
         ...reasoningEffort === undefined ? {} : { reasoningEffort },
         ...maxTokens === undefined ? {} : { maxTokens },
-        ...allowedTools === undefined ? {} : { allowedTools: [...allowedTools] as string[] },
+        ...allowedTools === undefined ? {} : { allowedTools },
         ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
       }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
       const deletions = this.executor.rootExecution.deletions
@@ -376,10 +384,10 @@ export class NativeSdkApplication implements NativeApplication {
           || !isApprovalOutcome(response.outcome)) return 'unavailable'
         return response.outcome
       } catch {
-        return request.signal.aborted ? 'cancelled' : 'unavailable'
+        return signalAborted(request.signal) ? 'cancelled' : 'unavailable'
       } finally {
         request.signal.removeEventListener('abort', cancel)
-        if (request.signal.aborted) cancel()
+        if (signalAborted(request.signal)) cancel()
       }
     })
   }
@@ -411,6 +419,8 @@ export class NativeSdkApplication implements NativeApplication {
       }
       const fail = (cause: unknown): void => {
         remove()
+        // AbortSignal.reason permits arbitrary values; rootExecution.ready() preserves that identity.
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors
         rejectExecutor(cause)
       }
       const abort = (): void => {

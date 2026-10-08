@@ -625,15 +625,25 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
         builtinToolNames: Object.freeze(authority.builtinToolNames.filter(name =>
           name === 'read_file' || name === 'write_file' && canRelayApproval)) })
       const approvalIds = new Set<string>()
-      const approval: NativeExternalSubagentApprovalRelay | undefined = canRelayApproval && approvalRequester !== undefined
+      const approval: NativeExternalSubagentApprovalRelay | undefined = canRelayApproval
         ? Object.freeze({
           operationId: id,
-          request: async (approvalRequest: NativeExternalSubagentApprovalRequest) => {
+          request: async (input: unknown) => {
+            if (typeof input !== 'object' || input === null || Array.isArray(input)) return 'unavailable'
+            const fields = input as Record<string, unknown>
+            if (fields.operationId !== id || fields.toolName !== 'write_file'
+              || typeof fields.requestId !== 'string' || fields.requestId.length === 0
+              || typeof fields.callId !== 'string' || fields.callId.length === 0
+              || fields.reason !== undefined && typeof fields.reason !== 'string'
+              || !(fields.signal instanceof AbortSignal)) return 'unavailable'
+            const approvalRequest: NativeExternalSubagentApprovalRequest = {
+              operationId: id, requestId: fields.requestId, toolName: 'write_file', callId: fields.callId,
+              ...fields.reason === undefined ? {} : { reason: fields.reason }, signal: fields.signal,
+            }
             const approvalSignal = AbortSignal.any([effective, approvalRequest.signal])
             this.assertExternalAdmission(admission)
             approvalSignal.throwIfAborted()
-            if (approvalRequest.operationId !== id || approvalRequest.toolName !== 'write_file'
-              || approvalRequest.requestId.length === 0 || approvalIds.has(approvalRequest.requestId)) {
+            if (approvalIds.has(approvalRequest.requestId)) {
               return 'unavailable' satisfies NativeExternalSubagentApprovalOutcome
             }
             approvalIds.add(approvalRequest.requestId)

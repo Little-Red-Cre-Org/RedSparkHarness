@@ -25,7 +25,7 @@ export class DeepSeekHarness extends SdkDeepSeekHarness {
   }
 
   override get client(): HarnessClient {
-    return super.client as HarnessClient
+    return super.client
   }
 }
 

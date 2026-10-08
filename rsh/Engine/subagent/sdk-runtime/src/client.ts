@@ -623,7 +623,7 @@ export class HarnessClient {
         task,
         new Promise<NativeSdkChildApprovalOutcome>((resolveOutcome) => {
           timer = setTimeout(() => {
-            controller.abort(new RequestTimeoutError('approval/request timed out after ' + timeout + 'ms'))
+            controller.abort(new RequestTimeoutError(`approval/request timed out after ${timeout}ms`))
             resolveOutcome('cancelled')
           }, timeout)
         }),

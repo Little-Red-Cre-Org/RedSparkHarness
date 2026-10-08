@@ -91,7 +91,7 @@ it('deduplicates the foreground event and streams a late root event until shutdo
         method?: string
         params?: { sessionId?: string; status?: string; event?: unknown }
       }
-      if (message.id !== undefined) replies.get(message.id)?.resolve(message as Record<string, unknown>)
+      if (message.id !== undefined) replies.get(message.id)?.resolve(message)
       if (message.method === 'session.status' && message.params?.sessionId === sessionId
         && message.params.status === 'idle') idle.resolve(undefined)
       if (message.method === 'session.event' && message.params?.sessionId === sessionId) {
@@ -113,7 +113,7 @@ it('deduplicates the foreground event and streams a late root event until shutdo
     const prompt = request('prompt', 'session/prompt', {
       sessionId, contentBlocks: [{ type: 'text', text: 'hello' }],
     })
-    expect((await prompt).result).toMatchObject({ messageId: expect.any(String) })
+    expect((await prompt).result).toMatchObject({ messageId: expect.any(String) as unknown })
     await idle.promise
     const accepted = await acceptedEvent.promise
     for (const observer of listeners) observer(lateEvent)

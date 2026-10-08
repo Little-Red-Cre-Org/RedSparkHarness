@@ -13,18 +13,18 @@ import type { NativeSdkChildApprovalRelay } from '@deepseek-ai/dsh-sdk-runtime/n
 import type { SdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 
-interface ProviderProfile {
-  readonly apiKeyEnv?: string
-}
-
 interface Config {
   readonly providerName: string
-  readonly providers: Readonly<Record<string, ProviderProfile>>
+  readonly providers: Readonly<Record<string, unknown>>
 }
 
 function record(value: unknown, field: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new TypeError(`dsh-sdk-native ${field} must be an object`)
   return value as Record<string, unknown>
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function nonempty(value: unknown, field: string): string {
@@ -40,18 +40,14 @@ function resolveConfig(input: unknown): Config {
     throw new TypeError('dsh-sdk-native configuration accepts only providerName and providers')
   }
   const providerName = nonempty(fields.providerName ?? 'dsh-sdk', 'providerName')
-  const providers = fields.providers === undefined ? {} : record(fields.providers, 'providers') as Record<string, ProviderProfile>
+  const providers = fields.providers === undefined ? {} : record(fields.providers, 'providers')
   return { providerName, providers: Object.freeze({ ...providers }) }
 }
 
 function endReason(events: readonly SessionEvent[]): TurnEndReason | undefined {
   for (let index = events.length - 1; index >= 0; index--) {
     const event = events[index]
-    if (event?.type !== 'turn/end' || typeof event.data !== 'object' || event.data === null) continue
-    const reason = (event.data as { reason?: unknown }).reason
-    if (typeof reason === 'object' && reason !== null && typeof (reason as { kind?: unknown }).kind === 'string') {
-      return reason as TurnEndReason
-    }
+    if (event?.type === 'turn/end') return event.data.reason
   }
   return undefined
 }
@@ -127,28 +123,29 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
         childSignal.throwIfAborted()
         const input = await promptBlocks(context, request.prompt, childSignal)
         childSignal.throwIfAborted()
-        if (closed || context.signal.aborted) throw new Error('dsh-sdk-native is closing')
         const parentPolicy = request.authority.sandboxPolicy
         if (parentPolicy === undefined) throw new Error('dsh-sdk-native requires the exact parent Session sandbox policy')
         if (parentPolicy.sessionId !== undefined && parentPolicy.sessionId !== request.parentSessionId) {
           throw new Error('dsh-sdk-native received a sandbox policy for a different parent Session')
         }
         const providerProfile = config.providers[request.route.provider]
-        if (providerProfile === undefined || typeof providerProfile !== 'object' || providerProfile === null) {
+        if (!isRecord(providerProfile)) {
           throw new Error(`dsh-sdk-native has no inherited provider profile for route "${request.route.provider}"`)
         }
-        if (providerProfile.apiKeyEnv === undefined) {
+        const rawApiKeyEnv = providerProfile.apiKeyEnv
+        if (rawApiKeyEnv === undefined) {
           const stored = isCredentialKeySegment(request.route.provider)
             ? await context.require('credentials').readRecord(credentialKey('llm-pi-ai', request.route.provider)) : undefined
           if (stored !== undefined) throw new Error(`dsh-sdk-native does not inherit stored OAuth or API-key records for "${request.route.provider}"`)
           throw new Error(`dsh-sdk-native requires an explicit apiKeyEnv for route "${request.route.provider}"`)
         }
-        const selectedCredential = await context.require('credentials').resolve(credentialRef(providerProfile.apiKeyEnv))
+        const apiKeyEnv = nonempty(rawApiKeyEnv, `providers.${request.route.provider}.apiKeyEnv`)
+        const selectedCredential = await context.require('credentials').resolve(credentialRef(apiKeyEnv))
         if (selectedCredential === undefined || selectedCredential.value.length === 0) {
           throw new Error(`dsh-sdk-native has no credential for provider route "${request.route.provider}"`)
         }
         childSignal.throwIfAborted()
-        const environment = { [providerProfile.apiKeyEnv]: selectedCredential.value }
+        const environment = { [apiKeyEnv]: selectedCredential.value }
         const builtinGrants = Object.freeze(request.authority.builtinToolNames
           .filter((name): name is 'read_file' | 'write_file' => name === 'read_file' || name === 'write_file'))
         const parentApproval = request.approval
@@ -173,7 +170,6 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
         let runtimeCleanup: Promise<void> | undefined
         startup.close = (): Promise<void> => runtimeCleanup ??= runtime.dispose()
         childSignal.throwIfAborted()
-        if (closed || context.signal.aborted) throw new Error('dsh-sdk-native is closing')
         const options = {
           cwd: request.cwd,
           processCwd: request.cwd,
@@ -186,18 +182,22 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
           ...request.route.reasoningEffort === undefined ? {} : { reasoningEffort: request.route.reasoningEffort },
           ...request.limits.maxTokens === undefined ? {} : { maxTokens: request.limits.maxTokens },
         }
-        const approvalRelay: NativeSdkChildApprovalRelay | undefined = !parentApprovalRelay || parentApproval === undefined ? undefined : {
+        const approvalRelay: NativeSdkChildApprovalRelay | undefined = !parentApprovalRelay ? undefined : {
           operationId: String(request.id),
-          request: async (approval, relaySignal) => {
+          request: async (approval: unknown, relaySignal) => {
             relaySignal.throwIfAborted()
             childSignal.throwIfAborted()
-            if (approval.operationId !== String(request.id) || approval.sessionId !== childSessionId
-              || approval.toolName !== 'write_file' || typeof approval.callId !== 'string' || approval.callId.length === 0) {
+            if (typeof approval !== 'object' || approval === null || Array.isArray(approval)) return 'unavailable'
+            const fields = approval as Record<string, unknown>
+            if (fields.operationId !== String(request.id) || fields.sessionId !== childSessionId
+              || fields.toolName !== 'write_file' || typeof fields.requestId !== 'string' || fields.requestId.length === 0
+              || typeof fields.callId !== 'string' || fields.callId.length === 0
+              || fields.reason !== undefined && typeof fields.reason !== 'string') {
               return 'unavailable'
             }
             return parentApproval.request({
-              operationId: request.id, requestId: approval.requestId, toolName: 'write_file', callId: approval.callId,
-              ...approval.reason === undefined ? {} : { reason: approval.reason },
+              operationId: request.id, requestId: fields.requestId, toolName: 'write_file', callId: fields.callId,
+              ...fields.reason === undefined ? {} : { reason: fields.reason },
               signal: AbortSignal.any([childSignal, relaySignal]),
             })
           },
@@ -216,7 +216,6 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
         try {
           await Promise.race([harness.start(), cancelled.promise.then(() => { throw new Error('dsh-sdk-native child startup was cancelled') })])
           childSignal.throwIfAborted()
-          if (closed || context.signal.aborted) throw new Error('dsh-sdk-native is closing')
           const effective = harness.initializedWith?.maxSteps
           if (typeof effective !== 'number' || !Number.isSafeInteger(effective)
             || effective <= 0 || effective > request.limits.maxSteps) {
