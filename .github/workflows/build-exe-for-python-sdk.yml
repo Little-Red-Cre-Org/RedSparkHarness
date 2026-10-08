@@ -355,7 +355,7 @@ jobs:
           Remove-Item Env:DSH_RUNTIME_MODE -ErrorAction SilentlyContinue
           Push-Location $blackboxRoot
           try {
-            & "${{ steps.smoke-venv-windows.outputs.python }}" "$env:GITHUB_WORKSPACE\scripts\smoke-python-runtime.py" --scenario all --installed-wheel
+            & "${{ steps.smoke-venv-windows.outputs.python }}" "$env:GITHUB_WORKSPACE\rsh\Scripts\smoke-python-runtime.py" --scenario all --installed-wheel
             if ($LASTEXITCODE -ne 0) { throw "Installed-wheel black-box failed with exit code $LASTEXITCODE" }
           } finally {
             Pop-Location
@@ -429,7 +429,7 @@ jobs:
           Remove-Item Env:DSH_RUNTIME_MODE -ErrorAction SilentlyContinue
           Push-Location $blackboxRoot
           try {
-            & "${{ steps.smoke-venv-windows.outputs.python }}" "$env:GITHUB_WORKSPACE\scripts\smoke-python-runtime.py" --scenario sdk-live --installed-wheel
+            & "${{ steps.smoke-venv-windows.outputs.python }}" "$env:GITHUB_WORKSPACE\rsh\Scripts\smoke-python-runtime.py" --scenario sdk-live --installed-wheel
             if ($LASTEXITCODE -ne 0) { throw "Installed-wheel live API smoke failed with exit code $LASTEXITCODE" }
           } finally {
             Pop-Location
@@ -485,6 +485,7 @@ jobs:
             cd /tmp/dsh-sdk-manylinux-smoke
             env -u PYTHONPATH -u DSH_RUNTIME_MODE /tmp/dsh-sdk/bin/python /work/rsh/Scripts/smoke-python-runtime.py --scenario sdk-default --installed-wheel
             env -u PYTHONPATH -u DSH_RUNTIME_MODE /tmp/dsh-sdk/bin/python /work/rsh/Scripts/smoke-python-runtime.py --scenario sdk-mcp --installed-wheel
+            env -u PYTHONPATH -u DSH_RUNTIME_MODE /tmp/dsh-sdk/bin/python /work/rsh/Scripts/smoke-python-runtime.py --scenario sdk-native --installed-wheel
           '
 
       - uses: actions/upload-artifact@v7

@@ -11,7 +11,7 @@ interface CliManifest {
   dsh?: { nativeProfileTemplates?: unknown }
 }
 
-const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as CliManifest
+const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as CliManifest
 const nativeProfileTemplates = manifest.dsh?.nativeProfileTemplates
 if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
   throw new Error('dsh: CLI package must declare its native profile templates')
