@@ -66,6 +66,11 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/Web/client/ui-slots',
   'rsh/Programs/Web/client/ui-primitives',
   'rsh/Core/util/workspace-path',
+  'rsh/Core/util/chunked-list',
+  'rsh/Core/util/deque',
+  'rsh/Core/util/package-manifest',
+  'rsh/Core/util/time',
+  'rsh/Programs/Web/client/ui-dockkit',
 ])
 
 /** Native-profile Client packages that do not implement the Cordis module-table entry. */

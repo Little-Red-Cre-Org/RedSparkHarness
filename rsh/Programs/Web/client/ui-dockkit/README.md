@@ -97,6 +97,8 @@ None; this package neither assembles nor sends a provider request.
 <a id="dev-note"></a>
 ### Dev Note
 
+The published engine and components are Cordis-free and have no framework peer or installer. Client consumers bundle the same artifact without installing Cordis.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 

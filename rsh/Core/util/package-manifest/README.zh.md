@@ -96,6 +96,8 @@ const manifest: DshPackageManifest = {
 <a id="dev-note"></a>
 ### 开发备注
 
+发布的声明不依赖 Cordis，无框架 peer 或安装器。原生与兼容 profile 读取方导入同一组类型。
+
 <details>
 <summary>维护者的工作上下文——点击展开</summary>
 
