@@ -1849,17 +1849,42 @@
     {
       "doc": "rsh/Docs/subsystems/web-server.md",
       "symbol": "WebRouteKind",
-      "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+      "source": "rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/web-server.md",
       "symbol": "WebRoute",
-      "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+      "source": "rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/web-server.md",
+      "symbol": "HttpWebServerConfig",
+      "source": "rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/web-server.md",
       "symbol": "Config",
       "source": "rsh/Programs/Web/host/webserver/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/http-routes.md",
+      "symbol": "HttpRouteKind",
+      "source": "rsh/Core/util/http-routes/src/host.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/http-routes.md",
+      "symbol": "HttpRoute",
+      "source": "rsh/Core/util/http-routes/src/host.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/http-routes.md",
+      "symbol": "HttpUpgradeRoute",
+      "source": "rsh/Core/util/http-routes/src/host.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/http-routes.md",
+      "symbol": "HttpRouteListener",
+      "source": "rsh/Core/util/http-routes/src/host.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/storage.md",
@@ -2022,9 +2047,19 @@
       "source": "rsh/Modules/Official/credentials/credentials/src/native-types.ts"
     },
     {
+        "doc": "rsh/Docs/subsystems/permission-presets.md",
+        "symbol": "PresetSpec",
+        "source": "rsh/Modules/Official/interaction/permission-presets/src/presets.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/permission-presets.md",
-      "symbol": "PresetSpec",
-      "source": "rsh/Modules/Official/interaction/permission-presets/src/index.ts"
+      "symbol": "NativePermissionPresetSpec",
+      "source": "rsh/Modules/Official/interaction/permission-presets/src/native-definition.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/permission-presets.md",
+      "symbol": "NativePermissionPresetOperations",
+      "source": "rsh/Modules/Official/interaction/permission-presets/src/native-definition.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-projection.md",

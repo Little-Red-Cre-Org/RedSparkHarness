@@ -30,6 +30,9 @@
       "path": "../../../../Programs/Web/host/frontend-static"
     },
     {
+      "path": "../../bridge/http-routes-cordis"
+    },
+    {
       "path": "../../../../Programs/Web/host/webserver"
     },
     {

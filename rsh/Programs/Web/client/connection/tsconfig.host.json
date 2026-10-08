@@ -37,9 +37,8 @@
     {
       "path": "../../../../Engine/core/session"
     },
-    {
-      "path": "../../host/webserver"
-    },
+    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" },
+    { "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis" },
     {
       "path": "../../../../Core/util/brand"
     },

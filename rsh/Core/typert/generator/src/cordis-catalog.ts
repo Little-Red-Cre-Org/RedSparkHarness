@@ -96,6 +96,8 @@ export interface ServiceEntry {
   doc: string
   /** Public methods (bodies stripped), in source order. */
   methods: ServiceMethodEntry[]
+  /** Base declaration names whose shapes complete inherited members. */
+  inheritedTypes?: readonly string[]
   /** Source pointer of the class declaration. */
   source: string
 }
@@ -122,7 +124,7 @@ export interface CordisCatalogPolicy {
   readonly runtimeServices?: readonly ServiceEntry[]
   /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
   readonly runtimeServiceExclusions?: ReadonlySet<string>
-  /** Registered source packages used as Context Service Definitions or inherited projected Services. */
+  /** Registered source packages used as Context Service Definitions and inherited projected Services. */
   readonly serviceDefinitionPackages?: readonly string[]
   /** Manually curated framework events inherited by every plugin. */
   readonly inheritedEvents: readonly InheritedEntry[]
@@ -296,9 +298,11 @@ export class CordisCatalogProjector {
       const methods: ServiceMethodEntry[] = []
       const resolvedMembers = service.resolvedMembers ?? []
       const resolvedNames = new Set(resolvedMembers.map(member => member.name))
+      const inheritedTypes = new Set<string>()
+      const inheritedMembers = this.serviceMembers(declaration, service.members, new Set(), inheritedTypes)
       const members = [
         ...resolvedMembers,
-        ...this.serviceMembers(declaration, service.members).filter(member => !resolvedNames.has(member.name)),
+        ...inheritedMembers.filter(member => !resolvedNames.has(member.name)),
       ]
       for (const member of members) {
         if (member.name.startsWith('[')) continue
@@ -333,6 +337,7 @@ export class CordisCatalogProjector {
         abstract: declaration.abstract,
         doc,
         methods,
+        inheritedTypes: [...inheritedTypes].sort(),
         source,
       })
     }
@@ -342,7 +347,7 @@ export class CordisCatalogProjector {
   }
 
   private serviceMembers(declaration: TypeDeclarationModel, memberIds: readonly string[],
-    visited = new Set<SymbolId>()): MemberModel[] {
+    visited = new Set<SymbolId>(), inheritedTypes = new Set<string>()): MemberModel[] {
     if (visited.has(declaration.id)) return []
     visited.add(declaration.id)
 
@@ -353,7 +358,13 @@ export class CordisCatalogProjector {
       const base = this.renderer.node(baseId)
       if (base.kind !== 'reference' || base.target.kind !== 'declaration') continue
       const baseDeclaration = this.renderer.declaration(base.target.symbol)
-      const inherited = this.serviceMembers(baseDeclaration, baseDeclaration.members.map(member => member.id), visited)
+      inheritedTypes.add(baseDeclaration.name)
+      const inherited = this.serviceMembers(
+        baseDeclaration,
+        baseDeclaration.members.map(member => member.id),
+        visited,
+        inheritedTypes,
+      )
       const inheritedNames = new Set(inherited.map(member => member.name))
       for (const name of inheritedNames) {
         if (names.has(name)) continue
@@ -404,6 +415,7 @@ export class CordisCatalogProjector {
     }
     return referencedTypes([
       ...services.flatMap(service => service.methods.map(method => method.signature)),
+      ...services.flatMap(service => service.inheritedTypes ?? []),
       ...events.map(event => event.signature),
     ], declarations)
   }
@@ -777,6 +789,8 @@ function renderRuntimeApi(
     '  summary: string',
     '  /** Complete service description. */',
     '  description: string',
+    '  /** Base type shapes needed to interpret inherited service members. */',
+    '  inheritedTypes?: readonly string[]',
     '  /** Public methods, bodies stripped, in source order. */',
     '  methods: readonly ServiceApiMethod[]',
     '}',
@@ -821,6 +835,9 @@ function renderRuntimeApi(
     lines.push(`    key: ${quote(service.key)},`)
     lines.push(`    summary: ${quote(firstSentence(service.doc))},`)
     lines.push(`    description: ${quote(service.doc)},`)
+    if (service.inheritedTypes !== undefined && service.inheritedTypes.length > 0) {
+      lines.push(`    inheritedTypes: ${quoteList(service.inheritedTypes)},`)
+    }
     if (service.methods.length === 0) {
       lines.push('    methods: [],')
     } else {
@@ -859,7 +876,7 @@ function renderRuntimeApi(
   lines.push(
     ']',
     '',
-    '/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */',
+    '/** Shapes of every exported type the Service and Event signatures or inherited service shapes reference (transitively), sorted by name. */',
     'export const TYPE_API: readonly TypeApiEntry[] = [',
   )
   for (const type of types) {
@@ -931,7 +948,7 @@ function renderRuntimeApi(
     '      },',
     '      methods: service.methods,',
     '    },',
-    '    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),',
+    '    referencedTypes: referencedTypeClosure([...(service.inheritedTypes ?? []), ...service.methods.map(method => method.signature)]),',
     '  }',
     '}',
     '',

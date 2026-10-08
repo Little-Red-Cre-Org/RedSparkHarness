@@ -6,7 +6,7 @@ import { Context, Service, symbols } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import { apply as applyConnection, inject as connectionInject } from '@deepseek-ai/dsh-client-connection'
 import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection'
-import type { WebServer, WebRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpWebServer as WebServer, WebRoute } from '@deepseek-ai/dsh-http-routes-cordis'
 import {
   bindTypertRemote,
   Remote,
@@ -153,7 +153,7 @@ function fakeHttpServer(routes: WebRoute[]): Pick<WebServer, 'register' | 'tapIn
         throw new Error(`duplicate route ${route.path}`)
       }
       routes.push(route)
-      return () => { routes.splice(routes.indexOf(route), 1) }
+      return async () => { routes.splice(routes.indexOf(route), 1) }
     },
     tapIndex: () => () => {},
     port: 0,

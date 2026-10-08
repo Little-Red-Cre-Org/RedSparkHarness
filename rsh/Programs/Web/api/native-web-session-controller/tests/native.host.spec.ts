@@ -1,15 +1,29 @@
 /** Native browser Session lifecycle through the authenticated HTTP Connection carrier. */
+import { createHmac } from 'node:crypto'
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
 import { plugin as attachmentStorage } from '@deepseek-ai/dsh-attachment-local/native'
+import { plugin as githubWebhook } from '@deepseek-ai/dsh-webhook-github/src/native.ts'
+import { plugin as webhook } from '../../../../../Modules/Official/webhook/webhook/src/native.ts'
+import { WebhookRuleId } from '../../../../../Modules/Official/webhook/webhook/src/brand.ts'
+import type {} from '../../../../../Modules/Official/webhook/webhook/src/native-definition.ts'
+import { plugin as workspaceRegistry } from '@deepseek-ai/dsh-workspace/native'
+import { plugin as permissionPresets } from '../../../../../Modules/Official/interaction/permission-presets/src/native.ts'
+import { plugin as sandboxPolicy } from '../../../../../Modules/Official/sandbox/native-sandbox-policy/src/native.ts'
+import { plugin as storageHub } from '@deepseek-ai/dsh-storage/native'
+import { plugin as storageJson } from '@deepseek-ai/dsh-storage-json/native'
+import { plugin as storageDomain } from '@deepseek-ai/dsh-storage-domain/native'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
 import z from '@deepseek-ai/schemastery'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
+import { plugin as sandboxedFilesystem } from '../../../../../Modules/Official/fs/fs-sandbox/src/native.ts'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { NativeAgentId, type NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelection } from '@deepseek-ai/dsh-native-model-selection/native'
@@ -40,7 +54,11 @@ import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
   const cwd = join(directory, 'work')
+  const webhookCwd = join(cwd, 'webhook')
+  const outsideCwd = join(directory, 'outside')
   await mkdir(cwd)
+  await mkdir(webhookCwd)
+  await mkdir(outsideCwd)
   const scope = new NativeScope()
   let web: NativeHttpHost | undefined
   let foreign: NativeHeadlessApplication | undefined
@@ -69,15 +87,56 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let followFields: unknown
   let modelAborted!: () => void
   let releaseCleanup!: () => void
+  const webhookTurnStarted = Promise.withResolvers<undefined>()
+  const releaseWebhookTurn = Promise.withResolvers<undefined>()
+  const webhookShutdownStarted = Promise.withResolvers<undefined>()
+  const webhookShutdownAborted = Promise.withResolvers<undefined>()
+  const releaseWebhookShutdown = Promise.withResolvers<undefined>()
+  const webhookTurnFinished = Promise.withResolvers<undefined>()
+  const webhookOverlapFinished = Promise.withResolvers<undefined>()
+  const webhookReadonlyFinished = Promise.withResolvers<undefined>()
+  const webhookShutdownTurnFinished = Promise.withResolvers<undefined>()
+  let webhookMode: 'complete' | 'readonly' | 'shutdown' | undefined
+  let webhookCalls = 0
+  let firstWebhookSessionId: string | undefined
+  let webhookAgentId: NativeAgentId | undefined
+  let webhookApprovals = 0
+  let webhookSelectionApplied = false
+  let webhookPromptContainsDelivery = false
+  let activeSessionsService: NativeActiveSessionOperations | undefined
+  const webhookRootOwners: NativeActiveSessionOwner[] = []
+  let sandboxPolicyService: NativeSandboxPolicy | undefined
+  let workspaceRegistryService: import('../../../../../Modules/Official/workspace/workspace/src/native.ts').WorkspaceRegistryRuntime | undefined
+  let rootExecutionService: NativeRootExecutionOperations | undefined
+  let approvalService: NativeApprovalServiceDefinition | undefined
+  let hostStop: Promise<void> | undefined
   const aborted = new Promise<void>((resolve) => { modelAborted = resolve })
   const cleanup = new Promise<void>((resolve) => { releaseCleanup = resolve })
   const model: NativePlugin = {
-    apiVersion: 1, name: 'fixture-model', targets: ['host'], requires: ['agentPresets', 'activeSessions', 'agents', 'tools'], provides: ['model', 'modelDirectory'],
+    apiVersion: 1, name: 'fixture-model', targets: ['host'],
+    requires: ['agentPresets', 'activeSessions', 'agents', 'tools', 'fs', 'sandboxPolicy'], provides: ['model', 'modelDirectory'],
     resolve: () => (context) => {
       for (const id of ['standard', 'alternate']) context.own(context.require('agentPresets').register({ id, name: id, scope }))
       context.effect(context.require('tools').register({ schema: { name: 'guarded', description: 'Guarded fixture.',
         parameters: { type: 'object', properties: {}, additionalProperties: false } }, approval: { reason: 'Protect this action.' },
       execute: async () => { protectedRuns++; return { isError: false, content: [{ type: 'text', text: 'guarded allowed' }] } },
+      }, scope))
+      context.effect(context.require('tools').register({ schema: { name: 'write_file', description: 'Write a workspace file.',
+        parameters: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } },
+          required: ['path', 'content'], additionalProperties: false } }, approval: { reason: 'Writing a file changes the selected workspace.' },
+      execute: async (call) => {
+        const args = call.arguments as { readonly path?: unknown; readonly content?: unknown }
+        if (typeof args.path !== 'string' || typeof args.content !== 'string') throw new Error('write_file requires path and content')
+        const fs = context.require('fs')
+        const workspaceRoot = call.session.header.cwd
+        if (workspaceRoot === undefined) throw new Error('write_file requires a Session Workspace')
+        const root = await fs.resolve(workspaceRoot, { signal: call.signal })
+        const target = await fs.resolve(args.path, { cwd: workspaceRoot, signal: call.signal })
+        if (!fs.contains(root, target)) throw new Error('write_file path is outside the selected workspace')
+        const result = await fs.writeText(target, args.content, undefined, call.signal,
+          context.require('sandboxPolicy').resolve({ session: call.session }))
+        return { isError: false, content: [{ type: 'text', text: `${result.operation}: ${args.path}` }] }
+      },
       }, scope))
       const reasoning = { efforts: [{ id: ReasoningEffortId('high'), name: 'High' }] }
       context.provide('modelDirectory', { providers: () => [{ id: 'fixture', name: 'Fixture' }],
@@ -104,6 +163,50 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('model', {
         async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
           requests.push(request)
+          if (webhookMode === 'complete') {
+            const owner = context.require('activeSessions').owners().find(candidate => candidate.session.id === request.sessionId)
+            if (owner !== undefined && webhookAgentId === undefined) webhookAgentId = owner.agent.id
+            webhookPromptContainsDelivery = request.messages.some(message => message.content.some(block => block.type === 'text'
+              && block.text.includes('native-durable-admission')))
+            webhookSelectionApplied = request.model === 'chosen' && request.maxTokens === 1234
+            if (webhookCalls++ === 0) {
+              firstWebhookSessionId = request.sessionId
+              webhookTurnStarted.resolve(undefined)
+              await releaseWebhookTurn.promise
+              yield* toolCallResponse('webhook-guard', 'guarded', {})
+            } else {
+              yield* textResponse('webhook processed')
+              if (request.sessionId === firstWebhookSessionId) webhookTurnFinished.resolve(undefined)
+              else webhookOverlapFinished.resolve(undefined)
+            }
+            return
+          }
+          if (webhookMode === 'readonly') {
+            const owner = context.require('activeSessions').owners().find(candidate => candidate.session.id === request.sessionId)
+            if (owner !== undefined) webhookAgentId = owner.agent.id
+            if (requests.filter(item => item.sessionId === request.sessionId).length === 1) {
+              yield* toolCallResponse('webhook-readonly-write', 'write_file', {
+                path: join(webhookCwd, 'denied.txt'), content: 'must remain absent',
+              })
+            } else {
+              yield* textResponse('read-only policy enforced')
+              webhookReadonlyFinished.resolve(undefined)
+            }
+            return
+          }
+          if (webhookMode === 'shutdown') {
+            webhookShutdownStarted.resolve(undefined)
+            const signal = request.signal
+            if (signal === undefined) throw new Error('missing webhook cancellation')
+            await new Promise<void>((resolve) => {
+              if (signal.aborted) resolve()
+              else signal.addEventListener('abort', () => { resolve() }, { once: true })
+            })
+            webhookShutdownAborted.resolve(undefined)
+            await releaseWebhookShutdown.promise
+            webhookShutdownTurnFinished.resolve(undefined)
+            throw signal.reason
+          }
           if (request.model === 'foreign') {
             if (foreignStep++ === 0) {
               foreignModelReady.resolve(undefined)
@@ -133,8 +236,40 @@ it('creates, resumes and cancels one durable Session through the real browser RP
         },
       }) },
   }
+  const nativePolicyProbe: NativePlugin = {
+    apiVersion: 1, name: 'native-policy-probe', targets: ['host'],
+    requires: ['activeSessions', 'sandboxPolicy', 'workspaceRegistry', 'rootExecution', 'approval'], provides: [],
+    resolve: () => (context) => {
+      activeSessionsService = context.require('activeSessions')
+      context.own(activeSessionsService.onAttached(async (owner) => {
+        if (owner.session.header.cwd === webhookCwd) webhookRootOwners.push(owner)
+      }))
+      sandboxPolicyService = context.require('sandboxPolicy')
+      workspaceRegistryService = context.require('workspaceRegistry')
+      rootExecutionService = context.require('rootExecution')
+      approvalService = context.require('approval')
+    },
+  }
+  const webhookRuleRegistration: NativePlugin = {
+    apiVersion: 1, name: 'native-webhook-test-rule', targets: ['host'], requires: ['webhookRules'], provides: [],
+    resolve: () => (context) => {
+      context.own(context.require('webhookRules').register({
+        id: WebhookRuleId('native-test-rule'), kind: 'github',
+        run: (delivery) => {
+          const action = (delivery.event as unknown as { readonly payload?: { readonly action?: unknown } }).payload?.action
+          if (action === 'ignored') return null
+          if (action === 'failed') throw new Error('trusted rule fixture failure')
+          return { workspacePath: action === 'outside' ? outsideCwd : webhookCwd,
+            title: action === 'readonly' ? 'Native read-only webhook' : 'Native durable webhook',
+            prompt: 'Process GitHub delivery ' + delivery.deliveryId,
+            agentPreset: 'alternate', permissionPreset: action === 'readonly' ? 'read-only' : 'workspace-write',
+            model: { provider: 'fixture', model: 'chosen', maxTokens: 1234 } }
+        },
+      }))
+    },
+  }
   const carrier: NativePlugin = {
-    apiVersion: 1, name: 'fixture-carrier', targets: ['host'], requires: [], provides: ['hostConnection'],
+    apiVersion: 1, name: 'fixture-carrier', targets: ['host'], requires: [], provides: ['hostConnection', 'httpRoutes'],
     resolve: () => async (context) => {
       let value: CredentialRecord | undefined
       const registry = await createNativeHostConnectionRegistry({}, { async modifyRecord(_key, mutate) {
@@ -144,6 +279,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       web = await listenNativeHttpHost(registry, { requestBodyMode: () => 'buffered', fetch: () => Promise.resolve(new Response('native')) }, bridge, { port: 0 })
       context.own(() => web!.close())
       context.provide('hostConnection', web.connection)
+      context.provide('httpRoutes', web.httpRoutes)
     },
   }
   const foreignProgram: NativePlugin = {
@@ -191,7 +327,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.own(() => { scope.dispose() })
     },
   }
-  const credentials = new Map<string, string>()
+  const githubSecret = 'fixture github webhook secret'
+  const credentials = new Map<string, string>([['NATIVE_GITHUB_SECRET', githubSecret]])
   const credentialProvider: NativePlugin = {
     apiVersion: 1, name: 'native-credentials-test-provider', targets: ['host'], requires: [], provides: ['credentials'],
     resolve: () => (context) => {
@@ -215,13 +352,26 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
-      maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 } },
+      maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1,
+      workspaceRoutes: { maxRoutes: 1, allowedRoots: [directory] } } },
+    { plugin: githubWebhook, scope, config: { source: 'native-test', path: '/github', secretEnv: 'NATIVE_GITHUB_SECRET',
+      maxBodyBytes: 4096, rootRoute: 'root' } },
     ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
-      model, carrier, foreignProgram, settingsProvider, settingsRegistrant, credentialProvider].map(plugin =>
+      model, carrier, foreignProgram, settingsProvider, settingsRegistrant, credentialProvider, webhook,
+      workspaceRegistry, storageHub,
+      webhookRuleRegistration, nativePolicyProbe].map(plugin =>
       ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
-    { plugin: localFilesystemPlugin, scope, config: { cwd } },
+    { plugin: permissionPresets, scope, config: { presets: {
+      'workspace-write': { sandbox: 'workspace-write', approval: 'ask' },
+      'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
+      'read-only': { sandbox: 'read-only', approval: 'ask' },
+    } } },
+    { plugin: sandboxPolicy, scope, config: { mode: 'workspace-write', workspaceRoot: cwd } },
+    { plugin: sandboxedFilesystem, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
+    { plugin: storageJson, scope, config: { root: join(directory, 'domains') } },
+    { plugin: storageDomain, scope, config: { backend: 'json' } },
     { plugin: attachmentStorage, scope, config: { dshHome: directory } },
   ], 'host'))
   try {
@@ -458,6 +608,182 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     } finally { releaseWebRead.resolve(undefined); readSpy.mockRestore(); foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
     await conversation.close()
     await client.close()
+
+    const unauthenticatedApi = await fetch(new URL('/api/native-session/follow', url), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    })
+    expect(unauthenticatedApi.status).toBe(401)
+
+    const payload = '{ "action" : "opened", "issue": {"title":"durable native webhook"} }\n'
+    const signedRequest = (body: string, delivery = 'native-durable-admission', signature = createHmac('sha256', githubSecret).update(body).digest('hex')) => fetch(
+      new URL('/github', url), {
+        method: 'POST', headers: {
+          'content-type': 'application/json', 'x-github-delivery': delivery,
+          'x-github-event': 'issues', 'x-hub-signature-256': `sha256=${signature}`,
+        }, body,
+      })
+    const requestCount = requests.length
+    const sessionIdsBeforeInvalid = (await persistence.list()).map(row => row.header.id).sort()
+    const createdSessions = persistence.create.bind(persistence)
+    let failNextCreate = false
+    const webhookSessions: SessionId[] = []
+    if (approvalService === undefined) throw new Error('missing Native approval authority')
+    const releaseWebhookApprover = approvalService.registerAnswerer((request) => {
+      if (webhookAgentId === undefined || request.agent.id !== webhookAgentId) return undefined
+      webhookApprovals++
+      return 'allowed-once'
+    })
+    const createSpy = vi.spyOn(persistence, 'create').mockImplementation(async (header, options) => {
+      if (failNextCreate) {
+        failNextCreate = false
+        throw new Error('fixture root admission failure')
+      }
+      const writer = await createdSessions(header, options)
+      webhookSessions.push(header.id)
+      return writer
+    })
+    try {
+      const nullAction = await signedRequest(JSON.stringify({ action: 'ignored' }), 'native-null-rule')
+      expect(nullAction.status).toBe(202)
+      expect(requests).toHaveLength(requestCount)
+      expect(createSpy).not.toHaveBeenCalled()
+      expect((await persistence.list()).map(row => row.header.id).sort()).toEqual(sessionIdsBeforeInvalid)
+
+      const invalid = await signedRequest(payload, 'native-invalid-signature', '0'.repeat(64))
+      expect(invalid.status).toBe(401)
+      expect(requests).toHaveLength(requestCount)
+      expect(createSpy).not.toHaveBeenCalled()
+      expect((await persistence.list()).map(row => row.header.id).sort()).toEqual(sessionIdsBeforeInvalid)
+
+      const ruleFailure = await signedRequest(JSON.stringify({ action: 'failed' }), 'native-rule-failure')
+      expect(ruleFailure.status).toBe(503)
+      expect(requests).toHaveLength(requestCount)
+      expect(createSpy).not.toHaveBeenCalled()
+      expect(workspaceRegistryService?.list()).toEqual([])
+      expect(rootExecutionService?.workspaceRoutes()).toEqual([])
+
+      const outsidePolicy = await signedRequest(JSON.stringify({ action: 'outside' }), 'native-outside-policy')
+      expect(outsidePolicy.status).toBe(503)
+      expect(requests).toHaveLength(requestCount)
+      expect(createSpy).not.toHaveBeenCalled()
+      expect(workspaceRegistryService?.list()).toEqual([])
+      expect(rootExecutionService?.workspaceRoutes()).toEqual([])
+
+      failNextCreate = true
+      const beforeFailedAdmission = requests.length
+      expect((await signedRequest(payload, 'native-failed-admission')).status).toBe(503)
+      expect(requests).toHaveLength(beforeFailedAdmission)
+      expect((await persistence.list()).map(row => row.header.id).sort()).toEqual(sessionIdsBeforeInvalid)
+      expect(workspaceRegistryService?.list().map(workspace => ({ path: workspace.path, sessionIds: workspace.sessionIds })))
+        .toEqual([{ path: webhookCwd, sessionIds: [] }])
+      expect(rootExecutionService?.workspaceRoutes()).toEqual([])
+
+      webhookMode = 'complete'
+      const accepted = await signedRequest(payload)
+      expect(accepted.status).toBe(202)
+      await webhookTurnStarted.promise
+      expect(webhookPromptContainsDelivery).toBe(true)
+      const admittedId = webhookSessions[0]
+      if (admittedId === undefined) throw new Error('webhook created no Session writer')
+      const duringTurn = await persistence.open(SessionId(admittedId), 'read')
+      const acceptedPrefix = (await duringTurn.read()).events
+      await duringTurn.close()
+      const inbox = acceptedPrefix.find(event => event.type === 'agent/inbox/spliced'
+        && event.data.inserted.some(message => message.content.some(block => block.type === 'text'
+          && block.text.includes('native-durable-admission'))))
+      expect(inbox?.type).toBe('agent/inbox/spliced')
+      expect(acceptedPrefix.some(event => event.type === 'turn/end')).toBe(false)
+      expect(acceptedPrefix.some(event => event.type === 'session/title' && event.data.title === 'Native durable webhook')).toBe(true)
+      expect(acceptedPrefix.some(event => event.type === 'permission/preset' && event.data.preset === 'workspace-write')).toBe(true)
+      const overlappingAccepted = await signedRequest(payload, 'native-durable-admission-overlap')
+      expect(overlappingAccepted.status).toBe(202)
+      await webhookOverlapFinished.promise
+      expect(webhookSessions).toHaveLength(2)
+      expect(rootExecutionService?.workspaceRoutes()).toHaveLength(1)
+      expect(duringTurn.header.agentPreset).toBe('alternate')
+      expect(webhookSelectionApplied).toBe(true)
+      const owner = activeSessionsService?.owners().find(candidate => candidate.session.id === admittedId)
+      if (owner === undefined || sandboxPolicyService === undefined) throw new Error('missing live webhook owner or sandbox policy')
+      expect(sandboxPolicyService.resolve({ session: owner.session }).mode).toBe('workspace-write')
+      const root = rootExecutionService
+      if (root === undefined) throw new Error('missing Native root execution service')
+      const activeRoute = root.capture(owner)
+      await expect(root.releaseIdle({ route: activeRoute.id, id: admittedId, expectedOwner: owner },
+        new AbortController().signal)).rejects.toThrow(/settled Session/)
+      expect(duringTurn.header.cwd).toBe(webhookCwd)
+      const overlappingId = webhookSessions[1]
+      if (overlappingId === undefined) throw new Error('overlapping Webhook created no Session writer')
+      expect(workspaceRegistryService?.list().map(workspace => ({ path: workspace.path, sessionIds: [...workspace.sessionIds].sort() })))
+        .toEqual([{ path: webhookCwd, sessionIds: [admittedId, overlappingId].sort() }])
+      expect(rootExecutionService?.workspaceRoutes()).toHaveLength(1)
+      const protectedBeforeWebhook = protectedRuns
+      releaseWebhookTurn.resolve(undefined)
+      await webhookTurnFinished.promise
+      expect(webhookApprovals).toBe(1)
+      expect(protectedRuns).toBe(protectedBeforeWebhook + 1)
+      await vi.waitFor(() => {
+        expect(rootExecutionService?.workspaceRoutes()).toEqual([])
+        expect(activeSessionsService?.owners().some(candidate => candidate.session.id === admittedId)).toBe(false)
+      })
+      const preservedReader = await persistence.open(admittedId, 'read')
+      const preservedEvents = (await preservedReader.read()).events
+      await preservedReader.close()
+      expect(preservedEvents.some(event => event.type === 'session/title' && event.data.title === 'Native durable webhook')).toBe(true)
+      expect(preservedEvents.some(event => event.type === 'turn/end')).toBe(true)
+      const maintenanceOwner = webhookRootOwners[0]
+      if (maintenanceOwner === undefined) throw new Error('missing captured Webhook maintenance owner')
+      await root.releaseIdle({ route: activeRoute.id, id: admittedId, expectedOwner: maintenanceOwner }, new AbortController().signal)
+      await expect(root.releaseIdle({ route: 'wrong-route' as typeof activeRoute.id, id: admittedId, expectedOwner: maintenanceOwner },
+        new AbortController().signal)).rejects.toThrow(/route does not match/)
+
+      webhookMode = 'readonly'
+      const readonlyResponse = await signedRequest(JSON.stringify({ action: 'readonly' }), 'native-readonly-enforcement')
+      expect(readonlyResponse.status).toBe(202)
+      await webhookReadonlyFinished.promise
+      const readonlyId = webhookSessions[2]
+      if (readonlyId === undefined) throw new Error('read-only webhook created no Session writer')
+      const readonlyReader = await persistence.open(readonlyId, 'read')
+      const readonlyEvents = (await readonlyReader.read()).events
+      await readonlyReader.close()
+      expect(readonlyEvents.find(event => event.type === 'session/title')).toMatchObject({ data: { title: 'Native read-only webhook' } })
+      expect(readonlyEvents.find(event => event.type === 'sandbox/mode')).toMatchObject({ data: { mode: 'read-only' } })
+      expect(readonlyEvents.find(event => event.type === 'approval/policy')).toMatchObject({ data: { policy: 'ask' } })
+      expect(readonlyEvents.find(event => event.type === 'native-approval/decided')).toMatchObject({ data: { outcome: 'allowed-once' } })
+      expect(readonlyEvents.find(event => event.type === 'tool/result')).toMatchObject({ data: { error: { code: 'FS_SANDBOX_DENIED' } } })
+      await expect(readFile(join(webhookCwd, 'denied.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
+      expect(webhookApprovals).toBe(2)
+      await vi.waitFor(() => {
+        expect(rootExecutionService?.workspaceRoutes()).toEqual([])
+        expect(activeSessionsService?.owners().some(candidate => candidate.session.id === readonlyId)).toBe(false)
+      })
+
+      webhookMode = 'shutdown'
+      const drainingResponse = await signedRequest(payload, 'native-shutdown-admission')
+      expect(drainingResponse.status).toBe(202)
+      await webhookShutdownStarted.promise
+      const beforeWithdrawal = requests.length
+      const sessionIdsBeforeWithdrawal = (await persistence.list()).map(row => row.header.id).sort()
+      hostStop = host.stop()
+      await webhookShutdownAborted.promise
+      await vi.waitFor(async () => {
+        const afterWithdrawal = await signedRequest(payload, 'native-after-withdrawal')
+        expect(afterWithdrawal.status).toBe(503)
+      })
+      let stopped = false
+      void hostStop.then(() => { stopped = true })
+      expect(stopped).toBe(false)
+      expect(requests).toHaveLength(beforeWithdrawal)
+      expect((await persistence.list()).map(row => row.header.id).sort()).toEqual(sessionIdsBeforeWithdrawal)
+      releaseWebhookShutdown.resolve(undefined)
+      await webhookShutdownTurnFinished.promise
+      await hostStop
+    } finally {
+      releaseWebhookApprover()
+      createSpy.mockRestore()
+      releaseWebhookTurn.resolve(undefined)
+      releaseWebhookShutdown.resolve(undefined)
+      await (hostStop ?? host.stop())
+    }
   } finally {
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
@@ -467,7 +793,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseRetainedRoot?.()
     firstContinue.resolve(undefined)
     releaseCleanup()
-    await host.stop()
+    await (hostStop ?? host.stop())
     await rm(directory, { recursive: true, force: true })
   }
 })

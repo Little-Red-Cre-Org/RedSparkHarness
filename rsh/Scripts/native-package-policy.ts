@@ -15,6 +15,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/crypto',
   'rsh/Core/util/errors',
   'rsh/Core/util/home-paths',
+  'rsh/Core/util/http-routes',
   'rsh/Core/util/json-rpc-line',
   'rsh/Core/util/native-command',
   'rsh/Core/util/output-retention',
@@ -73,6 +74,7 @@ export const nativeProfileClientDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Core/util/http-routes', ['host', 'client']],
   ['rsh/Programs/Web/client/ui-primitives', ['client']],
   ['rsh/Programs/TUI/native-tui', ['host']],
   ['rsh/Programs/TUI/terminal-ui', ['host']],
@@ -104,6 +106,9 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
 export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map([
+  ['rsh/Modules/Official/webhook/webhook-github', 'Cordis and Native GitHub ingress share raw-body HMAC verification while selected listeners and root execution remain sole authorities'],
+  ['rsh/Modules/Official/webhook/webhook', 'Cordis and Native trusted-rule registration share neutral request and delivery Definitions'],
+  ['rsh/Modules/Official/interaction/permission-presets', 'Cordis and Native permission selection share preset facts while Native applies through the selected root Session owner'],
   ['rsh/Modules/Official/automation/task-scheduler', 'Native and Cordis schedulers share SQLite plan facts while selected Programs own Agent execution and Session writers'],
   ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/subagent/tool-subagent', 'Native and Cordis Consumers delegate through their selected Subagent Provider'],
@@ -159,6 +164,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/spill/spill', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
+  ['rsh/Programs/Web/client/ui-slots', ['client']],
   ['rsh/Modules/Official/shell/shell', ['host']],
   ['rsh/Modules/Official/attachment/attachment', ['host']],
   ['rsh/Core/subprocess/subprocess', ['host']],
@@ -175,6 +181,14 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/webhook/webhook-github', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-http-routes-cordis']],
+  ['rsh/Modules/Official/webhook/webhook', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-default-model', '@deepseek-ai/dsh-agent-presets', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-permission-presets', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-title', '@deepseek-ai/dsh-workspace']],
+  ['rsh/Modules/Official/interaction/permission-presets', [
+    '@deepseek-ai/cordis', '@deepseek-ai/dsh-compat-settings-definition', '@deepseek-ai/dsh-shell',
+    '@deepseek-ai/dsh-commands', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-sandbox',
+    '@deepseek-ai/dsh-sandbox-policy', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-projection',
+    '@deepseek-ai/dsh-user-approval', '@deepseek-ai/dsh-settings',
+  ]],
   ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
@@ -214,6 +228,10 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
+  ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
+  ['rsh/Engine/session/session-projection', ['./types']],
+  ['rsh/Engine/session/session-title', ['./normalize', './types']],
   ['rsh/Engine/goal/goal', ['./types']],
   ['rsh/Modules/Official/interaction/commands', ['./facts']],
   ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy']],
@@ -259,7 +277,11 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
+  ['rsh/Engine/session/session-title/normalize', ['host']],
   ['rsh/Core/subprocess/subprocess-local/child-connection', ['host']],
+  ['rsh/Modules/Official/webhook/webhook/definition', ['host']],
+  ['rsh/Modules/Official/webhook/webhook/types', ['host']],
   ['rsh/Programs/Web/client/ui-conversation/tool-records', ['client']],
   ['rsh/Programs/Web/client/ui-conversation/conversation-copy', ['client']],
   ['rsh/Programs/Web/client/ui-tool/tool-renderer', ['client']],

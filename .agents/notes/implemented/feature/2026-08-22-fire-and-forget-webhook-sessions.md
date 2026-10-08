@@ -18,9 +18,9 @@ The runtime stores no provider delivery or execution record. It does not retry, 
 
 ## Provider adapters
 
-Authentication belongs to provider adapters. `@deepseek-ai/dsh-webhook-github` registers one exact route on an injected WebServer, bounds the untouched UTF-8 body, resolves its secret reference per request, verifies `X-Hub-Signature-256` before parsing, and passes a signed lossless-JSON object to the runtime. `202` means only verified in-memory dispatch; it precedes rule matching, external calls, and Session creation.
+Authentication belongs to provider adapters. The Cordis `@deepseek-ai/dsh-webhook-github` entry registers one exact route on injected `ctx.webServer`, bounds the untouched UTF-8 body, resolves its secret reference per request, verifies `X-Hub-Signature-256` before parsing, and passes a signed lossless-JSON object to the runtime. Its `202` means verified in-memory dispatch and precedes rule matching, external calls, and Session creation. The package also has an explicit Native entry that shares the raw-body verifier, but uses the selected `rootExecution` owner and confirms the exact message's durable inbox admission before `202`; the [HTTP routes and Native GitHub ingress note](../architecture/2026-10-07-http-route-definitions-and-native-github-ingress.md) records that transport contract.
 
-The normal Web composition keeps its UI/API WebServer separate. The GitHub example mounts another WebServer and its adapter in a group that isolates only `webServer`, so a reverse proxy can expose the webhook port without exposing `/api`, WebSockets, or frontend files.
+The Cordis Web composition keeps its UI/API WebServer separate. The GitHub example mounts another WebServer and its Cordis adapter in a group that isolates only `webServer`, so a reverse proxy can expose the webhook port without exposing `/api`, WebSockets, or frontend files. The explicit Native entry reuses the Native Web listener and keeps its `/api` token gate ahead of generic route dispatch.
 
 Patch loading anchors relative plugin names in inserted rows to the patch file. The same `./github-ready-review-rule.mjs` entry therefore works from a development `--patch` overlay and from a permanent profile patch without changing the rule into a package.
 
@@ -54,5 +54,5 @@ Source audits keep execution records, retry timers, dedupe maps, completion even
 
 - Provider adapters stay small and provider-specific while Session creation has one owner.
 - Users receive ordinary titled Sessions under Web Workspaces rather than a second automation UI.
-- HTTP success intentionally says nothing about downstream matching or Agent success.
+- Cordis HTTP success intentionally says nothing about downstream matching or Agent success; Native HTTP success confirms durable admission of the correlated root message but still says nothing about Agent completion.
 - Crashes and repeated deliveries retain simple at-most-process-lifetime semantics; deployments needing durable automation must add a separately designed subsystem rather than reinterpret this runtime.

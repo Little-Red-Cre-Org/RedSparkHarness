@@ -1,5 +1,6 @@
 /** Cordis-free process-sandbox policy types shared by native providers. */
 import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import type {} from '@deepseek-ai/dsh-session/types'
 
 /**
  * File-effect policy for confined processes. `read-only` permits only required
@@ -8,6 +9,17 @@ import type { SessionId } from '@deepseek-ai/dsh-session/native'
  * and process visibility are outside this vocabulary.
  */
 export type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
+
+declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /** Durable, log-only mode override folded by every native and compatibility policy consumer. */
+    'sandbox/mode': {
+      mode: SandboxMode
+      /** Marks an override seeded into a child at delegation. */
+      source?: 'delegation'
+    }
+  }
+}
 
 /** A confining (non-`danger-full-access`) mode — the modes a {@link SandboxPolicy} can carry. */
 export type ConfinedSandboxMode = Exclude<SandboxMode, 'danger-full-access'>

@@ -1,0 +1,1 @@
+Record authenticated webhook inputs.

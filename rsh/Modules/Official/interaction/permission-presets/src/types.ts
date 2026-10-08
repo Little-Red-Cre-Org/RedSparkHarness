@@ -9,6 +9,9 @@
  * @module @deepseek-ai/dsh-permission-presets/types
  */
 
+import type {} from '@deepseek-ai/dsh-session-projection/types'
+import type {} from '@deepseek-ai/dsh-session/types'
+
 /** The select-option shape a presentation layer advertises for one preset (or for the derived `custom` state). */
 export interface PresetOption {
   /** Stable option value: the table key, or `custom`. */
@@ -40,5 +43,17 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
      * is composed — clients hide the control.
      */
     permissions: PermissionSelect
+  }
+}
+
+declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /**
+     * Records the selected preset as durable, log-only user intent. The knob
+     * events follow in the same turn and control execution; this event stays
+     * out of the model transcript and lets the permission projection unit
+     * preserve a selection when bundles match.
+     */
+    'permission/preset': { preset: string }
   }
 }

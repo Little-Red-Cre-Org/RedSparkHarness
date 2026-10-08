@@ -8,6 +8,7 @@ import {
   type NativeHttpHost,
 } from '@deepseek-ai/dsh-native-web-assets'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@deepseek-ai/dsh-http-routes/native'
 import { NativeClientReloader } from './client-reload.ts'
 import { createHash } from 'node:crypto'
 import type { NativeWebHostService } from './index.ts'
@@ -120,7 +121,7 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-native-web-host',
   targets: ['host'],
   requires: ['credentials'],
-  provides: ['nativeWebHost', 'hostConnection', 'application'],
+  provides: ['nativeWebHost', 'hostConnection', 'httpRoutes', 'application'],
   resolve(input) {
     const config = resolveNativeWebHostConfig(input)
     return async (context: NativeContext) => {
@@ -174,6 +175,7 @@ export const plugin: NativePlugin = {
       }
       context.provide('hostConnection', host.connection)
       context.provide('nativeWebHost', host)
+      context.provide('httpRoutes', host.httpRoutes)
       context.provide('application', new NativeWebApplication(host))
     }
   },

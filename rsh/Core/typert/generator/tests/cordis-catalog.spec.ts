@@ -113,5 +113,12 @@ describe('Typert-backed Cordis catalog', () => {
       expect.stringContaining('mutate'),
     ]))
     expect(projection().projector.renderRuntimeApi(projection().model)).toContain('SettingsDescriptor')
+    const webServer = byKey.get('webServer')
+    expect(webServer?.methods.map(method => method.signature)).toContain('register(route: HttpRoute): () => Promise<void>')
+    expect(webServer?.inheritedTypes).toContain('HttpRouteListener')
+    const runtimeApi = projection().projector.renderRuntimeApi(projection().model)
+    for (const type of ['HttpRouteListener', 'HttpRoute', 'HttpUpgradeRoute', 'IndexInjection', 'IndexInjectionPlacement']) {
+      expect(runtimeApi).toContain("name: '" + type + "'")
+    }
   })
 })

@@ -24,7 +24,10 @@
       "path": "../modules"
     },
     {
-      "path": "../../host/webserver"
+      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
     },
     {
       "path": "../../../../Core/vendor/schemastery"

@@ -3,6 +3,8 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { NativeClientBundle } from './index.ts'
+import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes/native'
+import type { HttpRoute, HttpRouteListener } from '@deepseek-ai/dsh-http-routes/native'
 
 /** Native HTTP listener configuration. */
 export interface NativeHttpHostConfig {
@@ -76,6 +78,8 @@ export interface NativeHttpHost {
   readonly host: '127.0.0.1' | '0.0.0.0'
   readonly port: number
   readonly connection: NativeConnectionHandle
+  /** Native HMAC and other non-Connection routes on this same listener. */
+  readonly httpRoutes: HttpRouteListener
   /** Canonical loopback URL for this listener. */
   readonly url: string
   /** Stop accepting requests, dispose route contributions, and close the socket. */
@@ -95,6 +99,16 @@ interface NativeOwnerState {
 
 const DEFAULT_MAX_REQUEST_BODY_BYTES = 300 * 1024 * 1024
 
+function matchPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
+}
+
+function overlapsPrefix(route: HttpRoute, prefix: string): boolean {
+  return route.kind === 'exact'
+    ? matchPrefix(route.path, prefix)
+    : matchPrefix(route.path, prefix) || matchPrefix(prefix, route.path)
+}
+
 function resolveConfig(input: NativeHttpHostConfig): Required<NativeHttpHostConfig> {
   const host = input.host ?? '127.0.0.1'
   const port = input.port ?? 0
@@ -106,7 +120,7 @@ function resolveConfig(input: NativeHttpHostConfig): Required<NativeHttpHostConf
   return { host, port, maxRequestBodyBytes }
 }
 
-function ownerState(): { owner: NativeConnectionOwner; state: NativeOwnerState } {
+function ownerState(routes: HttpRouteTable): { owner: NativeConnectionOwner; state: NativeOwnerState } {
   const state: NativeOwnerState = { channels: new Map(), disposers: new Set() }
   const owner: NativeConnectionOwner = {
     effect(setup) {
@@ -122,6 +136,7 @@ function ownerState(): { owner: NativeConnectionOwner; state: NativeOwnerState }
     },
     mount(channel, handler) {
       if (state.channels.has(channel)) throw new Error(`native web: RPC channel ${JSON.stringify(channel)} is already mounted`)
+      if (routes.conflictsPrefix(channel)) throw new Error(`native web: HTTP route overlaps RPC channel ${JSON.stringify(channel)}`)
       state.channels.set(channel, handler)
       return () => { state.channels.delete(channel) }
     },
@@ -175,7 +190,8 @@ export async function listenNativeHttpHost(
   config: NativeHttpHostConfig = {},
 ): Promise<NativeHttpHost> {
   const resolved = resolveConfig(config)
-  const { owner, state } = ownerState()
+  const routes = new HttpRouteTable()
+  const { owner, state } = ownerState(routes)
   const connection = registry.forOwner(owner)
   const shared = connection.createSharedFetchHandler('/api')
   const server: Server = createServer((req, res) => {
@@ -206,6 +222,7 @@ export async function listenNativeHttpHost(
       await bridge(req, res, handler, resolved.maxRequestBodyBytes)
       return
     }
+    if (await routes.dispatch(url.pathname, req, res)) return
     if (url.pathname === '/' || url.pathname === '/index.html') {
       if (!connection.authorizeIndex({ headers: requestHeaders(req), method: req.method, url: req.url }, indexResponse(res))) return
     }
@@ -226,11 +243,25 @@ export async function listenNativeHttpHost(
     host: resolved.host,
     port,
     connection,
+    httpRoutes: {
+      register(route: HttpRoute) {
+        if (['/api', ...state.channels.keys()].some(prefix => overlapsPrefix(route, prefix))) {
+          throw new Error(`native web: HTTP route ${JSON.stringify(route.path)} overlaps a reserved route`)
+        }
+        if (route.kind === 'exact' ? route.path === '/' || route.path === '/index.html'
+          : matchPrefix('/', route.path) || matchPrefix('/index.html', route.path)) {
+          throw new Error('native web: HTTP route cannot shadow the native Client page')
+        }
+        return routes.register(route)
+      },
+    },
     url: `http://${resolved.host === '0.0.0.0' ? '127.0.0.1' : resolved.host}:${String(port)}/`,
     async close() {
       closed ??= (async () => {
+        const serverClosed = new Promise<void>((resolve) => { server.close(() => { resolve() }) })
+        await routes.close()
         for (const disposer of [...state.disposers].reverse()) await disposer()
-        await new Promise<void>((resolve) => { server.close(() => { resolve() }) })
+        await serverClosed
       })()
       await closed
     },

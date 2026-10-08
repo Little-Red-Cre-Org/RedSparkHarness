@@ -10,6 +10,9 @@
   "references": [
     {
       "path": "../store"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

@@ -146,7 +146,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[ToolCallId](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/approval-definition/src/legacy.ts:97`](../Engine/core/approval-definition/src/legacy.ts)
+来源：[`rsh/Engine/core/approval-definition/src/legacy.ts:92`](../Engine/core/approval-definition/src/legacy.ts)
 
 <a id="approvaldecided--log-only"></a>
 
@@ -157,22 +157,18 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'approval/decided': { id: ApprovalRequestId; outcome: ApprovalOutcome }
 ```
 
-来源：[`rsh/Engine/core/approval-definition/src/legacy.ts:104`](../Engine/core/approval-definition/src/legacy.ts)
+来源：[`rsh/Engine/core/approval-definition/src/legacy.ts:99`](../Engine/core/approval-definition/src/legacy.ts)
 
 <a id="approvalpolicy--log-only"></a>
 
 #### `approval/policy` — log-only
 
 ```ts persistence-catalog
-/** Durable per-Session policy override, never included in the model transcript. */
-'approval/policy': {
-  policy: ApprovalPolicy
-  /** Marks an override seeded into a child during delegation. */
-  source?: 'delegation'
-}
+/** Durable per-Session approval override shared by Native and compatibility consumers. */
+'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }
 ```
 
-来源：[`rsh/Engine/core/approval-definition/src/legacy.ts:106`](../Engine/core/approval-definition/src/legacy.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:99`](../Engine/core/approval-definition/src/index.ts)
 
 ### `assistant/*`
 
@@ -548,7 +544,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[ToolCallId](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/approval-definition/src/index.ts:82`](../Engine/core/approval-definition/src/index.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:103`](../Engine/core/approval-definition/src/index.ts)
 
 <a id="native-approvaldecided--log-only"></a>
 
@@ -563,7 +559,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/core/approval-definition/src/index.ts:89`](../Engine/core/approval-definition/src/index.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:110`](../Engine/core/approval-definition/src/index.ts)
 
 ### `permission/*`
 
@@ -581,7 +577,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'permission/preset': { preset: string }
 ```
 
-来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:56`](../Modules/Official/interaction/permission-presets/src/index.ts)
+来源：[`rsh/Modules/Official/interaction/permission-presets/src/types.ts:57`](../Modules/Official/interaction/permission-presets/src/types.ts)
 
 ### `plan/*`
 
@@ -644,13 +640,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 #### `sandbox/mode` — log-only
 
 ```ts persistence-catalog
-/**
- * The session's sandbox mode was switched — log-only (like `approval/*`;
- * NOT a surface event, carries no `surfaceOp`): durable and replayable,
- * never in the model transcript. The LAST such event is the session's
- * override (folded by the sandboxMode projection unit). `source: 'delegation'` marks
- * an override seeded into a child; an absent source is a runtime switch.
- */
+/** Durable, log-only mode override folded by every native and compatibility policy consumer. */
 'sandbox/mode': {
   mode: SandboxMode
   /** Marks an override seeded into a child at delegation. */
@@ -658,7 +648,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Modules/Official/sandbox/sandbox-policy/src/session-mode.ts:33`](../Modules/Official/sandbox/sandbox-policy/src/session-mode.ts)
+来源：[`rsh/Modules/Official/sandbox/sandbox/src/native-types.ts:16`](../Modules/Official/sandbox/sandbox/src/native-types.ts)
 
 ### `schedule/*`
 

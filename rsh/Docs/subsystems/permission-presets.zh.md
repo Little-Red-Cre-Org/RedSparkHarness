@@ -11,16 +11,16 @@
 预设是一个表键，映射到一个沙箱／审批组合，外加可选的客户端展示信息；默认预设表自带 `workspace-write`（`workspace-write` + `ask`）和 `danger-full-access`（`danger-full-access` + `never`）。
 
 ```ts type-equiv
-/** One preset's sandbox/approval bundle and optional client presentation. */
+/** One sandbox/approval bundle and optional client presentation. */
 interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
   sandbox: SandboxMode
   /** The `approval/policy` value the preset writes through. */
-  approval: ApprovalPolicy
+  approval: NativeApprovalPolicy
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string
-  /** One user-facing sentence on what the preset means; omitted when not configured. */
-  description?: string
+  name?: string | null
+  /** One user-facing sentence on what the value means; omitted when not configured. */
+  description?: string | null
 }
 ```
 
@@ -66,6 +66,33 @@ interface PresetOption {
 `set(session, name)` 解析预设（未知名称抛出异常），在 `name` 尚不是生效预设时追加一条仅记日志的 `permission/preset` 事件，然后通过各旋钮自己的 setter（[dsh-sandbox-policy](../../Modules/Official/sandbox/sandbox-policy) 的 `setSandboxMode` 与 [dsh-approval-definition/legacy](../../Engine/core/approval-definition/README.zh.md#implementation) 的 `setApprovalPolicy`）写入，且仅当该 knob 的生效值发生变化时才写。同一轮次内，选择事件先于旋钮事件出现；重新选择当前生效的预设则什么都不追加。
 
 `permission/preset` 是持久、仅记日志的用户意图：它不进入模型 transcript（文本记录），模型可见的后果由 knob 事件经各自消费方承担；它存在是为了在两个预设共享同一个旋钮组合时，让 `current()` 仍能保住用户选择的究竟是哪一个预设。`permissions` 投影把该选择与两个 knob 事件一同折叠，并保留用于区分空恢复 seed 与新会话的 `session/end-seed` 边界；回放不需要任何追赶状态或原始日志重扫。完整事件声明见[持久化日志事件目录](../persistence-catalog.zh.md)；方法签名见生成的[服务目录](#ctxpermissionpresets--permissionpresetservice)。
+
+## Native 宿主写入
+
+Native 宿主入口通过 `permissionPresets` 提供相同的策略值。`resolve()` 返回一个已配置的不可变捆绑项；`apply()` 只接受确切且可写的 root owner，通过 Program 所有的 writer 记录发生变化的持久事实，并等待刷新完成。该操作只记录策略；由沙箱与审批 Provider 强制执行。Native 入口不会安装 Cordis 设置、命令或客户端投影。
+
+```ts type-equiv
+/** The same two durable policy knobs bundled by the Cordis permission service. */
+type NativePermissionPresetSpec = Readonly<Omit<PresetSpec, 'name' | 'description'> & {
+  name?: string | undefined
+  description?: string | undefined
+}>
+```
+
+```ts type-equiv
+/** Program-owned validation and durable application of a configured preset. */
+interface NativePermissionPresetOperations {
+  /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
+  resolve(name: string): Readonly<NativePermissionPresetSpec>
+  /**
+   * @param owner - exact writable root Session.
+   * @param name - configured preset.
+   * @param signal - effective maintenance cancellation.
+   * @returns a promise fulfilled after the policy events are durable.
+   */
+  apply(owner: NativeActiveSessionOwner, name: string, signal: AbortSignal): Promise<void>
+}
+```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

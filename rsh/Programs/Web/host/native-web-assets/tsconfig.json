@@ -3,6 +3,7 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
   "include": ["src"],
   "references": [
+    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../client/web" }
   ]

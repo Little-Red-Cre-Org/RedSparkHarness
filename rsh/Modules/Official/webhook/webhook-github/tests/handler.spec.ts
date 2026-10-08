@@ -131,6 +131,17 @@ describe('GitHub webhook HTTP handler', () => {
     expect(typeof (dispatched as { receivedAt?: unknown }).receivedAt).toBe('number')
   })
 
+  it.each([
+    ['signature over the exact BOM-prefixed body', '\uFEFF{}', signature('fixture-secret', '\uFEFF{}'), 400],
+    ['signature over bytes with the BOM removed', '\uFEFF{}', signature('fixture-secret', '{}'), 401],
+  ] as const)('authenticates %s before applying JSON parsing', async (_label, body, signed, status) => {
+    const fake = fakeContext()
+    const base = await serve(fake.ctx)
+    const response = await post(base, body, { signature: signed })
+    expect(response.status).toBe(status)
+    expect(fake.dispatch).not.toHaveBeenCalled()
+  })
+
   it('resolves the secret for each request so rotation takes effect immediately', async () => {
     const fake = fakeContext('first')
     const base = await serve(fake.ctx)

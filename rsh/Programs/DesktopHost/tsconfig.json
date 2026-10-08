@@ -9,6 +9,8 @@
     { "path": "../../Core/vendor/cordis" },
     { "path": "../../Core/vendor/include" },
     { "path": "../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../Core/util/http-routes/tsconfig.host.json" },
+    { "path": "../../Compatibility/DSH/bridge/http-routes-cordis" },
     { "path": "../Web/api/gateway/tsconfig.host.json" },
     { "path": "../../Compatibility/DSH/boot/app-boot" },
     { "path": "../../Compatibility/DSH/boot/cmdline" },

@@ -38,6 +38,7 @@ import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import {
   NativeApprovalRequestId,
+  sessionApprovalPolicy,
   type NativeApprovalOutcome,
   type NativeApprovalServiceDefinition,
 } from '@deepseek-ai/dsh-approval-definition'
@@ -258,6 +259,18 @@ export class NativeHeadlessApplication implements NativeApplication {
     presetLease?: NativeAgentPresetLease
     route: Readonly<NativeRootRoute>
   }>()
+  private readonly rootOwnerBindings = new WeakMap<NativeActiveSessionOwner, {
+    readonly agent: NativeAgent
+    readonly sessionId: SessionId
+    readonly route: Readonly<NativeRootRoute>
+    retirement?: Promise<void>
+  }>()
+  private readonly idleRetirements = new Map<SessionId, {
+    readonly owner: NativeActiveSessionOwner
+    readonly route: Readonly<NativeRootRoute>
+    readonly promise: Promise<void>
+  }>()
+  private readonly retiringSessions = new Map<SessionId, NativeRootRouteId>()
   private readonly workspaceRoutes: NativeWorkspaceRoutes
   private readonly routeAdmissions = new Map<SessionId, Readonly<NativeRootRoute>>()
   private readonly storageMutations = new Map<SessionId, { readonly route: Readonly<NativeRootRoute>; readonly done: Promise<unknown> }>()
@@ -339,9 +352,32 @@ export class NativeHeadlessApplication implements NativeApplication {
       resolve: resolveRoute,
       workspaceRoutes: () => this.workspaceRoutes.list(),
       selectWorkspace: (request, signal) => this.workspaceRoutes.select(request.baseRoute, request.workspaceId, signal),
-      releaseWorkspace: (id, signal) => Promise.resolve().then(() => { signal.throwIfAborted(); this.workspaceRoutes.release(id) }),
+      ...config.workspaceRoutes === undefined ? {} : {
+        createWorkspaceRoute: (request: { readonly baseRoute: NativeRootRouteId; readonly path: string }, signal: AbortSignal) => {
+          resolveRoute(request.baseRoute)
+          return this.workspaceRoutes.createWorkspace(request.baseRoute, request.path, signal)
+        },
+      },
+      releaseWorkspace: (id, signal) => Promise.resolve().then(() => {
+        signal.throwIfAborted()
+        this.workspaceRoutes.release(id)
+        for (const [sessionId, retirement] of this.idleRetirements) {
+          if (retirement.route.id === id) {
+            this.idleRetirements.delete(sessionId)
+          }
+        }
+        for (const [sessionId, route] of this.retiringSessions) {
+          if (route === id) this.retiringSessions.delete(sessionId)
+        }
+      }),
       capture: (owner: NativeActiveSessionOwner) => captureRoot(owner).route,
       cancel: (owner: NativeActiveSessionOwner) => captureRoot(owner).unregister(),
+      releaseIdle: (request, signal) => {
+        try { return this.releaseIdleRoot(request, signal) }
+        catch (error: unknown) {
+          return Promise.reject(error instanceof Error ? error : new Error('native-headless: idle retirement failed', { cause: error }))
+        }
+      },
       execute: (request, signal) => {
         resolveRoute(request.route)
         return this.executeRootTurn(request, signal)
@@ -797,6 +833,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 const service = this.approval
                 if (service === undefined) throw new Error('native-headless: no approval authority')
                 const approvalId = NativeApprovalRequestId(randomUUID())
+                const sessionPolicy = sessionApprovalPolicy(session)
                 track(session.append('native-approval/asked', {
                   id: approvalId, toolName: requested.toolName, callId: requested.callId,
                   ...requested.reason === undefined ? {} : { reason: requested.reason },
@@ -807,7 +844,8 @@ export class NativeHeadlessApplication implements NativeApplication {
                 const decision = invocation === 'delegated'
                   ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
                   : await service.request({
-                    id: approvalId, agent, toolName: requested.toolName, callId: requested.callId,
+                    id: approvalId, agent, ...sessionPolicy === undefined ? {} : { sessionPolicy },
+                    toolName: requested.toolName, callId: requested.callId,
                     ...requested.reason === undefined ? {} : { reason: requested.reason },
                     signal: approvalSignal,
                   })
@@ -988,6 +1026,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     observation?: { release?: () => void; epoch?: NativeContinuationActivation }): Promise<NativeTurnResult> {
     if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
     signal.throwIfAborted()
+    this.assertSessionNotRetiring(request.id)
     if (this.presetSelections.has(request.id)) throw new Error('native-headless: preset selection is in progress')
     return this.withRootExecution(request, signal, execution => execution.run(
       async (composed) => {
@@ -1015,6 +1054,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> {
     if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
     signal.throwIfAborted()
+    this.assertSessionNotRetiring(request.id)
     if (this.presetSelections.has(request.id)) throw new Error('native-headless: preset selection is in progress')
     this.selectedRootRoute(request.id, request.route)
     const live = this.continuationOwners.get(request.id)
@@ -1026,13 +1066,50 @@ export class NativeHeadlessApplication implements NativeApplication {
       }
       return this.runLiveSessionOperation(active, operation, signal)
     }
-    return this.withRootExecution(request, signal, execution => this.runIdleSessionOperation(execution, request, operation, signal))
+    const freshAdmission = !request.resume && !this.executions.has(request.id)
+    let selectedExecution: NativeAgentExecution | undefined
+    let operationStarted = false
+    const pending = this.withRootExecution(request, signal, (execution) => {
+      if (freshAdmission) selectedExecution = execution
+      return this.runIdleSessionOperation(execution, request, async (owner, effective) => {
+        operationStarted = true
+        return operation(owner, effective)
+      }, signal)
+    })
+    if (!freshAdmission) return pending
+    return pending.catch(async (error: unknown) => {
+      if (operationStarted || selectedExecution === undefined) throw error
+      const owned = this.executions.get(request.id)
+      if (owned?.execution !== selectedExecution || owned.route.id !== request.route
+        || !this.canReleaseFreshFailure(request.id, owned)) throw error
+      this.retiringSessions.set(request.id, owned.route.id)
+      try {
+        await owned.unregister()
+        if (owned.route.workspaceId === undefined) this.retiringSessions.delete(request.id)
+      } catch (cleanup: unknown) {
+        throw new AggregateError([error, cleanup], 'native-headless: fresh Session admission and cleanup failed')
+      }
+      throw error
+    })
+  }
+
+  private canReleaseFreshFailure(id: SessionId, owned: {
+    readonly execution: NativeAgentExecution
+    readonly route: Readonly<NativeRootRoute>
+  }): boolean {
+    const resident = this.continuationOwners.get(id)
+    return owned.execution.status === 'idle' && !this.activeSessions.has(id) && resident === undefined
+      && !this.rootEpochs.has(id) && !this.rootAdmissions.has(id) && !this.routeAdmissions.has(id)
+      && !this.presetSelections.has(id) && !this.storageMutations.has(id)
+      && ![...this.rootOperations.values()].some(agent => agent === owned.execution.agent)
+      && ![...this.currentTurns.keys()].some(owner => owner.session.id === id)
   }
 
   private runIdleSessionOperation<T>(execution: NativeAgentExecution,
     request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route' | 'rootOrigin'>,
     operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal,
     forkSeed?: NativeRootForkSeed): Promise<T> {
+    this.assertSessionNotRetiring(request.id)
     return execution.runMaintenance(async (agentSignal) => {
       this.settledRoots.delete(execution)
       const composed = AbortSignal.any([agentSignal, signal])
@@ -1057,6 +1134,8 @@ export class NativeHeadlessApplication implements NativeApplication {
     const effective = AbortSignal.any([signal, this.context.signal, this.operationCancellation.signal])
     effective.throwIfAborted()
     if (this.disposal !== undefined) throw new Error('native-headless: application is disposed')
+    this.assertSessionNotRetiring(request.source)
+    this.assertSessionNotRetiring(request.id)
     if (request.source === request.id || this.executions.has(request.id) || this.agents.get(NativeAgentId(request.id)) !== undefined) {
       throw new Error('native-headless: fork requires a fresh destination identity')
     }
@@ -1296,6 +1375,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     if (this.presetSelections.has(request.id)) throw new Error('native-headless: preset selection is already in progress')
     const effective = AbortSignal.any([signal, this.context.signal, this.operationCancellation.signal])
     effective.throwIfAborted()
+    this.assertSessionNotRetiring(request.id)
     this.presetSelections.add(request.id)
     let lease: NativeAgentPresetLease | undefined
     const ownership = { successorOwnsLease: false }
@@ -1364,10 +1444,74 @@ export class NativeHeadlessApplication implements NativeApplication {
     return this.workspaceRoutes.resolve(explicit === undefined ? resolveRootRoute(this.config).id : explicit)
   }
 
+  private assertSessionNotRetiring(id: SessionId): void {
+    if (this.retiringSessions.has(id)) throw new Error('native-headless: Session idle retirement is in progress')
+  }
+
+  private releaseIdleRoot(request: {
+    readonly route: NativeRootRouteId
+    readonly id: SessionId
+    readonly expectedOwner: NativeActiveSessionOwner
+  }, signal: AbortSignal): Promise<void> {
+    const { expectedOwner } = request
+    const binding = this.rootOwnerBindings.get(expectedOwner)
+    if (binding !== undefined && binding.route.id !== request.route) {
+      throw new Error('native-headless: idle retirement route does not match its former root owner')
+    }
+    if (binding === undefined || expectedOwner.invocation !== 'root' || expectedOwner.rootOperations === undefined
+      || expectedOwner.session.id !== request.id || expectedOwner.agent.id !== NativeAgentId(request.id)
+      || binding.agent !== expectedOwner.agent || binding.sessionId !== request.id
+      || expectedOwner.rootOperations.agent !== expectedOwner.agent || expectedOwner.rootOperations.sessionId !== request.id) {
+      throw new Error('native-headless: idle retirement requires this Program\'s former root owner')
+    }
+    const prior = this.idleRetirements.get(request.id)
+    if (prior !== undefined && (prior.owner !== expectedOwner || prior.route.id !== request.route)) {
+      throw new Error('native-headless: another root owner is retiring this Session')
+    }
+    if (binding.retirement !== undefined) return binding.retirement
+    signal.throwIfAborted()
+    if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
+
+    const route = this.workspaceRoutes.resolve(request.route)
+    const owned = this.executions.get(request.id)
+    if (route.workspaceId === undefined || binding.route !== route || owned === undefined || owned.route !== route
+      || owned.execution.agent !== binding.agent || this.agents.get(binding.agent.id) !== binding.agent) {
+      throw new Error('native-headless: idle retirement route or Agent identity changed')
+    }
+    const resident = this.continuationOwners.get(request.id)
+    const active = resident === undefined ? undefined : this.activeOwners.get(resident)?.owner
+    const rootOperation = [...this.rootOperations.values()].some(agent => agent === binding.agent)
+    const busy: string[] = []
+    if (owned.execution.status !== 'idle') busy.push(`Agent ${owned.execution.status}`)
+    if (this.activeSessions.has(request.id)) busy.push('active Session')
+    if (resident !== undefined) busy.push(resident.hasPending ? 'pending inbox' : 'resident Session owner')
+    if (active !== undefined) busy.push('active Session owner')
+    if (this.rootEpochs.has(request.id)) busy.push('root epoch')
+    if (this.rootAdmissions.has(request.id) || this.routeAdmissions.has(request.id)) busy.push('root admission')
+    if (this.presetSelections.has(request.id)) busy.push('preset selection')
+    if (this.storageMutations.has(request.id)) busy.push('storage mutation')
+    if (rootOperation) busy.push('root operation')
+    if ([...this.currentTurns.keys()].some(owner => owner.session.id === request.id)) busy.push('current turn')
+    if (busy.length > 0) throw new Error(`native-headless: idle retirement requires a settled Session (${busy.join(', ')})`)
+
+    const completion = Promise.withResolvers<void>()
+    binding.retirement = completion.promise
+    this.idleRetirements.set(request.id, { owner: expectedOwner, route, promise: completion.promise })
+    this.retiringSessions.set(request.id, route.id)
+    void Promise.resolve().then(() => owned.unregister()).then(completion.resolve, completion.reject)
+    return completion.promise
+  }
+
   private mutateStoredSession<T>(id: SessionId, route: Readonly<NativeRootRoute>, signal: AbortSignal,
-    operation: (effective: AbortSignal) => Promise<T>): Promise<T> {
+    operation: (effective: AbortSignal) => Promise<T>, allowIdleRetirement = false): Promise<T> {
     const effective = AbortSignal.any([signal, this.context.signal, this.operationCancellation.signal])
     effective.throwIfAborted()
+    if (allowIdleRetirement) {
+      const retirement = this.idleRetirements.get(id)
+      if (this.retiringSessions.has(id) && retirement?.route !== route) {
+        throw new Error('native-headless: Session deletion does not match its accepted idle retirement')
+      }
+    } else this.assertSessionNotRetiring(id)
     if (this.disposal !== undefined) throw new Error('native-headless: application is disposed')
     if (this.workspaceRoutes.resolve(route.id) !== route) throw new Error('native-headless: Session mutation route changed during admission')
     const owned = this.executions.get(id)
@@ -1416,7 +1560,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (stored === undefined) throw new SessionPersistenceNotFoundError(request.id)
       if (stored.header.cwd !== route.configuration.cwd) throw new Error('native-headless: Session deletion workspace differs from selected route')
       return deletion.delete(request.id, { signal: effective, expectedRevision: stored.revision })
-    })
+    }, true)
   }
 
   private async restoreStoredSession(request: { readonly route: NativeRootRouteId; readonly id: SessionDeletionId },
@@ -1462,6 +1606,7 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   private withRootExecution<T>(request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route'>, signal: AbortSignal,
     task: (execution: NativeAgentExecution) => Promise<T>, forkSeed?: NativeRootForkSeed): Promise<T> {
+    this.assertSessionNotRetiring(request.id)
     if (this.storageMutations.has(request.id)) throw new Error('native-headless: Session storage mutation is in progress')
     if (request.preset !== undefined) {
       if (request.resume || forkSeed !== undefined) throw new Error('native-headless: explicit preset is fresh-only')
@@ -1551,6 +1696,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     id: ReturnType<typeof SessionId>, task: (execution: NativeAgentExecution) => Promise<T>,
     scope?: NativeScope, parent?: NativeAgent, presetLease?: NativeAgentPresetLease, route?: Readonly<NativeRootRoute>,
   ): Promise<T> {
+    this.assertSessionNotRetiring(id)
     if (this.storageMutations.has(id)) throw new Error('native-headless: Session storage mutation is in progress')
     let owned = this.executions.get(id)
     if (owned === undefined) {
@@ -1742,6 +1888,11 @@ export class NativeHeadlessApplication implements NativeApplication {
       }
       return existing.owner
     }
+    const rootExecution = invocation === 'root' ? this.executions.get(owner.session.id) : undefined
+    if (invocation === 'root' && (rootExecution?.execution.agent !== agent
+      || this.agents.get(agent.id) !== agent)) {
+      throw new Error('native-headless: root owner provenance requires the exact registered Agent')
+    }
     const active = new NativeProgramActiveSession(agent, owner, invocation, rootOrigin, {
       signal: AbortSignal.any([this.agents.execution(agent).signal, this.context.signal, this.operationCancellation.signal]),
       retain: () => {
@@ -1757,6 +1908,11 @@ export class NativeHeadlessApplication implements NativeApplication {
     try {
       const release = await this.activeSessionRegistry.register(active)
       this.activeOwners.set(owner, { owner: active, release })
+      if (invocation === 'root') {
+        const route = rootExecution?.route
+        if (route === undefined) throw new Error('native-headless: root owner route was not admitted')
+        this.rootOwnerBindings.set(active, { agent, sessionId: owner.session.id, route })
+      }
       return active
     } catch (error: unknown) {
       await active.dispose()

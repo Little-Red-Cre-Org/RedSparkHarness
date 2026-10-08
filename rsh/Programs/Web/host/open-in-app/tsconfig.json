@@ -18,7 +18,10 @@
       "path": "../../../../Core/vendor/schemastery"
     },
     {
-      "path": "../webserver"
+      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
     },
     {
       "path": "../../../../Core/subprocess/subprocess"

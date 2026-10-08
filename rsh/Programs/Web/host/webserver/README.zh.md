@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-把 webserver 组合为面向浏览器宿主的 HTTP 传输，然后让功能插件认领各自的路由。激活即开始监听；注册顺序不影响请求处理，因为具名路由组合起来互不相交。
+把 webserver 组合为面向浏览器宿主的 HTTP 传输，再让功能插件经共享 Core 路由表认领路由。注册顺序不会选择 handler：重复的 `(kind, path)` 注册会失败，精确路由优先于前缀路由，多个前缀匹配时取最长者。HTTP 与 upgrade 路由使用不同的表，可以共用 pathname。
 
 ### 最小配置
 
@@ -42,7 +42,7 @@ kind: "package-reference"
 
 ### 注册路由
 
-`register(route)` 添加具名的 `exact`／`prefix` HTTP route，`registerUpgrade(route)` 为精确 pathname 添加 upgrade route，两者返回的 disposer 都会移除注册。同一张表内的重复路径会抛错——route 模式是组合层约定，冲突即配置错误。HTTP 匹配先在整张表中匹配精确 route，再匹配最长前缀，最后交给回退 handler；upgrade 只做精确匹配，未命中连接直接关闭。
+`register(route)` 添加具名的 `exact`／`prefix` HTTP route，`registerUpgrade(route)` 为精确 pathname 添加 upgrade route；二者都返回异步 disposer。disposer 先从后续匹配中移除该注册项，再等它已接纳的 handler 结算后返回。同一张表内重复的 route 会抛错；HTTP route 与 upgrade route 可以共用 pathname。HTTP 匹配先在整张表中查精确 route，再查最长前缀，最后交给回退 handler；upgrade 只做精确匹配，未命中连接直接关闭。
 
 ### 回退席位
 
@@ -64,11 +64,11 @@ index 启动输入分两层。`collectIndexInjections()` 收集一张全新的�
 
 ### 设计理念
 
-本包是一个不带任何 harness 词汇的普通路由注册表：`WebServer` 继承 Cordis `Service`，持有三张路由表、回退 slot、原始 index 转换列表，以及 index 渲染器经其收集行的 `webserver/index-inject` 事件。index 渲染每次响应组合两层：`renderIndex` 先把包含提示性 `script-preload` 行的全新注入表渲染进正文，再按注册顺序应用原始转换；`applyIndexTaps` 只运行转换。upgrade handler 拥有协议握手与连接内容；webserver 只交付原始 socket 与 request。`host` 与 `port` getter 暴露其他插件据以自适应的组合期事实（例如 directory-picker 选择器）。
+通用 route 定义与可排空 table 位于 `@deepseek-ai/dsh-http-routes`；本包拥有 Cordis `WebServer` listener Provider。`ctx.webServer` 与 `webserver/index-inject` 的 Cordis 声明位于 `@deepseek-ai/dsh-http-routes-cordis`，浏览器安全的注入行位于 Core Client face。`WebServer` 继承 Cordis `Service`，拥有 socket、gzip 策略、回退 slot、原始 index 转换列表与 index 事件收集。upgrade handler 拥有协议协商与 socket 使用；webserver 只交付原始 socket 和 request。`host` 与 `port` getter 暴露其他插件自适应的组合期事实（例如 directory-picker 选择器）。
 
 ### 匹配与生命周期
 
-`match(pathname)` 先查精确表，再遍历前缀表取最长匹配，最后走回退。激活（`[Service.init]`）即开始监听；资源释放会启动 `close()` 与 `closeAllConnections()`，销毁所有受跟踪的升级 socket，并仅在服务器与这些 socket 均已关闭后返回。Node 的 `closeAllConnections()` 不包含升级 socket，因此服务显式跟踪它们。
+Core `HttpRouteTable` 先查精确表，再遍历前缀表取最长匹配，最后走回退。HTTP 与 upgrade 分属不同表，因此同一路径可由两种协议分别认领。路由注册的 disposer 会移除后续接纳并等待活动 handler 完成。激活（`[Service.init]`）即开始监听；服务释放会启动 `close()` 与 `closeAllConnections()`，销毁所有受跟踪的升级 socket，并仅在服务器与这些 socket 均已关闭后返回。Node 的 `closeAllConnections()` 不包含升级 socket，因此服务显式跟踪它们。
 
 ### 源码地图
 
@@ -87,7 +87,8 @@ index 启动输入分两层。`collectIndexInjections()` 收集一张全新的�
 
 当服务器约定不够用时阅读以下内容：先看子系统参考，再看回退持有者，以及谁注册哪条路由背后的分层决策。
 
-- [HTTP 服务器子系统](../../../../Docs/subsystems/web-server.zh.md)——路由、匹配顺序与服务器接受的配置。
+- [HTTP 服务器子系统](../../../../Docs/subsystems/web-server.zh.md)——Cordis listener 约定与其接受的配置。
+- [HTTP routes 子系统](../../../../Docs/subsystems/http-routes.zh.md)——共享 Host／Native 路由约定与排空 table。
 - [SPA dist 服务器](../frontend-static/README.zh.md)——回退席位的随附持有者。
 - [Web 配置树启动与传输分层](../../../../../.agents/notes/implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.zh.md)——功能插件为何拥有每条路由。
 - [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-host-webserver)——每个受支持配置字段及其源声明。

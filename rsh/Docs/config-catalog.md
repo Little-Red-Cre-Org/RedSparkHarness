@@ -197,7 +197,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Programs/Web/api/gateway/src/index.ts:119`](../Programs/Web/api/gateway/src/index.ts)
+Source: [`rsh/Programs/Web/api/gateway/src/index.ts:120`](../Programs/Web/api/gateway/src/index.ts)
 
 <a id="deepseek-aidsh-api-session-controller"></a>
 
@@ -390,7 +390,7 @@ export interface ConnectionRecoveryConfig {
 }
 ```
 
-Source: [`rsh/Programs/Web/client/connection/src/index.ts:73`](../Programs/Web/client/connection/src/index.ts)
+Source: [`rsh/Programs/Web/client/connection/src/index.ts:74`](../Programs/Web/client/connection/src/index.ts)
 
 <a id="deepseek-aidsh-client-hmr"></a>
 
@@ -964,22 +964,12 @@ Source: [`rsh/Programs/Web/host/open-in-app/src/index.ts:50`](../Programs/Web/ho
 ## `@deepseek-ai/dsh-host-webserver`
 
 ```ts config-catalog
-/** Web server listen and response-compression config. */
-export interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
-  /** Listen port; zero requests an OS-assigned port. */
-  port: number
-  /** Response compression for socket-backed HTTP requests. @default 'none' */
-  compression?: 'none' | 'gzip'
-  /** Gzip DEFLATE level from 0 through 9. @default 1 */
-  compressionLevel?: number
-  /** Minimum known response length eligible for gzip; unknown-length streams are eligible. @default 1024 */
-  compressionThresholdBytes?: number
-}
+type Config = HttpWebServerConfig
 ```
 
-Source: [`rsh/Programs/Web/host/webserver/src/index.ts:59`](../Programs/Web/host/webserver/src/index.ts)
+Depends on: [`HttpWebServerConfig`](subsystems/web-server.md)
+
+Source: [`rsh/Programs/Web/host/webserver/src/index.ts:27`](../Programs/Web/host/webserver/src/index.ts)
 
 <a id="deepseek-aidsh-invariants"></a>
 
@@ -1626,22 +1616,22 @@ export interface Config {
   defaultPreset?: string
 }
 
-/** One preset's sandbox/approval bundle and optional client presentation. */
+/** One sandbox/approval bundle and optional client presentation. */
 export interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
   sandbox: SandboxMode
   /** The `approval/policy` value the preset writes through. */
-  approval: ApprovalPolicy
+  approval: NativeApprovalPolicy
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string
-  /** One user-facing sentence on what the preset means; omitted when not configured. */
-  description?: string
+  name?: string | null
+  /** One user-facing sentence on what the value means; omitted when not configured. */
+  description?: string | null
 }
 ```
 
-Depends on: [`ApprovalPolicy`](subsystems/approval.md) · [`SandboxMode`](subsystems/sandbox.md)
+Depends on: [`NativeApprovalPolicy`](../Engine/core/approval-definition/src/index.ts) · [`SandboxMode`](subsystems/sandbox.md)
 
-Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:146`](../Modules/Official/interaction/permission-presets/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:125`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 <a id="deepseek-aidsh-persona"></a>
 
@@ -3436,7 +3426,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/webhook/webhook-github/src/index.ts:17`](../Modules/Official/webhook/webhook-github/src/index.ts)
+Source: [`rsh/Modules/Official/webhook/webhook-github/src/index.ts:18`](../Modules/Official/webhook/webhook-github/src/index.ts)
 
 <a id="deepseek-aidsh-workflow-worker-thread"></a>
 
@@ -3620,6 +3610,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-home-paths` ([`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts))
 - `@deepseek-ai/dsh-hook-protocol` ([`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts))
 - `@deepseek-ai/dsh-http-proxy` ([`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts))
+- `@deepseek-ai/dsh-http-routes` ([`rsh/Core/util/http-routes/src/index.ts`](../Core/util/http-routes/src/index.ts))
+- `@deepseek-ai/dsh-http-routes-cordis` ([`rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts`](../Compatibility/DSH/bridge/http-routes-cordis/src/index.ts))
 - `@deepseek-ai/dsh-json-rpc-line` ([`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts))
 - `@deepseek-ai/dsh-launch-environment` ([`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts))
 - `@deepseek-ai/dsh-llm-mock-server` ([`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts))

@@ -2,6 +2,20 @@
 import { isAbsolute, resolve } from 'node:path'
 import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
 import type { Session } from '@deepseek-ai/dsh-session/native'
+import { SessionSeq } from '@deepseek-ai/dsh-session/native'
+
+const sessionModes = new WeakMap<Session, { nextSeq: number; mode: SandboxMode | undefined }>()
+
+function sessionMode(session: Session): SandboxMode | undefined {
+  const state = sessionModes.get(session) ?? { nextSeq: 0, mode: undefined }
+  for (; state.nextSeq < session.seq; state.nextSeq += 1) {
+    // oxlint-disable-next-line typescript/no-deprecated -- Native policy reads the live Session log; a projection Provider is not required.
+    const event = session.eventAt(SessionSeq(state.nextSeq))
+    if (event?.type === 'sandbox/mode') state.mode = event.data.mode
+  }
+  sessionModes.set(session, state)
+  return state.mode
+}
 
 /** Required deployment choices; the bridge never falls back to bare local storage. */
 export interface Config {
@@ -42,7 +56,8 @@ export class NativeSandboxPolicy {
    * @returns mutation policy for one filesystem operation.
    */
   resolve(request: { session?: Session } = {}): SandboxExecutionPolicy {
-    return { mode: this.config.mode, workspaceRoot: request.session?.header.cwd ?? this.config.workspaceRoot }
+    return { mode: request.session === undefined ? this.config.mode : sessionMode(request.session) ?? this.config.mode,
+      workspaceRoot: request.session?.header.cwd ?? this.config.workspaceRoot }
   }
 }
 

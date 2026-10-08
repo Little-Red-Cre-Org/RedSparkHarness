@@ -64,6 +64,30 @@
     },
     {
       "path": "../../../../Core/settings/settings-definition"
+    },
+    {
+      "path": "../../../../Core/storage/storage"
+    },
+    {
+      "path": "../../../../Core/storage/storage-json"
+    },
+    {
+      "path": "../../../../Core/storage/storage-domain"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/permission-presets"
+    },
+    {
+      "path": "../../../../Modules/Official/sandbox/native-sandbox-policy"
+    },
+    {
+      "path": "../../../../Modules/Official/workspace/workspace/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Modules/Official/webhook/webhook"
+    },
+    {
+      "path": "../../../../Modules/Official/webhook/webhook-github"
     }
   ]
 }

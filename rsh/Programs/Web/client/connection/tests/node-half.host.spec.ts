@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
-import type { IndexInjection, WebServer, WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
+import type { HttpWebServer as WebServer, WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-http-routes-cordis'
 import { API_PATH, RpcId, apply, inject, type ClientRequest, type ConnectionConfig, type HostConnectionHandle } from '../src/index.ts'
 import { DEFAULT_MAX_REQUEST_BODY_BYTES } from '../src/http-bridge.ts'
 import { provideBrowserCredentials } from './browser-credentials.ts'
@@ -23,11 +24,11 @@ function fakeHttpServer(
         throw new Error(`duplicate route ${route.path}`)
       }
       routes.push(route)
-      return () => { routes.splice(routes.indexOf(route), 1) }
+      return async () => { routes.splice(routes.indexOf(route), 1) }
     },
     registerUpgrade(route) {
       upgrades.push(route)
-      return () => { upgrades.splice(upgrades.indexOf(route), 1) }
+      return async () => { upgrades.splice(upgrades.indexOf(route), 1) }
     },
     tapIndex: () => () => {},
     port: 0,

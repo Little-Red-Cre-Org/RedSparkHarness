@@ -14,7 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 // Empty type imports carry the clientModuleHost/webServer Context merges.
 import type { ClientArtifactBaseline } from '@deepseek-ai/dsh-client-modules'
-import type {} from '@deepseek-ai/dsh-host-webserver'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import type { PluginsEventFrame } from './events.ts'
 import { EVENTS_ENDPOINT } from './events.ts'
 
@@ -191,11 +191,12 @@ export function apply(ctx: Context, config: Config): void {
       const line = sseData({ type: 'rebuilt', id, rev })
       for (const res of connections) res.write(line)
     })
-    return () => {
+    return async () => {
+      const drain = disposeRoute()
       unsubscribe()
-      disposeRoute()
       for (const res of connections) res.destroy()
       connections.clear()
+      await drain
     }
   }, 'client-hmr: /plugins/events channel')
 }

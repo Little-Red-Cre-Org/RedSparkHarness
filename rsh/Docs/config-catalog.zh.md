@@ -966,22 +966,12 @@ export interface Config {
 ## `@deepseek-ai/dsh-host-webserver`
 
 ```ts config-catalog
-/** Web server listen and response-compression config. */
-export interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
-  /** Listen port; zero requests an OS-assigned port. */
-  port: number
-  /** Response compression for socket-backed HTTP requests. @default 'none' */
-  compression?: 'none' | 'gzip'
-  /** Gzip DEFLATE level from 0 through 9. @default 1 */
-  compressionLevel?: number
-  /** Minimum known response length eligible for gzip; unknown-length streams are eligible. @default 1024 */
-  compressionThresholdBytes?: number
-}
+type Config = HttpWebServerConfig
 ```
 
-来源：[`rsh/Programs/Web/host/webserver/src/index.ts:59`](../Programs/Web/host/webserver/src/index.ts)
+依赖：[`HttpWebServerConfig`](subsystems/web-server.zh.md)
+
+来源：[`rsh/Programs/Web/host/webserver/src/index.ts:27`](../Programs/Web/host/webserver/src/index.ts)
 
 <a id="deepseek-aidsh-invariants"></a>
 
@@ -1628,22 +1618,22 @@ export interface Config {
   defaultPreset?: string
 }
 
-/** One preset's sandbox/approval bundle and optional client presentation. */
+/** One sandbox/approval bundle and optional client presentation. */
 export interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
   sandbox: SandboxMode
   /** The `approval/policy` value the preset writes through. */
-  approval: ApprovalPolicy
+  approval: NativeApprovalPolicy
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string
-  /** One user-facing sentence on what the preset means; omitted when not configured. */
-  description?: string
+  name?: string | null
+  /** One user-facing sentence on what the value means; omitted when not configured. */
+  description?: string | null
 }
 ```
 
-依赖：[`ApprovalPolicy`](subsystems/approval.zh.md) · [`SandboxMode`](subsystems/sandbox.zh.md)
+依赖：[`NativeApprovalPolicy`](../Engine/core/approval-definition/src/index.ts) · [`SandboxMode`](subsystems/sandbox.zh.md)
 
-来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:146`](../Modules/Official/interaction/permission-presets/src/index.ts)
+来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:125`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 <a id="deepseek-aidsh-persona"></a>
 
@@ -3621,6 +3611,8 @@ export interface Config {
 - `@deepseek-ai/dsh-home-paths`（[`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts)）
 - `@deepseek-ai/dsh-hook-protocol`（[`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts)）
 - `@deepseek-ai/dsh-http-proxy`（[`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts)）
+- `@deepseek-ai/dsh-http-routes`（[`rsh/Core/util/http-routes/src/index.ts`](../Core/util/http-routes/src/index.ts)）
+- `@deepseek-ai/dsh-http-routes-cordis`（[`rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts`](../Compatibility/DSH/bridge/http-routes-cordis/src/index.ts)）
 - `@deepseek-ai/dsh-json-rpc-line`（[`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts)）
 - `@deepseek-ai/dsh-launch-environment`（[`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts)）
 - `@deepseek-ai/dsh-llm-mock-server`（[`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts)）

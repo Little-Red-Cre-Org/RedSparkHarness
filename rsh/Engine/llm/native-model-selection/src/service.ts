@@ -14,6 +14,7 @@ function requestedConfig(selected: ModelSelection, defaults: LlmCallConfig): Llm
   const { reasoningEffort: _effort, ...base } = defaults
   return { ...base, provider: selected.provider, model: selected.model,
     ...selected.reasoningEffort === undefined ? {} : { reasoningEffort: ReasoningEffortId(selected.reasoningEffort) },
+    ...selected.maxTokens === undefined ? {} : { maxTokens: selected.maxTokens },
   }
 }
 
@@ -23,7 +24,8 @@ function resolveConfig(selected: ModelSelection, defaults: LlmCallConfig, info: 
 
 function selectionOf(config: LlmCallConfig): ModelSelection {
   return { provider: config.provider, model: config.model,
-    ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort } }
+    ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort },
+    ...config.maxTokens === undefined ? {} : { maxTokens: config.maxTokens } }
 }
 
 /** A resolved choice lost comparison against a newer durable selection intent. */
@@ -63,8 +65,13 @@ export class NativeModelSelectionService implements NativeModelSelectionOperatio
 
   select(owner: NativeActiveSessionOwner, request: NativeModelSelectionRequest, signal: AbortSignal): Promise<NativeModelSelectionReceipt> {
     return this.run(owner, signal, async (effective) => {
+      if (request.selected.maxTokens !== undefined
+        && (!Number.isSafeInteger(request.selected.maxTokens) || request.selected.maxTokens <= 0)) {
+        throw new RangeError('native-model-selection: maxTokens must be a positive safe integer')
+      }
       const info = await this.directory.resolve(request.selected.provider, request.selected.model, effective)
-      const proposed = { provider: request.selected.provider, model: request.selected.model }
+      const proposed = { provider: request.selected.provider, model: request.selected.model,
+        ...request.selected.maxTokens === undefined ? {} : { maxTokens: request.selected.maxTokens } }
       const selected = selectionOf(requestedConfig(request.selected, proposed))
       resolveConfig(selected, proposed, info)
       this.assertOwner(owner, effective)

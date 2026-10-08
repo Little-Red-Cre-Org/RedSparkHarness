@@ -100,6 +100,14 @@ export interface NativeRootExecutionOperations {
   selectWorkspace(request: { readonly baseRoute: NativeRootRouteId; readonly workspaceId: WorkspaceId },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
+   * Create or reuse an existing directory as a Workspace after the selected Program's route policy admits its canonical path.
+   * @param request - configured base route and absolute existing directory; arbitrary paths outside route policy are rejected.
+   * @param signal - caller cancellation composed with Program lifetime.
+   * @returns immutable admitted route after Workspace registration and filesystem identity checks.
+   */
+  createWorkspaceRoute?(request: { readonly baseRoute: NativeRootRouteId; readonly path: string },
+    signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
+  /**
    * Withdraw a dynamic route after its exact Agent, writer and pending admissions have released.
    * @param id - branded dynamic route identity; the configured base route cannot be withdrawn.
    * @param signal - caller cancellation checked before withdrawal.
@@ -117,6 +125,19 @@ export interface NativeRootExecutionOperations {
    * @returns completion after the original Agent registration and owned resources release; cleanup failures remain visible.
    */
   cancel(owner: NativeActiveSessionOwner): Promise<void>
+  /**
+   * Retire the exact Program-owned Agent after its root execution has settled, without deleting durable Session data.
+   * The former owner is identity evidence only; this operation never flushes or cancels it. The selected dynamic
+   * route, original root Agent, and durable Session identity must still match, with no live owner, epoch, admission,
+   * pending inbox, storage mutation, or other root operation. Repeated calls with the same owner share the same
+   * drain promise, including after success. Cancellation is checked before acceptance; accepted cleanup always drains.
+   * @param request - exact dynamic route, durable Session identity, and original Program-issued root owner.
+   * @param signal - caller cancellation before retirement acceptance.
+   * @returns completion after the exact Agent and all owned writer, observer, and execution resources release.
+   * @throws when the route or Agent changed, the owner is foreign/delegated, or any live work still owns the Session.
+   */
+  releaseIdle(request: { readonly route: NativeRootRouteId; readonly id: SessionId; readonly expectedOwner: NativeActiveSessionOwner },
+    signal: AbortSignal): Promise<void>
   /**
    * Run a fresh or restored root through the existing executor, including autonomous root settlement.
    * @param request - explicit route and Session input; live identity conflicts are rejected.

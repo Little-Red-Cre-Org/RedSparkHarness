@@ -1,7 +1,7 @@
 /** Cordis lifetime and HTTP adapter over the shared Host Connection registry. */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
 import type { BrowserAuth } from './browser-auth.ts'
 import { HostConnectionRegistry, type HostConnectionOwner } from './host-core.ts'
 import { bridge } from './http-bridge.ts'
@@ -67,7 +67,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
     return {
       effect: (setup, label) => owner.effect(setup, label),
       mount: (channel, handler) => {
-        const route: WebRoute = {
+        const route: HttpRoute = {
           kind: 'prefix', path: channel,
           handler: async (req, res) => {
             const rejection = this.requestRejection(req)

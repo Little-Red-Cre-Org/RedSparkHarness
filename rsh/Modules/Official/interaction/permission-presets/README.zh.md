@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当部署希望向用户提供一个 Permissions 选择器、而非分离的沙箱与审批控件时，选择此服务。它捆绑旋钮；执行与审批各自保留自己的取值，因此以后移除本包，最后一次取值依然生效。
 
+Native 宿主可以显式装配 `@deepseek-ai/dsh-permission-presets/native`。它的 `permissionPresets` 能力解析已配置的预设，并将其中一个应用到确切且可写的 root owner；它通过 Program 所有的 writer 追加发生变化的预设、沙箱与审批事件，并等待持久化刷新完成。此入口不提供 Cordis 设置命名空间、`/permission` 命令或客户端投影；记录的策略值由沙箱与审批 Provider 强制执行。
+
 ### 配置预设
 
 插件配置定义预设表与新会话的默认值。每个预设名称把一个沙箱模式与一个审批策略捆绑为一组；`name` 与 `description` 是可选的客户端呈现。
@@ -79,6 +81,9 @@ kind: "package-reference"
 |---|---|
 | [`src/index.ts`](src/index.ts) | `PermissionPresetService`：预设表、写入路径、设置命名空间、会话固定、子功能 |
 | [`src/types.ts`](src/types.ts) | `permissions` 投影键声明与选择器载荷类型 |
+| [`src/native.ts`](src/native.ts) | Native 宿主 Provider：验证 root owner 并应用持久化策略事件 |
+| [`src/native-definition.ts`](src/native-definition.ts) | Cordis-free Native 操作与预设捆绑项 Definition |
+| [`src/presets.ts`](src/presets.ts) | 共享默认预设表与呈现字段 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：校验 `permission/preset` 指向可解析的预设 |
 
 ### 写入路径

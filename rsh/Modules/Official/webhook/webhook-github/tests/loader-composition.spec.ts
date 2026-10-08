@@ -1,35 +1,41 @@
 import { createHmac } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
-import WebServer from '@deepseek-ai/dsh-host-webserver'
+import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
+import type { HttpWebServer } from '@deepseek-ai/dsh-http-routes-cordis'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as GitHubAdapter from '../src/index.ts'
 
 let root: string | undefined
 let context: Context | undefined
+let server: ReturnType<typeof createServer> | undefined
+let routes: HttpRouteTable | undefined
 
 afterEach(async () => {
   await context?.fiber.dispose()
   context = undefined
+  await routes?.close()
+  routes = undefined
+  if (server !== undefined) await new Promise<void>(resolve => server!.close(() => { resolve() }))
+  server = undefined
   if (root !== undefined) await rm(root, { recursive: true, force: true })
   root = undefined
 })
 
 describe('real Loader composition', () => {
-  it('registers on a real WebServer and dispatches a signed request', { timeout: 60_000 }, async () => {
+  it('registers through the Cordis HTTP adapter and dispatches a signed request', { timeout: 60_000 }, async () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-webhook-github-loader-'))
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, [
       '- name: fixture-dependencies',
-      "- name: '@deepseek-ai/dsh-host-webserver'",
-      '  config:',
-      "    host: '127.0.0.1'",
-      '    port: 0',
+      '- name: fixture-http-routes',
       "- name: '@deepseek-ai/dsh-webhook-github'",
       '  config:',
       '    source: loader',
@@ -49,13 +55,23 @@ describe('real Loader composition', () => {
         } as never)
       },
     }
+    routes = new HttpRouteTable()
+    server = createServer((request, response) => {
+      void routes!.dispatch(new URL(request.url ?? '/', 'http://dsh.internal').pathname, request, response)
+        .then((handled) => {
+          if (!handled) { response.writeHead(404); response.end() }
+        })
+    })
+    await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve))
+    const httpRoutes = { register: routes.register.bind(routes) } as HttpWebServer
+    const routeProvider = { name: 'fixture-http-routes', apply(ctx: Context) { ctx.provide('webServer', httpRoutes) } }
     context = new Context()
     context.baseUrl = pathToFileURL(root).href + '/'
     await context.plugin(Loader)
     context.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
       ['fixture-dependencies', dependencies],
-      ['@deepseek-ai/dsh-host-webserver', WebServer],
+      ['fixture-http-routes', routeProvider],
       ['@deepseek-ai/dsh-webhook-github', GitHubAdapter],
     ])
     context.loader.internal = {
@@ -74,7 +90,9 @@ describe('real Loader composition', () => {
 
     const body = JSON.stringify({ action: 'ready_for_review' })
     const signature = `sha256=${createHmac('sha256', 'loader-secret').update(body).digest('hex')}`
-    const response = await fetch(`http://127.0.0.1:${String(context.webServer.port)}/github`, {
+    const address = server.address()
+    if (address === null || typeof address === 'string') throw new Error('missing HTTP test listener')
+    const response = await fetch(`http://127.0.0.1:${String(address.port)}/github`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

@@ -1,0 +1,8 @@
+version: 1
+scenario: native-github-webhook
+profile: native-web
+composition: native-github-webhook
+recording: authored
+header:
+  class: native-github-webhook
+  pin: true

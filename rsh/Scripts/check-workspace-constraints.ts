@@ -155,6 +155,11 @@ function workspaceManifests(): WorkspaceManifest[] {
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
+  '@deepseek-ai/dsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-webhook-github': ['lib/native.js'],
+  '@deepseek-ai/dsh-webhook': ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-permission-presets': ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-client-ui-slots': ['lib/native.js'],
   '@deepseek-ai/dsh-commands': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-goal': ['lib/native.js', 'lib/projection.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
@@ -687,12 +692,6 @@ const runtimeLayerExceptions: readonly RuntimeLayerException[] = [
     section: 'peerDependencies',
     dependency: '@deepseek-ai/dsh-sdk-client',
     reason: 'The DSH SDK subagent bridge consumes the current Program-owned client API.',
-  },
-  {
-    consumer: '@deepseek-ai/dsh-webhook-github',
-    section: 'peerDependencies',
-    dependency: '@deepseek-ai/dsh-host-webserver',
-    reason: 'The GitHub webhook adapter integrates with the current Web host API.',
   },
 ]
 

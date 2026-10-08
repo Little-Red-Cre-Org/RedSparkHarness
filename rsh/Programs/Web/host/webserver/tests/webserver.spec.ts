@@ -19,13 +19,26 @@ import HttpServer, { renderIndexInjections } from '../src/index.ts'
 
 let root: string | undefined
 let context: Context | undefined
+const upgradeClients = new Set<ReturnType<typeof connect>>()
 
 afterEach(async () => {
+  const closedClients = [...upgradeClients].map(socket => new Promise<void>((resolve) => {
+    socket.once('close', resolve)
+    socket.destroy()
+  }))
+  await Promise.all(closedClients)
+  upgradeClients.clear()
   await context?.fiber.dispose()
   context = undefined
   if (root !== undefined) await rm(root, { recursive: true, force: true })
   root = undefined
 })
+
+function trackUpgrade(socket: ReturnType<typeof connect>): ReturnType<typeof connect> {
+  upgradeClients.add(socket)
+  socket.once('close', () => { upgradeClients.delete(socket) })
+  return socket
+}
 
 /** Write a cordis.yml with one webserver row, then boot it through the real Loader. */
 async function loadComposition(port = 0, gzip = false): Promise<Context> {
@@ -80,7 +93,7 @@ async function request(
 
 /** Open one raw upgrade request and return after the handler writes its response. */
 async function upgrade(port: number, path: string): Promise<ReturnType<typeof connect>> {
-  const socket = connect(port, '127.0.0.1')
+  const socket = trackUpgrade(connect(port, '127.0.0.1'))
   await once(socket, 'connect')
   const response = once(socket, 'data')
   socket.write([
@@ -235,6 +248,26 @@ describe('real Loader composition', () => {
     expect((await request(port, '/no/such/route')).body).not.toContain('__T__')
     expect((await request(port, '/no/such/route')).body).toContain('shell')
 
+    const routeEntered = Promise.withResolvers<undefined>()
+    const releaseRoute = Promise.withResolvers<undefined>()
+    const disposeDraining = server.register({ kind: 'exact', path: '/drain', handler: async (_req, res) => {
+      routeEntered.resolve(undefined)
+      await releaseRoute.promise
+      res.writeHead(200)
+      res.end('DRAINED')
+    } })
+    const inFlight = fetch(`http://127.0.0.1:${String(port)}/drain`)
+    await routeEntered.promise
+    let routeDrained = false
+    const routeDrain = disposeDraining().then(() => { routeDrained = true })
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(routeDrained).toBe(false)
+    expect((await request(port, '/drain')).body).toContain('shell')
+    releaseRoute.resolve(undefined)
+    expect(await (await inFlight).text()).toBe('DRAINED')
+    await routeDrain
+    expect(routeDrained).toBe(true)
+
     // Per-request error containment: a malformed %-escape answers 400 and the
     // server keeps serving afterwards (no process-level failure path).
     expect((await request(port, '/%zz')).status).toBe(400)
@@ -246,7 +279,7 @@ describe('real Loader composition', () => {
       .toThrow(/duplicate exact route/)
     const disposeOnce = server.register({ kind: 'exact', path: '/once', handler: (_req, res) => { res.writeHead(200); res.end('ONCE') } })
     expect(await request(port, '/once')).toMatchObject({ status: 200, body: 'ONCE' })
-    disposeOnce()
+    await disposeOnce()
     expect((await request(port, '/once')).body).toContain('shell') // back to the fallback owner
     expect(() => server.register({ kind: 'exact', path: '/once', handler: () => {} })).not.toThrow()
 
@@ -259,6 +292,10 @@ describe('real Loader composition', () => {
     // become registrable again after disposal. The accepted socket stays open
     // so the teardown assertion also covers upgraded-connection ownership.
     let upgradedServerClosed = false
+    server.register({ kind: 'exact', path: '/events', handler: (_req, res) => {
+      res.writeHead(200)
+      res.end('HTTP EVENTS')
+    } })
     const disposeUpgrade = server.registerUpgrade({
       path: '/events',
       handler: (_req, socket) => {
@@ -269,7 +306,8 @@ describe('real Loader composition', () => {
     expect(() => server.registerUpgrade({ path: '/events', handler: () => {} }))
       .toThrow(/duplicate upgrade route/)
     const upgraded = await upgrade(port, '/events?stream=mux')
-    disposeUpgrade()
+    expect(await request(port, '/events')).toMatchObject({ status: 200, body: 'HTTP EVENTS' })
+    await disposeUpgrade()
     expect(() => server.registerUpgrade({ path: '/events', handler: () => {} })).not.toThrow()
 
     // The webserver contains raw-socket errors even before an upgrade handler
@@ -281,7 +319,7 @@ describe('real Loader composition', () => {
         socket.destroy(new Error('test upgrade transport failure'))
       },
     })
-    const failedUpgrade = connect(port, '127.0.0.1')
+    const failedUpgrade = trackUpgrade(connect(port, '127.0.0.1'))
     failedUpgrade.on('error', () => { /* The server-side reset is the fixture outcome. */ })
     await once(failedUpgrade, 'connect')
     const failedUpgradeClosed = once(failedUpgrade, 'close')
@@ -296,9 +334,24 @@ describe('real Loader composition', () => {
     await failedUpgradeClosed
     expect(await request(port, '/probe')).toMatchObject({ status: 200, body: 'EXACT' })
 
+    let waitingUpgradeClosed = false
+    server.registerUpgrade({
+      path: '/upgrade-drain',
+      handler: async (_req, socket) => {
+        const closed = once(socket, 'close')
+        socket.write('HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: dsh-test\r\n\r\n')
+        await closed
+        waitingUpgradeClosed = true
+      },
+    })
+    const waitingUpgrade = await upgrade(port, '/upgrade-drain')
+    const waitingPeerClosed = once(waitingUpgrade, 'close')
+
     // Teardown closes both ordinary and upgraded sockets before it resolves.
     await loaded.fiber.dispose()
     expect(upgradedServerClosed).toBe(true)
+    await waitingPeerClosed
+    expect(waitingUpgradeClosed).toBe(true)
     upgraded.destroy()
     await expect(request(port, '/probe')).rejects.toThrow()
   })

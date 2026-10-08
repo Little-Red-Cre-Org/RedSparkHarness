@@ -27,7 +27,10 @@
       "path": "../ui-slots"
     },
     {
-      "path": "../../host/webserver"
+      "path": "../../../../Core/util/http-routes/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
     },
     {
       "path": "../../../../Core/vendor/cordis"
