@@ -75,6 +75,8 @@ pnpm docs:check
 
 If Markdown link checks pass but the site build reports a missing fragment, follow the `verify-doc-site-fragments` source and target paths. Preserve the English GitHub id with an explicit alias in authored Markdown or in the owning generator.
 
+If the build or `verify-doc-site-render` reports pages without server-rendered markup, the VitePress render failed while the build still exited 0; check first that `vue` and every `@vue/*` package resolve to one version (`pnpm why vue -r`, `pnpm why @vue/server-renderer -r`).
+
 Before committing a documentation-site change, run:
 
 ```sh

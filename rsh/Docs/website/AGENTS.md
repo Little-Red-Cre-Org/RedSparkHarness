@@ -14,4 +14,6 @@ Production builds remove the configured output directory after VitePress resolve
 
 The build also emits each route's raw-Markdown twin (with a parent-level alias per index route) and a root `llms.txt` index into `.dist/`, so a page's URL, minus any trailing slash, plus `.md` serves it as plain Markdown. Both derive from the publication manifest at build time; neither is ever a file in this tree.
 
+Server rendering must emit page markup. VitePress logs a Vue render error instead of failing, so a split Vue runtime, such as an `@vue/server-renderer` from another release than `vue`, writes every page with an empty `#app` in a build that exits 0. The production build therefore fails when VitePress logs `vitepress data not properly injected in app` or the matching renderer error, and `docs:build` then runs [verify-doc-site-render.ts](../../Scripts/verify-doc-site-render.ts), which rejects a locale home whose `#app` holds no element and any other page, except the client-rendered `404.html`, without `.vp-doc` text. Keep `vue` and every `@vue/*` runtime, compiler, and renderer package on one version.
+
 Run `pnpm docs:check` after changing this subtree; the gate rejects additional non-ignored Markdown under `website/`.

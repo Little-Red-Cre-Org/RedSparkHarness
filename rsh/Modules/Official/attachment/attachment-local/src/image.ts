@@ -1,8 +1,9 @@
 /** Raster inspection: full decode at admission, header-only probe on verified reads. */
 
-import sharp, { type Sharp } from 'sharp'
+import type { Sharp } from 'sharp'
 import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
 import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import { openSupportedImage } from './signature.ts'
 
 /** Decoded metadata from a supported image. */
 export interface DetectedImage {
@@ -90,7 +91,7 @@ async function imageMetadata(image: Sharp): Promise<DetectedImage> {
  */
 export async function probeImage(data: Uint8Array): Promise<DetectedImage> {
   try {
-    return await imageMetadata(sharp(data, { failOn: 'error', limitInputPixels: false }))
+    return await imageMetadata(openSupportedImage(data))
   } catch (error) {
     if (error instanceof AttachmentError) throw error
     throw new AttachmentError('Unsupported or malformed image data.', 'INVALID_IMAGE', { cause: error })
@@ -113,7 +114,7 @@ export interface DecodedImageLimits {
  */
 export async function detectImage(data: Uint8Array, limits?: DecodedImageLimits): Promise<DetectedImage> {
   try {
-    const image = sharp(data, { failOn: 'error', limitInputPixels: false })
+    const image = openSupportedImage(data)
     const detected = await imageMetadata(image)
     if (limits?.maxPixels !== undefined && detected.width * detected.height > limits.maxPixels) {
       throw new AttachmentError('Image exceeds the configured decoded-pixel limit.', 'IMAGE_TOO_MANY_PIXELS')

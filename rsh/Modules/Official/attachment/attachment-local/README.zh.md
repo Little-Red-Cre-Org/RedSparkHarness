@@ -78,6 +78,7 @@ kind: "package-reference"
 - **一次规范化，按路由投影。** 准入持久保存一份提供方无关的规范化附件；请求投影派生确定性变体而不改写持久历史。
 - **惰性 alpha 路由编码。** 带 alpha 的图片使用 WebP，不透明图片使用 JPEG；质量候选按 85/75/60 顺序运行，没有候选满足编码字节目标时保留最小输出。
 - **限制是写入时策略。** 字节、总像素与单边尺寸限制只约束准入，因此之后收紧它们绝不会让已接纳的历史不可读。
+- **解码前的签名允许列表。** 每个 Sharp 流水线都通过同一个函数打开，该函数只接受 PNG、JPEG、WebP 与 GIF 的起始签名。HEIF/AVIF、SVG/XML、TIFF 及其他所有字节都会在 libvips 选择加载器之前以 `INVALID_IMAGE` 失败，因此受支持格式之外的解码器绝不会解析附件字节。
 
 ### 写入与读取路径
 
@@ -107,6 +108,7 @@ kind: "package-reference"
 | [`src/request-image.ts`](src/request-image.ts) | 路由专用请求变换与缓存身份 |
 | [`src/request-store.ts`](src/request-store.ts) | 不依赖 Cordis 的持久图片读取与共享请求工作 |
 | [`src/image.ts`](src/image.ts) | 完整光栅解码与元数据校验 |
+| [`src/signature.ts`](src/signature.ts) | 把关每个 Sharp 输入的起始签名允许列表 |
 | — | 不发布运行时不变式伴生入口；不可变写入与校验读取在后端边界直接强制。 |
 
 </details>

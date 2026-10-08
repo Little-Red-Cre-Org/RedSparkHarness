@@ -34,7 +34,7 @@
   "dependencies": {
     "@deepseek-ai/dsh-http-routes": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "negotiator": "^1.0.0"
   },
   "devDependencies": {
