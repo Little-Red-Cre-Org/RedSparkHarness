@@ -51,8 +51,8 @@ function cloneForVersion(manifest: object, sourceVersion: string, version: strin
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = cloned[field]
     if (dependencies === undefined) continue
-    for (const name of Object.keys(dependencies)) {
-      if (isDshPackage(name)) dependencies[name] = dependencies[name].replaceAll(sourceVersion, version)
+    for (const [name, dependencyRange] of Object.entries(dependencies)) {
+      if (isDshPackage(name)) dependencies[name] = dependencyRange.replaceAll(sourceVersion, version)
     }
   }
   return cloned
@@ -250,7 +250,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
       }
       const targetPath = resolvePackagePath(packageLock.packages, cliPath, dependency)
       const target = targetPath === undefined ? undefined : packageLock.packages[targetPath]
-      if (targetPath !== sharedReactPaths.get(dependency) || target === undefined) {
+      if (targetPath === undefined || targetPath !== sharedReactPaths.get(dependency) || target === undefined) {
         errors.push(`${cliPath}: ${dependency} must resolve to the shared ${String(sharedReactPaths.get(dependency))}`)
         continue
       }
