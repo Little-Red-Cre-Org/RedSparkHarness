@@ -2463,15 +2463,11 @@ export interface Config {
   /** Grace in milliseconds between app-server managed-range termination tiers. */
   disposeGraceMs?: number
 }
-
-/** Profile-selectable non-interactive Codex permission mode. */
-export type CodexPermissionMode =
-  | 'never'
-  | 'approve-for-me'
-  | 'dangerously-bypass-approvals-and-sandbox'
 ```
 
-Source: [`rsh/Engine/subagent/subagent-codex/src/index.ts:36`](../Engine/subagent/subagent-codex/src/index.ts)
+Depends on: [`CodexPermissionMode`](../Modules/Official/subagent/codex-app-server/src/index.ts)
+
+Source: [`rsh/Compatibility/DSH/bridge/subagent-codex/src/index.ts:36`](../Compatibility/DSH/bridge/subagent-codex/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-dsh-sdk"></a>
 
@@ -3594,6 +3590,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-cmdline` ([`rsh/Compatibility/DSH/boot/cmdline/src/index.ts`](../Compatibility/DSH/boot/cmdline/src/index.ts))
 - `@deepseek-ai/dsh-code-runtime-definition` ([`rsh/Engine/core/code-runtime-definition/src/index.ts`](../Engine/core/code-runtime-definition/src/index.ts))
 - `@deepseek-ai/dsh-code-runtime-process-sandbox` ([`rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts`](../Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts))
+- `@deepseek-ai/dsh-codex-app-server` ([`rsh/Modules/Official/subagent/codex-app-server/src/index.ts`](../Modules/Official/subagent/codex-app-server/src/index.ts))
 - `@deepseek-ai/dsh-compat-dsh-runtime` ([`rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts))
 - `@deepseek-ai/dsh-compat-fs-local` ([`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts))
 - `@deepseek-ai/dsh-compat-fs-policy` ([`rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-policy/src/index.ts))

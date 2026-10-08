@@ -26,3 +26,4 @@ kind: "package-group"
 | [`compat-fs-policy/`](compat-fs-policy/README.zh.md) | 面向原生事件的文件系统观察策略 |
 | [`compat-fs-sandbox/`](compat-fs-sandbox/README.zh.md) | 要求策略的 sandbox 文件系统 Provider |
 | [`compat-tool-fs/`](compat-tool-fs/README.zh.md) | 旧文件系统工具和提示词贡献 |
+| [`subagent-codex/`](subagent-codex/README.zh.md) | 面向 Cordis 兼容 profile 的 Codex app-server 子 agent 适配器 |

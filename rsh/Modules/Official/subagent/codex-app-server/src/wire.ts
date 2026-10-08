@@ -1,17 +1,30 @@
 /**
- * Minimal Codex app-server 0.159.0 protocol adapter. The shared JSON-RPC
+ * Codex app-server 0.161.0 protocol adapter. The shared JSON-RPC
  * transport owns framing and request correlation; this module owns only the
  * product methods, current thread/turn association, unattended approval
  * responses, and terminal-answer selection.
  *
- * @module @deepseek-ai/dsh-subagent-codex/wire
+ * @module @deepseek-ai/dsh-codex-app-server/wire
  */
 
 import type { Readable, Writable } from 'node:stream'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { SubagentResult } from '@deepseek-ai/dsh-subagent'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
-import type { CodexPermissionMode } from './run.ts'
+import type { CodexPermissionMode } from './types.ts'
+
+export type { CodexPermissionMode } from './types.ts'
+
+interface CodexTextBlock {
+  readonly type: 'text'
+  readonly text: string
+}
+
+/** Selected answer and terminal status from one Codex turn.
+ * The app-server wire currently returns completed or token-limit outcomes.
+ */
+export interface CodexWireResult {
+  readonly output: readonly CodexTextBlock[]
+  readonly stopReason: 'completed' | 'max-tokens'
+}
 
 type JsonObject = Record<string, unknown>
 
@@ -220,6 +233,9 @@ export class CodexAppServerWire {
   private terminalObserved = false
   private closed = false
 
+  /** Product-owned identity established by the `thread/start` handshake. */
+  get remoteId(): string | undefined { return this.threadId }
+
   constructor(
     private readonly input: Readable,
     output: Writable,
@@ -258,6 +274,13 @@ export class CodexAppServerWire {
    */
   endedBeforeTerminal(): boolean {
     return this.inputEnded && !this.terminalObserved
+  }
+
+  /** Whether this run's authoritative terminal notification was observed.
+   * @returns true after a terminal notification for this turn.
+   */
+  hasTerminalNotification(): boolean {
+    return this.terminalObserved
   }
 
   /**
@@ -305,12 +328,14 @@ export class CodexAppServerWire {
    * terminal notification.
    * @param texts - already validated task text blocks.
    * @param signal - local cancellation for the published run.
+   * @param effort - optional reasoning effort sent on turn/start.
    * @returns the shared subagent result.
    */
   async runTurn(
     texts: readonly string[],
     signal: AbortSignal,
-  ): Promise<SubagentResult> {
+    effort?: string,
+  ): Promise<CodexWireResult> {
     const completion = Promise.withResolvers<{
       readonly params: JsonObject
       readonly order: number
@@ -321,6 +346,7 @@ export class CodexAppServerWire {
       const response = object(await this.guarded(this.transport.request('turn/start', {
         threadId,
         input: texts.map(text => ({ type: 'text', text, text_elements: [] })),
+        ...effort === undefined ? {} : { effort },
       }, signal), signal), 'turn/start response')
       const turn = object(response.turn, 'turn/start turn')
       this.commitTurnId(string(turn.id, 'turn/start turn id'))
@@ -389,7 +415,7 @@ export class CodexAppServerWire {
    * The best non-commentary answer observed so far, preserving exact bytes.
    * @returns the selected final or nullable-phase text block, if any.
    */
-  collectOutput(): ContentBlock[] {
+  collectOutput(): CodexTextBlock[] {
     const selected = this.lastFinalAnswer ?? this.lastUnphasedAnswer
     return selected !== undefined && selected.trim().length > 0
       ? [{ type: 'text', text: selected }]
@@ -412,6 +438,11 @@ export class CodexAppServerWire {
   collectFailure(): CodexWireFailureFacts {
     return this.failure as CodexWireFailureFacts
   }
+
+  /** Whether the app-server closed its protocol stream before the run settled.
+   * @returns true after the protocol input stream ends.
+   */
+  hasInputEnded(): boolean { return this.inputEnded }
 
   /** Detach JSON-RPC listeners and reject outstanding requests. Idempotent. */
   close(): void {
