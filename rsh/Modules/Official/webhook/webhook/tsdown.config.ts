@@ -14,5 +14,6 @@ export default defineConfig({
   target: 'es2024',
   fixedExtension: false,
   dts: false,
+  outputOptions: { chunkFileNames: 'shared-[hash].js' },
   clean: false,
 })

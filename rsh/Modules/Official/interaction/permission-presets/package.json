@@ -52,11 +52,11 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "lib/*.js",
     "lib/index.js",
     "lib/invariant.js",
     "lib/native.js",
     "lib/native-definition.js",
+    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -65,7 +65,6 @@
     "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-shell": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
     "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
@@ -82,7 +81,6 @@
     "@deepseek-ai/dsh-compat-settings-definition": { "optional": true },
     "@deepseek-ai/dsh-shell": { "optional": true },
     "@deepseek-ai/dsh-commands": { "optional": true },
-    "@deepseek-ai/dsh-invariants": { "optional": true },
     "@deepseek-ai/dsh-sandbox-policy": { "optional": true },
     "@deepseek-ai/dsh-session": { "optional": true },
     "@deepseek-ai/dsh-session-projection": { "optional": true },
