@@ -6,7 +6,8 @@ import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-client-modules'
-import { renderIndexInjections, type IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
+import { renderIndexInjections, type IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
 import type { NativeClientBundle } from './native-client.ts'
 
 /** Desktop stream endpoint shared with the injected browser transport. */

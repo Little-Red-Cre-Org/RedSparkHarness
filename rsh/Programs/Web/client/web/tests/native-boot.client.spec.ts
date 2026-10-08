@@ -3,7 +3,6 @@ import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, t
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { describe, expect, it } from 'vitest'
 import { bootNativeClient } from '../src/native-boot.ts'
-import type {} from '../src/native-services.d.ts'
 
 function modulesOf(entries: Record<string, unknown>): ClientModuleSystem {
   const ids = Object.keys(entries)

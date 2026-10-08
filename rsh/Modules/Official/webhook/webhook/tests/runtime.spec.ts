@@ -7,6 +7,7 @@ import WebhookRuntime, {
   WebhookSourceId,
   type VerifiedWebhookDelivery,
 } from '../src/index.ts'
+import { NativeWebhookRuleRegistry } from '../src/native.ts'
 
 const contexts: Context[] = []
 
@@ -279,4 +280,77 @@ describe('WebhookRuntime', () => {
       source: { kind: 'webhook', ruleId: 'creates' },
     })
   })
+
+  it.each(['registration-withdrawal', 'repeated-provider-close'] as const)(
+    'cancels and drains admitted root executions during %s', async (mode) => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const admitted: Array<{ readonly id: string; readonly owner: object }> = []
+      const released: string[] = []
+      const executions = new Map<string, { readonly signal: AbortSignal; readonly resolve: (value: unknown) => void }>()
+      const route = { id: 'webhook-workspace-route', workspaceId: 'workspace' }
+      const baseRoute = { id: 'root' }
+      const workspace = { attachSession: async () => {}, detachSession: async () => {} }
+      const root = {
+        deletions: { delete: vi.fn(async () => {}) },
+        resolve: (id: string) => id === 'root' ? baseRoute : route,
+        createWorkspaceRoute: async () => route,
+        releaseWorkspace: vi.fn(async () => {}),
+        releaseIdle: vi.fn(async ({ id }: { readonly id: string }) => { released.push(id) }),
+        async maintenance(request: { readonly id: string }, operation: (owner: { append(): void }) => Promise<void>) {
+          const owner = { append() {} }
+          admitted.push({ id: request.id, owner })
+          await operation(owner)
+          return owner
+        },
+        execute(request: {
+          readonly id: string
+          readonly message: { readonly content: readonly { readonly text?: string }[] }
+          onEvent(event: unknown): void
+        }, signal: AbortSignal) {
+          const name = request.message.content[0]?.text ?? 'unknown'
+          const pending = Promise.withResolvers<unknown>()
+          executions.set(name, { signal, resolve: pending.resolve })
+          request.onEvent({ type: 'agent/inbox/spliced', data: { inserted: [request.message] } })
+          return pending.promise
+        },
+      }
+      const registry = new NativeWebhookRuleRegistry(root as never, { get: () => workspace } as never,
+        { resolvePreset: () => ({ id: 'standard' }) } as never,
+        { resolve: () => ({}), apply: async () => {} } as never)
+      const makeRequest = (prompt: string) => ({ workspacePath: '/workspace', title: prompt, prompt,
+        agentPreset: 'standard', permissionPreset: 'workspace-write' })
+      const disposeFirst = registry.register({ id: WebhookRuleId('first'), kind: 'fixture', run: () => makeRequest('first') })
+      registry.register({ id: WebhookRuleId('second'), kind: 'fixture', run: () => makeRequest('second') })
+      try {
+        await registry.dispatch(delivery(), 'root' as never)
+        expect([...executions.keys()].sort()).toEqual(['first', 'second'])
+
+        const withdrawal = mode === 'registration-withdrawal' ? disposeFirst() : Promise.resolve()
+        const close = registry.close()
+        const repeatedClose = registry.close()
+        expect(repeatedClose).toBe(close)
+        let closeDone = false
+        let withdrawalDone = false
+        void close.then(() => { closeDone = true })
+        void withdrawal.then(() => { withdrawalDone = true })
+        await new Promise<void>(resolve => setImmediate(resolve))
+        expect(executions.get('first')?.signal.aborted).toBe(true)
+        expect(executions.get('second')?.signal.aborted).toBe(true)
+        expect(closeDone).toBe(false)
+        expect(withdrawalDone).toBe(mode !== 'registration-withdrawal')
+        expect(released).toEqual([])
+        expect(root.releaseWorkspace).not.toHaveBeenCalled()
+        executions.get('second')?.resolve({ exitCode: 0 })
+        executions.get('first')?.resolve({ exitCode: 0 })
+        await Promise.all([withdrawal, close, repeatedClose])
+        expect(released.sort()).toEqual(admitted.map(({ id }) => id).sort())
+        expect(root.releaseWorkspace).toHaveBeenCalledOnce()
+        expect(root.deletions.delete).not.toHaveBeenCalled()
+      } finally {
+        for (const execution of executions.values()) execution.resolve({ exitCode: 0 })
+        await registry.close()
+        warning.mockRestore()
+      }
+    },
+  )
 })

@@ -46,6 +46,18 @@
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.host.json"
     }
   ]
 }

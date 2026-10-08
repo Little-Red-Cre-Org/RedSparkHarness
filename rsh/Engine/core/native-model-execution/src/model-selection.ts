@@ -8,11 +8,12 @@ declare module '@deepseek-ai/dsh-session/types' {
   }
 }
 
-/** Complete provider, model and optional provider-owned reasoning effort for one Session. */
+/** Complete provider route and request controls for one Session. */
 export interface ModelSelection {
   readonly provider: string
   readonly model: string
   readonly reasoningEffort?: string
+  readonly maxTokens?: number
 }
 
 /** Durable last request and unconsumed later choice. */
@@ -77,7 +78,7 @@ export interface ModelCatalog {
  */
 export function sameModelSelection(left: ModelSelection | null, right: ModelSelection | null): boolean {
   return left === right || left !== null && right !== null && left.provider === right.provider
-    && left.model === right.model && left.reasoningEffort === right.reasoningEffort
+    && left.model === right.model && left.reasoningEffort === right.reasoningEffort && left.maxTokens === right.maxTokens
 }
 
 /** Advance selection intent and request-use facts from one validated durable event.
@@ -91,8 +92,10 @@ export function applyModelSelectionProjection(state: ModelSelectionProjectionSta
   }
   if (event.type !== 'request/header') return state
   const config = event.data.header.config
+  const adapterDefaults = event.data.header.adapterDefaults
   const lastUsed: ModelSelection = { provider: config.provider, model: config.model,
-    ...config.reasoningEffort === undefined ? {} : { reasoningEffort: String(config.reasoningEffort) } }
+    ...config.reasoningEffort === undefined ? {} : { reasoningEffort: String(config.reasoningEffort) },
+    ...adapterDefaults?.maxTokens === true || config.maxTokens === undefined ? {} : { maxTokens: config.maxTokens } }
   const pending = sameModelSelection(state.pending, lastUsed) ? null : state.pending
   return sameModelSelection(state.lastUsed, lastUsed) && pending === state.pending ? state : { lastUsed, pending }
 }

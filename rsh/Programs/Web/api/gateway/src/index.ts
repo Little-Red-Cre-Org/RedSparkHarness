@@ -9,7 +9,8 @@ import { randomUUID } from 'node:crypto'
 import { Context, Service, symbols } from '@deepseek-ai/cordis'
 import type { ConnectionRpcHandler } from '@deepseek-ai/dsh-client-connection'
 import { Deque } from '@deepseek-ai/dsh-deque'
-import type { WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpUpgradeRoute } from '@deepseek-ai/dsh-http-routes/host'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import z from '@deepseek-ai/schemastery'
 export type { TypertGatewayFaultDetails } from './remote-error-codes.ts'
@@ -209,7 +210,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
         resolved.websocketHeartbeatIntervalMs,
       )
       webCtx.effect(() => {
-        const route: WebUpgradeRoute = {
+        const route: HttpUpgradeRoute = {
           path: REMOTE_STREAM_MUX_PATH,
           handler: (req, socket, head) => {
             const rejection = webCtx.connection.requestRejection(req)
@@ -222,8 +223,9 @@ export class TypertGatewayService extends Service implements TypertGateway {
         }
         const unregister = webCtx.webServer.registerUpgrade(route)
         return async () => {
-          unregister()
+          const drain = unregister()
           await mux.close()
+          await drain
         }
       }, `api-gateway: ${REMOTE_STREAM_MUX_PATH} WebSocket`)
     })

@@ -26,7 +26,10 @@
       "path": "../../client/connection/tsconfig.host.json"
     },
     {
-      "path": "../../host/webserver"
+      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
     },
     {
       "path": "../../../../Core/typert/protocol"

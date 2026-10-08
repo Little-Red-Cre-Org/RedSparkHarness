@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { createLaunchEnvironmentSnapshot, DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import type { WebServer } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpWebServer as WebServer } from '@deepseek-ai/dsh-http-routes-cordis'
 import { apply, Config, internals } from '../src/index.ts'
 
 vi.mock('node:child_process', async importOriginal => ({

@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import { sessionApprovalPolicy, type NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import { SessionId, Session } from '@deepseek-ai/dsh-session/native'
 import { NativeApprovalRequestId, plugin as approvalPlugin } from '../src/index.ts'
 
 async function fixture(policy?: 'ask' | 'never'): Promise<{
@@ -91,6 +92,37 @@ describe('NativeApprovalService', () => {
       await expect(state.approval.request({ id: NativeApprovalRequestId('approval-4'), agent: owner, toolName: 'write_file' })).resolves.toMatchObject({
         policy: 'never', outcome: 'rejected',
       })
+      expect(called).toBe(false)
+    } finally {
+      await unregister()
+      await state.host.stop()
+    }
+  })
+
+  it('uses the exact Session policy override ahead of the deployment default', async () => {
+    const state = await fixture('never')
+    const owner = agent('owner', state.root)
+    const unregister = state.agents.register(owner)
+    const session = Session.create(SessionId('approval-session-policy'))
+    session.append('approval/policy', { policy: 'ask' })
+    const askPolicy = sessionApprovalPolicy(session)
+    if (askPolicy === undefined) throw new Error('approval session policy was not projected')
+    let called = false
+    try {
+      state.approval.registerAnswerer((request) => {
+        called = true
+        return request.policy === 'ask' ? 'allowed-once' : undefined
+      })
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-session-ask'), agent: owner,
+        sessionPolicy: askPolicy, toolName: 'write_file' })).resolves.toMatchObject({ policy: 'ask', outcome: 'allowed-once' })
+      expect(called).toBe(true)
+
+      session.append('approval/policy', { policy: 'never' })
+      const neverPolicy = sessionApprovalPolicy(session)
+      if (neverPolicy === undefined) throw new Error('approval session policy was not projected')
+      called = false
+      await expect(state.approval.request({ id: NativeApprovalRequestId('approval-session-never'), agent: owner,
+        sessionPolicy: neverPolicy, toolName: 'write_file' })).resolves.toMatchObject({ policy: 'never', outcome: 'rejected' })
       expect(called).toBe(false)
     } finally {
       await unregister()

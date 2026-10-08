@@ -100,6 +100,7 @@ export class NativeSdkApplication implements NativeApplication {
       releaseWorkspace: (id, signal) => this.rootOperations().releaseWorkspace(id, signal),
       capture: owner => this.rootOperations().capture(owner),
       cancel: owner => this.rootOperations().cancel(owner),
+      releaseIdle: (request, signal) => this.rootOperations().releaseIdle(request, signal),
       execute: (request, signal) => this.rootOperations().execute(request, signal),
       settle: (request, signal) => this.rootOperations().settle(request, signal),
       maintenance: (request, operation, signal) => this.rootOperations().maintenance(request, operation, signal),

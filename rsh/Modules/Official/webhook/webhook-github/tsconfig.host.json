@@ -1,0 +1,24 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "lib/types/host",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo"
+  },
+  "include": [
+    "src/native.ts",
+    "src/ingress.ts",
+    "src/body.ts",
+    "src/types.ts"
+  ],
+  "references": [
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json" },
+    { "path": "../../../../Engine/llm/llm" },
+    { "path": "../webhook" },
+    { "path": "../../credentials/credentials" }
+  ]
+}

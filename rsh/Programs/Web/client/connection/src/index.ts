@@ -4,7 +4,8 @@ import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-credentials'
 // Activates the webServer Context merge used below.
-import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import { API_PATH } from './api-path.ts'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 import { assertTrustedAuthority } from './api-request-trust.ts'
@@ -123,7 +124,7 @@ export async function apply(ctx: Context, config?: ConnectionConfig): Promise<vo
       table.push({ kind: 'global', name: '__DSH_CONNECTION_RECOVERY__', value: recovery })
     })
     const fetchHandler = connection.createSharedFetchHandler(API_PATH)
-    const route: WebRoute = {
+    const route: HttpRoute = {
       kind: 'prefix',
       path: API_PATH,
       handler: async (req, res) => {

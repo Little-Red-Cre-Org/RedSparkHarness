@@ -343,6 +343,7 @@ const subsystemGroups = [
     ['schedule.md', '定时提醒', 'Scheduled reminders'],
   ]],
   ['平台与接入', 'Platform and access', [
+    ['http-routes.md', 'HTTP 路由约定', 'HTTP route contracts'],
     ['web-server.md', 'HTTP 服务器', 'HTTP server'],
     ['web-client.md', 'Web Client 架构', 'Web Client architecture'],
     ['client-modules.md', '客户端模块', 'Client modules'],

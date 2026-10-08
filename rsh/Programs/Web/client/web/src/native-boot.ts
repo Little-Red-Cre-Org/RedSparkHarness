@@ -5,7 +5,7 @@ import {
   type InstallationRequest, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
 
-export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-renderer/native'
+export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-slots/native'
 
 /** Module import and installation states exposed to the native loading page. */
 export type NativeClientEntryState = 'loading' | 'active' | 'failed'

@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClientArtifactBaseline, ClientModuleRegistry, WebBootGraph } from '@deepseek-ai/dsh-client-modules'
-import type { WebRoute, WebServer } from '@deepseek-ai/dsh-host-webserver'
+import type { HttpWebServer as WebServer, WebRoute } from '@deepseek-ai/dsh-http-routes-cordis'
 import { apply, Config, EVENTS_ENDPOINT, inject } from '../src/index.ts'
 
 const POLL_MS = 20

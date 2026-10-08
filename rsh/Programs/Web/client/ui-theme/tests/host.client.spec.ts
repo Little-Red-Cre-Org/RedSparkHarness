@@ -1,6 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
-import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
 import { SettingsProvider, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import {
   DEFAULT_PREFERENCE, THEME_SETTINGS_NAMESPACE, apply,

@@ -5,6 +5,7 @@ import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { ApprovalRequestId } from './index.ts'
 import { APPROVAL_POLICIES } from './index.ts'
+import type {} from '@deepseek-ai/dsh-approval-definition'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-user-approval'
 const APPROVAL_OUTCOMES = ['allowed-once', 'rejected', 'cancelled', 'unavailable'] as const

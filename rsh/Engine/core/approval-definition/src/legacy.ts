@@ -1,9 +1,9 @@
 /** Framework-free legacy approval contracts and durable policy projection. */
 import { type Branded } from '@deepseek-ai/dsh-brand'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { Session } from '@deepseek-ai/dsh-session/native'
 import type {} from '@deepseek-ai/dsh-session/types'
+import { sessionApprovalPolicy } from './index.ts'
 
 /** One-shot outcome returned by the compatibility answerer chain. */
 export type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
@@ -44,12 +44,7 @@ export function setApprovalPolicy(session: Session, policy: ApprovalPolicy): voi
  * @returns the last policy event, or `undefined` when the log has none.
  */
 export function approvalPolicyOf(session: Session): ApprovalPolicy | undefined {
-  for (let seq = session.seq - 1; seq >= 0; seq -= 1) {
-    // oxlint-disable-next-line typescript/no-deprecated -- Session history API migration is separate.
-    const event = session.eventAt(SessionSeq(seq))
-    if (event?.type === 'approval/policy') return event.data.policy
-  }
-  return undefined
+  return sessionApprovalPolicy(session)
 }
 
 /** Framework-free request passed to the compatibility approval service. */
@@ -102,11 +97,5 @@ declare module '@deepseek-ai/dsh-session/types' {
     }
     /** Closed outcome paired with a preceding compatibility approval question. */
     'approval/decided': { id: ApprovalRequestId; outcome: ApprovalOutcome }
-    /** Durable per-Session policy override, never included in the model transcript. */
-    'approval/policy': {
-      policy: ApprovalPolicy
-      /** Marks an override seeded into a child during delegation. */
-      source?: 'delegation'
-    }
   }
 }

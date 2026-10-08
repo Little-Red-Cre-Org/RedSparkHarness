@@ -19,24 +19,8 @@
  */
 
 import type { Session } from '@deepseek-ai/dsh-session'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * The session's sandbox mode was switched — log-only (like `approval/*`;
-     * NOT a surface event, carries no `surfaceOp`): durable and replayable,
-     * never in the model transcript. The LAST such event is the session's
-     * override (folded by the sandboxMode projection unit). `source: 'delegation'` marks
-     * an override seeded into a child; an absent source is a runtime switch.
-     */
-    'sandbox/mode': {
-      mode: SandboxMode
-      /** Marks an override seeded into a child at delegation. */
-      source?: 'delegation'
-    }
-  }
-}
+import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
+import type {} from '@deepseek-ai/dsh-sandbox/native-types'
 
 /** Every {@link SandboxMode}, for option advertisement and runtime validation of untrusted mode strings. */
 export const SANDBOX_MODES: readonly SandboxMode[] = ['read-only', 'workspace-write', 'danger-full-access']

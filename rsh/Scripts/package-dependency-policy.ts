@@ -11,15 +11,19 @@ const CLIENT_FACE_EXCLUDE: readonly string[] = [
   '@deepseek-ai/dsh-api-workspace-controller',
 ]
 
-/** Host-only packages whose peer relays are deliberately flattened. */
+/** Explicit Host packages whose published dependency edges need manual classification. */
 const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
   '@deepseek-ai/dsh-llm',
+  '@deepseek-ai/dsh-permission-presets',
   '@deepseek-ai/dsh-session',
+  '@deepseek-ai/dsh-webhook',
 ]
 
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store'],
+  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime'],
+  '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
+  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
   '@deepseek-ai/dsh-client-native-session': [
     '@deepseek-ai/dsh-native-runtime',
@@ -45,9 +49,31 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
 
 /** Published type imports whose provider must be installed by the consumer. */
 const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-permission-presets': [
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-native-session-execution',
+    '@deepseek-ai/dsh-sandbox',
+  ],
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
   '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
+  '@deepseek-ai/dsh-webhook': [
+    '@deepseek-ai/dsh-agent-presets',
+    '@deepseek-ai/dsh-native-model-execution',
+    '@deepseek-ai/dsh-native-model-selection',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-native-session-execution',
+    '@deepseek-ai/dsh-permission-presets',
+    '@deepseek-ai/dsh-workspace',
+  ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
+
+/** Peer packages that own contracts for Native services required by a mixed package's Host entry. */
+const NATIVE_SERVICE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-permission-presets': {
+    agents: '@deepseek-ai/dsh-native-agent',
+    sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
+  },
+} as const satisfies Readonly<Record<string, Readonly<Record<string, string>>>>
 
 /** Development-only package relationships not represented by source imports. */
 const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
@@ -77,7 +103,22 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
   '@deepseek-ai/dsh-workflow': ['@deepseek-ai/dsh-agent'],
   '@deepseek-ai/dsh-fs-sandbox': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy'],
   '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
+  '@deepseek-ai/dsh-permission-presets': [
+    '@deepseek-ai/dsh-compat-settings-definition',
+    '@deepseek-ai/dsh-shell',
+    '@deepseek-ai/dsh-commands',
+    '@deepseek-ai/dsh-invariants',
+    '@deepseek-ai/dsh-sandbox-policy',
+    '@deepseek-ai/dsh-session',
+    '@deepseek-ai/dsh-session-projection',
+    '@deepseek-ai/dsh-user-approval',
+  ],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
+  '@deepseek-ai/dsh-webhook': [
+    '@deepseek-ai/dsh-agent',
+    '@deepseek-ai/dsh-agent-default-model',
+    '@deepseek-ai/dsh-invariants',
+  ],
   '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol'],
 }
 
@@ -114,6 +155,12 @@ const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
  */
 const SAFE_HOST_DEPENDENCY_EXPORTS = {
   '@deepseek-ai/dsh-deque': ['Deque'],
+  '@deepseek-ai/dsh-approval-definition': ['sessionApprovalPolicy'],
+  '@deepseek-ai/dsh-approval-definition/legacy': ['APPROVAL_POLICIES', 'setApprovalPolicy'],
+  '@deepseek-ai/dsh-commands/brand': ['CommandDefinitionId'],
+  '@deepseek-ai/dsh-llm': ['boundContextSummary', 'errorChain'],
+  '@deepseek-ai/dsh-llm/native': ['boundContextSummary'],
+  '@deepseek-ai/dsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
   '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
   '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
   '@deepseek-ai/schemastery': ['default'],
@@ -134,6 +181,7 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
   '@deepseek-ai/dsh-session/native': ['SessionId'],
   '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
+  '@deepseek-ai/dsh-session-title/normalize': ['normalizeSessionTitle'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
 
@@ -152,6 +200,7 @@ export interface PackageDependencyPolicy {
   readonly sharedClientRuntimePeers: Readonly<Record<string, readonly string[]>>
   readonly publishedTypeDependencies?: Readonly<Record<string, readonly string[]>>
   readonly publishedTypePeerDependencies?: Readonly<Record<string, readonly string[]>>
+  readonly nativeServicePeerDependencies?: Readonly<Record<string, Readonly<Record<string, string>>>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
   readonly peerRequiredHostExports: HostDependencyExports
@@ -168,6 +217,7 @@ export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
   sharedClientRuntimePeers: SHARED_CLIENT_RUNTIME_PEERS,
   publishedTypeDependencies: PUBLISHED_TYPE_DEPENDENCIES,
   publishedTypePeerDependencies: PUBLISHED_TYPE_PEER_DEPENDENCIES,
+  nativeServicePeerDependencies: NATIVE_SERVICE_PEER_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,
   peerRequiredHostExports: PEER_REQUIRED_HOST_EXPORTS,

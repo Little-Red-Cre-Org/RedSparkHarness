@@ -1,7 +1,8 @@
 /** Host Cordis plugin for the cross-realm Inspector Worker and full fetch capture. */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
+import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import { resolveInspectorOptions, startInspector, type InspectorOptions } from './bridge/controller.ts'
 import { createInspectorService } from '../shared/service.ts'
 import { publishCordisTree } from './inspection/cordis.ts'

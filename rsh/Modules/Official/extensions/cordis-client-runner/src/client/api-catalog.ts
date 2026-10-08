@@ -43,6 +43,8 @@ export interface ServiceApiEntry {
   summary: string
   /** Complete service description. */
   description: string
+  /** Base type shapes needed to interpret inherited service members. */
+  inheritedTypes?: readonly string[]
   /** Public methods, bodies stripped, in source order. */
   methods: readonly ServiceApiMethod[]
 }
@@ -451,7 +453,7 @@ export const EVENT_API: readonly EventApiEntry[] = [
   },
 ]
 
-/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */
+/** Shapes of every exported type the Service and Event signatures or inherited service shapes reference (transitively), sorted by name. */
 export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ActionsDecl',
@@ -988,7 +990,7 @@ export function queryServiceApi(key?: string, services: readonly ServiceApiEntry
       },
       methods: service.methods,
     },
-    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),
+    referencedTypes: referencedTypeClosure([...(service.inheritedTypes ?? []), ...service.methods.map(method => method.signature)]),
   }
 }
 

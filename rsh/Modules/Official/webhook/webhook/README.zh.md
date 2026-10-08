@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-webhook` 提供 Host 侧的 `ctx.webhookRuntime`：它既是受信任程序化 webhook 规则的注册表，也拥有唯一内置动作——在 Web Workspace 中创建普通根会话。接口只包含 `register(rule)` 和 `dispatch(delivery)`；提供方身份验证属于适配器包。当受信任规则必须把外部事件变成新的 agent（智能体）会话时，请使用它。
+`dsh-webhook` 通过 Cordis `ctx.webhookRuntime` 或显式 Native `./native` Provider 提供受信任的程序化 webhook 规则。两者都公开 `register(rule)` 并分发已验证交付；提供方身份验证属于适配器包。规则可以用 `null` 放弃，也可以请求在准入 Workspace 中创建一个普通根 Session。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="rule-interface"></a>
 ## 规则接口
 
-`WebhookRule<K>` 具有带 brand 类型的唯一 `id`、提供方 `kind` 与 `run(delivery, signal)`。回调可以执行任意受信任代码，并返回 `null` 或一个 `WebhookSessionRequest`。同类规则彼此独立启动；某个回调抛出异常或其返回的 Promise 被拒绝时，只会记录日志，不会阻止同级规则。
+`WebhookRule<K>` 具有带 brand 类型的唯一 `id`、提供方 `kind` 与 `run(delivery, signal)`。回调可以执行任意受信任代码，并返回 `null` 或一个 `WebhookSessionRequest`。Native 会先解析所有匹配回调，再创建任何 Session，因此回调失败不会留下部分 Session 操作。若多个规则都返回请求，Native 会等待每项操作结算；一项失败会导致 HTTP 操作失败，但已被同级规则 inbox 接纳的消息仍然持久存在。
 
 `VerifiedWebhookDelivery` 携带提供方种类、已配置来源 id、提供方交付 id、规范化的无损 JSON 与接收时间。运行时会在共享前快照并冻结完整值。`deliveryId` 仅是来源信息；重复交付会再次运行规则。
 
@@ -34,16 +34,18 @@ kind: "package-reference"
 <a id="session-request"></a>
 ## 会话请求
 
-`WebhookSessionRequest` 要求 `workspacePath`、`title`、`prompt`、`agentPreset` 与 `permissionPreset`；可选 `model` 会指定明确的提供方／模型路由与输出 token 上限。明确路由使用其适配器的默认推理（reasoning）强度。省略时会快照包含推理强度的完整当前部署选择，直到首个请求记录持久 header；之后的 Web 模型变更保留普通会话行为。
+`WebhookSessionRequest` 要求 `workspacePath`、`title`、`prompt`、`agentPreset` 与 `permissionPreset`；可选 `model` 会指定明确的提供方／模型路由与输出 token 上限。Native 会先按所选 root 的规范 allowed roots 与 sandbox policy 验证路径，再创建或复用持久 Workspace 元数据。Agent preset、permission preset、标题及显式模型选择会作用于真实 Session 和普通 root execution。未指定模型时使用所选 route 的常规模型选择默认值。
 
-运行时会在变更状态前验证 preset，解析或创建规范 Workspace，以该 Workspace 路径作为 `SessionHeader.cwd` 创建 Agent，在发布前挂载 agent preset，并在应用权限、标题与提示词前附加会话。附加失败会对尚未发布的动作执行 dispose（资源释放）。之后若在提示词前失败，则以尽力而为方式脱离 Workspace 并对 Agent 执行 dispose。
+Native 通过所选 Program 的 root maintenance 与 execution 操作创建 Session，再将其附加到 Workspace，并持久入队普通 user 消息。消息带有 `source.kind: "webhook"` 及提供方、来源、交付与规则来源信息。持久 inbox-spliced 事件是接纳提交点；Native 的 `202` 等待该事件，而不等待模型完成。之后 Program 会结算轮次、释放确切闲置 Agent 与临时 route，并保留持久 Session 历史和 Workspace 关联。inbox 接纳前失败时，会排空本次新建 execution 并可恢复地删除 Session；已成功创建的 Workspace 记录可以保留。
 
-成功的 `Agent.followup()` 是 webhook 操作的提交点。消息使用 `source.kind: "webhook"`，并携带提供方、来源、交付与规则来源信息。运行时不等待 idle、不执行特殊 flush、不检查回复，也不发布完成状态；之后完全由普通 Agent 与会话行为接管。
+Cordis compatibility Provider 保留现有 `Agent.followup()` 提交点和进程内 fire-and-forget 行为；它不会增加 Native Agent 或 Session authority。
 
 <a id="composition"></a>
 ## 组合
 
-在 Web Host plane 上，于 Agents、模型默认值、agent presets、permission presets、标题与 Workspace 注册表之后加载运行时。用户编写的规则插件注入 `webhookRuntime`，并通过自己的 effect 交出 `register()` 返回的 disposer。
+Cordis Provider 在 Web Host plane 上加载于 Agents、模型默认值、agent presets、permission presets、标题与 Workspace 注册表之后。用户编写的规则插件注入 `webhookRuntime`，并通过自己的 effect 交出 `register()` 返回的 disposer。Native composition 使用 `@deepseek-ai/dsh-webhook/native`，要求所选 `rootExecution`、Workspace registry、Agent preset 与 permission preset Provider、可恢复 Session deletion，并在该 root 上启用动态 `workspaceRoutes`。显式模型请求还要求 model selection 和 model directory Provider。
+
+包根入口是 Cordis compatibility Provider。只有 Cordis 和仅供旧 Agent 兼容入口使用的 helper peers 标记为 optional；Cordis profile 必须提供它们，仓库 CLI profile 已显式声明这些 peers。Native runtime 与公开声明所需 peers 在 package 层仍为必需，其中也包括仅用于类型的 peers。`dsh.native` 的 service `requires` 与 `optional` 分别描述 Provider 能力，不改变 package 安装依赖。Native consumer 可在不安装 Cordis 的情况下导入中立 `./definition` 契约；导入 `./native` 的 consumer 必须安装该入口声明的 peers。缺少必需 peer 时会在模块解析阶段失败。Native Web 在配置动态 Workspace 创建的 root 上支持完整规则到 Session 的路径。当前 SDK facade 未公开该创建能力，因此 Native Provider 会在安装时拒绝该组合；ACP facade 支持仍待其独立集成完成。
 
 [GitHub 评审指南](../../../../Docs/user/guide/github-review.zh.md)展示了规则模块、专用入口端口、密钥设置与 Workspace 路由。
 
@@ -70,9 +72,10 @@ kind: "package-reference"
 
 - **仅限进程内 fire-and-forget** — 崩溃会丢失尚未接纳提示词的规则调用；不存在队列、回放或重试。
 - **无内置去重** — 提供方重复交付可能创建重复会话；需要幂等性的规则自行负责。
-- **无完成结果** — HTTP 接受与规则结算都不报告 Agent 成功、idle 或输出。
+- **不确认执行完成** — Native `202` 表示每个非 null 规则动作都已被持久 inbox 接纳，不表示模型执行完成。多规则失败可能发生在同级动作已接纳之后；已接纳消息仍然持久存在。
 - **受信任回调必须配合取消** — 运行时 teardown 会中止并等待回调，但无法终止任意同进程代码。
-- **Workspace 创建可能比失败的会话尝试更长寿** — 空 Workspace 会保留，因为另一个并发调用者可能已经使用它。
+- **Workspace 元数据持久存在** — 规范路径和 policy 准入后，Workspace 创建就是持久提交；之后 Session 准备或接纳失败时记录仍可能保留。临时 route、Agent、observer、writer 与 Workspace attachment 仍会分别排空。
+- **profile capability 明确** — 当前 Native Web composition 支持完整 Session 请求。SDK 暂缺 root 动态 Workspace 创建能力，ACP 集成待完成；Native Provider 缺少所需 route 操作时会拒绝安装。
 
 
 <a id="dev-note"></a>

@@ -25,7 +25,7 @@ Browsers reach the web GUI over HTTP through `dsh-host-webserver`: a `node:http`
 <a id="use-this-package"></a>
 ## Use this package
 
-Compose the webserver as the HTTP transport of a browser-facing host, then let the feature plugins claim their routes. Activation listens immediately; registration order carries no request-facing semantics because named routes compose to be disjoint.
+Compose the webserver as the HTTP transport of a browser-facing host, then let feature plugins claim routes through the shared Core route table. Registration order does not choose a handler: duplicate `(kind, path)` registrations fail, exact routes precede prefixes, and the longest matching prefix wins. HTTP and upgrade routes use separate tables and may share a pathname.
 
 ### Minimal configuration
 
@@ -42,7 +42,7 @@ Set `compression: 'gzip'` to wrap eligible socket-backed responses without chang
 
 ### Registering routes
 
-`register(route)` adds a named `exact` or `prefix` HTTP route, `registerUpgrade(route)` adds an upgrade route for an exact pathname, and both return a disposer that removes the registration. A duplicate path within either table throws — route patterns are a composition-level contract, so a collision is a misconfiguration. HTTP matching is exact over the whole table, then longest prefix, then the fallback handler; upgrades match exactly and unmatched connections are closed.
+`register(route)` adds a named `exact` or `prefix` HTTP route, `registerUpgrade(route)` adds an upgrade route for an exact pathname, and each returns an async disposer. A disposer first removes that registration from future matching, then resolves after its admitted handlers settle. A duplicate route within either table throws; an HTTP route and an upgrade route may share the same pathname. HTTP matching is exact over the whole table, then longest prefix, then the fallback handler; upgrades match exactly and unmatched connections are closed.
 
 ### The fallback seat
 
@@ -64,11 +64,11 @@ A listen failure (for example EADDRINUSE) rejects plugin initialization with the
 
 ### Design concept
 
-The package is a plain route registry with no harness vocabulary: `WebServer` extends Cordis `Service` and holds three route tables plus the fallback slot, the raw index-tap list, and the `webserver/index-inject` event the index renderer gathers rows through. Index rendering composes two layers per response: `renderIndex` renders the fresh injection table, including advisory `script-preload` rows, into the body, then applies the raw taps in registration order; `applyIndexTaps` runs the taps alone. The upgrade handler owns the protocol handshake and connection contents; the webserver only delivers the raw socket and request. `host` and `port` getters expose composition-time facts other plugins adapt to (for example the directory-picker chooser).
+The generic route definitions and drainable table live in `@deepseek-ai/dsh-http-routes`; this package owns the Cordis `WebServer` listener Provider. The Cordis `ctx.webServer` and `webserver/index-inject` declarations live in `@deepseek-ai/dsh-http-routes-cordis`, while browser-safe injection rows live in the Core Client face. `WebServer` extends Cordis `Service` and owns the socket, gzip policy, fallback slot, raw index-tap list, and index event collection. The upgrade handler owns protocol negotiation and socket use; the webserver only delivers the raw socket and request. `host` and `port` getters expose composition-time facts other plugins adapt to (for example the directory-picker chooser).
 
 ### Matching and lifecycle
 
-`match(pathname)` consults the exact table first, then walks the prefix table for the longest match, then the fallback. Activation (`[Service.init]`) listens immediately; disposal starts `close()` and `closeAllConnections()`, destroys every tracked upgraded socket, and returns only after the server and those sockets have closed. Node does not include upgraded sockets in `closeAllConnections()`, so the service tracks them explicitly.
+The Core `HttpRouteTable` consults the exact table first, then walks the prefix table for the longest match, then the fallback. HTTP and upgrade routes occupy separate tables, so equal paths can own both protocols. Registration disposal removes future admission and awaits active handler completion. Activation (`[Service.init]`) listens immediately; service disposal starts `close()` and `closeAllConnections()`, destroys every tracked upgraded socket, and returns only after the server and those sockets have closed. Node does not include upgraded sockets in `closeAllConnections()`, so the service tracks them explicitly.
 
 ### Source map
 
@@ -87,7 +87,8 @@ The package is a plain route registry with no harness vocabulary: `WebServer` ex
 
 Read these when the server contract is not enough: the subsystem reference, then the fallback owner and the layering decision behind who registers which route.
 
-- [HTTP server subsystem](../../../../Docs/subsystems/web-server.md) — routes, matching order, and the config the server accepts.
+- [HTTP server subsystem](../../../../Docs/subsystems/web-server.md) — the Cordis listener contract and its accepted config.
+- [HTTP routes subsystem](../../../../Docs/subsystems/http-routes.md) — the shared Host and Native route contracts and draining table.
 - [SPA dist server](../frontend-static/README.md) — the shipped owner of the fallback seat.
 - [Web config-tree boot and transport layering](../../../../../.agents/notes/implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.md) — why feature plugins own every route.
 - [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-host-webserver) — every accepted config field and its source declaration.

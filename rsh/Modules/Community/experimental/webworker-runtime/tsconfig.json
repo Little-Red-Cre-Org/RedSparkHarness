@@ -33,7 +33,7 @@
       "path": "../../../../Programs/Web/client/file-upload/tsconfig.host.json"
     },
     {
-      "path": "../../../../Programs/Web/host/webserver"
+      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
     },
     {
       "path": "../../../../Core/util/crypto"

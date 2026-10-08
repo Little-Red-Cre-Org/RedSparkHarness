@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-webhook-github",
-  "description": "Signed GitHub HTTP webhook adapter for the DeepSeek Harness webhook runtime",
+  "description": "Signed GitHub webhook ingress for Cordis and Native trusted-rule execution",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
@@ -11,6 +11,16 @@
     "directory": "rsh/Modules/Official/webhook/webhook-github"
   },
   "type": "module",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["httpRoutes", "credentials", "rootExecution", "webhookRules"],
+      "optional": [],
+      "provides": []
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -22,11 +32,16 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -34,13 +49,22 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
+    "@deepseek-ai/dsh-http-routes": "workspace:^",
+    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-webhook": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-http-routes-cordis": { "optional": true }
   },
   "dependencies": {
     "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
+    "zod": "^4.4.3",
     "@octokit/webhooks": "^14.2.0"
   },
   "devDependencies": {
@@ -48,7 +72,11 @@
     "@deepseek-ai/cordis-plugin-include": "workspace:^",
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
+    "@deepseek-ai/dsh-http-routes": "workspace:^",
+    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-webhook": "workspace:^"
   }

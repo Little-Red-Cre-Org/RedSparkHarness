@@ -43,6 +43,8 @@ export interface ServiceApiEntry {
   summary: string
   /** Complete service description. */
   description: string
+  /** Base type shapes needed to interpret inherited service members. */
+  inheritedTypes?: readonly string[]
   /** Public methods, bodies stripped, in source order. */
   methods: readonly ServiceApiMethod[]
 }
@@ -134,6 +136,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'agentPresets',
     summary: 'Registry over the deployment\'s agent presets.',
     description: 'Registry over the deployment\'s agent presets.\n\nDiscovery is unmemoized: `list()` and `resolve()` re-read the roots on every call so a preset authored while the process runs is visible immediately, and a preset deleted underneath a picker disappears from the next read.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'async list(): Promise<AgentPreset[]>',
@@ -348,6 +351,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'agentTeams',
     summary: 'Agent Teams service backed by the exact live Lead Session log.',
     description: 'Agent Teams service backed by the exact live Lead Session log.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'membership(agent: Agent): TeamMembership',
@@ -439,6 +443,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'approval',
     summary: 'Cordis implementation specialized to the exact scoped Agent owner.',
     description: 'Cordis implementation specialized to the exact scoped Agent owner.',
+    inheritedTypes: ['ApprovalServiceDefinition'],
     methods: [
       {
         signature: 'setPolicy(agent: Agent, policy: ApprovalPolicy): void',
@@ -597,6 +602,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'authorizationController',
     summary: 'Host owner of the generated `ctx.remote.authorization` namespace.',
     description: 'Host owner of the generated `ctx.remote.authorization` namespace.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote async list(): Promise<AuthorizationEntryView[]>',
@@ -698,6 +704,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'commands',
     summary: 'Human-command registry.',
     description: 'Human-command registry. Plain-context definitions are global; definitions registered through a command-injected child of an agent context shadow globals for that agent.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'register(definition: CommandDefinition): () => void',
@@ -820,6 +827,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'credentialsController',
     summary: 'Host service backing the generated `ctx.remote.credentials` namespace.',
     description: 'Host service backing the generated `ctx.remote.credentials` namespace. It carries every wire obligation the credential seam itself does not: the batch fan-out bound, the field-by-field view projection, the reference-grammar guard, and the refusal mapping. Secret values cross in one direction only — no method here returns one.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote async describe(refs: string[]): Promise<Record<string, CredentialInfo>>',
@@ -878,6 +886,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'directoryPickerController',
     summary: 'Host service backing the generated `ctx.remote.directoryPicker` namespace.',
     description: 'Host service backing the generated `ctx.remote.directoryPicker` namespace. The seam it exports is abstract and therefore never a Loader entry of its own, so this controller carries the wire verbs: one composed backend serves either the native chooser or the browse primitives, and a verb the composition cannot serve is refused rather than approximated.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote(\'pick\') async pick(signal: AbortSignal): Promise<string | null>',
@@ -940,6 +949,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'fileUploads',
     summary: 'Host service owning upload storage and Agent-scoped staged receipts.',
     description: 'Host service owning upload storage and Agent-scoped staged receipts.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'registerAgentResolver(resolve: AgentResolver): () => void',
@@ -1073,6 +1083,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'goals',
     summary: 'Goal service (`ctx.goals`) backed exclusively by the owning session log.',
     description: 'Goal service (`ctx.goals`) backed exclusively by the owning session log.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote(\'get\') get(agent: Agent): GoalView | undefined',
@@ -1232,6 +1243,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'llm',
     summary: 'The abstract `llm` service: an adapter registry plus a streaming model-call API, interceptable via the `llm/stream` waterfall.',
     description: 'The abstract `llm` service: an adapter registry plus a streaming model-call API, interceptable via the `llm/stream` waterfall.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle',
@@ -1349,6 +1361,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'messageFeedback',
     summary: 'Session-log service; cold operations never construct a Session or Agent.',
     description: 'Session-log service; cold operations never construct a Session or Agent.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote(\'list\') list(request: MessageFeedbackListRequest): Promise<MessageFeedbackListResult>',
@@ -1498,6 +1511,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'sessionController',
     summary: 'Host service backing the generated `ctx.remote.session` namespace.',
     description: 'Host service backing the generated `ctx.remote.session` namespace.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'resolveAgent(sessionId: SessionId): Promise<ApiSessionAgentResult>',
@@ -1620,6 +1634,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'sessionFeedback',
     summary: 'Host Remote through which a product surface records a Session-level remark.',
     description: 'Host Remote through which a product surface records a Session-level remark.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote(\'record\') record(request: SessionFeedbackRecordRequest): Promise<SessionFeedbackRecordResult>',
@@ -1633,6 +1648,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'sessionFileReferences',
     summary: 'Host Remote adapter over the composed file-reference provider.',
     description: 'Host Remote adapter over the composed file-reference provider.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote list( agent: Agent, query: string, signal: AbortSignal, ): Promise<FileReferenceCandidate[]>',
@@ -1902,6 +1918,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'sessionReferenceResolver',
     summary: 'Exact-read consumer that prepares immutable cross-session message context.',
     description: 'Exact-read consumer that prepares immutable cross-session message context.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'async listCandidates( agent: Agent, query: string = \'\', limit: number = this.config.candidateLimit, signal?: AbortSignal, ): Promise<SessionReferenceCandidate[]>',
@@ -1986,6 +2003,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'sessionSkillCatalog',
     summary: 'Host service backing `ctx.remote.skills` without activating a cold Agent.',
     description: 'Host service backing `ctx.remote.skills` without activating a cold Agent.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote async list(request: SkillListRequest, signal: AbortSignal): Promise<SkillListValue>',
@@ -2060,6 +2078,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'settings',
     summary: 'Cordis-facing extension of the framework-neutral Settings service.',
     description: 'Cordis-facing extension of the framework-neutral Settings service.',
+    inheritedTypes: ['SettingsService'],
     methods: [
       {
         signature: 'register<const Namespace extends string, T>( namespace: Namespace & SettingsNamespaceInput<Namespace>, schema: z<T>, options?: SettingsRegisterOptions<T>, ): SettingsScope<T>',
@@ -2125,6 +2144,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'settingsController',
     summary: 'Host service backing the generated `ctx.remote.settings` namespace.',
     description: 'Host service backing the generated `ctx.remote.settings` namespace. Every remote read uses `redactSecrets: true`, so a `role(\'secret\')` field cannot ride a response. Writes expose the settings service\'s merge, replacement, and path-addressed operations, and classify every provider refusal as `settings/conflict` or `settings/rejected` with the service\'s message.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote describe(): SettingsDescribeValue',
@@ -2304,6 +2324,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'storageDomain',
     summary: 'Compatibility adapter over the single shared domain facility.',
     description: 'Compatibility adapter over the single shared domain facility.',
+    inheritedTypes: ['DomainFacilityCore'],
     methods: [
       {
         signature: 'async open<S extends DomainSpec>(spec: S): Promise<Domain<S>>',
@@ -2342,6 +2363,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'subagents',
     summary: 'Named provider registry with one-shot runs, durable discovery, and continuable-child operations.',
     description: 'Named provider registry with one-shot runs, durable discovery, and continuable-child operations.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: 'async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>',
@@ -2523,6 +2545,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'taskScheduler',
     summary: 'Remote-only adapter sharing the tool\'s ownership, permissions and task database.',
     description: 'Remote-only adapter sharing the tool\'s ownership, permissions and task database.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote notifications(): TaskNotice[]',
@@ -2942,50 +2965,51 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'webServer',
-    summary: 'The browser HTTP carrier service.',
-    description: 'The browser HTTP carrier service. Activation listens immediately. Route registration order does not affect requests because configured named routes must be distinct, and the fallback handler answers anything not yet claimed during startup with 404 until its owner registers. A listen failure rejects initialization, and the boot process reports the failed fiber.',
+    summary: 'Cordis Web listener service retained by the compatibility Provider.',
+    description: 'Cordis Web listener service retained by the compatibility Provider.',
+    inheritedTypes: ['HttpRouteListener'],
     methods: [
       {
-        signature: 'register(route: WebRoute): () => void',
-        description: 'Register a named route. Duplicate (kind, path) throws — route patterns are a composition-level contract, so a collision is a misconfiguration.',
-        parameters: [{ name: 'route', description: 'kind, path, and the owning handler.' }],
-        returns: 'the disposer removing the route.',
+        signature: 'registerUpgrade(route: HttpUpgradeRoute): () => Promise<void>',
+        description: 'Register one exact-path HTTP upgrade route and drain admitted sockets on disposal.',
+        parameters: [{ name: 'route', description: 'pathname and handler that own negotiation and socket use.' }],
+        returns: 'an asynchronous disposer that waits for admitted handlers.',
       },
       {
-        signature: 'registerUpgrade(route: WebUpgradeRoute): () => void',
-        description: 'Register an exact-path HTTP upgrade route. Duplicate paths throw because one socket can have only one protocol owner.',
-        parameters: [{ name: 'route', description: 'pathname and handler owning negotiation plus socket use.' }],
-        returns: 'the disposer removing the route.',
-      },
-      {
-        signature: 'registerFallback(handler: WebRoute[\'handler\']): () => void',
-        description: 'Claim the fallback seat: the handler answering every request no named route matches (the SPA dist server in the shipped Web composition). One owner only — a second registration throws, because two fallbacks cannot compose.',
-        parameters: [{ name: 'handler', description: 'owns the full response lifecycle of unmatched requests.' }],
-        returns: 'the disposer releasing the seat.',
+        signature: 'registerFallback(handler: HttpRoute[\'handler\']): () => void',
+        description: 'Claim the single fallback handler for requests no named route claims.',
+        parameters: [{ name: 'handler', description: 'owns the complete unmatched response lifecycle.' }],
+        returns: 'a disposer that releases the fallback seat.',
       },
       {
         signature: 'tapIndex(transform: (html: string) => string): () => void',
-        description: 'Register a raw-HTML index transform, the escape hatch for markup no IndexInjection row expresses: renderIndex applies taps in registration order after rendering the structured rows.',
-        parameters: [{ name: 'transform', description: 'pure html-to-html function.' }],
-        returns: 'the disposer removing the transform.',
+        description: 'Register a raw-HTML transform applied after structured index injections.',
+        parameters: [{ name: 'transform', description: 'pure HTML-to-HTML transformation.' }],
+        returns: 'a disposer that removes the transform.',
       },
       {
         signature: 'applyIndexTaps(html: string): string',
-        description: 'Run an index.html body through the registered taps in registration order — called by the fallback owner on every index response it renders.',
-        parameters: [{ name: 'html', description: 'the raw index.html body.' }],
-        returns: 'the transformed body.',
+        description: 'Apply raw-HTML transforms in registration order.',
+        parameters: [{ name: 'html', description: 'the unmodified index document.' }],
+        returns: 'the transformed document.',
       },
       {
         signature: 'collectIndexInjections(): IndexInjection[]',
-        description: 'Gather the structured injection table: one `webserver/index-inject` emit, every subscriber pushes its current rows. Fresh per call, so subscribers read live state (module graph, theme preference) at emit time.',
+        description: 'Emit once and collect each subscriber\'s current index injection rows.',
         parameters: [],
         returns: 'rows in subscriber activation order.',
       },
       {
         signature: 'renderIndex(html: string): string',
-        description: 'Render one index.html body: the structured injection table first, then the raw `tapIndex` transforms over the result.',
-        parameters: [{ name: 'html', description: 'the raw index.html body.' }],
-        returns: 'the transformed body.',
+        description: 'Render structured injection rows, then apply registered raw transforms.',
+        parameters: [{ name: 'html', description: 'the unmodified index document.' }],
+        returns: 'the transformed document.',
+      },
+      {
+        signature: 'register(route: HttpRoute): () => Promise<void>',
+        description: 'Register one route and remove future admission on disposal.',
+        parameters: [{ name: 'route', description: 'path, match kind, and handler for the request.' }],
+        returns: 'a disposer that disconnects incomplete bodies and waits for admitted handlers.',
       },
     ],
   },
@@ -3006,6 +3030,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'workspaceController',
     summary: 'Host service backing the generated `ctx.remote.workspace` namespace.',
     description: 'Host service backing the generated `ctx.remote.workspace` namespace.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote(\'create\') create(request: WorkspaceCreateRequest): Promise<WorkspaceCreateValue>',
@@ -3055,6 +3080,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     key: 'workspaceFiles',
     summary: 'Host Remote file reads and workspace directory observations over the composed filesystem.',
     description: 'Host Remote file reads and workspace directory observations over the composed filesystem.',
+    inheritedTypes: ['TypertRemoteService'],
     methods: [
       {
         signature: '@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, range: WorkspaceFileRange, signal: AbortSignal, ): Promise<WorkspaceFileText>',
@@ -3645,8 +3671,8 @@ export const EVENT_API: readonly EventApiEntry[] = [
     name: 'webserver/index-inject',
     mode: 'emit',
     signature: '\'webserver/index-inject\'(table: IndexInjection[]): void',
-    summary: 'Collect the structured index injection table.',
-    description: 'Collect the structured index injection table. Emitted on every index render and every worker boot-payload request; listeners push their current rows, so a row\'s data is read fresh at emit time.',
+    summary: 'Collect current Client page injection rows from selected consumers.',
+    description: 'Collect current Client page injection rows from selected consumers.',
     parameters: [{ name: 'table', description: 'Mutable row table; listeners append in activation order.' }],
   },
   {
@@ -3699,7 +3725,7 @@ export const EVENT_API: readonly EventApiEntry[] = [
   },
 ]
 
-/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */
+/** Shapes of every exported type the Service and Event signatures or inherited service shapes reference (transitively), sorted by name. */
 export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AdapterRegistrationHandle',
@@ -3804,6 +3830,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ApprovalRequestId',
     declaration: 'export type ApprovalRequestId = Branded<\'ApprovalRequestId\'>;',
+  },
+  {
+    name: 'ApprovalServiceDefinition',
+    declaration: 'export interface ApprovalServiceDefinition<AgentOwner> {\n    readonly config: {\n        readonly policy?: ApprovalPolicy;\n    };\n    setPolicy(agent: AgentOwner, policy: ApprovalPolicy): void;\n    request(request: ApprovalRequest<AgentOwner>): Promise<ApprovalOutcome>;\n    overrideOf(session: Session): ApprovalPolicy | undefined;\n}',
   },
   {
     name: 'AskUserQuestionAnswer',
@@ -4298,6 +4328,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface DomainChangedPut extends DomainChangedBase {\n    readonly operation: \'put\';\n    readonly value: unknown;\n}',
   },
   {
+    name: 'DomainFacilityConfiguration',
+    declaration: 'export interface DomainFacilityConfiguration {\n    readonly backend: string;\n    readonly routes?: Readonly<Record<string, string>>;\n}',
+  },
+  {
+    name: 'DomainFacilityCore',
+    declaration: 'export class DomainFacilityCore {\n    constructor(private readonly backends: BackendRegistry, private readonly effects: DomainFacilityEffects, private readonly config: DomainFacilityConfiguration, private readonly lifetime?: AbortSignal);\n    async open<S extends DomainSpec>(spec: S): Promise<Domain<S>>;\n    get(name: string): DomainImpl | undefined;\n    closeAll(): Promise<void>;\n}',
+  },
+  {
+    name: 'DomainFacilityEffects',
+    declaration: 'export interface DomainFacilityEffects extends DomainRuntimeEffects {\n    error(message: string): void;\n}',
+  },
+  {
     name: 'DomainGlobal',
     declaration: 'export interface DomainGlobal<G> {\n    get(): G;\n    set(value: G): Promise<void>;\n}',
   },
@@ -4512,6 +4554,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GrantRecord',
     declaration: 'export interface GrantRecord {\n    readonly kind: \'grant\';\n    readonly payload: unknown;\n}',
+  },
+  {
+    name: 'HttpRoute',
+    declaration: 'export interface HttpRoute {\n    readonly kind: HttpRouteKind;\n    readonly path: string;\n    readonly handler: (request: IncomingMessage, response: ServerResponse) => void | Promise<void>;\n}',
+  },
+  {
+    name: 'HttpRouteKind',
+    declaration: 'export type HttpRouteKind = \'exact\' | \'prefix\';',
+  },
+  {
+    name: 'HttpRouteListener',
+    declaration: 'export interface HttpRouteListener {\n    register(route: HttpRoute): () => Promise<void>;\n}',
+  },
+  {
+    name: 'HttpUpgradeRoute',
+    declaration: 'export interface HttpUpgradeRoute {\n    readonly path: string;\n    readonly handler: (request: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>;\n}',
   },
   {
     name: 'ImageAttachmentLimits',
@@ -4906,6 +4964,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelReasoningEffort {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n}',
   },
   {
+    name: 'NativeApprovalPolicy',
+    declaration: 'export type NativeApprovalPolicy = \'ask\' | \'never\';',
+  },
+  {
     name: 'NativeRootRouteId',
     declaration: 'export type NativeRootRouteId = Branded<\'NativeRootRouteId\'>;',
   },
@@ -4967,7 +5029,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PresetSpec',
-    declaration: 'export interface PresetSpec {\n    sandbox: SandboxMode;\n    approval: ApprovalPolicy;\n    name?: string;\n    description?: string;\n}',
+    declaration: 'export interface PresetSpec {\n    sandbox: SandboxMode;\n    approval: NativeApprovalPolicy;\n    name?: string | null;\n    description?: string | null;\n}',
   },
   {
     name: 'PresetTrust',
@@ -5802,6 +5864,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SettingsSectionHooks<T> {\n    setSource(current: () => T): void;\n    onChange(): void;\n    validate?: (value: T) => void;\n}',
   },
   {
+    name: 'SettingsService',
+    declaration: 'export interface SettingsService {\n    readonly writable: boolean;\n    readonly documentPath: string | undefined;\n    prepareDocument(): Promise<string | undefined>;\n    describe(options?: SettingsDescribeOptions): SettingsDescriptor[];\n    get<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>): unknown;\n    update<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>, patch: object, expectedRevision?: number): Promise<void>;\n    replace<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>, section: object, expectedRevision?: number): Promise<void>;\n    mutate<const Namespace extends string>(namespace: Namespace & SettingsNamespaceInput<Namespace>, ops: readonly SettingsPathOp[], expectedRevision?: number): Promise<void>;\n}',
+  },
+  {
     name: 'SettingsUpdateSource',
     declaration: 'export type SettingsUpdateSource = \'update\' | \'provider\';',
   },
@@ -6574,14 +6640,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type WebResultView = WebSearchResultView | WebFetchResultView;',
   },
   {
-    name: 'WebRoute',
-    declaration: 'export interface WebRoute {\n    kind: WebRouteKind;\n    path: string;\n    handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;\n}',
-  },
-  {
-    name: 'WebRouteKind',
-    declaration: 'export type WebRouteKind = \'exact\' | \'prefix\';',
-  },
-  {
     name: 'WebSearchProvider',
     declaration: 'export interface WebSearchProvider {\n    readonly id: string;\n    available(): boolean;\n    search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;\n}',
   },
@@ -6604,10 +6662,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WebSource',
     declaration: 'export interface WebSource {\n    url: string;\n    title?: string;\n    snippet?: string;\n    publishedAt?: string;\n}',
-  },
-  {
-    name: 'WebUpgradeRoute',
-    declaration: 'export interface WebUpgradeRoute {\n    path: string;\n    handler: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>;\n}',
   },
   {
     name: 'WorkflowAgentEndInfo',
@@ -6832,7 +6886,7 @@ export function queryServiceApi(key?: string, services: readonly ServiceApiEntry
       },
       methods: service.methods,
     },
-    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),
+    referencedTypes: referencedTypeClosure([...(service.inheritedTypes ?? []), ...service.methods.map(method => method.signature)]),
   }
 }
 

@@ -1,11 +1,26 @@
 /** Framework-free native approval identities and consumer operations. */
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import { SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
+import type { Session } from '@deepseek-ai/dsh-session/native'
 import type {} from '@deepseek-ai/dsh-session/types'
 
 /** Deployment policy applied before native answerers receive a request. */
 export type NativeApprovalPolicy = 'ask' | 'never'
+
+/** Read the latest durable approval override from the Session that owns an invocation.
+ * @param session - the existing Session whose log is the policy authority.
+ * @returns its latest compatibility approval override, or `undefined` when none was recorded.
+ */
+export function sessionApprovalPolicy(session: Session): NativeApprovalPolicy | undefined {
+  for (let seq = session.seq - 1; seq >= 0; seq -= 1) {
+    // oxlint-disable-next-line typescript/no-deprecated -- Keep the pure durable fold until Session exposes its public event iterator.
+    const event = session.eventAt(SessionSeq(seq))
+    if (event?.type === 'approval/policy') return event.data.policy
+  }
+  return undefined
+}
 
 /** Opaque native approval identity pairing its durable asked and decided events. */
 export type NativeApprovalRequestId = Branded<'NativeApprovalRequestId'>
@@ -39,6 +54,8 @@ export interface NativeApprovalRequest {
   readonly id: NativeApprovalRequestId
   /** Registered Agent that owns the requested operation. */
   readonly agent: NativeAgent
+  /** Effective durable Session override resolved by its owning Program before dispatch. */
+  readonly sessionPolicy?: NativeApprovalPolicy
   /** Model-visible tool name about to execute. */
   readonly toolName: string
   /** Model tool-call identity when available. */
@@ -77,6 +94,10 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 }
 
 declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /** Durable per-Session approval override shared by Native and compatibility consumers. */
+    'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }
+  }
   interface SessionEventMap {
     /** One native approval question before its matching decision is recorded. */
     'native-approval/asked': {

@@ -61,7 +61,7 @@ export async function readBoundedUtf8Body(
   }
   if (!request.complete) throw new WebhookHttpError(400, 'request body was aborted')
   try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size))
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks, size))
   } catch {
     // TextDecoder is the only statement in the try; GitHub JSON must be valid UTF-8.
     throw new WebhookHttpError(400, 'request body is not valid UTF-8')

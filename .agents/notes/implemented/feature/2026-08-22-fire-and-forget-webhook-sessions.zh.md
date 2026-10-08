@@ -18,9 +18,9 @@ runtime 不存储提供方交付或执行记录。它不重试、不去重、不
 
 ## Provider adapters
 
-身份验证属于提供方适配器。`@deepseek-ai/dsh-webhook-github` 会在注入的 WebServer 上注册一条精确路由，限制未改动的 UTF-8 body，为每次请求解析密钥引用，在解析前验证 `X-Hub-Signature-256`，并把签名无损 JSON 对象交给 runtime。`202` 只表示已验证的内存分发；它先于规则匹配、外部调用和 Session 创建。
+身份验证属于提供方适配器。Cordis `@deepseek-ai/dsh-webhook-github` entry 会在注入的 `ctx.webServer` 上注册一条精确路由，限制未改动的 UTF-8 body，逐请求解析密钥引用，在 JSON 解析前验证 `X-Hub-Signature-256`，并把签名无损 JSON 对象交给 runtime。其 `202` 仅表示通过身份验证的内存分发，早于规则匹配、外部调用与 Session 创建。该 package 还提供显式 Native entry，共用原始 body 验证器，但使用所选 `rootExecution` owner，并在确认精确 message 的持久 inbox 接纳后才返回 `202`；[HTTP routes 与 Native GitHub ingress note](../architecture/2026-10-07-http-route-definitions-and-native-github-ingress.zh.md)记录了这一传输约定。
 
-普通 Web 组合保持其 UI/API WebServer 独立。GitHub 示例会把另一个 WebServer 及其适配器挂载到只隔离 `webServer` 的 group 中，因此反向代理可以暴露 webhook 端口，而不暴露 `/api`、WebSocket 或前端文件。
+Cordis Web 组合保持其 UI/API WebServer 独立。GitHub 示例会把另一个 WebServer 及其 Cordis 适配器挂载到只隔离 `webServer` 的 group 中，因此反向代理可以暴露 webhook 端口，而不暴露 `/api`、WebSocket 或前端文件。显式 Native entry 复用 Native Web listener，并保留通用 route 分发前的 `/api` token gate。
 
 Patch 加载会把插入行中的相对插件名锚定到 patch 文件。因而同一个 `./github-ready-review-rule.mjs` 条目既可用于开发环境的 `--patch` overlay，也可用于永久 profile patch，而无需把规则改成软件包。
 
@@ -54,5 +54,5 @@ Patch 加载会把插入行中的相对插件名锚定到 patch 文件。因而�
 
 - 提供方适配器保持小而且只含提供方逻辑，Session 创建只有一个 owner。
 - 用户在 Web Workspace 下获得普通带标题 Session，而不是第二套自动化 UI。
-- HTTP 成功刻意不说明下游匹配或 Agent 成功。
+- Cordis HTTP 成功刻意不说明下游匹配或 Agent 成功；Native HTTP 成功确认关联 root message 已持久接纳，但仍不说明 Agent 已完成。
 - 崩溃与重复交付保持简单的进程生命周期内语义；需要持久自动化的部署必须增加单独设计的子系统，而不是重新解释此 runtime。

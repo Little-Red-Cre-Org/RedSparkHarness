@@ -31,12 +31,16 @@ function fixture(content: string, dependency?: string): string {
     const exports = Object.fromEntries(entries.map(entry => [entry, {
       types: `./lib/types/${entry.slice(2)}.d.ts`, default: `./lib/${entry.slice(2)}.js`,
     }]))
+    if (mixedNativeLibraryDirectories.has(owner)) {
+      exports['./native'] = { types: './lib/types/native.d.ts', default: './lib/native.js' }
+    }
     const name = owner === 'rsh/Programs/SDK/packages/client'
       ? '@deepseek-ai/dsh-sdk-client'
       : `@deepseek-ai/dsh-${owner.split('/').at(-1)}`
     write(`${owner}/package.json`, JSON.stringify({ name, exports }))
     for (const entry of entries) write(`${owner}/src/${entry.slice(2)}.ts`, 'export {}')
     write(`${owner}/src/index.ts`, 'export {}')
+    if (mixedNativeLibraryDirectories.has(owner)) write(`${owner}/src/native.ts`, 'export {}')
   }
   write(`${dir}/package.json`, JSON.stringify({
     name: '@deepseek-ai/dsh-native-runtime',
@@ -201,9 +205,13 @@ it('keeps a mixed Cordis and native package explicitly classified', () => {
   const root = fixture('export {}')
   const dir = join(root, 'rsh/Modules/Official/fs/fs-local')
   mkdirSync(join(dir, 'src'), { recursive: true })
+  writeFileSync(join(dir, 'src/backend.ts'), 'export {}')
   writeFileSync(join(dir, 'src/native.ts'), 'export {}')
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-fs-local', exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+    name: '@deepseek-ai/dsh-fs-local', exports: {
+      './native': { types: './lib/types/native.d.ts', default: './lib/native.js' },
+      './backend': { types: './lib/types/backend.d.ts', default: './lib/backend.js' },
+    },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
   expect(collectNativeDependencyViolations(root)).toEqual([])

@@ -72,7 +72,7 @@ export const RELEASED_V0_EVENT_DISPOSITIONS: Readonly<Record<string, ReleasedV0P
     ['maxRetries'],
   ),
   'llm/retry-started': disposition(['retryId', 'turn', 'step', 'retry']),
-  'model/selection': disposition(['provider', 'model'], ['reasoningEffort']),
+  'model/selection': disposition(['provider', 'model'], ['reasoningEffort', 'maxTokens']),
   'permission/preset': disposition(['preset']),
   'plan/mode': disposition(['active']),
   'request/context': disposition(['provider', 'model'], ['contextWindow']),

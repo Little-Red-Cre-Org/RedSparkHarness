@@ -96,7 +96,7 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
     const answererRequest: NativeApprovalAnswererRequest = {
       ...request,
       signal: controller.signal,
-      policy: this.policy,
+      policy: request.sessionPolicy ?? this.policy,
     }
     const task = this.decide(answererRequest)
     this.active.add(task)

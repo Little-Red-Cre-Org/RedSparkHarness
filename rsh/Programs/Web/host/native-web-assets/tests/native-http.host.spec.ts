@@ -1,5 +1,8 @@
-import { request as httpRequest } from 'node:http'
+import { once } from 'node:events'
+import { request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
+import { connect } from 'node:net'
 import { expect, it } from 'vitest'
+import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
 import { listenNativeHttpHost, type NativeConnectionFetchHandler, type NativeConnectionHandle, type NativeHttpBridge } from '../src/native-http.ts'
 
 function responseBody(
@@ -32,6 +35,12 @@ const testBridge: NativeHttpBridge = async (req, res, handler) => {
   const response = await handler.fetch(request)
   res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
   res.end(await response.text())
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolvePromise!: () => void
+  const promise = new Promise<void>((resolve) => { resolvePromise = resolve })
+  return { promise, resolve: () => { resolvePromise() } }
 }
 
 function fakeConnection(): { handle: NativeConnectionHandle; registry: { forOwner(owner: unknown): NativeConnectionHandle } } {
@@ -107,4 +116,77 @@ it('closes the listener and rejects requests after close', async () => {
   const server = await listenNativeHttpHost(fake.registry, { fetch: async () => new Response('asset'), requestBodyMode: () => 'buffered' }, testBridge)
   await server.close()
   await expect(responseBody(server.port, '/')).rejects.toBeDefined()
+})
+
+it('waits for a removed route handler before closing the table', async () => {
+  const routes = new HttpRouteTable()
+  const started = deferred()
+  const release = deferred()
+  let finished = false
+  let closed = false
+  const unregister = routes.register({ kind: 'exact', path: '/pending', handler: async () => {
+    started.resolve()
+    await release.promise
+    finished = true
+  } })
+  const request = { complete: true, destroy() {} } as unknown as IncomingMessage
+  const response = {} as unknown as ServerResponse
+  const dispatch = routes.dispatch('/pending', request, response)
+  let routeDrain: Promise<void> | undefined
+  let tableClose: Promise<void> | undefined
+  try {
+    await started.promise
+    routeDrain = unregister()
+    tableClose = routes.close().then(() => { closed = true })
+    await new Promise<void>((resolve) => { setImmediate(resolve) })
+    expect({ closed, finished }).toEqual({ closed: false, finished: false })
+  } finally {
+    release.resolve()
+    await Promise.allSettled([
+      dispatch,
+      ...(routeDrain === undefined ? [] : [routeDrain]),
+      ...(tableClose === undefined ? [] : [tableClose]),
+    ])
+  }
+  expect({ closed, finished }).toEqual({ closed: true, finished: true })
+})
+
+it.each(['route removal', 'listener close'] as const)('aborts incomplete request bodies during %s', async (action) => {
+  const fake = fakeConnection()
+  const server = await listenNativeHttpHost(fake.registry, {
+    requestBodyMode: () => 'buffered',
+    fetch: async () => new Response('asset'),
+  }, testBridge)
+  const started = deferred()
+  const aborted = deferred()
+  const dispose = server.httpRoutes.register({ kind: 'exact', path: '/partial', handler: async (request) => {
+    started.resolve()
+    try {
+      for await (const _chunk of request) {}
+    } catch {
+      aborted.resolve()
+    }
+  } })
+  const client = connect(server.port, '127.0.0.1')
+  client.on('error', () => {})
+  let routeDrain: Promise<void> | undefined
+  let listenerClose: Promise<void> | undefined
+  try {
+    await once(client, 'connect')
+    client.write('POST /partial HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n\r\n{')
+    await started.promise
+    let stopped = false
+    const stopping = action === 'route removal'
+      ? (routeDrain = dispose()).then(() => { stopped = true })
+      : (listenerClose = server.close()).then(() => { stopped = true })
+    await aborted.promise
+    await stopping
+    expect(stopped).toBe(true)
+    if (action === 'route removal') await server.close()
+  } finally {
+    client.destroy()
+    routeDrain ??= dispose()
+    listenerClose ??= server.close()
+    await Promise.allSettled([routeDrain, listenerClose])
+  }
 })
