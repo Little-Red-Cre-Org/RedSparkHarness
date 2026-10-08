@@ -122,6 +122,10 @@ export interface Config extends NativeSessionConfiguration {
   maxSteps: number
   /** Enable fixed file/code tools independently of registry tools; defaults to true. */
   builtinTools?: boolean
+  /** Restrict model-visible and executable tools without installing or granting a capability. */
+  allowedTools?: readonly string[]
+  /** Optional narrower write boundary for native SDK children; reads remain bounded by cwd. */
+  workspaceWriteRoot?: string
 }
 
 interface ResolvedConfig extends Config {
@@ -155,6 +159,15 @@ function nonempty(value: unknown, name: string): string {
   return value
 }
 
+function allowedToolNames(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native-headless: allowedTools must be an array of unique non-empty names'
+  if (!Array.isArray(value)) throw new Error(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new Error(message)
+  return names
+}
+
 /** Validate native Program turn settings.
  * @param input - profile settings.
  * @returns explicit workspace, model and execution limits.
@@ -163,7 +176,7 @@ export function resolveNativeHeadlessConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-headless: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['cwd', 'provider', 'model', 'systemPrompt', 'maxSteps', 'builtinTools', 'rootRouteId', 'workspaceRoutes', 'maxTokens', 'reasoningEffort'].includes(key)) throw new Error(`native-headless: unknown configuration field ${key}`)
+    if (!['cwd', 'provider', 'model', 'systemPrompt', 'maxSteps', 'builtinTools', 'rootRouteId', 'workspaceRoutes', 'maxTokens', 'reasoningEffort', 'allowedTools', 'workspaceWriteRoot'].includes(key)) throw new Error(`native-headless: unknown configuration field ${key}`)
   }
   const cwd = nonempty(fields.cwd, 'cwd')
   if (!isAbsolute(cwd)) throw new Error('native-headless: cwd must be absolute')
@@ -180,11 +193,16 @@ export function resolveNativeHeadlessConfig(input: unknown): ResolvedConfig {
     throw new Error('native-headless: maxTokens must be a positive integer')
   }
   const reasoningEffort = fields.reasoningEffort === undefined ? undefined : ReasoningEffortId(nonempty(fields.reasoningEffort, 'reasoningEffort'))
+  const allowedTools = allowedToolNames(fields.allowedTools)
+  const workspaceWriteRoot = fields.workspaceWriteRoot === undefined ? undefined : nonempty(fields.workspaceWriteRoot, 'workspaceWriteRoot')
+  if (workspaceWriteRoot !== undefined && !isAbsolute(workspaceWriteRoot)) throw new Error('native-headless: workspaceWriteRoot must be absolute')
   return {
     ...rootRouteId === undefined ? {} : { rootRouteId },
     ...workspaceRoutes === undefined ? {} : { workspaceRoutes },
     ...maxTokens === undefined ? {} : { maxTokens },
     ...reasoningEffort === undefined ? {} : { reasoningEffort },
+    ...allowedTools === undefined ? {} : { allowedTools: Object.freeze([...allowedTools]) },
+    ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
     cwd: resolve(cwd), provider: nonempty(fields.provider, 'provider'), model: nonempty(fields.model, 'model'),
     systemPrompt: nonempty(fields.systemPrompt, 'systemPrompt'), maxSteps, builtinTools,
   }
@@ -457,7 +475,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   }
 
   private async execute(call: ToolCallBlock, root: FsTarget, actor: object, session: Session,
-    signal: AbortSignal, cwd: string): Promise<string> {
+    signal: AbortSignal, cwd: string, workspaceWriteRoot?: string): Promise<string> {
     if (call.name !== 'read_file' && call.name !== 'write_file') throw new Error(`unknown tool ${call.name}`)
     const args = toolArguments(call.arguments, call.name)
     const target = await this.target(args.path, root, signal, cwd)
@@ -470,6 +488,10 @@ export class NativeHeadlessApplication implements NativeApplication {
       const text = await this.fs.readText(target, signal)
       this.context.events.emit(this.context.scope, 'fs/observed', target, { kind: 'present', version: info.version }, actor)
       return text
+    }
+    if (workspaceWriteRoot !== undefined) {
+      const writeRoot = await this.fs.resolve(workspaceWriteRoot, { cwd, signal })
+      if (!this.fs.contains(writeRoot, target)) throw new FsError(`write path outside authorized root: ${args.path}`, 'FS_SANDBOX_DENIED')
     }
     const intent = await this.context.events.waterfall(
       this.context.scope, 'fs/write-intent', (): FsWriteIntent => ({ kind: 'createIfAbsent' }), target, actor,
@@ -601,7 +623,29 @@ export class NativeHeadlessApplication implements NativeApplication {
         throw new Error('native-headless: historical preset requires the Agent preset Registry')
       }
       this.activeSessions.set(id, session)
+      const allowed = (name: string): boolean => config.allowedTools === undefined || config.allowedTools.includes(name)
+      const modelTools = this.tools?.modelSchemas(agent.scope).map(schema => schema.name).filter(allowed) ?? []
+      const builtinTools = config.builtinTools
+        ? ['read_file', 'write_file', ...(this.codeRuntime === undefined ? [] : ['run_code'])].filter(allowed)
+        : []
+      const resolvedSandbox = this.sandboxPolicy?.resolve({ session })
+      const toolNames = [...new Set([...builtinTools, ...modelTools])]
+      if (resolvedSandbox?.mode === 'read-only') {
+        const readOnlyTools = toolNames.filter(name => name === 'read_file')
+        toolNames.splice(0, toolNames.length, ...readOnlyTools)
+      }
+      const builtinToolNames = resolvedSandbox?.mode === 'read-only'
+        ? builtinTools.filter(name => name === 'read_file') : [...builtinTools]
       releaseExecution = this.sessionExecution?.register({ agent, session, config,
+        delegationAuthority: {
+          toolNames: Object.freeze(toolNames),
+          builtinToolNames: Object.freeze(builtinToolNames),
+          ...(resolvedSandbox === undefined ? {} : { sandboxPolicy: {
+            mode: resolvedSandbox.mode, workspaceRoot: resolvedSandbox.workspaceRoot,
+            sessionId: session.id,
+          } }),
+          approvalRequired: this.approval !== undefined,
+        },
         continuations: this.continuationRuntime.forParent(agent, session),
         delegate: (child, childSignal) => this.executeDelegatedTurn({ ...child, parent: session }, childSignal),
       })
@@ -649,8 +693,10 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
       activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config, rootOrigin)
       const schemas = [
-        ...(config.builtinTools ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])] : []),
-        ...(this.tools?.modelSchemas(agent.scope) ?? []),
+        ...(config.builtinTools ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
+          .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)) : []),
+        ...(this.tools?.modelSchemas(agent.scope) ?? [])
+          .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)),
       ]
       if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
         throw new Error('native-headless: duplicate tool schema')
@@ -826,6 +872,9 @@ export class NativeHeadlessApplication implements NativeApplication {
             let additionalContexts: readonly UserMessage[] = []
             let execution: NativeToolExecution | undefined
             try {
+              if (config.allowedTools !== undefined && !config.allowedTools.includes(call.name)) {
+                throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's allowedTools`, 'TOOL_DENIED')
+              }
               const requestApproval = async (requested: NativeToolApprovalRequest): Promise<NativeApprovalOutcome> => {
                 if (requested.agent !== agent || requested.session !== session) {
                   throw new Error('native-headless: approval invocation belongs to a different Agent or Session')
@@ -863,7 +912,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 if (call.name === 'write_file' && this.approval !== undefined) {
                   await authorize({ reason: 'Writing a file changes the selected workspace.' })
                 }
-                content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd) }]
+                content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
               } else if (config.builtinTools && call.name === 'run_code' && this.codeRuntime !== undefined) {
                 const outcome = await this.executeCode(call, signal)
                 content = [{ type: 'text', text: outcome.text }]

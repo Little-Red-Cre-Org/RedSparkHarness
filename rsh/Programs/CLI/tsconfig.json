@@ -60,6 +60,9 @@
       "path": "../../Modules/Official/mcp/mcp-client"
     },
     {
+      "path": "../../Modules/Official/interaction/native-approval"
+    },
+    {
       "path": "../../Tests/test-support/loader-smoke"
     },
     {
@@ -73,6 +76,9 @@
     },
     {
       "path": "../../Modules/Official/shell/tool-bash"
+    },
+    {
+      "path": "../SDK/packages/client"
     },
     {
       "path": "../../Engine/llm/native-model-selection/tsconfig.host.json"

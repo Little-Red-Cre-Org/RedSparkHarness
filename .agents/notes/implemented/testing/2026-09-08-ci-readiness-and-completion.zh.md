@@ -30,7 +30,7 @@ Status: implemented
 
 [Worker runtime binding 测试](../../../../rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/runtime.spec.ts)为源码 worker 初始化保留五秒计算额度，并将 binding 延迟设为 6.5 秒。若将该空闲延迟计费，仍会超过整个计算额度。用例保留 15 秒测试期限与 30 秒墙钟上限，登记 Context 和回复定时器的清理，并保持热循环、诱饵 dispatch、墙钟上限及取消控制用例的原有限制。生产预算不变。
 
-[SDK 子 Agent 协议错误测试](../../../../rsh/Engine/subagent/subagent-dsh-sdk/tests/subagent-dsh-sdk.spec.ts)使用提供方正常的关闭和退出等待时间，并在断言前登记清理。[Inspector 树测试](../../../../rsh/Modules/Community/experimental/inspector/tests/cordis-tree.host.spec.ts)将当前测试预算传给 Worker 启动，并在启动尚未完成时登记清理。取消后的测试不会收到随后才就绪的实例；清理等待初始化完成，并关闭成功启动的 Worker。初始化失败时，启动操作会在拒绝前终止 Worker。受控的延迟启动测试通过真实 Worker 的 HTTP 端点验证取消和关闭。生产默认值不变。
+[SDK 子 Agent 协议错误测试](../../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/subagent-dsh-sdk.spec.ts)使用提供方正常的关闭和退出等待时间，并在断言前登记清理。[Inspector 树测试](../../../../rsh/Modules/Community/experimental/inspector/tests/cordis-tree.host.spec.ts)将当前测试预算传给 Worker 启动，并在启动尚未完成时登记清理。取消后的测试不会收到随后才就绪的实例；清理等待初始化完成，并关闭成功启动的 Worker。初始化失败时，启动操作会在拒绝前终止 Worker。受控的延迟启动测试通过真实 Worker 的 HTTP 端点验证取消和关闭。生产默认值不变。
 
 ## 考虑过的替代方案
 

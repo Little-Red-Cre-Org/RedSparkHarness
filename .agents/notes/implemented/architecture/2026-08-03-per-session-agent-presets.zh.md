@@ -77,7 +77,7 @@ Status: implemented
 
 **把 agent 的 scope 键设为 preset。** 同一 preset 上的会话就能免费共享一层，但按 agent 的注册——`installAgentLlmTarget`、按 agent 的工具限制——会跨会话相撞。
 
-**把每个 preset 作为子进程运行。** [`subagent-dsh-sdk`](../../../../rsh/Engine/subagent/subagent-dsh-sdk/README.zh.md) 已经证明完整的子 harness 可行，隔离性也会是绝对的。但这同时意味着要按会话代理流式输出、审批与投影，那是一个传输层项目，而非组装问题。
+**把每个 preset 作为子进程运行。** [`subagent-dsh-sdk`](../../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) 已经证明完整的子 harness 可行，隔离性也会是绝对的。但这同时意味着要按会话代理流式输出、审批与投影，那是一个传输层项目，而非组装问题。
 
 **给产品 subagent 增加全局启用设置与独立设置页。** 进程级值会与 preset 争夺模型可见工具的所有权，也无法表达两个会话使用不同组装。产品 provider 留在宿主，普通 preset 行分别暴露 Codex 与 Claude Code 工具。
 

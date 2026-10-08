@@ -40,7 +40,8 @@
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/dsh-native-agent": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^"
+    "@deepseek-ai/dsh-native-subagent": "workspace:^",
+    "@deepseek-ai/dsh-approval-definition": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-attachment-local": "workspace:^",

@@ -34,7 +34,7 @@
 
 - insert:
     - id: mock-llm
-      name: '../../../rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
       disabled: !!js process.env.DSH_SNAPSHOT !== 'record'
 
     - id: subagent-dsh-sdk
@@ -57,7 +57,7 @@
             model: mock-routed
 
     - id: tool-subagent-dsh-sdk
-      name: '../../../rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
       config:
         provider: dsh-sdk
         toolName: subagent
