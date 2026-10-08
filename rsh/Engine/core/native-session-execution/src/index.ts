@@ -25,6 +25,22 @@ export interface NativeSessionConfiguration {
   readonly maxTokens?: number
 }
 
+/** Detached capabilities granted by the exact parent Session to an external child. */
+export interface NativeSessionDelegationAuthority {
+  /** Tools the parent model can actually invoke in its active scope. */
+  readonly toolNames: readonly string[]
+  /** Names supplied by Native Headless itself, kept separate from same-named Plugin tools. */
+  readonly builtinToolNames: readonly string[]
+  /** Resolved filesystem policy, when this parent composition has one. */
+  readonly sandboxPolicy?: {
+    readonly mode: 'read-only' | 'workspace-write' | 'danger-full-access'
+    readonly workspaceRoot: string
+    readonly sessionId?: SessionId
+  }
+  /** Whether the parent composition owns tool approvals that this child cannot currently request. */
+  readonly approvalRequired: boolean
+}
+
 /** Bound resource ownership for child contributions before model input selection. */
 export interface NativeDelegationSetup {
   readonly agent: NativeAgent
@@ -67,6 +83,8 @@ export interface NativeSessionExecutionOwner {
   readonly agent: NativeAgent
   readonly session: Session
   readonly config: NativeSessionConfiguration
+  /** Exact tool and sandbox authority captured from this live parent Agent. */
+  readonly delegationAuthority?: NativeSessionDelegationAuthority
   readonly continuations?: NativeSessionContinuations
   /**
    * Execute the resolved child with the existing turn driver.
@@ -92,6 +110,8 @@ export interface NativeSessionExecutionOperations {
    * @returns an immutable detached configuration snapshot.
    */
   configuration(agent: NativeAgent, session: Session): NativeSessionConfiguration
+  /** Read detached capabilities from the exact active initiating parent. */
+  delegationAuthority(agent: NativeAgent, session: Session): NativeSessionDelegationAuthority | undefined
   /**
    * Select continuation operations from the exact active execution owner.
    * @param agent - original registered parent Agent.
@@ -120,6 +140,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 interface Entry {
   readonly owner: NativeSessionExecutionOwner
   readonly config: NativeSessionConfiguration
+  readonly delegationAuthority?: NativeSessionDelegationAuthority
   readonly pending: Map<AbortController, Promise<undefined>>
   releaseAgent: () => void
   release: Promise<void> | undefined
@@ -149,7 +170,16 @@ export class NativeSessionExecutionRegistry implements NativeSessionExecutionOpe
       throw new Error('native-session-execution: owner requires the exact registered Session Agent')
     }
     if (this.entries.has(owner.agent)) throw new Error('native-session-execution: Agent already has an active Session owner')
-    const entry: Entry = { owner, config: Object.freeze({ ...owner.config }), pending: new Map(),
+    const delegationAuthority = owner.delegationAuthority === undefined ? undefined : Object.freeze({
+      toolNames: Object.freeze([...owner.delegationAuthority.toolNames]),
+      builtinToolNames: Object.freeze([...owner.delegationAuthority.builtinToolNames]),
+      ...(owner.delegationAuthority.sandboxPolicy === undefined ? {} : {
+        sandboxPolicy: Object.freeze({ ...owner.delegationAuthority.sandboxPolicy }),
+      }),
+      approvalRequired: owner.delegationAuthority.approvalRequired,
+    })
+    const entry: Entry = { owner, config: Object.freeze({ ...owner.config }),
+      ...(delegationAuthority === undefined ? {} : { delegationAuthority }), pending: new Map(),
       releaseAgent: () => {}, release: undefined }
     entry.releaseAgent = this.agents.onDispose(owner.agent, () => this.release(entry))
     this.entries.set(owner.agent, entry)
@@ -159,6 +189,11 @@ export class NativeSessionExecutionRegistry implements NativeSessionExecutionOpe
   /** @inheritdoc */
   configuration(agent: NativeAgent, session: Session): NativeSessionConfiguration {
     return this.requireOwner(agent, session).config
+  }
+
+  /** @inheritdoc */
+  delegationAuthority(agent: NativeAgent, session: Session): NativeSessionDelegationAuthority | undefined {
+    return this.requireOwner(agent, session).delegationAuthority
   }
 
   /** @inheritdoc */

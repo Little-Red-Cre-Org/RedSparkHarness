@@ -970,6 +970,42 @@ describe('HarnessSdkJsonRpcServer', () => {
     }
   })
 
+  it('refuses the native-only step negotiation field before compatibility initialization', async () => {
+    const ctx = new Context()
+    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
+    try {
+      await expect(server.handleRequest('initialize', {
+        cwd: '.', provider: 'deepseek-official', model: 'model', maxSteps: 2,
+      })).rejects.toThrow('initialize maxSteps is supported only by the native-sdk profile')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('refuses the native-only tool ceiling before compatibility initialization', async () => {
+    const ctx = new Context()
+    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
+    try {
+      await expect(server.handleRequest('initialize', {
+        cwd: '.', provider: 'deepseek-official', model: 'model', allowedTools: ['read_file'],
+      })).rejects.toThrow('initialize allowedTools is supported only by the native-sdk profile')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('refuses the native-only write fence before compatibility initialization', async () => {
+    const ctx = new Context()
+    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
+    try {
+      await expect(server.handleRequest('initialize', {
+        cwd: '.', provider: 'deepseek-official', model: 'model', workspaceWriteRoot: '.',
+      })).rejects.toThrow('initialize workspaceWriteRoot is supported only by the native-sdk profile')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
   it('rejects an unavailable exact model during initialize', async () => {
     const storageDir = await mkdtemp(join(tmpdir(), 'dsh-jsonrpc-invalid-route-'))
     const ctx = await makeHarness(storageDir)

@@ -90,6 +90,11 @@ export function resolveDshHome(configured?: string, env: Record<string, string |
   return resolve(expandHomePath(selected))
 }
 
+export {
+  resolveDshProfileDirectoryExecution, resolveDshProfileExecution, validateDshProfileName,
+} from './profile-runtime.ts'
+export type { DshProfileExecution } from './profile-runtime.ts'
+
 /**
  * Join path segments onto the resolved DeepSeek Harness home.
  * @param segments - path segments appended to the Harness home; an empty list returns the home itself.

@@ -34,6 +34,12 @@
     },
     {
       "path": "../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-model-execution/tsconfig.host.json"
     }
   ]
 }

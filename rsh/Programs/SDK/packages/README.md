@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The SDK family lets another process drive a complete DeepSeek Harness runtime over newline-delimited JSON-RPC. Its protocol package defines the public messages, the TypeScript client launches `dsh` with a named profile and ordered patches, and the server accepts SDK requests over stdio. Clients can open sessions, send prompts, and observe session events, agent status changes, and subagent completions. The TypeScript client and [Python SDK](../python/README.md) use the same protocol, and these packages do not create developer projects or define another application.
+The SDK family lets another process drive a complete DeepSeek Harness runtime over newline-delimited JSON-RPC. Its Engine-owned protocol and runtime packages define the shared wire and Session client behavior; the TypeScript Program facade selects the same-version `dsh` launcher, while the server accepts SDK requests over stdio. The TypeScript client and [Python SDK](../python/README.md) use the same protocol, and these packages do not create developer projects or define another application.
 
 ## Table of Contents
 
@@ -26,8 +26,9 @@ Each package README describes what you can do with its part of the stack.
 
 | Package | Role |
 |---|---|
-| [`protocol/`](protocol/README.md) | Wire protocol: the newline-delimited JSON-RPC transport and the named request, result, and notification types |
-| [`client/`](client/README.md) | TypeScript client that spawns a runtime subprocess and drives agent turns through the high-level and protocol-level APIs |
+| [`sdk-protocol`](../../../Engine/subagent/sdk-protocol/README.md) | Engine-owned newline-delimited JSON-RPC transport and named wire types |
+| [`sdk-runtime`](../../../Engine/subagent/sdk-runtime/README.md) | Engine-owned TypeScript Session API and provider-neutral SDK runtime client |
+| [`client/`](client/README.md) | Program facade that selects the same-version `dsh` launcher and preserves the public TypeScript SDK API |
 | [`server/`](server/README.md) | `jsonrpc` plugin that serves out-of-process SDK clients over stdio |
 | [`native-server/`](native-server/README.md) | Explicit native SDK profile application over the shared Session executor |
 
@@ -42,7 +43,7 @@ Start with the Python SDK (the sibling implementation of the client contract), t
 - [SDK application bundle](../../../Compatibility/DSH/bundle/sdk-app/README.md) — the `dsh --profile sdk` application that boots the JSON-RPC server.
 - [Architecture](../../../Docs/architecture.md) — why the packaged Python client launches the same named profiles.
 - [SDK project toolchain removal](../../../../.agents/notes/archived/simplification/2026-08-11-remove-sdk-project-toolchain.md) — why this group never creates, configures, or builds developer projects.
-- [SDK subagent provider](../../../Engine/subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of the TypeScript client.
+- [SDK subagent provider](../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of the TypeScript client.
 
 <a id="dev-note"></a>
 ## Dev Note

@@ -59,7 +59,7 @@ transport.close()
 ## 进一步探索
 
 - [工具库目录](../README.zh.md) — 其他共用原语。
-- [SDK 协议](../../../Programs/SDK/packages/protocol/README.zh.md) — 使用这层传输的 SDK 方法和通知类型。
+- [SDK 协议](../../../Engine/subagent/sdk-protocol/README.zh.md) — 使用这层传输的 SDK 方法和通知类型。
 - [Codex 适配器](../../../Engine/subagent/subagent-codex/README.zh.md) — 使用同一分帧方式承载的 app-server 方法。
 
 -----

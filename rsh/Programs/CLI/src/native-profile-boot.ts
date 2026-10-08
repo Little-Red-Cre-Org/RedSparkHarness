@@ -2,11 +2,14 @@
 import { watch, type FSWatcher } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { NativeApplication } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeApplication, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { nativeSdkChildRuntimeLauncher } from '@deepseek-ai/dsh-sdk-client/native'
 import { loadNativeProfile, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
 import { createProcessShutdown } from './process-shutdown.ts'
+
+const SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
 
 function watchProfileFiles(files: readonly string[], changed: () => void, failed: (error: Error) => void): () => void {
   const directories = new Map<string, Set<string>>()
@@ -50,6 +53,13 @@ export async function runNativeProfile(options: {
   let application: NativeApplication | undefined
   const home = options.home ?? resolveDshHome()
   const onApplication = (selected: NativeApplication): void => { application = selected }
+  let carrier: { readonly plugin: NativePlugin; readonly scope: string } | undefined
+  if (options.profile === 'native-sdk-dsh-child') {
+    carrier = { plugin: nativeSdkChildRuntimeLauncher, scope: 'root' }
+  } else if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
+    const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
+    carrier = { plugin, scope: 'root' }
+  }
   let loaded = await loadNativeProfile({
     profile: options.profile,
     patchFiles: options.patchFiles,
@@ -57,6 +67,7 @@ export async function runNativeProfile(options: {
     installAnchor: fileURLToPath(import.meta.url),
     onApplication,
     home,
+    ...(carrier === undefined ? {} : { carrier }),
   })
   const { host } = loaded
   const live = nativeProfileReloadMode(options.profile, home) === 'live'
@@ -87,6 +98,7 @@ export async function runNativeProfile(options: {
       candidate = await loadNativeProfile({
         profile: options.profile, patchFiles: options.patchFiles, target: 'host',
         installAnchor: fileURLToPath(import.meta.url), home, previous: loaded, onApplication,
+        ...(carrier === undefined ? {} : { carrier }),
       })
     } catch (error) {
       if (!isStopping()) rejectCandidate(error)

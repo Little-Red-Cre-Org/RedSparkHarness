@@ -12,7 +12,7 @@ The native-sdk profile composes the production in-process subagent tool. Session
 
 ## Start a runtime
 
-The Python SDK has no separate application entrypoint. It launches the bundled `dsh` CLI with `--profile sdk`; the selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior.
+The Python SDK has no separate application entrypoint. By default, it launches the bundled `dsh` CLI with `--profile sdk`; pass `profile="native-sdk"` to select the Native Runtime while keeping `sdk` as the default. The selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior.
 
 Every launch requires an explicit Harness home. Pass `dsh_home` or provide a non-empty `DSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
 
@@ -32,7 +32,7 @@ with DeepSeekHarness(
 print(result.final_response)
 ```
 
-`DeepSeekHarness` starts lazily and reuses its runtime until `close()` or context-manager exit. The initial profile handshake has an independent 30-second default bound through `initialize_timeout_seconds`; ordinary turns remain unbounded unless `request_timeout_seconds` is set. A timeout names the selected profile and includes retained runtime diagnostics. `cwd` is the agent workspace; `runtime_cwd` independently selects the subprocess working directory. Both become absolute before launch. `provider`, `model`, optional `reasoning_effort`, and optional positive `max_tokens` are sent during JSON-RPC initialization. `base_url` and `api_key` explicitly override `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY` in the child environment.
+`DeepSeekHarness` starts lazily and reuses its runtime until `close()` or context-manager exit. The initial profile handshake has an independent 30-second default bound through `initialize_timeout_seconds`; ordinary turns remain unbounded unless `request_timeout_seconds` is set. A timeout names the selected profile and includes retained runtime diagnostics. `cwd` is the agent workspace; `runtime_cwd` independently selects the subprocess working directory. Both become absolute before launch. `provider`, `model`, optional `reasoning_effort`, and optional positive `max_tokens` are sent during JSON-RPC initialization. For the Native SDK profile, optional positive `max_steps` is negotiated with the server; the response must report a positive effective cap no greater than the request. Compatibility Cordis servers reject this Native-only field. `base_url` and `api_key` explicitly override `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY` in the child environment.
 
 With explicit `profile="native-sdk"`, `Session.cancel()` and `HarnessClient.session_cancel(session_id)` await cancellation of the admitted turn and return False when none is active. `on_notification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
 
@@ -43,6 +43,8 @@ With explicit `profile="native-sdk"`, `run` also accepts encoded raster image di
 `Session.fork(destination_session_id, at_seq=None)` returns a fresh native-sdk handle whose next run resumes copied history; `HarnessClient.session_fork` exposes the wire receipt. Forking does not invoke a model.
 
 Native session-tree subscriptions observe admitted roots and their delegated descendants; the [native server reference](../../packages/native-server/README.md#configuration) defines ownership and notification limits.
+
+`HarnessClient.next_approval_request()` receives a parent-bound Native SDK child approval question, and `respond_approval(request, outcome)` replies with its exact operation/request identities. The available outcomes are `allowed-once`, `rejected`, `cancelled`, and `unavailable`; callers route these questions through the parent policy.
 
 ## Customize plugins
 
@@ -69,7 +71,7 @@ with DeepSeekHarness(
 
 `profile` may select another existing profile, but that composition must retain `@deepseek-ai/dsh-sdk-app` or another `@deepseek-ai/dsh-sdk-jsonrpc-server` row. Misconfiguration fails during CLI boot or SDK initialization; there is no complete-config fallback. `dsh_bin` may select another `dsh` executable while preserving the same profile grammar. Arbitrary argv replacement remains an internal fake-runtime test adapter, not public API.
 
-`provider` selects a provider route registered by the chosen Cordis composition; `model` is the model id resolved by that adapter. `reasoning_effort` is an optional non-empty adapter-owned identifier for that exact route; omission preserves the model's own default. `max_tokens` is an optional positive per-request output-token cap for the root agent and its in-process descendants; omission leaves the provider default in control. Initialization rejects a missing adapter, unavailable model, or unsupported effort before a prompt runs. Compaction summaries keep the separate limit configured by their compaction plugin. The bundled default composition registers `deepseek-official`. A custom composition can mount `llm-pi-ai`, configure provider-specific credentials/endpoints there, and select any provider/model present in pi-ai's installed catalog.
+`provider` selects a provider route registered by the chosen runtime composition; `model` is the model id resolved by that adapter. `reasoning_effort` is an optional non-empty adapter-owned identifier for that exact route; omission preserves the model's own default. `max_tokens` is an optional positive per-request output-token cap for the root agent and its in-process descendants; omission leaves the provider default in control. Native SDK `max_steps` limits the existing Native Headless turn loop and is clamped to the selected profile ceiling; omit it for compatibility Cordis runtimes, which reject the field explicitly. Initialization rejects a missing adapter, unavailable model, or unsupported effort before a prompt runs. Compaction summaries keep the separate limit configured by their compaction plugin. The bundled default composition registers `deepseek-official`. A custom composition can mount `llm-pi-ai`, configure provider-specific credentials/endpoints there, and select any provider/model present in pi-ai's installed catalog.
 
 The shipped `sdk-minimal` profile is a standalone explicit tree rather than an overlay on `dsh-base`. Select it with `profile="sdk-minimal"`; the ordinary `model` argument is the sole runtime model selection, including for model ids outside the adapter's advisory catalog. It provides only a platform-selected persistent shell, local execution, and JSONL sessions; filesystem tools, settings, managed credentials, telemetry, Web tools, and the full default tool roster remain available through the separate full `sdk` and `web` profiles.
 

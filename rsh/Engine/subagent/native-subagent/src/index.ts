@@ -16,7 +16,8 @@ import type {} from '@deepseek-ai/dsh-native-prompt'
 import type {} from '@deepseek-ai/dsh-native-tools'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import type { NativeExternalSubagentDriver, NativeExternalSubagentFinishedEvent, NativeExternalSubagentId,
-  NativeExternalSubagentOutcome, NativeExternalSubagentRequest, NativeExternalSubagentResult,
+  NativeExternalSubagentApprovalOutcome, NativeExternalSubagentApprovalRelay, NativeExternalSubagentApprovalRequest,
+  NativeExternalSubagentApprovalRequester, NativeExternalSubagentOutcome, NativeExternalSubagentRequest, NativeExternalSubagentResult,
   NativeExternalSubagentRouteOverrides, NativeExternalSubagentStartedEvent, NativeExternalSubagentRouteField,
   NativeSubagentStopReason } from './external-driver.ts'
 
@@ -166,6 +167,7 @@ export interface NativeSubagentOperations {
     readonly label: string
     readonly prompt: readonly ContentBlock[]
     readonly options: NativeSubagentOptions
+    readonly approvalRequester?: NativeExternalSubagentApprovalRequester
   }): NativeSubagentRequest
   /**
    * Spawn one fresh child through the parent's existing executor.
@@ -228,6 +230,7 @@ interface ExternalAdmission {
   readonly root: NativeActiveSessionOwner
   readonly parentEpoch: string
   readonly rootEpoch: string
+  readonly approvalRequester?: NativeExternalSubagentApprovalRequester
   state: 'issued' | 'consumed'
 }
 
@@ -236,6 +239,7 @@ interface ExternalOperation {
   readonly root: NativeActiveSessionOwner
   readonly controller: AbortController
   readonly settled: PromiseWithResolvers<void>
+  readonly approvalRequests: Set<Promise<void>>
   readonly drainFailures: unknown[]
 }
 
@@ -349,7 +353,8 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (this.externalDriver !== undefined) {
       const owners = this.captureExternalOwners(agent, session)
       const admission: ExternalAdmission = { request: canonical, driver: this.externalDriver,
-        parent: owners.parent, root: owners.root, parentEpoch: this.epoch(owners.parent), rootEpoch: this.epoch(owners.root), state: 'issued' }
+        parent: owners.parent, root: owners.root, parentEpoch: this.epoch(owners.parent), rootEpoch: this.epoch(owners.root),
+        ...request.approvalRequester === undefined ? {} : { approvalRequester: request.approvalRequester }, state: 'issued' }
       this.assertExternalAdmission(admission)
       this.externalAdmissions.set(resolved, admission)
     }
@@ -582,7 +587,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     const id = randomUUID() as NativeExternalSubagentId
     this.assertExternalAdmission(admission)
     const operation: ExternalOperation = { ...owners, controller: new AbortController(),
-      settled: Promise.withResolvers<void>(), drainFailures: [] }
+      settled: Promise.withResolvers<void>(), approvalRequests: new Set(), drainFailures: [] }
     this.externalOperations.add(operation)
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal, operation.controller.signal])
     let child: Awaited<ReturnType<NativeExternalSubagentDriver['start']>> | undefined
@@ -607,12 +612,63 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       const route = Object.freeze({ provider: request.config.provider, model: request.config.model,
         ...request.config.reasoningEffort === undefined ? {} : { reasoningEffort: request.config.reasoningEffort },
         overrides: Object.freeze({ ...request.routeOverrides }) })
+      const authority = this.context.require('sessionExecution').delegationAuthority(request.agent, request.session)
+      if (authority === undefined) {
+        throw new Error('native-subagent: external children require a parent delegation-authority snapshot')
+      }
+      const builtinWriteGrant = authority.builtinToolNames.includes('write_file')
+      const approvalRequester = admission.approvalRequester
+      const canRelayApproval = driver.name === 'dsh-sdk' && driver.capabilities.approvalRelay
+        && approvalRequester !== undefined && authority.approvalRequired && builtinWriteGrant
+        && authority.sandboxPolicy?.mode === 'workspace-write'
+      const childAuthority = Object.freeze({ ...authority,
+        builtinToolNames: Object.freeze(authority.builtinToolNames.filter(name =>
+          name === 'read_file' || name === 'write_file' && canRelayApproval)) })
+      const approvalIds = new Set<string>()
+      const approval: NativeExternalSubagentApprovalRelay | undefined = canRelayApproval
+        ? Object.freeze({
+          operationId: id,
+          request: async (input: unknown) => {
+            if (typeof input !== 'object' || input === null || Array.isArray(input)) return 'unavailable'
+            const fields = input as Record<string, unknown>
+            if (fields.operationId !== id || fields.toolName !== 'write_file'
+              || typeof fields.requestId !== 'string' || fields.requestId.length === 0
+              || typeof fields.callId !== 'string' || fields.callId.length === 0
+              || fields.reason !== undefined && typeof fields.reason !== 'string'
+              || !(fields.signal instanceof AbortSignal)) return 'unavailable'
+            const approvalRequest: NativeExternalSubagentApprovalRequest = {
+              operationId: id, requestId: fields.requestId, toolName: 'write_file', callId: fields.callId,
+              ...fields.reason === undefined ? {} : { reason: fields.reason }, signal: fields.signal,
+            }
+            const approvalSignal = AbortSignal.any([effective, approvalRequest.signal])
+            this.assertExternalAdmission(admission)
+            approvalSignal.throwIfAborted()
+            if (approvalIds.has(approvalRequest.requestId)) {
+              return 'unavailable' satisfies NativeExternalSubagentApprovalOutcome
+            }
+            approvalIds.add(approvalRequest.requestId)
+            const work = approvalRequester({ ...approvalRequest, signal: approvalSignal })
+            const settled = work.then(() => undefined, () => undefined)
+            operation.approvalRequests.add(settled)
+            try {
+              const outcome = await work
+              approvalSignal.throwIfAborted()
+              this.assertExternalAdmission(admission)
+              return outcome
+            } finally {
+              operation.approvalRequests.delete(settled)
+            }
+          },
+        })
+        : undefined
       const externalRequest: NativeExternalSubagentRequest = Object.freeze({
         id, parentSessionId: owners.parent.session.id, rootSessionId: owners.root.session.id, parentEpoch, rootEpoch,
         parentDepth, maxDepth: request.maxDepth,
         limits: Object.freeze({ maxSteps: request.config.maxSteps,
           ...maxTokens === undefined ? {} : { maxTokens } }),
+        authority: childAuthority,
         label: request.label, cwd: request.config.cwd, prompt: Object.freeze(structuredClone(request.prompt)), route,
+        ...approval === undefined ? {} : { approval },
         ...request.persona === undefined ? {} : { persona: request.persona },
         ...request.toolFilter === undefined ? {} : { toolFilter: structuredClone(request.toolFilter) },
         ...request.outputSchema === undefined ? {} : { outputSchema: structuredClone(request.outputSchema) },
@@ -649,6 +705,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (cancelInstalled) effective.removeEventListener('abort', cancelChild)
     if (child !== undefined) {
       const cleanup = await disposeChild()
+      await Promise.allSettled([...operation.approvalRequests])
       if (cleanup.kind === 'quiescent') cleanupConfirmed = true
       else {
         cleanupConfirmed = false
