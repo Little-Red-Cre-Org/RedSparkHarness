@@ -213,6 +213,11 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
   '@deepseek-ai/dsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-plan-mode': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-first-prompt-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-title-all-prompts-llm': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
   '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.

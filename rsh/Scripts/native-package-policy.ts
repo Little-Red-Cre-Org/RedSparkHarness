@@ -135,6 +135,10 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/workflow/tool-workflow', 'Native and Cordis workflow Consumers share foreground lifecycle and progress recording'],
   ['rsh/Engine/workflow/tool-ralph', 'Native and Cordis Ralph Consumers share fixed scripts and terminal validation'],
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
+  ['rsh/Modules/Official/plan/plan-mode', 'Native and Cordis plan-mode Consumers share the durable mode event, review question and command copy'],
+  ['rsh/Engine/session/session-title', 'Native and Cordis title services share the durable title event, provider contract and fallback normalization'],
+  ['rsh/Engine/session/session-title-first-prompt-llm', 'Native and Cordis first-prompt title providers share the model-backed generation policy'],
+  ['rsh/Engine/session/session-title-all-prompts-llm', 'Native and Cordis all-prompts title providers share the model-backed generation policy'],
   ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
   ['rsh/Engine/context/agent-instructions', 'Native and Cordis instruction Providers share discovery, rendering and durable reconciliation'],
@@ -189,6 +193,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Core/util/launch-environment', ['host', 'client']],
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
   ['rsh/Modules/Official/settings/settings', ['host']],
+  ['rsh/Engine/session/session-title-llm', ['host']],
 ])
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
@@ -215,6 +220,10 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/workflow/tool-workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/tool-ralph', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/todo/tool-todo', ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/plan/plan-mode', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],
+  ['rsh/Engine/session/session-title', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session-projection']],
+  ['rsh/Engine/session/session-title-first-prompt-llm', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-title']],
+  ['rsh/Engine/session/session-title-all-prompts-llm', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-title']],
   ['rsh/Modules/Official/automation/task-scheduler', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-system-prompt']],
   ['rsh/Modules/Official/terminal/tool-terminal', ['@deepseek-ai/dsh-tools']],

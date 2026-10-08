@@ -11,6 +11,8 @@
     { "path": "../../../Core/vendor/schemastery" },
     { "path": "../../llm/llm" },
     { "path": "../../../Core/util/timeout" },
-    { "path": "../session-title" }
+    { "path": "../session-title" },
+    { "path": "../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../core/native-model-execution/tsconfig.host.json" }
   ]
 }

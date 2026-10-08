@@ -37,6 +37,7 @@ export class NativeContinuationActivation {
   private pumping: Promise<void> | undefined
   private closing: Promise<void> | undefined
   private children = 0
+  private backgroundTasks = 0
   private initial: boolean
   private result: NativeSessionTurnResult | undefined
   private failure: { readonly error: unknown } | undefined
@@ -63,8 +64,8 @@ export class NativeContinuationActivation {
   /** Whether this residency epoch has stopped admitting messages or owned descendants. */
   get isClosing(): boolean { return this.closing !== undefined }
 
-  /** Whether admitted descendants or capability Consumers still hold residency. */
-  get isRetained(): boolean { return this.children > 0 }
+  /** Whether admitted descendants or retained work still hold residency. */
+  get isRetained(): boolean { return this.children > 0 || this.backgroundTasks > 0 }
 
   /**
    * Durably accept one message and wake the selected ordinary turn driver.
@@ -94,6 +95,32 @@ export class NativeContinuationActivation {
       released = true
       this.children -= 1
       this.wake()
+    }
+  }
+
+  /** Retain root background work without blocking its ordinary foreground result. */
+  retainBackground(): () => void {
+    if (this.closing !== undefined) throw new Error('native-continuation: Activation is closing')
+    this.backgroundTasks += 1
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      this.backgroundTasks -= 1
+      this.wake()
+    }
+  }
+
+  /** Wait for foreground turns while allowing background-only root work to continue. */
+  async waitForeground(): Promise<void> {
+    while (true) {
+      if (this.closing !== undefined) { await this.done; return }
+      if (this.turn === undefined && !this.owner.hasPending && this.children === 0) {
+        if (this.backgroundTasks > 0) return
+        await this.done
+        return
+      }
+      await this.changed.promise
     }
   }
 
@@ -130,7 +157,7 @@ export class NativeContinuationActivation {
     void completion.promise.then(() => {
       this.pumping = undefined
       if (this.closing !== undefined) return
-      if (this.owner.hasPending || this.children > 0) this.wake()
+      if (this.owner.hasPending || this.children > 0 || this.backgroundTasks > 0) this.wake()
       else void this.close().catch((error: unknown) => { this.failure ??= { error } })
     }, (error: unknown) => {
       this.pumping = undefined
@@ -143,7 +170,7 @@ export class NativeContinuationActivation {
     while (this.closing === undefined) {
       const changed = this.changed.promise
       if (!this.owner.hasPending) {
-        if (this.children === 0) return
+        if (this.children === 0 && this.backgroundTasks === 0) return
         await changed
         continue
       }
@@ -174,6 +201,7 @@ export class NativeContinuationActivation {
         if (this.turnSettled === settled.promise) this.turnSettled = undefined
         settled.resolve()
       }
+      this.wake()
     }
   }
 

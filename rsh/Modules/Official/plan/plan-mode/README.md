@@ -45,7 +45,7 @@ The only required configuration is the guidance text the agent follows while pla
 
 | Field | Default | Meaning |
 |---|---|---|
-| `section` | required | Guidance rendered as the `plan:policy` prompt section while plan mode is active |
+| `section` | required | Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active |
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-plan-mode) is the exhaustive source for every accepted field and its JSDoc.
 
@@ -65,6 +65,10 @@ Choosing `Keep planning` (optionally with free-text feedback) sends the agent ba
 ### Observing plan state
 
 Interfaces can show whether plan mode is active and whether a mode change you requested is still waiting to take effect. The state is the same in every tab and survives restarts.
+
+### Native runtime
+
+The `./native` entry provides the same `/plan` command, `exit_plan_mode` tool, and `plan/mode` log for native profiles. It requires `tools` and `activeSessions`, uses `commands` and `userQuestions` when they are composed, and provides a read-only `planMode` view. The shipped `native-tui` profile installs it with the same guidance as the Cordis base bundle. The native system prompt cannot change during a session, so the guidance is delivered as a plan-mode notice queued for the next step: entering plan mode narrates the switch followed by the configured `section`, and leaving narrates the switch alone. A change you make while the agent is idle is logged at once; its notice is withdrawn again if you switch back before the agent runs. `/plan <message>` while idle queues the message for your next prompt instead of starting a turn.
 
 -----
 
@@ -88,6 +92,10 @@ The package persists one log-only whole-value event, `plan/mode`, and the last l
 
 The command child activates only when a commands service is composed. It maps bare `/plan` to active, the exact argument `off` to inactive without model input, and any other non-empty argument to active plus the trimmed text submitted through `agent.steer()` as the next step's ordinary logged user message. Admitted image and file blocks keep their selection order in that message; `/plan off` with attachments fails before any mode change. Entry points other than the command may drive `ctx.planMode` directly; the exact branch handling is in [`src/index.ts`](src/index.ts).
 
+### One core, two runtimes
+
+The selection state machine, boundary application, narration rule, command parsing, and reviewed exit live once in [`src/selection.ts`](src/selection.ts). The Cordis service and the native plugin supply only their session reads, durable append, and delivery: Cordis narrates through the pre-step decision and renders guidance as a prompt section, while native applies pending selections in an outermost step-admission hook and keeps at most one queued plan notice that announces the mode the model must learn next. The native "told" state is the mode in force at the last `step/start`, the counterpart of the Cordis header fold.
+
 ### The exit tool
 
 `exit_plan_mode` stays registered while plan mode is inactive, so entering or leaving changes only the prompt section, never the request tool catalog. An approved review records a silent pending exit that the next accepted in-turn pre-step appends, keeping plan guidance for the rest of the current tool batch. Without a user-questions channel, or after a service reload while the review is pending, the call fails closed and `/plan off` remains the manual escape.
@@ -100,7 +108,10 @@ When `ctx.sessionProjections` is composed, the package registers the `plan` unit
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, the `ctx.planMode` service, `plan:policy` section, `/plan` command, `exit_plan_mode` tool |
+| [`src/index.ts`](src/index.ts) | Cordis glue: `Config` schema, the `ctx.planMode` service, `plan:policy` section, `/plan` command, `exit_plan_mode` tool, `plan` projection |
+| [`src/selection.ts`](src/selection.ts) | Framework-free behavior shared by both entries: the selection state machine, boundary application, narration rule, `/plan` input parsing, and the reviewed exit |
+| [`src/common.ts`](src/common.ts) | Framework-free facts: the `plan/mode` event, config validation, model-facing texts, the review question and answer check, and command result texts |
+| [`src/native.ts`](src/native.ts) | Native glue: owner folds, the step-admission hook, the queued plan notice, the `/plan` command, and the `exit_plan_mode` value tool |
 | [`src/types.ts`](src/types.ts) | The `plan` projection-key declaration and `PlanProjection` wire value |
 | [`src/client.ts`](src/client.ts) | Client-namespace re-export of the types outlet |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: validates the `plan/mode` payload shape |
@@ -184,6 +195,8 @@ These limits describe when plan mode does not behave as you might expect or need
 - **Pending selections are process-local** — a selection made after the turn's final accepted pre-step is lost if the process exits before another accepted in-turn pre-step; the UI must reapply it.
 - **No creation-time plan option** — forked agents inherit logged plan state, while newly spawned agents begin inactive.
 - **Live children cannot open the review** — a child owned by another live agent fails the `exit_plan_mode` call and is told to include the unresolved decision in its final result; durable fork lineage alone does not prevent a session resumed as a runtime root from opening the review.
+- **Native idle messages wait for the next prompt** — native `/plan <message>` while idle queues the message instead of starting a turn, because a native wake would start a turn the TUI does not show.
+- **Native profiles** — only `native-tui` installs plan mode; native web has no plan client surface yet, and headless, SDK, and ACP profiles have no way to toggle it.
 - **One specialized review renderer** — only the Web UI has a `plan-review` presentation; another interaction provider presents the same request through its generic option flow.
 
 <a id="dev-note"></a>
