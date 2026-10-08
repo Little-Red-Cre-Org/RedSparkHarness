@@ -188,5 +188,6 @@ export async function recoverWithRetry(
   await host.scheduled(eventData)
   if (!await cancellableDelay(delayMs, fusedSignal)) return
   await host.started({ retryId, turn, step, retry })
+  if (signal.aborted || host.lifetime.aborted) return
   return { kind: 'retry' }
 }

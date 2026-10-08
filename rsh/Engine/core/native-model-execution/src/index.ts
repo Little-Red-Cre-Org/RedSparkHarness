@@ -246,6 +246,7 @@ export class NativeModelExecution {
 
   private async recover(request: NativeModelRecoveryRequest): Promise<NativeModelRecoveryAction> {
     const policies = [...this.recoveryPolicies]
+    let delegationViolation: Error | undefined
     const delegate = async (index: number): Promise<NativeModelRecoveryAction> => {
       request.signal.throwIfAborted()
       const policy = policies[index]
@@ -256,7 +257,11 @@ export class NativeModelExecution {
       let selected: NativeModelRecoveryAction
       try {
         selected = await policy(request, () => {
-          if (delegated) throw new Error('native-model-execution: recovery policy delegated more than once')
+          if (delegated) {
+            const error = new Error('native-model-execution: recovery policy delegated more than once')
+            delegationViolation ??= error
+            throw error
+          }
           delegated = true
           downstream = delegate(index + 1)
           return downstream
@@ -265,14 +270,19 @@ export class NativeModelExecution {
       if (downstream !== undefined) {
         try { await downstream }
         catch (error: unknown) {
-          if (primary === undefined) primary = { error }
-          else if (primary.error !== error) primary = { error: new AggregateError([primary.error, error], 'recovery policies failed') }
+          if (primary === undefined) {
+            if (selected?.kind !== 'retry') primary = { error }
+          } else if (primary.error !== error) {
+            primary = { error: new AggregateError([primary.error, error], 'recovery policies failed') }
+          }
         }
       }
       if (primary !== undefined) throw primary.error
       return selected
     }
-    return delegate(0)
+    const action = await delegate(0)
+    if (delegationViolation !== undefined) throw delegationViolation
+    return action
   }
 }
 

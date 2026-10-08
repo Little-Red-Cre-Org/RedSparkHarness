@@ -156,18 +156,18 @@ describe('runtime-layer constraints', () => {
     ])
   })
 
-  it('rejects a renewed Codex dependency on the Program-owned SDK protocol', () => {
+  it('rejects an Engine dependency on the Program-owned SDK server', () => {
     expect(collectRuntimeLayerViolations([{
-      dir: 'rsh/Programs/SDK/packages/protocol',
-      manifest: { name: '@deepseek-ai/dsh-sdk-protocol' },
+      dir: 'rsh/Programs/SDK/packages/native-server',
+      manifest: { name: '@deepseek-ai/dsh-native-sdk-server' },
     }, {
       dir: 'rsh/Engine/subagent/subagent-codex',
       manifest: {
         name: '@deepseek-ai/dsh-subagent-codex',
-        dependencies: { '@deepseek-ai/dsh-sdk-protocol': 'workspace:^' },
+        dependencies: { '@deepseek-ai/dsh-native-sdk-server': 'workspace:^' },
       },
     }])).toEqual([
-      '@deepseek-ai/dsh-subagent-codex: dependencies.@deepseek-ai/dsh-sdk-protocol violates runtime-layer policy: Engine packages may not consume Program packages',
+      '@deepseek-ai/dsh-subagent-codex: dependencies.@deepseek-ai/dsh-native-sdk-server violates runtime-layer policy: Engine packages may not consume Program packages',
     ])
   })
 
@@ -373,6 +373,18 @@ describe('package payload constraints', () => {
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
       'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('keeps the SDK client shared chunks while requiring exact owner package files', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-client' })).toEqual([
+      'lib/*.js', 'lib/types/**/*.d.ts',
+    ])
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-runtime' })).toEqual([
+      'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
+    ])
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-child' })).toEqual([
+      'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
     ])
   })
 })

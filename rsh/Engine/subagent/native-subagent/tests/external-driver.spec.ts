@@ -54,7 +54,14 @@ function fixture(selectedDriver: NativeExternalSubagentDriver, owners: NativeAct
     },
   } as unknown as NativeActiveSessionOperations
   const execution = { configuration: () => ({ cwd: '/selected', provider: 'parent-provider', model: 'parent-model',
-    systemPrompt: 'Parent prompt.', maxSteps: 4, maxTokens: 100 }) } as unknown as NativeSessionExecutionOperations
+    systemPrompt: 'Parent prompt.', maxSteps: 4, maxTokens: 100 }),
+  delegationAuthority: (agent: NativeAgent, session: Session) => {
+    const value = current.get(agent)
+    return value?.session === session && value.writerAvailable
+      ? Object.freeze({ toolNames: Object.freeze([]), builtinToolNames: Object.freeze([]), approvalRequired: false })
+      : undefined
+  },
+  } as unknown as NativeSessionExecutionOperations
   const base: NativePlugin = { apiVersion: 1, name: 'external-subagent-test-base', targets: ['host'], requires: [],
     optional: [], provides: ['sessionExecution', 'activeSessions', 'promptSections'], resolve: () => (context) => {
       context.provide('sessionExecution', execution)

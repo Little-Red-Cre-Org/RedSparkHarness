@@ -27,4 +27,6 @@ export type {
   HarnessNotification,
   NotificationFilter,
   RunResult,
+  SdkApprovalOutcome,
+  SdkApprovalHandler,
 } from './types.ts'

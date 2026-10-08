@@ -1,5 +1,6 @@
 /** JSON-RPC SDK transport over the native Session executor. */
-import { resolve } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import { isAbsolute, resolve } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
@@ -8,8 +9,10 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeRootExecutionOperations, NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
-import { SessionId, SessionSeq, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
+import { SessionId, SessionSeq, type SessionEvent, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeApprovalOutcome, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
@@ -34,6 +37,27 @@ function record(value: unknown, name: string): Record<string, unknown> {
 function nonempty(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.length === 0) throw new TypeError(`native SDK: ${name} must be a nonempty string`)
   return value
+}
+
+function allowedToolNames(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native SDK: allowedTools must be an array of unique non-empty names'
+  if (!Array.isArray(value)) throw new TypeError(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new TypeError(message)
+  return names
+}
+
+function signalAborted(signal: AbortSignal): boolean {
+  return signal.aborted
+}
+
+function isApprovalOutcome(value: unknown): value is NativeApprovalOutcome {
+  return value === 'allowed-once' || value === 'rejected' || value === 'cancelled' || value === 'unavailable'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function resolveConfig(input: unknown): Config {
@@ -77,10 +101,13 @@ export class NativeSdkApplication implements NativeApplication {
   private readonly rootExecutionWaiters = new Set<NativeSdkRootExecutionWaiter>()
   private rootInitializationFailure: { readonly cause: unknown } | undefined
   private readonly abort = new AbortController()
+  private transport: JsonRpcLineTransport | undefined
+  private releaseApprovalAnswerer: (() => void) | undefined
   private readonly sessions = new Map<string, Promise<void>>()
   private readonly pending = new Set<Promise<unknown>>()
   private readonly activeTurns = new Map<string, NativeSdkTurnAdmission>()
   private readonly acceptedRootSessions = new Set<string>()
+  private readonly sentSessionEvents = new WeakSet<object>()
   private closing = false
   private initializing = false
 
@@ -119,6 +146,7 @@ export class NativeSdkApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     if (args.length > 0) throw new Error('native SDK: task arguments are unsupported')
     const transport = new JsonRpcLineTransport(this.input, this.output)
+    this.transport = transport
     const releaseDescendants = this.observeDescendants(transport)
     let finish!: () => void
     const done = new Promise<void>((resolveDone) => { finish = resolveDone })
@@ -156,7 +184,13 @@ export class NativeSdkApplication implements NativeApplication {
       this.input.off('end', onEnd)
       signal.removeEventListener('abort', onAbort)
       try { await releaseDescendants() }
-      finally { transport.close(); this.input.pause() }
+      finally {
+        this.releaseApprovalAnswerer?.()
+        this.releaseApprovalAnswerer = undefined
+        this.transport = undefined
+        transport.close()
+        this.input.pause()
+      }
     }
   }
 
@@ -195,6 +229,15 @@ export class NativeSdkApplication implements NativeApplication {
         if (interaction?.displayRootAgent !== owner.agent || interaction.displayRootSessionId !== owner.session.id) return Promise.resolve()
         const previous = roots.get(owner.session.id)
         roots.set(owner.session.id, previous?.agent === owner.agent ? { ...previous, owner } : { agent: owner.agent, owner })
+        observed.get(owner)?.()
+        observed.set(owner, owner.onEvent((event) => {
+          const sessionId = String(owner.session.id)
+          const root = roots.get(owner.session.id)
+          if (root?.owner !== owner || !this.acceptedRootSessions.has(sessionId)) return
+          const routeId = root.routeId ?? executor.rootExecution.capture(owner).id
+          if (root.routeId === undefined) roots.set(owner.session.id, { ...root, routeId })
+          if (routeId === SDK_ROOT_ROUTE) this.notifySessionEvent(transport, sessionId, event)
+        }))
         return Promise.resolve()
       }
       if (interaction === undefined) return Promise.resolve()
@@ -215,8 +258,9 @@ export class NativeSdkApplication implements NativeApplication {
         return Promise.resolve()
       }
       descendants.set(childSessionId, { agent: owner.agent, parentAgent, parentSessionId, rootSessionId })
+      observed.get(owner)?.()
       observed.set(owner, owner.onEvent((event) => {
-        transport.notify('session.event', { sessionId: String(childSessionId), event })
+        this.notifySessionEvent(transport, String(childSessionId), event)
       }))
       transport.notify('subagent.started', { parentSessionId: String(parentSession), childSessionId: String(childSessionId) })
       return Promise.resolve()
@@ -238,6 +282,12 @@ export class NativeSdkApplication implements NativeApplication {
     }
   }
 
+  private notifySessionEvent(transport: JsonRpcLineTransport, sessionId: string, event: SessionEvent): void {
+    if (this.sentSessionEvents.has(event)) return
+    this.sentSessionEvents.add(event)
+    transport.notify('session.event', { sessionId, event })
+  }
+
   private track<T>(task: Promise<T>): Promise<T> {
     this.pending.add(task)
     void task.then(() => { this.pending.delete(task) }, () => { this.pending.delete(task) })
@@ -245,39 +295,101 @@ export class NativeSdkApplication implements NativeApplication {
   }
 
   private async initialize(raw: Record<string, unknown>, lifetime: AbortSignal):
-  Promise<{ serverInfo: { name: string; version: string } }> {
+  Promise<{ serverInfo: { name: string; version: string }; maxSteps: number }> {
     this.assertOpen()
     if (this.executor !== undefined || this.initializing) throw new Error('native SDK: already initialized')
     this.initializing = true
     this.rootInitializationFailure = undefined
     try {
+      for (const key of Object.keys(raw)) {
+        if (!['cwd', 'provider', 'model', 'reasoningEffort', 'maxTokens', 'maxSteps', 'allowedTools',
+          'workspaceWriteRoot', 'approvalOperationId'].includes(key)) {
+          throw new Error(`native SDK: unknown initialize field ${key}`)
+        }
+      }
+      const approvalOperationId = raw.approvalOperationId === undefined
+        ? undefined : nonempty(raw.approvalOperationId, 'approvalOperationId')
+      const approval = this.context.optional('approval')
+      if (approvalOperationId !== undefined && approval === undefined) {
+        throw new Error('native SDK: approvalOperationId requires the Native approval service')
+      }
       const cwd = resolve(nonempty(raw.cwd, 'cwd'))
       const provider = nonempty(raw.provider, 'provider')
       const model = nonempty(raw.model, 'model')
       const reasoningEffort = raw.reasoningEffort === undefined ? undefined : ReasoningEffortId(nonempty(raw.reasoningEffort, 'reasoningEffort'))
+      const requestedMaxSteps = raw.maxSteps
+      if (requestedMaxSteps !== undefined
+        && (typeof requestedMaxSteps !== 'number' || !Number.isSafeInteger(requestedMaxSteps) || requestedMaxSteps <= 0)) {
+        throw new TypeError('native SDK: maxSteps must be a positive safe integer')
+      }
+      const maxSteps = Math.min(typeof requestedMaxSteps === 'number' ? requestedMaxSteps : this.config.maxSteps,
+        this.config.maxSteps)
       const maxTokens = raw.maxTokens
       if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isSafeInteger(maxTokens) || maxTokens <= 0)) {
         throw new TypeError('native SDK: maxTokens must be a positive integer')
+      }
+      const allowedTools = allowedToolNames(raw.allowedTools)
+      const workspaceWriteRoot = raw.workspaceWriteRoot
+      if (workspaceWriteRoot !== undefined && (typeof workspaceWriteRoot !== 'string' || workspaceWriteRoot.length === 0 || !isAbsolute(workspaceWriteRoot))) {
+        throw new TypeError('native SDK: workspaceWriteRoot must be an absolute path')
       }
       const signal = AbortSignal.any([lifetime, this.context.signal, this.abort.signal])
       await this.context.require('model').resolveModel?.(provider, model, signal)
       signal.throwIfAborted()
       this.assertOpen()
       this.executor = createNativeHeadlessApplication(this.context, {
-        rootRouteId: SDK_ROOT_ROUTE, cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps: this.config.maxSteps,
+        rootRouteId: SDK_ROOT_ROUTE, cwd, provider, model, systemPrompt: this.config.systemPrompt, maxSteps,
         ...reasoningEffort === undefined ? {} : { reasoningEffort },
         ...maxTokens === undefined ? {} : { maxTokens },
+        ...allowedTools === undefined ? {} : { allowedTools },
+        ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
       }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
       const deletions = this.executor.rootExecution.deletions
       if (deletions !== undefined) Object.defineProperty(this.rootExecution, 'deletions', { enumerable: true, value: deletions })
       Object.freeze(this.rootExecution)
+      if (approval !== undefined) this.registerApprovalAnswerer(approval, approvalOperationId ?? randomUUID())
       for (const waiter of [...this.rootExecutionWaiters]) waiter.wake()
-      return { serverInfo: { name: 'deepseek-harness-sdk-runtime', version: '0.0.1' } }
+      return { serverInfo: { name: 'deepseek-harness-sdk-runtime', version: '0.0.1' }, maxSteps }
     } catch (failure: unknown) {
       this.rootInitializationFailure = { cause: failure }
       this.rejectRootExecutionWaiters(failure)
       throw failure
     } finally { this.initializing = false }
+  }
+
+  private registerApprovalAnswerer(approval: NativeApprovalServiceDefinition, operationId: string): void {
+    const transport = this.transport
+    if (transport === undefined) throw new Error('native SDK: approval relay transport is unavailable')
+    if (this.releaseApprovalAnswerer !== undefined) throw new Error('native SDK: approval relay is already registered')
+    this.releaseApprovalAnswerer = approval.registerAnswerer(async (request) => {
+      if (this.closing || request.signal.aborted) return 'cancelled'
+      const requestId = String(request.id)
+      const params = {
+        operationId, requestId, sessionId: String(request.agent.id), toolName: request.toolName,
+        ...(request.callId === undefined ? {} : { callId: String(request.callId) }),
+        ...(request.reason === undefined ? {} : { reason: request.reason }),
+      }
+      let cancellationSent = false
+      const cancel = (): void => {
+        if (cancellationSent) return
+        cancellationSent = true
+        try { transport.notify('approval/cancel', { operationId, requestId }) }
+        catch { /* closed transport has no peer to cancel */ }
+      }
+      request.signal.addEventListener('abort', cancel, { once: true })
+      try {
+        const response: unknown = await transport.request('approval/request', params, request.signal)
+        request.signal.throwIfAborted()
+        if (!isRecord(response) || response.operationId !== operationId || response.requestId !== requestId
+          || !isApprovalOutcome(response.outcome)) return 'unavailable'
+        return response.outcome
+      } catch {
+        return signalAborted(request.signal) ? 'cancelled' : 'unavailable'
+      } finally {
+        request.signal.removeEventListener('abort', cancel)
+        if (signalAborted(request.signal)) cancel()
+      }
+    })
   }
 
   private rootOperations(): NativeRootExecutionOperations {
@@ -307,7 +419,8 @@ export class NativeSdkApplication implements NativeApplication {
       }
       const fail = (cause: unknown): void => {
         remove()
-        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- preserve AbortSignal's exact cancellation reason.
+        // AbortSignal.reason permits arbitrary values; rootExecution.ready() preserves that identity.
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors
         rejectExecutor(cause)
       }
       const abort = (): void => {
@@ -414,7 +527,7 @@ export class NativeSdkApplication implements NativeApplication {
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
         await executor.executeRootTurn({ id, resume, message,
           onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
-            transport.notify('session.event', { sessionId, event })
+            this.notifySessionEvent(transport, sessionId, event)
             if (!admission.received && event.type === 'agent/inbox/spliced'
             && event.data.inserted.some(input => input.id === message.id)) {
               admission.received = true

@@ -91,6 +91,22 @@ describe('native model recovery', () => {
     expect(state.pending.map(event => event.type)).toEqual(['assistant/attempt', 'assistant/message'])
   })
 
+  it('keeps an explicit retry after handling a downstream recovery failure', async () => {
+    const downstreamError = new Error('downstream recovery failed')
+    const state = fixture([failed('SERVER_ERROR'), text('recovered')])
+    state.execution.onRecovery(() => Promise.reject(downstreamError))
+    state.execution.onRecovery(async (_request, next) => {
+      await expect(next()).rejects.toBe(downstreamError)
+      return { kind: 'retry' }
+    })
+
+    const result = await state.execution.execute(state.request)
+
+    expect(result.message.content).toEqual([{ type: 'text', text: 'recovered' }])
+    expect(state.calls()).toBe(2)
+    expect(state.pending.map(event => event.type)).toEqual(['assistant/attempt', 'assistant/message'])
+  })
+
   it('does not offer consumer failures to recovery', async () => {
     const state = fixture([text('observed')])
     let offered = false

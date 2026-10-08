@@ -92,7 +92,7 @@ const dshSdkDiagnosticChildPatch = fileURLToPath(new URL(
   import.meta.url,
 ))
 const dshSdkChildConfig = fileURLToPath(new URL(
-  '../../rsh/Engine/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
+  '../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
   import.meta.url,
 ))
 

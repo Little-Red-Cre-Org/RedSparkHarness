@@ -98,7 +98,7 @@ async function runCordis(script: ScriptEntry[], policy: RetryPolicyConfig) {
   }
 }
 
-async function nativeHost(adapter: LlmAdapter, retryPlugin: NativePlugin) {
+async function nativeHost(adapter: LlmAdapter, retryPlugin: NativePlugin, beforeRetry?: NativePlugin) {
   const scope = new NativeScope()
   let execution: NativeModelExecution | undefined
   const model: NativePlugin = {
@@ -113,15 +113,17 @@ async function nativeHost(adapter: LlmAdapter, retryPlugin: NativePlugin) {
     apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['modelExecution'], provides: [],
     resolve: () => (context) => { execution = context.require('modelExecution') },
   }
+  const retryRequest = { plugin: retryPlugin, scope, config: {} }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
-    { plugin: retryPlugin, scope, config: {} },
+    ...(beforeRetry === undefined ? [] : [{ plugin: beforeRetry, scope, config: {} }]),
+    retryRequest,
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: model, scope, config: undefined },
   ], 'host'))
   await host.start()
   if (execution === undefined) throw new Error('missing model execution')
-  return { host, execution }
+  return { host, execution, retryRequest }
 }
 
 function nativeSession() {
@@ -247,5 +249,128 @@ describe('native llm-retry lifecycle', () => {
     await host.stop()
     await outcome
     expect(adapter.requests).toHaveLength(1)
+  })
+
+  it('lets always retry recover after a delegated recovery failure', async () => {
+    vi.useFakeTimers()
+    const downstreamError = new Error('downstream recovery failed')
+    const downstream: NativePlugin = {
+      apiVersion: 1, name: 'test-downstream-recovery', targets: ['host'], requires: ['modelExecution'], provides: [],
+      resolve: () => (context) => {
+        context.effect(context.require('modelExecution').onRecovery(() => { throw downstreamError }))
+      },
+    }
+    const policy = resolveRetryPolicy({
+      mode: 'always', backoff: { initialDelayMs: 1, maxDelayMs: 1, jitterRatio: 0 },
+    }, 'policy')
+    const adapter = new ScriptedAdapter([failure('SERVER'), text('recovered')], policy)
+    const { host, execution } = await nativeHost(adapter, createNativeRetryPlugin({ random: () => 0.5 }), downstream)
+    const session = nativeSession()
+    const events: SessionEvent[] = []
+    try {
+      const outcome = await settle(execution.execute({
+        session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
+        append: (event) => { events.push(event) }, persist: () => Promise.resolve(),
+      }))
+      expect(outcome.status).toBe('fulfilled')
+      expect(adapter.requests).toHaveLength(2)
+      expect(events.map(event => event.type)).toEqual([
+        'assistant/attempt', 'llm/retry', 'llm/retry-started', 'assistant/message',
+      ])
+    } finally {
+      await host.stop()
+    }
+  })
+
+  it('keeps duplicate delegation fatal through an always retry policy', async () => {
+    vi.useFakeTimers()
+    const downstream: NativePlugin = {
+      apiVersion: 1, name: 'test-duplicate-delegation', targets: ['host'], requires: ['modelExecution'], provides: [],
+      resolve: () => (context) => {
+        context.effect(context.require('modelExecution').onRecovery(async (_request, next) => {
+          await next()
+          return next()
+        }))
+      },
+    }
+    const policy = resolveRetryPolicy({
+      mode: 'always', backoff: { initialDelayMs: 1, maxDelayMs: 1, jitterRatio: 0 },
+    }, 'policy')
+    const adapter = new ScriptedAdapter([failure('SERVER'), text('never')], policy)
+    const { host, execution } = await nativeHost(adapter, createNativeRetryPlugin({ random: () => 0.5 }), downstream)
+    const session = nativeSession()
+    const events: SessionEvent[] = []
+    try {
+      const outcome = await settle(execution.execute({
+        session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
+        append: (event) => { events.push(event) }, persist: () => Promise.resolve(),
+      }))
+      expect(outcome.status).toBe('rejected')
+      if (outcome.status === 'rejected') {
+        expect(outcome.reason).toMatchObject({ message: 'native-model-execution: recovery policy delegated more than once' })
+      }
+      expect(adapter.requests).toHaveLength(1)
+      expect(events.map(event => event.type)).toEqual(['assistant/attempt', 'llm/retry', 'llm/retry-started'])
+    } finally {
+      await host.stop()
+    }
+  })
+
+  it('does not retry when removal aborts during retry-started persistence', async () => {
+    const policy = resolveRetryPolicy({
+      mode: 'normal', maxRetries: 2,
+      backoff: { initialDelayMs: 1, maxDelayMs: 1, jitterRatio: 0 },
+    }, 'policy')
+    const adapter = new ScriptedAdapter([failure('SERVER'), text('never')], policy)
+    const retryPlugin = createNativeRetryPlugin({ random: () => 0.5 })
+    let retryLifetime: AbortSignal | undefined
+    const observingRetryPlugin: NativePlugin = {
+      ...retryPlugin,
+      resolve(input) {
+        const install = retryPlugin.resolve(input)
+        return (context) => {
+          retryLifetime = context.signal
+          return install(context)
+        }
+      },
+    }
+    const { host, execution, retryRequest } = await nativeHost(adapter, observingRetryPlugin)
+    const session = nativeSession()
+    const events: SessionEvent[] = []
+    const startedPersist = Promise.withResolvers<undefined>()
+    const releasePersist = Promise.withResolvers<undefined>()
+    let persisted = 0
+    try {
+      const running = execution.execute({
+        session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
+        append: (event) => { events.push(event) },
+        persist: async () => {
+          persisted++
+          if (events.at(-1)?.type === 'llm/retry-started') {
+            startedPersist.resolve(undefined)
+            await releasePersist.promise
+          }
+        },
+      })
+      const outcome = expect(running).rejects.toThrow('native-model-execution: model error: failed with SERVER')
+      await startedPersist.promise
+      const removal = host.remove(retryRequest)
+      for (let turn = 0; turn < 50 && retryLifetime?.aborted !== true; turn++) {
+        await new Promise(resolve => setImmediate(resolve))
+      }
+      expect(retryLifetime?.aborted).toBe(true)
+      releasePersist.resolve(undefined)
+      await outcome
+      await removal
+      expect(adapter.requests).toHaveLength(1)
+      expect(events.map(event => event.type)).toEqual(['assistant/attempt', 'llm/retry', 'llm/retry-started'])
+      expect(persisted).toBe(2)
+    } finally {
+      releasePersist.resolve(undefined)
+      await host.stop()
+    }
   })
 })
