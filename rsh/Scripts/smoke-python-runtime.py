@@ -739,7 +739,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenario",
-        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-restart", "sdk-profile-plugin", "sdk-live", "runner", "direct"),
+        choices=("all", "sdk-default", "sdk-native", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-restart", "sdk-profile-plugin", "sdk-live", "runner", "direct"),
         default="all",
     )
     parser.add_argument("--exe", type=Path)
@@ -756,6 +756,8 @@ def main() -> None:
         parser.error("--scenario sdk-live requires --installed-wheel")
     if args.scenario == "sdk-profile-plugin" and not args.installed_wheel:
         parser.error("--scenario sdk-profile-plugin requires --installed-wheel")
+    if args.scenario == "sdk-native" and not args.installed_wheel:
+        parser.error("--scenario sdk-native requires --installed-wheel")
     if args.installed_wheel:
         args.exe = assert_installed_wheel_environment()
     if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-restart", "runner", "direct"} and args.exe is None:
@@ -780,6 +782,8 @@ def main() -> None:
     with MockModel() as model:
         if args.scenario in {"all", "sdk-default"}:
             smoke_sdk_default(model.url)
+        if args.scenario == "sdk-native" or (args.scenario == "all" and args.installed_wheel):
+            smoke_sdk_native(model.url)
         if args.scenario in {"all", "sdk-custom"}:
             assert args.exe is not None
             smoke_sdk_custom(model.url, args.exe.resolve())
@@ -1005,6 +1009,54 @@ def smoke_sdk_default(base_url: str) -> None:
             f"turn_end={safe_turn_end(next((event.get('data', event) for event in reversed(result.events) if event.get('type') == 'turn/end'), {}))!r}"
         )
         assert_zstd_session_log(sessions)
+
+
+def smoke_sdk_native(base_url: str) -> None:
+    """Run one Native SDK turn through the installed wheel's default executable carrier."""
+    from deepseek_harness import DeepSeekHarness
+
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-") as temporary:
+        root = Path(temporary).resolve()
+        dsh_home = root / "home"
+        patch = root / "native.patch.json"
+        patch.write_text(json.dumps({
+            "formatVersion": 1,
+            "installations": [{
+                "id": "pi-ai",
+                "config": {"providers": {"deepseek-official": {
+                    "apiKeyEnv": "DEEPSEEK_API_KEY",
+                    "api": "openai-completions",
+                    "baseURL": f"{base_url}/v1",
+                    "models": [{"id": "smoke-model"}],
+                }}},
+            }],
+        }), encoding="utf-8")
+        with DeepSeekHarness(
+            provider="deepseek-official",
+            model="smoke-model",
+            cwd=str(root),
+            dsh_home=str(dsh_home),
+            profile="native-sdk",
+            patches=(str(patch),),
+            env={
+                "DSH_PERMISSION_MODE": "danger-full-access",
+                "DSH_TELEMETRY_DISABLED": "1",
+            },
+            api_key="sk-keyless-smoke",
+            request_timeout_seconds=60,
+        ) as harness:
+            result = harness.run("reply with the smoke text", session_id="native-smoke")
+            process = harness.client._proc
+        if result.final_response != EXPECTED_TEXT or result.finish_reason != "completed":
+            raise AssertionError(
+                f"native result={result.final_response!r} finish={result.finish_reason!r}"
+            )
+        if process is None or process.poll() != 0:
+            raise AssertionError(
+                f"native runtime did not exit cleanly after shutdown: "
+                f"{None if process is None else process.returncode}"
+            )
+        assert_session_log(dsh_home / "sessions", root, EXPECTED_TEXT)
 
 
 def smoke_sdk_custom(base_url: str, executable: Path) -> None:

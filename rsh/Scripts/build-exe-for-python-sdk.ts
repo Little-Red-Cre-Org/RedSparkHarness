@@ -9,7 +9,7 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, statSync } from 'node:fs'
-import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { parseArgs } from 'node:util'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
@@ -375,6 +375,16 @@ class SingleExeBuild {
       }
       const destination = remaining
       const source = await realpath(destination)
+      if (
+        destination === join(nodeModules, DEPLOY_ROOT_PACKAGE)
+        && source === await realpath(resolve(root, 'rsh/Programs/SDK/python/sdk-runtime'))
+      ) {
+        // pnpm deploy may keep the private manifest's workspace self-link. It is
+        // not runtime content, and copying it below itself recurses indefinitely.
+        await unlink(destination)
+        remaining = await this.findSymlink(nodeModules)
+        continue
+      }
       const nestedNodeModules = join(source, 'node_modules')
       await rm(destination, { recursive: true, force: true })
       await cp(source, destination, {
