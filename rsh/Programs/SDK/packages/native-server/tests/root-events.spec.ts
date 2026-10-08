@@ -93,10 +93,10 @@ it('deduplicates the foreground event and streams a late root event until shutdo
       }
       if (message.id !== undefined) replies.get(message.id)?.resolve(message as Record<string, unknown>)
       if (message.method === 'session.status' && message.params?.sessionId === sessionId
-        && message.params.status === 'idle') idle.resolve()
+        && message.params.status === 'idle') idle.resolve(undefined)
       if (message.method === 'session.event' && message.params?.sessionId === sessionId) {
         sessionEvents.push(message.params.event)
-        if (isRecord(message.params.event) && message.params.event.type === 'session/title') lateEventSeen.resolve()
+        if (isRecord(message.params.event) && message.params.event.type === 'session/title') lateEventSeen.resolve(undefined)
       }
     }
   })
