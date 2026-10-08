@@ -1518,18 +1518,10 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
 
   rsh/Core/util/crypto: {}
 
-  rsh/Core/util/deque:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
+  rsh/Core/util/deque: {}
 
   rsh/Core/util/errors: {}
 
@@ -1566,17 +1558,9 @@ importers:
 
   rsh/Core/util/output-retention: {}
 
-  rsh/Core/util/package-manifest:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
+  rsh/Core/util/package-manifest: {}
 
-  rsh/Core/util/time:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
+  rsh/Core/util/time: {}
 
   rsh/Core/util/timeout: {}
 
@@ -11597,9 +11581,6 @@ importers:
 
   rsh/Programs/Web/client/ui-dockkit:
     devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand

@@ -21,6 +21,10 @@ You may not use the covered material for a thesis, dissertation, journal article
 
 Publishing a technical report, thesis, paper, or other research result does not itself grant any rights or change this license. After the maintainers publish the related technical report or formal paper, they may designate a release or commit as MIT-licensed in an explicit release notice. Only that designated release and later material covered by the notice receive the MIT license.
 
-5. No warranty
+5. Rights reserved by the copyright holder
+
+This license sets the terms for licensees. It does not limit the copyright holder. Little Red Cre (the RedSpark project), as copyright holder and licensor, retains all rights in the covered material. Little Red Cre and the RedSpark Harness maintainers may freely write and publish papers, technical reports, and other publications about RedSpark Harness. The restrictions in section 3 bind licensees, not the copyright holder or the RedSpark Harness maintainers.
+
+6. No warranty
 
 THE COVERED MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE MATERIAL OR ITS USE.

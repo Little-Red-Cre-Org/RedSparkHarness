@@ -78,9 +78,9 @@ For agents, follow [AGENTS.md](AGENTS.md).
 
 ## License
 
-See [LICENSING.md](LICENSING.md) for the layered license. Upstream DeepSeek Harness material remains MIT; original RedSpark material is research-only until an explicit post-publication MIT release.
+See [LICENSING.md](LICENSING.md) for the layered license. Upstream DeepSeek Harness material remains MIT; original RedSpark material is under the RedSpark Restricted Evaluation License until an explicit post-publication MIT release. The RedSpark maintainers may publish papers and technical reports about RedSpark Harness; anyone else needs a separate written license to use RedSpark material for such publications.
 
 Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 # RedSpark Harness
 
-This project is publicly viewable for software evaluation and attribution review. Licensing is intentionally layered: upstream DeepSeek Harness material remains MIT, while original RedSpark material is restricted from academic, publication, and commercial use until the related technical report or formal paper is published and a release is explicitly marked MIT. See [LICENSING.md](LICENSING.md).
+This project is publicly viewable for software evaluation and attribution review. Licensing is intentionally layered: upstream DeepSeek Harness material remains MIT, while original RedSpark material is under the RedSpark Restricted Evaluation License, which restricts licensees (not the RedSpark maintainers) from academic, publication, and commercial use until the related technical report or formal paper is published and a release is explicitly marked MIT. See [LICENSING.md](LICENSING.md).
