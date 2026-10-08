@@ -31,6 +31,10 @@ kind: "package-reference"
 
 每条新的符合条件用户提示词之后都会启动新修订，包括子会话中的提示词；生成会折叠截至当前修订的所有符合条件消息，预置历史也包含在内。较新的修订会中止并取代旧工作，因此陈旧的完成结果永远无法提交。自动失败——包括输入超过 `maxInputBytes`（此时请求失败而非截断历史）——会发出警告并保留先前标题；`ctx.sessionTitle.refresh()` 是显式重试。
 
+### 原生运行时
+
+`./native` 入口是面向原生 profile 的同一提供方：依赖 `sessionTitles` 与 `model`，以 `all-prompts` 节奏注册为 `session-title-all-prompts-llm`，并接受相同配置。它由共享的 `nativeSessionTitleLlmPlugin` 与共享的全消息选择器构建，因此两个入口运行相同的生成逻辑。
+
 ### 配置
 
 插件接受完整必填的[共享 LLM 配置](../session-title-llm/README.zh.md#configuration)：`targetWords`、`targetCjkCharacters`、`maxInputBytes`、`maxOutputTokens`、`timeoutMs`，以及可选成对的 `provider`/`model` 路由。同时省略二者，会继承每个当前已记录主请求的确切路由；同时设置二者，则让标题生成使用独立路由。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-title-all-prompts-llm)是每个受支持字段的穷尽式真源。
@@ -57,7 +61,8 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：共享配置 schema、以全消息选择器注册提供方 |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口：共享配置 schema、以共享的全消息选择器注册提供方 |
+| [`src/native.ts`](src/native.ts) | 由 `nativeSessionTitleLlmPlugin` 与同一选择器构建的原生插件入口 |
 
 ### 调度
 

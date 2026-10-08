@@ -31,6 +31,10 @@ Mount this plugin beside the title service when a session should be retitled as 
 
 A new revision starts after each new eligible human prompt, including prompts in child sessions; the generation folds all eligible messages through the current revision, seeded history included. A newer revision aborts and supersedes older work, so a stale completion can never commit. An automatic failure — including input over `maxInputBytes`, which fails instead of truncating history — warns and keeps the prior title; `ctx.sessionTitle.refresh()` is the explicit retry.
 
+### Native runtime
+
+The `./native` entry is the same provider for native profiles: it requires `sessionTitles` and `model`, registers as `session-title-all-prompts-llm` with the `all-prompts` cadence, and accepts the same configuration. It is built with the shared `nativeSessionTitleLlmPlugin` and the shared all-messages selector, so both entries run identical generation.
+
 ### Configuration
 
 The plugin accepts the complete required [shared LLM configuration](../session-title-llm/README.md#configuration): `targetWords`, `targetCjkCharacters`, `maxInputBytes`, `maxOutputTokens`, `timeoutMs`, and the optional paired `provider`/`model` route. Omit both to inherit the exact route from each current logged main request, or set both to route title generation independently. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-title-all-prompts-llm) is the exhaustive source for every accepted field.
@@ -57,7 +61,8 @@ A thin provider plugin: it registers the `all-prompts` cadence with an identity 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: shared config schema, provider registration with the all-messages selector |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry: shared config schema, provider registration with the shared all-messages selector |
+| [`src/native.ts`](src/native.ts) | Native plugin entry built with `nativeSessionTitleLlmPlugin` and the same selector |
 
 ### Scheduling
 

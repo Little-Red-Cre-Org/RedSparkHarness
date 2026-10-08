@@ -126,6 +126,7 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-reference": "workspace:^",
     "@deepseek-ai/dsh-session-title": "workspace:^",
+    "@deepseek-ai/dsh-session-title-first-prompt-llm": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",
     "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
     "@deepseek-ai/dsh-task-scheduler": "workspace:^",
