@@ -22,9 +22,11 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前进程选择一个工作目录、提供方、模型，以及可选的推理强度和输出 token 上限。每个 Session ID 同时只运行一个轮次；后续提示从该 Session 的持久日志恢复，包括进程重启之后。`session/prompt` 仅在收件箱回执持久化后返回消息 ID；在此之前的失败以 JSON-RPC 错误返回给两个 SDK 客户端。
+Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前进程选择工作目录、提供方、模型、可选推理强度、可选输出 token 上限，以及可选的正安全整数 step 请求。服务器会返回 `min(request.maxSteps, profile.maxSteps)` 作为有效 step 上限（省略时使用 profile 上限），并把它交给现有单一 Native Headless loop；不会提高 profile 限制。每个 Session ID 同时只运行一个轮次；后续提示从该 Session 的持久日志恢复，包括进程重启之后。`session/prompt` 仅在收件箱回执持久化后返回消息 ID；在此之前的失败以 JSON-RPC 错误返回给两个 SDK 客户端。
 
 原生路径还为已接收模型分块发送 `session.chunk`，并提供 `session/cancel`。取消仅针对当前已接收轮次，在持久化接收前或结束后返回 false，并等待其资源清理结束后响应。清理失败会拒绝取消请求。排队提示与其它 Session 独立接收。分块投影选定派发，`assistant/message` 或 `assistant/attempt` 仍是其持久化所有者。同 id 提示恢复存储历史。
+
+仅包含一条完整已注册斜杠命令（例如 `/compact`）的 `session/prompt` 会通过共享 `commands` Provider，在该 Session 的确切 root owner 上分派。其它文本（包括正文中含斜杠的内容）仍按普通提示处理。命令生命周期事实通过现有 `session.event` 流送达；取消会等待已接收命令排空。
 
 `session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。根执行要求 Session-execution 与活动所有者 Provider。精简组装可不安装 Subagent Provider；选定后它才启用 `subagent.finished` 投影，随附 native-sdk profile 会安装它。
 

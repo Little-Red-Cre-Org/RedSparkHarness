@@ -248,6 +248,28 @@ describe('native step-boundary pressure compaction', () => {
     } finally { await state.close() }
   })
 
+  it('rebuilds the next model input after recovering a context overflow', async () => {
+    const overflow: StreamChunk[] = [{ type: 'finish', reason: { kind: 'error', failure: {
+      message: 'context window exceeded', code: 'CONTEXT_WINDOW_EXCEEDED',
+    } } }]
+    const state = await fixture([
+      textResponse('Prior answer.'), overflow,
+      textResponse('Overflow checkpoint.'), textResponse('Recovered from the replacement surface.'),
+    ], { contextWindow: 100_000 })
+    const id = SessionId('native-compaction-overflow-rebuild')
+    try {
+      await state.turn(id, false, `Old request before overflow ${'history detail '.repeat(500)}`)
+      await state.turn(id, true, 'Current request after overflow.')
+
+      expect(state.model.requests.map(summaryRequest)).toEqual([false, false, true, false])
+      const retry = state.model.requests[3]
+      expect(JSON.stringify(retry?.messages)).toContain('Overflow checkpoint.')
+      expect(JSON.stringify(retry?.messages)).toContain('Current request after overflow.')
+      expect(JSON.stringify(retry?.messages)).not.toContain('history detail '.repeat(100))
+      expect((await state.events(id)).some(event => event.type === 'compaction/summary')).toBe(true)
+    } finally { await state.close() }
+  })
+
   it('stays idle below the threshold and when the routed model has no capacity', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const state = await fixture([textResponse('B'.repeat(2_000)), textResponse('One.'), textResponse('Two.')])

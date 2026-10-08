@@ -62,6 +62,8 @@ import { canonicalClientTimeZone } from '@deepseek-ai/dsh-util-time'
 <a id="dev-note"></a>
 ### 开发备注
 
+发布的校验函数不依赖 Cordis，无框架 peer 或安装器。原生与兼容消费者导入同一模块。
+
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 

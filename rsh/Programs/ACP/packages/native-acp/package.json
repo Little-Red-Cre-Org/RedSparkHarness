@@ -52,7 +52,8 @@
         "agentPresets",
         "workspaceRegistry",
         "attachments",
-        "modelDirectory"
+        "modelDirectory",
+        "commands"
       ],
       "provides": [
         "application",
@@ -84,7 +85,8 @@
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
-    "@deepseek-ai/dsh-approval-definition": "workspace:^"
+    "@deepseek-ai/dsh-approval-definition": "workspace:^",
+    "@deepseek-ai/dsh-commands": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-fs-local": "workspace:^",

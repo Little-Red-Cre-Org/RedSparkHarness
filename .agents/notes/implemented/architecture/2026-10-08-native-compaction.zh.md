@@ -14,7 +14,7 @@ Status: implemented
 
 `dsh-compaction-basic`、`dsh-compaction-tool-result-pruner` 与 `dsh-command-compact` 成为混合包。它们的区域事务、触发策略、剪枝核心以及命令解析与渲染都成为共享模块，接收显式 `append` 目标而不是 Cordis `Agent`；Cordis 入口委托给这些模块，行为不变。原生压缩提供者先订阅附加与分离事件，再为每个现存 owner 按顺序 `100`（可通过 `admissionOrder` 配置）安装一个 `beforeStep` admission hook；两种方式同时找到同一 owner 时按身份去重。该 hook 在开放轮次内运行共享的压力策略，然后继续 admission，与兼容入口在请求派生之前、Goal 续跑（`700`）之前的 `agent/pre-step` 位置一致。Provider 释放时先排空已接受的生命周期回调，再快照并排空剩余 hook。容量来自已路由模型描述，摘要通过原生 `model.stream()` 发送到配置的摘要器目标或最近一次已路由目标。`compactNow()` 写入 `turn: null` 标记对并 flush owner；Program writer 不可用时以 `busy` 拒绝。
 
-随附的 `native-headless`、`native-web` 与 `native-tui` profile 安装 token meter、剪枝器与压缩；`native-tui` 另外挂载 `/compact`。`native-sdk` 与 `native-acp` 保持最小组合。
+所有随附的 Native profile 都安装 token meter、剪枝器与压缩。SDK、ACP、Web 与 TUI 通过各自现有命令界面提供 `/compact`：SDK 经 `session/prompt` 分派已注册的斜杠命令；ACP 通过 `available_commands_update` 广告命令，并经 `session/prompt` 分派；Web 使用 `session/command` RPC。这些适配器调用共享的 `commands` 与 `compactNow` 所有者。
 
 ## 备选方案
 
@@ -22,8 +22,8 @@ Status: implemented
 
 **在原生入口中复制事务：** 拒绝，因为标记对、保留与缩减验证定义了持久化日志语义；两份副本会逐渐偏离，并对同一历史产生不同日志。
 
-**现在就加入原生上下文溢出恢复：** 暂缓，因为原生执行器未暴露请求错误 hook，且重试策略属于另一项原生 LLM 防护工作。`compactIfNeeded(owner, 'context-overflow', signal)` 仍可供该集成使用。
+**为压缩单独增加原生重试循环：** 拒绝，因为 `llm-retry` 已拥有已分类的模型恢复。压缩 Provider 通过 model-execution recovery callback 参与；持久化表层替换后，执行器会从当前 Session 表层重新构建 `GenerateOptions`，再由共享策略继续重试。
 
 ## 后果
 
-原生与兼容 profile 持久化完全相同的 `compaction/*` 标记对与检查点消息，CLI 现在直接依赖压缩包而不再将其视为可选。原生 profile 不会在压缩后重试提供方的溢出响应。在任何请求被路由之前没有摘要器目标，因此不会压缩。原生 `compactRegion()` 与运行时不变式伴生入口仍只用于兼容入口，原生 Web 也没有可执行 `/compact` 的命令界面。本 note 扩展而非取代[调用后压力与溢出恢复](2026-07-10-after-call-compaction-pressure-and-overflow-recovery.zh.md)与[排队的手动压缩](../feature/2026-07-30-queued-manual-compaction.zh.md)决策。
+原生与兼容 profile 持久化完全相同的 `compaction/*` 标记对与检查点消息，CLI 将压缩包作为必需 Provider。遇到已分类的上下文溢出时，共享原生恢复策略执行一次压缩，并从新派生的 Session 消息重建下一请求；压缩本身不拥有第二个重试循环。在任何请求被路由之前没有摘要器目标，因此不会压缩。原生 `compactRegion()` 与运行时不变式伴生入口仍只用于兼容入口。Web Host 与 Client 通过 `session/command` 暴露共享命令；展示仍由 renderer 负责。本 note 扩展而非取代[调用后压力与溢出恢复](2026-07-10-after-call-compaction-pressure-and-overflow-recovery.zh.md)与[排队的手动压缩](../feature/2026-07-30-queued-manual-compaction.zh.md)决策。

@@ -3,6 +3,7 @@ import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm/nativ
 import type { SessionId } from '@deepseek-ai/dsh-session/native'
 import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
 import type { NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
+import type { NativeSessionDelegationAuthority } from '@deepseek-ai/dsh-native-session-execution'
 
 declare const externalSubagentId: unique symbol
 
@@ -22,6 +23,29 @@ export interface NativeExternalSubagentRouteOverrides {
 /** Route fields a concrete Module can honor before it starts a process. */
 export type NativeExternalSubagentRouteField = keyof NativeExternalSubagentRouteOverrides
 
+/** One approval question for a tool running inside an external child. */
+export interface NativeExternalSubagentApprovalRequest {
+  readonly operationId: NativeExternalSubagentId
+  readonly requestId: string
+  readonly toolName: 'write_file'
+  readonly callId: string
+  readonly reason?: string
+  readonly signal: AbortSignal
+}
+
+/** Closed result of the exact parent's one-shot approval request. */
+export type NativeExternalSubagentApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
+
+/** Narrow parent approval callback captured for one external-child admission. */
+export type NativeExternalSubagentApprovalRequester =
+  (request: NativeExternalSubagentApprovalRequest) => Promise<NativeExternalSubagentApprovalOutcome>
+
+/** One external child may request approval only through its captured parent operation. */
+export interface NativeExternalSubagentApprovalRelay {
+  readonly operationId: NativeExternalSubagentId
+  readonly request: NativeExternalSubagentApprovalRequester
+}
+
 /** Detached input to one external child. It has no Agent, Session, Cordis Context, or writer. */
 export interface NativeExternalSubagentRequest {
   /** Identity minted by Native and persisted with this child's parent-owned lineage. */
@@ -37,6 +61,8 @@ export interface NativeExternalSubagentRequest {
   readonly maxDepth: number
   /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
   readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
+  /** Capabilities resolved from the exact initiating parent Session. */
+  readonly authority: NativeSessionDelegationAuthority
   /** Task label and exact Program-selected workspace. */
   readonly label: string
   readonly cwd: string
@@ -53,6 +79,8 @@ export interface NativeExternalSubagentRequest {
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
   readonly outputSchema?: ObjectJsonSchema
+  /** Parent approval for the builtin writer, when the exact parent grant and sandbox allow it. */
+  readonly approval?: NativeExternalSubagentApprovalRelay
 }
 
 /** Terminal data returned by the external product after its real child has settled. */
@@ -120,6 +148,8 @@ export interface NativeExternalSubagentDriver {
     readonly toolFilter: boolean
     /** Whether the product validates and returns the requested structured output. */
     readonly outputSchema: boolean
+    /** Whether the product transports one-shot approval requests to the exact parent. */
+    readonly approvalRelay?: boolean
   }
   /** Start the selected product child and return only after a genuine readiness handshake.
    * @param request - detached, resolved child input.

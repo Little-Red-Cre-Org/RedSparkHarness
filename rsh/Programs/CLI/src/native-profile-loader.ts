@@ -74,6 +74,22 @@ function scopesOf(profile: NativeProfileConfig, previous?: LoadedNativeProfile):
   return scopes
 }
 
+function sdkChildProviderRoutes(profile: NativeProfileConfig): NativeProfileConfig {
+  const childIndex = profile.installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-sdk-child')
+  if (childIndex === -1) return profile
+  const providerRow = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-llm-pi-ai')
+  const providerConfig = typeof providerRow?.config === 'object' && providerRow.config !== null && !Array.isArray(providerRow.config)
+    ? providerRow.config as Record<string, unknown> : undefined
+  const providers = typeof providerConfig?.providers === 'object' && providerConfig.providers !== null && !Array.isArray(providerConfig.providers)
+    ? providerConfig.providers : {}
+  const child = profile.installations[childIndex]
+  if (child === undefined) throw new Error('native profile lost the SDK child installation')
+  const childConfig = typeof child.config === 'object' && child.config !== null && !Array.isArray(child.config)
+    ? child.config as Record<string, unknown> : {}
+  const installations = [...profile.installations]
+  installations[childIndex] = { ...child, config: { ...childConfig, providers } }
+  return { ...profile, installations }
+}
 /** Read the same strict composition used by native boot, without importing plugin code. */
 export function readNativeProfile(options: {
   profile: string
@@ -91,7 +107,7 @@ export function readNativeProfile(options: {
   if (options.profileDir === undefined) refuseLegacyPatch(join(home, 'cordis.patch.yml'))
   refuseLegacyPatch(join(profileDir, 'desktop.cordis.yml'))
   const base = parseNativeProfileConfig(jsonFile(join(profileDir, 'rsh.profile.json')))
-  return applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file))))
+  return sdkChildProviderRoutes(applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file)))))
 }
 
 /**

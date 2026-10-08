@@ -1,6 +1,6 @@
 /** Native model execution and Session recording for a single Agent step. */
-import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage,
-  resolveCallConfigWithModel, callConfigEquals, type LlmCallConfig, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, normalizeLlmFailure,
+  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 
@@ -27,6 +27,12 @@ export interface NativeModel {
    */
   resolveModel?(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>
   /**
+   * Read the retry policy captured with one provider route, or undefined when the route declares none.
+   * @param provider - configured route whose policy was captured with its adapter.
+   * @returns the provider-owned policy; the executor applies normal defaults when this is undefined.
+   */
+  retryPolicy?(provider: string): ResolvedRetryPolicy | undefined
+  /**
    * Stream the selected model request through the shared LLM protocol.
    * @param options - model route, durable messages, tool schemas and cancellation.
    * @returns chunks ending with one terminal finish.
@@ -40,6 +46,8 @@ export interface NativeModelStepRequest {
   readonly turn: number
   readonly step: number
   readonly options: GenerateOptions
+  /** Rebuild the model options from the current Session after recovery replaces its visible surface. */
+  readonly rebuildOptions: () => GenerateOptions
   /** Request controls and dispatch captured before their Session header is persisted. */
   readonly prepared?: NativePreparedModelStep
   readonly append: (event: SessionEvent) => void
@@ -52,7 +60,38 @@ export interface NativeModelStepRequest {
 export interface NativePreparedModelStep {
   readonly config: Readonly<LlmCallConfig>
   readonly modelInfo?: LlmResolvedModelInfo
+  /** Provider retry policy captured with the prepared route, or LlmRuntime's default when the route declares none. */
+  readonly retryPolicy?: ResolvedRetryPolicy
 }
+
+/** Facts of one failed model attempt offered to installed recovery policies. */
+export interface NativeModelRecoveryRequest {
+  readonly session: Session
+  readonly turn: number
+  readonly step: number
+  readonly provider: string
+  readonly failure: LlmFailure
+  /** Provider policy for this route, or LlmRuntime's default when the route declares none. */
+  readonly retryPolicy: ResolvedRetryPolicy
+  readonly signal: AbortSignal
+  /** Append one durable event for the owning Session. */
+  readonly append: (event: SessionEvent) => void
+  /** Persist every event appended since the previous persist. */
+  readonly persist: () => Promise<void>
+}
+
+/** Decision returned by a recovery policy after durable scheduling. */
+export type NativeModelRecoveryAction = { readonly kind: 'retry' } | undefined
+
+/**
+ * Decide whether one failed model attempt is retried.
+ * @param request - failed attempt facts and the owning Session writer.
+ * @param next - delegate at most once to the remaining policies; returning without it claims the failure.
+ * @returns a retry decision, or undefined to keep the failure.
+ */
+export type NativeModelRecoveryPolicy = (
+  request: NativeModelRecoveryRequest, next: () => Promise<NativeModelRecoveryAction>,
+) => Promise<NativeModelRecoveryAction>
 
 /** Recorded assistant message and the model's terminal reason. */
 export interface NativeModelStepResult {
@@ -63,7 +102,24 @@ export interface NativeModelStepResult {
 /** Canonical native stream assembly and assistant-event recording. */
 export class NativeModelExecution {
   private readonly prepared = new WeakMap<NativePreparedModelStep, (options: GenerateOptions) => AsyncIterable<StreamChunk>>()
+  private readonly recoveryPolicies: NativeModelRecoveryPolicy[] = []
   constructor(private readonly model: NativeModel) {}
+
+  /**
+   * Install one recovery policy consulted after a failed model attempt.
+   * @param policy - waterfall delegate that calls next at most once.
+   * @returns exact idempotent removal; later policies run first.
+   */
+  onRecovery(policy: NativeModelRecoveryPolicy): () => void {
+    this.recoveryPolicies.unshift(policy)
+    let removed = false
+    return () => {
+      if (removed) return
+      removed = true
+      const index = this.recoveryPolicies.indexOf(policy)
+      if (index >= 0) this.recoveryPolicies.splice(index, 1)
+    }
+  }
 
   /** Capture exact dispatch and resolve explicit controls before they enter Session history.
    * @param config - selected provider, model and explicit request controls.
@@ -84,8 +140,11 @@ export class NativeModelExecution {
       ...config.temperature === undefined ? {} : { temperature: config.temperature },
       ...config.stop === undefined ? {} : { stop: config.stop } }
     const resolved = info === undefined ? controls : resolveCallConfigWithModel(controls, info)
+    const retryPolicy = this.retryPolicyFor(undefined, config.provider)
+    signal?.throwIfAborted()
     const handle: NativePreparedModelStep = Object.freeze({ config: deepFreeze(structuredClone(resolved)),
-      ...info === undefined ? {} : { modelInfo: deepFreeze(structuredClone(info)) } })
+      ...info === undefined ? {} : { modelInfo: deepFreeze(structuredClone(info)) },
+      retryPolicy: deepFreeze(structuredClone(retryPolicy)) })
     this.prepared.set(handle, captured === undefined ? this.model.stream.bind(this.model) : captured.stream.bind(captured))
     return handle
   }
@@ -98,44 +157,151 @@ export class NativeModelExecution {
    * @returns the recorded assistant message and terminal reason.
    */
   async execute(request: NativeModelStepRequest): Promise<NativeModelStepResult> {
-    const { session, turn, step, options, append, persist } = request
-    const accumulator = new AssistantStreamAccumulator()
-    const assembler = new BlockAssembler()
-    let finished = false
-    try {
-      const handle = request.prepared
-      const dispatch = handle === undefined ? this.model.stream.bind(this.model) : this.prepared.get(handle)
-      if (dispatch === undefined) throw new Error('native-model-execution: step was prepared by a different executor')
-      if (handle !== undefined && !callConfigEquals(handle.config, options)) {
-        throw new Error('native-model-execution: dispatch controls differ from the prepared request')
-      }
-      options.signal?.throwIfAborted()
-      for await (const chunk of dispatch(options)) {
+    const { session, turn, step, append, persist } = request
+    let options = request.options
+    const handle = request.prepared
+    const dispatch = handle === undefined ? this.model.stream.bind(this.model) : this.prepared.get(handle)
+    if (dispatch === undefined) throw new Error('native-model-execution: step was prepared by a different executor')
+    if (handle !== undefined && !callConfigEquals(handle.config, options)) {
+      throw new Error('native-model-execution: dispatch controls differ from the prepared request')
+    }
+    // Each attempt assembles its own stream; a retry starts fresh, matching the Cordis loop.
+    for (;;) {
+      const accumulator = new AssistantStreamAccumulator()
+      const assembler = new BlockAssembler()
+      let finished = false
+      let modelFailure: { readonly error: unknown } | undefined
+      try {
         options.signal?.throwIfAborted()
-        if (finished) throw new Error('native-model-execution: model emitted data after terminal finish')
-        if (chunk.type === 'finish') finished = true
-        assembler.push(accumulator.push({ time: Date.now(), chunk }).chunk)
-        request.onChunk?.(chunk)
+        let stream: AsyncIterator<StreamChunk> | undefined
+        try { stream = dispatch(options)[Symbol.asyncIterator]() }
+        catch (error: unknown) { modelFailure = { error } }
+        let open = stream !== undefined
+        try {
+          while (stream !== undefined) {
+            let item: IteratorResult<StreamChunk>
+            try { item = await stream.next() }
+            catch (error: unknown) { open = false; modelFailure = { error }; break }
+            if (item.done === true) { open = false; break }
+            const chunk = item.value
+            options.signal?.throwIfAborted()
+            if (finished) throw new Error('native-model-execution: model emitted data after terminal finish')
+            if (chunk.type === 'finish') finished = true
+            assembler.push(accumulator.push({ time: Date.now(), chunk }).chunk)
+            request.onChunk?.(chunk)
+          }
+        } finally {
+          if (open) await stream?.return?.()
+        }
+        if (modelFailure === undefined) {
+          options.signal?.throwIfAborted()
+          if (!finished) throw new Error('native-model-execution: model ended without terminal finish')
+        }
+      } catch (error: unknown) {
+        append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
+        throw error
       }
+      if (modelFailure !== undefined) {
+        // An adapter throw is the native counterpart of LlmRuntime's terminal failure chunk: recovery sees
+        // its normalized facts, and an unrecovered throw keeps its original error for the turn outcome.
+        append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
+        if (options.signal?.aborted === true) throw modelFailure.error
+        const generation = session.surface.replaceGeneration
+        const action = await this.recover({
+          session, turn, step, provider: options.provider, failure: normalizeLlmFailure(modelFailure.error),
+          retryPolicy: this.retryPolicyFor(handle, options.provider),
+          signal: options.signal ?? new AbortController().signal, append, persist,
+        })
+        options.signal?.throwIfAborted()
+        if (action?.kind === 'retry') {
+          if (session.surface.replaceGeneration !== generation) {
+            options = request.rebuildOptions()
+            if (handle !== undefined && !callConfigEquals(handle.config, options)) {
+              throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
+            }
+          }
+          continue
+        }
+        throw modelFailure.error
+      }
+      if (assembler.finish.kind !== 'error' && assembler.finish.kind !== 'aborted') {
+        const message = createAssistantMessage({ content: assembler.blocks(), source: {
+          provider: options.provider, model: options.model,
+        } })
+        append(session.append('assistant/message', {
+          turn, step, message, stream: [...accumulator.snapshot()],
+          ...assembler.usage === undefined ? {} : { usage: assembler.usage },
+        }, { surfaceOp: 'append' }))
+        await persist()
+        return { message, finish: assembler.finish }
+      }
+      const failure = assembler.finish.failure
+      const kind = assembler.finish.kind
+      append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
+      if (options.signal?.aborted === true) throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+      const generation = session.surface.replaceGeneration
+      const action = await this.recover({
+        session, turn, step, provider: options.provider, failure,
+        retryPolicy: this.retryPolicyFor(handle, options.provider),
+        signal: options.signal ?? new AbortController().signal, append, persist,
+      })
       options.signal?.throwIfAborted()
-      if (!finished) throw new Error('native-model-execution: model ended without terminal finish')
-    } catch (error: unknown) {
-      append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
-      throw error
+      if (action?.kind !== 'retry') {
+        throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+      }
+      if (session.surface.replaceGeneration !== generation) {
+        options = request.rebuildOptions()
+        if (handle !== undefined && !callConfigEquals(handle.config, options)) {
+          throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
+        }
+      }
     }
-    if (assembler.finish.kind === 'error' || assembler.finish.kind === 'aborted') {
-      append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
-      throw new Error(`native-model-execution: model ${assembler.finish.kind}: ${assembler.finish.failure.message}`)
+  }
+
+  /** The prepared policy, else the model's, else the same default LlmRuntime applies to an adapter without one. */
+  private retryPolicyFor(handle: NativePreparedModelStep | undefined, provider: string): ResolvedRetryPolicy {
+    return handle?.retryPolicy ?? this.model.retryPolicy?.(provider) ?? resolveRetryPolicy(undefined, 'native-model-execution: model retryPolicy')
+  }
+
+  private async recover(request: NativeModelRecoveryRequest): Promise<NativeModelRecoveryAction> {
+    const policies = [...this.recoveryPolicies]
+    let delegationViolation: Error | undefined
+    const delegate = async (index: number): Promise<NativeModelRecoveryAction> => {
+      request.signal.throwIfAborted()
+      const policy = policies[index]
+      if (policy === undefined) return undefined
+      let delegated = false
+      let downstream: Promise<NativeModelRecoveryAction> | undefined
+      let primary: { error: unknown } | undefined
+      let selected: NativeModelRecoveryAction
+      try {
+        selected = await policy(request, () => {
+          if (delegated) {
+            const error = new Error('native-model-execution: recovery policy delegated more than once')
+            delegationViolation ??= error
+            throw error
+          }
+          delegated = true
+          downstream = delegate(index + 1)
+          return downstream
+        })
+      } catch (error: unknown) { primary = { error } }
+      if (downstream !== undefined) {
+        try { await downstream }
+        catch (error: unknown) {
+          if (primary === undefined) {
+            if (selected?.kind !== 'retry') primary = { error }
+          } else if (primary.error !== error) {
+            primary = { error: new AggregateError([primary.error, error], 'recovery policies failed') }
+          }
+        }
+      }
+      if (primary !== undefined) throw primary.error
+      return selected
     }
-    const message = createAssistantMessage({ content: assembler.blocks(), source: {
-      provider: options.provider, model: options.model,
-    } })
-    append(session.append('assistant/message', {
-      turn, step, message, stream: [...accumulator.snapshot()],
-      ...assembler.usage === undefined ? {} : { usage: assembler.usage },
-    }, { surfaceOp: 'append' }))
-    await persist()
-    return { message, finish: assembler.finish }
+    const action = await delegate(0)
+    if (delegationViolation !== undefined) throw delegationViolation
+    return action
   }
 }
 

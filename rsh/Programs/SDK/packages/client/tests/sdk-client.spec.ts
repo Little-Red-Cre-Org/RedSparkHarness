@@ -5,12 +5,14 @@
  * and session-tree scoping, error surfaces, timeouts, and the dispose ladder.
  */
 
+import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, realpath, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type { ApprovalRequestParams } from '@deepseek-ai/dsh-sdk-protocol'
 import {
   DeepSeekHarness,
   HarnessClient,
@@ -21,8 +23,8 @@ import {
   TransportClosedError,
   type HarnessNotification,
 } from '../src/index.ts'
-import { createProcessDeepSeekHarness, finalResponse, normalizeInput } from '../src/api.ts'
-import { createProcessHarnessClient } from '../src/client.ts'
+import { createProcessDeepSeekHarness } from '../src/api.ts'
+import { HarnessClient as ProgramHarnessClient } from '../src/client.ts'
 import type { RuntimeProcessOptions } from '../src/launch.ts'
 
 const fakeRuntime = fileURLToPath(new URL('./fake-runtime.ts', import.meta.url))
@@ -47,7 +49,11 @@ function fakeLaunch(env: Record<string, string> = {}, extra: LaunchOverrides = {
 }
 
 function processClient(options: RuntimeProcessOptions): HarnessClient {
-  return createProcessHarnessClient(options)
+  return new ProgramHarnessClient({}, options)
+}
+
+function textBlocks(text: string): { type: 'text'; text: string }[] {
+  return [{ type: 'text', text }]
 }
 
 function harnessWith(env: Record<string, string> = {}, extra: LaunchOverrides = {}): DeepSeekHarness {
@@ -63,6 +69,45 @@ async function tempDir(prefix: string): Promise<string> {
 }
 
 describe('DeepSeekHarness', () => {
+  it.each([
+    { scenario: 'approved once', late: false, expected: 'allowed-once' },
+    { scenario: 'late approval after close', late: true, expected: 'cancelled' },
+  ])('routes approval requests and rejects a late decision: $scenario', async ({ late, expected }) => {
+    const dir = await mkdtemp(join(tmpdir(), 'sdk-approval-'))
+    const responseFile = join(dir, 'approval-response.json')
+    const shutdownFile = join(dir, 'shutdown.jsonl')
+    const requested = Promise.withResolvers<ApprovalRequestParams>()
+    const lateDecision = Promise.withResolvers<'allowed-once'>()
+    const harness = createProcessDeepSeekHarness(fakeLaunch({
+      FAKE_APPROVAL_REQUEST: '1', FAKE_APPROVAL_RESPONSE: responseFile, FAKE_SHUTDOWN_FILE: shutdownFile,
+    }), {
+      provider: 'fake-provider', model: 'fake-model',
+      onApprovalRequest: (request) => {
+        requested.resolve(request)
+        return late ? lateDecision.promise : 'allowed-once'
+      },
+    })
+    try {
+      await harness.run('write the fixture')
+      const request = await requested.promise
+      expect(request).toMatchObject({ operationId: 'sdk-root-fixture', requestId: 'approval-once-fixture',
+        toolName: 'write_file', callId: 'write-call-fixture', reason: 'fixture write' })
+      await harness.close()
+      const shutdownFrames = (await readFile(shutdownFile, 'utf8')).trim().split('\n')
+        .map(line => JSON.parse(line) as { method?: string })
+      expect(shutdownFrames).toHaveLength(1)
+      expect(shutdownFrames[0]).toMatchObject({ method: 'shutdown' })
+      if (late) lateDecision.resolve('allowed-once')
+      expect(JSON.parse(await readFile(responseFile, 'utf8'))).toMatchObject({
+        id: 'approval-fixture-1',
+        result: { operationId: request.operationId, requestId: request.requestId, outcome: expected },
+      })
+    } finally {
+      await harness.close()
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it('ignores notifications that precede the submitted message receipt', async () => {
     const notifications = [
       { method: 'session.status', params: { sessionId: 'owned', status: 'running' } },
@@ -183,6 +228,7 @@ describe('DeepSeekHarness', () => {
       model: 'custom-model',
       reasoningEffort: ReasoningEffortId('max'),
       maxTokens: 4096,
+      workspaceWriteRoot: dir,
     })
     cleanups.push(() => harness.close())
     await harness.run('one')
@@ -195,6 +241,7 @@ describe('DeepSeekHarness', () => {
       model: 'custom-model',
       reasoningEffort: 'max',
       maxTokens: 4096,
+      workspaceWriteRoot: dir,
     }])
   })
 
@@ -311,10 +358,19 @@ describe('DeepSeekHarness', () => {
     await expect(captured.run('after')).rejects.toThrow(TransportClosedError)
   })
 
-  it('constructs the public dsh-backed client lazily', async () => {
-    const harness = new DeepSeekHarness()
-    expect(harness.client).toBeInstanceOf(HarnessClient)
-    await harness.close()
+  it('constructs the public dsh-backed client lazily', () => {
+    const publicEntry = new URL('../src/index.ts', import.meta.url).href
+    const probe = [
+      "import assert from 'node:assert/strict'",
+      `const { DeepSeekHarness, HarnessClient } = await import(${JSON.stringify(publicEntry)})`,
+      'const harness = new DeepSeekHarness()',
+      'assert.ok(harness.client instanceof HarnessClient)',
+      'await harness.close()',
+    ].join('\n')
+    execFileSync(process.execPath, ['--import', 'tsx/esm', '--input-type=module', '-e', probe], {
+      cwd: process.cwd(),
+      stdio: 'pipe',
+    })
   })
 })
 
@@ -345,7 +401,7 @@ describe('HarnessClient', () => {
     }))
     cleanups.push(() => client.close())
     await client.initialize({ cwd: process.cwd(), provider: 'p', model: 'm' })
-    await expect(client.request('session/prompt', { sessionId: 's', contentBlocks: normalizeInput('hi') }, 200))
+    await expect(client.request('session/prompt', { sessionId: 's', contentBlocks: textBlocks('hi') }, 200))
       .rejects.toThrow(/session\/prompt timed out.*stderr tail:\nruntime accepted initialize but hung the prompt/s)
     await client.close()
   })
@@ -355,7 +411,7 @@ describe('HarnessClient', () => {
     cleanups.push(() => client.close())
     await client.initialize({ cwd: process.cwd(), provider: 'p', model: 'm' })
     for (let round = 0; round < 3; round++) {
-      await expect(client.request('session/prompt', { sessionId: 's', contentBlocks: normalizeInput('x') }, 50))
+      await expect(client.request('session/prompt', { sessionId: 's', contentBlocks: textBlocks('x') }, 50))
         .rejects.toThrow(RequestTimeoutError)
     }
     // Abandonment removed each pending entry at its timeout; a hung method
@@ -370,14 +426,14 @@ describe('HarnessClient', () => {
     const client = processClient(fakeLaunch({ FAKE_HANG_PROMPT: '1' }, { requestTimeoutMs: 400 }))
     cleanups.push(() => client.close())
     // The bound applies from send, so it holds regardless of runtime boot time.
-    await expect(client.prompt('s', normalizeInput('hi'))).rejects.toThrow(RequestTimeoutError)
+    await expect(client.prompt('s', textBlocks('hi'))).rejects.toThrow(RequestTimeoutError)
     await client.close()
   })
 
   it('rejects a malformed prompt acceptance as a protocol error', async () => {
     const client = processClient(fakeLaunch({ FAKE_MALFORMED: '1' }))
     cleanups.push(() => client.close())
-    await expect(client.prompt('s', normalizeInput('hi'))).rejects.toThrow(SdkProtocolError)
+    await expect(client.prompt('s', textBlocks('hi'))).rejects.toThrow(SdkProtocolError)
     await client.close()
   })
 
@@ -481,7 +537,7 @@ describe('HarnessClient', () => {
     const all = client.subscribe()
     const idleOnly = client.subscribe(n => n.method === 'session.status' && n.params.status === 'idle')
     const firstPending = all.next()
-    await client.prompt('sub-test', normalizeInput('go'))
+    await client.prompt('sub-test', textBlocks('go'))
 
     const first = await firstPending
     expect(first.method).toBe('session.event')
@@ -516,7 +572,7 @@ describe('HarnessClient', () => {
     // A non-Error throw is normalized rather than crashing dispatch.
     const brokenNonError = client.subscribe(() => { throw 'string boom' })
     const healthy = client.subscribe(n => n.method === 'session.status' && n.params.status === 'idle')
-    await client.prompt('filter-contain', normalizeInput('go'))
+    await client.prompt('filter-contain', textBlocks('go'))
 
     // The sibling subscription and the read loop are undisturbed.
     expect((await healthy.next()).method).toBe('session.status')
@@ -532,7 +588,7 @@ describe('HarnessClient', () => {
     await client.initialize({ cwd: process.cwd(), provider: 'p', model: 'm' })
     const closed = client.subscribe()
     const drainable = client.subscribe()
-    await client.prompt('queue-drop', normalizeInput('go'))
+    await client.prompt('queue-drop', textBlocks('go'))
     expect(closed.tryNext()).toBeDefined()
     closed.close()
     // Manual close drops the rest of the queue outright.
@@ -641,22 +697,5 @@ describe('stderr tail bound', () => {
     // The tail is bounded to the newest 400 lines: the oldest are dropped.
     expect(text).toContain('line-449')
     expect(text).not.toContain('line-0\n')
-  })
-})
-
-describe('pure helpers', () => {
-  it('normalizeInput wraps strings and passes blocks through', () => {
-    expect(normalizeInput('x')).toEqual([{ type: 'text', text: 'x' }])
-    const blocks = [{ type: 'text' as const, text: 'y' }]
-    expect(normalizeInput(blocks)).toBe(blocks)
-  })
-
-  it('finalResponse reads the last assistant message and tolerates absence', () => {
-    expect(finalResponse([])).toBe('')
-    expect(finalResponse([{ type: 'turn/start', seq: 0, time: 0, data: { turn: 0 } } as never])).toBe('')
-    expect(finalResponse([
-      { type: 'assistant/message', seq: 0, time: 0, data: { message: { content: [{ type: 'text', text: 'first' }] } } } as never,
-      { type: 'assistant/message', seq: 1, time: 0, data: { message: { content: [{ type: 'text', text: 'a' }, { type: 'tool-call' }, { type: 'text', text: 'b' }] } } } as never,
-    ])).toBe('ab')
   })
 })

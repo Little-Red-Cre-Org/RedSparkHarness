@@ -25,6 +25,8 @@ The `./native` entry accepts `mode: native | ptc | both` (default `both`). Nativ
 
 Value contributions declare an output schema; the registry captures it, validates detached JSON and renders the canonical result. Scoped restrictions and guards run before approval and again before executor entry. Removing a contribution closes admission, cancels captured calls and drains their actual work before its disposer resolves. Result policies must delegate exactly once; finalizers finish before the application records the result. Only `acceptResult()` notifies result observers after that record is accepted. Sourced additional contexts remain separate from canonical JSON.
 
+A contribution may declare a positive `timeoutMs` body budget; the registry only records it. `aroundExecution(policy, scope?)` installs a policy around every body, outside result processing. The policy receives the frozen tool declaration and must call `next(signal?)` exactly once. A replacement signal is combined with the caller's signal, and the policy's own result is the outcome. Earlier registrations surround later ones. `onSettlement(policy, scope?)` installs a synchronous policy that sees each recorded result with frozen copies of its parsed arguments and may return only user messages. Applications call `settlementContexts()` once for each result they record, and PTC dispatch does the same for nested calls. These two hooks back the native timeout and repeat-call guards.
+
 The pure `./types` and `./presentation` exports share durable PTC event payloads and file diffs with Host and Client consumers. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
 
 <a id="model-experience"></a>

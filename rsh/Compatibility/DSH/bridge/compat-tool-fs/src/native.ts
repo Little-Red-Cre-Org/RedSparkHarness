@@ -12,6 +12,7 @@ import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
+import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -53,7 +54,7 @@ function resolveConfig(input: unknown): Config {
 /** Bridge native filesystem, tool, prompt and observation slots to the supported legacy plugin. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-compat-tool-fs', targets: ['host'],
-  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy'], provides: ['compatToolFs'],
+  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy', 'approval'], provides: ['compatToolFs'],
   resolve(input) {
     const config = resolveConfig(input)
     const require = createRequire(import.meta.url)
@@ -65,11 +66,16 @@ export const plugin: NativePlugin = {
       const legacy = runtime.context
       const policyEntrySelected = runtime.hasEntry('@deepseek-ai/dsh-fs-observation-policy')
       const active = new Set<Promise<unknown>>()
-      const trackActive = <T>(work: Promise<T>): Promise<T> => {
-        active.add(work)
-        void work.then(
-          () => { active.delete(work) },
-          () => { active.delete(work) },
+      // Keep expected admission cancellation out of Loader drain failures while returning the original rejection.
+      const trackActive = <T>(work: Promise<T>, cancellation?: AbortSignal): Promise<T> => {
+        const drain = cancellation === undefined ? work : work.catch((error: unknown) => {
+          if (cancellation.aborted && error === cancellation.reason) return
+          throw error
+        })
+        active.add(drain)
+        void drain.then(
+          () => { active.delete(drain) },
+          () => { active.delete(drain) },
         )
         return work
       }
@@ -83,6 +89,7 @@ export const plugin: NativePlugin = {
         await fsMount.ready
       }
       const sandboxPolicy = native.optional('sandboxPolicy')
+      const approvalSelected = native.optional('approval') !== undefined
       if (sandboxPolicy !== undefined && legacy.get('sandboxPolicy') === undefined) {
         const legacyPolicy = {
           defaultMode: sandboxPolicy.defaultMode,
@@ -149,19 +156,34 @@ export const plugin: NativePlugin = {
         const disposers: (() => Promise<void>)[] = []
         try {
           for (const schema of legacy.tools.schemas()) {
+            const approvalReason = schema.name === 'write'
+              ? 'Writing a file changes the selected workspace.'
+              : schema.name === 'edit' ? 'Editing a file changes the selected workspace.' : undefined
             disposers.push(registry.register({
               schema,
               execute: (call) => {
-                // The selected legacy tools read only Session and signal from their Agent argument.
-                const agent = { session: call.session } as Agent
-                return trackActive(legacy.tools.execute({
-                  callId: call.callId, name: call.name, arguments: call.arguments, agent,
-                  signal: AbortSignal.any([call.signal, native.signal]),
-                }).then(result => ({
-                  content: result.content,
-                  isError: result.isError,
-                  ...result.error?.info === undefined ? {} : { error: result.error.info },
-                })))
+                const signal = AbortSignal.any([call.signal, native.signal])
+                return trackActive((async () => {
+                  if (approvalSelected && approvalReason !== undefined) {
+                    const args = call.arguments as { sandbox_permissions?: string; justification?: string }
+                    // Explicit escalation stays with the legacy sandbox approval path.
+                    if (args.sandbox_permissions === undefined || args.justification === undefined) {
+                      if (call.authorize === undefined) throw new Error(`native-tools: tool ${call.name} requires an approval authority`)
+                      await call.authorize({ reason: approvalReason }, signal)
+                    }
+                  }
+                  // The selected legacy tools read only Session and signal from their Agent argument.
+                  const agent = { session: call.session } as Agent
+                  const result = await legacy.tools.execute({
+                    callId: call.callId, name: call.name, arguments: call.arguments, agent,
+                    signal,
+                  })
+                  return {
+                    content: result.content,
+                    isError: result.isError,
+                    ...result.error?.info === undefined ? {} : { error: result.error.info },
+                  }
+                })(), signal)
               },
             }))
           }

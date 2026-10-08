@@ -4,8 +4,9 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveDshHome, resolveDshProfileExecution } from '@deepseek-ai/dsh-home-paths'
 import type { HarnessClientOptions } from './types.ts'
 
 /** Default bound for the SDK profile-ready handshake across a cold startup. */
@@ -40,6 +41,14 @@ export interface DshNodeLaunch {
 interface PackageManifest {
   version?: unknown
   bin?: unknown
+  dsh?: { nativeProfileTemplates?: unknown }
+}
+
+interface DshNodeLaunchOptions {
+  profile?: string
+  dshHome?: string
+  environment?: Record<string, string | undefined>
+  sourceLoaderUrl?: string
 }
 
 /** Read a package manifest from one resolved package.json URL. */
@@ -79,16 +88,19 @@ export function installedDshBin(): string {
 
 /**
  * Resolve the Node launch for one same-version dsh package.
- * @param dshManifestUrl - resolved URL of the dsh package manifest.
- * @param clientManifestUrl - resolved URL of the SDK client manifest.
- * @param sourceLoaderUrl - optional absolute tsx loader URL for deterministic tests.
- * @returns built output, or the source entry plus its compatibility patch and tsx environment.
+ * @param dshManifestUrl - Resolved URL of the dsh package manifest.
+ * @param clientManifestUrl - Resolved URL of the SDK client manifest.
+ * @param options - Profile, home, and environment settings with an optional source-loader override for tests.
+ * @returns Built output or a source entry configured for the profile's declared runtime.
  */
 export function resolveDshNodeLaunchFromManifests(
   dshManifestUrl: string,
   clientManifestUrl: string,
-  sourceLoaderUrl?: string,
+  options: DshNodeLaunchOptions = {},
 ): DshNodeLaunch {
+  const profile = options.profile ?? 'sdk'
+  const environment = options.environment ?? process.env
+  const home = resolveDshHome(options.dshHome, environment)
   const bin = resolveDshBinFromManifests(dshManifestUrl, clientManifestUrl)
   if (existsSync(bin)) return { nodeArgs: [bin], patches: [], environment: {} }
 
@@ -96,15 +108,30 @@ export function resolveDshNodeLaunchFromManifests(
   const sourceBin = resolve(packageDir, 'src/bin.ts')
   const sourcePatch = resolve(packageDir, 'src/sdk-source.cordis.patch.yml')
   const sourceTsconfig = resolve(packageDir, 'tsconfig.json')
-  if (!existsSync(sourceBin) || !existsSync(sourcePatch) || !existsSync(sourceTsconfig)) {
+  const cliManifest = manifest(dshManifestUrl)
+  const nativeTemplates = cliManifest.dsh?.nativeProfileTemplates
+  if (!Array.isArray(nativeTemplates) || nativeTemplates.some(name => typeof name !== 'string' || name === '')) {
+    throw new Error('@deepseek-ai/dsh does not declare its native profile templates')
+  }
+  const shippedNativeProfile = nativeTemplates.includes(profile)
+  const profileDirectory = join(home, 'profiles', profile)
+  const runtime = shippedNativeProfile && !existsSync(profileDirectory)
+    ? 'native'
+    : resolveDshProfileExecution(profile, home).runtime
+  if (shippedNativeProfile && runtime !== 'native') {
+    throw new Error(`dsh: existing ${profile} profile is not a complete native profile`)
+  }
+  const cordisSourcePatch = runtime === 'legacy'
+  const sourceFiles = [sourceBin, ...(cordisSourcePatch ? [sourcePatch] : []), sourceTsconfig]
+  if (sourceFiles.some(path => !existsSync(path))) {
     throw new Error(
-      `@deepseek-ai/dsh is missing its built executable ${bin} and complete source launch files ${sourceBin}, ${sourcePatch}, ${sourceTsconfig}`,
+      `@deepseek-ai/dsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
     )
   }
-  const loader = sourceLoaderUrl ?? import.meta.resolve('tsx/esm')
+  const loader = options.sourceLoaderUrl ?? import.meta.resolve('tsx/esm')
   return {
     nodeArgs: ['--import', loader, sourceBin],
-    patches: [sourcePatch],
+    patches: cordisSourcePatch ? [sourcePatch] : [],
     environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
   }
 }
@@ -113,10 +140,15 @@ export function resolveDshNodeLaunchFromManifests(
  * Resolve the installed dsh package to a built or source Node launch.
  * @returns the launch descriptor for the current checkout or installed package.
  */
-function installedDshNodeLaunch(): DshNodeLaunch {
+function installedDshNodeLaunch(
+  profile: string,
+  dshHome: string | undefined,
+  environment: Record<string, string | undefined>,
+): DshNodeLaunch {
   return resolveDshNodeLaunchFromManifests(
     import.meta.resolve('@deepseek-ai/dsh/package.json'),
     new URL('../package.json', import.meta.url).href,
+    { profile, ...dshHome === undefined ? {} : { dshHome }, environment },
   )
 }
 
@@ -131,23 +163,29 @@ export function resolveDshLaunch(
   callerCwd: string = process.cwd(),
 ): RuntimeProcessOptions {
   const profile = options.profile ?? 'sdk'
+  const dshHome = options.dshHome === undefined ? undefined : resolve(callerCwd, options.dshHome)
+  const childEnvironment = options.env ?? process.env
   const dshLaunch = options.dshBin === undefined
-    ? installedDshNodeLaunch()
+    ? installedDshNodeLaunch(profile, dshHome, childEnvironment)
     : { nodeArgs: [resolve(callerCwd, options.dshBin)], patches: [], environment: {} }
   const patches = [
     ...dshLaunch.patches,
     ...(options.patches ?? []).map(path => resolve(callerCwd, path)),
   ]
-  const dshHome = options.dshHome === undefined ? undefined : resolve(callerCwd, options.dshHome)
   return {
     command: process.execPath,
     args: [...dshLaunch.nodeArgs, '--profile', profile, ...patches.flatMap(path => ['--patch', path])],
     ...options.processCwd === undefined ? {} : { cwd: resolve(callerCwd, options.processCwd) },
-    environment: () => ({
-      ...(options.env ?? process.env),
-      ...dshLaunch.environment,
-      ...dshHome === undefined ? {} : { DSH_HOME: dshHome },
-    }),
+    environment: () => {
+      const hasSystemRoot = Object.keys(childEnvironment).some(name => name.toUpperCase() === 'SYSTEMROOT')
+      return {
+        ...(process.platform === 'win32' && !hasSystemRoot && process.env.SystemRoot !== undefined
+          ? { SystemRoot: process.env.SystemRoot } : {}),
+        ...childEnvironment,
+        ...dshLaunch.environment,
+        ...dshHome === undefined ? {} : { DSH_HOME: dshHome },
+      }
+    },
     description: `dsh profile ${JSON.stringify(profile)}`,
     initializeTimeoutMs: options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS,
     ...options.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: options.requestTimeoutMs },

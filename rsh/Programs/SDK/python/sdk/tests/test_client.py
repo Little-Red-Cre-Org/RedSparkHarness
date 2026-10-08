@@ -36,8 +36,12 @@ for line in sys.stdin:
     msg = json.loads(line)
     method = msg.get("method")
     if method == "initialize":
-        json.dump(msg.get("params"), open(os.environ["INIT_DUMP"], "w"))
-        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {"serverInfo": {"name": "fake-runtime"}}}), flush=True)
+        params = msg.get("params")
+        json.dump(params, open(os.environ["INIT_DUMP"], "w"))
+        result = {"serverInfo": {"name": "fake-runtime"}}
+        if "maxSteps" in params:
+            result["maxSteps"] = 8
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": result}), flush=True)
     elif method == "session/prompt":
         params = msg.get("params") or {}
         print(json.dumps({"jsonrpc": "2.0", "method": "session.event", "params": {"sessionId": params["sessionId"], "event": {"type": "agent/inbox/spliced", "data": {"target": "next-turn", "start": 0, "inserted": [{"id": "message-1"}]}}}}), flush=True)
@@ -110,6 +114,9 @@ for line in sys.stdin:
         model="deepseek-v4-flash",
         reasoning_effort="max",
         max_tokens=4096,
+        max_steps=12,
+        allowed_tools=('read_file', 'write_file'),
+        workspace_write_root=str(tmp_path),
         cwd=str(tmp_path),
         _launch_args=(sys.executable, str(script)),
         env={
@@ -142,6 +149,9 @@ for line in sys.stdin:
         "model": "deepseek-v4-flash",
         "reasoningEffort": "max",
         "maxTokens": 4096,
+        "maxSteps": 12,
+        "allowedTools": ["read_file", "write_file"],
+        "workspaceWriteRoot": str(tmp_path),
     }
 
 
@@ -674,7 +684,7 @@ for line in sys.stdin:
             client.session_prompt("main", [{"type": "text", "text": "fix it"}])
 
 
-def test_client_routes_bridge_requests_and_sends_responses(tmp_path: Path) -> None:
+def test_client_routes_parent_approval_requests_and_correlated_responses(tmp_path: Path) -> None:
     script = tmp_path / "fake_bridge.py"
     script.write_text(
         """
@@ -686,7 +696,10 @@ for line in sys.stdin:
     method = msg.get("method")
     if method == "initialize":
         print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {"serverInfo": {"name": "fake-dsh"}}}), flush=True)
-        print(json.dumps({"jsonrpc": "2.0", "id": "bridge-req-1", "method": "llm.request", "params": {"requestId": "req-1", "sessionId": "main", "model": "dsagent", "messages": []}}), flush=True)
+        print(json.dumps({"jsonrpc": "2.0", "id": "approval-1", "method": "approval/request", "params": {
+            "operationId": "child-operation", "requestId": "child-approval", "sessionId": "child-session",
+            "toolName": "write_file", "callId": "child-tool-call", "reason": "write fixture",
+        }}), flush=True)
     elif "id" in msg and "method" not in msg:
         print(json.dumps({"jsonrpc": "2.0", "method": "response/seen", "params": {"result": msg.get("result")}}), flush=True)
     elif method == "shutdown":
@@ -698,15 +711,18 @@ for line in sys.stdin:
     with HarnessClient(_launch_args=(sys.executable, str(script))) as client:
         client.initialize(provider="deepseek-official", cwd="/workspace", model="dsagent")
 
-        request = client.next_request()
-        assert request.id == "bridge-req-1"
-        assert request.method == "llm.request"
-        assert request.payload["requestId"] == "req-1"
+        request = client.next_approval_request()
+        assert request.operation_id == "child-operation"
+        assert request.request_id == "child-approval"
+        assert request.session_id == "child-session"
+        assert request.call_id == "child-tool-call"
 
-        client.respond(request.id, {"content_blocks": [{"type": "text", "text": "done"}]})
+        client.respond_approval(request, "allowed-once")
         notification = client.next_notification()
         assert notification.method == "response/seen"
-        assert notification.payload["result"]["content_blocks"][0]["text"] == "done"
+        assert notification.payload["result"] == {
+            "operationId": "child-operation", "requestId": "child-approval", "outcome": "allowed-once",
+        }
 
 
 def test_client_ignores_non_json_stdout_lines(tmp_path: Path) -> None:
@@ -836,36 +852,92 @@ Path(os.environ["QUIESCED_MARKER"]).write_text("quiesced")
     assert marker.read_text() == "quiesced"
 
 
-def test_initialize_failure_reaps_started_runtime(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("initialize_options", "expected_exception", "expected_message", "expect_initialize_request"),
+    [
+        pytest.param({}, JsonRpcError, "bad initialize", True, id="runtime-rejection"),
+        pytest.param(
+            {"max_steps": 0}, ValueError, "positive safe integer", False, id="max-steps-validation"
+        ),
+        pytest.param(
+            {"allowed_tools": ("read_file", "read_file")},
+            ValueError,
+            "unique non-empty names",
+            False,
+            id="allowed-tools-validation",
+        ),
+        pytest.param(
+            {"workspace_write_root": "relative"},
+            ValueError,
+            "absolute path",
+            False,
+            id="write-root-validation",
+        ),
+    ],
+)
+def test_initialize_failure_reaps_started_runtime(
+    tmp_path: Path,
+    initialize_options: dict[str, object],
+    expected_exception: type[Exception],
+    expected_message: str,
+    expect_initialize_request: bool,
+) -> None:
     script = tmp_path / "rejecting_runtime.py"
+    methods = tmp_path / "methods.txt"
     script.write_text(
         """
 import json
+import os
 import sys
 
 for line in sys.stdin:
     msg = json.loads(line)
     if msg.get("method") == "initialize":
+        with open(os.environ["METHODS"], "a") as stream:
+            stream.write("initialize\\n")
         print("initialize diagnostic", file=sys.stderr, flush=True)
         print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32000, "message": "bad initialize"}}), flush=True)
     elif msg.get("method") == "shutdown":
+        with open(os.environ["METHODS"], "a") as stream:
+            stream.write("shutdown\\n")
         print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {}}), flush=True)
         break
 """.strip()
     )
 
-    client = HarnessClient(_launch_args=(sys.executable, str(script)))
+    client = HarnessClient(
+        HarnessConfig(env={"METHODS": str(methods)}),
+        _launch_args=(sys.executable, str(script)),
+    )
     client.start()
     proc = client._proc
     assert proc is not None
 
-    with pytest.raises(JsonRpcError, match="bad initialize") as excinfo:
-        client.initialize(provider="deepseek-official", cwd=".", model="dsagent")
+    try:
+        with pytest.raises(expected_exception, match=expected_message) as excinfo:
+            client.initialize(
+                provider="deepseek-official",
+                cwd=".",
+                model="dsagent",
+                **initialize_options,
+            )
 
-    assert excinfo.value.code == -32000
-    assert "initialize diagnostic" in str(excinfo.value)
-    assert proc.wait(timeout=1) is not None
-    assert client._proc is None
+        if expect_initialize_request:
+            assert isinstance(excinfo.value, JsonRpcError)
+            assert excinfo.value.code == -32000
+            assert "initialize diagnostic" in str(excinfo.value)
+        else:
+            assert isinstance(excinfo.value, ValueError)
+
+        assert proc.wait(timeout=1) is not None
+        assert client._proc is None
+        methods_seen = methods.read_text().splitlines()
+        assert ("initialize" in methods_seen) is expect_initialize_request
+        assert "shutdown" in methods_seen
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait(timeout=1)
 
 
 def test_public_signatures_omit_unsupported_wire_parameters() -> None:

@@ -836,7 +836,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[NativeExternalSubagentFinishedEvent](subsystems/subagent.zh.md)
 
-来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:142`](../Engine/subagent/native-subagent/src/external-driver.ts)
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:172`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentexternal-start--log-only"></a>
 
@@ -852,7 +852,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[NativeExternalSubagentStartedEvent](subsystems/subagent.zh.md)
 
-来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:138`](../Engine/subagent/native-subagent/src/external-driver.ts)
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:168`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 

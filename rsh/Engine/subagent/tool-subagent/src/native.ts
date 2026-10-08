@@ -2,8 +2,8 @@
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeSubagentOptions, NativeSubagentResult, NativeExternalSubagentResult,
-  NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
+import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult,
+  NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
 import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type {} from '@deepseek-ai/dsh-native-tool-jobs'
 
@@ -122,8 +122,20 @@ export const plugin: NativePlugin = {
         async execute(call) {
           const args = call.arguments as { description: string; prompt: string; run_in_background?: boolean }
           if (args.description.length === 0 || args.prompt.length === 0) throw new Error('subagent: description and prompt must be nonempty')
+          const approvalAuthority = call.approvalAuthority
+          const approvalRequester = approvalAuthority === undefined ? undefined : async (
+            approval: NativeExternalSubagentApprovalRequest,
+          ) => approvalAuthority.request({
+            agent: call.agent, session: call.session, callId: call.callId, toolName: approval.toolName,
+            reason: [
+              `External child ${approval.operationId} request ${approval.requestId} (child call ${approval.callId}).`,
+              approval.reason,
+            ].filter((part): part is string => part !== undefined).join(' '),
+            signal: AbortSignal.any([call.signal, approval.signal]),
+          })
           const request = subagents.resolve({ agent: call.agent, session: call.session, label: args.description,
-            prompt: [{ type: 'text', text: args.prompt }], options: config.options })
+            prompt: [{ type: 'text', text: args.prompt }], options: config.options,
+            ...approvalRequester === undefined ? {} : { approvalRequester } })
           return continuation && args.run_in_background !== false ? subagents.startContinuable(request, call.signal)
             : args.run_in_background === true ? subagents.startBackground(request, call.signal) : subagents.run(request, call.signal)
         },

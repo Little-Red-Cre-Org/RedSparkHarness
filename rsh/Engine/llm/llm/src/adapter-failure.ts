@@ -10,8 +10,7 @@ import type { LlmFailure } from './types.ts'
 /**
  * Detach serializable provider facts from a value thrown by an adapter.
  * @param value - arbitrary value thrown during adapter dispatch or iteration.
- * @returns immutable provider-neutral facts suitable for a terminal finish chunk.
- * @internal
+ * @returns immutable provider-neutral facts suitable for a terminal finish chunk or recovery policy.
  */
 export function normalizeLlmFailure(value: unknown): LlmFailure {
   const error = value instanceof Error

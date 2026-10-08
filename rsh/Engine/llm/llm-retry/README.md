@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `@deepseek-ai/dsh-llm-retry` to retry failed model requests at durable agent-step boundaries. Provider `retryPolicy` settings choose bounded normal-mode retries or unlimited always-mode retries; scheduled attempts reach the session log before backoff, and cancellation leaves consistent history. Retries re-run the failed step in the same open turn, while direct `ctx.llm.stream()` calls remain single-attempt. Each retry is another billed provider request, and always mode continues until success, cancellation, or disposal.
+Mount `@deepseek-ai/dsh-llm-retry` to retry failed model requests at durable agent-step boundaries. Provider `retryPolicy` settings choose bounded normal-mode retries or unlimited always-mode retries; scheduled attempts reach the session log before backoff, and cancellation leaves consistent history. Retries re-run the failed step in the same open turn, while direct `ctx.llm.stream()` calls remain single-attempt. The Cordis-free `./native` installer applies the same policy in every shipped native profile. Each retry is another billed provider request, and always mode continues until success, cancellation, or disposal.
 
 ## Table of Contents
 
@@ -57,6 +57,10 @@ Each scheduled retry is durable before its wait: the plugin appends a non-surfac
 
 A failure before any final adapter is selected has no provider policy and delegates downstream unchanged. In normal mode, a failure code outside the eligible set, or an exhausted budget, delegates; in always mode, an over-cap provider delay uses the configured local backoff so the policy cannot terminate on that instruction. Nothing here is model-visible: no retry event, delay, provider error, or failed partial output reaches the model or derived messages.
 
+### Native profiles
+
+The `./native` installer accepts no settings, requires the selected `modelExecution` service and registers one recovery policy. It writes the same `llm/retry` and `llm/retry-started` events, persists each before the wait, and uses the same eligibility, budget, delay and jitter rules. The provider policy comes from the selected model; a model that declares none gets the same normal default as the Cordis LLM runtime. Native model execution offers both a terminal error finish and an adapter that throws; when no policy retries a thrown failure, the turn keeps the original error. Each failed attempt is recorded as `assistant/attempt`, and live stream observers see the failed attempt's chunks before the retried attempt's chunks.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -79,10 +83,16 @@ The executor is built on one rule: **durable before wait, open-step boundaries.*
 | [`src/history.ts`](src/history.ts) | Durable retry-history lookup from the session log |
 | [`src/types.ts`](src/types.ts) | Browser-safe `llm/retry` and `llm/retry-started` event payload types |
 | [`src/brand.ts`](src/brand.ts) | The `RetryId` brand shared by the event payloads |
+| [`src/core.ts`](src/core.ts) | Runtime-neutral retry decision, delay calculation and cancellable wait shared by both entries |
+| [`src/native.ts`](src/native.ts) | Native installer over `modelExecution.onRecovery` |
 
 ### Recovery flow
 
 A failed step arrives on the waterfall with its provider and resolved policy. Always mode settles downstream recovery first and honors a downstream `retry` decision; normal mode first checks that the failure code is eligible and the budget is not exhausted. The plugin computes the delay — provider `Retry-After` when valid and within bounds, otherwise local bounded exponential backoff with symmetric jitter — appends the `llm/retry` event, waits on a cancellable timer, appends `llm/retry-started`, and returns `{ kind: 'retry' }`. The loop then re-runs the failed step inside the same open turn over the same durable history.
+
+### Native recovery
+
+[`src/native.ts`](src/native.ts) runs the same `recoverWithRetry` algorithm from [`src/core.ts`](src/core.ts). Instead of the Cordis Session projection, it keeps retry history for the current turn and step of each Session in memory and clears it when a new step starts. Recovery policies registered later run first, and each delegates to the next at most once, matching the Cordis waterfall. Removing the installation aborts active waits and drains recovery that is already running.
 
 ### Waterfall composition
 
@@ -134,6 +144,7 @@ These limits define where the executor stops and future work begins. They are cu
 - **Finite plugin budgets add** — normal mode counts only its configured codes and exact provider policy, while context-overflow compaction owns a separate budget. Any overlapping policy must define registration-order behavior.
 - **Recovery policies compose by waterfall order** — always mode accepts a downstream retry before applying its fallback. A later policy that ignores cancellation and never settles also prevents fallback, turn quiescence, and plugin disposal from completing.
 - **`llm/retry` records scheduling, not completion** — later step and turn events establish success, exhaustion, or cancellation.
+- **Native retry budgets restart after a restart** — the native installer keeps the current step's history in memory, so a Session resumed after a crash in the middle of a retry chain starts a new budget instead of reading earlier `llm/retry` events.
 
 <a id="dev-note"></a>
 ### Dev Note
