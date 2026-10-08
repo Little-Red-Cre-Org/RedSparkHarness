@@ -1,8 +1,8 @@
 # Agent Note: 兼容文件变更的 Native approval
 
-[English](2026-10-09-compat-tool-fs-native-write-approval.md) | 中文
-
 Status: implemented
+
+[English](2026-10-09-compat-tool-fs-native-write-approval.md) | 中文
 
 ## 问题
 

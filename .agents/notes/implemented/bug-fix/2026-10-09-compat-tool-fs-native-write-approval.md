@@ -1,8 +1,8 @@
 # Agent Note: Native approval for compatibility filesystem mutations
 
-English | [中文](2026-10-09-compat-tool-fs-native-write-approval.zh.md)
-
 Status: implemented
+
+English | [中文](2026-10-09-compat-tool-fs-native-write-approval.zh.md)
 
 ## Problem
 
