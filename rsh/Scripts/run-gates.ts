@@ -776,7 +776,13 @@ function docSyncLeafGates(options: {
       label: 'documentation standard tests',
       quick: true,
     }),
-    pnpmExec('docs-site-projection', ['vitest', 'run', 'rsh/Scripts/project-doc-site.spec.ts', 'rsh/Scripts/verify-doc-site-fragments.spec.ts'], {
+    pnpmExec('docs-site-projection', [
+      'vitest',
+      'run',
+      'rsh/Scripts/project-doc-site.spec.ts',
+      'rsh/Scripts/verify-doc-site-fragments.spec.ts',
+      'rsh/Scripts/verify-doc-site-render.spec.ts',
+    ], {
       label: 'documentation site checks',
     }),
     pnpmScript('package-readme-limitations', 'verify-package-readme-limitations', { label: 'package README limitations', quick: true }),

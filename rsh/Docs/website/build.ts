@@ -3,6 +3,7 @@
 import { lstatSync, realpathSync, rmSync, unlinkSync } from 'node:fs'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { format } from 'node:util'
 import { build } from 'vitepress'
 
 const websiteRoot = resolve(import.meta.dirname)
@@ -69,9 +70,48 @@ export function docSiteBuildOptions(siteRoot: string, mpa: boolean): DocSiteBuil
   }
 }
 
+/**
+ * Errors Vue and VitePress log, instead of throwing, while server rendering a
+ * page; each one leaves that page's `#app` empty or partial in a build that
+ * still succeeds.
+ */
+export const ssrRenderErrorSignatures: readonly RegExp[] = [
+  /vitepress data not properly injected in app/,
+  /Cannot read properties of null \(reading 'ce'\)/,
+]
+
+/**
+ * Run a build and fail it when server rendering logged a known render error.
+ * Messages still reach the original `console.error`.
+ * @param run - Build to observe.
+ * @returns The build's result.
+ * @throws When any `console.error` call during `run` matches {@link ssrRenderErrorSignatures}.
+ */
+export async function failOnSsrRenderErrors<T>(run: () => Promise<T>): Promise<T> {
+  const original = console.error
+  const matched: string[] = []
+  console.error = (...args: unknown[]) => {
+    const message = format(...args)
+    if (ssrRenderErrorSignatures.some(signature => signature.test(message))) matched.push(message.split('\n')[0] ?? message)
+    original.apply(console, args)
+  }
+  try {
+    const result = await run()
+    if (matched.length > 0) {
+      throw new Error(
+        `rsh/Docs/website/build: server rendering logged ${matched.length} render error(s), so pages were written without content: `
+        + `${[...new Set(matched)].slice(0, 3).join('; ')}. Check that vue and every @vue/* package resolve to one version.`,
+      )
+    }
+    return result
+  } finally {
+    console.error = original
+  }
+}
+
 async function buildDocSite(siteRoot: string, mpa: boolean): Promise<void> {
   const root = resolve(siteRoot)
-  await build(root, docSiteBuildOptions(root, mpa))
+  await failOnSsrRenderErrors(() => build(root, docSiteBuildOptions(root, mpa)))
 }
 
 function parseMpa(args: string[]): boolean {
