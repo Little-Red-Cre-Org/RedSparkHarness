@@ -119,6 +119,8 @@ interface ActiveProviderWork<R extends SessionTitleProviderRequest> extends Pend
 /** Mutable concurrency state scoped to one live session. */
 interface SessionTitleWorkState<R extends SessionTitleProviderRequest> {
   revision: number
+  readonly operations: Set<Promise<unknown>>
+  closing?: boolean
   fallback?: Promise<SessionTitleSnapshot | undefined>
   pending?: PendingAutomaticWork<R>
   active?: ActiveProviderWork<R>
@@ -211,7 +213,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     const work = this.activate({ registration, revision, throughSeq: input.lastSeq }, state, signal)
     const config = target.session.requestHeader()?.config
     const route = config === undefined ? undefined : { provider: config.provider, model: config.model }
-    return this.startProvider(target, work, route)
+    return this.startProvider(target, work, route, state)
   }
 
   /**
@@ -267,17 +269,18 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
    * @param event - appended `user/message` event.
    */
   onUserMessage(target: T, event: Extract<SessionEvent, { type: 'user/message' }>): void {
-    if (!this.host.active()) return
+    if (!this.host.active() || !target.live()) return
     if (event.data.source.kind !== 'user' || sessionTitleUserMessageOf(event) === undefined) return
     // A user rename pins the title: no automatic revision may override it.
     if (target.title()?.source.kind === 'user') return
+    const state = this.stateFor(target)
+    if (state.closing) return
     const registration = this.registration
     if (registration !== undefined && !registration.closing) {
       const count = target.input().count
       const shouldSchedule = registration.provider.automatic === 'all-prompts'
         || (target.session.header.parentSession === undefined && count === 1 && target.title() === undefined)
       if (shouldSchedule) {
-        const state = this.stateFor(target)
         const revision = this.supersede(state, 'newer user message superseded title generation')
         state.pending = { registration, revision, throughSeq: event.seq }
       }
@@ -289,7 +292,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
         if (!this.host.active()) return
         this.host.warn(`session "${target.session.id}": fallback title update failed: ${String(error)}`)
       }
-    })
+    }, state)
   }
 
   /**
@@ -302,7 +305,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     if (!this.host.active()) return
     const state = this.work.get(target)
     const pending = state?.pending
-    if (state === undefined || pending === undefined || pending.throughSeq >= seq) return
+    if (state === undefined || state.closing || pending === undefined || pending.throughSeq >= seq) return
     this.startPending(target, state, pending, route)
   }
 
@@ -311,11 +314,14 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
    * @param target - released target.
    * @param reason - abort reason.
    */
-  forget(target: T, reason: string): void {
+  async forget(target: T, reason: string): Promise<void> {
     const state = this.work.get(target)
     if (state === undefined) return
+    state.closing = true
+    delete state.pending
     state.active?.controller.abort(new Error(reason))
     this.work.delete(target)
+    await this.drain(state.operations)
   }
 
   /** Abort all work and wait for every accepted background operation. */
@@ -324,6 +330,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     if (this.registration !== undefined) this.registration.closing = true
     this.registration = undefined
     for (const state of this.work.values()) {
+      state.closing = true
       delete state.pending
       state.active?.controller.abort(new Error('session-title service disposed'))
     }
@@ -348,19 +355,20 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     }
     this.defer(async () => {
       try {
-        if (this.registration !== pending.registration
+        if (state.closing
+          || this.registration !== pending.registration
           || pending.registration.closing
           || this.work.get(target) !== state
           || state.revision !== pending.revision) return
         const work = this.activate(pending, state)
         try {
-          await this.startProvider(target, work, route)
+          await this.startProvider(target, work, route, state)
         } catch (error: unknown) {
           if (work.signal.aborted || !this.host.active()) return
           this.host.warn(`session "${target.session.id}": automatic title generation failed: ${String(error)}`)
         }
       } finally { release?.() }
-    })
+    }, state)
   }
 
   /** Start one tracked provider call after publishing its active revision. */
@@ -368,9 +376,11 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     target: T,
     work: ActiveProviderWork<R>,
     route?: SessionTitleModelProvenance,
+    state?: SessionTitleWorkState<R>,
   ): Promise<SessionTitleSnapshot | undefined> {
+    if (state?.closing) return Promise.reject(new Error('session-title: target is closing'))
     const run = Promise.resolve().then(() => this.runProvider(target, work, route))
-    return this.track(run, work.registration)
+    return this.track(run, work.registration, state)
   }
 
   /** Execute and accept one current provider revision. */
@@ -419,6 +429,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     /* v8 ignore next -- every supported supersession, provider disposal, and session disposal aborts
      * the work signal before changing this state. */
     if (this.registration !== work.registration
+      || state?.closing
       || state?.active !== work
       || state.revision !== work.revision
       || !target.live()) {
@@ -453,28 +464,30 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
   private stateFor(target: T): SessionTitleWorkState<R> {
     let state = this.work.get(target)
     if (state === undefined) {
-      state = { revision: 0 }
+      state = { revision: 0, operations: new Set() }
       this.work.set(target, state)
     }
     return state
   }
 
   /** Queue detached service work and retain it through service disposal. */
-  private defer(task: () => Promise<void>): void {
+  private defer(task: () => Promise<void>, state?: SessionTitleWorkState<R>): void {
     const run = Promise.resolve().then(async () => {
       if (!this.host.active()) return
       await task()
     })
-    void this.track(run)
+    void this.track(run, undefined, state)
   }
 
   /** Retain one promise until settlement for service and optional provider teardown. */
-  private track<V>(run: Promise<V>, registration?: ProviderRegistration<R>): Promise<V> {
+  private track<V>(run: Promise<V>, registration?: ProviderRegistration<R>, state?: SessionTitleWorkState<R>): Promise<V> {
     this.inFlight.add(run)
     registration?.active.add(run)
+    state?.operations.add(run)
     const settled = (): void => {
       this.inFlight.delete(run)
       registration?.active.delete(run)
+      state?.operations.delete(run)
     }
     void run.then(settled, settled)
     return run
@@ -510,13 +523,15 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
   /** Create the first deterministic fallback if the session still lacks a title. */
   private async ensureFallback(target: T): Promise<SessionTitleSnapshot | undefined> {
     this.assertServiceActive()
+    this.assertLive(target)
+    const state = this.stateFor(target)
+    if (state.closing) throw new Error('session-title: target is closing')
     const current = target.title()
     if (current !== undefined) return current
     const first = target.input().first
     if (first === null) return undefined
     const title = fallbackSessionTitle(first.text, this.config.fallbackMaxWords, this.config.fallbackMaxBytes)
     if (title.length === 0) return undefined
-    const state = this.stateFor(target)
     if (state.fallback !== undefined) return state.fallback
     const fallback = Promise.resolve().then(async () => {
       this.assertServiceActive()
@@ -527,7 +542,7 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
       await target.persist?.()
       return target.title()
     })
-    state.fallback = fallback
+    state.fallback = this.track(fallback, undefined, state)
     try {
       return await fallback
     } finally {

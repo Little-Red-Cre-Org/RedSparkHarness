@@ -59,7 +59,7 @@ No invariant companion is published because the transport has no independent sta
 ## Further Exploration
 
 - [Utility package map](../README.md) — other shared primitives.
-- [SDK protocol](../../../Programs/SDK/packages/protocol/README.md) — SDK method and notification types that use this transport.
+- [SDK protocol](../../../Engine/subagent/sdk-protocol/README.md) — SDK method and notification types that use this transport.
 - [Codex adapter](../../../Engine/subagent/subagent-codex/README.md) — app-server methods carried over the same framing.
 
 -----

@@ -31,6 +31,9 @@ declare module '@deepseek-ai/dsh-session/types' {
   }
 }
 
+/** The durable title event type, carrying this package's isolated SessionEventMap augmentation. */
+export type SessionTitleEvent = SessionEvent<'session/title'>
+
 /** Identifies one session-title provider registration. */
 export type SessionTitleProviderId = Branded<'SessionTitleProviderId'>
 

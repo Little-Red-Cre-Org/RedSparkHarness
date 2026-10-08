@@ -16,7 +16,7 @@ import { plugin as commandsPlugin, type NativeCommandOperations } from '@deepsee
 import { plugin as questionsPlugin, UserQuestionError } from '@deepseek-ai/dsh-user-questions/native'
 import { plugin as brokerPlugin } from '@deepseek-ai/dsh-user-question-broker/native'
 import type { NativeQuestionBroker } from '@deepseek-ai/dsh-user-questions/broker'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import { createUserMessage, type GenerateOptions } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
@@ -29,7 +29,8 @@ const PLAN = '# Ship the cache\n\n1. Inspect.\n2. Change.'
 vi.setConfig({ testTimeout: 15_000 })
 
 /** Compose native plan mode with the shipped headless Providers, the command registry, and a human question broker. */
-async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dismissAt?: number) {
+async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dismissAt?: number,
+  barrier?: { readonly entered: () => void; readonly wait: () => Promise<void> }) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-native-plan-'))
   const scope = new NativeScope()
   const model = new MockAdapter(script)
@@ -71,6 +72,33 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dis
       }, context.scope))
     },
   }
+  const admissionBarrierPlugin: NativePlugin = {
+    apiVersion: 1, name: 'plan-test-admission-barrier', targets: ['host'], requires: ['activeSessions'], provides: [],
+    resolve: () => (context) => {
+      const sessions = context.require('activeSessions')
+      const releases = new Map<NativeActiveSessionOwner, () => Promise<void>>()
+      context.effect(sessions.onAttached(async (owner) => {
+        let paused = false
+        releases.set(owner, owner.beforeStep(async (_step, next) => {
+          const decision = await next()
+          if (!paused) {
+            paused = true
+            barrier?.entered()
+            await barrier?.wait()
+          }
+          return decision
+        }, 700))
+      }))
+      context.effect(sessions.onDetached(async (owner) => {
+        await releases.get(owner)?.()
+        releases.delete(owner)
+      }))
+      context.own(async () => {
+        await Promise.all([...releases.values()].map(release => release()))
+        releases.clear()
+      })
+    },
+  }
   const host = new NativeHost(resolveInstallation([
     { plugin: agentsPlugin, scope, config: undefined }, { plugin: sessionsPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: toolsPlugin, scope, config: undefined },
@@ -79,6 +107,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dis
     { plugin: commandsPlugin, scope, config: undefined }, { plugin: questionsPlugin, scope, config: undefined },
     { plugin: dismisser, scope, config: undefined }, { plugin: brokerPlugin, scope, config: undefined },
     { plugin, scope, config: { section: SECTION } },
+    ...(barrier === undefined ? [] : [{ plugin: admissionBarrierPlugin, scope, config: undefined }]),
     { plugin: modelProvider, scope, config: undefined }, { plugin: capture, scope, config: undefined },
     { plugin: applicationPlugin, scope, config: { cwd: root, provider: 'mock', model: 'fixture', systemPrompt: 'Help.', maxSteps: 6 } },
   ], 'host'))
@@ -252,4 +281,33 @@ it('queues a mid-turn /plan until the next accepted step and admits its notice t
     expect(userTexts(state.model.requests[0])).toEqual(['Start implementing'])
     expect(userTexts(state.model.requests[1]).at(-1)).toBe(`The user switched this session to plan mode.\n\n${SECTION}`)
   } finally { await state.close() }
+})
+
+it('does not apply a plan selection queued after the candidate snapshot until its notice is admitted', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const resume = Promise.withResolvers<undefined>()
+  const state = await fixture([
+    toolCallResponse('probe', 'exit_plan_mode', { plan: PLAN }), textResponse('planning now'),
+  ], undefined, { entered: () => entered.resolve(undefined), wait: () => resume.promise })
+  const id = SessionId('native-plan-late-selection')
+  try {
+    const run = state.turn(id, false, 'Start implementing')
+    await entered.promise
+    expect((await state.running('/plan'))?.kind).toBe('success')
+    resume.resolve(undefined)
+    await run
+
+    const events = await state.events(id)
+    expect(planModes(events)).toEqual([true])
+    const firstResult = events.findIndex(event => event.type === 'tool/result')
+    const mode = events.findIndex(event => event.type === 'plan/mode')
+    const secondStep = events.findLastIndex(event => event.type === 'step/start')
+    expect(mode).toBeGreaterThan(firstResult)
+    expect(mode).toBeLessThan(secondStep)
+    expect(userTexts(state.model.requests[0])).toEqual(['Start implementing'])
+    expect(userTexts(state.model.requests[1])).toContain(`The user switched this session to plan mode.\n\n${SECTION}`)
+  } finally {
+    resume.resolve(undefined)
+    await state.close()
+  }
 })

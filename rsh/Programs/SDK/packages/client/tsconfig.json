@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Core/util/home-paths"
+    },
+    {
       "path": "../../../../Core/subprocess/subprocess"
     },
     {
@@ -24,7 +27,16 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../protocol"
+      "path": "../../../../Engine/subagent/sdk-protocol"
+    },
+    {
+      "path": "../../../../Engine/subagent/sdk-runtime"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Modules/Official/sandbox/sandbox"
     }
   ]
 }

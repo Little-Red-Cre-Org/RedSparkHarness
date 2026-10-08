@@ -27,7 +27,7 @@ import { plugin as appPlugin } from '../src/native.ts'
 
 async function fixture(
   script: ConstructorParameters<typeof MockAdapter>[0],
-  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number }; instructions?: boolean; ptc?: boolean; maxSteps?: number; directory?: string } = {},
+  options: { approvalPolicy?: 'ask' | 'never'; timeContext?: { timeZone: string; refreshIntervalMs?: number }; instructions?: boolean; ptc?: boolean; maxSteps?: number; directory?: string; workspaceWriteRoot?: string } = {},
 ) {
   const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
   const workspace = join(directory, 'work')
@@ -60,7 +60,8 @@ async function fixture(
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
-    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}) } },
+    { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}),
+      ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot } } },
     { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: codeRuntimePlugin, scope, config: { computeMs: 2_000, maxWallMs: 2_000 } },
@@ -222,6 +223,37 @@ it('supports empty writes, denies paths outside the workspace, and records both 
         const results = (await reader.read()).events.filter(event => event.type === 'tool/result')
         expect(results).toHaveLength(2)
         expect(results[0]?.type === 'tool/result' && results[0].data.message.content[0]?.type === 'tool-result' && results[0].data.message.content[0].isError).toBe(false)
+        expect(results[1]).toMatchObject({ type: 'tool/result', data: { error: { code: 'FS_SANDBOX_DENIED' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('keeps SDK child writes inside the parent-authorized workspace root even with fs-local', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-write-root-'))
+  const workspace = join(directory, 'work')
+  const writeRoot = join(workspace, 'authorized')
+  await import('node:fs/promises').then(fs => fs.mkdir(writeRoot, { recursive: true }))
+  const state = await fixture([
+    toolCallResponse('inside', 'write_file', { path: 'authorized/child.txt', content: 'allowed' }),
+    toolCallResponse('outside', 'write_file', { path: 'denied.txt', content: 'blocked' }),
+    textResponse('done'),
+  ], { directory, workspaceWriteRoot: writeRoot })
+  try {
+    await state.host.run(state.scope, { kind: 'child-write-fence' }, invocation => state.app.run(['write under parent grant'], invocation.signal))
+    expect(await readFile(join(writeRoot, 'child.txt'), 'utf8')).toBe('allowed')
+    await expect(readFile(join(workspace, 'denied.txt'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('missing fenced Session id')
+      const reader = await storage.open(id, 'read')
+      try {
+        const results = (await reader.read()).events.filter(event => event.type === 'tool/result')
+        expect(results).toHaveLength(2)
         expect(results[1]).toMatchObject({ type: 'tool/result', data: { error: { code: 'FS_SANDBOX_DENIED' } } })
       } finally { await reader.close() }
     } finally { await storage.close() }

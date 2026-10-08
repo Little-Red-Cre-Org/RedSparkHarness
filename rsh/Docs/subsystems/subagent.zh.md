@@ -4,7 +4,7 @@
 
 subagent seam 让一个 agent（智能体）将工作委派给子 agent。与 [bash](shell.zh.md) 一样，它是**一项可选能力**，不属于 agent loop（智能体循环），因此其类型定义在此而非 [core.md](core.zh.md) 中。它不同于其他能力 seam，因为**同一上下文中可共存多个提供方实现**，并按名称注册（`ctx.subagents`），而 bash 只允许一个执行器。该注册表遵循 [LLM（大语言模型）适配器注册表](llm-streaming.zh.md)，而非单服务的 bash 执行器。
 
-Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Service Provider 是六个兄弟包：`dsh-subagent-spawn-in-process`、`dsh-subagent-fork-in-process`、`dsh-subagent-acp`、`dsh-subagent-codex`、`dsh-subagent-claude-code`、`dsh-subagent-dsh-sdk`；面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
+Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Engine Service Provider 是五个同级包：`dsh-subagent-spawn-in-process`、`dsh-subagent-fork-in-process`、`dsh-subagent-acp`、`dsh-subagent-codex`、`dsh-subagent-claude-code`；旧版 DSH SDK 提供方保留为独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-dsh-sdk)，以免 Engine 依赖 Program 客户端。面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
 
 源码：[`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts)、[`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts)和 [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)
 
@@ -32,6 +32,8 @@ interface NativeExternalSubagentRequest {
   readonly maxDepth: number
   /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
   readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
+  /** Capabilities resolved from the exact initiating parent Session. */
+  readonly authority: NativeSessionDelegationAuthority
   /** Task label and exact Program-selected workspace. */
   readonly label: string
   readonly cwd: string
@@ -48,6 +50,8 @@ interface NativeExternalSubagentRequest {
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
   readonly outputSchema?: ObjectJsonSchema
+  /** Parent approval for the builtin writer, when the exact parent grant and sandbox allow it. */
+  readonly approval?: NativeExternalSubagentApprovalRelay
 }
 ```
 
@@ -90,6 +94,8 @@ interface NativeExternalSubagentDriver {
     readonly toolFilter: boolean
     /** Whether the product validates and returns the requested structured output. */
     readonly outputSchema: boolean
+    /** Whether the product transports one-shot approval requests to the exact parent. */
+    readonly approvalRelay?: boolean
   }
   /** Start the selected product child and return only after a genuine readiness handshake.
    * @param request - detached, resolved child input.

@@ -30,7 +30,7 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../protocol"
+      "path": "../../../../Engine/subagent/sdk-protocol"
     },
     {
       "path": "../../../../Engine/subagent/subagent"

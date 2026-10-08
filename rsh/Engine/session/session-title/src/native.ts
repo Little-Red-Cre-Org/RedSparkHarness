@@ -173,7 +173,8 @@ class NativeSessionTitleService implements NativeSessionTitles {
       live: () => !target.detached && owner.writerAvailable,
       commit: (data) => { fold(target, owner.append('session/title', data)) },
       persist: () => owner.flush(),
-      hold: () => owner.retain(),
+      hold: () => owner.invocation === 'root' && owner.retainBackground !== undefined
+        ? owner.retainBackground() : owner.retain(),
     }
     const buffered: SessionEvent[] = []
     let ready = false
@@ -195,13 +196,13 @@ class NativeSessionTitleService implements NativeSessionTitles {
    * Abort and forget one released owner's work.
    * @param owner - exact released Session writer.
    */
-  detach(owner: NativeActiveSessionOwner): void {
+  async detach(owner: NativeActiveSessionOwner): Promise<void> {
     const target = this.targets.get(owner.agent)
     if (target?.owner !== owner) return
     this.targets.delete(owner.agent)
     target.detached = true
-    this.engine.forget(target, 'session detached during title generation')
     target.stop()
+    await this.engine.forget(target, 'session detached during title generation')
   }
 
   /** Abort all work and wait for accepted background operations. */
@@ -261,8 +262,7 @@ export const plugin: NativePlugin = {
       context.own(() => service.dispose())
       context.effect(sessions.onAttached(owner => service.attach(owner)))
       context.effect(sessions.onDetached((owner) => {
-        service.detach(owner)
-        return Promise.resolve()
+        return service.detach(owner)
       }))
       for (const owner of sessions.owners()) await service.attach(owner)
       context.provide('sessionTitles', service)

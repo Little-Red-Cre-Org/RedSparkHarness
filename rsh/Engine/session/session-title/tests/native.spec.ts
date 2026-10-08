@@ -14,6 +14,8 @@ import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-sessio
 import { NativeHeadlessApplication, plugin as applicationPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { NativeActiveSessionOperations, NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import {
   plugin as titlePlugin, SessionTitleProviderId, type NativeSessionTitleProvider, type NativeSessionTitleRequest,
@@ -32,15 +34,19 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], pro
   let app: NativeHeadlessApplication | undefined
   let titles: NativeSessionTitles | undefined
   let storage: NativeSessionPersistenceOperations | undefined
+  let sessions: NativeActiveSessionOperations | undefined
+  let rootExecution: NativeRootExecutionOperations | undefined
   const capture: NativePlugin = {
     apiVersion: 1, name: 'title-test-capture', targets: ['host'],
-    requires: ['application', 'sessionTitles', 'sessionPersistence'], provides: [],
+    requires: ['application', 'sessionTitles', 'sessionPersistence', 'activeSessions', 'rootExecution'], provides: [],
     resolve: () => (context) => {
       const application = context.require('application')
       if (!(application instanceof NativeHeadlessApplication)) throw new Error('missing native headless')
       app = application
       titles = context.require('sessionTitles')
       storage = context.require('sessionPersistence')
+      sessions = context.require('activeSessions')
+      rootExecution = context.require('rootExecution')
     },
   }
   const modelProvider: NativePlugin = {
@@ -63,11 +69,13 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], pro
   ]
   const host = new NativeHost(resolveInstallation(installation, 'host'))
   await host.start()
-  if (app === undefined || titles === undefined || storage === undefined) throw new Error('missing title composition')
+  if (app === undefined || titles === undefined || storage === undefined || sessions === undefined || rootExecution === undefined) {
+    throw new Error('missing title composition')
+  }
   const application = app
   const persistence = storage
   return {
-    model, app: application, titles,
+    model, app: application, titles, sessions, rootExecution,
     turn: (id: SessionId, resume: boolean, text: string) => application.executeTurn({
       id, resume, message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }),
     }, new AbortController().signal),
@@ -174,4 +182,78 @@ it('keeps the fallback and the turn result when the provider fails', async () =>
     expect(titleEvents(await state.events(id))).toEqual([expect.objectContaining({ title: 'Investigate flaky tests', source: { kind: 'fallback' } })])
     expect(warn.mock.calls.flat().join('\n')).toContain('title model unavailable')
   } finally { await state.close() }
+})
+
+it('settles the root reply after queued follow-up turns while title generation runs, then drains on cancellation', async () => {
+  const titleEntered = Promise.withResolvers<undefined>()
+  const firstModelEntered = Promise.withResolvers<undefined>()
+  const aborted = Promise.withResolvers<undefined>()
+  const releaseTitle = Promise.withResolvers<undefined>()
+  const releaseFirstModel = Promise.withResolvers<undefined>()
+  let providerDone = false
+  const provider: NativeSessionTitleProvider = {
+    id: SessionTitleProviderId('slow-title'), automatic: 'first-prompt',
+    async generate(request) {
+      titleEntered.resolve(undefined)
+      await new Promise<void>(resolve => request.signal.addEventListener('abort', () => {
+        aborted.resolve(undefined)
+        void releaseTitle.promise.then(resolve)
+      }, { once: true }))
+      providerDone = true
+      request.signal.throwIfAborted()
+      return { title: 'never accepted', messageSeqs: request.messages.map(message => message.seq) }
+    },
+  }
+  const state = await fixture([textResponse('first answer'), textResponse('follow-up answer')], provider)
+  const originalStream = state.model.stream.bind(state.model)
+  let modelCalls = 0
+  vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    if (modelCalls++ === 0) {
+      firstModelEntered.resolve(undefined)
+      await releaseFirstModel.promise
+    }
+    yield* originalStream(options)
+  })
+  const id = SessionId('native-title-background')
+  try {
+    let endedTurns = 0
+    const firstTurnEnded = Promise.withResolvers<undefined>()
+    const followUpTurnEnded = Promise.withResolvers<undefined>()
+    const turn = state.rootExecution.execute({ route: brandString<NativeRootRouteId>('root'), id, resume: false,
+      message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Investigate the slow title provider' }] }),
+      onEvent(event) {
+        if (event.type !== 'turn/end') return
+        endedTurns += 1
+        if (endedTurns === 1) firstTurnEnded.resolve(undefined)
+        if (endedTurns === 2) followUpTurnEnded.resolve(undefined)
+      },
+    }, new AbortController().signal)
+    await Promise.all([titleEntered.promise, firstModelEntered.promise])
+    const owner = state.sessions.owners().find(owner => owner.session.id === id)
+    if (owner === undefined) throw new Error('root title owner was released before its first turn')
+    await owner.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue the investigation' }] }),
+      'next-turn', true, new AbortController().signal)
+    releaseFirstModel.resolve(undefined)
+    await Promise.all([firstTurnEnded.promise, followUpTurnEnded.promise])
+    expect(endedTurns).toBe(2)
+    expect(state.model.requests).toHaveLength(2)
+    expect(owner.messages('next-turn')).toHaveLength(0)
+
+    const settled = await Promise.race([turn.then(() => true), new Promise<boolean>(resolve => setTimeout(() => resolve(false), 1_000))])
+    expect(settled).toBe(true)
+    expect(providerDone).toBe(false)
+
+    let cancelled = false
+    const cancellation = state.rootExecution.cancel(owner).then(() => { cancelled = true })
+    await aborted.promise
+    expect(cancelled).toBe(false)
+    expect(providerDone).toBe(false)
+    releaseTitle.resolve(undefined)
+    await cancellation
+    expect(providerDone).toBe(true)
+  } finally {
+    releaseFirstModel.resolve(undefined)
+    releaseTitle.resolve(undefined)
+    await state.close()
+  }
 })

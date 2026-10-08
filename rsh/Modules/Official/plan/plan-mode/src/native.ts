@@ -165,9 +165,17 @@ export const plugin: NativePlugin = {
         // Selections made during an open turn apply at the next accepted step,
         // after every downstream admission decision; the narration is already queued.
         const admission = owner.beforeStep(async (step, next) => {
-          const decision = await next()
           const key = owner.session.id
-          if (decision.kind === 'reject' || step.signal.aborted || selections.pending(key) === undefined) return decision
+          const selected = selections.pending(key)
+          const notice = state.notice
+          const decision = await next()
+          if (decision.kind === 'reject' || step.signal.aborted || selected === undefined
+            || selections.pending(key) !== selected || state.notice !== notice) return decision
+          const needsNotice = selected.narrate && selections.narration(view(owner, state), selected.active) !== undefined
+          const noticeAdmitted = notice !== undefined && notice.active === selected.active
+            && step.candidates.some(message => message.id === notice.id)
+            && decision.messages.some(message => message.id === notice.id)
+          if (needsNotice && !noticeAdmitted) return decision
           try {
             selections.applyBoundary(key, view(owner, state))
           } catch (error: unknown) {

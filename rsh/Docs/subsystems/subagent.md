@@ -4,7 +4,7 @@ English | [中文](subagent.zh.md)
 
 The subagent seam lets an agent delegate work to a child agent. Like [bash](shell.md), it is **one optional capability**, not part of the agent loop, so its types live here rather than in [core.md](core.md). It differs from the other capability seams because **multiple provider implementations coexist** in one context, registered by name (`ctx.subagents`), while bash allows only one executor. Its registry follows the [LLM adapter registry](llm-streaming.md), not the single-service bash executor.
 
-Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Service Providers are sibling packages (`dsh-subagent-spawn-in-process`, `dsh-subagent-fork-in-process`, `dsh-subagent-acp`, `dsh-subagent-codex`, `dsh-subagent-claude-code`, `dsh-subagent-dsh-sdk`); the model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
+Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process`, `dsh-subagent-fork-in-process`, `dsh-subagent-acp`, `dsh-subagent-codex`, `dsh-subagent-claude-code`); the legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-dsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
 
 Sources: [`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts), [`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts), and [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)
 
@@ -32,6 +32,8 @@ interface NativeExternalSubagentRequest {
   readonly maxDepth: number
   /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
   readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
+  /** Capabilities resolved from the exact initiating parent Session. */
+  readonly authority: NativeSessionDelegationAuthority
   /** Task label and exact Program-selected workspace. */
   readonly label: string
   readonly cwd: string
@@ -48,6 +50,8 @@ interface NativeExternalSubagentRequest {
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
   readonly outputSchema?: ObjectJsonSchema
+  /** Parent approval for the builtin writer, when the exact parent grant and sandbox allow it. */
+  readonly approval?: NativeExternalSubagentApprovalRelay
 }
 ```
 
@@ -90,6 +94,8 @@ interface NativeExternalSubagentDriver {
     readonly toolFilter: boolean
     /** Whether the product validates and returns the requested structured output. */
     readonly outputSchema: boolean
+    /** Whether the product transports one-shot approval requests to the exact parent. */
+    readonly approvalRelay?: boolean
   }
   /** Start the selected product child and return only after a genuine readiness handshake.
    * @param request - detached, resolved child input.
