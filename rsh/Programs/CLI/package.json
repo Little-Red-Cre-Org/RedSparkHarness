@@ -155,7 +155,7 @@
     "@deepseek-ai/dsh-workflow-worker-thread": "workspace:^",
     "@deepseek-ai/dsh-workflow": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^4.3.2",
     "node-addon-require-builtin": "^0.1.4",
     "@deepseek-ai/dsh-user-question-broker": "workspace:^"
   },

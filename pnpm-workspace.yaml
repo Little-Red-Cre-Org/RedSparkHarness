@@ -41,6 +41,34 @@ linkWorkspacePackages: true
 overrides:
   '@deepseek-ai/cosmokit': 'link:rsh/Core/vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:rsh/Core/vendor/schemastery'
+  # Security floors for transitive dependencies whose parents still declare
+  # vulnerable ranges. Each selector covers only the affected range of one
+  # release line, so no consumer crosses a major version. Remove an entry once
+  # every parent requires the patched release.
+  'brace-expansion@<1.1.21': '^1.1.21'
+  'brace-expansion@>=2.0.0 <2.1.7': '^2.1.7'
+  'brace-expansion@>=4.0.0 <5.0.12': '^5.0.12'
+  # undici floors are scoped to the parents that pin the 6.x and 7.x lines: a
+  # version-range selector would also rewrite openai's `>=5 <9` peer range and
+  # move the direct undici 8 peer back to 6.x.
+  'node-gyp>undici': '^6.28.1'
+  '@electron/get>undici': '^7.29.1'
+  '@yao-pkg/pkg-fetch>undici': '^7.29.1'
+  'e2b>undici': '^7.29.1'
+  'jsdom>undici': '^7.29.1'
+  'nanoid@<3.3.18': '^3.3.18'
+  'postcss@<8.5.18': '^8.5.18'
+  'source-map-js@<1.2.2': '^1.2.2'
+  'http-cache-semantics@<4.2.1': '^4.2.1'
+  'browserslist@<4.28.7': '^4.28.7'
+  '@vue/server-renderer@<3.5.42': '^3.5.42'
+  'proxy-addr@<2.0.8': '^2.0.8'
+  'fast-uri@>=3.0.0 <3.1.8': '^3.1.8'
+  'ip-address@>=10.0.0 <10.7.1': '^10.7.1'
+  # The MCP reference servers used as mcp-client test fixtures were locked
+  # before the SDK fix.
+  '@modelcontextprotocol/server-everything>@modelcontextprotocol/sdk': '^1.32.1'
+  '@modelcontextprotocol/server-filesystem>@modelcontextprotocol/sdk': '^1.32.1'
 
 peerDependencyRules:
   allowedVersions:

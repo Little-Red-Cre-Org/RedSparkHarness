@@ -78,6 +78,7 @@ This section explains the durability and verification design behind the storage,
 - **Normalize once, project per route.** Admission persists one provider-independent normalized attachment; request projection derives deterministic variants without rewriting durable history.
 - **Lazy alpha-routed encoding.** Alpha images use WebP and opaque images use JPEG; quality candidates run in 85/75/60 order, and the smallest output is retained when none meets the encoded-byte target.
 - **Limits are write-time policy.** Byte, total-pixel, and per-side dimension limits bind admission only, so tightening them later never makes admitted history unreadable.
+- **Signature allow-list before decoding.** Every Sharp pipeline opens through one function that accepts only PNG, JPEG, WebP, and GIF leading signatures. HEIF/AVIF, SVG/XML, TIFF, and all other bytes fail with `INVALID_IMAGE` before libvips selects a loader, so decoders outside the accepted formats never parse attachment bytes.
 
 ### Write and read paths
 
@@ -107,6 +108,7 @@ Generic-file bytes have one canonical object at `<DSH_HOME>/attachments/v1/file-
 | [`src/request-image.ts`](src/request-image.ts) | Route-specific request transforms and cache identity |
 | [`src/request-store.ts`](src/request-store.ts) | Cordis-free durable image reads and shared request work |
 | [`src/image.ts`](src/image.ts) | Full raster decode and metadata verification |
+| [`src/signature.ts`](src/signature.ts) | Leading-signature allow-list that gates every Sharp input |
 | — | No runtime invariant companion is published; immutable writes and verified reads are enforced directly at the backend boundary. |
 
 </details>

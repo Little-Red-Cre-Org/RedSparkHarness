@@ -6,6 +6,12 @@ import { detectImage } from '../src/image.ts'
 
 const POLICY: NormalizationPolicy = { maxPixels: 2048 * 2048, maxDimension: 8192, maxBytes: 4 * 1024 * 1024 }
 
+/** Supported signatures followed by bytes no decoder accepts, so the encoder pipeline itself fails. */
+const UNDECODABLE = {
+  png: Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3),
+  jpeg: Uint8Array.of(0xff, 0xd8, 0xff, 1, 2, 3),
+} as const
+
 /** Deterministic pseudo-random RGB noise; PNG cannot compress it below raw size. */
 function noisePixels(width: number, height: number): Uint8Array {
   const pixels = new Uint8Array(width * height * 3)
@@ -241,7 +247,7 @@ describe('normalizeImage', () => {
       mediaType: 'image/png', width: 5000, height: 5000, animated: false, carriesMetadata: false,
       depth: 'ushort', space: 'rgb16', hasAlpha: true,
     } as const
-    await expect(normalizeImage(Uint8Array.of(1, 2, 3), detected, POLICY))
+    await expect(normalizeImage(UNDECODABLE.png, detected, POLICY))
       .rejects.toMatchObject({
         code: 'ATTACHMENT_WRITE_FAILED',
         message: 'The 16-bit PNG could not be converted to the normalized 8-bit sRGB form.',
@@ -262,7 +268,7 @@ describe('normalizeImage', () => {
       hasAlpha: false,
     } as const
 
-    await expect(normalizeImage(Uint8Array.of(1, 2, 3), detected, POLICY))
+    await expect(normalizeImage(UNDECODABLE[fields.mediaType === 'image/png' ? 'png' : 'jpeg'], detected, POLICY))
       .rejects.toMatchObject({
         code: 'ATTACHMENT_WRITE_FAILED',
         message: `The ${source} could not be converted to the normalized 8-bit sRGB form.`,
