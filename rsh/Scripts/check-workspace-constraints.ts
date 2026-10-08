@@ -181,6 +181,12 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-theme': ['lib/styles'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
+  '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-web-fetch-http': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-web-search-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-web-search-exa': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-web-search-perplexity': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-web': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],

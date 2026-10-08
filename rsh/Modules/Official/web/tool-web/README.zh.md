@@ -79,6 +79,10 @@ web_fetch({ url: 'https://example.com' })
 
 schema 校验会在执行前拒绝缺失或非数组的 `queries` 字段、非字符串数组元素、超限数组或空白 URL，错误消息精确，例如 `Error: queries must contain at least one query` 与 `Error: url must be a non-empty string`。提供方侧失败以结构化错误工具结果呈现；模型可以读取并决定下一步，例如抓取被引用的 URL 或精化查询。
 
+### 原生入口
+
+原生组合导入 `./native`。该入口依赖 `tools` 与 `web`，可选依赖 `promptSections`。它与 Cordis 入口调用同一份共享核心，因此模型可见的参数 schema、参数错误、查询合并、结果文本、展示 meta 与提示词指引完全一致，并接受相同的配置字段。两条路径上的调用截止时间都由工具调用超时守卫负责，因此原生工具只遵循调用信号，不会自行启动计时器（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -248,6 +252,7 @@ schema 校验会在执行前拒绝缺失或非数组的 `queries` 字段以及�
 
 这些限制说明工具在哪些情况下不完整或需要部署配合。它们是当前包约束。
 
+- **原生工具不自行设定截止时间** — 原生入口接受 `searchTimeoutMs` / `fetchTimeoutMs`，但只有在原生工具调用超时守卫能读取单个工具预算后才会执行；在此之前，原生 `web_search` 仅受调用信号约束（`web_fetch` 另受抓取 Provider 自身 `timeoutMs` 约束）。`native-sdk` 与 `native-acp` 组合暂不安装 web 相关行。
 - **没有覆盖整个批次的原生搜索计数器**：`searchMaxQueries` 限制 `ctx.web.search` 调用数，但提供方可以在每次调用内执行多次原生搜索；例如，配置了 `maxUses` 的以模型为后端的提供方最多可以执行 `searchMaxQueries × maxUses` 次原生搜索，`searchMaxResults` 只限制返回给调用方的组合来源。部署通过这些独立的消费方与提供方设置控制成本，因为服务不知道提供方内部的搜索计量单位。
 - **HTML→markdown 转换会省略无法安全表示的输入**——[turndown](https://github.com/mixmark-io/turndown) 会通过真实 DOM 转换至多 `fetchMaxOutputChars` 个源字符。512 层嵌套守卫与转换异常会产生固定省略标记，而不是返回原始 HTML；表格 `colspan` 仍不受支持，因为 GFM 无法表示跨列单元格（[已归档的依赖决策](../../../../../.agents/notes/archived/simplification/2026-07-26-turndown-for-tool-web-html-markdown.md)）。
 - **面向模型的接口有意保持精简，后续扩展暂缓**：`max_results` 保持为配置上限（不是模型参数），`web_fetch` 只接受 `url`（没有 `format`／`prompt`／LLM（大语言模型）摘要模式）；两项都列为 [seam Agent Note](../../../../../.agents/notes/implemented/architecture/2026-06-24-web-capability-seam.zh.md) 中的后续步骤。

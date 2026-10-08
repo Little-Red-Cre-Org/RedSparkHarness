@@ -67,6 +67,10 @@ kind: "package-reference"
 
 失败抛出携带可按机器路由 code 的 `WebError`：凭据缺失为 `WEB_PROVIDER_CREDENTIAL_MISSING`，调用方取消为 `WEB_ABORTED`，提供方或传输失败，包括响应中没有 `web_search_tool_result` 块，为 `WEB_PROVIDER_ERROR`。HTTP 重定向会在接触 `Location` 指向的目标之前被拒绝。请求发出后的每项失败都会指出已解析的搜索端点，并说明搜索端点配置独立于聊天端点。如果该端点不符合用户预期，错误消息会要求会话模型指导用户进入 Settings > Plugins > Plugin configuration > Web search，修改 Endpoint 字段并保存。该页面不可用时，消息会把 `DEEPSEEK_SEARCH_BASE_URL` 和 `web-search-deepseek.baseURL` 作为部署配置方式。模型不得替用户选择或修改端点。面向模型的 `web_search` 工具会在自己的错误包装层内呈现这段文本。
 
+### 原生入口
+
+原生组合导入 `./native`。该入口依赖 `web` 与 `launchEnvironment`，可选依赖 `settings` 与 `credentials`。它与 Cordis 入口共享配置、密钥解析（优先 credentials 服务，其次启动环境）、基础 URL 优先级与 Provider 实现。其设置分区注册到原生 settings 服务并实时生效。每个辅助请求离开进程之前，它都会等待一条追加到发起调用 Session 的 `web/deepseek-search-llm-request` 事件；记录失败时不会发送请求（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+
 -----
 
 <a id="understand-the-implementation"></a>

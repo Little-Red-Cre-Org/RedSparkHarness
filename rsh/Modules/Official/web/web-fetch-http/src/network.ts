@@ -12,7 +12,7 @@ import { isIP } from 'node:net'
 import type { Dispatcher, Response } from 'undici'
 
 import ipaddr from 'ipaddr.js'
-import { WebError } from '@deepseek-ai/dsh-web'
+import { WebError } from '@deepseek-ai/dsh-web/native'
 
 /** One address resolved and retained for the subsequent pinned connection. */
 export interface PublicAddress {

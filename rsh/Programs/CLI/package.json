@@ -157,7 +157,10 @@
     "@deepseek-ai/schemastery": "workspace:^",
     "js-yaml": "^4.3.2",
     "node-addon-require-builtin": "^0.1.4",
-    "@deepseek-ai/dsh-user-question-broker": "workspace:^"
+    "@deepseek-ai/dsh-user-question-broker": "workspace:^",
+    "@deepseek-ai/dsh-web": "workspace:^",
+    "@deepseek-ai/dsh-web-fetch-http": "workspace:^",
+    "@deepseek-ai/dsh-web-search-deepseek": "workspace:^"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
