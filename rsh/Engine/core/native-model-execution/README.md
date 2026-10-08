@@ -20,7 +20,9 @@ English | [中文](README.zh.md)
 
 ## Configuration
 
-The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt.
+The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt, unless a recovery policy retries it.
+
+`onRecovery(policy)` installs a recovery policy and returns its remover. After a failed attempt is recorded, policies receive the normalized failure, the route's retry policy and the Session writer callbacks. The retry policy comes from the model's `retryPolicy(provider)`, or the LLM runtime default when the model declares none. Later registrations run first; each policy may call `next()` at most once, and returning without it claims the failure. A `{ kind: 'retry' }` decision dispatches a fresh attempt for the same step. An adapter that throws is offered the same way; when no policy retries it, the original error is rethrown. A cancelled request is never offered for recovery.
 
 An optional `onChunk` observer receives accepted stream chunks from this same dispatch. Observer failures interrupt the attempt and preserve its recorded partial stream; the observer creates neither another model request nor another writer.
 

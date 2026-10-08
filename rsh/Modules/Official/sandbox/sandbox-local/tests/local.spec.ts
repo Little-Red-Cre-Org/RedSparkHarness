@@ -438,7 +438,7 @@ describe('the windows-acl probe (runner invocation contract)', () => {
       windowsAclRunnerEntry: absentRunnerEntry(),
     })
     const confined = sandbox.confine(['true'], RO)
-    expect(confined.argv.slice(0, 3)).toEqual([process.execPath, '--import', 'tsx/esm'])
+    expect(confined.argv.slice(0, 3)).toEqual([process.execPath, '--import', import.meta.resolve('tsx/esm')])
     expect(confined.argv[3]).toMatch(/runner\.ts$/)
   })
 

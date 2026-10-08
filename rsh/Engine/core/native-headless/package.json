@@ -69,7 +69,10 @@
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
-    "@deepseek-ai/dsh-native-code-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
+    "@deepseek-ai/dsh-llm-retry": "workspace:^",
+    "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
+    "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
