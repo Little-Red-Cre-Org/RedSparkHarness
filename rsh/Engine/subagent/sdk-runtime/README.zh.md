@@ -45,6 +45,7 @@ kind: "package-library"
 | [`src/native.ts`](src/native.ts) | Engine 所有的 Program launcher capability contract |
 | [`src/types.ts`](src/types.ts) | 共用 runtime 与调用方选项类型 |
 | [`src/index.ts`](src/index.ts) | 包导出面 |
+| — | 本包不发布 runtime invariant companion，因为它公开的是 provider-neutral SDK client API，而非 plugin 注册；其生命周期约定通过该 API 验证。 |
 
 普通调用方 API 与可执行文件解析仍归 [Programs SDK](../../../Programs/SDK/packages/client/README.zh.md)。Engine runtime 不含另一套 agent loop；所选 Native server 将工作路由到既有 Native Session executor。
 

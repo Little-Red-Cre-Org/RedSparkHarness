@@ -86,6 +86,7 @@ console.log(result.finalResponse)
 | [`src/native-launcher.ts`](src/native-launcher.ts) | 固定 Native child launcher：提供方 overlay、父 sandbox policy 与私有 home 清理 |
 | [`src/native.ts`](src/native.ts) | Native Host 固定 child launcher 导出 |
 | Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.zh.md) | 唯一的 `HarnessClient`、`DeepSeekHarness` 与 provider-neutral SDK 协议 runtime 实现 |
+| — | 本包不发布 runtime invariant companion，因为它是在调用方进程中运行的 SDK client library，而非 runtime plugin；公开 SDK API 覆盖其 launcher 与 connection 生命周期。 |
 
 ### 自有活动流程
 

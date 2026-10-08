@@ -87,6 +87,7 @@ The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `Har
 | [`src/native-launcher.ts`](src/native-launcher.ts) | Fixed Native child launcher: provider overlay, parent sandbox policy, and private-home cleanup |
 | [`src/native.ts`](src/native.ts) | Native Host exports for the fixed child launcher |
 | Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.md) | Single implementation of `HarnessClient`, `DeepSeekHarness`, and the provider-neutral SDK protocol runtime |
+| — | No runtime invariant companion is published because this client-process library is not a runtime plugin; its launch and connection lifecycle are covered through the public SDK API. |
 
 ### Owned activity flow
 

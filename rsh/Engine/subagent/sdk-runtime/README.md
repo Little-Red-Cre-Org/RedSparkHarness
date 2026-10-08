@@ -43,6 +43,7 @@ The `createNativeSdkChildHarness` helper binds the same client implementation to
 | [`src/native.ts`](src/native.ts) | Engine-owned contract for the injected Program launcher capability |
 | [`src/types.ts`](src/types.ts) | Shared runtime and caller option types |
 | [`src/index.ts`](src/index.ts) | Package export surface |
+| — | No runtime invariant companion is published because this library exposes an SDK client API rather than a registered plugin; the lifecycle contract is exercised through that API. |
 
 The normal caller-facing API and executable resolution remain in [Programs SDK](../../../Programs/SDK/packages/client/README.md). The Engine runtime does not contain another agent loop; the selected Native server routes work through the existing Native Session executor.
 

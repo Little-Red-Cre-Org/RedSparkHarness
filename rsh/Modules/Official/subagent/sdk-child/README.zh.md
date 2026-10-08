@@ -36,6 +36,8 @@ SDK 入口只接受工作区、提供方／模型／推理路由、每次请求�
 
 本适配器将一个已准入的 Native 外部子任务请求映射为 child SDK Session。SDK 握手协商出 `maxSteps` 后即报告就绪；所选 server 会将其限制到 profile 上限，并由 Headless loop 在后续 turn 执行时强制该上限。`maxTokens` 限制每次 child 模型请求。Module 返回 child 的 `result` promise 与 `dispose` 函数；结果可能先于 dispose 完成而结算。Native Subagent Provider 会等待结果与受管进程清理完成，再持久化并发布终态事实／结果。Native Subagent 拥有准入、谱系、父 Session 写入和终态发布；[共用 SDK runtime](../../../../Engine/subagent/sdk-runtime/README.zh.md) 拥有协议 client。
 
+本适配器不发布 runtime invariant companion，因为其按请求运行的生命周期没有独立运行时观测；Native Subagent 拥有准入、谱系、父 Session 写入和终态发布，child server 则拥有持久 Session 事件。
+
 <a id="further-exploration"></a>
 ## 进一步探索
 

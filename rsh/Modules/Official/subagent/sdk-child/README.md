@@ -36,6 +36,8 @@ The SDK entry accepts only the workspace, provider/model/reasoning route, per-re
 
 The adapter maps one admitted Native external-child request to a child SDK Session. It reports readiness after the SDK handshake negotiates `maxSteps`; the selected server clamps that value to its profile ceiling, and the Headless loop enforces it when a subsequent turn runs. `maxTokens` caps each child model request. The Module returns a child `result` promise and `dispose` function; the result may settle before disposal completes. The Native Subagent Provider awaits the result and managed-process cleanup before persisting and publishing the terminal fact/result. Native Subagent owns admission, lineage, parent Session writes, and terminal publication; the [shared SDK runtime](../../../../Engine/subagent/sdk-runtime/README.md) owns the protocol client.
 
+No runtime invariant companion is published because the adapter's per-request lifecycle has no independent runtime observation; Native Subagent owns admission, lineage, parent Session writes, and terminal publication, while the child server owns durable Session events.
+
 <a id="further-exploration"></a>
 ## Further Exploration
 
