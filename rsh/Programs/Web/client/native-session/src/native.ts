@@ -321,7 +321,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
           || !Number.isSafeInteger(result.sourceEventSeq) || result.sourceEventSeq < 0)) {
         throw new TypeError('invalid native Session command result')
       }
-      return data as unknown as CommandExecution
+      return data
     }
     case 'session/answer-human':
       if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')

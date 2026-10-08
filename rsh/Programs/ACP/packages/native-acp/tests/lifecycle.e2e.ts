@@ -279,7 +279,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
     const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
     expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
-      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) })
+      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
     const requestsBeforeCompact = requests.length
     expect(await transport.request('session/prompt', { sessionId: created.sessionId,
       prompt: [{ type: 'text', text: '/compact' }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
@@ -322,7 +322,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
     expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
-      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) })
+      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
     expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
     expect(permissionRequests).toHaveLength(2)
     permissionRelease.resolve(undefined)

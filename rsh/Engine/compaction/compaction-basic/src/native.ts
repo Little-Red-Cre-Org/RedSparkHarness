@@ -115,7 +115,10 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
       this.hooks.set(owner, owner.beforeStep(this.admission(owner), this.config.admissionOrder))
     }
     const releases = [
-      activeSessions.onAttached(async (owner) => { installHook(owner) }),
+      activeSessions.onAttached((owner) => {
+        installHook(owner)
+        return Promise.resolve()
+      }),
       activeSessions.onDetached(async (owner) => {
         const release = this.hooks.get(owner)
         await release?.()
