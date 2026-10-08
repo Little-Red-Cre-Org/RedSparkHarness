@@ -140,7 +140,7 @@ kind: "package-reference"
 
 ### 原生 profile
 
-原生 profile 在原生 `model`、`tokenMeter` 与 `activeSessions` 旁选择 `./native`，`toolResultPruner` 为可选。配置接受兼容入口的全部字段，另加 `admissionOrder`（默认 `100`），即 `beforeStep` admission 顺序；因此压缩在 Goal 续跑（`700`）等后续 admission hook 之前、请求派生之前运行。每个已附加会话获得一个 hook，它在开放轮次内应用共享的 `compactForTrigger` 策略（阈值、剪枝步骤、保留与缩减验证），然后继续调用链。上下文容量来自已路由模型描述；容量未知时，hook 对每个目标只警告一次并跳过。摘要通过原生 `model.stream()` 发送到配置的 `summarizer` 目标或最近一次已路由请求的目标；在任何请求被路由之前没有回退模型。`compactNow()` 支撑原生 `/compact`：Program writer 不可用时以 `busy` 拒绝，否则选择保留量为零的范围，写入 `turn: null` 标记对，并在标记对闭合后 flush owner。自动路径失败时记录警告并继续 admission；取消会向上传播。[原生压缩 Agent Note](../../../../.agents/notes/implemented/architecture/2026-10-08-native-compaction.zh.md) 记录了位置选择与暂缓工作。
+原生 profile 在原生 `model`、`tokenMeter` 与 `activeSessions` 旁选择 `./native`，`toolResultPruner` 为可选。配置接受兼容入口的全部字段，另加 `admissionOrder`（默认 `100`），即 `beforeStep` admission 顺序；因此压缩在 Goal 续跑（`700`）等后续 admission hook 之前、请求派生之前运行。启用自动压缩时，Provider 会为每个现存 owner 安装一个 hook，包括 Provider 激活时已驻留的 owner；之后附加的 owner 也各安装一个 hook。每个 hook 在开放轮次内应用共享的 `compactForTrigger` 策略（阈值、剪枝步骤、保留与缩减验证），然后继续调用链。上下文容量来自已路由模型描述；容量未知时，hook 对每个目标只警告一次并跳过。摘要通过原生 `model.stream()` 发送到配置的 `summarizer` 目标或最近一次已路由请求的目标；在任何请求被路由之前没有回退模型。`compactNow()` 支撑原生 `/compact`：Program writer 不可用时以 `busy` 拒绝，否则选择保留量为零的范围，写入 `turn: null` 标记对，并在标记对闭合后 flush owner。自动路径失败时记录警告并继续 admission；取消会向上传播。[原生压缩 Agent Note](../../../../.agents/notes/implemented/architecture/2026-10-08-native-compaction.zh.md) 记录了位置选择与暂缓工作。
 
 </details>
 

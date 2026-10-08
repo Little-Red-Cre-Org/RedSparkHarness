@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-08-native-compaction.md
-2026-10-08-native-compaction.md: 29177917c3995c781357265e740c0a0e02a7f887
-2026-10-08-native-compaction.zh.md: b2f06af133a7d445826fabc728cfe4c897d950cc
+2026-10-08-native-compaction.md: 485b06ef4f04f84859c3d4fc8d2f6a0323d27c95
+2026-10-08-native-compaction.zh.md: 23f86591274297ac62b414c3cc08d0fdd8ca4e3f

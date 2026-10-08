@@ -97,28 +97,30 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
   ) {}
 
   /**
-   * Register automatic pressure compaction on every future active owner.
-   * @returns removal of both lifecycle observers.
+   * Register automatic pressure compaction on every current and future active owner.
+   * @returns removal of lifecycle observers after accepted callbacks and hooks drain.
    */
   attach(): () => Promise<void> {
     const { activeSessions } = this.services
+    const installHook = (owner: NativeActiveSessionOwner): void => {
+      if (this.hooks.has(owner)) return
+      this.hooks.set(owner, owner.beforeStep(this.admission(owner), this.config.admissionOrder))
+    }
     const releases = [
-      activeSessions.onAttached(async (owner) => {
-        this.hooks.set(owner, owner.beforeStep(this.admission(owner), this.config.admissionOrder))
-        await Promise.resolve()
-      }),
+      activeSessions.onAttached(async (owner) => { installHook(owner) }),
       activeSessions.onDetached(async (owner) => {
         const release = this.hooks.get(owner)
-        this.hooks.delete(owner)
         await release?.()
+        if (this.hooks.get(owner) === release) this.hooks.delete(owner)
       }),
     ]
+    for (const owner of activeSessions.owners()) installHook(owner)
     return async () => {
-      const failures = (await Promise.allSettled([
-        ...releases.map(async (release) => { await release() }),
-        ...[...this.hooks.values()].map(async (release) => { await release() }),
-      ])).filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      const observers = await Promise.allSettled(releases.map(async (release) => { await release() }))
+      const hooks = await Promise.allSettled([...this.hooks.values()].map(async (release) => { await release() }))
       this.hooks.clear()
+      const failures = [...observers, ...hooks]
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
       if (failures.length > 0) {
         throw new AggregateError(failures.map(failure => failure.reason as unknown), 'compaction-basic: hook cleanup failed')
       }
