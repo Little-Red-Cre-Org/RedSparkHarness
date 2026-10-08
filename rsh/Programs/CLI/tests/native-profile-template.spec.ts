@@ -199,3 +199,35 @@ it('installs the Cordis-equivalent web search and fetch rows in the headless, we
     expect(profile.installations.some(row => row.plugin === '@deepseek-ai/dsh-tool-web')).toBe(false)
   }
 })
+
+it.each(['native-web', 'native-tui'] as const)('installs native session titles with the Cordis base policy in %s', (profileName) => {
+  const installed = createRequire(new URL('../package.json', import.meta.url))
+  const profile = shippedNativeProfileComposition('/tmp/rsh-title', profileName, 'linux')
+  expect(profile.installations.filter(row => row.id === 'session-title' || row.id === 'session-title-llm')).toEqual([
+    { id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
+      config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
+    { id: 'session-title-llm', plugin: '@deepseek-ai/dsh-session-title-first-prompt-llm', scope: 'root',
+      config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
+  ])
+  for (const name of ['@deepseek-ai/dsh-session-title', '@deepseek-ai/dsh-session-title-first-prompt-llm']) {
+    expect(installed.resolve(`${name}/package.json`)).toBeTruthy()
+  }
+})
+
+it.each(['native-headless', 'native-sdk', 'native-acp'] as const)('keeps title and plan Consumers out of %s', (profileName) => {
+  const plugins = shippedNativeProfileComposition('/tmp/rsh-title', profileName, 'linux').installations.map(row => row.plugin)
+  expect(plugins).not.toContain('@deepseek-ai/dsh-session-title')
+  expect(plugins).not.toContain('@deepseek-ai/dsh-plan-mode')
+})
+
+it('installs plan mode beside the native TUI command registry', () => {
+  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', 'native-tui', 'linux')
+  const ids = profile.installations.map(row => row.id)
+  const plan = profile.installations.find(row => row.id === 'plan-mode')
+  expect(plan).toMatchObject({ plugin: '@deepseek-ai/dsh-plan-mode', scope: 'root' })
+  expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
+  expect(ids).toContain('commands')
+  expect(ids).toContain('user-questions')
+  expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
+    .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
+})
