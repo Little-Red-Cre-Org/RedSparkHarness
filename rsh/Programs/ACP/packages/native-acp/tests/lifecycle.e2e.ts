@@ -17,7 +17,8 @@ import { plugin as executionPlugin } from '@deepseek-ai/dsh-native-session-execu
 import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as modelSelectionPlugin } from '@deepseek-ai/dsh-native-model-selection/native'
-import { NativeApprovalRequestId, type NativeApprovalService } from '@deepseek-ai/dsh-native-approval'
+import { NativeApprovalRequestId } from '@deepseek-ai/dsh-native-approval'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
@@ -39,7 +40,7 @@ async function failedClose(home: string): Promise<void> {
   let app: NativeAcpApplication | undefined
   let rootExecution: NativeRootExecutionOperations | undefined
   let activeSessions: NativeActiveSessionOperations | undefined
-  let approval: NativeApprovalService | undefined
+  let approval: NativeApprovalServiceDefinition | undefined
   const permissionRequests: Record<string, unknown>[] = []
   const modelProvider: NativePlugin = { apiVersion: 1, name: 'close-model', targets: ['host'],
     requires: [], provides: ['model', 'modelDirectory'], resolve: () => (context) => {
@@ -118,30 +119,31 @@ async function failedClose(home: string): Promise<void> {
   const signal = AbortSignal.timeout(10_000)
   try {
     if (rootExecution === undefined) throw new Error('ACP root execution service was not installed')
-    const ready = rootExecution.ready(signal)
+    const rootOperations = rootExecution
+    const ready = rootOperations.ready(signal)
     await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
     await ready
     const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
     const owner = activeSessions?.owners().find(candidate => candidate.session.id === created.sessionId)
     if (owner === undefined) throw new Error('ACP root owner was not attached')
-    const route = rootExecution.capture(owner)
+    const route = rootOperations.capture(owner)
     expect(route).toMatchObject({ id: `acp:${created.sessionId}`, configuration: { cwd: home } })
-    expect(rootExecution.workspaceRoutes()).toEqual([])
-    expect('createWorkspaceRoute' in rootExecution).toBe(false)
-    await expect(rootExecution.releaseIdle({ route: route.id, id: owner.session.id, expectedOwner: owner }, signal))
+    expect(rootOperations.workspaceRoutes()).toEqual([])
+    expect('createWorkspaceRoute' in rootOperations).toBe(false)
+    await expect(rootOperations.releaseIdle({ route: route.id, id: owner.session.id, expectedOwner: owner }, signal))
       .rejects.toThrow('native-headless: idle retirement route or Agent identity changed')
     const secondCwd = join(home, 'other-workspace')
     await mkdir(secondCwd)
     const second = await transport.request('session/new', { cwd: secondCwd, mcpServers: [] }, signal) as { sessionId: string }
     const secondOwner = activeSessions?.owners().find(candidate => candidate.session.id === second.sessionId)
     if (secondOwner === undefined) throw new Error('second ACP root owner was not attached')
-    expect(rootExecution.capture(secondOwner)).toMatchObject({ id: `acp:${second.sessionId}`, configuration: { cwd: secondCwd } })
+    expect(rootOperations.capture(secondOwner)).toMatchObject({ id: `acp:${second.sessionId}`, configuration: { cwd: secondCwd } })
     await transport.request('session/close', { sessionId: second.sessionId }, signal)
-    expect(() => rootExecution.capture(secondOwner)).toThrow('active root owner has no live Session route')
-    expect(rootExecution.capture(owner)).toBe(route)
+    expect(() => rootOperations.capture(secondOwner)).toThrow('active root owner has no live Session route')
+    expect(rootOperations.capture(owner)).toBe(route)
 
     const freshId = SessionId('review-provider-fresh-root')
-    await rootExecution.maintenance({ route: route.id, id: freshId, resume: false }, async (fresh) => {
+    await rootOperations.maintenance({ route: route.id, id: freshId, resume: false }, async (fresh) => {
       // Seed the fork boundary through the exact Engine owner and its only writer.
       fresh.append('turn/start', { turn: 1 })
       fresh.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -149,7 +151,7 @@ async function failedClose(home: string): Promise<void> {
     }, signal)
     const freshOwner = activeSessions?.owners().find(candidate => candidate.session.id === freshId)
     if (freshOwner === undefined) throw new Error('Provider-created fresh root owner was not attached')
-    expect(rootExecution.capture(freshOwner)).toBe(route)
+    expect(rootOperations.capture(freshOwner)).toBe(route)
     if (approval === undefined) throw new Error('native approval Provider was not installed')
     await expect(approval.request({ id: NativeApprovalRequestId('provider-fresh-permission'), agent: freshOwner.agent,
       toolName: 'write_file', callId: ToolCallId('provider-fresh-call'), signal })).resolves.toMatchObject({ outcome: 'allowed-once' })
@@ -157,22 +159,22 @@ async function failedClose(home: string): Promise<void> {
     expect(permissionRequests[0]).toMatchObject({ sessionId: created.sessionId,
       toolCall: { toolCallId: 'provider-fresh-call' } })
     const lookalikeOwner = { ...freshOwner }
-    expect(() => rootExecution.capture(lookalikeOwner)).toThrow('active root owner has no live Session route')
-    expect(() => rootExecution.cancel(lookalikeOwner)).toThrow('active root owner has no live Session route')
+    expect(() => rootOperations.capture(lookalikeOwner)).toThrow('active root owner has no live Session route')
+    expect(() => rootOperations.cancel(lookalikeOwner)).toThrow('active root owner has no live Session route')
     const delegatedOwner = { ...freshOwner, invocation: 'delegated' as const }
-    expect(() => rootExecution.capture(delegatedOwner)).toThrow('active root owner has no live Session route')
-    expect(() => rootExecution.cancel(delegatedOwner)).toThrow('active root owner has no live Session route')
-    await rootExecution.cancel(freshOwner)
-    expect(() => rootExecution.capture(freshOwner)).toThrow('active root owner has no live Session route')
-    expect(rootExecution.capture(owner)).toBe(route)
+    expect(() => rootOperations.capture(delegatedOwner)).toThrow('active root owner has no live Session route')
+    expect(() => rootOperations.cancel(delegatedOwner)).toThrow('active root owner has no live Session route')
+    await rootOperations.cancel(freshOwner)
+    expect(() => rootOperations.capture(freshOwner)).toThrow('active root owner has no live Session route')
+    expect(rootOperations.capture(owner)).toBe(route)
 
     const forkId = SessionId('review-provider-fork-root')
-    await rootExecution.fork({ route: route.id, source: freshId, id: forkId }, signal)
+    await rootOperations.fork({ route: route.id, source: freshId, id: forkId }, signal)
     const forkOwner = activeSessions?.owners().find(candidate => candidate.session.id === forkId)
     if (forkOwner === undefined) throw new Error('Provider-created fork owner was not attached')
-    expect(rootExecution.capture(forkOwner)).toBe(route)
-    await rootExecution.cancel(forkOwner)
-    expect(rootExecution.capture(owner)).toBe(route)
+    expect(rootOperations.capture(forkOwner)).toBe(route)
+    await rootOperations.cancel(forkOwner)
+    expect(rootOperations.capture(owner)).toBe(route)
 
     failClose = true
     const closing = transport.request('session/close', { sessionId: created.sessionId }, signal).catch((error: unknown) => error)
