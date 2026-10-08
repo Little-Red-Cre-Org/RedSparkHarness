@@ -78,7 +78,7 @@ function fakeHttpServer(routes: WebRoute[]): WebServer {
   const fake: Pick<WebServer, 'register' | 'tapIndex' | 'port'> = {
     register(route) {
       routes.push(route)
-      return () => { routes.splice(routes.indexOf(route), 1) }
+      return async () => { routes.splice(routes.indexOf(route), 1) }
     },
     tapIndex: () => () => {},
     port: 0,

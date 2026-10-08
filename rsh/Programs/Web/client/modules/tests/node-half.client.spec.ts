@@ -87,7 +87,7 @@ function constructWithRoute(
     port: 0,
     register: (candidate) => {
       if (candidate.path === '/plugins') route = candidate
-      return () => {}
+      return async () => {}
     },
     tapIndex: () => () => {},
   }

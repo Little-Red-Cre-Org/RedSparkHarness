@@ -12910,12 +12910,12 @@ importers:
       '@deepseek-ai/dsh-compat-settings-definition':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
-      '@deepseek-ai/dsh-host-webserver':
-        specifier: workspace:^
-        version: link:../../host/webserver
       '@deepseek-ai/dsh-http-routes':
         specifier: workspace:^
         version: link:../../../../Core/util/http-routes
+      '@deepseek-ai/dsh-http-routes-cordis':
+        specifier: workspace:^
+        version: link:../../../../Compatibility/DSH/bridge/http-routes-cordis
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
