@@ -96,6 +96,8 @@ Type declarations add no model input, so provider cache reuse is unaffected.
 <a id="dev-note"></a>
 ### Dev Note
 
+The published declarations are Cordis-free and have no framework peer or installer. Native and compatibility profile readers import the same types.
+
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
