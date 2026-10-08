@@ -36,7 +36,8 @@
         "sessionPersistence",
         "model",
         "modelExecution",
-        "agents"
+        "agents",
+        "activeSessions"
       ],
       "optional": [
         "tools",
@@ -48,14 +49,14 @@
         "agentInstructions",
         "modelSelection",
         "sessionExecution",
-        "activeSessions",
         "agentPresets",
         "workspaceRegistry",
         "attachments",
         "modelDirectory"
       ],
       "provides": [
-        "application"
+        "application",
+        "rootExecution"
       ]
     }
   },

@@ -46,7 +46,7 @@ kind: "package-reference"
 
 `./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。原生 Host 移除 Provider 时会等待已打开句柄关闭。
 
-构建后的原生入口沿当前 Session、持久化、格式与模型值依赖链加载时不会加载 Cordis；包根入口仍是 Cordis 插件入口。
+随包发布的原生入口与 CommonJS migration verifier 无需安装 Cordis 即可运行；包根入口仍是 Cordis 插件入口。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
