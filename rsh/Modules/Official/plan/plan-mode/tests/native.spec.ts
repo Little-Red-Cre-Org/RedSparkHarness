@@ -22,6 +22,7 @@ import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { EXIT_APPROVED_TEXT, REVIEW_DISMISSED_MESSAGE } from '../src/common.ts'
 import { plugin, type NativePlanMode } from '../src/native.ts'
+import { PlanModeSelections, type PlanSessionView } from '../src/selection.ts'
 
 const SECTION = 'Plan-mode guidance for the fixture.'
 const PLAN = '# Ship the cache\n\n1. Inspect.\n2. Change.'
@@ -30,7 +31,7 @@ vi.setConfig({ testTimeout: 15_000 })
 
 /** Compose native plan mode with the shipped headless Providers, the command registry, and a human question broker. */
 async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dismissAt?: number,
-  barrier?: { readonly entered: () => void; readonly wait: () => Promise<void> }) {
+  barrier?: { readonly entered: () => void; readonly wait: () => Promise<void> }, extra: readonly NativePlugin[] = []) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-native-plan-'))
   const scope = new NativeScope()
   const model = new MockAdapter(script)
@@ -108,6 +109,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dis
     { plugin: dismisser, scope, config: undefined }, { plugin: brokerPlugin, scope, config: undefined },
     { plugin, scope, config: { section: SECTION } },
     ...(barrier === undefined ? [] : [{ plugin: admissionBarrierPlugin, scope, config: undefined }]),
+    ...extra.map(plugin => ({ plugin, scope, config: undefined })),
     { plugin: modelProvider, scope, config: undefined }, { plugin: capture, scope, config: undefined },
     { plugin: applicationPlugin, scope, config: { cwd: root, provider: 'mock', model: 'fixture', systemPrompt: 'Help.', maxSteps: 6 } },
   ], 'host'))
@@ -141,6 +143,9 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], dis
         }
         return results
       }, new AbortController().signal),
+    /** Read the plan-mode states while the Session's owner is attached, between turns. */
+    inspect: (id: SessionId) => application.executeSessionOperation({ id, resume: true },
+      () => Promise.resolve(planMode?.states() ?? []), new AbortController().signal),
     turn: (id: SessionId, resume: boolean, text: string) => application.executeTurn({
       id, resume, message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }),
     }, new AbortController().signal),
@@ -160,6 +165,11 @@ function userTexts(request: GenerateOptions | undefined): string[] {
 
 function planModes(events: readonly SessionEvent[]): boolean[] {
   return events.flatMap(event => event.type === 'plan/mode' ? [event.data.active] : [])
+}
+
+/** Whether one event is a durable plan-mode notice in history. */
+function isPlanNotice(event: SessionEvent): boolean {
+  return event.type === 'user/message' && event.data.source.kind === 'plugin' && event.data.source.plugin === 'plan-mode'
 }
 
 it('commits idle /plan selections, withdraws a stale notice, and admits exactly one guidance notice before the next prompt', async () => {
@@ -276,8 +286,10 @@ it('queues a mid-turn /plan until the next accepted step and admits its notice t
     const mode = events.findIndex(event => event.type === 'plan/mode')
     const secondStep = events.findLastIndex(event => event.type === 'step/start')
     expect(planModes(events)).toEqual([true])
-    expect(mode).toBeLessThan(secondStep)
-    expect(mode).toBeGreaterThan(events.findIndex(event => event.type === 'tool/result'))
+    // The mode commits inside the step that delivers the guidance, only after the notice is durable.
+    expect(mode).toBeGreaterThan(secondStep)
+    expect(mode).toBeGreaterThan(events.findIndex(isPlanNotice))
+    expect(mode).toBeLessThan(events.findLastIndex(event => event.type === 'step/end'))
     expect(userTexts(state.model.requests[0])).toEqual(['Start implementing'])
     expect(userTexts(state.model.requests[1]).at(-1)).toBe(`The user switched this session to plan mode.\n\n${SECTION}`)
   } finally { await state.close() }
@@ -303,11 +315,138 @@ it('does not apply a plan selection queued after the candidate snapshot until it
     const mode = events.findIndex(event => event.type === 'plan/mode')
     const secondStep = events.findLastIndex(event => event.type === 'step/start')
     expect(mode).toBeGreaterThan(firstResult)
-    expect(mode).toBeLessThan(secondStep)
+    expect(mode).toBeGreaterThan(secondStep)
+    expect(mode).toBeGreaterThan(events.findIndex(isPlanNotice))
     expect(userTexts(state.model.requests[0])).toEqual(['Start implementing'])
     expect(userTexts(state.model.requests[1])).toContain(`The user switched this session to plan mode.\n\n${SECTION}`)
   } finally {
     resume.resolve(undefined)
     await state.close()
   }
+})
+
+it('keeps a narrated selection pending when its admitted notice is rejected before it is durable, then delivers and commits it at a later step', async () => {
+  let rejected = 0
+  // Inner admission hook: lets the plan notice through admission, then rejects
+  // it in the Program's final commit check, after the plan hook has returned.
+  const rejector: NativePlugin = {
+    apiVersion: 1, name: 'plan-test-notice-rejector', targets: ['host'], requires: ['activeSessions'], provides: [],
+    resolve: () => (context) => {
+      const sessions = context.require('activeSessions')
+      const releases = new Map<NativeActiveSessionOwner, () => Promise<void>>()
+      context.effect(sessions.onAttached(async (owner) => {
+        releases.set(owner, owner.beforeStep(async (step, next) => {
+          const decision = await next()
+          const notice = decision.kind === 'enter'
+            ? decision.messages.find(message => message.source.kind === 'plugin' && message.source.plugin === 'plan-mode')
+            : undefined
+          if (notice !== undefined && rejected === 0) {
+            rejected += 1
+            step.registerCommitCheck(() => [notice.id])
+          }
+          return decision
+        }, 700))
+      }))
+      context.effect(sessions.onDetached(async (owner) => {
+        await releases.get(owner)?.()
+        releases.delete(owner)
+      }))
+      context.own(async () => {
+        await Promise.all([...releases.values()].map(release => release()))
+        releases.clear()
+      })
+    },
+  }
+  const state = await fixture([toolCallResponse('probe', 'exit_plan_mode', { plan: PLAN }), textResponse('planning now')],
+    undefined, undefined, [rejector])
+  const entered = Promise.withResolvers<undefined>()
+  const resume = Promise.withResolvers<undefined>()
+  const original = state.model.stream.bind(state.model)
+  let paused = false
+  vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    if (!paused) {
+      paused = true
+      entered.resolve(undefined)
+      await resume.promise
+    }
+    yield* original(options)
+  })
+  const id = SessionId('native-plan-rejected-notice')
+  const guidance = `The user switched this session to plan mode.\n\n${SECTION}`
+  try {
+    const run = state.turn(id, false, 'Start implementing')
+    await entered.promise
+    expect((await state.running('/plan'))?.kind).toBe('success')
+    resume.resolve(undefined)
+    await run
+
+    // The notice was admitted in memory at step 2 and then rejected: nothing
+    // reached history, so the mode is not committed and the selection survives.
+    expect(rejected).toBe(1)
+    const failed = await state.events(id)
+    expect(failed.some(isPlanNotice)).toBe(false)
+    expect(planModes(failed)).toEqual([])
+    expect(state.model.requests).toHaveLength(1)
+    expect(await state.inspect(id)).toEqual([expect.objectContaining({ active: false, pending: true })])
+
+    await state.turn(id, true, 'Keep going')
+    expect(state.model.requests).toHaveLength(2)
+    expect(userTexts(state.model.requests[1]).slice(-2)).toEqual([guidance, 'Keep going'])
+    const events = await state.events(id)
+    const notice = events.findIndex(isPlanNotice)
+    const mode = events.findIndex(event => event.type === 'plan/mode')
+    expect(events.filter(isPlanNotice)).toHaveLength(1)
+    expect(planModes(events)).toEqual([true])
+    // Only the durable notice commits the mode, inside the step that delivered it.
+    expect(mode).toBeGreaterThan(notice)
+    expect(notice).toBeGreaterThan(events.findLastIndex(event => event.type === 'step/start'))
+    expect((await state.inspect(id)).map(entry => [entry.active, entry.pending])).toEqual([[true, undefined]])
+  } finally {
+    resume.resolve(undefined)
+    await state.close()
+  }
+})
+
+it('commits a narrated selection through the shared core only for the announced mode, after a successful append', () => {
+  let logged = false
+  let told: boolean | undefined = false
+  let failAppend = true
+  const appended: boolean[] = []
+  const view: PlanSessionView = {
+    loggedActive: () => logged,
+    toldActive: () => told,
+    hasOpenTurn: () => true,
+    appendMode: (active) => {
+      if (failAppend) throw new Error('writer closed')
+      appended.push(active)
+      logged = active
+    },
+  }
+  const selections = new PlanModeSelections<string>(new Map(), active => `mode ${String(active)}`)
+  expect(selections.awaitsNarration('s', view)).toBe(false)
+  expect(selections.commitNarrated('s', view, true)).toBe(false)
+
+  selections.approveExit('s')
+  expect(selections.awaitsNarration('s', view)).toBe(false)
+  expect(selections.commitNarrated('s', view, false)).toBe(false)
+  expect(selections.pending('s')).toEqual({ active: false, narrate: false })
+
+  expect(selections.select('s', view, true).outcome).toBe('queued')
+  expect(selections.awaitsNarration('s', view)).toBe(true)
+  expect(selections.commitNarrated('s', view, false)).toBe(false)
+  expect(() => selections.commitNarrated('s', view, true)).toThrow('writer closed')
+  expect(selections.pending('s')).toEqual({ active: true, narrate: true })
+
+  failAppend = false
+  told = true
+  expect(selections.awaitsNarration('s', view)).toBe(false)
+  expect(selections.commitNarrated('s', view, true)).toBe(true)
+  expect(appended).toEqual([true])
+  expect(selections.pending('s')).toBeUndefined()
+
+  // A narrated selection that already matches the logged mode clears without another append.
+  expect(selections.select('s', view, false).outcome).toBe('queued')
+  logged = false
+  expect(selections.commitNarrated('s', view, false)).toBe(true)
+  expect(appended).toEqual([true])
 })
