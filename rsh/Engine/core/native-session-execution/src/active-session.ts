@@ -119,6 +119,8 @@ export interface NativeActiveSessionOwner {
    * @returns exact idempotent release; Program cancellation overrides retention and still drains work.
    */
   retain(): () => void
+  /** Retain root background work without delaying its foreground result; cancellation still drains it. */
+  retainBackground?(): () => void
   /**
    * Observe only backend-accepted events; observers must not synchronously await new persistence.
    * @param observer - synchronous durable-event observer.

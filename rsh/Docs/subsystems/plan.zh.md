@@ -21,7 +21,7 @@ agent 运行时，唯一的追加点是前置（prepend）注册的 `agent/pre-s
 ```ts type-equiv
 /** Deployment-owned plan guidance. */
 interface PlanModeConfig {
-  /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
+  /** Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active. */
   section: string
 }
 ```
@@ -50,7 +50,7 @@ Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by 
 
 ### `ctx.planMode` — `PlanModeController`
 
-`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. Client carriers expose the projection's cropped `{ active, pending }` view.
+`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. Client carriers expose the projection's cropped `{ active, pending }` view. The selection state machine and the reviewed exit are the shared framework-free core in `./selection.ts`; this class is the Cordis glue.
 
 ```ts cordis-catalog
 /**

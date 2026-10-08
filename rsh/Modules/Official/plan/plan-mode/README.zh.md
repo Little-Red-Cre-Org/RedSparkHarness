@@ -45,7 +45,7 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `section` | 必填 | 计划模式激活时作为 `plan:policy` 提示词段落渲染的引导 |
+| `section` | 必填 | 计划模式激活时作为 `plan:policy` 提示词段落渲染（Cordis）或由进入计划模式的通知携带（原生）的引导 |
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-plan-mode)完整列出了所有受支持的字段及其 JSDoc。
 
@@ -65,6 +65,10 @@ agent 完成计划后，会以 markdown 形式、从标题开头书写计划并�
 ### 观察计划状态
 
 界面可以显示计划模式是否激活，以及你请求的模式变更是否仍在等待生效。该状态在每个标签页中一致，并能在重启后保留。
+
+### 原生运行时
+
+`./native` 入口为原生 profile 提供同样的 `/plan` 命令、`exit_plan_mode` 工具与 `plan/mode` 日志。它依赖 `tools` 与 `activeSessions`，在组合了 `commands` 与 `userQuestions` 时使用它们，并提供只读的 `planMode` 视图。内置 `native-tui` profile 以与 Cordis 基础 bundle 相同的指导文本安装它。原生系统提示词在会话内不可变，因此指导以排队到下一步的计划模式通知送达：进入计划模式时先说明切换、再附上配置的 `section`，离开时只说明切换。智能体空闲时的切换立即记入日志；若在智能体运行前又切回，排队的通知会被撤回。空闲时的 `/plan <消息>` 会把消息排到你的下一条提示之前，而不是启动新的 turn。
 
 -----
 
@@ -88,6 +92,10 @@ agent 完成计划后，会以 markdown 形式、从标题开头书写计划并�
 
 命令子插件只在组合了命令服务时激活。它把不带参数的 `/plan` 映射为激活，把恰好为 `off` 的参数映射为未激活且不发送模型输入，把其他非空参数映射为激活并把去除首尾空白的文本通过 `agent.steer()` 作为下一步骤的普通已记录用户消息提交。已准入的图片块与文件块按选择顺序进入这条消息；带附件的 `/plan off` 会在模式变更前失败。命令以外的入口可以直接驱动 `ctx.planMode`；确切的分支处理见 [`src/index.ts`](src/index.ts)。
 
+### 一份核心，两个运行时
+
+选择状态机、边界应用、通知规则、命令解析与经评审的退出只在 [`src/selection.ts`](src/selection.ts) 中实现一次。Cordis 服务与原生插件只提供各自的会话读取、持久追加与投递：Cordis 通过 pre-step 决策发出通知并把指导渲染为提示词段落；原生入口在最外层的步骤准入钩子中应用待定选择，并最多保留一条排队的计划通知，用于告知模型接下来应知道的模式。原生的“已告知”状态是上一个 `step/start` 时生效的模式，对应 Cordis 的请求头折叠。
+
 ### 退出工具
 
 `exit_plan_mode` 在计划模式未激活时仍保持注册，因此进入或离开只改变提示词段落，绝不改变请求的工具目录。经批准的评审会记录一个静默的待生效退出，由下一个被接受的轮内 pre-step 追加，当前这批工具调用剩余部分仍保留计划引导。缺少用户交互通道，或评审等待期间服务重载，调用都会以拒绝方式失败，`/plan off` 仍是手动退路。
@@ -100,7 +108,10 @@ agent 完成计划后，会以 markdown 形式、从标题开头书写计划并�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、`ctx.planMode` 服务、`plan:policy` 段落、`/plan` 命令、`exit_plan_mode` 工具 |
+| [`src/index.ts`](src/index.ts) | Cordis 胶水层：`Config` schema、`ctx.planMode` 服务、`plan:policy` 段落、`/plan` 命令、`exit_plan_mode` 工具、`plan` 投影 |
+| [`src/selection.ts`](src/selection.ts) | 两个入口共享的框架无关行为：选择状态机、边界应用、通知规则、`/plan` 输入解析与经评审的退出 |
+| [`src/common.ts`](src/common.ts) | 框架无关事实：`plan/mode` 事件、配置校验、面向模型的文本、评审问题与回答检查、命令结果文本 |
+| [`src/native.ts`](src/native.ts) | 原生胶水层：owner 折叠、步骤准入钩子、排队的计划通知、`/plan` 命令与 `exit_plan_mode` 值工具 |
 | [`src/types.ts`](src/types.ts) | `plan` 投影 key 声明与 `PlanProjection` 协议值 |
 | [`src/client.ts`](src/client.ts) | types 出口的客户端命名空间再导出 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：校验 `plan/mode` 载荷结构 |
@@ -180,6 +191,8 @@ You are in plan mode. Explore and design before presenting the complete plan thr
 
 这些限制描述计划模式在哪些情况下不符合你的预期，或需要额外的注意。它们是当前包约束，不是路线图。
 
+- **原生空闲消息等待下一条提示**：原生空闲时的 `/plan <消息>` 只排队消息而不启动 turn，因为原生唤醒会启动一个 TUI 不显示的 turn。
+- **原生 profile**：只有 `native-tui` 安装计划模式；原生 Web 尚无计划客户端界面，headless、SDK 与 ACP profile 没有切换入口。
 - **引导而非强制**——计划模式只通过文本约束；需要强制限制的部署要分别配置沙箱模式与审批策略。
 - **待生效选择只存在于进程内**——某轮最后一个被接受的 pre-step 之后作出的选择，若进程在另一个被接受的轮内 pre-step 之前退出就会丢失；UI 必须重新应用它。
 - **没有创建时 plan 选项**——fork 的 agent 继承已记录的计划状态，新 spawn 的 agent 则从未激活开始。
