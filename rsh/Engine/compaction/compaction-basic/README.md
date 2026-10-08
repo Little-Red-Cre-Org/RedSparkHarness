@@ -134,7 +134,13 @@ The transaction validates the surface span and the durable lock, appends `compac
 | [`src/summarizer.ts`](src/summarizer.ts) | Default `ctx.llm.stream()` summarization, checkpoint framing, safe-summary projection |
 | [`src/config.ts`](src/config.ts) | Load-time validation and routed-model policy resolution |
 | [`src/types.ts`](src/types.ts) | `BasicCompactionConfig` and resolved policy vocabulary |
+| [`src/policy.ts`](src/policy.ts) | Runtime-neutral logic both entries call: trigger thresholds, step-pressure failure handling, turn and idle transactions, policy-selected summarization |
+| [`src/native.ts`](src/native.ts) | Native `compaction` provider: admission hook, `/compact` backend, routed capacity |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. The durable bracket remains observable in the session log. |
+
+### Native profile
+
+Native profiles select `./native` beside native `model`, `tokenMeter`, and `activeSessions`, with optional `toolResultPruner`. Configuration accepts the compatibility fields plus `admissionOrder` (default `100`), the `beforeStep` admission order; compaction therefore runs before later admission hooks such as Goal continuation (`700`) and before request derivation. Each attached session receives one hook that applies the shared `compactForTrigger` policy (threshold, pruning step, retention, and shrink validation) under the open turn, then continues the chain. Context capacity comes from the routed model descriptor; when it is unknown, the hook warns once per target and skips. Summaries stream through native `model.stream()` to the configured `summarizer` target or the latest routed request's target; no fallback model exists before a request has been routed. `compactNow()` backs native `/compact`: it rejects with `busy` while the Program writer is unavailable, otherwise selects a retain-zero range, writes a `turn: null` bracket, and flushes the owner after the bracket closes. Automatic failures log a warning and admission continues; cancellation propagates. The [native compaction Agent Note](../../../../.agents/notes/implemented/architecture/2026-10-08-native-compaction.md) records the placement and deferred work.
 
 </details>
 
@@ -242,6 +248,7 @@ These limits define when automatic condensation is a poor fit or needs special c
 - **Some indivisible-unit and envelope-only overflow remains outside surface compaction** — recovery cannot shrink system/tools/prefix, split an indivisible non-tool node, or repair a tool unit whose non-prunable remainder still exceeds the window. The optional pruner can shrink text-bearing tool-result bulk inside an otherwise indivisible pair.
 - **`compactRegion` requires an open turn** — a manual call on a fully-closed session throws ("no open turn") rather than compacting.
 - **Summarization failure preserves the latest durable surface** — before any replacement, the auto path logs a warning and proceeds with full over-budget history. If pruning already landed, a later summarization failure proceeds from that durable pruned surface. Summarization truncation at `maxTokens`, which hidden reasoning tokens can consume, follows the same rule.
+- **Native profiles do not recover from overflow responses** — the native executor exposes no request-error hook, so a `CONTEXT_WINDOW_EXCEEDED` response is not retried after compaction; pre-step pressure compaction still runs, and `compactIfNeeded(owner, 'context-overflow', signal)` remains available to callers. Native `compactRegion()` is not exposed.
 
 <a id="dev-note"></a>
 ### Dev Note

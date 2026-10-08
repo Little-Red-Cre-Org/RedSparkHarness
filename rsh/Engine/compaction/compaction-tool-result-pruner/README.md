@@ -85,10 +85,16 @@ Pruning measures `text` blocks by Unicode code point (non-text blocks cost zero)
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `ToolResultPruner` service, `pruneSession` / `pruneContent` / `measureContent` |
+| [`src/index.ts`](src/index.ts) | Compatibility plugin entry: `ToolResultPruner` service, `pruneSession` / `pruneContent` / `measureContent` |
+| [`src/core.ts`](src/core.ts) | Runtime-neutral measurement, content pruning, and the stable-surface pass |
+| [`src/native.ts`](src/native.ts) | Native `toolResultPruner` provider (`./native`) |
 | [`src/config.ts`](src/config.ts) | `PRUNE_MARKER`, defaults, code-point counting, budget validation |
 | [`src/types.ts`](src/types.ts) | `ToolResultPruneConfig`, `ResolvedConfig`, `PrunedEntry`, `PruneResult` |
 | — | No runtime invariant companion is published; Session validates each content-only rewrite and its companion owns cross-event enclosure. |
+
+### Native profile
+
+Native profiles select `./native` beside native `tokenMeter`. It provides `toolResultPruner` with `measureContent(blocks)`, `pruneContent(blocks)`, and `pruneSession(owner)`, using the same configuration, budgets, and replacement protocol as the compatibility service; both entries delegate to `src/core.ts`. The owner supplies the session and the Program writer's `append`. Native compaction calls `pruneSession()` before range selection, so replacements land inside the open turn exactly as they do in compatibility profiles.
 
 </details>
 

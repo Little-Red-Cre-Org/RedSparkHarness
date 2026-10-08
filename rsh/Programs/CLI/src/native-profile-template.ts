@@ -27,6 +27,12 @@ const NATIVE_WORKFLOW_INSTALLATIONS = [
     config: { workflowProvider: 'worker-thread', subagentProvider: 'spawn' } },
 ] as const
 
+const NATIVE_COMPACTION_INSTALLATIONS = [
+  { id: 'token-meter', plugin: '@deepseek-ai/dsh-token-meter', scope: ROOT },
+  { id: 'tool-result-pruner', plugin: '@deepseek-ai/dsh-compaction-tool-result-pruner', scope: ROOT },
+  { id: 'compaction', plugin: '@deepseek-ai/dsh-compaction-basic', scope: ROOT },
+] as const
+
 function cliRuntimeRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
@@ -108,6 +114,7 @@ export function shippedNativeProfileComposition(
         { id: 'ask-user-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT },
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
         { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: ROOT },
+        { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
         { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
         { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
           config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
@@ -145,6 +152,7 @@ export function shippedNativeProfileComposition(
       ...(profile === 'native-tui' ? [{ id: 'tool-todo-minimal', plugin: '@deepseek-ai/dsh-tool-todo', scope: 'minimal',
         config: { allowParallelInProgress: true } }] : []),
       { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: ROOT },
+      ...NATIVE_COMPACTION_INSTALLATIONS,
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
         config: { path: join(home, 'profiles', profile, 'task-scheduler.sqlite') },

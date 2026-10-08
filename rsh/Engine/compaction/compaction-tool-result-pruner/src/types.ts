@@ -1,4 +1,4 @@
-import type { ToolCallId } from '@deepseek-ai/dsh-llm'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { SessionSeq } from '@deepseek-ai/dsh-session/types'
 
 /** Character-budget policy for deterministic tool-result pruning. */

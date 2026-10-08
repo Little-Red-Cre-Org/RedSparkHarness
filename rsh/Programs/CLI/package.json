@@ -78,7 +78,11 @@
     "@deepseek-ai/dsh-tool-subagent-control": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
     "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
-    "@deepseek-ai/dsh-tool-goal": "workspace:^"
+    "@deepseek-ai/dsh-tool-goal": "workspace:^",
+    "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "workspace:^",
+    "@deepseek-ai/dsh-compaction-basic": "workspace:^",
+    "@deepseek-ai/dsh-command-compact": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -98,11 +102,8 @@
     "@deepseek-ai/dsh-client-ui-agent-preset": "workspace:^",
     "@deepseek-ai/dsh-client-ui-cordis": "workspace:^",
     "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-command-compact": "workspace:^",
     "@deepseek-ai/dsh-command-goal": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-compaction-basic": "workspace:^",
-    "@deepseek-ai/dsh-compaction-tool-result-pruner": "workspace:^",
     "@deepseek-ai/dsh-cordis-client-runner": "workspace:^",
     "@deepseek-ai/dsh-headless": "workspace:^",
     "@deepseek-ai/dsh-hooks-claude-code": "workspace:^",
@@ -133,7 +134,6 @@
     "@deepseek-ai/dsh-terminal-bash": "workspace:^",
     "@deepseek-ai/dsh-time-context": "workspace:^",
     "@deepseek-ai/dsh-tmux-context": "workspace:^",
-    "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-tool-bash": "workspace:^",
     "@deepseek-ai/dsh-tool-bash-persistent": "workspace:^",
     "@deepseek-ai/dsh-tool-cordis": "workspace:^",

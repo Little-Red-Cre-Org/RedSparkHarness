@@ -8,27 +8,24 @@ import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { CompactionEngine, ManualCompactionError } from '@deepseek-ai/dsh-compaction'
 import type { CompactionResult, CompactionTrigger } from '@deepseek-ai/dsh-compaction'
-import type { TokenMeter } from '@deepseek-ai/dsh-token-meter'
+import type {} from '@deepseek-ai/dsh-token-meter'
 import type { Session, SessionSeq } from '@deepseek-ai/dsh-session'
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm'
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
 // Type-only: makes the optional sibling service available to `ctx.get()`.
 import type {} from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import { resolveConfig, resolveTargetPolicy } from './config.ts'
 import {
-  resolveCompactSpec,
-  resolveConfig,
-  resolveTargetPolicy,
-  TargetPressureConfigError,
-} from './config.ts'
-import {
-  assertNoActiveCompaction,
-  compactSurfaceRegion,
-  selectCompactableRange,
-} from './region.ts'
-import { summarizeWithLlm } from './summarizer.ts'
+  compactForStepPressure,
+  compactForTrigger,
+  compactIdleSurface,
+  compactTurnRegion,
+  routedTarget,
+  summarizeConversation,
+} from './policy.ts'
+import type { RoutedTarget } from './policy.ts'
+import type { RegionDependencies, RegionTarget } from './region.ts'
 import type { SummarizationInput, SummaryResult } from './summarizer.ts'
 import type {
   BasicCompactionConfig,
@@ -46,29 +43,16 @@ export type {
   ResolvedTargetPolicy,
 } from './types.ts'
 
-/** The region transaction's view of this service's dynamically dispatched summarizer. */
-type RegionSummarize = (input: SummarizationInput, agent: Agent, signal?: AbortSignal) => Promise<SummaryResult>
-
-/** Resolve the exact provider/model durably routed for the latest request. */
-function routedTarget(
-  session: Session,
-): Pick<LlmCallConfig, 'provider' | 'model'> | undefined {
-  const config = session.requestHeader()?.config
-  if (config === undefined || config.provider.length === 0 || config.model.length === 0) {
-    return undefined
-  }
-  return { provider: config.provider, model: config.model }
-}
-
-/** Resolve the conversation target used to select an optional policy override. */
-function conversationTarget(
-  agent: Agent,
-): Pick<LlmCallConfig, 'provider' | 'model'> | undefined {
-  const routed = routedTarget(agent.session)
-  if (routed !== undefined) return routed
+/** The agent's configured provider/model, when both are set. */
+function agentTarget(agent: Agent): RoutedTarget | undefined {
   if (agent.options.provider === undefined || agent.options.provider.length === 0
     || agent.options.model === undefined || agent.options.model.length === 0) return undefined
   return { provider: agent.options.provider, model: agent.options.model }
+}
+
+/** Bind the Session's own writer as the transaction append target. */
+function sessionTarget(session: Session): RegionTarget {
+  return { session, append: session.append.bind(session) }
 }
 
 const thresholdRatioSchema = z.number()
@@ -149,19 +133,13 @@ export class BasicCompactionEngine extends CompactionEngine {
       { agent, signal },
       next,
     ): Promise<PreStepDecision> => {
-      if (!signal.aborted) {
-        try {
-          const result = await this.compactIfNeeded(agent, 'pressure', signal)
-          if (result !== null) logResult(result, 'step pressure')
-        } catch (error: unknown) {
-          if (error instanceof TargetPressureConfigError) {
-            if (this.warnedPressureConfigTargets.has(error.targetKey)) return next()
-            this.warnedPressureConfigTargets.add(error.targetKey)
-          }
-          const message = error instanceof Error ? error.message : String(error)
-          ctx.logger.warn(`step compaction failed: ${message}; continuing the turn`)
-        }
-      }
+      const result = await compactForStepPressure(
+        () => this.compactIfNeeded(agent, 'pressure', signal),
+        signal,
+        this.warnedPressureConfigTargets,
+        (message) => { ctx.logger.warn(message) },
+      )
+      if (result !== null) logResult(result, 'step pressure')
       return next()
     })
 
@@ -239,11 +217,13 @@ export class BasicCompactionEngine extends CompactionEngine {
     agent: Agent,
     signal?: AbortSignal,
   ): Promise<SummaryResult> {
-    const target = conversationTarget(agent)
-    const config = target === undefined
-      ? this.config
-      : resolveTargetPolicy(this.config, target)
-    return summarizeWithLlm(this.ctx, config, input, agent, signal)
+    return summarizeConversation(
+      this.config,
+      options => this.ctx.llm.stream(options),
+      input,
+      { session: agent.session, fallback: agentTarget(agent) },
+      signal,
+    )
   }
 
   /**
@@ -261,75 +241,16 @@ export class BasicCompactionEngine extends CompactionEngine {
     trigger: CompactionTrigger,
     signal: AbortSignal,
   ): Promise<CompactionResult | null> {
-    const target = routedTarget(agent.session)
-    if (target === undefined) return null
-    const policy = resolveTargetPolicy(this.config, target)
-    const meter = this.ctx.tokenMeter
-    let measurement = meter.measure(agent.session)
-    switch (trigger) {
-      case 'context-overflow':
-        break
-      case 'pressure':
-        break
-      /* v8 ignore next -- closed-union exhaustiveness guard */
-      default:
-        assertNever(trigger, 'compaction trigger')
-    }
-
     // Pruning is optional so compaction-basic remains independently composable.
-    // Overflow always qualifies; pressure first resolves the routed model's
-    // capacity and checks its target-specific threshold.
     const prune = this.ctx.get('toolResultPruner')
-
-    if (trigger === 'context-overflow') {
-      if (prune !== undefined) {
-        prune.pruneSession(agent.session)
-        measurement = meter.measure(agent.session)
-      }
-      const range = selectCompactableRange(agent.session, measurement, 0)
-      if (range === null) return null
-      return this.compactRegion(range.start, range.end, agent, signal)
-    }
-
-    const context = (await this.ctx.llm.resolveModelInfo(target.provider, target.model, signal)).context
-    assertNoActiveCompaction(agent.session, 'automatic pressure compaction')
-    const targetKey = `${target.provider}/${target.model}`
-    if (context === undefined) {
-      throw new TargetPressureConfigError(
-        targetKey,
-        `compaction-basic: no context capacity for ${targetKey}; `
-        + 'configure contextWindow on that adapter model',
-      )
-    }
-    const spec = resolveCompactSpec(policy, context.contextWindow)
-    if (measurement.totalTokens < spec.thresholdTokens) return null
-
-    // Once pressure qualifies, land the model-free pass before choosing a
-    // summary range, then remeasure through the singleton replay fold.
-    if (prune !== undefined) {
-      prune.pruneSession(agent.session)
-      measurement = meter.measure(agent.session)
-    }
-    if (measurement.totalTokens < spec.thresholdTokens) return null
-
-    let result: CompactionResult | null = null
-    for (let attempt = 0; attempt <= spec.compactionRetries; attempt += 1) {
-      const range = selectCompactableRange(agent.session, measurement, spec.retainTokens)
-      if (range === null) {
-        /* v8 ignore else -- concrete replacement preserves a compactable checkpoint; subclass hooks cannot mutate it. */
-        if (result === null) return null
-        /* v8 ignore next -- paired with the defensive post-success branch above. */
-        break
-      }
-      result = await this.compactRegion(range.start, range.end, agent, signal)
-      measurement = meter.measure(agent.session)
-      if (measurement.totalTokens < spec.thresholdTokens) return result
-    }
-
-    throw new Error(
-      `compaction still above threshold after ${spec.compactionRetries + 1} compaction attempts `
-      + `(${measurement.totalTokens} estimated tokens >= threshold ${spec.thresholdTokens})`,
-    )
+    return compactForTrigger(this.config, {
+      session: agent.session,
+      meter: this.ctx.tokenMeter,
+      prune: prune === undefined ? undefined : () => { prune.pruneSession(agent.session) },
+      contextWindow: async (target, abort) =>
+        (await this.ctx.llm.resolveModelInfo(target.provider, target.model, abort)).context?.contextWindow,
+      compactRegion: (start, end, abort) => this.compactRegion(start, end, agent, abort),
+    }, trigger, signal)
   }
 
   /**
@@ -347,15 +268,7 @@ export class BasicCompactionEngine extends CompactionEngine {
     agent: Agent,
     signal?: AbortSignal,
   ): Promise<CompactionResult> {
-    return compactSurfaceRegion(
-      this.regionDependencies(),
-      agent.session,
-      start,
-      end,
-      agent,
-      { owner: 'current-turn', stability: 'whole-surface' },
-      signal,
-    )
+    return compactTurnRegion(this.regionDependencies(), sessionTarget(agent.session), start, end, agent, signal)
   }
 
   /**
@@ -377,27 +290,13 @@ export class BasicCompactionEngine extends CompactionEngine {
         const operationSignal = AbortSignal.any([agentSignal, signal])
         try {
           operationSignal.throwIfAborted()
-          const range = selectCompactableRange(
-            agent.session,
-            this.ctx.tokenMeter.measure(agent.session),
-            0,
-          )
-          if (range === null) return null
-          return await compactSurfaceRegion(
+          return await compactIdleSurface(
             this.regionDependencies(),
-            agent.session,
-            range.start,
-            range.end,
+            sessionTarget(agent.session),
             agent,
-            {
-              owner: null,
-              stability: 'selected-span',
-              ...sourceCommandId === undefined ? {} : { sourceCommandId },
-              flush: async () => {
-                await this.ctx.sessions.flush(agent.session)
-              },
-            },
+            async () => { await this.ctx.sessions.flush(agent.session) },
             operationSignal,
+            sourceCommandId,
           )
         } catch (error: unknown) {
           if (agentSignal.aborted && operationSignal.reason === agentSignal.reason) {
@@ -421,7 +320,7 @@ export class BasicCompactionEngine extends CompactionEngine {
   }
 
   /** Bind the effective token meter and dynamically dispatched summarizer hook. */
-  private regionDependencies(): { meter: TokenMeter; summarize: RegionSummarize } {
+  private regionDependencies(): RegionDependencies<Agent> {
     return {
       meter: this.ctx.tokenMeter,
       summarize: (input, owner, abort) => this.summarize(input, owner, abort),
