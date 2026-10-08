@@ -164,8 +164,8 @@ export class SessionTitleService extends Service {
     ctx.on('session/disposed', (session) => {
       const target = this.targets.get(session)
       if (target === undefined) return
-      this.engine.forget(target, 'session disposed during title generation')
       this.targets.delete(session)
+      this.engine.abandon(target, 'session disposed during title generation')
     })
   }
 

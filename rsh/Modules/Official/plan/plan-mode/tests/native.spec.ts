@@ -288,7 +288,7 @@ it('does not apply a plan selection queued after the candidate snapshot until it
   const resume = Promise.withResolvers<undefined>()
   const state = await fixture([
     toolCallResponse('probe', 'exit_plan_mode', { plan: PLAN }), textResponse('planning now'),
-  ], undefined, { entered: () => entered.resolve(undefined), wait: () => resume.promise })
+  ], undefined, { entered: () => { entered.resolve(undefined) }, wait: () => resume.promise })
   const id = SessionId('native-plan-late-selection')
   try {
     const run = state.turn(id, false, 'Start implementing')

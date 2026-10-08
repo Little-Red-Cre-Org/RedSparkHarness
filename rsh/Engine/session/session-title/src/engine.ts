@@ -313,15 +313,32 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
    * Abort and forget one released Session's work.
    * @param target - released target.
    * @param reason - abort reason.
+   * @returns after all work accepted for this target settles.
    */
   async forget(target: T, reason: string): Promise<void> {
+    const state = this.retire(target, reason)
+    if (state !== undefined) await this.drain(state.operations)
+  }
+
+  /**
+   * Stop accepting work for one Session without waiting for its provider.
+   * Remaining work stays in the engine's lifetime registry and `dispose()` drains it.
+   * @param target - released target.
+   * @param reason - abort reason.
+   */
+  abandon(target: T, reason: string): void {
+    this.retire(target, reason)
+  }
+
+  /** Close one target and return its outstanding work to the current lifecycle owner. */
+  private retire(target: T, reason: string): SessionTitleWorkState<R> | undefined {
     const state = this.work.get(target)
-    if (state === undefined) return
+    if (state === undefined) return undefined
     state.closing = true
     delete state.pending
     state.active?.controller.abort(new Error(reason))
     this.work.delete(target)
-    await this.drain(state.operations)
+    return state
   }
 
   /** Abort all work and wait for every accepted background operation. */

@@ -195,10 +195,12 @@ it('settles the root reply after queued follow-up turns while title generation r
     id: SessionTitleProviderId('slow-title'), automatic: 'first-prompt',
     async generate(request) {
       titleEntered.resolve(undefined)
-      await new Promise<void>(resolve => request.signal.addEventListener('abort', () => {
-        aborted.resolve(undefined)
-        void releaseTitle.promise.then(resolve)
-      }, { once: true }))
+      await new Promise<void>((resolve) => {
+        request.signal.addEventListener('abort', () => {
+          aborted.resolve(undefined)
+          void releaseTitle.promise.then(resolve)
+        }, { once: true })
+      })
       providerDone = true
       request.signal.throwIfAborted()
       return { title: 'never accepted', messageSeqs: request.messages.map(message => message.seq) }
@@ -239,7 +241,9 @@ it('settles the root reply after queued follow-up turns while title generation r
     expect(state.model.requests).toHaveLength(2)
     expect(owner.messages('next-turn')).toHaveLength(0)
 
-    const settled = await Promise.race([turn.then(() => true), new Promise<boolean>(resolve => setTimeout(() => resolve(false), 1_000))])
+    const settled = await Promise.race([turn.then(() => true), new Promise<boolean>((resolve) => {
+      setTimeout(() => { resolve(false) }, 1_000)
+    })])
     expect(settled).toBe(true)
     expect(providerDone).toBe(false)
 

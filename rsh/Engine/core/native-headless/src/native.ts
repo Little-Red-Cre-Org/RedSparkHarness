@@ -1356,7 +1356,8 @@ export class NativeHeadlessApplication implements NativeApplication {
       try {
         if (foreground && !signal.aborted) {
           await activation.waitForeground()
-          if (signal.aborted) await activation.done
+          const stillCancelled = (): boolean => signal.aborted
+          if (stillCancelled()) await activation.done
         } else await activation.done
       }
       catch (error: unknown) {
