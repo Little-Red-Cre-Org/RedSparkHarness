@@ -12,7 +12,7 @@ native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收�
 
 ## 启动运行时
 
-Python SDK 没有独立的应用入口。它以 `--profile sdk` 启动内置的 `dsh` CLI（命令行界面）；所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。
+Python SDK 没有独立的应用入口。默认情况下，它以 `--profile sdk` 启动内置的 `dsh` CLI（命令行界面）；传入 `profile="native-sdk"` 可选择 Native Runtime，同时保持 `sdk` 为默认 profile。所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。
 
 每次启动都必须显式指定 Harness home。请传入 `dsh_home`，或在子进程环境中提供非空的 `DSH_HOME`。SDK 刻意不会发现 `~/.dsh`。
 

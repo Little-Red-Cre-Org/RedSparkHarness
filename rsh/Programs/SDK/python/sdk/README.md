@@ -12,7 +12,7 @@ The native-sdk profile composes the production in-process subagent tool. Session
 
 ## Start a runtime
 
-The Python SDK has no separate application entrypoint. It launches the bundled `dsh` CLI with `--profile sdk`; the selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior.
+The Python SDK has no separate application entrypoint. By default, it launches the bundled `dsh` CLI with `--profile sdk`; pass `profile="native-sdk"` to select the Native Runtime while keeping `sdk` as the default. The selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior.
 
 Every launch requires an explicit Harness home. Pass `dsh_home` or provide a non-empty `DSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
 
