@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Modules/Official/web/web-search-perplexity/README.md
-README.md: ef9b05296763e562118736e65760c4e2db6b6605
-README.zh.md: 848580b63e9c5c3796551c1232bb577adfa08914
+README.md: 6505dbac5dff1ea20d9a778b439e7ce60667bf10
+README.zh.md: 728d44f38192c3b572ac4ff59788d00183173be0

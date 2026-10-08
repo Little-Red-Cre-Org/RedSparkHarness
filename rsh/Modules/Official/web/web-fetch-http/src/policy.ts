@@ -6,7 +6,7 @@
  * @module @deepseek-ai/dsh-web-fetch-http/policy
  */
 
-import { WebError } from '@deepseek-ai/dsh-web'
+import { WebError } from '@deepseek-ai/dsh-web/native'
 
 /** Maximum accepted request URL length enforced by the public fetch provider. */
 export const WEB_FETCH_MAX_URL_LENGTH = 2048

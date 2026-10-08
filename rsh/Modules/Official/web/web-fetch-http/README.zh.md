@@ -67,6 +67,10 @@ const page = await ctx.web.fetch({ url: 'https://example.com' })
 
 失败会抛出 `WebError`，其中包含可供程序路由的错误码：`WEB_INVALID_URL`、`WEB_BLOCKED_URL`、`WEB_FETCH_TOO_LARGE`、`WEB_FETCH_TIMEOUT`、`WEB_REDIRECT_BLOCKED`、`WEB_UNSUPPORTED_CONTENT_TYPE`、`WEB_ABORTED` 或 `WEB_PROVIDER_ERROR`。直接调用方可以按错误码路由；面向模型的 `web_fetch` 工具会在自己的错误包装层内把失败文本呈现给模型。
 
+### 原生入口
+
+原生组合导入 `./native`。该入口依赖 `web`，以与 Cordis 入口相同的限制、公网目标策略与抓取超时注册同一个 `http` Provider，并接收发起调用的取消信号。移除安装时会取消已接受的抓取，并等待其结束（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+
 -----
 
 <a id="understand-the-implementation"></a>

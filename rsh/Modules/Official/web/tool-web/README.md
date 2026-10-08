@@ -79,6 +79,10 @@ Tool registration follows product enablement, not backend availability: a tool s
 
 Schema validation rejects an absent or non-array `queries` field, non-string array elements, an oversized array, or a blank URL before execution, with exact messages such as `Error: queries must contain at least one query` and `Error: url must be a non-empty string`. Provider-side failures surface as structured error tool results; the model can read them and decide the next step, for example fetching a cited URL or refining a query.
 
+### Native entry
+
+Native compositions import `./native`, which requires `tools` and `web` and optionally `promptSections`. It calls the same shared core as the Cordis entry, so the model-visible parameter schemas, argument errors, query merge, result text, presentation meta and prompt guidance are identical. It accepts the same configuration fields. Call-deadline enforcement belongs to the tool-call timeout guard on both paths, so the native tools honor the invocation signal and do not arm a timer of their own ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -248,6 +252,7 @@ Append-only; newly visible content follows the reusable request prefix and does 
 
 These limits define when the tools are incomplete or need deployment cooperation. They are current package constraints.
 
+- **Native SDK and ACP compositions do not install the web rows.**
 - **There is no batch-wide native-search counter** — `searchMaxQueries` bounds `ctx.web.search` calls, but a provider may perform several native searches inside each call; for example a model-backed provider configured with `maxUses` can permit up to `searchMaxQueries × maxUses` native searches, and `searchMaxResults` limits only the combined sources returned to the caller. Deployments control cost through these independent consumer and provider settings because the service does not know provider-internal search units.
 - **HTML→markdown conversion omits inputs it cannot safely represent** — [turndown](https://github.com/mixmark-io/turndown) converts at most `fetchMaxOutputChars` source characters through a real DOM. A 512-level nesting guard and conversion exceptions produce a fixed omission marker instead of raw HTML; table `colspan` remains unsupported because GFM has no spanning-cell representation ([archived dependency decision](../../../../../.agents/notes/archived/simplification/2026-07-26-turndown-for-tool-web-html-markdown.md)).
 - **The model-facing API is minimal by design, with promotions deferred** — `max_results` stays a config bound (not a model argument), and `web_fetch` takes only `url` (no `format`/`prompt`/LLM-summarization mode); both are named later steps in [the seam Agent Note](../../../../../.agents/notes/implemented/architecture/2026-06-24-web-capability-seam.md).

@@ -16,7 +16,7 @@ import type {
   WebSearchRequest,
   WebSearchResult,
 } from './types.ts'
-import { WebError } from './types.ts'
+import { assertUniqueProvider, capSources, resolveProvider } from './selection.ts'
 
 export {
   WebError,
@@ -36,14 +36,6 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     web: WebRuntime
   }
-}
-
-/** Selection inputs for execution-time provider resolution. */
-interface Selection<P> {
-  /** The configured provider id for this capability, if any. */
-  readonly configuredId?: string
-  /** Providers registered for this capability kind. */
-  readonly providers: ReadonlyMap<string, P>
 }
 
 /**
@@ -116,9 +108,7 @@ export class WebRuntime extends Service {
   }
 
   private registerProvider<P extends { readonly id: string }>(store: Map<string, P>, provider: P): () => void {
-    if (store.has(provider.id)) {
-      throw new WebError(`a web provider with id "${provider.id}" is already registered`, 'WEB_DUPLICATE_PROVIDER')
-    }
+    assertUniqueProvider(store, provider.id)
     const dispose = this.ctx.effect(function* () {
       store.set(provider.id, provider)
       yield () => store.delete(provider.id)
@@ -161,42 +151,6 @@ export class WebRuntime extends Service {
     })
     return provider.fetch(request, signal)
   }
-}
-
-interface ResolvableProvider {
-  readonly id: string
-  available(): boolean
-}
-
-/** Resolve the selected provider or throw the matching {@link WebError}. */
-function resolveProvider<P extends ResolvableProvider>(selection: Selection<P>): P {
-  const { configuredId, providers } = selection
-  if (configuredId !== undefined) {
-    const provider = providers.get(configuredId)
-    if (!provider) {
-      throw new WebError(`configured web provider "${configuredId}" is not registered`, 'WEB_PROVIDER_CONFIGURED_MISSING')
-    }
-    if (!provider.available()) {
-      throw new WebError(`configured web provider "${configuredId}" is registered but unavailable`, 'WEB_PROVIDER_CONFIGURED_UNAVAILABLE')
-    }
-    return provider
-  }
-  const usable = [...providers.values()].filter(provider => provider.available())
-  const [single] = usable
-  if (single === undefined) {
-    throw new WebError('no usable web provider is registered', 'WEB_PROVIDER_UNAVAILABLE')
-  }
-  if (usable.length > 1) {
-    const ids = usable.map(provider => provider.id).join(', ')
-    throw new WebError(`multiple usable web providers are registered (${ids}); configure one explicitly`, 'WEB_PROVIDER_AMBIGUOUS')
-  }
-  return single
-}
-
-/** Enforce `maxResults` on a search result: truncate `sources[]` and flag it. */
-function capSources(result: WebSearchResult, maxResults: number | undefined): WebSearchResult {
-  if (maxResults === undefined || result.sources.length <= maxResults) return result
-  return { ...result, sources: result.sources.slice(0, maxResults), truncated: true }
 }
 
 export default WebRuntime

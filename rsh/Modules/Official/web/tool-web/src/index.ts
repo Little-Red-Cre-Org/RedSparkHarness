@@ -7,15 +7,18 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-web'
-import { applyWebSearchTool, WEB_SEARCH_MAX_QUERIES, WEB_SEARCH_MAX_RESULTS } from './search.ts'
+import { applyWebSearchTool } from './search.ts'
+import { assertToolWebLimits, type Config, type ResolvedConfig } from './config.ts'
 import { applyWebFetchTool } from './fetch.ts'
 
-export { WEB_SEARCH_MAX_QUERIES, WEB_SEARCH_MAX_RESULTS, applyWebSearchTool, formatSearchOutput, presentSearchCall, presentSearchResult, searchMetaFromValue, searchMetaFromResult } from './search.ts'
-export type { WebSearchMeta } from './search.ts'
-export { applyWebFetchTool, formatFetchOutput, parseFetchArgs, presentFetchCall, presentFetchResult, fetchMetaFromValue, fetchMetaFromResult } from './fetch.ts'
-export type { WebFetchMeta } from './fetch.ts'
+export { applyWebSearchTool, presentSearchCall, presentSearchResult } from './search.ts'
+export { WEB_SEARCH_MAX_QUERIES, WEB_SEARCH_MAX_RESULTS } from './search-core.ts'
+export { formatSearchOutput, searchMetaFromValue, searchMetaFromResult } from './search-core.ts'
+export type { WebSearchMeta } from './search-core.ts'
+export { applyWebFetchTool, presentFetchCall, presentFetchResult } from './fetch.ts'
+export { formatFetchOutput, parseFetchArgs, fetchMetaFromValue, fetchMetaFromResult } from './fetch-core.ts'
+export type { WebFetchMeta } from './fetch-core.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'tool-web'
@@ -23,53 +26,7 @@ export const name = 'tool-web'
 /** Services required by the web tool suite. */
 export const inject = ['tools', 'web', 'systemPrompt']
 
-/** Default cooperative tool-call timeout budget (ms) for the web tools. */
-export const DEFAULT_WEB_TOOL_TIMEOUT_MS = 30_000
-
-/**
- * Default cap on one `web_fetch` output and on source characters converted
- * synchronously. This leaves headroom above the local provider's default
- * 100,000-character body cap while bounding custom providers and rendered output.
- */
-export const DEFAULT_FETCH_MAX_OUTPUT_CHARS = 200_000
-
-/** Plugin config: which web tools to register, search bounds, per-tool budgets, and the fetch output cap. */
-export interface Config {
-  /** Register `web_search`. Defaults to true. */
-  search?: boolean
-  /** Register `web_fetch`. Defaults to true. */
-  fetch?: boolean
-  /** Upper bound on sources returned by one `web_search` call. */
-  searchMaxResults?: number
-  /** Upper bound on queries accepted by one `web_search` call. */
-  searchMaxQueries?: number
-  /** Cooperative timeout budget (ms) for `web_fetch`. Defaults to 30000. */
-  fetchTimeoutMs?: number
-  /** Cooperative timeout budget (ms) for `web_search`. Defaults to 30000. */
-  searchTimeoutMs?: number
-  /** Cap on source characters converted and complete `web_fetch` output characters. Defaults to 200000. */
-  fetchMaxOutputChars?: number
-}
-
-export const Config: z<Config> = z.object({
-  search: z.boolean().default(true),
-  fetch: z.boolean().default(true),
-  searchMaxResults: z.number().default(WEB_SEARCH_MAX_RESULTS),
-  searchMaxQueries: z.number().default(WEB_SEARCH_MAX_QUERIES),
-  fetchTimeoutMs: z.number().default(DEFAULT_WEB_TOOL_TIMEOUT_MS),
-  searchTimeoutMs: z.number().default(DEFAULT_WEB_TOOL_TIMEOUT_MS),
-  fetchMaxOutputChars: z.number().default(DEFAULT_FETCH_MAX_OUTPUT_CHARS),
-})
-
-/** Complete config after schemastery applies every field default. */
-type ResolvedConfig = Required<Config>
-
-/** Configured count, timeout, and character caps must be positive integers. */
-function assertPositiveInteger(name: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`tool-web: ${name} must be a positive integer`)
-  }
-}
+export { Config, DEFAULT_FETCH_MAX_OUTPUT_CHARS, DEFAULT_WEB_TOOL_TIMEOUT_MS } from './config.ts'
 
 /**
  * Register the enabled web tools. `search`/`fetch` default to true; a product
@@ -83,11 +40,7 @@ function assertPositiveInteger(name: string, value: number): void {
 export function apply(ctx: Context, config: Config): void {
   // schemastery (Config) has already filled every defaulted field.
   const resolved = config as ResolvedConfig
-  assertPositiveInteger('searchMaxResults', resolved.searchMaxResults)
-  assertPositiveInteger('searchMaxQueries', resolved.searchMaxQueries)
-  assertPositiveInteger('fetchTimeoutMs', resolved.fetchTimeoutMs)
-  assertPositiveInteger('searchTimeoutMs', resolved.searchTimeoutMs)
-  assertPositiveInteger('fetchMaxOutputChars', resolved.fetchMaxOutputChars)
+  assertToolWebLimits(resolved)
   if (resolved.search) {
     applyWebSearchTool(ctx, resolved.searchMaxResults, resolved.searchMaxQueries, resolved.searchTimeoutMs, resolved.fetch)
   }
