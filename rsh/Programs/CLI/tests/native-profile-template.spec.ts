@@ -107,6 +107,18 @@ it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
   })
 
+it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
+  'installs the Cordis base guards natively in %s', (profileName) => {
+    const profile = shippedNativeProfileComposition('C:/rsh-native-guards', profileName, 'win32')
+    expect(profile.installations.filter(row => ['llm-retry', 'timeout-policy', 'repeat-tool-reminder'].includes(row.id))).toEqual([
+      { id: 'llm-retry', plugin: '@deepseek-ai/dsh-llm-retry', scope: 'root' },
+      { id: 'timeout-policy', plugin: '@deepseek-ai/dsh-tool-call-timeout-policy', scope: 'root' },
+      // Same settings as the Cordis base bundle row.
+      { id: 'repeat-tool-reminder', plugin: '@deepseek-ai/dsh-repeat-tool-reminder', scope: 'root',
+        config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
+    ])
+  })
+
 it('defines a native-tui composition over the shared headless Providers', () => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
