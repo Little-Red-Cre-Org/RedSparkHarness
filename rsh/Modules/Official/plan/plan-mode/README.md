@@ -94,7 +94,7 @@ The command child activates only when a commands service is composed. It maps ba
 
 ### One core, two runtimes
 
-The selection state machine, boundary application, narration rule, command parsing, and reviewed exit live once in [`src/selection.ts`](src/selection.ts). The Cordis service and the native plugin supply only their session reads, durable append, and delivery: Cordis narrates through the pre-step decision and renders guidance as a prompt section, while native applies pending selections in an outermost step-admission hook and keeps at most one queued plan notice that announces the mode the model must learn next. The native "told" state is the mode in force at the last `step/start`, the counterpart of the Cordis header fold.
+The selection state machine, boundary application, narration rule, command parsing, and reviewed exit live once in [`src/selection.ts`](src/selection.ts). The Cordis service and the native plugin supply only their session reads, durable append, and delivery: Cordis narrates through the pre-step decision and renders guidance as a prompt section, while native applies pending selections at the next accepted step and keeps at most one queued plan notice that announces the mode the model must learn next. Native step admission is only in memory, so a narrated selection commits when its notice's `user/message` is durable rather than in the admission hook, and a notice withdrawn after admission is re-queued when the turn settles; until then the selection stays pending. The native "told" state is the mode in force at the last `step/start`, or the mode a durable notice announced, the counterpart of the Cordis header fold.
 
 ### The exit tool
 

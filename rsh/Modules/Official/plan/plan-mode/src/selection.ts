@@ -132,7 +132,9 @@ export class PlanModeSelections<K> {
   approveExit(key: K): void { this.intents.set(key, { active: false, narrate: false }) }
 
   /**
-   * Apply a pending selection at an accepted in-turn step boundary.
+   * Apply a pending selection at an accepted in-turn step boundary. A runtime
+   * whose narration is a queued durable message applies only selections for
+   * which `awaitsNarration` is false and commits the others with `commitNarrated`.
    * @param key - session key.
    * @param view - session reads and append.
    * @returns narration for a user selection, computed before the append.
@@ -146,6 +148,42 @@ export class PlanModeSelections<K> {
     // Delete only after append succeeds so a later accepted step can retry a failed write.
     this.intents.delete(key)
     return narration
+  }
+
+  /**
+   * Whether the pending selection must wait for its narration to become
+   * durable before it may commit. A runtime that delivers guidance as a
+   * queued durable message must not apply such a selection at the step
+   * boundary: admission is only in memory, and committing first would let a
+   * failed or rejected notice write record the new mode as told while the
+   * guidance never reached history.
+   * @param key - session key.
+   * @param view - session reads.
+   * @returns true when a narrated selection still has a notice to deliver.
+   */
+  awaitsNarration(key: K, view: PlanSessionView): boolean {
+    const pending = this.intents.get(key)
+    return pending !== undefined && pending.narrate && this.narration(view, pending.active) !== undefined
+  }
+
+  /**
+   * Commit a narrated selection once its notice is durable in session history.
+   * The runtime calls this when it observes the notice's own durable event,
+   * never at admission, so a notice that fails to persist or is rejected after
+   * admission leaves the selection pending and its guidance retryable.
+   * @param key - session key.
+   * @param view - session reads and append.
+   * @param announced - mode the durable notice announced.
+   * @returns whether a pending selection was committed.
+   * @throws when the durable append fails; the selection stays pending.
+   */
+  commitNarrated(key: K, view: PlanSessionView, announced: boolean): boolean {
+    const pending = this.intents.get(key)
+    if (pending === undefined || !pending.narrate || pending.active !== announced) return false
+    if (pending.active !== view.loggedActive()) view.appendMode(pending.active)
+    // Delete only after append succeeds so a later accepted step can retry a failed write.
+    this.intents.delete(key)
+    return true
   }
 
   /**
