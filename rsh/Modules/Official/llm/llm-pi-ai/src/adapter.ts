@@ -335,7 +335,7 @@ export class PiAiAdapter extends LlmAdapter {
     if (auth?.auth.apiKey === undefined || auth.auth.apiKey.length === 0) {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
     }
-    const refreshed = await snapshot.models.refresh({ providers: [provider], force: true, signal })
+    const refreshed = await snapshot.models.refresh({ providers: [provider], force: true, ...signal === undefined ? {} : { signal } })
     signal?.throwIfAborted()
     const failure = refreshed.errors.get(provider)
     if (failure !== undefined) throw failure
