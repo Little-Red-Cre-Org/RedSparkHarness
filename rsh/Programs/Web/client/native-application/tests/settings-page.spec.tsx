@@ -485,6 +485,38 @@ it('preserves a draft reset when a newer refresh replaces it', async () => {
   expect(editor.value).toBe(JSON.stringify({ label: 'canonical' }, null, 2))
 })
 
+it('keeps an unsaved edit when refresh follows a failed post-save describe', async () => {
+  let user: Record<string, unknown> = { label: 'canonical' }
+  let revision = 1
+  const row = (): NativeSettingsDescriptor => ({
+    namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user, applies: 'live', secrets: [],
+    credentialRefs: [], revision,
+  })
+  const settingsDescribe = vi.fn(async () => {
+    if (settingsDescribe.mock.calls.length === 2) throw new Error('describe failed')
+    return settingsDescription([row()])
+  })
+  const settingsMutate = vi.fn(async () => {
+    user = { label: 'saved' }
+    revision = 2
+    return row()
+  })
+  const actions = {
+    settingsDescribe, settingsMutate,
+    credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
+  } as unknown as NativeSessionClient
+  render(<SettingsPage actions={actions} t={key => en[key]} onBack={() => undefined} />)
+  const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
+  fireEvent.change(editor, { target: { value: JSON.stringify({ label: 'saved' }) } })
+  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  expect(await screen.findByRole('alert')).toBeTruthy()
+  const edited = '{ "label": "unsaved" }'
+  fireEvent.change(editor, { target: { value: edited } })
+  fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
+  expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 2`)).toBeTruthy()
+  expect(editor.value).toBe(edited)
+})
+
 it('refresh settles authorization and drops a stale disconnect warning', async () => {
   const key = credentialKey('llm-pi-ai', 'openai-codex')
   let listed: string | undefined = 'a1'

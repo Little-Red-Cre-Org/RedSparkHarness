@@ -352,7 +352,10 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       }
       return true
     } catch (cause: unknown) {
-      if (latest()) setError(requestError(cause, t, 'native/settings'))
+      if (latest()) {
+        resetDrafts.current = false
+        setError(requestError(cause, t, 'native/settings'))
+      }
       return false
     } finally { if (latest()) setLoading(false) }
   }, [actions, t])
