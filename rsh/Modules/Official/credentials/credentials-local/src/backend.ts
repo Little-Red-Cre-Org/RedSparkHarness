@@ -190,7 +190,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
         await this.reconcileFromDisk()
         const current = this.records.get(key)
         const next = await mutate(current)
-        options?.signal?.throwIfAborted()
+        // Once mutate starts, commit even if the caller aborts: it may have rotated a refresh token.
         if (next === undefined) return current
         // Admitted before it is rendered: what the read path would refuse is
         // refused here first, so a caller can never persist a document the

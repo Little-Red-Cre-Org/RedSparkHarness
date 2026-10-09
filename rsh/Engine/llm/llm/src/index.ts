@@ -526,11 +526,12 @@ export class LlmRuntime extends TypertRemoteService {
    * Discover models advertised by one registered provider. Catalog membership
    * is advisory and never changes routing or request validation.
    * @param provider - registered provider route to inspect.
+   * @param signal - optional cancellation forwarded to the owning adapter.
    * @returns detached model metadata in adapter-preferred order.
    */
-  async listModels(provider: string): Promise<LlmModelInfo[]> {
+  async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]> {
     const adapter = this.registration(provider).adapter
-    const models = await adapter.listModels(provider)
+    const models = await adapter.listModels(provider, signal)
     const seen = new Set<string>()
     return models.map((model) => {
       if (

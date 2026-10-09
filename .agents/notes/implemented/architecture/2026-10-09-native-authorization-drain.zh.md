@@ -10,7 +10,7 @@ Cordis 授权服务会立即结算被撤销的尝试，并让 flow 的运行自�
 
 ## 决策
 
-`@deepseek-ai/dsh-authorization/native` 在不依赖 Cordis 的情况下提供 `authorization` 服务。界面用 `begin()` 开始尝试，从 `frames()` 读取可重放的 `AuthorizationFrame`，并通过 `answer()`、`decline()` 与 `cancel()` 作答。每条取消路径都会中止 flow 的 signal，并且只在 `run()` 返回后才结算尝试。原生凭据记录写入接受该 signal，并在 Provider 写队列内部于读取前和提交前检查它，因此尚未开始的写入会被拒绝，正在提交的写入会在键释放前完成。
+`@deepseek-ai/dsh-authorization/native` 在不依赖 Cordis 的情况下提供 `authorization` 服务。界面用 `begin()` 开始尝试，从 `frames()` 读取可重放的 `AuthorizationFrame`，并通过 `answer()`、`decline()` 与 `cancel()` 作答。每条取消路径都会中止 flow 的 signal，并且只在 `run()` 返回后才结算尝试。原生凭据记录写入接受该 signal，并在入队开始写入前检查；一旦 mutate 开始就一定提交，因此尚未开始的写入会被拒绝，已经开始的写入会在键释放前完成。
 
 Cordis 服务保留现有的遗弃运行语义；两个入口共享 flow、session、帧与错误类型。
 

@@ -208,15 +208,14 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   }
 }
 
-async function tokenResponse(response: Response, operation: string, signal: AbortSignal): Promise<TokenResponse> {
-  signal.throwIfAborted()
+async function tokenResponse(response: Response, operation: string): Promise<TokenResponse> {
+  // The issuer has already answered; read the body even if the caller has aborted.
   let body: unknown
   try {
     body = await response.json()
   } catch {
     body = undefined
   }
-  signal.throwIfAborted()
   if (!response.ok) {
     throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`)
   }
@@ -355,7 +354,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
           headers: { 'content-type': 'application/x-www-form-urlencoded' },
           body: form,
           signal: requestSignal,
-        }), 'authorization-code exchange', requestSignal)
+        }), 'authorization-code exchange')
         const access = requiredString(tokens.access_token, 'access token')
         const refresh = requiredString(tokens.refresh_token, 'refresh token')
         const idToken = requiredString(tokens.id_token, 'ID token')
@@ -403,7 +402,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: form,
         signal: requestSignal,
-      }), 'token refresh', requestSignal)
+      }), 'token refresh')
       const scopes = scopesFrom(tokens.scope, credential.scopes)
       return {
         ...credential,

@@ -60,9 +60,9 @@ export interface NativeCredentials {
    * Read-decide-replace one record under the Provider's write queue.
    * @param key - record address.
    * @param mutate - decides the next record from the current one; undefined keeps it.
-   * @param options - `signal` is checked inside the queue before the read and
-   *   again before the commit; a write already committing finishes, a queued
-   *   or deciding one rejects with the signal's reason and writes nothing.
+   * @param options - `signal` is checked when the queued write starts, before
+   *   reading; once `mutate` begins the write always commits. A queued write
+   *   rejects with the signal's reason and writes nothing.
    * @returns the committed record, or the unchanged current one.
    */
   modifyRecord(

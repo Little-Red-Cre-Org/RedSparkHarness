@@ -398,9 +398,23 @@ function assertValidHeaders(provider: string, headers: Readonly<Record<string, s
   }
 }
 
+const CODEX_PROFILE_FIELDS = new Set([
+  'displayName', 'api', 'baseURL', 'headers', 'transport', 'timeoutMs', 'streamIdleTimeoutMs',
+  'maxRequestImageBytes', 'requestImagePixelBudget', 'requestImageMaxBytes', 'retryPolicy',
+  'defaultContextWindow', 'defaultMaxTokens', 'defaultInput', 'models', 'modelOverrides', 'compat',
+])
+
 /** Keep the SIWC route on its account OAuth and the documented public HTTP/SSE contract. */
 function assertCodexSubscriptionProfile(provider: string, source: PiAiProviderProfile): void {
   if (provider !== CODEX_SUBSCRIPTION_ROUTE) return
+  for (const [field, value] of Object.entries(source)) {
+    if (value === undefined) continue
+    // An absent object schema arrives as {}; that is not a configured budget.
+    if (field === 'thinkingBudgets' && Object.keys(value as object).length === 0) continue
+    if (!CODEX_PROFILE_FIELDS.has(field)) {
+      throw new Error(`llm-pi-ai: openai-codex does not accept "${field}"`)
+    }
+  }
   if ((source.models?.length ?? 0) > 0 || Object.keys(source.modelOverrides ?? {}).length > 0) {
     throw new Error('llm-pi-ai: openai-codex models and modelOverrides come from the signed-in account catalog')
   }
@@ -420,24 +434,18 @@ function assertCodexSubscriptionProfile(provider: string, source: PiAiProviderPr
   if (source.baseURL !== undefined && source.baseURL !== CODEX_RESPONSES_BASE_URL) {
     throw new Error(`llm-pi-ai: openai-codex uses ${CODEX_RESPONSES_BASE_URL}`)
   }
-  if (source.apiKeyEnv !== undefined) {
-    throw new Error('llm-pi-ai: openai-codex authenticates only through its Sign in with ChatGPT account')
-  }
   if (Object.keys(source.headers ?? {}).some(name => name.toLowerCase() === 'authorization')) {
     throw new Error('llm-pi-ai: openai-codex Authorization is owned by its Sign in with ChatGPT account')
   }
   if (source.transport !== undefined && source.transport !== 'sse') {
     throw new Error('llm-pi-ai: openai-codex supports the public HTTP/SSE Responses transport only')
   }
-  if (source.cacheRetention !== undefined || source.websocketConnectTimeoutMs !== undefined) {
-    throw new Error('llm-pi-ai: openai-codex does not support prompt cache retention or WebSocket controls')
-  }
   const compat = source.compat
   const hasCompatControls = Object.entries(compat ?? {}).some(([name]) =>
     name !== 'chatTemplateKwargs' && name !== 'chatTemplateArgs')
     || Object.keys(compat?.chatTemplateKwargs ?? {}).length > 0
     || Object.keys(compat?.chatTemplateArgs ?? {}).length > 0
-  if (source.reasoning !== undefined || Object.keys(source.thinkingBudgets ?? {}).length > 0 || hasCompatControls) {
+  if (hasCompatControls) {
     throw new Error('llm-pi-ai: openai-codex does not expose reasoning or Responses compatibility controls')
   }
 }

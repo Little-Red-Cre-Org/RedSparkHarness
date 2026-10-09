@@ -1,7 +1,6 @@
 /** Cordis-free construction of pi-ai authorization flows. */
 
-import { createModels } from '@earendil-works/pi-ai'
-import type { AuthEvent, AuthPrompt, AuthType, Provider } from '@earendil-works/pi-ai'
+import type { AuthEvent, AuthPrompt, Credential, Provider, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 import type {
   AuthorizationFlow, AuthorizationMethod, AuthorizationPrompt, AuthorizationSession,
 } from '@deepseek-ai/dsh-authorization/native'
@@ -104,14 +103,16 @@ export function createPiAiFlows(
       label: loginProvider.name,
       methods: [first, ...rest],
       async run(session) {
-        const models = createModels(auth)
-        models.setProvider(loginProvider)
-        const type: AuthType = session.method === 'oauth' ? 'oauth' : 'api_key'
-        await models.login(providerId, type, {
+        // Models.login races the caller signal and can return before login or its write finishes.
+        const method = (session.method === 'oauth' ? loginProvider.auth.oauth : loginProvider.auth.apiKey) as {
+          login: (interaction: ProviderAuthInteraction) => Promise<Credential>
+        }
+        const credential = await method.login({
           signal: session.signal,
           notify: (event) => { relay(event, session) },
           prompt: prompt => session.prompt(restate(prompt)),
         })
+        await auth.credentials.modify(providerId, () => Promise.resolve(credential), { signal: session.signal })
       },
     })
   }

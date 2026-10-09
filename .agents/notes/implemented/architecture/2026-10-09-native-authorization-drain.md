@@ -10,7 +10,7 @@ The Cordis authorization service settles a withdrawn attempt immediately and lea
 
 ## Decision
 
-`@deepseek-ai/dsh-authorization/native` provides the `authorization` service without Cordis. A surface starts an attempt with `begin()`, reads replayable `AuthorizationFrame` values from `frames()`, and answers through `answer()`, `decline()` and `cancel()`. Every cancellation path aborts the flow's signal and settles the attempt only after `run()` returns. Native credential record writes accept that signal and check it inside the Provider's write queue before reading and before committing, so a write that has not started is refused and one that is committing finishes before the key is released.
+`@deepseek-ai/dsh-authorization/native` provides the `authorization` service without Cordis. A surface starts an attempt with `begin()`, reads replayable `AuthorizationFrame` values from `frames()`, and answers through `answer()`, `decline()` and `cancel()`. Every cancellation path aborts the flow's signal and settles the attempt only after `run()` returns. Native credential record writes accept that signal and check it when a queued write starts, before reading; once mutate begins the write always commits, so a write that has not started is refused and one that has started finishes before the key is released.
 
 The Cordis service keeps its existing orphaned-run semantics; both entries share the flow, session, frame and error types.
 

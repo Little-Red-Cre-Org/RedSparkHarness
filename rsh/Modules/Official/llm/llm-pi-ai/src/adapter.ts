@@ -74,6 +74,8 @@ interface PiAiSnapshot {
   profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>
   /** Providers for exactly those profiles; never mutated once published. */
   models: Models
+  /** In-flight Codex catalog refreshes keyed by provider; concurrent callers share one. */
+  refreshes: Map<string, Promise<void>>
 }
 
 /** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
@@ -219,6 +221,30 @@ function requestHeaders(headers: Readonly<Record<string, string>> | undefined): 
 
 const CODEX_SUBSCRIPTION_ROUTE = 'openai-codex'
 const OPENAI_RESPONSES_BASE_URL = 'https://api.openai.com/v1'
+const SIWC_TOOL_NAMESPACE = 'harness'
+
+/** SIWC rejects system-role items and top-level function tools. */
+function siwcResponsesPayload(payload: unknown): unknown {
+  const body = payload as {
+    input?: { role?: string; type?: string; namespace?: string }[]
+    tools?: unknown
+  }
+  if (body.input !== undefined) {
+    for (const item of body.input) {
+      if (item.role === 'system') item.role = 'developer'
+      if (item.type === 'function_call' || item.type === 'custom_tool_call') item.namespace = SIWC_TOOL_NAMESPACE
+    }
+  }
+  if (body.tools !== undefined) {
+    body.tools = [{
+      type: 'namespace',
+      name: SIWC_TOOL_NAMESPACE,
+      description: 'Tools the harness exposes to the model.',
+      tools: body.tools,
+    }]
+  }
+  return body
+}
 
 /** pi-ai requires numeric rates; the Harness does not publish these internal placeholders. */
 const NO_MODEL_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
@@ -303,7 +329,7 @@ export class PiAiAdapter extends LlmAdapter {
           : profile.piProvider)
       }
     }
-    this.snapshot = { profiles, models }
+    this.snapshot = { profiles, models, refreshes: new Map() }
     return this.snapshot
   }
 
@@ -340,10 +366,26 @@ export class PiAiAdapter extends LlmAdapter {
     if (auth?.auth.apiKey === undefined || auth.auth.apiKey.length === 0) {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
     }
-    const refreshed = await snapshot.models.refresh({ providers: [provider], force: true, ...signal === undefined ? {} : { signal } })
-    signal?.throwIfAborted()
-    const failure = refreshed.errors.get(provider)
-    if (failure !== undefined) throw failure
+    // A later refresh aborts the earlier one inside pi-ai, so one snapshot shares one flight.
+    // The shared flight ignores the caller signal; discovery times the /models request out itself.
+    let refresh = snapshot.refreshes.get(provider)
+    if (refresh === undefined) {
+      refresh = snapshot.models.refresh({ providers: [provider], force: true }).then((refreshed) => {
+        const failure = refreshed.errors.get(provider)
+        if (failure !== undefined) throw failure
+      })
+      snapshot.refreshes.set(provider, refresh)
+      const clear = (): void => { snapshot.refreshes.delete(provider) }
+      void refresh.then(clear, clear)
+    }
+    if (signal === undefined) return refresh
+    if (signal.aborted) throw signal.reason
+    const shared = refresh
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = (): void => { reject(signal.reason) }
+      signal.addEventListener('abort', onAbort, { once: true })
+      shared.then(resolve, reject).finally(() => { signal.removeEventListener('abort', onAbort) })
+    })
   }
 
   /** A request can arrive before any model-directory surface has fetched the account catalog. */
@@ -517,12 +559,12 @@ export class PiAiAdapter extends LlmAdapter {
         ? snapshot.models.stream(model as Model<'openai-responses'>, context, {
           ...apiKey === undefined ? {} : { apiKey },
           ...reasoning === undefined || reasoning === 'off' ? {} : { reasoningEffort: reasoning },
-          ...profile.cacheRetention === undefined ? {} : { cacheRetention: profile.cacheRetention },
           ...profile.timeoutMs === undefined ? {} : { timeoutMs: profile.timeoutMs },
           transport: 'sse',
           ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
           maxRetries: 0,
           signal: watchdog.signal,
+          onPayload: siwcResponsesPayload,
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
           headers: requestHeaders(profile.headers),
         })

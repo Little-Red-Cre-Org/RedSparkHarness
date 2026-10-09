@@ -12,7 +12,6 @@ import type { AuthorizationInteraction, AuthorizationNotice, AuthorizationPrompt
 import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
 import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
 import type { AuthEvent, AuthInteraction, AuthPrompt, AuthType, Credential } from '@earendil-works/pi-ai'
-import type { PiAiAuthInjection } from '../src/adapter.ts'
 
 const login = vi.hoisted(() => vi.fn())
 const nativeModels = vi.hoisted(() => ({ auth: undefined as unknown, collections: 0, refreshes: 0 }))
@@ -35,9 +34,29 @@ vi.mock('@earendil-works/pi-ai', async importOriginal => ({
   },
 }))
 
+vi.mock('../src/siwc.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/siwc.ts')>()
+  return {
+    ...actual,
+    createSiwcOAuth(credentials: Parameters<typeof actual.createSiwcOAuth>[0]): ReturnType<typeof actual.createSiwcOAuth> {
+      const oauth = actual.createSiwcOAuth(credentials)
+      return {
+        ...oauth,
+        login: interaction => login('openai-codex', 'oauth', interaction) as ReturnType<typeof oauth.login>,
+      }
+    },
+  }
+})
+
 const { credentialStoreFrom, authContextFrom, recordKeyFor } = await import('../src/auth.ts')
+const { catalogProvider } = await import('../src/catalog.ts')
 const { registerPiAiFlows } = await import('../src/login.ts')
 const { plugin: nativePlugin } = await import('../src/native.ts')
+const anthropicApiKey = catalogProvider('anthropic')?.auth.apiKey
+if (anthropicApiKey?.login !== undefined) {
+  anthropicApiKey.login = ((interaction: AuthInteraction) =>
+    login('anthropic', 'api_key', interaction)) as typeof anthropicApiKey.login
+}
 
 const CODEX = recordKeyFor('openai-codex')
 const dirs: string[] = []
@@ -146,13 +165,9 @@ describe('pi-ai login flows', () => {
       expect(codex?.methods.map(method => method.id)).toEqual(['oauth'])
       expect(effects).toHaveLength(flows.length)
       const sessionSignal = new AbortController().signal
-      login.mockImplementation(async (providerId: string, _type: AuthType, interaction: AuthInteraction) => {
-        const auth = nativeModels.auth as PiAiAuthInjection
-        await auth.credentials.modify(providerId,
-          () => Promise.resolve({ type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }),
-          { signal: interaction.signal as AbortSignal })
-        return { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
-      })
+      login.mockImplementation(async () => (
+        { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
+      ))
       await codex?.run({ method: 'oauth', signal: sessionSignal, notify: () => {}, prompt: async () => '' })
       expect(writeSignals).toEqual([sessionSignal])
 

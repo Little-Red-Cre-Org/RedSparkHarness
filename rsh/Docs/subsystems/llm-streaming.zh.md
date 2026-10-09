@@ -991,9 +991,10 @@ fileRequestText(ref: FileAttachmentRef): string
  * Discover models advertised by one registered provider. Catalog membership
  * is advisory and never changes routing or request validation.
  * @param provider - registered provider route to inspect.
+ * @param signal - optional cancellation forwarded to the owning adapter.
  * @returns detached model metadata in adapter-preferred order.
  */
-async listModels(provider: string): Promise<LlmModelInfo[]>
+async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]>
 
 /**
  * Resolve and validate all metadata from the adapter that owns one exact
