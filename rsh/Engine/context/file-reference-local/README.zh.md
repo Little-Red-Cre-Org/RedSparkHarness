@@ -70,7 +70,8 @@ agent（智能体）及宿主 UI 可以用各 agent 本地工作区中经过排�
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `LocalFileReferenceService`：配置校验、按 agent 搜索、提示词安装 |
-| [`src/search.ts`](src/search.ts) | `WorkspaceFileSearch`：遍历、排序、排除、陈旧标记与后台重建 |
+| [`src/search.ts`](src/search.ts) | 连接共用遍历与排序核心的 Cordis 文件系统适配器 |
+| [`../file-reference/src/search-core.ts`](../file-reference/src/search-core.ts) | 与提供方无关的有界索引、排序、排除、陈旧标记与后台重建 |
 | — | 不发布运行时不变式伴生入口；按 agent 的 index 是私有 advisory cache，其失效与 dispose 行为通过服务测试直接观察。 |
 
 ### 主要流程
@@ -86,7 +87,7 @@ agent（智能体）及宿主 UI 可以用各 agent 本地工作区中经过排�
 
 包级约定不够用时阅读以下页面。它们从本提供方所实现的 seam 进入其候选所指向的工具。
 
-- [文件引用 seam](../file-reference/README.zh.md)——本提供方所实现的服务约定与 `@file` 语法。
+- [文件引用 seam](../file-reference/README.zh.md)——本提供方所实现的服务约定、Native 提供方入口与 `@file` 语法。
 - [会话引用子系统](../../../Docs/subsystems/session-reference.zh.md)——宿主 UI 背后的共享文件引用约定。
 - [文件系统工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-fs)——发现能力必须匹配其命名空间的 `read` 工具。
 - [上下文组地图](../README.zh.md)——相邻的请求上下文包。

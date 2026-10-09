@@ -20,6 +20,26 @@ interface FileReferenceCandidate {
 }
 ```
 
+Native Consumers use the exact active Agent and Session pair when requesting candidates; the Native Provider resolves that pair through the active-session owner and reads paths through the selected filesystem service.
+
+```ts type-equiv
+/** Path-only candidates from the exact active Agent and Session workspace. */
+interface NativeFileReferenceOperations {
+  /**
+   * List deterministic path candidates without reading file contents.
+   * @param agent - exact Native Agent whose scope is consuming the candidates.
+   * @param session - exact live Session whose cwd bounds discovery.
+   * @param query - path text following `@` or `@"`.
+   * @param signal - caller cancellation.
+   * @returns ranked workspace-relative file and directory candidates.
+   * @throws when the exact Agent and Session do not have a live owner.
+   */
+  list(agent: NativeAgent, session: Session, query: string, signal: AbortSignal): Promise<FileReferenceCandidate[]>
+}
+```
+
+Source: [`rsh/Engine/context/file-reference/src/native.ts`](../../Engine/context/file-reference/src/native.ts)
+
 ## Inputs and candidates
 
 `SessionReferenceInput` is the host-independent selection. The id is authoritative; the label is display metadata carried into the snapshot.

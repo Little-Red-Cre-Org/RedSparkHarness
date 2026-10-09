@@ -7,9 +7,13 @@ import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, t
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
+import { plugin as toolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as sessionExecutionPlugin } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
+import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
@@ -21,9 +25,11 @@ import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
+import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
+import { plugin as fileReferencePlugin } from '@deepseek-ai/dsh-native-file-reference-local/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../src/native.ts'
@@ -35,6 +41,8 @@ async function fixture(
     timeContext?: { timeZone: string; refreshIntervalMs?: number }
     instructions?: boolean
     ptc?: boolean
+    fileReferences?: boolean
+    allowedTools?: readonly string[]
     maxSteps?: number
     directory?: string
     workspaceWriteRoot?: string
@@ -79,8 +87,10 @@ async function fixture(
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
     { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}),
+      ...options.allowedTools === undefined ? {} : { allowedTools: options.allowedTools },
       ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot } } },
     { plugin: agentPlugin, scope, config: undefined },
+    ...(options.fileReferences ? [{ plugin: sessionExecutionPlugin, scope, config: undefined }] : []),
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
       config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
@@ -90,6 +100,11 @@ async function fixture(
     ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
     { plugin: toolsPlugin, scope, config: undefined },
     { plugin: policyPlugin, scope, config: undefined },
+    ...(options.fileReferences ? [
+      { plugin: promptPlugin, scope, config: undefined },
+      { plugin: toolFsPlugin, scope, config: undefined },
+      { plugin: fileReferencePlugin, scope, config: undefined },
+    ] : []),
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
     { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
     { plugin: model, scope, config: undefined },
@@ -146,6 +161,106 @@ it('logs the model-visible request and tool result, then resumes the same stored
   }
 })
 
+it('applies the Session allowlist to Native file-reference guidance in model requests and durable prompts', async () => {
+  const state = await fixture([textResponse('File-reference request completed.')], { fileReferences: true, allowedTools: [] })
+  try {
+    await import('node:fs/promises').then(fs => fs.writeFile(join(state.workspace, 'README.md'), 'workspace facts'))
+    await state.host.run(state.scope, { kind: 'file-reference-profile' }, invocation =>
+      state.app.run(['Inspect @README.md.'], invocation.signal))
+
+    const request = state.adapter.requests[0]
+    expect(state.tools.modelSchemas(state.scope).some(schema => schema.name === 'read')).toBe(true)
+    expect(request?.tools?.some(schema => schema.name === 'read')).toBe(false)
+    expect(request?.messages.some(message => message.role === 'system'
+      && message.content.some(block => block.type === 'text' && block.text.includes(FILE_REFERENCE_PROMPT)))).toBe(false)
+    expect(request?.messages.some(message => message.role === 'user'
+      && message.content.some(block => block.type === 'text' && block.text.includes('@README.md')))).toBe(true)
+
+    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('missing file-reference Session id')
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.some(event => event.type === 'system/message'
+          && event.data.message.content.some(block => block.type === 'text' && block.text.includes(FILE_REFERENCE_PROMPT)))).toBe(false)
+        expect(events.some(event => event.type === 'user/message'
+          && event.data.content.some(block => block.type === 'text' && block.text.includes('@README.md')))).toBe(true)
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('rejects prompt-mismatched admissions before persisting resume or fork facts', async () => {
+  const original = await fixture([textResponse('Source Session ready.')], { fileReferences: true, allowedTools: [] })
+  let activeHost: (typeof original)['host'] | undefined = original.host
+  try {
+    await original.host.run(original.scope, { kind: 'file-reference-source' }, invocation =>
+      original.app.run(['Keep this source Session.'], invocation.signal))
+    await original.host.stop()
+    activeHost = undefined
+
+    const storage = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
+    let source: ReturnType<typeof SessionId> | undefined
+    let interruptedEvents: readonly import('@deepseek-ai/dsh-session/native').SessionEvent[] = []
+    try {
+      const row = (await storage.list())[0]
+      if (row === undefined) throw new Error('missing fork source Session')
+      source = row.header.id
+      const writer = await storage.open(source, 'write')
+      try {
+        const events = (await writer.read()).events
+        const lastTurn = events.findLast(event => event.type === 'turn/end')
+        if (lastTurn?.type !== 'turn/end') throw new Error('source Session has no closed turn')
+        const lastSeq = events.at(-1)?.seq
+        if (lastSeq === undefined) throw new Error('source Session has no stored events')
+        await writer.append([{ type: 'turn/start', seq: SessionSeq(lastSeq + 1), time: Date.now(), data: { turn: lastTurn.data.turn + 1 } }])
+        interruptedEvents = (await writer.read()).events
+      } finally { await writer.close() }
+    } finally { await storage.close() }
+    if (source === undefined) throw new Error('missing fork source identity')
+
+    const changed = await fixture([textResponse('Must not reach the model.')], {
+      directory: original.directory, fileReferences: true, allowedTools: ['read'],
+    })
+    activeHost = changed.host
+    try {
+      const route = brandString<NativeRootRouteId>('root')
+      const signal = new AbortController().signal
+      const fork = SessionId('prompt-mismatch-fork')
+      await expect(changed.rootExecution.fork({ route, source, id: fork }, signal))
+        .rejects.toThrow('native-headless: fork source systemPrompt differs from profile configuration')
+      const verifyFork = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
+      try { expect((await verifyFork.list()).map(row => row.header.id)).toEqual([source]) }
+      finally { await verifyFork.close() }
+
+      await expect(changed.rootExecution.execute({ route, id: source, resume: true, rootOrigin: 'scheduled' }, signal))
+        .rejects.toThrow('native-headless: resumed Session systemPrompt differs from profile configuration')
+      const verify = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
+      try {
+        const reader = await verify.open(source, 'read')
+        try {
+          const events = (await reader.read()).events
+          expect(events).toEqual(interruptedEvents)
+          expect(events.some(event => event.type === 'session/root-origin')).toBe(false)
+        } finally { await reader.close() }
+        expect((await verify.list()).map(row => row.header.id)).toEqual([source])
+      } finally { await verify.close() }
+      expect(changed.adapter.requests).toHaveLength(0)
+    } finally {
+      const host = activeHost
+      activeHost = undefined
+      await host?.stop()
+    }
+  } finally {
+    await activeHost?.stop()
+    await rm(original.directory, { recursive: true, force: true })
+  }
+})
 it('waits for an admitted model stream and persists the cancelled turn before shutdown', async () => {
   const entered = Promise.withResolvers<boolean>()
   const aborted = Promise.withResolvers<boolean>()

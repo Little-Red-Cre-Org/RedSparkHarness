@@ -67,6 +67,7 @@
     "@deepseek-ai/dsh-native-tool-jobs": "workspace:^",
     "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
+    "@deepseek-ai/dsh-native-file-reference-local": "workspace:^",
     "@deepseek-ai/dsh-attachment-local": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-llm-deepseek": "workspace:^",

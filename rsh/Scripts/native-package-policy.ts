@@ -54,6 +54,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/subagent/sdk-child',
   'rsh/Modules/Official/subagent/codex-app-server',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
+  'rsh/Modules/Official/fs/native-file-reference-local',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
   'rsh/Programs/Web/client/native-session',
@@ -100,6 +101,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/subagent/codex-app-server', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
+  ['rsh/Modules/Official/fs/native-file-reference-local', ['host']],
   ['rsh/Modules/Official/code-runtime/native-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
@@ -279,6 +281,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
   ['rsh/Engine/session/session-projection', ['./types']],

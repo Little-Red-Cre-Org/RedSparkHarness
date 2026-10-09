@@ -1,5 +1,5 @@
 ---
-description: "面向宿主驱动 UI 的文件引用发现与 @file mention 语法，供选择该 seam 或为其搭配提供方的用户与维护者阅读。"
+description: "Native 与宿主驱动消费方使用的文件引用发现约定和 @file mention 语法，以及搭配提供方的维护者指南。"
 kind: "package-reference"
 ---
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当宿主驱动 UI（Web 或终端）需要提供 `@file` 补全时选择本包，并搭配一个命名空间与 agent 实际生效的 `read` 工具一致的提供方。单独挂载该 seam 而没有提供方时，UI 只能得到空的补全列表。
+当 Native 或宿主驱动消费方需要 `@file` 候选与共用 mention 语法时选择本包，并搭配一个命名空间与 agent 实际生效的 `read` 工具一致的提供方。没有提供方时，消费方得不到候选。
 
 ### mention 语法
 
@@ -37,7 +37,7 @@ kind: "package-reference"
 
 ### 搭配提供方
 
-本地文件系统请挂载 `@deepseek-ai/dsh-file-reference-local`；其他命名空间（远程或虚拟文件系统）需要发现能力与生效工具一致的提供方。当指定 agent 可以调用 `read` 时，提供方可以安装稳定的 `FILE_REFERENCE_PROMPT` 指引，告诉模型先读取被引用文件、再声称检查过它。
+Native Host profile 请挂载 `@deepseek-ai/dsh-native-file-reference-local`；Cordis profile 请挂载 `@deepseek-ai/dsh-file-reference-local`。其他命名空间（远程或虚拟文件系统）需要发现能力与生效工具一致的提供方。当指定 agent 可以调用 `read` 时，提供方可以安装稳定的 `FILE_REFERENCE_PROMPT` 指引，告诉模型先读取被引用文件、再声称检查过它。
 
 -----
 
@@ -57,7 +57,10 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 抽象 `FileReferenceService` 与 `FILE_REFERENCE_PROMPT` |
+| [`src/index.ts`](src/index.ts) | Cordis `FileReferenceService` 与公共导出 |
+| [`src/native.ts`](src/native.ts) | 不依赖 Cordis 的 Native `NativeFileReferenceOperations` 声明 |
+| [`src/prompt.ts`](src/prompt.ts) | 两个提供方共用的稳定 `FILE_REFERENCE_PROMPT` |
+| [`src/search-core.ts`](src/search-core.ts) | 与提供方无关的有界排序和遍历算法 |
 | [`src/grammar.ts`](src/grammar.ts) | `activeAtToken` 识别与 `formatFileMention` 渲染 |
 | [`src/types.ts`](src/types.ts) | 仅含路径的结果类型 `FileReferenceCandidate` |
 | — | 不发布运行时不变式伴生入口；接口不保留 candidate 或 lifecycle 状态；具体提供方负责自己的 cache 与 invalidation 关系。 |
@@ -75,7 +78,8 @@ UI 通过 `activeAtToken` 识别活动 `@` token，用查询文本调用 `list`�
 
 包级约定不够用时阅读以下页面。它们从随附提供方进入共享引用表面，以及候选所指向的工具。
 
-- [本地文件引用提供方](../file-reference-local/README.zh.md)——本 seam 的随附本地工作区实现。
+- [Native 本地文件引用提供方](../../../Modules/Official/fs/native-file-reference-local/README.zh.md)——基于所选文件系统服务的 Native Host 实现。
+- [Cordis 本地文件引用提供方](../file-reference-local/README.zh.md)——本 seam 的 Cordis 本地工作区实现。
 - [会话引用子系统](../../../Docs/subsystems/session-reference.zh.md)——宿主 UI 背后的共享文件引用与会话引用约定。
 - [上下文组地图](../README.zh.md)——相邻的请求上下文包。
 - [文件系统工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-fs)——被引用路径所对应的 `read` 工具。

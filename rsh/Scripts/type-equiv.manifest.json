@@ -768,6 +768,11 @@
     },
     {
       "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "NativeFileReferenceOperations",
+      "source": "rsh/Engine/context/file-reference/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
       "symbol": "SessionReferenceCandidate",
       "source": "rsh/Engine/context/session-reference/src/types.ts"
     },

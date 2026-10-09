@@ -541,7 +541,8 @@ export class NativeHeadlessApplication implements NativeApplication {
     rootObservation?: { release?: () => void; epoch?: NativeContinuationActivation },
     forkSeed?: NativeRootForkSeed,
   ): Promise<NativeTurnResult> {
-    const additions = await this.promptSections?.render(agent.scope) ?? ''
+    const promptContext = config.allowedTools === undefined ? undefined : { allowedTools: config.allowedTools }
+    const additions = await this.promptSections?.render(agent.scope, promptContext) ?? ''
     const systemPrompt = additions === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${additions}`
     const root = await this.fs.resolve(config.cwd, { signal })
     const rootInfo = await this.fs.stat(root, signal)
@@ -635,6 +636,12 @@ export class NativeHeadlessApplication implements NativeApplication {
       } else if (acceptedPreset !== null) {
         throw new Error('native-headless: historical preset requires the Agent preset Registry')
       }
+      if (request.resume) {
+        const priorSystem = session.deriveMessages().findLast(message => message.role === 'system')
+        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== systemPrompt)) {
+          throw new Error('native-headless: resumed Session systemPrompt differs from profile configuration')
+        }
+      }
       this.activeSessions.set(id, session)
       const allowed = (name: string): boolean => config.allowedTools === undefined || config.allowedTools.includes(name)
       const modelTools = this.tools?.modelSchemas(agent.scope).map(schema => schema.name).filter(allowed) ?? []
@@ -671,10 +678,6 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (session.header.cwd !== config.cwd) {
           throw new Error('native-headless: resumed Session workspace differs from profile configuration')
         }
-        const priorSystem = session.deriveMessages().findLast(message => message.role === 'system')
-        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== systemPrompt)) {
-          throw new Error('native-headless: resumed Session systemPrompt differs from profile configuration')
-        }
         if (closersToAppend.length > 0) {
           await writer.append(closersToAppend, { signal })
           for (const event of closersToAppend) notifyEvent(event)
@@ -710,7 +713,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)) : []),
         ...(this.tools?.modelSchemas(agent.scope) ?? [])
           .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)),
-      ]
+      ].map(schema => structuredClone(schema))
       if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
         throw new Error('native-headless: duplicate tool schema')
       }
