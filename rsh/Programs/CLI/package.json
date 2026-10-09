@@ -95,15 +95,15 @@
     "@deepseek-ai/dsh-goal": "workspace:^",
     "@deepseek-ai/dsh-goal-round-driver": "workspace:^",
     "@deepseek-ai/dsh-tool-goal": "workspace:^",
+    "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "workspace:^",
+    "@deepseek-ai/dsh-compaction-basic": "workspace:^",
+    "@deepseek-ai/dsh-command-compact": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
     "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-fs-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-token-meter": "workspace:^",
-    "@deepseek-ai/dsh-compaction-tool-result-pruner": "workspace:^",
-    "@deepseek-ai/dsh-compaction-basic": "workspace:^",
-    "@deepseek-ai/dsh-command-compact": "workspace:^"
+    "@deepseek-ai/dsh-fs-sandbox": "workspace:^"
   },
   "optionalDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

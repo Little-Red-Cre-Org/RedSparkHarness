@@ -140,7 +140,7 @@ kind: "package-reference"
 
 ### 原生 profile
 
-原生 profile 在原生 `model`、`tokenMeter` 与 `activeSessions` 旁选择 `./native`，`toolResultPruner` 为可选。配置接受兼容入口的全部字段，另加 `admissionOrder`（默认 `100`），即 `beforeStep` admission 顺序；因此压缩在 Goal 续跑（`700`）等后续 admission hook 之前、请求派生之前运行。每个已附加会话获得一个 hook，它在开放轮次内应用共享的 `compactForTrigger` 策略（阈值、剪枝步骤、保留与缩减验证），然后继续调用链。上下文容量来自已路由模型描述；容量未知时，hook 对每个目标只警告一次并跳过。摘要通过原生 `model.stream()` 发送到配置的 `summarizer` 目标或最近一次已路由请求的目标；在任何请求被路由之前没有回退模型。`compactNow()` 支撑原生 `/compact`：Program writer 不可用时以 `busy` 拒绝，否则选择保留量为零的范围，写入 `turn: null` 标记对，并在标记对闭合后 flush owner。自动路径失败时记录警告并继续 admission；取消会向上传播。[原生压缩 Agent Note](../../../../.agents/notes/implemented/architecture/2026-10-08-native-compaction.zh.md) 记录了位置选择与暂缓工作。
+原生 profile 在原生 `model`、`tokenMeter` 与 `activeSessions` 旁选择 `./native`，`toolResultPruner` 为可选。配置接受兼容入口的全部字段，另加 `admissionOrder`（默认 `100`），即 `beforeStep` admission 顺序；因此压缩在 Goal 续跑（`700`）等后续 admission hook 之前、请求派生之前运行。启用自动压缩时，Provider 会为每个现存 owner 安装一个 hook，包括 Provider 激活时已驻留的 owner；之后附加的 owner 也各安装一个 hook。每个 hook 在开放轮次内应用共享的 `compactForTrigger` 策略（阈值、剪枝步骤、保留与缩减验证），然后继续调用链。上下文容量来自已路由模型描述；容量未知时，hook 对每个目标只警告一次并跳过。摘要通过原生 `model.stream()` 发送到配置的 `summarizer` 目标或最近一次已路由请求的目标；在任何请求被路由之前没有回退模型。`compactNow()` 支撑原生 `/compact`：Program writer 不可用时以 `busy` 拒绝，否则选择保留量为零的范围，写入 `turn: null` 标记对，并在标记对闭合后 flush owner。已确认的上下文溢出进入共享 `llm-retry` 恢复策略；压缩持久化后，执行器从当前 Session 消息重建重试请求。本 Provider 不拥有第二个重试循环。SDK 与 ACP 经 `session/prompt` 路由 `/compact`，ACP 通过标准命令更新进行广告，Web 则通过 `session/command` 暴露；所有入口都调用同一命令及压缩 Provider。自动路径失败时记录警告并继续 admission；取消会向上传播。[原生压缩 Agent Note](../../../../.agents/notes/implemented/architecture/2026-10-08-native-compaction.zh.md) 记录了位置选择与恢复所有者。
 
 </details>
 
@@ -248,7 +248,7 @@ Rules:
 - **部分不可分单元与仅 envelope 溢出仍不在表层压缩范围内**——恢复无法缩减系统／工具／前缀、拆分不可分的非工具节点，或修复不可剪枝剩余部分仍超出窗口的工具单元。可选 pruner 可以缩减原本不可分工具对内的文本型工具结果主体。
 - **`compactRegion` 要求存在未结束的轮次**——在完全关闭的会话上手动调用会抛出异常（「no open turn」），而不是执行压缩。
 - **摘要失败会保留最新持久表层**——任何替换前，自动路径会记录警告，并携带完整超预算历史继续。如果剪枝已落地，后续摘要失败会从该持久剪枝表层继续。因达到 `maxTokens` 而发生的摘要截断（隐藏推理 token 可能会耗尽该额度）遵循同一规则。
-- **原生 profile 不从溢出响应中恢复**——原生执行器未暴露请求错误 hook，因此 `CONTEXT_WINDOW_EXCEEDED` 响应不会在压缩后重试；step 前的压力压缩仍会运行，调用方仍可使用 `compactIfNeeded(owner, 'context-overflow', signal)`。原生入口不暴露 `compactRegion()`。
+- **原生入口不暴露 `compactRegion()`**——原生调用方使用共享的 `/compact` 命令或 `compactNow()` 服务；已确认的溢出恢复使用上文所述的现有 model-execution 策略。
 
 <a id="dev-note"></a>
 ### 开发备注
