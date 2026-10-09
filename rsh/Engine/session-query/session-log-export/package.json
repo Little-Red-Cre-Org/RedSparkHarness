@@ -57,12 +57,6 @@
     "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-native-runtime": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-native-session-execution": {
-      "optional": true
-    },
     "@deepseek-ai/cordis": {
       "optional": true
     }

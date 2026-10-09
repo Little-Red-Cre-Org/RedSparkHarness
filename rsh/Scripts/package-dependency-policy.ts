@@ -32,6 +32,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
     '@deepseek-ai/dsh-agent-presets',
     '@deepseek-ai/dsh-brand',
     '@deepseek-ai/dsh-commands',
+    '@deepseek-ai/dsh-authorization',
   ],
   '@deepseek-ai/dsh-client-native-application': [
     '@deepseek-ai/dsh-native-runtime',
@@ -68,6 +69,13 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
 
 /** Published type imports whose provider must be installed by the consumer. */
 const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-session-log-export': [
+    '@deepseek-ai/dsh-attachment',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-session',
+    '@deepseek-ai/dsh-session-persistence',
+    '@deepseek-ai/dsh-session-query',
+  ],
   '@deepseek-ai/dsh-permission-presets': [
     '@deepseek-ai/dsh-native-runtime',
     '@deepseek-ai/dsh-native-session-execution',
@@ -88,6 +96,9 @@ const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
 
 /** Peer packages that own contracts for Native services required by a mixed package's Host entry. */
 const NATIVE_SERVICE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-session-log-export': {
+    activeSessions: '@deepseek-ai/dsh-native-session-execution',
+  },
   '@deepseek-ai/dsh-permission-presets': {
     agents: '@deepseek-ai/dsh-native-agent',
     sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
@@ -211,9 +222,10 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-llm/native': ['createUserMessage', 'ReasoningEffortId'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
-  '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
+  '@deepseek-ai/dsh-session': ['SessionId'],
+  '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
   '@deepseek-ai/dsh-session/native': ['SessionId'],
-  '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
+  '@deepseek-ai/dsh-session-persistence/native': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-session-title/normalize': ['normalizeSessionTitle'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
