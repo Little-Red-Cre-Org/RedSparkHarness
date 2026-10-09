@@ -49,7 +49,7 @@ function harness(beforeCommit?: () => Promise<void>): {
   return { credentials, authorization: provider, provider }
 }
 
-it.each(['success', 'cancel-drains-write', 'decline', 'removal-and-dispose'] as const)(
+it.each(['success', 'cancel-drains-write', 'cancel-during-describe', 'decline', 'removal-and-dispose'] as const)(
   'native authorization: %s', async (scenario) => {
     const writeStarted = Promise.withResolvers<undefined>()
     const finishWrite = Promise.withResolvers<undefined>()
@@ -101,6 +101,33 @@ it.each(['success', 'cancel-drains-write', 'decline', 'removal-and-dispose'] as 
         finishWrite.resolve(undefined)
         await cancellation
         expect(runFinished).toBe(true)
+        await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
+        expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
+        return
+      }
+
+      if (scenario === 'cancel-during-describe') {
+        const describeStarted = Promise.withResolvers<undefined>()
+        const finishDescribe = Promise.withResolvers<undefined>()
+        const describe = state.credentials.describeRecord.bind(state.credentials)
+        state.credentials.describeRecord = async (key) => {
+          describeStarted.resolve(undefined)
+          await finishDescribe.promise
+          return describe(key)
+        }
+        state.authorization.registerFlow({
+          key: KEY,
+          label: 'Codex',
+          methods: [{ id: 'oauth', label: 'Sign in' }],
+          async run() {
+            await state.credentials.modifyRecord(KEY, async () => ({ kind: 'grant', payload: { token: 'saved' } }))
+          },
+        })
+        const attempt = state.authorization.begin({ key: KEY })
+        await describeStarted.promise
+        const cancellation = attempt.cancel()
+        finishDescribe.resolve(undefined)
+        await cancellation
         await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
         expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
         return

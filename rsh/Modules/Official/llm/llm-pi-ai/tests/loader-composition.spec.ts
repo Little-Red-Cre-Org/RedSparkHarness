@@ -193,6 +193,72 @@ describe('llm-pi-ai real dormant composition', () => {
     expect(llm.listProviders()).toEqual([])
   })
 
+  it('replays a real Codex reasoning and tool-call turn natively on the next turn', async () => {
+    const reasoning = { type: 'reasoning', id: 'rs_codex', summary: [], encrypted_content: 'encrypted-reasoning' }
+    const call = { type: 'function_call', id: 'fc_codex', call_id: 'call_codex', name: 'lookup',
+      arguments: '{}', namespace: 'harness', status: 'completed' }
+    const answer = { type: 'message', id: 'msg_codex', role: 'assistant', status: 'completed',
+      content: [{ type: 'output_text', text: 'done', annotations: [] }] }
+    const sse = (events: unknown[]): Response => new Response(
+      events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+      { headers: { 'content-type': 'text/event-stream' } },
+    )
+    const { ctx, settingsPath } = await loadComposition()
+    await ctx.credentials.modifyRecord(LlmPiAi.recordKeyFor('openai-codex'), () => Promise.resolve({
+      kind: 'grant', payload: {
+        type: 'oauth', access: 'synthetic-account-access-token', refresh: 'synthetic-account-refresh-token',
+        expires: Date.now() + 3_600_000, siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id',
+        issuer: 'https://auth.openai.com', subject: 'fixture-account-subject', idToken: 'fixture-id-token',
+        extAgentHostId: 'urn:uuid:fixture-host-id',
+        scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
+      },
+    }))
+    const fetch = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [
+        { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      ] })))
+      .mockResolvedValueOnce(sse([
+        { type: 'response.output_item.added', output_index: 0, item: { ...reasoning, encrypted_content: undefined } },
+        { type: 'response.output_item.done', output_index: 0, item: reasoning },
+        { type: 'response.output_item.added', output_index: 1, item: { ...call, arguments: '' } },
+        { type: 'response.function_call_arguments.delta', output_index: 1, item_id: 'fc_codex', delta: '{}' },
+        { type: 'response.output_item.done', output_index: 1, item: call },
+        { type: 'response.completed', response: { id: 'resp_1', status: 'completed', output: [reasoning, call],
+          usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 } } },
+      ]))
+      .mockResolvedValueOnce(sse([
+        { type: 'response.output_item.added', output_index: 0, item: { ...answer, content: [] } },
+        { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'done' },
+        { type: 'response.output_item.done', output_index: 0, item: answer },
+        { type: 'response.completed', response: { id: 'resp_2', status: 'completed', output: [answer],
+          usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 } } },
+      ]))
+    await writeFile(settingsPath, ['llm-pi-ai:', '  providers:', '    openai-codex:', '      transport: sse', ''].join('\n'))
+    try {
+      await vi.waitFor(() => {
+        expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
+      }, { timeout: 5000 })
+      const tools = [{ name: 'lookup', description: 'Look up a value.', parameters: { type: 'object' } }]
+      const first = await assemble(ctx, { provider: 'openai-codex', model: 'gpt-6.1-sol', messages: [], tools })
+      const toolCall = first.message.content.find(block => block.type === 'tool-call')
+      expect(toolCall).toMatchObject({ name: 'lookup' })
+      await assemble(ctx, {
+        provider: 'openai-codex', model: 'gpt-6.1-sol', tools,
+        messages: [first.message, createUserMessage({
+          content: [{ type: 'tool-result', toolCallId: toolCall!.id, content: [{ type: 'text', text: '42' }] }],
+          source: { kind: 'plugin', plugin: 'test' },
+        })],
+      })
+      const body = JSON.parse(fetch.mock.calls[2]![1]?.body as string) as { input: unknown[] }
+      expect(body.input).toContainEqual(expect.objectContaining({ type: 'reasoning', encrypted_content: 'encrypted-reasoning' }))
+      expect(body.input).toContainEqual(expect.objectContaining({
+        type: 'function_call', id: 'fc_codex', call_id: 'call_codex', namespace: 'harness',
+      }))
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
   it('shares one Codex catalog refresh across concurrent listings', async () => {
     const { ctx, settingsPath } = await loadComposition()
     const key = LlmPiAi.recordKeyFor('openai-codex')

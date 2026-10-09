@@ -26,9 +26,10 @@
  * @module dsh-llm-pi-ai/adapter
  */
 
-import { createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'
+import { createAssistantMessageEventStream, createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'
 import type {
   Api,
+  AssistantMessageEventStream,
   AuthResult,
   AuthContext,
   CredentialStore,
@@ -40,6 +41,7 @@ import type {
   RefreshModelsContext,
   SimpleStreamOptions,
   ThinkingLevel,
+  TranscriptContext,
 } from '@earendil-works/pi-ai'
 import {
   attributionHeaders,
@@ -254,6 +256,35 @@ function asChatGptPlanModel(model: Model<Api>): Model<Api> {
   return { ...model, provider: 'openai', api: 'openai-responses', baseUrl: OPENAI_RESPONSES_BASE_URL }
 }
 
+/**
+ * The Harness routes this account as `openai-codex` while pi-ai streams it as
+ * `openai`. History goes out under the transport identity so pi-ai replays it as
+ * same-model output, and results come back under the route identity so the
+ * stored replay state matches its assistant source.
+ */
+function asOpenAiContext(context: TranscriptContext): TranscriptContext {
+  return {
+    ...context,
+    messages: context.messages.map(message => message.role === 'assistant' && message.provider === CODEX_SUBSCRIPTION_ROUTE
+      ? { ...message, provider: 'openai' }
+      : message),
+  }
+}
+
+function asCodexRouteEvents(events: AssistantMessageEventStream): AssistantMessageEventStream {
+  const relabeled = createAssistantMessageEventStream()
+  void (async () => {
+    for await (const event of events) {
+      if ('partial' in event) event.partial.provider = CODEX_SUBSCRIPTION_ROUTE
+      if ('message' in event) event.message.provider = CODEX_SUBSCRIPTION_ROUTE
+      if ('error' in event) event.error.provider = CODEX_SUBSCRIPTION_ROUTE
+      relabeled.push(event)
+    }
+    relabeled.end()
+  })()
+  return relabeled
+}
+
 /** Account-scoped SIWC catalog over the public OpenAI Responses API. */
 function codexSubscriptionProvider(base: Provider, credentials: CredentialStore): Provider {
   const openai = catalogProvider('openai')
@@ -290,8 +321,10 @@ function codexSubscriptionProvider(base: Provider, credentials: CredentialStore)
         }))
       await context.publish({ update: () => { currentModels = models } })
     },
-    stream: (model, context, options) => openai.stream(asChatGptPlanModel(model), context, options),
-    streamSimple: (model, context, options) => openai.streamSimple(asChatGptPlanModel(model), context, options),
+    stream: (model, context, options) =>
+      asCodexRouteEvents(openai.stream(asChatGptPlanModel(model), asOpenAiContext(context), options)),
+    streamSimple: (model, context, options) =>
+      asCodexRouteEvents(openai.streamSimple(asChatGptPlanModel(model), asOpenAiContext(context), options)),
   }
 }
 

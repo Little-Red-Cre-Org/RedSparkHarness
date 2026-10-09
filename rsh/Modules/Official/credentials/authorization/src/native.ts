@@ -400,13 +400,12 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
           notify: (notice) => { this.push(state, { type: 'notice', notice }) },
           prompt: prompt => this.prompt(state, prompt),
         })
+        const record = await this.credentials.describeRecord(state.key)
+        // A cancel during run() or while the record is described wins; a committed record stays.
         if (state.controller.signal.aborted) settlement = 'cancelled'
+        else if (state.observedCommit && record.configured) settlement = 'authorized'
         else {
-          const record = await this.credentials.describeRecord(state.key)
-          if (state.observedCommit && record.configured) settlement = 'authorized'
-          else {
-            failure = new AuthorizationError(`authorization flow for "${state.key}" completed without committing its record`, 'NOT_COMMITTED')
-          }
+          failure = new AuthorizationError(`authorization flow for "${state.key}" completed without committing its record`, 'NOT_COMMITTED')
         }
       } catch (error) {
         if (state.controller.signal.aborted || state.observedDecline) settlement = 'cancelled'
