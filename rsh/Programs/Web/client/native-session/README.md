@@ -26,6 +26,8 @@ The native profile selects this package through its `dsh.native` row and `./nati
 
 Select after client-connection in the native profile and configure a positive integer maxFollowBufferChars, limiting the SSE parser buffer. The clientNativeSession service supports list, create, history, prompt, cancel and status. A prompt requires an explicit resume boolean and completes after Host settlement. Caller cancellation aborts non-prompt requests; prompt cancellation awaits Host settlement. Host errors reject; decoded results validate their endpoint fields before reaching Consumers. The Consumer keeps no second Session cache or connection loop.
 
+The `./list-types` export contains the neutral Host/Client wire row for stored Sessions. Its title projection stays beside the unchanged Session header and distinguishes resolved, absent and unavailable reads; the Host supplies it from durable title events.
+
 `executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
 
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.

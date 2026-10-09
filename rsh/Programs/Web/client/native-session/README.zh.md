@@ -26,6 +26,8 @@ kind: "package-reference"
 
 在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
+`./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
+
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。

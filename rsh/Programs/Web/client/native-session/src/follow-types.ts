@@ -9,4 +9,5 @@ export type NativeSessionFollowFrame =
   | { readonly type: 'text'; readonly text: string }
   | { readonly type: 'human'; readonly prompt: NativeWebHumanPrompt }
   | { readonly type: 'human-removed'; readonly id: NativeWebHumanId }
+  | { readonly type: 'title-updated' }
   | { readonly type: 'settled' }

@@ -41,7 +41,7 @@ export interface PackageDependencyManifest {
   peerDependenciesMeta?: Record<string, unknown>
   dsh?: {
     client?: { inject?: string[] }
-    native?: { requires?: string[]; optional?: string[]; provides?: string[] }
+    native?: { entry?: string; targets?: string[]; requires?: string[]; optional?: string[]; provides?: string[] }
   }
 }
 
@@ -337,8 +337,13 @@ function hostSourceEntries(root: string, pkg: WorkspacePackageManifest): string[
   const entries = new Set([entry])
   const exports = pkg.manifest.exports
   if (exports === null || typeof exports !== 'object') return [...entries]
+  const native = pkg.manifest.dsh?.native
+  const clientOnlyNativeEntry = native?.entry !== undefined
+    && native.targets?.includes('client') === true
+    && !native.targets.includes('host')
   for (const [subpath, declaration] of Object.entries(exports as Record<string, unknown>)) {
     if (subpath === '.' || subpath === './package.json' || /^\.\/(?:client|src)(?:\/|$)/.test(subpath)) continue
+    if (clientOnlyNativeEntry && subpath === native.entry) continue
     const types = declaration !== null && typeof declaration === 'object' && 'types' in declaration
       ? declaration.types
       : undefined
@@ -363,6 +368,53 @@ function hostSourceEntries(root: string, pkg: WorkspacePackageManifest): string[
     }
   }
   return [...entries].sort()
+}
+
+/** Resolve one declared Native Client export to its authored source entry. */
+function nativeClientSourceEntries(root: string, pkg: WorkspacePackageManifest): string[] {
+  const native = pkg.manifest.dsh?.native
+  if (native?.entry === undefined || native.targets?.includes('client') !== true) return []
+  const exports = pkg.manifest.exports
+  if (exports === null || typeof exports !== 'object') return []
+  const declaration = (exports as Record<string, unknown>)[native.entry]
+  if (declaration === undefined) {
+    throw new Error(`${pkg.manifestPath}: Native Client entry ${native.entry} has no package export`)
+  }
+  const entries = nodeExportTargets(declaration).flatMap((target) => {
+    if (!target.startsWith('./lib/')) {
+      throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} cannot map ${target} to source`)
+    }
+    const source = target.replace(/^\.\/lib\//, './src/').replace(/\.js$/, '.ts').replace(/\.mjs$/, '.mts')
+    const resolved = resolveLocal(resolve(root, pkg.manifestPath), source)
+    if (resolved === undefined) {
+      throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} has no source entry for ${target}`)
+    }
+    return [resolved]
+  })
+  if (entries.length === 0) {
+    throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} has no runtime target`)
+  }
+  return [...new Set(entries)].sort()
+}
+
+/** Read authored runtime uses from the selected Native Client entry closure. */
+function readNativeClientRuntimeUses(root: string, pkg: WorkspacePackageManifest): Map<string, string[]> {
+  const packageUses = new Map<string, string[]>()
+  const seen = new Set<string>()
+  const visit = (path: string): void => {
+    const normalized = normalize(path)
+    if (seen.has(normalized)) return
+    seen.add(normalized)
+    const source = readFileSync(normalized, 'utf8')
+    const displayPath = normalizePath(relative(root, normalized))
+    for (const name of collectRuntimeSourcePackageUses(displayPath, source)) addUse(packageUses, name, displayPath)
+    for (const specifier of collectRuntimeLocalSourceSpecifiers(normalized, source)) {
+      const target = resolveLocal(normalized, specifier)
+      if (target !== undefined) visit(target)
+    }
+  }
+  for (const entry of nativeClientSourceEntries(root, pkg)) visit(entry)
+  return packageUses
 }
 
 function readHostRuntimeUses(root: string, pkg: WorkspacePackageManifest, generatedHostSource?: string): {
@@ -420,16 +472,20 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishe
     const source = readFileSync(resolve(root, pkg.dir, sourcePath), 'utf8')
     const displayPath = `${pkg.dir}/${normalizePath(sourcePath)}`
     const runtimePackageNames = collectRuntimeSourcePackageUses(sourcePath, source)
+    const typePackageNames = collectTypeSourcePackageUses(sourcePath, source)
     for (const name of runtimePackageNames) addUse(runtimeUses, name, displayPath)
     let runtimeNames: Set<string> | undefined
     for (const specifier of collectSourcePackageUses(sourcePath, source)) {
       const name = packageNameOf(specifier)
       if (name === undefined) continue
-      if (publishedTypes.has(name)) {
-        runtimeNames ??= runtimePackageNames
-        if (!runtimeNames.has(name)) addUse(typeUses, name, displayPath)
-      }
       const typesName = `@types/${name.replace(/^@/, '').replace('/', '__')}`
+      if (typePackageNames.has(name)) {
+        if (publishedTypes.has(name)) addUse(typeUses, name, displayPath)
+        if (publishedTypes.has(typesName)) {
+          addUse(typeUses, typesName, displayPath)
+          addUse(uses, typesName, displayPath)
+        }
+      }
       if (declaredSections(pkg.manifest, name).length === 0 && declaredSections(pkg.manifest, typesName).length > 0) {
         runtimeNames ??= runtimePackageNames
         if (!runtimeNames.has(name)) {
@@ -441,6 +497,39 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishe
     }
   }
   return { uses, typeUses, runtimeUses }
+}
+
+/** Type providers retained by import/export type syntax and declaration augmentations. */
+function collectTypeSourcePackageUses(path: string, source: string): Set<string> {
+  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
+  const uses = new Set<string>()
+  const add = (specifier: ts.Expression | undefined): void => {
+    if (specifier === undefined || !ts.isStringLiteralLike(specifier)) return
+    const name = packageNameOf(specifier.text)
+    if (name !== undefined) uses.add(name)
+  }
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node)) {
+      const clause = node.importClause
+      if (clause?.phaseModifier === ts.SyntaxKind.TypeKeyword
+        || clause?.namedBindings !== undefined && ts.isNamedImports(clause.namedBindings)
+          && clause.namedBindings.elements.some(element => element.isTypeOnly)) add(node.moduleSpecifier)
+    } else if (ts.isExportDeclaration(node)) {
+      const clause = node.exportClause
+      if (node.isTypeOnly || clause !== undefined && ts.isNamedExports(clause)
+        && clause.elements.some(element => element.isTypeOnly)) add(node.moduleSpecifier)
+    } else if (ts.isImportEqualsDeclaration(node) && node.isTypeOnly
+      && ts.isExternalModuleReference(node.moduleReference)) {
+      add(node.moduleReference.expression)
+    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      add(node.argument.literal)
+    } else if (ts.isModuleDeclaration(node) && ts.isStringLiteral(node.name)) {
+      add(node.name)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return uses
 }
 
 /**
@@ -475,6 +564,11 @@ export function readPackageDependencyFacts(
         ? paths.filter(path => path.startsWith(`${pkg.dir}/src/client/`))
         : []
     if (clientPaths.length > 0) clientRuntimeSourceUses.set(name, clientPaths)
+  }
+  if (role !== 'configured-host') {
+    for (const [name, paths] of readNativeClientRuntimeUses(root, pkg)) {
+      for (const path of paths) addUse(clientRuntimeSourceUses, name, path)
+    }
   }
   const hostRuntime = role === 'client-only'
     ? { packageUses: new Map<string, string[]>(), exportUses: [] }
@@ -583,7 +677,9 @@ export function collectPublishedTypeDependencyPolicyViolations(
       violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} more than once`)
     }
     for (const dependency of dependencies) {
-      if (!fact.workspaceNames.has(dependency)) violations.push(`publishedTypeDependencies names unknown workspace package ${dependency}`)
+      if (!fact.workspaceNames.has(dependency) && !dependency.startsWith('@types/')) {
+        violations.push(`publishedTypeDependencies names unknown workspace package ${dependency}`)
+      }
       if (!fact.publishedTypeSourceUses.has(dependency)) {
         violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} without a source type import`)
       }

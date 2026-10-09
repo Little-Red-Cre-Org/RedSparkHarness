@@ -84,6 +84,7 @@ flowchart TD
     pkg_tool_skill["tool-skill"]
   end
   subgraph group_subagent["group: subagent"]
+    pkg_codex_app_server["codex-app-server"]
     pkg_native_subagent["native-subagent"]
     pkg_native_tool_subagent_list_agents["native-tool-subagent-list-agents"]
     pkg_sdk_child["sdk-child"]
@@ -92,7 +93,6 @@ flowchart TD
     pkg_subagent["subagent"]
     pkg_subagent_acp["subagent-acp"]
     pkg_subagent_claude_code["subagent-claude-code"]
-    pkg_subagent_codex["subagent-codex"]
     pkg_subagent_dsh_sdk["subagent-dsh-sdk"]
     pkg_subagent_fork_in_process["subagent-fork-in-process"]
     pkg_subagent_in_process_driver["subagent-in-process-driver"]
@@ -166,6 +166,7 @@ flowchart TD
     pkg_compat_tool_fs["compat-tool-fs"]
     pkg_http_routes_cordis["http-routes-cordis"]
     pkg_plugin_host["plugin-host"]
+    pkg_subagent_codex["subagent-codex"]
     pkg_user_approval["user-approval"]
   end
   subgraph group_bundle["group: bundle"]
@@ -1199,11 +1200,6 @@ flowchart TD
   pkg_subagent_claude_code --> pkg_subagent
   pkg_subagent_claude_code --> pkg_subprocess
   pkg_subagent_claude_code --> pkg_timeout
-  pkg_subagent_codex --> pkg_llm
-  pkg_subagent_codex --> pkg_session
-  pkg_subagent_codex --> pkg_subagent
-  pkg_subagent_codex --> pkg_subprocess
-  pkg_subagent_codex --> pkg_timeout
   pkg_subagent_dsh_sdk --> pkg_agent
   pkg_subagent_dsh_sdk --> pkg_llm
   pkg_subagent_dsh_sdk --> pkg_sdk_client
@@ -1264,6 +1260,11 @@ flowchart TD
   pkg_api_session_controller --> pkg_util_values
   pkg_api_session_controller --> pkg_util_workspace_path
   pkg_api_session_controller --> pkg_workspace
+  pkg_subagent_codex --> pkg_llm
+  pkg_subagent_codex --> pkg_session
+  pkg_subagent_codex --> pkg_subagent
+  pkg_subagent_codex --> pkg_subprocess
+  pkg_subagent_codex --> pkg_timeout
   pkg_compaction_basic --> pkg_agent
   pkg_compaction_basic --> pkg_commands
   pkg_compaction_basic --> pkg_compaction
@@ -1350,6 +1351,7 @@ flowchart TD
 | [`native-session-execution`](../Engine/core/native-session-execution) | `core` | — |
 | [`native-tools`](../Engine/core/native-tools) | `core` | — |
 | [`command-goal`](../Engine/goal/command-goal) | `goal` | — |
+| [`codex-app-server`](../Modules/Official/subagent/codex-app-server) | `subagent` | — |
 | [`native-subagent`](../Engine/subagent/native-subagent) | `subagent` | — |
 | [`native-tool-subagent-list-agents`](../Engine/subagent/native-tool-subagent-list-agents) | `subagent` | — |
 | [`subagent-protocol`](../Engine/subagent/subagent-protocol) | `subagent` | — |
@@ -1622,13 +1624,13 @@ flowchart TD
 | [`webhook-github`](../Modules/Official/webhook/webhook-github) | `webhook` | [`credentials`](../Modules/Official/credentials/credentials), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`session`](../Engine/core/session), [`webhook`](../Modules/Official/webhook/webhook) |
 | [`subagent-acp`](../Engine/subagent/subagent-acp) | `subagent` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`subagent-claude-code`](../Engine/subagent/subagent-claude-code) | `subagent` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
-| [`subagent-codex`](../Engine/subagent/subagent-codex) | `subagent` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`subagent-dsh-sdk`](../Compatibility/DSH/subagent/subagent-dsh-sdk) | `subagent` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`sdk-client`](../Programs/SDK/packages/client), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`subprocess`](../Core/subprocess/subprocess) |
 | [`subagent-in-process-driver`](../Engine/subagent/subagent-in-process-driver) | `subagent` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`tool-subagent`](../Engine/subagent/tool-subagent) | `subagent` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`jobs`](../Engine/jobs/jobs), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`subagent`](../Engine/subagent/subagent), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`tool-subagent-control`](../Engine/subagent/tool-subagent-control) | `subagent` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`tools`](../Engine/core/tools) |
 | [`hooks-claude-code`](../Modules/Official/hooks/hooks-claude-code) | `hooks` | [`agent`](../Engine/core/agent), [`hook-protocol`](../Modules/Official/hooks/hook-protocol), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`subagent`](../Engine/subagent/subagent), [`tools`](../Engine/core/tools) |
 | [`api-session-controller`](../Programs/Web/api/session-controller) | `api` | [`agent`](../Engine/core/agent), [`agent-default-model`](../Engine/core/agent-default-model), [`agent-presets`](../Engine/preset/agent-presets), [`api-gateway`](../Programs/Web/api/gateway), [`attachment`](../Modules/Official/attachment/attachment), [`client-connection`](../Programs/Web/client/connection), [`client-file-upload`](../Programs/Web/client/file-upload), [`commands`](../Modules/Official/interaction/commands), [`file-reference`](../Engine/context/file-reference), [`fs`](../Modules/Official/fs/fs), [`jobs`](../Engine/jobs/jobs), [`llm`](../Engine/llm/llm), [`native-command`](../Core/util/native-command), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`session-projection`](../Engine/session/session-projection), [`session-projection-cache`](../Engine/session/session-projection-cache), [`session-query`](../Engine/session-query/session-query), [`session-title`](../Engine/session/session-title), [`skill`](../Modules/Official/skill/skill), [`subagent`](../Engine/subagent/subagent), [`typert-protocol`](../Core/typert/protocol), [`typert-registry`](../Core/typert/registry), [`util-time`](../Core/util/time), [`util-values`](../Core/util/values), [`util-workspace-path`](../Core/util/workspace-path), [`workspace`](../Modules/Official/workspace/workspace) |
+| [`subagent-codex`](../Compatibility/DSH/bridge/subagent-codex) | `bridge` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`compaction-basic`](../Engine/compaction/compaction-basic) | `compaction` | [`agent`](../Engine/core/agent), [`commands`](../Modules/Official/interaction/commands), [`compaction`](../Engine/compaction/compaction), [`compaction-tool-result-pruner`](../Engine/compaction/compaction-tool-result-pruner), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`token-meter`](../Engine/llm/token-meter) |
 | [`sdk-jsonrpc-server`](../Programs/SDK/packages/server) | `sdk` | [`agent`](../Engine/core/agent), [`attachment`](../Modules/Official/attachment/attachment), [`llm`](../Engine/llm/llm), [`llm-deepseek`](../Modules/Official/llm/llm-deepseek), [`scope`](../Engine/core/scope), [`sdk-protocol`](../Engine/subagent/sdk-protocol), [`session`](../Engine/core/session), [`subagent`](../Engine/subagent/subagent) |
 | [`tool-ralph`](../Engine/workflow/tool-ralph) | `workflow` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`subagent`](../Engine/subagent/subagent), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |

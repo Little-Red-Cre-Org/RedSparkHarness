@@ -9,7 +9,6 @@ import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import type {} from '@deepseek-ai/dsh-api-gateway'
 import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
-import { prepareNativeClientBundle } from './native-client.ts'
 import { createDesktopAssetHandler, DESKTOP_STREAM_PATH } from './web-assets.ts'
 import type { DesktopHostRuntime } from './runtime.ts'
 
@@ -111,11 +110,14 @@ function remoteStreamHandler(ctx: Context): ConnectionFetchHandler {
  * @param projectDir - installed profile directory.
  * @param allowLinkedPackages - development-only linked bundle allowance.
  * @returns shared private-carrier handlers and their teardown.
+ * @throws if the profile selects native Client entries without selecting the native Host runtime.
  */
 export async function createLegacyDesktopRuntime(
   runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
 ): Promise<DesktopHostRuntime> {
-  const nativeClient = await prepareNativeClientBundle(projectDir, runtimeDir)
+  if (existsSync(join(projectDir, 'rsh.client.json'))) {
+    throw new Error('dsh desktop: rsh.client.json requires profile runtime "native"')
+  }
   const rootConfig = join(projectDir, ROOT_CONFIG_FILENAME)
   writeFileSync(rootConfig, ROOT_CONFIG)
   const environment = loadLayeredEnv('dsh desktop')
@@ -137,7 +139,7 @@ export async function createLegacyDesktopRuntime(
     throw new Error('dsh desktop: composition did not provide connection, typertGateway, and clientModules')
   }
   const api = connection.createSharedFetchHandler('/api')
-  const assets = createDesktopAssetHandler(ctx, runtimeDir, nativeClient)
+  const assets = createDesktopAssetHandler(ctx, runtimeDir)
   const streams = remoteStreamHandler(ctx)
 
   return {

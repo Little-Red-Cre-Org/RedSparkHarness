@@ -6,11 +6,11 @@ English | [中文](2026-10-05-native-desktop-private-host.zh.md)
 
 ## Problem
 
-A native Client preview leaves the Desktop Agent and Session on the compatibility Host. Native installation must select the actual Host without changing existing Desktop defaults or opening a server.
+The Desktop default remains the compatibility Host. Native Client Session RPC, follow, and image routes require a Native Session controller, so a compatibility profile that selects native Client entries must fail before startup. Native installation selects the matching Host without changing existing Desktop defaults or opening a server.
 
 ## Decision
 
-The private Host reads the explicit profile runtime marker before importing either assembly. Native mode shares CLI profile validation and installation planning, supplies Electron's existing Connection carrier within the same scope plan, and activates the selected Session controller and Providers once. Its selected Client replaces the root page. Both package and export realpaths must stay within the installed profile or runtime. The planning loader's only allowed computed import is the export already resolved from a validated installed manifest.
+The private Host reads `dsh.profile.runtime` from the installed profile's `package.json` before importing either assembly; `dsh.profile.config` names `rsh.profile.json`, which contains the composition. Native mode shares CLI profile validation and installation planning, supplies Electron's existing Connection carrier within the same scope plan, and activates the selected Session controller and Providers once. Its selected Client replaces the root page. Both package and export realpaths must stay within the installed profile or runtime. The planning loader's only allowed computed import is the export already resolved from a validated installed manifest.
 
 ## Alternatives considered
 

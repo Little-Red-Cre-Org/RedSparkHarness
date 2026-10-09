@@ -10,6 +10,7 @@ import SessionTitleService, {
   normalizeSessionTitle,
   truncateTitleUtf8,
 } from '@deepseek-ai/dsh-session-title'
+import { foldSessionTitle as foldNativeSessionTitle } from '../src/native.ts'
 
 const CONFIG = {
   fallbackMaxWords: 5,
@@ -22,6 +23,10 @@ async function settleTitles(): Promise<void> {
 }
 
 describe('session title normalization', () => {
+  it('exports the same pure event fold through its Cordis-free Native face', () => {
+    expect(foldNativeSessionTitle).toBe(foldSessionTitle)
+  })
+
   it('removes terminal controls, collapses whitespace, and applies word and UTF-8 byte caps', () => {
     expect(normalizeSessionTitle('\u001B]0;stolen\u0007  Hello\t brave\nnew world  ', 80))
       .toBe('Hello brave new world')

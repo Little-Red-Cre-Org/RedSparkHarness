@@ -25,7 +25,7 @@ const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url))
 /** The shipped Web surface: the dsh-base and dsh-web-app bundle patches over an empty preset root. */
 const BASE_PATCH = join(REPO_ROOT, 'rsh/Compatibility/DSH/bundle/base/cordis.patch.yml')
 const WEB_PATCH = join(REPO_ROOT, 'rsh/Compatibility/DSH/bundle/web-app/cordis.patch.yml')
-const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Engine/subagent/subagent-codex')
+const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Compatibility/DSH/bridge/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Engine/subagent/subagent-claude-code')
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'rsh/Programs/CLI/package.json')

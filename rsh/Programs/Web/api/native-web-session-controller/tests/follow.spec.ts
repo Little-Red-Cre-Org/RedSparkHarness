@@ -29,13 +29,14 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
 
   const entered = Promise.withResolvers<undefined>()
   const cleanup = Promise.withResolvers<undefined>()
-  const executor: Pick<NativeHeadlessApplication, 'executeRootTurn'> = {
+  const executor: Pick<NativeHeadlessApplication, 'executeRootTurn' | 'dispose'> = {
     async executeRootTurn(request, signal) {
       request.onChunk?.({ type: 'text-delta', index: 0, text: 'overflow' })
       entered.resolve(undefined)
       await cleanup.promise
       throw new AggregateError([signal.reason, new Error('fixture cleanup failure')], 'epoch cleanup failed')
     },
+    async dispose() {},
   }
   // Only turn execution participates in this transport settlement fixture.
   const service = new NativeWebSessionService(executor as NativeHeadlessApplication,

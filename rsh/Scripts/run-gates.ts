@@ -810,7 +810,7 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'rsh/Programs/SDK/packages/server/tests/built-scope-carrier.e2e.ts',
     'rsh/Modules/Official/fs/tool-present/tests/built-errors.e2e.ts',
     'rsh/Core/subprocess/subprocess-local/tests/spawn-runner-built.e2e.ts',
-    'rsh/Engine/subagent/subagent-codex/tests/loader-composition.e2e.ts',
+    'rsh/Compatibility/DSH/bridge/subagent-codex/tests/loader-composition.e2e.ts',
     'rsh/Engine/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
     'rsh/Programs/Web/api/remotes/tests/built-lib.e2e.ts',
     'rsh/Modules/Community/experimental/agent-team/tests/built-lib.e2e.ts',

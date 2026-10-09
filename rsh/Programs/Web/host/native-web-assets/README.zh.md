@@ -39,7 +39,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - 此包不选择 Client profile，也不编排完整的原生 Web 应用；调用者需要提供 registry 和选中的资源 bundle。
-- 受支持的产品 Client 名册尚未迁至原生页面；兼容 Host 仍默认提供旧版应用。
+- 首次使用的 native-web roster 会在 application、renderer、Connection 和 Session Consumer 外选择六个可选壳安装器：locale、theme、Session presentation、layout、左侧 sidebar 和右侧详情 sidebar。Host 还会安装 Session-title 投影与 first-prompt Provider。这是一个已选择的 Native 组合，并非完整旧版 Client 名册；兼容 Host 仍默认提供旧版应用。
 
 不发布 invariant companion，因为路由响应由已安装的前端和提供的不可变 bundle 推导，不存在独立的持久状态。
 

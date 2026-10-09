@@ -21,7 +21,8 @@ type LayoutState = {
   layoutInfo: LayoutInfo
 }
 
-type LayoutInfo = {
+/** Panel measurements and visibility reported to the root frame. */
+export type LayoutInfo = {
   sidebar: number
   /** Last positive frame measurement; window width bootstraps the first render. */
   viewportWidth: number

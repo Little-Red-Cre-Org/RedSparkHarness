@@ -27,6 +27,15 @@
       "path": "../ui-renderer"
     },
     {
+      "path": "../locale"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
       "path": "../../../../Engine/llm/native-model-selection/tsconfig.client.json"
     },
     {

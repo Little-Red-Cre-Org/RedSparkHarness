@@ -7,6 +7,8 @@ import type { ConversationLocaleKey } from './locales.ts'
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
+export type NativeSettingsActions = Pick<NativeSessionClient,
+  'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -114,8 +116,8 @@ function pretty(value: unknown): string {
  * @param props - selected native client, localized copy, and the route back to the Session page.
  * @returns the native Settings and write-only credential page.
  */
-export function SettingsPage({ client, t, onBack }: {
-  client: NativeSessionClient
+export function SettingsPage({ actions, t, onBack }: {
+  actions: NativeSettingsActions
   t: Translate
   onBack: () => void
 }) {
@@ -135,7 +137,7 @@ export function SettingsPage({ client, t, onBack }: {
     setError(undefined)
     setCredentialError(undefined)
     try {
-      const description = await client.settingsDescribe(signal)
+      const description = await actions.settingsDescribe(signal)
       const rows = description.namespaces
       setLimits(description.limits)
       setNamespaces(rows)
@@ -146,7 +148,7 @@ export function SettingsPage({ client, t, onBack }: {
         try {
           const aggregate: Record<string, { configured: boolean; source?: string; writable: boolean }> = {}
           for (let offset = 0; offset < refs.length; offset += description.limits.maxCredentialRefsPerRead) {
-            Object.assign(aggregate, await client.credentialsDescribe(
+            Object.assign(aggregate, await actions.credentialsDescribe(
               refs.slice(offset, offset + description.limits.maxCredentialRefsPerRead), signal,
             ))
           }
@@ -159,7 +161,7 @@ export function SettingsPage({ client, t, onBack }: {
       setError(requestError(cause, t, 'native/settings'))
       return false
     } finally { setLoading(false) }
-  }, [client])
+  }, [actions, t])
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -177,7 +179,7 @@ export function SettingsPage({ client, t, onBack }: {
       if (limits === undefined || ops.length > limits.maxSettingsOperations) {
         throw new UnsupportedSettingsEdit('settingsOperationLimitExceeded', 'Settings edit exceeds the Host operation limit.')
       }
-      if (ops.length > 0) await client.settingsMutate(row.namespace, ops, row.revision)
+      if (ops.length > 0) await actions.settingsMutate(row.namespace, ops, row.revision)
       if (await refresh(false)) setNotice(t('settingsSaved'))
     } catch (cause: unknown) {
       if (cause instanceof UnsupportedSettingsEdit) {
@@ -195,7 +197,7 @@ export function SettingsPage({ client, t, onBack }: {
     setCredentialError(undefined)
     setNotice(undefined)
     try {
-      await client.credentialsSet(ref, value)
+      await actions.credentialsSet(ref, value)
       setCredentialDrafts(current => ({ ...current, [ref]: '' }))
       await refresh(true)
       setNotice(t('credentialSaved'))
@@ -210,7 +212,7 @@ export function SettingsPage({ client, t, onBack }: {
     setCredentialError(undefined)
     setNotice(undefined)
     try {
-      await client.credentialsUnset(ref)
+      await actions.credentialsUnset(ref)
       await refresh(true)
       setNotice(t('credentialRemoved'))
     } catch (cause: unknown) {

@@ -25,6 +25,12 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'renderer', plugin: '@deepseek-ai/dsh-client-ui-renderer' },
   { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
   { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session', config: { maxFollowBufferChars: 1000000 } },
+  { id: 'locale', plugin: '@deepseek-ai/dsh-client-locale' },
+  { id: 'theme', plugin: '@deepseek-ai/dsh-client-ui-theme' },
+  { id: 'session-presentation', plugin: '@deepseek-ai/dsh-client-ui-session' },
+  { id: 'layout', plugin: '@deepseek-ai/dsh-client-ui-layout' },
+  { id: 'sidebar', plugin: '@deepseek-ai/dsh-client-ui-sidebar' },
+  { id: 'sidebar-right', plugin: '@deepseek-ai/dsh-client-ui-sidebar-right' },
 ] as const
 
 function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
