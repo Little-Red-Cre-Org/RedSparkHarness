@@ -39,8 +39,10 @@ interface CodeRunRequest {
 原生 Host 还接受 `NativeCodeRunRequest`，它为调用方取消自己拥有的 binding 增加停止回调。已开始的执行停止时，Provider 会在等待这些调用完成前通知一次；执行尚未开始便已解析或拒绝的请求不会触发通知。Cordis `CodeRuntimeDefinition` Provider 只接受共享请求。
 
 ```ts type-equiv
-/** Native-only run request with a stop notification for caller-owned bindings. */
+/** Native-only request; Session stays host-side so Providers can resolve its policy. */
 interface NativeCodeRunRequest extends CodeRunRequest {
+  /** Exact live Session for this run; Providers use it for scoped execution policy and never serialize it to a worker. */
+  session: Session
   /**
    * Notify the caller once a started native execution stops, before waiting
    * for caller-owned binding calls. Use the notification to begin cancelling
