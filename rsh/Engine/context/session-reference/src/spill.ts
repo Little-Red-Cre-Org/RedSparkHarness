@@ -1,7 +1,7 @@
 /** Full projected transcripts and model-visible spill outcomes for bounded reference previews. */
 
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import type { SaveTextSpill, SpillRef, SpillStore } from '@deepseek-ai/dsh-spill'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill/native'
 import type { ReferencedSessionData, ReferenceRetentionStats } from './projection.ts'
 
 /** Warning shared by inline previews and retrievable full transcripts. */
@@ -21,7 +21,7 @@ type FullSnapshot = ({ status: 'saved' } & SpillRef)
  * @returns an omission notice, absent for intact previews; storage failures report unavailable.
  */
 export async function prepareReferenceOmission(
-  store: SpillStore | undefined,
+  store: { saveText(input: SaveTextSpill): Promise<SpillRef> } | undefined,
   ownerId: SessionId,
   source: { fullData: ReferencedSessionData; stats: ReferenceRetentionStats; capturedFormatVersion: number },
   inputIndex: number,

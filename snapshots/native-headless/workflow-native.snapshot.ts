@@ -5,17 +5,24 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+import { formatSessionReferenceMention } from '../../rsh/Engine/context/session-reference/src/uri.ts'
 import { toolCallResponse, textResponse } from '../../rsh/Engine/core/agent-loop/tests/mock-adapter.ts'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/workflow-native')
 const roleNames = Array.from({ length: 4 }, (_, index) => join(scene, sessionFixtureName(index, SESSION_FORMAT_VERSION)))
+const referenceSessionId = SessionId('workflow-native-reference')
+const referenceFact = 'Prior finding: the fixture token is empty.'
+const referenceMention = formatSessionReferenceMention({ sessionId: referenceSessionId, label: 'prior finding' })
 const task = 'Inspect @README.md, then run a two-child workflow and one structured Ralph round.'
+  + ` Use this prior finding: ${referenceMention}`
 const workflowScript = "const first = await agent('inspect first item'); const second = await agent('inspect second item'); return { results: [first, second] }"
 const report = { status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [], blocker: '' }
 
@@ -28,6 +35,9 @@ function fixtureEntries(): { readonly task: string; readonly parent: ReturnType<
   const initial = parentEvents.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
   const userTask = initial?.type === 'user/message' ? initial.data.content.find(block => block.type === 'text') : undefined
   if (userTask?.type !== 'text') throw new Error('workflow-native: missing recorded task')
+  const taskWithReference = userTask.text.includes(referenceMention)
+    ? userTask.text
+    : `${userTask.text} Use this prior finding: ${referenceMention}`
   const children = parsed.slice(1).map(events => {
     const first = events.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
     const prompt = first?.type === 'user/message' ? first.data.content.find(block => block.type === 'text') : undefined
@@ -36,11 +46,26 @@ function fixtureEntries(): { readonly task: string; readonly parent: ReturnType<
     if (match === undefined || match.length === 0) throw new Error('workflow-native: child prompt has no first line')
     return { match, script: deriveReplayScript(events) }
   })
-  return { task: userTask.text, parent: deriveReplayScript(parentEvents), children }
+  return { task: taskWithReference, parent: deriveReplayScript(parentEvents), children }
 }
 
 function lstatExists(path: string): boolean {
   try { return lstatSync(path).isFile() } catch { return false }
+}
+
+async function seedReferenceSession(sessions: string): Promise<void> {
+  const backend = new JsonlSessionBackend({ root: sessions, compression: 'none' })
+  const header = { version: SESSION_FORMAT_VERSION, id: referenceSessionId, createdAt: 1, cwd: '/', isSeeded: false }
+  const handle = await backend.create(header)
+  try {
+    await handle.append([{
+      type: 'user/message', seq: SessionSeq(0), time: 1,
+      data: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: referenceFact }] }),
+      surfaceOp: 'append',
+    }])
+  } finally {
+    try { await handle.close() } finally { await backend.close() }
+  }
 }
 
 function initialEntries() {
@@ -71,16 +96,25 @@ it('replays real workflow children and a committed structured report through dsh
   const modules = join(profile, 'node_modules')
   const workspace = join(home, 'work')
   const sessions = join(home, 'sessions')
+  const modelRequests = join(home, 'model-requests.jsonl')
   const links: string[] = []
   try {
     ensureShippedNativeProfile('native-headless', home)
     mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
     mkdirSync(workspace)
+    mkdirSync(sessions)
+    await seedReferenceSession(sessions)
     writeFileSync(join(workspace, 'README.md'), 'A workspace file explicitly referenced by the user.\n')
     const packages = [
       ['native-headless', 'rsh/Engine/core/native-headless'],
       ['native-agent', 'rsh/Engine/core/native-agent'],
       ['native-session-execution', 'rsh/Engine/core/native-session-execution'],
+      ['session-query', 'rsh/Engine/session-query/session-query'],
+      ['session-reference', 'rsh/Engine/context/session-reference'],
+      ['agent-instructions', 'rsh/Engine/context/agent-instructions'],
+      ['session-title', 'rsh/Engine/session/session-title'],
+      ['compaction', 'rsh/Engine/compaction/compaction'],
+      ['output-retention', 'rsh/Core/util/output-retention'],
       ['native-model-execution', 'rsh/Engine/core/native-model-execution'],
       ['native-tools', 'rsh/Engine/core/native-tools'],
       ['native-prompt', 'rsh/Engine/core/native-prompt'],
@@ -116,6 +150,7 @@ it('replays real workflow children and a committed structured report through dsh
           const childIndices = new Map();
           context.provide('model', { async *stream(request) {
             const messages = JSON.stringify(request.messages);
+            (await import('node:fs')).appendFileSync(${JSON.stringify(modelRequests)}, messages + '\\n');
             const delegated = messages.includes('You are a delegated subagent:');
             if (delegated) {
               const child = children.find(row => messages.includes(row.match));
@@ -136,9 +171,11 @@ it('replays real workflow children and a committed structured report through dsh
     };`)
 
     const composition = shippedNativeProfileComposition(home, 'native-headless')
-    const selected = new Set(['app', 'agents', 'session-execution', 'tools', 'prompt', 'subagents', 'workflow',
-      'workflow-worker', 'workflow-tool', 'ralph-tool', 'model-execution', 'storage', 'fs', 'policy', 'file-tools',
-      'file-reference', 'pi-ai'])
+    const selected = new Set([
+      'app', 'agents', 'session-execution', 'session-query', 'session-reference', 'agent-instructions',
+      'tools', 'prompt', 'subagents', 'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool',
+      'model-execution', 'storage', 'fs', 'policy', 'file-tools', 'file-reference', 'pi-ai',
+    ])
     const installations = composition.installations.map(row => {
       if (!selected.has(row.id)) return { ...row, disabled: true }
       if (row.id === 'app') return { ...row, config: { provider: 'fixture', model: 'native-workflow',
@@ -159,12 +196,19 @@ it('replays real workflow children and a committed structured report through dsh
 
     const stored = readdirSync(sessions, { recursive: true }).filter(name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)))
       .map(name => readFileSync(join(sessions, String(name)), 'utf8'))
-    expect(stored).toHaveLength(4)
+    expect(stored).toHaveLength(5)
     const parentIndex = stored.findIndex(raw => parseSessionLog(raw).some(event => event.type === 'tool-workflow/run-start'))
     if (parentIndex < 0) throw new Error('workflow-native: durable parent Session missing')
     const parentRaw = stored[parentIndex]
     if (parentRaw === undefined) throw new Error('workflow-native: parent Session is missing')
     const parentEvents = parseSessionLog(parentRaw)
+    const originalReferenceMention = parentEvents.find(event => event.type === 'user/message'
+      && event.data.source.kind === 'user' && JSON.stringify(event.data.content).includes(referenceMention))
+    const durableReference = parentEvents.find(event => event.type === 'user/message'
+      && JSON.stringify(event.data.source).includes('session-reference'))
+    expect(originalReferenceMention).toBeDefined()
+    expect(JSON.stringify(durableReference)).toContain(referenceFact)
+    expect(readFileSync(modelRequests, 'utf8')).toContain(referenceFact)
     const starts = parentEvents.filter(event => event.type === 'tool-workflow/agent-start')
     expect(starts).toHaveLength(3)
     expect(parentEvents.filter(event => event.type === 'tool-workflow/run-start').map(event => event.data.name))

@@ -88,7 +88,7 @@ interface SessionReferenceMentionCandidate extends SessionReferenceCandidate {
 
 ## Prepared messages
 
-Preparation preserves readable current-message content and returns at most one aggregated context. Its durable source records keep `capturedThroughSeq` as a coordinate in the referenced Session's original generation; they never reinterpret it as a seq in the containing Session. `capturedFormatVersion` records that generation, with absence meaning released format v0.
+Cordis preparation returns readable current-message content with its mention tokens removed, plus at most one aggregated context. Its durable source records keep `capturedThroughSeq` as a coordinate in the referenced Session's original generation; they never reinterpret it as a seq in the containing Session. `capturedFormatVersion` records that generation, with absence meaning released format v0. Native preparation leaves admitted messages unchanged and returns separate snapshot contexts for its caller to append through the existing Session writer.
 
 ```ts type-equiv
 /** Durable source session, cited event seqs, and snapshot facts for prepared cross-session context. */
@@ -117,12 +117,28 @@ interface SessionReferenceSource {
 ```ts type-equiv
 /** Direct message content and optional referenced-session context. */
 interface PreparedReferencedMessage {
-  /** Readable message content after host mention tokens are removed. */
+  /** A clone of the direct message content supplied to preparation. */
   content: ContentBlock[]
   /** Aggregated untrusted snapshot, absent when the message has no references. */
   additionalContext?: UserMessage
 }
 ```
+
+`NativeSessionReferenceOperations` prepares contexts for newly admitted canonical mentions through `NativeSessionQueryOperations`. It leaves the input messages unchanged. The Native headless consumer appends returned contexts with those messages through its existing Session writer; later history reconstruction reads those persisted context messages rather than resolving the historical URI again.
+
+```ts type-equiv
+/** Native read-only context preparation over the exact session query owner. */
+interface NativeSessionReferenceOperations {
+  /**
+   * Prepare durable untrusted contexts for newly admitted user messages without rewriting inputs.
+   * The caller appends them through its existing Session writer; cancellation or failure waits for
+   * started reads and spills to settle before preparation rejects.
+   */
+  prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
+}
+```
+
+Source: [`rsh/Engine/context/session-reference/src/native.ts`](../../Engine/context/session-reference/src/native.ts)
 
 ## Errors
 
@@ -225,9 +241,10 @@ async listCandidates( agent: Agent, query: string = '', limit: number = this.con
 /**
  * Snapshot all references for one accepted direct message and return one aggregated durable context.
  * Automatic budgets use the last assembled route, or agent options before any assembly.
+ * It snapshots direct content and validates references before asynchronous model-budget lookup.
  * Missing model capacity or adapter uses 64 KiB; other metadata lookup failures and cancellation reject preparation.
  * Truncated previews include omission facts and a full-snapshot spill locator, or an explicit unavailable notice.
- * Cancellation prevents context publication, including when storage completes after cancellation.
+ * Cancellation or failure waits for started reads and spill writes to settle before returning; cancellation prevents context publication.
  * @param agent - target agent; references to it are rejected.
  * @param content - already host-normalized readable message content.
  * @param references - structured source sessions in mention order.

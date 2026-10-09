@@ -4,6 +4,10 @@ import { agentEvents, installModelSelection, type Agent, type ModelSelectionRef 
 import { CompactionId, compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import LlmRuntime, { createMessage, createSystemMessage, createToolResultMessage, createUserMessage, LlmError, ToolCallId } from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
+import { createToolResultMessage as createNativeToolResultMessage, createUserMessage as createNativeUserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import { Session as NativeSession, SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeSessionQueryOperations, SessionSurfaceSnapshot } from '@deepseek-ai/dsh-session-query/native'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SessionQueryEngine from '@deepseek-ai/dsh-session-query'
 import SessionTitleService from '@deepseek-ai/dsh-session-title'
@@ -17,6 +21,7 @@ import SessionReferenceResolver, {
   type SessionReferenceErrorCode,
 } from '@deepseek-ai/dsh-session-reference'
 import { stringifyTagSafeJson } from '../src/serialization.ts'
+import { plugin as nativeSessionReferencePlugin, type NativeSessionReferenceOperations } from '../src/native.ts'
 import { SpillLocator, SpillStore, type SaveTextSpill, type SpillRef } from '@deepseek-ai/dsh-spill'
 
 class TestSessionQueryEngine extends SessionQueryEngine {
@@ -68,6 +73,43 @@ function fakeAgent(session: Session): Agent {
 
 function expectCode(code: SessionReferenceErrorCode): Error {
   return expect.objectContaining({ code }) as Error
+}
+
+async function installNativeReference(
+  input: unknown,
+  query: NativeSessionQueryOperations,
+  options: { spill?: unknown; signal?: AbortSignal } = {},
+): Promise<NativeSessionReferenceOperations> {
+  const services = new Map<string, unknown>()
+  await nativeSessionReferencePlugin.resolve(input)({
+    signal: options.signal ?? new AbortController().signal,
+    require: () => query,
+    optional: () => options.spill,
+    provide: (key: string, service: unknown) => { services.set(key, service) },
+  } as unknown as NativeContext)
+  const provider = services.get('sessionReference')
+  if (provider === undefined) throw new Error('Native session-reference Provider did not provide its service')
+  return provider as NativeSessionReferenceOperations
+}
+
+function nativeSurfaceSnapshot(sessionId: NativeSessionId, text = 'source fact'): SessionSurfaceSnapshot {
+  const session = NativeSession.create(sessionId)
+  const event = session.append('user/message', createNativeUserMessage({
+    content: [{ type: 'text', text }], source: { kind: 'user' },
+  }), { surfaceOp: 'append' })
+  return {
+    session: session.header,
+    inheritedEventCount: session.inheritedEventCount,
+    capturedThroughSeq: event.seq,
+    events: [event],
+  }
+}
+
+function nativeReferenceMessage(sessionIds: readonly string[]) {
+  return createNativeUserMessage({
+    content: [{ type: 'text', text: sessionIds.map(id => formatSessionReferenceMention({ sessionId: SessionId(id) })).join(' ') }],
+    source: { kind: 'user' },
+  })
 }
 
 function checkpointSource(id: string) {
@@ -577,23 +619,39 @@ describe('model-relative reference budgets', () => {
   })
 
   it('propagates lookup errors and cancels an unresolved lookup without reading sources', async () => {
-    const { ctx, resolve, prepare } = await setup()
+    const { ctx, agent, source, resolve, prepare } = await setup()
     const read = vi.spyOn(ctx.sessionQuery, 'readSurface')
     const failure = new Error('catalog unavailable')
     resolve.mockRejectedValueOnce(failure)
     await expect(prepare()).rejects.toBe(failure)
+
     const started = Promise.withResolvers<undefined>()
+    const metadata = Promise.withResolvers<Awaited<ReturnType<LlmRuntime['resolveModelInfo']>>>()
+    resolve.mockImplementationOnce(() => { started.resolve(undefined); return metadata.promise })
+    const directContent = [{ type: 'text' as const, text: 'admitted before budget lookup' }]
+    const preparing = ctx.sessionReferenceResolver.prepare(
+      agent, directContent, [{ sessionId: source.id }],
+    )
+    await started.promise
+    directContent[0]!.text = 'mutated while budget lookup was pending'
+    metadata.resolve({ provider: 'seed', id: 'seed', name: 'seed', context: { contextWindow: 200_001 } })
+    await expect(preparing).resolves.toMatchObject({
+      content: [{ type: 'text', text: 'admitted before budget lookup' }],
+    })
+
+    const readsBeforeCancelledLookup = read.mock.calls.length
+    const lookupStarted = Promise.withResolvers<undefined>()
     const pending = Promise.withResolvers<Awaited<ReturnType<LlmRuntime['resolveModelInfo']>>>()
-    resolve.mockImplementationOnce(() => { started.resolve(undefined); return pending.promise })
+    resolve.mockImplementationOnce(() => { lookupStarted.resolve(undefined); return pending.promise })
     const controller = new AbortController()
     const result = prepare(controller.signal)
     const rejected = expect(result).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
-    await started.promise
+    await lookupStarted.promise
     controller.abort('cancel lookup')
     await rejected
     pending.resolve({ provider: 'seed', id: 'seed', name: 'seed' })
     await pending.promise
-    expect(read).not.toHaveBeenCalled()
+    expect(read).toHaveBeenCalledTimes(readsBeforeCancelledLookup)
   })
 
   it('removes both listeners when the resolver fiber is disposed', async () => {
@@ -994,26 +1052,41 @@ describe('session reference discovery and preparation', () => {
     const agent = fakeAgent(target)
     const content = [{ type: 'text' as const, text: 'go' }]
 
+    agent.options.provider = 'seed'
+    agent.options.model = 'seed'
+    const resolveModelInfo = vi.fn().mockRejectedValue(new Error('model metadata should not be needed'))
+    ctx.provide('llm', { resolveModelInfo } as never)
+
     const withoutReferences = await ctx.sessionReferenceResolver.prepare(agent, content, [])
     expect(withoutReferences).toEqual({ content })
     expect(withoutReferences.content).not.toBe(content)
+    expect(resolveModelInfo).not.toHaveBeenCalled()
+
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: target.id }]))
+      .rejects.toThrow(expectCode('SESSION_REFERENCE_SELF_REFERENCE'))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
+      { sessionId: one.id }, { sessionId: two.id }, { sessionId: SessionId('three') },
+    ])).rejects.toThrow(expectCode('SESSION_REFERENCE_TOO_MANY'))
+    expect(resolveModelInfo).not.toHaveBeenCalled()
+    const alreadyCancelled = new AbortController()
+    alreadyCancelled.abort('request was cancelled before preparation')
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], alreadyCancelled.signal))
+      .rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
+    expect(resolveModelInfo).not.toHaveBeenCalled()
+
+    resolveModelInfo.mockResolvedValue({ provider: 'seed', id: 'seed', name: 'seed' })
 
     await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
       { sessionId: one.id, label: 'first' },
       { sessionId: one.id, label: 'ignored duplicate' },
       { sessionId: two.id },
     ])).resolves.toMatchObject({ additionalContext: { source: { references: [{ label: 'first' }, { label: 'two' }] } } })
-    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: target.id }]))
-      .rejects.toThrow(expectCode('SESSION_REFERENCE_SELF_REFERENCE'))
     await expect(ctx.sessionReferenceResolver.prepare(agent, content, [null as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
     await expect(ctx.sessionReferenceResolver.prepare(agent, content, [1 as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
     await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: 1 } as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
-    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
-      { sessionId: one.id }, { sessionId: two.id }, { sessionId: SessionId('three') },
-    ])).rejects.toThrow(expectCode('SESSION_REFERENCE_TOO_MANY'))
     await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
       { sessionId: one.id }, { sessionId: SessionId('missing') },
     ])).rejects.toThrow(expectCode('SESSION_REFERENCE_READ_FAILED'))
@@ -1043,12 +1116,19 @@ describe('session reference discovery and preparation', () => {
     const hangingRead = new AbortController()
     const pending = ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], hangingRead.signal)
     await vi.waitFor(() => { expect(releaseRead).toBeTypeOf('function') })
-    const cancelledRead = expect(pending).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
-    hangingRead.abort('cancelled while storage remained pending')
-    await cancelledRead
-    releaseRead?.()
-    await Promise.resolve()
-    readSurface.mockRestore()
+    let settled = false
+    void pending.then(() => { settled = true }, () => { settled = true })
+    try {
+      hangingRead.abort('cancelled while storage remained pending')
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(settled).toBe(false)
+      releaseRead?.()
+      await expect(pending).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
+    } finally {
+      releaseRead?.()
+      await pending.catch(() => undefined)
+      readSurface.mockRestore()
+    }
 
     const abort = new AbortController()
     abort.abort('host cancelled')
@@ -1218,5 +1298,140 @@ describe('session reference discovery and preparation', () => {
     await defaultCtx.plugin(SessionStore)
     await defaultCtx.plugin(TestSessionQueryEngine)
     expect(() => new SessionReferenceResolver(defaultCtx)).not.toThrow()
+
+    for (const input of [
+      null,
+      [],
+      { maxReferences: null },
+      { maxReferences: 0 },
+      { maxReferences: 4 },
+      { maxReferenceBytes: null },
+      { maxReferenceBytes: 0 },
+      { candidateLimit: 1 },
+    ]) {
+      expect(() => nativeSessionReferencePlugin.resolve(input)).toThrow(expectCode('SESSION_REFERENCE_INVALID_CONFIG'))
+    }
+    expect(() => nativeSessionReferencePlugin.resolve(undefined)).not.toThrow()
+    expect(() => nativeSessionReferencePlugin.resolve({ maxReferences: 1, maxReferenceBytes: 256 })).not.toThrow()
+  })
+})
+
+describe('Native session-reference Provider', () => {
+  it('skips non-user and unreferenced messages, then prepares user references with optional spill outcomes', async () => {
+    const target = NativeSession.create(NativeSessionId('native-reference-inputs'))
+    const sourceId = NativeSessionId('native-reference-large')
+    const readSurface = vi.fn(async () => nativeSurfaceSnapshot(sourceId, 'durable context '.repeat(160)))
+    const query = { readSurface } as unknown as NativeSessionQueryOperations
+    const noReference = createNativeUserMessage({
+      content: [{ type: 'reasoning', text: 'internal note' }, { type: 'text', text: 'direct only' }],
+      source: { kind: 'user' },
+    })
+    const toolResult = createNativeToolResultMessage({
+      callId: ToolCallId('native-reference-tool-call'),
+      content: [{ type: 'text', text: formatSessionReferenceMention({ sessionId: sourceId }) }],
+      isError: false,
+    })
+    const direct = [toolResult, noReference, nativeReferenceMessage([sourceId])]
+
+    const withoutStore = await installNativeReference({ maxReferenceBytes: 400 }, query)
+    const unavailable = await withoutStore.prepare(target, direct, new AbortController().signal)
+    expect(unavailable).toHaveLength(1)
+    expect(unavailable[0]?.source).toMatchObject({ kind: 'session-reference' })
+    expect(JSON.stringify(unavailable[0]?.content)).toContain('storage-not-configured')
+    expect(readSurface).toHaveBeenCalledTimes(1)
+
+    const spill = { saveText: vi.fn(async (_input: SaveTextSpill) => ({
+      locator: SpillLocator('native-reference/full.txt'), bytes: 2560, retrievalHint: 'read the complete snapshot',
+    })) }
+    const withStore = await installNativeReference({ maxReferenceBytes: 400 }, query, { spill })
+    const saved = await withStore.prepare(target, [nativeReferenceMessage([sourceId])], new AbortController().signal)
+    expect(spill.saveText).toHaveBeenCalledOnce()
+    expect(spill.saveText.mock.calls[0]?.[0]).toMatchObject({
+      owner: { sessionId: target.id },
+      source: { kind: 'session-reference', sessionId: sourceId },
+    })
+    expect(JSON.stringify(saved[0]?.content)).toContain('native-reference/full.txt')
+
+    const failingStore = { saveText: vi.fn(async () => { throw new Error('spill unavailable') }) }
+    const withFailure = await installNativeReference({ maxReferenceBytes: 400 }, query, { spill: failingStore })
+    const failed = await withFailure.prepare(target, [nativeReferenceMessage([sourceId])], new AbortController().signal)
+    expect(JSON.stringify(failed[0]?.content)).toContain('save-failed')
+
+    const tooSmall = await installNativeReference({ maxReferenceBytes: 1 }, query)
+    await expect(tooSmall.prepare(target, [nativeReferenceMessage([sourceId])], new AbortController().signal))
+      .rejects.toMatchObject({ code: 'SESSION_REFERENCE_BUDGET_EXCEEDED' })
+
+    const alreadyCancelled = new AbortController()
+    alreadyCancelled.abort('request was already cancelled')
+    const readsBeforeCancellation = readSurface.mock.calls.length
+    await expect(withoutStore.prepare(target, [nativeReferenceMessage([sourceId])], alreadyCancelled.signal))
+      .rejects.toMatchObject({ code: 'SESSION_REFERENCE_CANCELLED' })
+    expect(readSurface).toHaveBeenCalledTimes(readsBeforeCancellation)
+  })
+
+  it('waits for pending read siblings, reports the first failure, and drains provider cancellation', async () => {
+    const targetId = NativeSessionId('native-reference-target')
+    const target = NativeSession.create(targetId)
+    const failedId = NativeSessionId('native-reference-failed')
+    const pendingId = NativeSessionId('native-reference-pending')
+    const started = Promise.withResolvers<undefined>()
+    const pendingSurface = Promise.withResolvers<SessionSurfaceSnapshot>()
+    const readSurface = vi.fn((sessionId: NativeSessionId) => {
+      if (sessionId === pendingId) {
+        started.resolve(undefined)
+        return pendingSurface.promise
+      }
+      return Promise.reject(new Error('source read failed'))
+    })
+    const query = { readSurface } as unknown as NativeSessionQueryOperations
+    const service = await installNativeReference({}, query)
+    const pending = service.prepare(target, [
+      nativeReferenceMessage([targetId]),
+      nativeReferenceMessage([failedId, pendingId]),
+    ], new AbortController().signal)
+    try {
+      await started.promise
+      let settled = false
+      void pending.then(() => { settled = true }, () => { settled = true })
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(settled).toBe(false)
+
+      pendingSurface.resolve(nativeSurfaceSnapshot(pendingId))
+      await expect(pending).rejects.toMatchObject({ code: 'SESSION_REFERENCE_SELF_REFERENCE' })
+      expect(readSurface).toHaveBeenCalledTimes(2)
+    } finally {
+      pendingSurface.resolve(nativeSurfaceSnapshot(pendingId))
+      await pending.catch(() => undefined)
+    }
+
+    const cancellationId = NativeSessionId('native-reference-cancelled')
+    const cancellationStarted = Promise.withResolvers<undefined>()
+    const cancellationSurface = Promise.withResolvers<SessionSurfaceSnapshot>()
+    const lifetime = new AbortController()
+    const cancellationQuery = {
+      readSurface: vi.fn(() => {
+        cancellationStarted.resolve(undefined)
+        return cancellationSurface.promise
+      }),
+    } as unknown as NativeSessionQueryOperations
+    const cancellationService = await installNativeReference({}, cancellationQuery, { signal: lifetime.signal })
+    const preparing = cancellationService.prepare(
+      target,
+      [nativeReferenceMessage([cancellationId])],
+      new AbortController().signal,
+    )
+    try {
+      await cancellationStarted.promise
+      let settled = false
+      void preparing.then(() => { settled = true }, () => { settled = true })
+      lifetime.abort(new Error('reference provider stopping'))
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(settled).toBe(false)
+      cancellationSurface.resolve(nativeSurfaceSnapshot(cancellationId))
+      await expect(preparing).rejects.toMatchObject({ code: 'SESSION_REFERENCE_CANCELLED' })
+    } finally {
+      cancellationSurface.resolve(nativeSurfaceSnapshot(cancellationId))
+      await preparing.catch(() => undefined)
+    }
   })
 })

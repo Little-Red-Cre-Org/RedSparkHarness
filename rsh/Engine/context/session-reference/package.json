@@ -30,11 +30,17 @@
       "types": "./lib/typert.remote-client.d.ts",
       "default": "./lib/typert.remote-client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
     "lib/typert.host.js",
@@ -62,13 +68,20 @@
     "@deepseek-ai/dsh-session-title": "workspace:^",
     "@deepseek-ai/dsh-spill": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-spill": {
       "optional": true
     },
     "@deepseek-ai/dsh-session-projection-cache": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-runtime": {
       "optional": true
     }
   },
@@ -93,5 +106,23 @@
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "sessionQuery"
+      ],
+      "optional": [
+        "spillStore"
+      ],
+      "provides": [
+        "sessionReference"
+      ]
+    }
   }
 }

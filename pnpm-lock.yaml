@@ -2078,6 +2078,9 @@ importers:
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../session/session-projection
+      '@deepseek-ai/dsh-session-reference':
+        specifier: workspace:^
+        version: link:../session-reference
       '@deepseek-ai/dsh-system-prompt':
         specifier: workspace:^
         version: link:../../core/system-prompt
@@ -2145,6 +2148,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -3539,6 +3545,12 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session

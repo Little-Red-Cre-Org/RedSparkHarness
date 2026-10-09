@@ -4,7 +4,31 @@ English | [中文](session-query.zh.md)
 
 Query vocabulary over the live-preferred logical session corpus. The [Service Definition package](../../Engine/session-query/session-query) owns exact reads, source precedence, relationship tracing, semantic extraction, and provider-independent filters, while the [SQLite provider](../../Engine/session-query/session-query-sqlite) owns the concrete full-text index lifecycle.
 
-Source: [`rsh/Engine/session-query/session-query/src/types.ts`](../../Engine/session-query/session-query/src/types.ts)
+The package's Native host entry exposes `NativeSessionQueryOperations` through the same `sessionQuery` service key. It selects live history only from `activeSessions.owners()` and `owner.readEvents()`, and cold history only from optional `sessionPersistence` read handles. Active owners supply history validated when the resident Session is restored and accepts appends; cold logs pass replay validation on detached data through `Session.fromRestore()` without acquiring a writer or publishing a validation Session. This Native batch implements exact list, raw-log, title, and current-surface reads for session references. It does not close the wider Native query surface: `observeSession`, `filterSessions`, `listEvents`, `filterEvents`, `readEvent`, `traceSession`, `traceEvent`, provider-independent search, SQLite indexes, and ranked full-text search remain outside this entry.
+
+```ts type-equiv
+/** Read-only exact session history selected from Native's active-owner registry and persistence. */
+interface NativeSessionQueryOperations {
+  /** List stored sessions and exact active owners, newest first. */
+  listSessions(signal?: AbortSignal): Promise<SessionRecord[]>
+  /**
+   * Read one raw log without acquiring a writer.
+   * Cold logs are replay-validated; active history is validated by the resident Session.
+   * @param sessionId - the logical session identity.
+   * @param signal - optional cancellation for source lookup and history reading.
+   * @returns a detached complete raw log from one live-preferred source.
+   */
+  readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot>
+  /** Read the latest log-backed title from one live-preferred source. */
+  readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation>
+  /** Read titles in first-occurrence order, isolating per-session failures. */
+  readTitleSnapshots(sessionIds: readonly SessionId[], signal?: AbortSignal): Promise<SessionTitleObservationResult[]>
+  /** Read a validated current model surface from one live-preferred source. */
+  readSurface(sessionId: SessionId, signal?: AbortSignal): Promise<SessionSurfaceSnapshot>
+}
+```
+
+Source: [`rsh/Engine/session-query/session-query/src/native.ts`](../../Engine/session-query/session-query/src/native.ts)
 
 ## Logical records
 
@@ -20,23 +44,23 @@ type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
 interface SessionRecord {
   /** Cloned session header selected from the live-preferred corpus. */
   header: SessionHeader
-  /** Whether the id currently exists in `ctx.sessions`. */
+  /** Whether the id currently exists in the selected runtime's live session authority. */
   live: boolean
   /** Whether the active persistence backend currently lists the id, including a created-but-unmaterialized session it already observes. */
   persisted: boolean
 }
 ```
 
-`SessionLogSnapshot` is the complete detached, replay-validated raw log used by resume preflight. `SessionSurfaceSnapshot` is one exact-read surface observation rather than a retained subscription.
+`SessionLogSnapshot` is the complete detached raw log used by resume preflight; cold persisted logs include in-memory tail balancing and detached replay validation. `SessionSurfaceSnapshot` is one exact-read surface observation rather than a retained subscription.
 
 ```ts type-equiv
-/** One validated detached observation of a logical session's complete raw log. */
+/** One detached observation of a logical session's complete raw log. */
 interface SessionLogSnapshot {
   /** Cloned session header selected from the same observation as `events`. */
   session: SessionHeader
   /** Exact number of fork-inherited events in the observed log. */
   inheritedEventCount: SessionLogOffset
-  /** Cloned contiguous raw events after in-memory interrupted-turn balancing and replay validation. */
+  /** Cloned contiguous raw events; cold persisted logs include in-memory tail balancing and detached replay validation. */
   events: SessionEvent[]
 }
 ```

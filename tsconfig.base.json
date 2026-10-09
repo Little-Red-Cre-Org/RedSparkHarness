@@ -681,6 +681,8 @@
       "@deepseek-ai/dsh-sandbox/native-types": ["./rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"],
       "@deepseek-ai/dsh-sandbox/roots": ["./rsh/Modules/Official/sandbox/sandbox/src/roots.ts"],
       "@deepseek-ai/dsh-sdk-child/native": ["./rsh/Modules/Official/subagent/sdk-child/src/native.ts"],
+      "@deepseek-ai/dsh-session-query/native": ["./rsh/Engine/session-query/session-query/src/native.ts"],
+      "@deepseek-ai/dsh-session-reference/native": ["./rsh/Engine/context/session-reference/src/native.ts"],
       "@deepseek-ai/dsh-session-title/normalize": ["./rsh/Engine/session/session-title/src/normalize.ts"],
       "@deepseek-ai/dsh-session/event-validation": ["./rsh/Engine/core/session/src/event-validation.ts"],
       "@deepseek-ai/dsh-settings-definition/native": ["./rsh/Core/settings/settings-definition/src/native.ts"],

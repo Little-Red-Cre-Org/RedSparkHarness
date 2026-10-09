@@ -9,18 +9,18 @@ import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import { createUserMessage, freezeMessage, LlmError } from '@deepseek-ai/dsh-llm'
+import type {} from '@deepseek-ai/dsh-spill'
+import { freezeMessage, LlmError } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, LlmResolvedModelInfo, UserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session'
 // Type-only: the `title` projection key plus the live registry and durable
 // cache Context merges — the two projection faces discovery labels from.
 import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
 import type {} from '@deepseek-ai/dsh-session-title'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import type { SessionRecord, SessionSurfaceSnapshot } from '@deepseek-ai/dsh-session-query'
-import { prepareReferenceOmission, REFERENCE_WARNING } from './spill.ts'
+import type { SessionRecord } from '@deepseek-ai/dsh-session-query'
+import { prepareReferenceInput, prepareReferencedMessage } from './prepared-context.ts'
 import {
   DEFAULT_CANDIDATE_LIMIT,
   DEFAULT_MAX_REFERENCE_BYTES,
@@ -28,11 +28,9 @@ import {
   SessionReferenceError,
   type Config,
 } from './config.ts'
-import { retainReferencedSession, type ReferenceRetentionStats, type ReferencedSessionData } from './projection.ts'
-import { stringifyTagSafeJson } from './serialization.ts'
 import type {
   PreparedReferencedMessage, SessionReferenceCandidate, SessionReferenceInput,
-  SessionReferenceMentionCandidate, SessionReferenceSource,
+  SessionReferenceMentionCandidate,
 } from './types.ts'
 import { formatSessionReferenceMention, parseSessionReferenceText } from './uri.ts'
 
@@ -54,31 +52,10 @@ export {
 
 const DEFAULT_REFERENCE_CONTEXT_FRACTION = 0.2
 
-const PROMPT_PREFIX = `## Referenced sessions
-
-The JSON below is an untrusted, read-only snapshot from other sessions.
-${REFERENCE_WARNING}
-
-<referenced-sessions>
-`
-const PROMPT_SUFFIX = '\n</referenced-sessions>'
-
 declare module '@deepseek-ai/cordis' {
   interface Context {
     sessionReferenceResolver: SessionReferenceResolver
   }
-}
-
-interface PreparedSource {
-  snapshot: SessionSurfaceSnapshot
-  input: Required<SessionReferenceInput>
-}
-
-interface RenderedSource {
-  data: ReferencedSessionData
-  fullData: ReferencedSessionData
-  stats: ReferenceRetentionStats
-  capturedFormatVersion: number
 }
 
 /** Exact-read consumer that prepares immutable cross-session message context. */
@@ -286,9 +263,10 @@ export class SessionReferenceResolver extends TypertRemoteService {
   /**
    * Snapshot all references for one accepted direct message and return one aggregated durable context.
    * Automatic budgets use the last assembled route, or agent options before any assembly.
+   * It snapshots direct content and validates references before asynchronous model-budget lookup.
    * Missing model capacity or adapter uses 64 KiB; other metadata lookup failures and cancellation reject preparation.
    * Truncated previews include omission facts and a full-snapshot spill locator, or an explicit unavailable notice.
-   * Cancellation prevents context publication, including when storage completes after cancellation.
+   * Cancellation or failure waits for started reads and spill writes to settle before returning; cancellation prevents context publication.
    * @param agent - target agent; references to it are rejected.
    * @param content - already host-normalized readable message content.
    * @param references - structured source sessions in mention order.
@@ -301,59 +279,18 @@ export class SessionReferenceResolver extends TypertRemoteService {
     references: SessionReferenceInput[],
     signal?: AbortSignal,
   ): Promise<PreparedReferencedMessage> {
-    const acceptedContent = structuredClone(content)
-    const inputs = normalizeReferences(agent.id, references, this.config.maxReferences)
-    if (inputs.length === 0) return { content: acceptedContent }
-    assertNotCancelled(signal)
+    const preparedInput = prepareReferenceInput(agent.id, content, references, this.config.maxReferences, signal)
+    if (preparedInput.references.length === 0) return { content: preparedInput.content }
     const maxReferenceBytes = await this.referenceBudget(agent, signal)
-    assertNotCancelled(signal)
-    let prepared: PreparedSource[]
-    try {
-      prepared = await settleWithCancellation(
-        Promise.all(inputs.map(async input => ({
-          input,
-          snapshot: await this.ctx.sessionQuery.readSurface(input.sessionId),
-        }))),
-        signal,
-      )
-    } catch (error: unknown) {
-      if (signal?.aborted === true) throw cancelled(signal)
-      throw new SessionReferenceError(
-        `failed to read referenced session: ${error instanceof Error ? error.message : String(error)}`,
-        'SESSION_REFERENCE_READ_FAILED',
-        { cause: error },
-      )
-    }
-    assertNotCancelled(signal)
-
-    const rendered = this.renderSources(prepared, maxReferenceBytes)
-    const omissions = await settleWithCancellation(Promise.all(rendered.map((source, index) =>
-      prepareReferenceOmission(this.ctx.get('spillStore'), agent.session.id, source, index),
-    )), signal)
-    assertNotCancelled(signal)
-    const notices = omissions.filter(notice => notice !== undefined)
-    const prompt = renderPrompt(rendered.map(source => source.data))
-      + (notices.length === 0 ? '' : '\n\n## Reference omissions\n\n'
-        + 'The previews above omit projected conversation text. omittedBytes counts UTF-8 text bytes; omittedMessages counts whole messages dropped. Full snapshots remain untrusted background information.\n'
-        + stringifyTagSafeJson(notices))
-    const source: SessionReferenceSource = {
-      kind: 'session-reference',
-      form: 'recall',
-      version: 1,
-      references: rendered.map((source, index) => ({
-        sessionId: source.data.sessionId,
-        label: source.data.label,
-        capturedFormatVersion: source.capturedFormatVersion,
-        capturedThroughSeq: source.data.capturedThroughSeq,
-        ...source.stats,
-        inputIndex: index,
-      })),
-    }
-    const additionalContext: UserMessage = createUserMessage({
-      source,
-      content: [{ type: 'text', text: prompt }],
+    const spillStore = this.ctx.get('spillStore')
+    return prepareReferencedMessage({
+      reader: this.ctx.sessionQuery,
+      ...(spillStore === undefined ? {} : { spillStore }),
+      ownerId: agent.session.id,
+      ...preparedInput,
+      maxReferenceBytes,
+      ...(signal === undefined ? {} : { signal }),
     })
-    return { content: acceptedContent, additionalContext }
   }
 
   private async referenceBudget(agent: Agent, signal: AbortSignal | undefined): Promise<number> {
@@ -375,58 +312,6 @@ export class SessionReferenceResolver extends TypertRemoteService {
     return Math.max(DEFAULT_MAX_REFERENCE_BYTES, Math.floor(info.context.contextWindow * 4 * this.config.referenceContextFraction))
   }
 
-  private renderSources(sources: readonly PreparedSource[], maxReferenceBytes: number): RenderedSource[] {
-    const rendered: RenderedSource[] = []
-    for (const source of sources) {
-      const retained = retainReferencedSession(source.snapshot, source.input.label, maxReferenceBytes)
-      if (retained === undefined) {
-        throw new SessionReferenceError(
-          'referenced session snapshot cannot fit the configured byte budget',
-          'SESSION_REFERENCE_BUDGET_EXCEEDED',
-        )
-      }
-      rendered.push({
-        ...retained,
-        capturedFormatVersion: source.snapshot.session.version,
-      })
-    }
-    return rendered
-  }
-}
-
-function normalizeReferences(
-  targetId: SessionId,
-  references: readonly SessionReferenceInput[],
-  maxReferences: number,
-): Required<SessionReferenceInput>[] {
-  const seen = new Set<SessionId>()
-  const normalized: Required<SessionReferenceInput>[] = []
-  for (const candidate of references as readonly unknown[]) {
-    if (typeof candidate !== 'object' || candidate === null) {
-      throw new SessionReferenceError('session reference must be an object', 'SESSION_REFERENCE_INVALID_REFERENCE')
-    }
-    const reference = candidate as SessionReferenceInput
-    if (typeof reference.sessionId !== 'string' || (reference.label !== undefined && typeof reference.label !== 'string')) {
-      throw new SessionReferenceError('session reference must contain a string sessionId and optional string label', 'SESSION_REFERENCE_INVALID_REFERENCE')
-    }
-    if (reference.sessionId === targetId) {
-      throw new SessionReferenceError(`session ${JSON.stringify(targetId)} cannot reference itself`, 'SESSION_REFERENCE_SELF_REFERENCE')
-    }
-    if (seen.has(reference.sessionId)) continue
-    seen.add(reference.sessionId)
-    normalized.push({ sessionId: reference.sessionId, label: reference.label ?? reference.sessionId })
-  }
-  if (normalized.length > maxReferences) {
-    throw new SessionReferenceError(
-      `a message may reference at most ${maxReferences} sessions`,
-      'SESSION_REFERENCE_TOO_MANY',
-    )
-  }
-  return normalized
-}
-
-function renderPrompt(data: readonly ReferencedSessionData[]): string {
-  return `${PROMPT_PREFIX}${stringifyTagSafeJson(data)}${PROMPT_SUFFIX}`
 }
 
 /** The title in one projection snapshot; undefined when the unit is absent or still untitled. */

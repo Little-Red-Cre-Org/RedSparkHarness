@@ -27,6 +27,7 @@ const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
   'snapshots/web/native-session-core.snapshot.ts',
+  'snapshots/web/native-github-webhook.snapshot.ts',
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/desktop/native-session-core.snapshot.ts',
@@ -81,9 +82,9 @@ async function scenarios(): Promise<Scenario[]> {
       expect(existsSync(path), `${profile}/${entry.name}/snapshot.yml`).toBe(true)
       const manifest = parseSnapshotManifest(await readFile(path, 'utf8'), path)
       expect(manifest.scenario, `${profile}/${entry.name}: scenario`).toBe(entry.name)
-      expect(manifest.profile, `${profile}/${entry.name}: profile`).toBe(
-        profile === 'session' ? 'headless' : profile,
-      )
+      const expectedProfiles = profile === 'session' ? ['headless']
+        : profile === 'web' ? ['web', 'native-web'] : [profile]
+      expect(expectedProfiles, `${profile}/${entry.name}: profile`).toContain(manifest.profile)
       expect(manifest.composition, `${profile}/${entry.name}: composition`).toBeTypeOf('string')
       expect(manifest.recording, `${profile}/${entry.name}: recording`).toMatch(/^(live|authored)$/)
       expect(manifest.header, `${profile}/${entry.name}: header`).toBeDefined()

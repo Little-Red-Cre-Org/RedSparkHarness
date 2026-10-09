@@ -622,6 +622,16 @@
       "source": "rsh/Engine/session/session-persistence/src/errors.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/session-reference.md",
+      "symbol": "NativeSessionReferenceOperations",
+      "source": "rsh/Engine/context/session-reference/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-query.md",
+      "symbol": "NativeSessionQueryOperations",
+      "source": "rsh/Engine/session-query/session-query/src/native.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/session-query.md",
       "symbol": "SessionEventSurface",
       "source": "rsh/Engine/session-query/session-query/src/types.ts"

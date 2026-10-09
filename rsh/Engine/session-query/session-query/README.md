@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-session-query` lets application code list, filter, read, and search session history, inspect bounded event context, and trace session or event relationships. Reads prefer live sessions over persisted copies and return detached clones from one consistent observation. Exact reads, filters, and traces work with any supported storage setup; ranked full-text search requires a backend such as `dsh-session-query-sqlite`. Use it when application code needs programmatic access to the history presented to the model.
+`dsh-session-query` lets application code list, filter, read, and search session history, inspect bounded event context, and trace session or event relationships. Reads prefer live sessions over persisted copies and return detached clones from one consistent observation. The package also provides a Cordis-free Native host entry for exact reads over active Session owners and optional persistence. Ranked full-text search remains a Cordis backend capability such as `dsh-session-query-sqlite`.
 
 ## Table of Contents
 
@@ -25,14 +25,14 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Use `ctx.sessionQuery` from application code when you need to read or search session history without touching the session service or a storage backend directly. The service is provided by a concrete backend plugin — the shipped composition mounts `@deepseek-ai/dsh-session-query-sqlite` ([README](../session-query-sqlite/README.md)) — so this package is never mounted alone. Everything below is available on `ctx.sessionQuery` once a backend is composed.
+Use `ctx.sessionQuery` from Cordis application code when you need to read or search session history without touching the session service or a storage backend directly. The shipped composition mounts `@deepseek-ai/dsh-session-query-sqlite` ([README](../session-query-sqlite/README.md)) for ranked full-text search. Native host compositions can instead mount this package's `./native` entry for the exact reads listed below; it requires `activeSessions` and uses `sessionPersistence` when selected.
 
 ### What you can do
 
 | Operation | What you get |
 |---|---|
 | `listSessions()` | Every logical session, newest first, with `live` and `persisted` availability flags |
-| `readSession(id)` | The complete replay-validated raw event log, without making the session live |
+| `readSession(id)` | The complete detached raw log, without making the session live; Cordis and Native cold reads replay-validate it |
 | `filterSessions(filters)` | Sessions matching ANDed metadata and availability predicates |
 | `filterEvents(id, filters)` | Semantic event documents matching metadata and literal-text predicates |
 | `readTitleSnapshots(ids)` | The latest folded title per session, bound to its source header |
@@ -41,6 +41,10 @@ Use `ctx.sessionQuery` from application code when you need to read or search ses
 | `traceSession(id)` | The known ancestor chain and recursive descendant trees |
 | `traceEvent(request)` | One event's positional replacements and cited source-event relationships |
 | `searchSessions(request)` / `searchEvents(request)` | Full-text search pages, implemented by the mounted backend |
+
+The Native entry exposes `listSessions`, `readSession`, `readTitleSnapshot(s)`, and `readSurface` through the same `sessionQuery` service key. It reads attached history through the exact active owner and cold history through a short-lived read handle. Active owners supply history validated when the resident Session is restored and accepts appends; cold logs are replay-validated as detached data, with interrupted tails balanced in memory. A cold read never attaches a Session or changes storage. Without `sessionPersistence`, Native can still list and read active owners, while detached sessions are unavailable.
+
+Application handlers keep these reads inside the Host invocation that owns the request: API handlers use `host.run()`, while application-owned runs use `host.runOwned()` so Host replacement or shutdown drains their selected Providers ([Host installation and cleanup](../../../Core/runtime-diagnostics/native-runtime/README.md#installation-and-cleanup)).
 
 Body-free records expose only `SessionHeader.isSeeded`. Reads that return event bodies (`readSession`, `readSurface`, `readEvent`) and retained `SessionObservation` values also carry the exact `inheritedEventCount`, so callers can distinguish inherited and owned events without inferring a cut from the log.
 
@@ -112,7 +116,7 @@ The decision history lives in the [unified service decision](../../../../.agents
 
 ### Reads and traces
 
-`readSession` replays the log through `Session.create` to reuse resume's validation. `readSurface`, `listEvents`, and `traceEvent` share one `foldSurface` pass that classifies events as `current`, `shadowed`, or `log-only` and validates zero-based contiguous seqs, surface-marker eligibility, and replacement or citation integrity; any violation fails with `SESSION_QUERY_INVALID_SURFACE`. Traces are one-shot: session lineage reads the corpus once and walks parents and descendant trees deterministically, and event traces follow positional replacers to the final node while keeping cited-source links non-transitive.
+Cordis `readSession` replay-validates a detached clone through `Session.fromRestore` without acquiring a writer or registering the validation Session; it returns the original events without local resume markers. Native cold reads also replay-validate, while Native active reads use history validated by the resident Session. `readSurface`, `listEvents`, and `traceEvent` share one `foldSurface` pass that classifies events as `current`, `shadowed`, or `log-only` and validates zero-based contiguous seqs, surface-marker eligibility, and replacement or citation integrity; any violation fails with `SESSION_QUERY_INVALID_SURFACE`. Traces are one-shot: session lineage reads the corpus once and walks parents and descendant trees deterministically, and event traces follow positional replacers to the final node while keeping cited-source links non-transitive.
 
 </details>
 
@@ -149,7 +153,8 @@ These limits define when this package is a poor fit or needs special operational
 
 - **No caller authorization** — this is trusted context-wide infrastructure; a model tool or UI must constrain which sessions its caller may inspect.
 - **No provider coordinator or fallback** — the service is abstract over search, so a composition must mount a concrete backend; there is no search-provider registry or fallback implementation.
-- **Exact reads replay whole logs** — `readSession`, `readSurface`, `filterEvents`, and event traces load and validate the complete logical log, so very large histories pay full inspection per call; `listSessions` stays lightweight.
+- **No Native full-text backend** — the Native entry implements exact reads only; it does not provide SQLite search, ranked results, or cursor generations.
+- **Exact reads inspect complete histories** — Cordis exact reads and Native cold reads replay-validate full logs; Native active reads use the resident Session's validated history. Surface projection and event traces still inspect every relevant event, so very large histories pay per-call cost; `listSessions` stays lightweight.
 - **Literal text scan, not full-text search** — the `text` filter scans extracted documents with a regular expression and does not rank; ranked search requires the mounted backend.
 
 <a id="dev-note"></a>
