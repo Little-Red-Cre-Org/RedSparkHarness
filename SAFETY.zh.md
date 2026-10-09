@@ -24,4 +24,4 @@ DeepSeek Harness 是实验性的开发者预览软件。它尚未接受安全审
 
 ## 不提供保证，不承担责任
 
-请在充分了解相关风险的前提下使用 DeepSeek Harness。本软件依照 [MIT License](LICENSE) 提供，不附带任何保证。在适用法律允许的最大范围内，对于使用本项目造成的计算机损坏、数据丢失或泄露、文件丢失或其他损害，作者和版权持有人不承担责任。
+请在充分了解相关风险的前提下使用 DeepSeek Harness。本软件不附带任何保证。RedSpark Harness 的原创部分依照 [RedSpark Restricted Evaluation License](LICENSE-REDSPARK-RESEARCH.txt) 许可。DeepSeek Harness 的上游部分仍依照 [MIT License](LICENSE-UPSTREAM-MIT.txt) 许可。详见 [LICENSING.md](LICENSING.md)。在适用法律允许的最大范围内，对于使用本项目造成的计算机损坏、数据丢失或泄露、文件丢失或其他损害，作者和版权持有人不承担责任。
