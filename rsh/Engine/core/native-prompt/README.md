@@ -23,7 +23,7 @@ English | [中文](README.zh.md)
 
 The `./native` entry accepts only an empty configuration object and provides `promptSections`. A duplicate section name fails within its registration scope. Rendering selects contributions visible from the consuming scope, with descendant names shadowing ancestor names and sibling scopes isolated. A disposer removes only the section that created it, while Provider teardown removes every remaining section.
 
-Applications may supply the requesting Agent’s scope to `render(scope)`. Scope-aware contributions use that exact scope when selecting visible declarations; contributions that ignore the optional argument retain their behavior. The application still records the assembled text before model dispatch.
+Applications may pass the requesting Agent scope and an optional NativePromptRenderContext to render(scope, context). Its allowedTools list, when present, is the Session's explicit tool allowlist, not the complete emitted schema set. A section that depends on a model-visible tool should combine this constraint with its scoped tool view; without a context, it may use that view alone. The application still records the assembled text before model dispatch.
 
 <a id="model-experience"></a>
 ## Model Experience

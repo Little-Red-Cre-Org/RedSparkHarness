@@ -20,6 +20,26 @@ interface FileReferenceCandidate {
 }
 ```
 
+Native 消费方请求候选时会使用确切的活动 Agent 与 Session；Native 提供方通过活动会话 owner 解析这对身份，并通过所选文件系统服务读取路径。
+
+```ts type-equiv
+/** Path-only candidates from the exact active Agent and Session workspace. */
+interface NativeFileReferenceOperations {
+  /**
+   * List deterministic path candidates without reading file contents.
+   * @param agent - exact Native Agent whose scope is consuming the candidates.
+   * @param session - exact live Session whose cwd bounds discovery.
+   * @param query - path text following `@` or `@"`.
+   * @param signal - caller cancellation.
+   * @returns ranked workspace-relative file and directory candidates.
+   * @throws when the exact Agent and Session do not have a live owner.
+   */
+  list(agent: NativeAgent, session: Session, query: string, signal: AbortSignal): Promise<FileReferenceCandidate[]>
+}
+```
+
+来源：[`rsh/Engine/context/file-reference/src/native.ts`](../../Engine/context/file-reference/src/native.ts)
+
 ## 输入与候选项
 
 `SessionReferenceInput` 是与宿主无关的选择。id 具有权威性；label 是随快照携带的显示元数据。

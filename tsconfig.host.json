@@ -326,6 +326,7 @@
     { "path": "./rsh/Modules/Official/shell/tool-bash" },
     { "path": "./rsh/Modules/Official/fs/fs" },
     { "path": "./rsh/Modules/Official/fs/fs-local" },
+    { "path": "./rsh/Modules/Official/fs/native-file-reference-local" },
     { "path": "./rsh/Modules/Official/e2b/fs-e2b" },
     { "path": "./rsh/Modules/Official/fs/fs-observation-policy" },
     { "path": "./rsh/Modules/Official/fs/fs-sandbox" },

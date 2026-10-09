@@ -40,7 +40,7 @@ import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from
 
 ## 实现方式
 
-本包拥有可移植的 binding、JSON 值、请求、结果、失败和与语言无关的保留名称声明。`CodeRuntimeDefinition` 接受共享的 `CodeRunRequest`；原生 Provider 还接受扩展了停止回调的 `NativeCodeRunRequest`，供调用方取消其拥有的原生 binding。`NativeCodeRuntime` 增加由 Provider 等待完成的释放操作。后端配置、隔离、取消以及进程或 worker 资源仍由所选实现负责。
+本包拥有可移植的 binding、JSON 值、请求、结果、失败和与语言无关的保留名称声明。`CodeRuntimeDefinition` 接受共享的 `CodeRunRequest`；原生 Provider 还接受携带当前准确 Native Session（仅作为宿主内策略上下文）并带有停止回调的 `NativeCodeRunRequest`，供调用方取消自己拥有的 binding。Provider 不会把该 Session 序列化给 worker。`NativeCodeRuntime` 增加由 Provider 等待完成的释放操作。后端配置、隔离、取消以及进程或 worker 资源仍由所选实现负责。
 
 本包不发布 `./invariant` companion，因为其值和接口不持有运行时注册表或状态。Provider 与 Consumer 通过同一个根入口共享这些声明。
 

@@ -91,7 +91,7 @@ export class ProcessSandboxCodeRuntime implements NativeCodeRuntime {
   async run(request: NativeCodeRunRequest): Promise<CodeRunResult> {
     if (this.disposed) throw new Error('code-runtime-process-sandbox: run() after disposal')
     if (request.signal?.aborted) return failure('abort', String(request.signal.reason))
-    const executionPolicy = this.policy.resolve()
+    const executionPolicy = this.policy.resolve({ session: request.session })
     if (executionPolicy.mode === 'danger-full-access') {
       throw new Error('code-runtime-process-sandbox: confined policy required')
     }

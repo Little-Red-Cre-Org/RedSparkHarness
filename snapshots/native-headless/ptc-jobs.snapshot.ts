@@ -31,9 +31,13 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
   for (const name of ['package.json', 'rsh.profile.json']) {
     copyFileSync(join(root, 'rsh/Programs/CLI/tests/profiles/native-ptc', name), join(profile, name))
   }
+  const profilePath = join(profile, 'rsh.profile.json')
+  const profileConfig = JSON.parse(readFileSync(profilePath, 'utf8'))
+  profileConfig.installations.push({ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' })
+  writeFileSync(profilePath, JSON.stringify(profileConfig))
   writeFileSync(join(model, 'package.json'), JSON.stringify({
     name: 'native-ptc-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['agents', 'jobs'], optional: [], provides: ['model'] } },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['agents', 'jobs', 'activeSessions'], optional: [], provides: ['model'] } },
   }))
   copyFileSync(join(root, 'rsh/Engine/core/native-headless/tests/fixtures/ptc-jobs-model.mjs'), join(model, 'native.mjs'))
   const patch = join(home, 'patch.json')
@@ -57,12 +61,17 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     const physical = join(sessions, String(name))
     const raw = readFileSync(physical, 'utf8')
     const events = parseSessionLog(raw)
+    const modes = events.filter(event => event.type === 'sandbox/mode')
+    expect(modes).toHaveLength(1)
+    expect(modes[0]).toMatchObject({ data: { mode: 'danger-full-access' } })
     const results = events.filter(event => event.type === 'tool/result')
-    expect(results).toHaveLength(2)
+    expect(results).toHaveLength(3)
     expect(results[0]).toMatchObject({ data: { message: { content: [{ type: 'tool-result', isError: true }] } } })
     expect(JSON.stringify(results[0])).toContain('timeout')
     expect(JSON.stringify(results[1])).toContain('cancelled')
     expect(JSON.stringify(results[1])).toContain('background task running')
+    expect(results[2]).toMatchObject({ data: { message: { source: { callId: 'session-mode-refusal' }, content: [{ type: 'tool-result', toolCallId: 'session-mode-refusal', isError: true }] } } })
+    expect(JSON.stringify(results[2])).toContain('code-runtime-process-sandbox: confined policy required')
     expect(events.filter(event => event.type === 'tool/ptc-dispatch').length).toBeGreaterThanOrEqual(5)
     const cold = new JsonlSessionBackend({ root: sessions, compression: 'none' })
     try {

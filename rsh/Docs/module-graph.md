@@ -68,6 +68,7 @@ flowchart TD
     pkg_fs_local["fs-local"]
     pkg_fs_observation_policy["fs-observation-policy"]
     pkg_fs_sandbox["fs-sandbox"]
+    pkg_native_file_reference_local["native-file-reference-local"]
     pkg_tool_fs["tool-fs"]
     pkg_tool_fs_search["tool-fs-search"]
     pkg_tool_present["tool-present"]
@@ -650,6 +651,13 @@ flowchart TD
   pkg_fs_local --> pkg_plugin_host
   pkg_fs_observation_policy --> pkg_fs
   pkg_fs_observation_policy --> pkg_plugin_host
+  pkg_native_file_reference_local --> pkg_fs
+  pkg_native_file_reference_local --> pkg_native_agent
+  pkg_native_file_reference_local --> pkg_native_prompt
+  pkg_native_file_reference_local --> pkg_native_runtime
+  pkg_native_file_reference_local --> pkg_native_session_execution
+  pkg_native_file_reference_local --> pkg_native_tools
+  pkg_native_file_reference_local --> pkg_session
   pkg_skill_filesystem --> pkg_fs
   pkg_skill_filesystem --> pkg_home_paths
   pkg_skill_filesystem --> pkg_skill
@@ -681,6 +689,9 @@ flowchart TD
   pkg_user_approval --> pkg_session
   pkg_user_approval --> pkg_system_prompt
   pkg_file_reference --> pkg_agent
+  pkg_file_reference --> pkg_native_agent
+  pkg_file_reference --> pkg_native_runtime
+  pkg_file_reference --> pkg_session
   pkg_time_context --> pkg_agent
   pkg_time_context --> pkg_invariants
   pkg_time_context --> pkg_llm
@@ -1519,12 +1530,13 @@ flowchart TD
 | [`goal-round-driver`](../Engine/goal/goal-round-driver) | `goal` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`fs-local`](../Modules/Official/fs/fs-local) | `fs` | [`fs`](../Modules/Official/fs/fs), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) |
 | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | `fs` | [`fs`](../Modules/Official/fs/fs), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) |
+| [`native-file-reference-local`](../Modules/Official/fs/native-file-reference-local) | `fs` | [`fs`](../Modules/Official/fs/fs), [`native-agent`](../Engine/core/native-agent), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session) |
 | [`skill-filesystem`](../Modules/Official/skill/skill-filesystem) | `skill` | [`fs`](../Modules/Official/fs/fs), [`home-paths`](../Core/util/home-paths), [`skill`](../Modules/Official/skill/skill) |
 | [`sdk-child`](../Modules/Official/subagent/sdk-child) | `subagent` | [`attachment`](../Modules/Official/attachment/attachment), [`credentials`](../Modules/Official/credentials/credentials), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-subagent`](../Engine/subagent/native-subagent), [`sdk-protocol`](../Engine/subagent/sdk-protocol), [`sdk-runtime`](../Engine/subagent/sdk-runtime), [`session`](../Engine/core/session), [`subagent-protocol`](../Engine/subagent/subagent-protocol) |
 | [`web-search-deepseek`](../Modules/Official/web/web-search-deepseek) | `web` | [`agent`](../Engine/core/agent), [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition), [`credentials`](../Modules/Official/credentials/credentials), [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`settings-definition`](../Core/settings/settings-definition), [`web`](../Modules/Official/web/web) |
 | [`hook-protocol`](../Modules/Official/hooks/hook-protocol) | `hooks` | [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session), [`shell`](../Modules/Official/shell/shell) |
 | [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) | `bridge` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`system-prompt`](../Engine/core/system-prompt) |
-| [`file-reference`](../Engine/context/file-reference) | `context` | [`agent`](../Engine/core/agent) |
+| [`file-reference`](../Engine/context/file-reference) | `context` | [`agent`](../Engine/core/agent), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`time-context`](../Engine/context/time-context) | `context` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
 | [`tmux-context`](../Engine/context/tmux-context) | `context` | [`agent`](../Engine/core/agent), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`shell`](../Modules/Official/shell/shell) |
 | [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | `e2b` | [`e2b`](../Modules/Official/e2b/e2b), [`fs`](../Modules/Official/fs/fs) |

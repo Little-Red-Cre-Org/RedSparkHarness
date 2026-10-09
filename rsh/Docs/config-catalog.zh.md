@@ -3622,6 +3622,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-approval`（[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts)）
 - `@deepseek-ai/dsh-native-code-runtime`（[`rsh/Modules/Official/code-runtime/native-code-runtime/src/index.ts`](../Modules/Official/code-runtime/native-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-command`（[`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts)）
+- `@deepseek-ai/dsh-native-file-reference-local`（[`rsh/Modules/Official/fs/native-file-reference-local/src/index.ts`](../Modules/Official/fs/native-file-reference-local/src/index.ts)）
 - `@deepseek-ai/dsh-native-headless`（[`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts)）
 - `@deepseek-ai/dsh-native-jobs`（[`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-model-execution`（[`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts)）

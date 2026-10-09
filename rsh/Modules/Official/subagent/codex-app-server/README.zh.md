@@ -28,7 +28,7 @@ kind: "package-reference"
 |---|---|---|
 | DSH Cordis Codex 兼容 runner | 通过 Official 产品 runner 执行的一次性文本路径 | 修复 sandboxMode 传递并断言生成的 config.toml 后，只重跑了两个受影响的真实产品权限用例：显式 bypass marker 写入通过；never 加配置 workspace-write 的用例确认 config.toml 包含 workspace-write，但 nested product tool 返回 blocked by policy 后跳过，写入和继承仍未验证。此前三文件集合的 64 通过/1 跳过早于 fixture 修复；其继承归因已被取代。 |
 | Native Codex external driver | 没有 Native 请求可以执行；Codex 0.161 无法约束精确的父级 authority 和正数 `maxSteps` 上限，因此每个请求都会在 `childConnection.connect()` 前被拒绝。部署级 `permissionMode`（包括 full access）不能覆盖该拒绝。 | 现有 `native-admission.spec.ts` 回归用例确认在配置 bypass 权限时仍会于连接前拒绝；这只证明拒绝契约。 |
-| Native 进程内 spawn 提供方 | 保留现有可执行 Native 基线；本次 Codex 迁移不切换默认路径。 | 单独选择执行的 fresh-child 完成回归通过。 |
+| Native 进程内 spawn 提供方 | 已交付的 Native profile 模板选择进程内 `spawn` 提供方；专用 `native-sdk-dsh-child` 则选择 `dsh-sdk`。本 Codex 驱动不会替代这两条路径。 | Native 子任务执行由 [native-subagent](../../../../Engine/subagent/native-subagent/README.zh.md) 负责。上面的 `native-admission.spec.ts` 用例只覆盖本包连接前的拒绝。 |
 
 <a id="use-this-package"></a>
 ## 使用本包
