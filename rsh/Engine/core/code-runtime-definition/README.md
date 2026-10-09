@@ -38,7 +38,7 @@ import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from
 
 ## Implementation
 
-The package owns portable binding, JSON value, request, result, failure, and language-independent reserved-name declarations. `CodeRuntimeDefinition` accepts the shared `CodeRunRequest`; native Providers also accept `NativeCodeRunRequest`, which adds the stop callback used to cancel native caller-owned bindings. `NativeCodeRuntime` adds awaited Provider disposal. Backend configuration, isolation, cancellation, and process or worker resources remain with the selected implementation.
+The package owns portable binding, JSON value, request, result, failure, and language-independent reserved-name declarations. `CodeRuntimeDefinition` accepts the shared `CodeRunRequest`; native Providers also accept `NativeCodeRunRequest`, which carries the exact live Native Session as host-side policy context and adds the stop callback used to cancel caller-owned bindings. Providers do not serialize that Session to workers. `NativeCodeRuntime` adds awaited Provider disposal. Backend configuration, isolation, cancellation, and process or worker resources remain with the selected implementation.
 
 The package publishes no `./invariant` companion because its values and interfaces hold no runtime registry or state. Providers and Consumers share the same declarations through the root entry.
 
