@@ -107,7 +107,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const [showSettings, setShowSettings] = useState(false)
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
-  if (showSettings) return <SettingsPage actions={settingsActions} t={t} onBack={() => { setShowSettings(false) }} />
+  if (showSettings) return <SettingsPage actions={settingsActions} t={t} onBack={() => { setShowSettings(false) }}
+    onAuthorized={() => { void refreshModelControls() }} />
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <h1>{t('title')}</h1>
     <nav aria-label={t('sessions')}>
@@ -204,6 +205,12 @@ export const plugin: NativePlugin = {
             settingsDescribe: client.settingsDescribe.bind(client), settingsMutate: client.settingsMutate.bind(client),
             credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
             credentialsUnset: client.credentialsUnset.bind(client),
+            authorizationList: client.authorizationList.bind(client),
+            authorizationBegin: client.authorizationBegin.bind(client),
+            authorizationFrames: client.authorizationFrames.bind(client),
+            authorizationAnswer: client.authorizationAnswer.bind(client),
+            authorizationDecline: client.authorizationDecline.bind(client),
+            authorizationCancel: client.authorizationCancel.bind(client),
           },
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,

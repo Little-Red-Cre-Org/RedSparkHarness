@@ -1,14 +1,17 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { AuthorizationFrame, AuthorizationSettlement } from '@deepseek-ai/dsh-authorization/types'
 import type { ConversationLocaleKey } from './locales.ts'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
 export type NativeSettingsActions = Pick<NativeSessionClient,
-  'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'>
+  'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
+  | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -103,6 +106,169 @@ export function nativeSettingsDiff(
   return operations
 }
 
+function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
+  entry: NativeAuthorizationEntry
+  actions: NativeSettingsActions
+  t: Translate
+  onSettled: () => Promise<boolean>
+  refreshClick: number
+}) {
+  const [attemptId, setAttemptId] = useState(entry.attemptId)
+  const [frames, setFrames] = useState<AuthorizationFrame[]>([])
+  const [method, setMethod] = useState(entry.methods[0]?.id)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string>()
+  const [lost, setLost] = useState(false)
+  const [stopped, setStopped] = useState<string>()
+  const retried = useRef<string>()
+  // Parent callbacks may change identity on every render; only a new attempt resubscribes.
+  const settledRef = useRef(onSettled)
+  settledRef.current = onSettled
+  const attemptRef = useRef(attemptId)
+  attemptRef.current = attemptId
+  const listedAttempt = useRef(entry.attemptId)
+
+  // Undefined means not subscribed; refresh may resubscribe once per attempt.
+  // Clearing `stopped` must not replace a Sign in attempt the list does not list yet.
+  useEffect(() => {
+    const listed = entry.attemptId
+    const listedChanged = listed !== listedAttempt.current
+    listedAttempt.current = listed
+    if (listed === undefined || listed === stopped) return
+    if (!listedChanged && attemptRef.current !== undefined && attemptRef.current !== listed) return
+    setAttemptId(listed)
+  }, [entry, stopped])
+
+  // Only the Settings button increments this; a settled refresh must not clear the cap.
+  useEffect(() => {
+    setStopped(undefined)
+  }, [refreshClick])
+
+  useEffect(() => {
+    if (attemptId === undefined) return
+    const controller = new AbortController()
+    let settlement: AuthorizationSettlement | undefined
+    // The attempt may settle before this subscription; the refreshed record then decides what to show.
+    const lose = async (): Promise<void> => {
+      setAttemptId(undefined)
+      setAnswers({})
+      if (retried.current === attemptId) {
+        setLost(false)
+        setStopped(attemptId)
+        return
+      }
+      retried.current = attemptId
+      await settledRef.current()
+      setLost(true)
+    }
+    setFrames([])
+    setAnswers({})
+    setStopped(undefined)
+    void (async () => {
+      try {
+        for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
+          setLost(false)
+          setFrames(current => [...current, frame])
+          if (frame.type === 'prompt-closed') {
+            setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== frame.promptId)))
+          }
+          if (frame.type === 'settled') {
+            settlement = frame.settlement
+            void settledRef.current()
+          }
+        }
+        if (settlement !== undefined) setAttemptId(undefined)
+        else if (!controller.signal.aborted) await lose()
+      } catch {
+        if (!controller.signal.aborted) await lose()
+      }
+    })()
+    return () => { controller.abort() }
+  }, [actions, attemptId, entry.key])
+
+  const answer = async (id: string, promptId: string, value: string): Promise<void> => {
+    setError(undefined)
+    try {
+      await actions.authorizationAnswer(entry.key, id, promptId, value)
+      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
+    }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const decline = async (id: string, promptId: string): Promise<void> => {
+    setError(undefined)
+    try {
+      await actions.authorizationDecline(entry.key, id, promptId)
+      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
+    }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const cancel = async (id: string): Promise<void> => {
+    setError(undefined)
+    try {
+      await actions.authorizationCancel(entry.key, id)
+      if (attemptRef.current === id) setAnswers({})
+    }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const begin = async (): Promise<void> => {
+    setError(undefined)
+    setLost(false)
+    setStopped(undefined)
+    try {
+      const attempt = await actions.authorizationBegin(entry.key, method)
+      setAttemptId(attempt.attemptId)
+    } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+
+  const settled = [...frames].reverse().find(frame => frame.type === 'settled')
+  return <div>
+    <p>{entry.label} · {entry.configured ? t('configured') : t('notConfigured')}</p>
+    {attemptId === undefined ? <div>
+      {entry.methods.length > 1 ? <label>{t('signInMethod')}
+        <select aria-label={t('signInMethod')} value={method} onChange={(event) => { setMethod(event.target.value) }}>
+          {entry.methods.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
+        </select>
+      </label> : null}
+      <button type="button" onClick={() => { void begin() }}>{t('signIn')}</button>
+    </div> : <>
+      <button type="button" onClick={() => { void cancel(attemptId) }}>{t('cancelSignIn')}</button>
+      {frames.map((frame, index) => {
+        if (frame.type !== 'prompt' || frames.slice(index + 1).some(later => later.type === 'prompt-closed' && later.promptId === frame.promptId)) return null
+        const value = answers[frame.promptId] ?? (frame.prompt.kind === 'select' ? frame.prompt.options[0]?.id ?? '' : '')
+        return <form key={frame.promptId} onSubmit={(event) => {
+          event.preventDefault()
+          void answer(attemptId, frame.promptId, value)
+        }}>
+          <label>{frame.prompt.message}{frame.prompt.kind === 'select'
+            ? <select aria-label={frame.prompt.message} value={value} onChange={(event) => {
+              setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
+            }}>
+              {frame.prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+            : <input type={frame.prompt.kind === 'secret' ? 'password' : 'text'} autoComplete={frame.prompt.kind === 'secret' ? 'off' : undefined}
+              placeholder={frame.prompt.placeholder} aria-label={frame.prompt.message} value={value} onChange={(event) => {
+                setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
+              }} />}
+          </label>
+          <button type="submit">{t('authorizationAnswer')}</button>
+          <button type="button" onClick={() => { void decline(attemptId, frame.promptId) }}>{t('decline')}</button>
+        </form>
+      })}
+    </>}
+    {frames.map((frame, index) => frame.type === 'notice' ? <p key={index}>
+      {frame.notice.message}{frame.notice.url === undefined ? null : <> <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a></>}
+      {frame.notice.code === undefined ? null : <> <code>{frame.notice.code}</code></>}
+    </p> : null)}
+    {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
+      : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
+    {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
+    </p>}
+    {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
+    {stopped !== undefined && stopped === entry.attemptId ? <p role="alert">{t('authorizationDisconnected')}</p> : null}
+    {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
+  </div>
+}
+
 function userSection(value: unknown): JsonObject {
   if (!isObject(value)) throw new TypeError('Settings user layer must be an object')
   return value
@@ -113,38 +279,64 @@ function pretty(value: unknown): string {
 }
 
 /** Registered schema-backed Settings with revision-safe JSON edits and schema-discovered credential refs.
- * @param props - selected native client, localized copy, and the route back to the Session page.
+ * @param props - selected native client, localized copy, the route back to the Session page, and an optional authorized callback.
  * @returns the native Settings and write-only credential page.
  */
-export function SettingsPage({ actions, t, onBack }: {
+export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   actions: NativeSettingsActions
   t: Translate
   onBack: () => void
+  onAuthorized?: () => void
 }) {
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
   const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
+  const [authorizationEntries, setAuthorizationEntries] = useState<readonly NativeAuthorizationEntry[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string>()
   const [error, setError] = useState<string>()
   const [credentialError, setCredentialError] = useState<string>()
+  const [authorizationError, setAuthorizationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const [refreshClick, setRefreshClick] = useState(0)
+  // Older refreshes cannot replace a newer refresh's results.
+  // A superseded refresh(false) still resets drafts on the refresh that lands.
+  const refreshes = useRef(0)
+  const resetDrafts = useRef(false)
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
+    const request = ++refreshes.current
+    if (!keepDrafts) resetDrafts.current = true
+    const latest = () => request === refreshes.current
     setLoading(true)
     setError(undefined)
     setCredentialError(undefined)
+    setAuthorizationError(undefined)
     try {
       const description = await actions.settingsDescribe(signal)
+      try {
+        const entries = await actions.authorizationList(signal)
+        if (latest()) setAuthorizationEntries(entries)
+      } catch (cause: unknown) {
+        if (latest()) {
+          setAuthorizationEntries([])
+          setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
+        }
+      }
       const rows = description.namespaces
-      setLimits(description.limits)
-      setNamespaces(rows)
-      setDrafts(current => keepDrafts ? current : Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
+      if (latest()) {
+        const reset = resetDrafts.current
+        if (reset) resetDrafts.current = false
+        setLimits(description.limits)
+        setNamespaces(rows)
+        if (reset) setDrafts(Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
+      }
       const refs = [...new Set(rows.flatMap(row => row.credentialRefs))]
-      if (refs.length === 0) setCredentials({})
-      else {
+      if (refs.length === 0) {
+        if (latest()) setCredentials({})
+      } else {
         try {
           const aggregate: Record<string, { configured: boolean; source?: string; writable: boolean }> = {}
           for (let offset = 0; offset < refs.length; offset += description.limits.maxCredentialRefsPerRead) {
@@ -152,16 +344,28 @@ export function SettingsPage({ actions, t, onBack }: {
               refs.slice(offset, offset + description.limits.maxCredentialRefsPerRead), signal,
             ))
           }
-          setCredentials(aggregate)
+          if (latest()) setCredentials(aggregate)
         }
-        catch (cause: unknown) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+        catch (cause: unknown) {
+          if (latest()) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+        }
       }
       return true
     } catch (cause: unknown) {
-      setError(requestError(cause, t, 'native/settings'))
+      if (latest()) {
+        resetDrafts.current = false
+        setError(requestError(cause, t, 'native/settings'))
+      }
       return false
-    } finally { setLoading(false) }
+    } finally { if (latest()) setLoading(false) }
   }, [actions, t])
+
+  // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
+  const authorizationSettled = useCallback(async (): Promise<boolean> => {
+    const refreshed = await refresh(true)
+    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
+    return refreshed
+  }, [onAuthorized, refresh])
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -224,7 +428,7 @@ export function SettingsPage({ actions, t, onBack }: {
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <button type="button" onClick={onBack}>{t('backToSessions')}</button>
     <h1>{t('settings')}</h1>
-    <button type="button" disabled={loading} onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
+    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
@@ -238,7 +442,7 @@ export function SettingsPage({ actions, t, onBack }: {
       </details>
       <label>{t('userOverrides')}
         <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
-          value={drafts[row.namespace] ?? pretty(row.user)} disabled={saving === row.namespace}
+          value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
           onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
           style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
       </label>
@@ -269,5 +473,11 @@ export function SettingsPage({ actions, t, onBack }: {
         })}
       </div>}
     </section>)}
+    {authorizationEntries.length === 0 && authorizationError === undefined ? null : <section aria-label={t('accounts')}>
+      <h2>{t('accounts')}</h2>
+      {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
+      {authorizationEntries.map(entry => <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
+        onSettled={authorizationSettled} refreshClick={refreshClick} />)}
+    </section>}
   </main>
 }

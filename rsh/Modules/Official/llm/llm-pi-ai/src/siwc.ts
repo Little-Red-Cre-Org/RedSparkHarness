@@ -188,6 +188,9 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     callbackSignal.removeEventListener('abort', onAbort)
     if (server.listening) {
       await new Promise<void>(resolve => server.close(() => { resolve() }))
+    } else {
+      server.once('error', () => {})
+      server.once('listening', () => { server.close() })
     }
     throw error
   }

@@ -40,7 +40,9 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。执行器在展示或回答前捕获精确应用所有者；仅 Session 标识相同不会准入其他 Program 的请求。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。
 
-可选 Settings 与 Credentials Provider 复用同一经过身份验证的 `/api` Connection 载体。`settings/describe` 返回 `{ namespaces, limits }`：只包含 owner 显式发布 presentation 元数据的活动 namespace，剥离机密值并省略所有 schema 默认值，同时公布经过校验的请求预算。注册时拒绝藏在不支持 schema 节点后的机密字段。`settings/mutate` 按所显示 revision 应用可见路径修改，拒绝机密路径、超过 maxSettingsOperations 的修改以及过期写入；超限修改在 Provider 写入前整体拒绝。Provider 异常文本会替换为通用 Settings 或 Credentials 错误；revision 冲突只保留 namespace 与预期／当前 revision。凭据引用来自这些已注册 schema；`credentials/describe` 只返回 configured/source/writable 事实并执行 maxCredentialRefsPerRead 上限，set 与 unset 只返回确认，不会回读值。本包不提供浏览器授权流程、不透明 grant 记录编辑或完整旧版插件页。
+可选 Settings 与 Credentials Provider 复用同一经过身份验证的 `/api` Connection 载体。`settings/describe` 返回 `{ namespaces, limits }`：只包含 owner 显式发布 presentation 元数据的活动 namespace，剥离机密值并省略所有 schema 默认值，同时公布经过校验的请求预算。注册时拒绝藏在不支持 schema 节点后的机密字段。`settings/mutate` 按所显示 revision 应用可见路径修改，拒绝机密路径、超过 maxSettingsOperations 的修改以及过期写入；超限修改在 Provider 写入前整体拒绝。Provider 异常文本会替换为通用 Settings 或 Credentials 错误；revision 冲突只保留 namespace 与预期／当前 revision。凭据引用来自这些已注册 schema；`credentials/describe` 只返回 configured/source/writable 事实并执行 maxCredentialRefsPerRead 上限，set 与 unset 只返回确认，不会回读值。
+
+将 `authorizationKeys` 设为页面可授权的凭据 key；允许列表默认为空。Host 通过 `/api` 提供 `authorization/list`、`authorization/begin`、`authorization/answer`、`authorization/decline` 和 `authorization/cancel`，并通过 POST `/api/native-session/authorization` 提供可重放的帧。回答、拒绝和取消请求必须包含当前 `attemptId`；帧不携带机密，断开连接只取消订阅，显式点击取消才会终止尝试。
 
 ## 不变量
 

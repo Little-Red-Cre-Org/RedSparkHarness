@@ -61,6 +61,7 @@ export const plugin: NativePlugin = {
           return assertUsableApiKey(hit.value, 'llm-pi-ai', profile.apiKeyEnv)
         },
       })
+      context.own(() => { adapter.dispose() })
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
