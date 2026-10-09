@@ -2485,6 +2485,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
 
   rsh/Engine/core/native-agent:
     dependencies:
@@ -5624,6 +5627,9 @@ importers:
       '@deepseek-ai/dsh-sandbox-local':
         specifier: workspace:^
         version: link:../../sandbox/sandbox-local
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
@@ -5661,6 +5667,10 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+    devDependencies:
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/code-runtime/tool-code-runtime:
     dependencies:

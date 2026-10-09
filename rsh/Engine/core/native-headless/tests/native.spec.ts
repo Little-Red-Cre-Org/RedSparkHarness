@@ -2,7 +2,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
@@ -19,6 +19,9 @@ import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/nativ
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
 import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
+import type { NativeCodeRunRequest, NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
+import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
+import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
@@ -43,6 +46,8 @@ async function fixture(
     maxSteps?: number
     directory?: string
     workspaceWriteRoot?: string
+    codeRuntimeProvider?: NativePlugin
+    sandboxPolicy?: NativeSandboxPolicy
   } = {},
 ) {
   const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
@@ -60,6 +65,11 @@ async function fixture(
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
+  }
+  const selectedSandboxPolicy = options.sandboxPolicy
+  const sandboxPolicyProvider: NativePlugin | undefined = selectedSandboxPolicy === undefined ? undefined : {
+    apiVersion: 1, name: 'test-native-sandbox-policy', targets: ['host'], requires: [], provides: ['sandboxPolicy'],
+    resolve: () => (context) => { context.provide('sandboxPolicy', selectedSandboxPolicy) },
   }
   const capture: NativePlugin = {
     apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution'], optional: ['approval'], provides: [],
@@ -82,8 +92,10 @@ async function fixture(
     { plugin: agentPlugin, scope, config: undefined },
     ...(options.fileReferences ? [{ plugin: sessionExecutionPlugin, scope, config: undefined }] : []),
     { plugin: modelExecutionPlugin, scope, config: undefined },
-    { plugin: codeRuntimePlugin, scope, config: { computeMs: 2_000, maxWallMs: 2_000 } },
+    { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
+      config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
     ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
+    ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
     ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
     ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
     { plugin: toolsPlugin, scope, config: undefined },
@@ -407,6 +419,54 @@ it('projects a bounded worker-thread code result through the Session tool sequen
   } finally {
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it.each([false, true])('passes the current Session to builtin/PTC code runtime and rejects restricted worker execution (PTC %s)', async (ptc) => {
+  const requests: NativeCodeRunRequest[] = []
+  const codeRuntime: NativeCodeRuntime = {
+    language: 'typescript', isolation: 'worker-thread',
+    run: async (request) => { requests.push(request); return { logs: [], value: 42 } },
+    dispose: async () => {},
+  }
+  const codeRuntimeProvider: NativePlugin = {
+    apiVersion: 1, name: 'test-code-runtime', targets: ['host'], requires: [], provides: ['codeRuntime'],
+    resolve: () => (context) => {
+      context.own(() => codeRuntime.dispose())
+      context.provide('codeRuntime', codeRuntime)
+    },
+  }
+  const args = ptc ? { code: 'return 6 * 7', description: 'Calculate six times seven.' } : { program: 'return 6 * 7' }
+  const safe = await fixture([
+    toolCallResponse('code-safe', 'run_code', args), textResponse('calculation complete'),
+  ], { ptc, codeRuntimeProvider })
+  try {
+    await safe.host.run(safe.scope, { kind: 'code-runtime-session' }, invocation => safe.app.run(['calculate'], invocation.signal))
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.session.header.cwd).toBe(safe.workspace)
+  } finally {
+    await safe.host.stop()
+    await rm(safe.directory, { recursive: true, force: true })
+  }
+
+  requests.length = 0
+  const policy = new NativeSandboxPolicy({ mode: 'danger-full-access', workspaceRoot: process.cwd() })
+  const resolvePolicy = vi.spyOn(policy, 'resolve').mockImplementation((request = {}) => ({
+    mode: request.session === undefined ? 'danger-full-access' : 'read-only',
+    workspaceRoot: request.session?.header.cwd ?? process.cwd(),
+  }))
+  const restricted = await fixture([
+    toolCallResponse('code-restricted', 'run_code', args), textResponse('restricted call recorded'),
+  ], { ptc, codeRuntimeProvider, sandboxPolicy: policy })
+  try {
+    await restricted.host.run(restricted.scope, { kind: 'code-runtime-session-policy' }, invocation => restricted.app.run(['calculate'], invocation.signal))
+    expect(requests).toHaveLength(0)
+    const resolvedSessions = resolvePolicy.mock.calls.flatMap(([request]) => request?.session === undefined ? [] : [request.session])
+    expect(resolvedSessions.length).toBeGreaterThan(0)
+    expect(resolvedSessions.every(session => session.header.cwd === restricted.workspace)).toBe(true)
+  } finally {
+    await restricted.host.stop()
+    await rm(restricted.directory, { recursive: true, force: true })
   }
 })
 
