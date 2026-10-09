@@ -4,7 +4,31 @@
 
 本文定义逻辑会话语料库的查询词汇；当 live 数据存在时，该语料库优先使用 live 数据。[Service Definition 包](../../Engine/session-query/session-query)负责精确读取、来源优先级、关系追踪、语义提取，以及与提供方无关的过滤器；[SQLite 提供方](../../Engine/session-query/session-query-sqlite)负责具体全文索引的生命周期。
 
-源码：[`rsh/Engine/session-query/session-query/src/types.ts`](../../Engine/session-query/session-query/src/types.ts)
+本包的 Native Host 入口通过同一个 `sessionQuery` 服务键公开 `NativeSessionQueryOperations`。它只通过 `activeSessions.owners()` 与 `owner.readEvents()` 选择活动历史，只通过可选的 `sessionPersistence` 只读 handle 读取冷历史。活动 owner 提供的历史由驻留 Session 在恢复时校验，并在接纳追加事件时持续验证；冷日志作为脱离运行时的数据，通过 `Session.fromRestore()` 回放验证，不取得 writer，也不把校验 Session 发布到 active owners。本 Native 批次为会话引用实现精确列表、原始日志、标题和当前表层读取。它尚未闭合更广泛的 Native 查询能力：`observeSession`、`filterSessions`、`listEvents`、`filterEvents`、`readEvent`、`traceSession`、`traceEvent`、与提供方无关的搜索、SQLite 索引和排序全文搜索仍在此入口之外。
+
+```ts type-equiv
+/** Read-only exact session history selected from Native's active-owner registry and persistence. */
+interface NativeSessionQueryOperations {
+  /** List stored sessions and exact active owners, newest first. */
+  listSessions(signal?: AbortSignal): Promise<SessionRecord[]>
+  /**
+   * Read one raw log without acquiring a writer.
+   * Cold logs are replay-validated; active history is validated by the resident Session.
+   * @param sessionId - the logical session identity.
+   * @param signal - optional cancellation for source lookup and history reading.
+   * @returns a detached complete raw log from one live-preferred source.
+   */
+  readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot>
+  /** Read the latest log-backed title from one live-preferred source. */
+  readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation>
+  /** Read titles in first-occurrence order, isolating per-session failures. */
+  readTitleSnapshots(sessionIds: readonly SessionId[], signal?: AbortSignal): Promise<SessionTitleObservationResult[]>
+  /** Read a validated current model surface from one live-preferred source. */
+  readSurface(sessionId: SessionId, signal?: AbortSignal): Promise<SessionSurfaceSnapshot>
+}
+```
+
+源码：[`rsh/Engine/session-query/session-query/src/native.ts`](../../Engine/session-query/session-query/src/native.ts)
 
 ## 逻辑记录
 
@@ -20,23 +44,23 @@ type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
 interface SessionRecord {
   /** Cloned session header selected from the live-preferred corpus. */
   header: SessionHeader
-  /** Whether the id currently exists in `ctx.sessions`. */
+  /** Whether the id currently exists in the selected runtime's live session authority. */
   live: boolean
   /** Whether the active persistence backend currently lists the id, including a created-but-unmaterialized session it already observes. */
   persisted: boolean
 }
 ```
 
-`SessionLogSnapshot` 是供恢复预检使用的完整原始日志：它脱离运行时，并经过回放验证。`SessionSurfaceSnapshot` 表示一次精确读取的 surface 观测结果，而不是持续保留的订阅。
+`SessionLogSnapshot` 是供恢复预检使用的完整脱离运行时原始日志；冷持久化日志会在内存中补齐尾部并通过脱离运行时的回放验证。`SessionSurfaceSnapshot` 表示一次精确读取的 surface 观测结果，而不是持续保留的订阅。
 
 ```ts type-equiv
-/** One validated detached observation of a logical session's complete raw log. */
+/** One detached observation of a logical session's complete raw log. */
 interface SessionLogSnapshot {
   /** Cloned session header selected from the same observation as `events`. */
   session: SessionHeader
   /** Exact number of fork-inherited events in the observed log. */
   inheritedEventCount: SessionLogOffset
-  /** Cloned contiguous raw events after in-memory interrupted-turn balancing and replay validation. */
+  /** Cloned contiguous raw events; cold persisted logs include in-memory tail balancing and detached replay validation. */
   events: SessionEvent[]
 }
 ```

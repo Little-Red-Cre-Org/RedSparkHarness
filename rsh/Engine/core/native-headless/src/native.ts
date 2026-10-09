@@ -789,7 +789,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           if (admitted === undefined) break
           const { inputs, selection, preparedStep, commitChecks } = admitted
           const stepConfig = preparedStep.config
-          const instructionContext = await this.agentInstructions?.prepare(session, inputs, signal)
+          const instructionContexts = await this.agentInstructions?.prepare(session, inputs, signal)
           signal.throwIfAborted()
           if (activeOwner !== undefined) {
             const admittedIds = new Set(inputs.map(input => input.id))
@@ -826,7 +826,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             track(session.append('user/message', input, { surfaceOp: 'append' }))
           }
           if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
-          if (instructionContext !== undefined) {
+          for (const instructionContext of instructionContexts ?? []) {
             track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
           }
           const timeContext = this.timeContext?.prepare({ session, turn, step })

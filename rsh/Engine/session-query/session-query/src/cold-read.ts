@@ -1,9 +1,9 @@
 /** One-shot cold session read through the handle-based persistence seam. */
 
-import { interruptedTurnClosers } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@deepseek-ai/dsh-session'
-import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
-import type { SessionHandleReadResult } from '@deepseek-ai/dsh-session-persistence'
+import { interruptedTurnClosers } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@deepseek-ai/dsh-session/native'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionHandleReadResult } from '@deepseek-ai/dsh-session-persistence/native'
 
 /** A stored session log balanced for read-only viewing. */
 export interface ColdSessionLog {
@@ -29,7 +29,7 @@ export interface ColdSessionLog {
  * @returns an adoptable seed in a caller-owned outer array, ready for in-place Session restoration.
  */
 export async function readColdSessionLog(
-  persistence: SessionPersistence,
+  persistence: Pick<NativeSessionPersistenceOperations, 'open'>,
   sessionId: SessionId,
   signal?: AbortSignal,
 ): Promise<ColdSessionLog> {

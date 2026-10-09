@@ -97,12 +97,28 @@ interface SessionReferenceSource {
 ```ts type-equiv
 /** Direct message content and optional referenced-session context. */
 interface PreparedReferencedMessage {
-  /** Readable message content after host mention tokens are removed. */
+  /** A clone of the direct message content supplied to preparation. */
   content: ContentBlock[]
   /** Aggregated untrusted snapshot, absent when the message has no references. */
   additionalContext?: UserMessage
 }
 ```
+
+`NativeSessionReferenceOperations` 通过 `NativeSessionQueryOperations` 为新准入的规范 mention 准备上下文，但不会修改输入消息。Native headless 消费方通过既有 Session writer 将返回的上下文与输入一起追加；之后的历史重建会读取已持久化上下文消息，而不会再次解析历史 URI。
+
+```ts type-equiv
+/** Native read-only context preparation over the exact session query owner. */
+interface NativeSessionReferenceOperations {
+  /**
+   * Prepare durable untrusted contexts for newly admitted user messages without rewriting inputs.
+   * The caller appends them through its existing Session writer; cancellation or failure waits for
+   * started reads and spills to settle before preparation rejects.
+   */
+  prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
+}
+```
+
+来源：[`rsh/Engine/context/session-reference/src/native.ts`](../../Engine/context/session-reference/src/native.ts)
 
 ## 错误
 

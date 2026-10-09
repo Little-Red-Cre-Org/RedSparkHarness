@@ -29,6 +29,8 @@ kind: "package-library"
 
 manifest 的 `profile` 是公开 `dsh` profile 的准确名称；兼容场景使用 `compat`。
 
+语料库的 `snapshots/web/` 目录归属浏览器 `web` 与原生 Web `native-web` 场景；每份清单仍保留实际随附 profile 的准确名称。
+
 本包把随附 profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
 
 `profile: desktop` 标识既有 Electron 私有 Host 生命周期；其 owner 使用实际 Desktop 后端控制器与 Session 往返，不新增应用入口。

@@ -39,6 +39,7 @@
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-session-reference": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
@@ -60,6 +61,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-session-reference": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
@@ -78,7 +80,8 @@
         "fs"
       ],
       "optional": [
-        "tools"
+        "tools",
+        "sessionReference"
       ],
       "provides": [
         "agentInstructions"
@@ -93,6 +96,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-session-projection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-reference": {
       "optional": true
     },
     "@deepseek-ai/dsh-tools": {

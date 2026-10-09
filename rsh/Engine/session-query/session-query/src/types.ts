@@ -14,8 +14,8 @@ import type {
   SessionSeq,
   OptionalSessionSeq,
   SurfaceEvent,
-} from '@deepseek-ai/dsh-session'
-import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title'
+} from '@deepseek-ai/dsh-session/native'
+import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
 import type { SessionSearchCursor } from './cursor.ts'
 
 export type { SessionSearchCursor } from './cursor.ts'
@@ -27,7 +27,7 @@ export type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
 export interface SessionRecord {
   /** Cloned session header selected from the live-preferred corpus. */
   header: SessionHeader
-  /** Whether the id currently exists in `ctx.sessions`. */
+  /** Whether the id currently exists in the selected runtime's live session authority. */
   live: boolean
   /** Whether the active persistence backend currently lists the id, including a created-but-unmaterialized session it already observes. */
   persisted: boolean
@@ -45,13 +45,13 @@ export interface SessionSurfaceSnapshot {
   events: SurfaceEvent[]
 }
 
-/** One validated detached observation of a logical session's complete raw log. */
+/** One detached observation of a logical session's complete raw log. */
 export interface SessionLogSnapshot {
   /** Cloned session header selected from the same observation as `events`. */
   session: SessionHeader
   /** Exact number of fork-inherited events in the observed log. */
   inheritedEventCount: SessionLogOffset
-  /** Cloned contiguous raw events after in-memory interrupted-turn balancing and replay validation. */
+  /** Cloned contiguous raw events; cold persisted logs include in-memory tail balancing and detached replay validation. */
   events: SessionEvent[]
 }
 

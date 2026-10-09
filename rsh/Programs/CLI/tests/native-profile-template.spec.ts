@@ -248,6 +248,16 @@ it.each(['native-headless', 'native-sdk', 'native-acp'] as const)('keeps title a
   expect(plugins).not.toContain('@deepseek-ai/dsh-plan-mode')
 })
 
+it('installs cold session query before references in the Native headless profile', () => {
+  const installations = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless', 'linux').installations
+  const query = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-query')
+  const reference = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-reference')
+  const instructions = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-agent-instructions')
+  expect(query).toBeGreaterThan(installations.findIndex(row => row.id === 'session-execution'))
+  expect(reference).toBeGreaterThan(query)
+  expect(instructions).toBeGreaterThan(reference)
+})
+
 it('installs plan mode beside the native TUI command registry', () => {
   const profile = shippedNativeProfileComposition('/tmp/rsh-plan', 'native-tui', 'linux')
   const ids = profile.installations.map(row => row.id)

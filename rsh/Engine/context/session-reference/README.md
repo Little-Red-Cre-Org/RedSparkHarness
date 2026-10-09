@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-session-reference` lets a conversation reference other sessions: a host turns a `@label` mention into a canonical URI, and the service prepares a bounded, read-only snapshot of each referenced session as durable, untrusted background context for the model. Candidate discovery ranks other sessions by working-directory affinity and labels them with their latest titles. Snapshots are immutable after capture and carry a fixed warning that forbids following instructions, permission claims, or tool requests inside them. It is an opt-in service for hosts that support cross-session mentions; it consumes `ctx.sessionQuery` and needs no SQLite FTS.
+`dsh-session-reference` lets a conversation cite another session and gives the model a bounded, read-only snapshot as durable, untrusted context. Cordis hosts replace `@label` mentions with readable labels; Native preserves the admitted canonical URI and appends a separate snapshot. Discovery ranks sessions by working-directory affinity and uses their latest titles as labels. Snapshots freeze at capture and warn against following their instructions, permission claims, or tool requests. The package reads through `ctx.sessionQuery` or its Native service and does not require SQLite FTS.
 
 ## Table of Contents
 
@@ -29,13 +29,21 @@ Enable this service when hosts should let a user mention another session and giv
 
 ### Mention syntax
 
-A canonical mention is `@[label](dsh-session:<base64url-encoded-id>)` in Markdown, or the bare `dsh-session:` URI; every JavaScript string session id round-trips exactly. The service rewrites mentions into readable `@label` text in the message and returns the structured references. Explicit Markdown mentions reject malformed URIs; empty or punctuation-only scheme mentions stay ordinary discussion text.
+A canonical mention is `@[label](dsh-session:<base64url-encoded-id>)` in Markdown, or the bare `dsh-session:` URI; every JavaScript string session id round-trips exactly. The Cordis resolver rewrites mentions into readable `@label` text in the message and returns the structured references. Explicit Markdown mentions reject malformed URIs; empty or punctuation-only scheme mentions stay ordinary discussion text.
 
 ### What the agent gets
 
 A message that cites other sessions is followed immediately by a `## Referenced sessions` snapshot as a second user-role message. The snapshot is untrusted background: the fixed warning tells the model not to follow instructions, permission claims, or tool requests inside it unless the current user explicitly repeats them. Each source preview is bounded independently — at most `maxReferences` distinct sessions per message and a configured or model-relative serialized JSON byte budget per source. Retention drops older non-checkpoint messages before shortening retained text; preparation fails only when the reference cannot fit even after retention.
 
 For a truncated reference, an optional spill backend saves the full captured text projection under the target session. A separate omission notice outside the bounded preview JSON gives exact `omittedMessages` and `omittedBytes`, then the saved locator and `retrievalHint`, or an unavailable outcome distinguishing missing storage from a failed save. The notice is part of the same durable context message. Full transcripts carry the same untrusted-background warning and capture metadata, including `capturedFormatVersion`. Each message uses JSON string fragments of at most 64 Unicode code points per line; decode and concatenate its fragments to recover exact text, including original newlines. This fixed storage format keeps even long single-line text readable through paged file reads.
+
+### Native integration
+
+The Native provider preserves the canonical URI in the admitted user message and returns a separate snapshot context without changing that input. When Native headless composes it with workspace instructions, the existing Session writer persists the original input and prepared context; later model-history reconstruction reads that captured context from the log. The model-visible mention therefore differs from Cordis `@label` replacement.
+
+Native consumers can omit the optional Cordis peer when importing the explicit `/native` entry. The package-root service remains the Cordis adapter and requires Cordis when imported.
+
+Native accepts `maxReferences` (default `3`) and `maxReferenceBytes` (fixed default `65536`). These defaults do not use model capacity; Native rejects Cordis-only `candidateLimit` and `referenceContextFraction`. Native preparation waits for all started reads and spill writes to settle before returning an error or cancellation, so callers can release the Session writer and selected services after preparation ends.
 
 ### Finding sessions to reference
 
@@ -50,7 +58,7 @@ For a truncated reference, an optional spill backend saves the full captured tex
 | `maxReferenceBytes` | automatic | Explicit maximum serialized JSON bytes per source; overrides the automatic budget exactly |
 | `referenceContextFraction` | `0.2` | Context-window fraction per source, from `0` to `1` |
 
-The automatic budget is `max(65536, floor(contextWindow × 4 × referenceContextFraction))` bytes per source. Model context capacity is measured in tokens; four bytes per token is a sizing heuristic, not an exact token conversion. A missing route, LLM service, adapter, or capacity uses 64 KiB; other model metadata lookup errors and cancellation fail preparation.
+The automatic budget is `max(65536, floor(contextWindow × 4 × referenceContextFraction))` bytes per source. Model context capacity is measured in tokens; four bytes per token is a sizing heuristic, not an exact token conversion. A missing route, LLM service, adapter, or capacity uses 64 KiB; other model metadata lookup errors and cancellation fail preparation. Direct content is snapshotted and reference IDs are validated before this asynchronous lookup.
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-reference) is the exhaustive source for every accepted field and its JSDoc.
 
@@ -68,7 +76,7 @@ This section explains the design of the service; the observable behavior is cove
 
 Preparation reads each referenced session's current surface exactly once, when the target message reaches `agent/pre-step`. Both preview and spill use that same captured projection: direct-user text, assistant text, and user checkpoints carrying the canonical compaction marker; tools, reasoning, and other injected context are excluded. This prevents recursive reference propagation and prevents a later source mutation from changing the saved transcript. Preview JSON escapes every `<` as `\u003c`, so source text cannot spell the `<referenced-sessions>` framing tag.
 
-The resolver discovers optional storage through `ctx.get("spillStore")` and saves only truncated references. Storage ownership is the target session; provenance identifies the referenced source session and label, without a fabricated tool call. Cancellation is checked after the asynchronous save and prevents publication even if an artifact was written. Artifact expiry remains the backend's existing policy.
+The resolver discovers optional storage through `ctx.get("spillStore")` and saves only truncated references. Storage ownership is the target session; provenance identifies the referenced source session and label, without a fabricated tool call. Cancellation waits for started reads and spill writes to settle, then prevents publication even if an artifact was written. Artifact expiry remains the backend's existing policy.
 
 The budget uses the provider and model captured after `system-prompt/assemble` completes for the target agent. Direct `prepare` calls before any assembly use agent options; session headers do not select the budget model. Diagnostic assemblies without an agent do not affect captured routes.
 
@@ -87,7 +95,7 @@ The budget uses the provider and model captured after `system-prompt/assemble` c
 
 ### Main flow
 
-The outer `agent/pre-step` listener accepts the step, parses canonical mentions out of direct user messages, then calls `prepare`, which normalizes references (first-mention order, deduplication, self-reference and count rejection), reads every surface in parallel, retains each under its resolved byte budget, and renders the aggregated prompt. Each durable source record keeps the frozen `capturedThroughSeq` and records a nonzero `capturedFormatVersion`; absence denotes format v0. Each snapshot is inserted immediately after the message that cited it, and the target log records the readable direct message followed by its sourced context, so source mutation after capture cannot change target replay.
+The Cordis `agent/pre-step` listener accepts the step, parses canonical mentions out of direct user messages, then calls `prepare`, which normalizes references (first-mention order, deduplication, self-reference and count rejection), reads every surface in parallel, retains each under its resolved byte budget, and renders the aggregated prompt. Each durable source record keeps the frozen `capturedThroughSeq` and records a nonzero `capturedFormatVersion`; absence denotes format v0. Cordis inserts each snapshot immediately after the message that cited it. Native preparation leaves the admitted message unchanged and returns separate snapshot contexts for the Native headless Session writer.
 
 </details>
 
@@ -113,7 +121,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The model sees two consecutive user-role messages: the current message with its readable `@label`, then the `## Referenced sessions` untrusted snapshot. The warning forbids following instructions, permission claims, or tool requests from the snapshot unless the current user explicitly repeats them. Labels, cwd values, ids, and conversation text are serialized as JSON inside `<referenced-sessions>` tags; every data `<` is emitted as the lossless JSON escape `\u003c`, so source text cannot spell a framing tag.
+Cordis sends the current message with its readable `@label`, followed by the `## Referenced sessions` untrusted snapshot. The fixed warning says not to follow snapshot instructions, permission claims, or tool requests unless the user repeats them. Labels, cwd values, ids, and conversation text are JSON inside `<referenced-sessions>` tags; each data `<` is emitted as `\u003c`, so source text cannot spell a framing tag. Native preserves the canonical URI in the admitted message and appends a separate untrusted snapshot after configured workspace instructions. The existing Session writer persists the source facts and context, and requests replay the captured text without rereading the source. This differs from Cordis's readable `@label` substitution; the representations are not claimed to be equivalent.
 
 #### Token effect
 

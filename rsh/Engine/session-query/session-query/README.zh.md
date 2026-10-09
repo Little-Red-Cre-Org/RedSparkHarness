@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-session-query` 让应用代码可以列出、过滤、读取和搜索会话历史，检查带边界的事件上下文，并追踪会话或事件关系。读取优先使用实时会话而非持久化副本，并返回来自同一次一致观察的脱离存储克隆。精确读取、过滤与追踪可用于任何受支持的存储设置；带排名的全文搜索需要 `dsh-session-query-sqlite` 等后端。当应用代码需要以编程方式访问呈现给模型的历史时，请使用本包。
+`dsh-session-query` 让应用代码可以列出、过滤、读取和搜索会话历史，检查带边界的事件上下文，并追踪会话或事件关系。读取优先使用实时会话而非持久化副本，并返回来自同一次一致观察的脱离存储克隆。本包还提供 Cordis-free Native Host 入口，可通过活动 Session owner 和可选持久化服务进行精确读取。排序全文搜索仍由 `dsh-session-query-sqlite` 等 Cordis 后端提供。
 
 ## 目录
 
@@ -25,14 +25,14 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当你需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，从应用代码使用 `ctx.sessionQuery`。该服务由具体后端插件提供——已发布组合挂载 `@deepseek-ai/dsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）——因此本包从不单独挂载。一旦组合了后端，以下全部能力都可在 `ctx.sessionQuery` 上使用。
+当 Cordis 应用代码需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，使用 `ctx.sessionQuery`。已发布组合挂载 `@deepseek-ai/dsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）提供排序全文搜索。Native Host 组合也可挂载本包的 `./native` 入口，以提供下面列出的精确读取；它要求 `activeSessions`，并在选中时使用 `sessionPersistence`。
 
 ### 你可以做什么
 
 | 操作 | 你得到什么 |
 |---|---|
 | `listSessions()` | 每个逻辑会话，最新的在前，带 `live` 与 `persisted` 可用性标志 |
-| `readSession(id)` | 经过回放校验的完整原始事件日志，且不会让该会话变为实时 |
+| `readSession(id)` | 完整的脱离运行时原始日志，不会让该会话变为实时；Cordis 和 Native 冷读会对其进行回放校验 |
 | `filterSessions(filters)` | 匹配 AND 连接的元数据与可用性谓词的会话 |
 | `filterEvents(id, filters)` | 匹配元数据与字面文本谓词的语义事件文档 |
 | `readTitleSnapshots(ids)` | 每个会话的最新折叠标题，绑定到其来源 header |
@@ -41,6 +41,10 @@ kind: "package-reference"
 | `traceSession(id)` | 已知祖先链与递归后代树 |
 | `traceEvent(request)` | 一个事件的位置替换与被引用源事件关系 |
 | `searchSessions(request)` / `searchEvents(request)` | 全文搜索分页结果，由挂载的后端实现 |
+
+Native 入口使用同一个 `sessionQuery` 服务键，提供 `listSessions`、`readSession`、`readTitleSnapshot(s)` 和 `readSurface`。活动历史通过精确 active owner 读取，由驻留 Session 在恢复时校验，并在接纳追加事件时持续验证；冷日志作为脱离运行时的数据进行回放验证，并在内存中补齐中断尾部。冷读不会挂载 Session，也不会修改存储。没有 `sessionPersistence` 时仍可列出和读取活动 owner，但无法访问已分离会话。
+
+应用 handler 应在负责该请求的 Host 调用中读取这些数据：API handler 使用 `host.run()`，应用自身的执行使用 `host.runOwned()`，以便 Host 替换或关闭时等待所选 Provider 的调用排空（[Host 安装与清理](../../../Core/runtime-diagnostics/native-runtime/README.zh.md#installation-and-cleanup)）。
 
 不带正文的记录只公开 `SessionHeader.isSeeded`。返回事件正文的读取（`readSession`、`readSurface`、`readEvent`）与保留的 `SessionObservation` 值还携带精确 `inheritedEventCount`，因此调用方无需从日志推断切点即可区分继承事件与自有事件。
 
@@ -112,7 +116,7 @@ kind: "package-reference"
 
 ### 读取与追踪
 
-`readSession` 通过 `Session.create` 回放日志，复用恢复的校验。`readSurface`、`listEvents` 与 `traceEvent` 共用一次 `foldSurface` 遍历，把事件分类为 `current`、`shadowed` 或 `log-only`，并校验从零开始且连续的 seq、表层标记的适用性以及替换或引用完整性；任何违规都以 `SESSION_QUERY_INVALID_SURFACE` 失败。追踪是一次性的：会话血缘只读取一次语料库并确定性遍历父级与后代树；事件追踪沿位置替换者跟进到最终节点，同时保持被引用源事件链接不传递。
+Cordis `readSession` 会通过 `Session.fromRestore` 回放校验脱离存储的副本，不获取 writer，也不把校验 Session 注册到活动会话；它返回原始事件，不包含本地恢复标记。Native 冷读也会回放校验，Native 活动读取则使用由驻留 Session 验证过的历史。`readSurface`、`listEvents` 与 `traceEvent` 共用一次 `foldSurface` 遍历，把事件分类为 `current`、`shadowed` 或 `log-only`，并校验从零开始且连续的 seq、表层标记的适用性以及替换或引用完整性；任何违规都以 `SESSION_QUERY_INVALID_SURFACE` 失败。追踪是一次性的：会话血缘只读取一次语料库并确定性遍历父级与后代树；事件追踪沿位置替换者跟进到最终节点，同时保持被引用源事件链接不传递。
 
 </details>
 
@@ -149,7 +153,8 @@ kind: "package-reference"
 
 - **无调用方授权**——这是上下文范围内的可信基础设施；模型工具或 UI 必须限制调用方可检查的会话。
 - **无提供方协调器或回退**——服务在搜索上是抽象的，组合必须挂载具体后端；没有搜索提供方注册表或回退实现。
-- **精确读取回放整个日志**——`readSession`、`readSurface`、`filterEvents` 与事件追踪会加载并校验完整逻辑日志，因此非常大的历史每次调用都要付出完整检查；`listSessions` 保持轻量。
+- **Native 没有全文后端**——Native 入口只实现精确读取，不提供 SQLite 搜索、排序结果或游标世代。
+- **精确读取会检查完整历史**——Cordis 精确读取与 Native 冷读会回放校验完整日志；Native 活动读取使用驻留 Session 已验证的历史。surface 投影和事件追踪仍会检查所有相关事件，因此超大历史会产生逐次读取成本；`listSessions` 保持轻量。
 - **字面文本扫描，而非全文搜索**——`text` 过滤器用正则表达式扫描提取出的文档且不提供排名；带排名的搜索需要挂载后端。
 
 <a id="dev-note"></a>

@@ -378,6 +378,7 @@ it.each(['pause', 'edit'] as const)('rechecks a Goal after instructions preparat
     action === 'edit' ? textResponse('The revised objective was completed.') : textResponse('The queued user input was handled.'),
   ], async (_session, inputs) => {
     if (inputs.some(input => input.source.kind === 'goal')) { ready.resolve(undefined); await release.promise }
+    return []
   })
   const id = SessionId(`native-goal-late-${action}`)
   const detached = Promise.withResolvers<undefined>()

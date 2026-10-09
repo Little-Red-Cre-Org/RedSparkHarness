@@ -42,6 +42,9 @@
       "path": "../../session-query/session-query"
     },
     {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../session/session-projection"
     },
     {

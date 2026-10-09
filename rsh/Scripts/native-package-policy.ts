@@ -142,6 +142,8 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/todo/tool-todo', 'Native and Cordis todo consumers share list normalization and durable Session events'],
   ['rsh/Modules/Official/plan/plan-mode', 'Native and Cordis plan-mode Consumers share the durable mode event, review question and command copy'],
   ['rsh/Engine/session/session-title', 'Native and Cordis title services share the durable title event, provider contract and fallback normalization'],
+  ['rsh/Engine/session-query/session-query', 'Native and Cordis exact reads share Session replay validation, current-surface folds and title facts'],
+  ['rsh/Engine/context/session-reference', 'Native and Cordis reference providers share URI parsing, current-surface projection and bounded snapshot rendering'],
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native and Cordis first-prompt title providers share the model-backed generation policy'],
   ['rsh/Engine/session/session-title-all-prompts-llm', 'Native and Cordis all-prompts title providers share the model-backed generation policy'],
   ['rsh/Modules/Official/fs/tool-fs-search', 'Cordis and native search Consumers share ripgrep execution, parsing and result retention'],

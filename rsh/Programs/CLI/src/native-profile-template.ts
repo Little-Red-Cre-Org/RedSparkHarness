@@ -182,6 +182,10 @@ export function shippedNativeProfileComposition(
       ] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
+      ...(profile === 'native-headless' ? [
+        { id: 'session-query', plugin: '@deepseek-ai/dsh-session-query', scope: ROOT },
+        { id: 'session-reference', plugin: '@deepseek-ai/dsh-session-reference', scope: ROOT },
+      ] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? NATIVE_SESSION_TITLE_INSTALLATIONS : []),
       ...(profile === 'native-headless' ? [
         { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: ROOT },

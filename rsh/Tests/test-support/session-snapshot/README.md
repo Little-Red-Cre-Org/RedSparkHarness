@@ -29,6 +29,8 @@ Scenario manifests accept the explicit `native-tui` profile; its real-terminal a
 
 The manifest `profile` is the exact public `dsh` profile name; compatibility scenarios use `compat`.
 
+The `snapshots/web/` corpus folder groups browser `web` and Native Web `native-web` scenarios; each manifest retains the exact shipped profile name.
+
 This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
 `profile: desktop` identifies the existing Electron private Host lifecycle; its owner uses the real Desktop backend controller and Session round trip without adding an application entrypoint.
