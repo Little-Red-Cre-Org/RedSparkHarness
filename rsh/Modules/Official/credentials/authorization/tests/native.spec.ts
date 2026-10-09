@@ -49,14 +49,9 @@ function harness(beforeCommit?: () => Promise<void>): {
   return { credentials, authorization: provider, provider }
 }
 
-it.each(['success', 'cancel-drains-write', 'cancel-during-describe', 'decline', 'removal-and-dispose'] as const)(
+it.each(['success', 'decline', 'removal-and-dispose'] as const)(
   'native authorization: %s', async (scenario) => {
-    const writeStarted = Promise.withResolvers<undefined>()
-    const finishWrite = Promise.withResolvers<undefined>()
-    const state = harness(scenario === 'cancel-drains-write' ? async () => {
-      writeStarted.resolve(undefined)
-      await finishWrite.promise
-    } : undefined)
+    const state = harness()
     try {
       if (scenario === 'success') {
         state.authorization.registerFlow({
@@ -76,59 +71,6 @@ it.each(['success', 'cancel-drains-write', 'cancel-during-describe', 'decline', 
           { type: 'notice', notice: { message: 'Continue in your browser' } },
           { type: 'settled', settlement: 'authorized' },
         ])
-        expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
-        return
-      }
-
-      if (scenario === 'cancel-drains-write') {
-        let runFinished = false
-        state.authorization.registerFlow({
-          key: KEY,
-          label: 'Codex',
-          methods: [{ id: 'oauth', label: 'Sign in' }],
-          async run(session) {
-            await state.credentials.modifyRecord(KEY, async () => ({ kind: 'grant', payload: { token: 'saved' } }), { signal: session.signal })
-            runFinished = true
-          },
-        })
-        const attempt = state.authorization.begin({ key: KEY })
-        await writeStarted.promise
-        let cancelled = false
-        const cancellation = attempt.cancel().then(() => { cancelled = true })
-        await Promise.resolve()
-        expect(cancelled).toBe(false)
-        expect(state.authorization.current(KEY)).toBe(attempt)
-        finishWrite.resolve(undefined)
-        await cancellation
-        expect(runFinished).toBe(true)
-        await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
-        expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
-        return
-      }
-
-      if (scenario === 'cancel-during-describe') {
-        const describeStarted = Promise.withResolvers<undefined>()
-        const finishDescribe = Promise.withResolvers<undefined>()
-        const describe = state.credentials.describeRecord.bind(state.credentials)
-        state.credentials.describeRecord = async (key) => {
-          describeStarted.resolve(undefined)
-          await finishDescribe.promise
-          return describe(key)
-        }
-        state.authorization.registerFlow({
-          key: KEY,
-          label: 'Codex',
-          methods: [{ id: 'oauth', label: 'Sign in' }],
-          async run() {
-            await state.credentials.modifyRecord(KEY, async () => ({ kind: 'grant', payload: { token: 'saved' } }))
-          },
-        })
-        const attempt = state.authorization.begin({ key: KEY })
-        await describeStarted.promise
-        const cancellation = attempt.cancel()
-        finishDescribe.resolve(undefined)
-        await cancellation
-        await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
         expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
         return
       }
@@ -195,6 +137,70 @@ it.each(['success', 'cancel-drains-write', 'cancel-during-describe', 'decline', 
       await disposal
       await expect(second.outcome).resolves.toEqual({ status: 'cancelled' })
       expect(() => state.authorization.begin({ key: OTHER })).toThrow(/disposed/)
+    } finally {
+      await state.provider.dispose()
+    }
+  },
+)
+
+it.each(['drains-write', 'during-describe'] as const)(
+  'native authorization cancel: %s', async (scenario) => {
+    const writeStarted = Promise.withResolvers<undefined>()
+    const finishWrite = Promise.withResolvers<undefined>()
+    const state = harness(scenario === 'drains-write' ? async () => {
+      writeStarted.resolve(undefined)
+      await finishWrite.promise
+    } : undefined)
+    try {
+      if (scenario === 'drains-write') {
+        let runFinished = false
+        state.authorization.registerFlow({
+          key: KEY,
+          label: 'Codex',
+          methods: [{ id: 'oauth', label: 'Sign in' }],
+          async run(session) {
+            await state.credentials.modifyRecord(KEY, async () => ({ kind: 'grant', payload: { token: 'saved' } }), { signal: session.signal })
+            runFinished = true
+          },
+        })
+        const attempt = state.authorization.begin({ key: KEY })
+        await writeStarted.promise
+        let cancelled = false
+        const cancellation = attempt.cancel().then(() => { cancelled = true })
+        await Promise.resolve()
+        expect(cancelled).toBe(false)
+        expect(state.authorization.current(KEY)).toBe(attempt)
+        finishWrite.resolve(undefined)
+        await cancellation
+        expect(runFinished).toBe(true)
+        await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
+        expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
+        return
+      }
+
+      const describeStarted = Promise.withResolvers<undefined>()
+      const finishDescribe = Promise.withResolvers<undefined>()
+      const describe = state.credentials.describeRecord.bind(state.credentials)
+      state.credentials.describeRecord = async (key) => {
+        describeStarted.resolve(undefined)
+        await finishDescribe.promise
+        return describe(key)
+      }
+      state.authorization.registerFlow({
+        key: KEY,
+        label: 'Codex',
+        methods: [{ id: 'oauth', label: 'Sign in' }],
+        async run() {
+          await state.credentials.modifyRecord(KEY, async () => ({ kind: 'grant', payload: { token: 'saved' } }))
+        },
+      })
+      const attempt = state.authorization.begin({ key: KEY })
+      await describeStarted.promise
+      const cancellation = attempt.cancel()
+      finishDescribe.resolve(undefined)
+      await cancellation
+      await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
+      expect(await state.credentials.describeRecord(KEY)).toMatchObject({ configured: true })
     } finally {
       finishWrite.resolve(undefined)
       await state.provider.dispose()

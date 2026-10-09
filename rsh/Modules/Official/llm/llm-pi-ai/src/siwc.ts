@@ -209,7 +209,7 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
 }
 
 async function tokenResponse(response: Response, operation: string): Promise<TokenResponse> {
-  // The issuer has already answered; read the body even if the caller has aborted.
+  // The fetch signal also bounds this body read, so it fails if that signal aborts.
   let body: unknown
   try {
     body = await response.json()
@@ -348,6 +348,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
           redirect_uri: listener.redirectUri,
           resource: RESOURCE,
         })
+        // A cancelled sign-in stores nothing, so the code exchange may stop with the caller.
         const requestSignal = AbortSignal.any([interaction.signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
         const tokens = await tokenResponse(await fetch(TOKEN_URL, {
           method: 'POST',
@@ -388,7 +389,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         await listener.close()
       }
     },
-    async refresh(credential, signal): Promise<OAuthCredential> {
+    async refresh(credential, _signal): Promise<OAuthCredential> {
       if (!isSiwcCredential(credential)) throw new Error('Sign in with ChatGPT again to use this subscription route')
       const form = new URLSearchParams({
         grant_type: 'refresh_token',
@@ -396,12 +397,13 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         refresh_token: credential.refresh,
         resource: RESOURCE,
       })
-      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
+      // Only the timeout bounds a refresh: the issuer rotates the refresh token once it
+      // answers, so a caller abort must not drop the response before it is committed.
       const tokens = await tokenResponse(await fetch(TOKEN_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: form,
-        signal: requestSignal,
+        signal: AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS),
       }), 'token refresh')
       const scopes = scopesFrom(tokens.scope, credential.scopes)
       return {
