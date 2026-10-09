@@ -150,7 +150,7 @@ describe('pi-ai login flows', () => {
         const auth = nativeModels.auth as PiAiAuthInjection
         await auth.credentials.modify(providerId,
           () => Promise.resolve({ type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }),
-          { signal: interaction.signal })
+          { signal: interaction.signal as AbortSignal })
         return { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
       })
       await codex?.run({ method: 'oauth', signal: sessionSignal, notify: () => {}, prompt: async () => '' })
