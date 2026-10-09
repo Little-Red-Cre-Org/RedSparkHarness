@@ -13,6 +13,15 @@
     },
     {
       "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

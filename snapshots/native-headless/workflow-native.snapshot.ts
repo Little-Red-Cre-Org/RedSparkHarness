@@ -15,7 +15,7 @@ import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/workflow-native')
 const roleNames = Array.from({ length: 4 }, (_, index) => join(scene, sessionFixtureName(index, SESSION_FORMAT_VERSION)))
-const task = 'Run a two-child workflow and one structured Ralph round.'
+const task = 'Inspect @README.md, then run a two-child workflow and one structured Ralph round.'
 const workflowScript = "const first = await agent('inspect first item'); const second = await agent('inspect second item'); return { results: [first, second] }"
 const report = { status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [], blocker: '' }
 
@@ -76,6 +76,7 @@ it('replays real workflow children and a committed structured report through dsh
     ensureShippedNativeProfile('native-headless', home)
     mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
     mkdirSync(workspace)
+    writeFileSync(join(workspace, 'README.md'), 'A workspace file explicitly referenced by the user.\n')
     const packages = [
       ['native-headless', 'rsh/Engine/core/native-headless'],
       ['native-agent', 'rsh/Engine/core/native-agent'],
@@ -90,6 +91,9 @@ it('replays real workflow children and a committed structured report through dsh
       ['tool-ralph', 'rsh/Engine/workflow/tool-ralph'],
       ['session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
       ['fs-local', 'rsh/Modules/Official/fs/fs-local'],
+      ['fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+      ['tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+      ['native-file-reference-local', 'rsh/Modules/Official/fs/native-file-reference-local'],
     ] as const
     for (const [name, path] of packages) {
       const link = join(modules, '@deepseek-ai', `dsh-${name}`)
@@ -133,7 +137,8 @@ it('replays real workflow children and a committed structured report through dsh
 
     const composition = shippedNativeProfileComposition(home, 'native-headless')
     const selected = new Set(['app', 'agents', 'session-execution', 'tools', 'prompt', 'subagents', 'workflow',
-      'workflow-worker', 'workflow-tool', 'ralph-tool', 'model-execution', 'storage', 'fs', 'pi-ai'])
+      'workflow-worker', 'workflow-tool', 'ralph-tool', 'model-execution', 'storage', 'fs', 'policy', 'file-tools',
+      'file-reference', 'pi-ai'])
     const installations = composition.installations.map(row => {
       if (!selected.has(row.id)) return { ...row, disabled: true }
       if (row.id === 'app') return { ...row, config: { provider: 'fixture', model: 'native-workflow',

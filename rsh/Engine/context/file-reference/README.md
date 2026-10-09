@@ -1,5 +1,5 @@
 ---
-description: "File-reference discovery and @file mention grammar for host-backed UIs, for users and maintainers choosing the seam or pairing it with a provider."
+description: "File-reference discovery contract and @file mention grammar for Native and host-backed consumers, and maintainers pairing it with a provider."
 kind: "package-reference"
 ---
 
@@ -25,7 +25,7 @@ Host-backed user interfaces use `dsh-file-reference` to offer `@file` completion
 <a id="use-this-package"></a>
 ## Use this package
 
-Choose this package when a host-backed UI (web or terminal) should offer `@file` completion, and pair it with a provider whose namespace matches the agent's effective `read` tool. Mounting the seam without a provider gives the UI an empty completion surface.
+Choose this package when a Native or host-backed consumer needs `@file` candidates and the shared mention grammar. Pair it with a provider whose namespace matches the agent's effective `read` tool. A consumer without a provider has no candidates.
 
 ### Mention grammar
 
@@ -37,7 +37,7 @@ An `@path` token at the start of input or after whitespace triggers completion; 
 
 ### Pairing with a provider
 
-For a local filesystem, mount `@deepseek-ai/dsh-file-reference-local`; other namespaces (remote or virtual filesystems) need a provider whose discovery matches the effective tool. When the addressed agent can call `read`, a provider may install the stable `FILE_REFERENCE_PROMPT` guidance that tells the model to read a referenced file before claiming to have inspected it.
+For Native Host profiles, mount `@deepseek-ai/dsh-native-file-reference-local`; for Cordis profiles, mount `@deepseek-ai/dsh-file-reference-local`. Other namespaces (remote or virtual filesystems) need a provider whose discovery matches the effective tool. When the addressed agent can call `read`, a provider may install the stable `FILE_REFERENCE_PROMPT` guidance that tells the model to read a referenced file before claiming to have inspected it.
 
 -----
 
@@ -57,7 +57,10 @@ The package separates an abstract discovery service from a shared, browser-safe 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Abstract `FileReferenceService` and `FILE_REFERENCE_PROMPT` |
+| [`src/index.ts`](src/index.ts) | Cordis `FileReferenceService` and public exports |
+| [`src/native.ts`](src/native.ts) | Cordis-free Native `NativeFileReferenceOperations` declaration |
+| [`src/prompt.ts`](src/prompt.ts) | Stable `FILE_REFERENCE_PROMPT` shared by both providers |
+| [`src/search-core.ts`](src/search-core.ts) | Provider-neutral bounded ranking and traversal algorithm |
 | [`src/grammar.ts`](src/grammar.ts) | `activeAtToken` recognition and `formatFileMention` rendering |
 | [`src/types.ts`](src/types.ts) | `FileReferenceCandidate` path-only result type |
 | — | No runtime invariant companion is published; the interface retains no candidate or lifecycle state; concrete providers own their cache and invalidation relationships. |
@@ -75,7 +78,8 @@ The UI recognizes an active `@` token through `activeAtToken`, calls `list` with
 
 Read these pages when the package-level contract is not enough. They move from the shipped provider to the shared reference surface and the tools the candidates point at.
 
-- [Local file-reference provider](../file-reference-local/README.md) — the shipped local-workspace implementation of this seam.
+- [Native local file-reference provider](../../../Modules/Official/fs/native-file-reference-local/README.md) — the Native Host implementation over its selected filesystem service.
+- [Cordis local file-reference provider](../file-reference-local/README.md) — the Cordis local-workspace implementation of this seam.
 - [Session-reference subsystem](../../../Docs/subsystems/session-reference.md) — the shared file-reference and session-reference contracts behind host UIs.
 - [Context group map](../README.md) — sibling request-context packages.
 - [Filesystem tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs) — the `read` tool that referenced paths are meant for.

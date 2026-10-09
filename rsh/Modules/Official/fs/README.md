@@ -1,5 +1,5 @@
 ---
-description: "The filesystem package group: the ctx.fs provider contract, local and sandbox-enforcing backends, the read-before-edit policy plugin, and the model-facing file and search tools."
+description: "The filesystem package group: the ctx.fs contract and providers, Native file-reference discovery, read-before-edit policy, and model-facing file and search tools."
 kind: "package-group"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The `fs/` group gives agents durable, policy-governed access to files: the filesystem service contract in `fs/`, the host and sandbox-enforcing backends in `fs-local/` and `fs-sandbox/`, the read-before-edit policy in `fs-observation-policy/`, and the model-facing tools in `tool-fs/` (`read`, `read_image`, `write`, `edit`) and `tool-fs-search/` (`glob`, `grep`). `fs-sandbox/` exposes both Cordis and Native provider entries. A deployment selects one backend, loads its matching sandbox policy, and registers the tool packages the model should see; the tools and their policy stay independent of the backend face. File I/O has no timeout; cancellation is best-effort at syscall boundaries.
+The `fs/` group gives agents durable, policy-governed file access: the filesystem service contract in `fs/`, the host and sandbox-enforcing backends in `fs-local/` and `fs-sandbox/`, the Native file-reference provider in `native-file-reference-local/`, the read-before-edit policy in `fs-observation-policy/`, and the model-facing tools in `tool-fs/` (`read`, `read_image`, `write`, `edit`) and `tool-fs-search/` (`glob`, `grep`). `fs-sandbox/` exposes both Cordis and Native provider entries. A deployment selects one backend, loads its matching sandbox policy, and registers the tool packages the model should see; the tools and their policy stay independent of the backend face. File I/O has no timeout; cancellation is best-effort at syscall boundaries.
 
 ## Table of Contents
 
@@ -22,13 +22,14 @@ The `fs/` group gives agents durable, policy-governed access to files: the files
 <a id="packages"></a>
 ## Packages
 
-Eight packages plus the remote sibling `fs-e2b` play the filesystem roles; the subsystem reference owns the exhaustive contracts and the error taxonomy. Their `dsh.runtime` declarations identify the Definition, Provider, Consumer, or policy role for the RSH runtime checks, while their `runtime` exports retain the existing Cordis lifecycle through `dsh-plugin-host`.
+Nine local packages plus the remote sibling `fs-e2b` play the filesystem roles; the subsystem reference owns the exhaustive contracts and the error taxonomy. Their `dsh.runtime` declarations identify the Definition, Provider, Consumer, or policy role for the RSH runtime checks, while their `runtime` exports retain the existing Cordis lifecycle through `dsh-plugin-host`.
 
 | Package | Role | ctx key |
 |---|---|---|
 | [`fs/`](fs/README.md) | `ctx.fs` service contract: execution-world paths, bounded text I/O, and atomic mutations with an optional version guard | `ctx.fs` |
 | [`fs-local/`](fs-local/README.md) | Host-filesystem backend: reads, writes, and edits real files on the local machine | registers on `ctx.fs` |
 | [`fs-sandbox/`](fs-sandbox/README.md) | Cordis and Native sandbox-enforcing providers: fence writes and edits by the per-call mode while reads pass through | `ctx.fs` or Native `fs` service |
+| [`native-file-reference-local/`](native-file-reference-local/README.md) | Native local-workspace file-reference discovery over the selected filesystem service | Native `fileReferences` service |
 | [`e2b/fs-e2b`](../e2b/fs-e2b/README.md) | E2B-backed backend: file state lives in the remote execution world shared with the E2B subprocess provider | registers on `ctx.fs` |
 | [`fs-observation-policy/`](fs-observation-policy/README.md) | Read-before-edit policy: records observed presence or absence and guards write/edit through the `fs/*` events | `fs/*` listeners |
 | [`tool-fs/`](tool-fs/README.md) | Model-facing `read`, `read_image`, `write`, and `edit` tools plus their executor | registers on `ctx.tools` |

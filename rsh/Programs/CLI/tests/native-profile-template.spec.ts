@@ -183,7 +183,7 @@ it('installs native compaction in each native runtime profile and /compact where
   }
 })
 
-it('ships a complete one-shot shell seam in the native headless profile', () => {
+it('ships one-shot shell and file-reference Providers in the native headless profile', () => {
   const installed = createRequire(new URL('../package.json', import.meta.url))
   for (const [platform, provider, tool] of [
     ['win32', '@deepseek-ai/dsh-pwsh-sandbox', '@deepseek-ai/dsh-tool-pwsh'],
@@ -199,6 +199,11 @@ it('ships a complete one-shot shell seam in the native headless profile', () => 
     expect(installed.resolve(`${provider}/package.json`)).toBeTruthy()
     expect(plugins).toContain(tool)
   }
+  const nativeHeadless = shippedNativeProfileComposition('/tmp/rsh-file-reference', 'native-headless', 'linux')
+  expect(nativeHeadless.installations.find(row => row.id === 'file-reference')).toEqual({
+    id: 'file-reference', plugin: '@deepseek-ai/dsh-native-file-reference-local', scope: 'root',
+  })
+  expect(installed.resolve('@deepseek-ai/dsh-native-file-reference-local/package.json')).toBeTruthy()
 })
 
 it('installs the Cordis-equivalent web search and fetch rows in the headless, web, and TUI profiles', () => {

@@ -23,7 +23,7 @@ kind: "package-reference"
 
 `./native` 入口只接受空配置对象并提供 `promptSections`。同一注册作用域内重复 section 名称会在注册时失败。渲染选择消费作用域可见的贡献；后代同名 section 遮蔽祖先 section，兄弟作用域相互隔离。disposer 只移除创建它的 section，而 Provider 释放会移除所有剩余 section。
 
-应用可以向 `render(scope)` 传入请求 Agent 的 scope。感知 scope 的贡献在选择可见声明时使用该精确 scope；忽略可选参数的贡献保持其行为。应用仍须在模型发送前记录组装后的文本。
+应用可以向 render(scope, context) 传入请求 Agent 的 scope 和可选的 NativePromptRenderContext。其中的 allowedTools（若存在）是 Session 显式配置的工具 allowlist，并非完整的已发出 schema 集合。依赖模型可见工具的 section 应将此约束与自身作用域内的工具视图结合；没有 context 时，可以只使用该视图。应用仍须在模型分发前记录组装后的文本。
 
 <a id="model-experience"></a>
 ## 模型体验

@@ -22,6 +22,18 @@
       "types": "./lib/types/grammar.d.ts",
       "default": "./lib/types/grammar.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/types/native.js"
+    },
+    "./prompt": {
+      "types": "./lib/types/prompt.d.ts",
+      "default": "./lib/types/prompt.js"
+    },
+    "./search": {
+      "types": "./lib/types/search-core.d.ts",
+      "default": "./lib/types/search-core.js"
+    },
     "./types": {
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
@@ -37,10 +49,22 @@
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-native-agent": { "optional": true },
+    "@deepseek-ai/dsh-native-runtime": { "optional": true },
+    "@deepseek-ai/dsh-session": { "optional": true }
   }
 }
