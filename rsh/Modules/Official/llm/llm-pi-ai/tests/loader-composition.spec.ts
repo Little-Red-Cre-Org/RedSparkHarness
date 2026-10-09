@@ -344,7 +344,7 @@ describe('llm-pi-ai real dormant composition', () => {
         await ctx.fiber.dispose()
         context = undefined
         expect(requestSignal?.aborted).toBe(true)
-        await pending.catch(() => undefined)
+        await expect(pending).rejects.toMatchObject({ code: 'ABORTED' })
         return
       }
       await grant('rotated-account-access-token')
