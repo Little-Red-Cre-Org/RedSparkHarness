@@ -127,7 +127,8 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Subagent subsystem](../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
 - [dsh-subagent seam](../subagent/README.md) — the registry and start API this provider registers on.
-- [Codex subagent provider](../subagent-codex/README.md) — the sibling product backend over the official app-server protocol.
+- [Codex compatibility bridge](../../../Compatibility/DSH/bridge/subagent-codex/README.md) — the legacy Cordis adapter for the Codex product.
+- [Official Codex app-server product](../../../Modules/Official/subagent/codex-app-server/README.md) — the native app-server protocol and external-child driver owner.
 - [Claude Code and Codex backends](../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
 - [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) — every accepted config field and its source declaration.
 

@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Install `@deepseek-ai/dsh-subagent-codex` into a Profile when delegated work should run in a genuine, unattended Codex session in the parent Session's workspace. Each delegation uses a fresh isolated Codex thread for one self-contained text task and returns only its final answer or a safe failure diagnostic. Native Codex configuration and authentication remain authoritative, while `permissionMode` selects the non-interactive approval and sandbox behavior. The Bundle supplies a compatible native Codex payload, but it exposes no model capability until a delegation tool is configured.
+Use this Bundle to delegate a text task to an unattended Codex session in the parent workspace. The Official app-server starts a fresh thread and returns only the final answer or a safe failure diagnostic. Codex native settings and authentication remain in control; permissionMode selects the non-interactive policy.
+
+Native Codex requests stop before startup because 0.161 cannot enforce parent authority or the inherited positive maxSteps limit. The Cordis route runs, but workspace-write inheritance is unverified: the correctly configured product probe returned blocked by policy. Native in-process spawn remains the executable baseline; the default route is unchanged.
 
 ## Table of Contents
 
@@ -55,7 +57,7 @@ Removing the package withdraws the provider and its private runtime closure on t
 | `approve-for-me` | `approvalPolicy: on-request`, `approvalsReviewer: auto_review`, `sandbox: workspace-write` | Route permission requests through Codex automatic review without a human |
 | `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`, `sandbox: danger-full-access` | Skip approval and sandbox enforcement; this value must be selected explicitly |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-subagent-codex) is the exhaustive source for every accepted field and its JSDoc. A configured `model` passes unchanged on each ephemeral `thread/start`; omission leaves native model selection in force. The provider does not discover models, rewrite aliases, select `modelProvider` or `serviceTier`, or set a fallback. Credential-shaped ambient variables are removed before the explicit `env` overlay, so an API key intended for the child must be supplied there.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-codex) is the exhaustive source for every accepted field and its JSDoc. A configured `model` passes unchanged on each ephemeral `thread/start`; omission leaves native model selection in force. The provider does not discover models, rewrite aliases, select `modelProvider` or `serviceTier`, or set a fallback. Credential-shaped ambient variables are removed before the explicit `env` overlay, so an API key intended for the child must be supplied there.
 
 ### Exposing the tool
 
@@ -93,12 +95,12 @@ An install that omits optional dependencies, uses an unsupported platform, or lo
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-This section explains how the provider drives a real Codex app-server and where the observable behavior comes from; the full contract lives in [Use this package](#use-this-package).
+This section explains how the Cordis compatibility adapter delegates to the Official app-server product package; the full contract lives in [Use this package](#use-this-package).
 
 ### Design concept
 
-- **One fresh process, thread, and turn per run.** Every run spawns a fresh app-server, creates one ephemeral thread, and executes exactly one turn; there is no continuation, resume, or pooling.
-- **Native configuration is authoritative.** Codex configuration and authentication stay native through the parent cwd, `HOME`, and `CODEX_HOME`; the provider overrides only the optional model and the thread's approval, reviewer, and sandbox fields.
+- **One fresh process, thread, and turn per run.** The Official product starts a fresh app-server, creates one ephemeral thread, and executes exactly one turn; there is no continuation, resume, or pooling.
+- **Native configuration is authoritative.** Codex configuration and authentication stay native through the parent cwd, `HOME`, and `CODEX_HOME`; the compatibility provider supplies only its optional model, permission mode, and explicit environment overlay.
 - **Unattended by design.** Approval, user-input, and MCP requests are answered or declined without a human; unknown server requests fail the run.
 
 ### Source map
@@ -106,13 +108,13 @@ This section explains how the provider drives a real Codex app-server and where 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: config schema, provider registration |
-| [`src/run.ts`](src/run.ts) | The run lifecycle, turn execution, result selection, and diagnostics |
-| [`src/wire.ts`](src/wire.ts) | The minimal app-server JSON-RPC wire implementation |
+| [`src/run.ts`](src/run.ts) | Cordis task and result translation into the Official product API |
+| [`src/wire.ts`](src/wire.ts) | Compatibility re-export of the Official wire type |
 | [`cordis.patch.yml`](cordis.patch.yml) | The Profile patch layer that registers the dormant provider |
 
 ### Run flow
 
-A start accepts only a non-empty sequence of text blocks and derives the child cwd from the parent session. It spawns the fixed command through the subprocess seam, performs the `initialize` → `initialized` handshake, maps the Profile-selected mode and optional model into official `thread/start` fields beside `{ cwd, ephemeral: true }`, and publishes the run only after Codex returns a valid ephemeral thread. The published result starts exactly one turn, accepts only notifications for that run's thread and turn, and waits for the authoritative `turn/completed` terminal. The latest `agentMessage` with `phase: "final_answer"` wins; when Codex emits no explicit final phase, the latest message with null or omitted `phase` is the compatibility fallback. A successful turn with no nonblank answer settles as an error. Failed turns use the coarse categories `limit`, `access-policy`, `service`, `transport`, `product-error`, `invalid-result`, or `unknown`; an early app-server exit uses `process`, and applicable connection and stream failures retain a numeric `httpStatusCode`.
+The adapter accepts only non-empty text blocks, derives the child cwd from the parent Session, and translates the Cordis request and configured provider fields into `startCodexProductRun`. The [Official app-server package](../../../../Modules/Official/subagent/codex-app-server/README.md) owns process startup, the versioned JSON-RPC protocol, ephemeral thread and turn lifecycle, answer selection, failure diagnostics, and managed-range cleanup; this package converts that result into the legacy `SubagentRun` surface.
 
 </details>
 
@@ -123,11 +125,12 @@ A start accepts only a non-empty sequence of text blocks and derives the child c
 
 Read these pages when the package-level contract is not enough. They move from this provider to the seam it plugs into and the sibling product provider.
 
-- [Subagent subsystem](../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
-- [dsh-subagent seam](../subagent/README.md) — the registry and start API this provider registers on.
-- [Claude Code subagent provider](../subagent-claude-code/README.md) — the sibling product backend over the official Agent SDK.
-- [Claude Code and Codex backends](../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-subagent-codex) — every accepted config field and its source declaration.
+- [Subagent subsystem](../../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
+- [dsh-subagent seam](../../../../Engine/subagent/subagent/README.md) — the registry and start API this provider registers on.
+- [Official Codex app-server product](../../../../Modules/Official/subagent/codex-app-server/README.md) — protocol, native driver, process, and cleanup authority.
+- [Claude Code subagent provider](../../../../Engine/subagent/subagent-claude-code/README.md) — the sibling product backend over the official Agent SDK.
+- [Claude Code and Codex backends](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-codex) — every accepted config field and its source declaration.
 
 -----
 
@@ -187,8 +190,8 @@ These limits define when this provider is a poor fit or needs special operationa
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior and limits live in the sections above and in the package code.
 
-- **Package size disclosure** — npm metadata reports 331,552,702 unpacked bytes (about 316 MiB) for `@openai/codex@0.159.0-darwin-arm64`; this is a disclosure figure, not an installation threshold.
-- **Version-pinned protocol** — the runtime dependency is pinned to `@openai/codex@0.159.0`; its `thread/start` permission fields follow the v2 [`ThreadStartParams` definition](https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L62-L166). The keyless real-product test generates the installed package schema and checks these fields; the credentialed nonce test checks the product connection.
+- **Platform payload selection** — `@openai/codex@0.161.0` declares six platform-specific optional payloads; the workspace lockfile resolves the matching package for supported targets.
+- **Version-pinned protocol** — the Official runtime package pins `@openai/codex@0.161.0`. Its v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) includes the permission fields, and [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) defines optional reasoning `effort`. The keyless real-product test generates schema from the Official package's pinned dependency.
 
 </details>
 

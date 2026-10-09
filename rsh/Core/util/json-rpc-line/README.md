@@ -24,7 +24,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-The SDK client and server use this library for stdio framing; the Codex adapter uses it for app-server framing. A caller supplies readable and writable streams, calls `start()`, and closes the transport before releasing those streams. `close()` rejects pending requests and detaches listeners without destroying either stream.
+The SDK client and server use this library for stdio framing; the Codex product driver uses it for app-server framing. A caller supplies readable and writable streams, calls `start()`, and closes the transport before releasing those streams. `close()` rejects pending requests and detaches listeners without destroying either stream.
 
 ```text
 const transport = new JsonRpcLineTransport(input, output)
@@ -60,7 +60,7 @@ No invariant companion is published because the transport has no independent sta
 
 - [Utility package map](../README.md) — other shared primitives.
 - [SDK protocol](../../../Engine/subagent/sdk-protocol/README.md) — SDK method and notification types that use this transport.
-- [Codex adapter](../../../Engine/subagent/subagent-codex/README.md) — app-server methods carried over the same framing.
+- [Codex product driver](../../../Modules/Official/subagent/codex-app-server/README.md) — app-server methods carried over the same framing.
 
 -----
 
