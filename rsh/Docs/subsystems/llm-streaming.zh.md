@@ -814,9 +814,10 @@ declare abstract class LlmAdapter {
    * The result is advisory: an adapter may accept unlisted model ids, and
    * consumers must not turn absence into request rejection.
    * @param _provider - one provider route owned by this adapter.
+   * @param _signal - optional cancellation for this catalog lookup.
    * @returns discoverable models in adapter-preferred order.
    */
-  listModels(_provider: string): Promise<readonly LlmModelInfo[]>;
+  listModels(_provider: string, _signal?: AbortSignal): Promise<readonly LlmModelInfo[]>;
   /**
    * Resolve all metadata available for one exact model. This query is
    * independent of the advisory catalog and does not validate request routing.
@@ -990,9 +991,10 @@ fileRequestText(ref: FileAttachmentRef): string
  * Discover models advertised by one registered provider. Catalog membership
  * is advisory and never changes routing or request validation.
  * @param provider - registered provider route to inspect.
+ * @param signal - optional cancellation forwarded to the owning adapter.
  * @returns detached model metadata in adapter-preferred order.
  */
-async listModels(provider: string): Promise<LlmModelInfo[]>
+async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]>
 
 /**
  * Resolve and validate all metadata from the adapter that owns one exact

@@ -3,10 +3,10 @@
  * surface's "fetch available models" action.
  *
  * A route the installed pi-ai catalog ships is answered **from that catalog**,
- * with no network call at all: pi-ai's registry is the authoritative list for
- * its own providers, and it carries the capacities a listing endpoint would
- * not disclose. Only a route the catalog does not describe — a gateway, a
- * self-hosted server — is interrogated over the wire.
+ * with no network call at all, except OpenAI Codex subscriptions: those expose
+ * a provider-authenticated server catalog which can change between pi-ai
+ * releases. Only a route the catalog does not describe — a gateway, a
+ * self-hosted server — is otherwise interrogated over the wire.
  *
  * Neither path is a catalog refresh. Nothing here is stored: the request
  * carries a draft the user is still editing, and the reply is candidate
@@ -22,9 +22,10 @@
  * @module dsh-llm-pi-ai/discovery
  */
 
-import { INVALID_CREDENTIAL_CODE, LlmError, normalizeApiKey } from '@deepseek-ai/dsh-llm'
-import type { LlmDiscoveredModel, LlmModelDiscoveryOperation } from '@deepseek-ai/dsh-llm'
-import { attributionHeaders } from '@deepseek-ai/dsh-llm'
+import { INVALID_CREDENTIAL_CODE, LlmError, normalizeApiKey } from '@deepseek-ai/dsh-llm/native'
+import type { LlmDiscoveredModel, LlmModelDiscoveryOperation } from '@deepseek-ai/dsh-llm/native'
+import { attributionHeaders } from '@deepseek-ai/dsh-llm/native'
+import type { AuthResult } from '@earendil-works/pi-ai'
 import { catalogModels } from './catalog.ts'
 
 /**
@@ -32,9 +33,8 @@ import { catalogModels } from './catalog.ts'
  * bearer auth at `GET {baseURL}/models`; Anthropic Messages uses `x-api-key`
  * and `anthropic-version` at its native `GET /v1/models`. Azure is absent
  * despite its OpenAI lineage — it authenticates with an `api-key` header and
- * requires an `api-version` query — and Codex authenticates through OAuth;
- * guessing at either would report an authentication failure as a provider
- * with no models. pi-ai's remaining protocols are absent for the same reason.
+ * requires an `api-version` query. pi-ai's remaining protocols are absent
+ * because their listing request shapes are not handled by this discovery path.
  */
 const LISTABLE_PROTOCOLS: ReadonlySet<string> = new Set([
   'anthropic-messages',
@@ -56,6 +56,34 @@ const ANTHROPIC_MODEL_LIMIT = 1000
  * is not parseable, so overflow rejects instead of truncating.
  */
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+
+/** Public Sign in with ChatGPT model catalog endpoint. */
+const CODEX_MODELS_URL = 'https://api.openai.com/v1/models'
+const DISCOVERY_REQUEST_TIMEOUT_MS = 30_000
+
+/** Combine one caller's cancellation with this listing request's deadline. */
+function discoverySignal(signal?: AbortSignal): AbortSignal {
+  return AbortSignal.any([...(signal === undefined ? [] : [signal]), AbortSignal.timeout(DISCOVERY_REQUEST_TIMEOUT_MS)])
+}
+
+/** Translate an aborted listing request without including its bearer token. */
+function discoveryAbortError(signal: AbortSignal | undefined, requestSignal: AbortSignal, error: unknown): LlmError | undefined {
+  if (signal?.aborted) return new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
+  if (requestSignal.aborted) return new LlmError('model discovery request timed out', 'DISCOVERY_FAILED', { cause: error })
+  return undefined
+}
+
+interface CodexModelEntry {
+  slug?: unknown
+  display_name?: unknown
+  visibility?: unknown
+}
+
+/** Model fields guaranteed by the public Sign in with ChatGPT catalog. */
+export interface CodexDiscoveredModel {
+  readonly id: string
+  readonly name: string
+}
 
 /** Capacity fields nested by enriched model-directory replies. */
 interface ListingLimit {
@@ -254,6 +282,109 @@ export interface StoredModelDiscoveryProfile {
   readonly headers: Readonly<Record<string, string>> | undefined
   /** Resolve the named route's credential only when the draft carries none. */
   readonly resolveApiKey: () => Promise<string | undefined>
+  /** Resolve provider-native OAuth through the same collection as inference. */
+  readonly resolveCodexAuth?: (signal?: AbortSignal) => Promise<AuthResult | undefined>
+}
+
+/**
+ * Read the server-ordered visible Codex catalog with the selected account's OAuth token.
+ * @param token - the active SIWC access token used to fetch the public model listing.
+ * @param signal - optional caller cancellation signal for the listing request.
+ * @returns visible models in server order, using each slug as the request id and display name.
+ */
+export async function fetchCodexModels(
+  token: string,
+  signal?: AbortSignal,
+): Promise<readonly CodexDiscoveredModel[]> {
+  if (token.length === 0) {
+    throw new LlmError('OpenAI Codex model discovery needs an active OAuth sign-in', 'DISCOVERY_FAILED')
+  }
+
+  let response: Response
+  const requestSignal = discoverySignal(signal)
+  try {
+    const headers = new Headers()
+    headers.set('accept', 'application/json')
+    headers.set('authorization', `Bearer ${token}`)
+    for (const [name, value] of Object.entries(attributionHeaders())) headers.set(name, value)
+    response = await fetch(CODEX_MODELS_URL, {
+      method: 'GET',
+      headers,
+      signal: requestSignal,
+    })
+    requestSignal.throwIfAborted()
+  } catch (error: unknown) {
+    const aborted = discoveryAbortError(signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
+    throw new LlmError(`could not reach ${CODEX_MODELS_URL}`, 'DISCOVERY_FAILED', { cause: error })
+  }
+  if (!response.ok) {
+    throw new LlmError(
+      `${CODEX_MODELS_URL} answered ${response.status}${response.status === 401 || response.status === 403 ? '; check the OpenAI Codex sign-in' : ''}`,
+      'DISCOVERY_FAILED',
+    )
+  }
+  let text: string
+  try {
+    text = await readBounded(response, CODEX_MODELS_URL)
+    requestSignal.throwIfAborted()
+  } catch (error: unknown) {
+    const aborted = discoveryAbortError(signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
+    throw error
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch (error: unknown) {
+    throw new LlmError(`${CODEX_MODELS_URL} did not answer with JSON`, 'DISCOVERY_FAILED', { cause: error })
+  }
+  const entries = (body as { models?: unknown } | null)?.models
+  if (!Array.isArray(entries)) {
+    throw new LlmError(`${CODEX_MODELS_URL} did not return a Codex models array`, 'DISCOVERY_FAILED')
+  }
+
+  const models: CodexDiscoveredModel[] = []
+  for (const raw of entries as readonly unknown[]) {
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) continue
+    const entry = raw as CodexModelEntry
+    if (entry.visibility !== 'list') continue
+    const id = label(entry.slug)
+    if (id === undefined) continue
+    models.push({
+      id,
+      name: label(entry.display_name) ?? id,
+    })
+  }
+  return models
+}
+
+/** Resolve and list Codex subscription models through the same Pi auth collection as inference. */
+async function discoverCodexModels(
+  stored: StoredModelDiscoveryProfile | undefined,
+  signal?: AbortSignal,
+): Promise<readonly LlmDiscoveredModel[]> {
+  if (stored?.resolveCodexAuth === undefined) {
+    throw new LlmError('OpenAI Codex model discovery needs a configured OAuth route; sign in first', 'DISCOVERY_FAILED')
+  }
+  let resolved: Awaited<ReturnType<NonNullable<StoredModelDiscoveryProfile['resolveCodexAuth']>>>
+  try {
+    resolved = await stored.resolveCodexAuth(signal)
+  } catch (error: unknown) {
+    if (signal?.aborted) throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
+    throw new LlmError('could not resolve the stored OpenAI Codex subscription credential', 'DISCOVERY_FAILED', { cause: error })
+  }
+  if (resolved === undefined) {
+    throw new LlmError('OpenAI Codex model discovery needs an active OAuth sign-in', 'DISCOVERY_FAILED')
+  }
+  const token = resolved.auth.apiKey
+  if (token === undefined || token.length === 0) {
+    throw new LlmError('OpenAI Codex model discovery needs an active OAuth sign-in', 'DISCOVERY_FAILED')
+  }
+  return (await fetchCodexModels(token, signal)).map(model => ({
+    id: model.id,
+    name: model.name,
+  }))
 }
 
 /**
@@ -270,6 +401,9 @@ export async function discoverModels(
   request: LlmModelDiscoveryOperation,
   storedProfile?: () => StoredModelDiscoveryProfile | undefined,
 ): Promise<readonly LlmDiscoveredModel[]> {
+  if (request.provider === 'openai-codex') {
+    return discoverCodexModels(storedProfile?.(), request.signal)
+  }
   // A catalog route already has its answer, and a better one: the installed
   // entries carry context windows and output caps no listing endpoint reports.
   if (request.provider !== undefined) {
@@ -313,6 +447,7 @@ export async function discoverModels(
   const supplied = request.apiKey ?? await stored?.resolveApiKey()
   const apiKey = supplied === undefined ? undefined : usableProbeKey(supplied)
   let response: Response
+  const requestSignal = discoverySignal(request.signal)
   try {
     const headers = new Headers(stored?.headers === undefined ? undefined : Object.entries(stored.headers))
     headers.set('accept', 'application/json')
@@ -326,12 +461,12 @@ export async function discoverModels(
     response = await fetch(url, {
       method: 'GET',
       headers,
-      ...request.signal === undefined ? {} : { signal: request.signal },
+      signal: requestSignal,
     })
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
-    if (request.signal?.aborted) {
-      throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
-    }
+    const aborted = discoveryAbortError(request.signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw new LlmError(`could not reach ${url}`, 'DISCOVERY_FAILED', { cause: error })
   }
   if (!response.ok) {
@@ -343,13 +478,13 @@ export async function discoverModels(
   let text: string
   try {
     text = await readBounded(response, url)
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
     // Cancellation during the body read rejects with the abort reason, which
     // may be any value; the caller gets the same coded failure it would have
     // for a cancellation before the request went out.
-    if (request.signal?.aborted) {
-      throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
-    }
+    const aborted = discoveryAbortError(request.signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw error
   }
   let body: unknown

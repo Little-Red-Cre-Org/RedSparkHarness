@@ -5707,6 +5707,10 @@ importers:
         version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/credentials/authorization:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5720,6 +5724,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Modules/Official/credentials/credentials:
     dependencies:
@@ -6956,6 +6963,9 @@ importers:
       '@earendil-works/pi-ai':
         specifier: ^1.0.0
         version: 1.0.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(supports-color@9.4.0)(zod@4.4.3))(@smithy/signature-v4@5.7.3)(supports-color@9.4.0)(undici@8.11.2)(ws@8.21.0)(zod@4.4.3)
+      jose:
+        specifier: 6.2.3
+        version: 6.2.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^

@@ -68,6 +68,10 @@ A flow declares the credential record it writes, a user-facing label, and the si
 
 A surface runs one attempt per credential at a time. The interaction travels with the request rather than living in a registry, so prompts reach exactly the page that asked; a headless caller supplies an interaction that declines. `begin()` reports `{ status: 'authorized' }` when the record was committed and observed during the attempt, and `{ status: 'cancelled' }` when the human declined or the caller withdrew. `cancel(key)` withdraws the running attempt from a second call, for the request/response transport that answers a Cancel button without holding the first call's signal.
 
+### Native Host entry
+
+Native Host compositions import `plugin` from `@deepseek-ai/dsh-authorization/native` and install it with a credentials Provider. `NativeAuthorization` returns an attempt whose `frames()` replays the conversation for reconnecting surfaces. Cancellation, flow removal, and Provider disposal wait for `run()` and its accepted credential writes to finish before releasing the key.
+
 ### What can go wrong
 
 - **A credential with no flow is inert** — `begin()` on a key no flow claims throws `NO_FLOW`; a record left by an uninstalled plugin can be deleted but not re-authorized.
@@ -98,12 +102,13 @@ This section explains the design decisions behind the seam and points at the cod
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition: flow registry, one-attempt-per-key lifecycle, interaction routing, commit confirmation |
+| [`src/native.ts`](src/native.ts) | Native Host Provider: frame replay, prompts and draining cancellation |
 | [`src/types.ts`](src/types.ts) | Wire-safe vocabulary: methods, notices, prompts, outcomes, entries |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `authorization/settled` always names a released key |
 
 ### Lifecycle
 
-One attempt per key at a time. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. A withdrawn attempt settles immediately even when the flow never reacts to its signal — the orphaned run is left to finish on its own, and a record it still manages to commit is a record the human did authorize. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused; listener failures are contained on the credentials seam's terms.
+The Cordis service runs one attempt per key. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. A withdrawn attempt settles immediately even when the flow never reacts to its signal — the orphaned run is left to finish on its own, and a record it still manages to commit is a record the human did authorize. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused; listener failures are contained on the credentials seam's terms.
 
 ### The interaction vocabulary
 

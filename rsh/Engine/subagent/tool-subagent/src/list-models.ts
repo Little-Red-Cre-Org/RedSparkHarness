@@ -60,7 +60,7 @@ async function listSubagentModels(
   }
   const provider = registeredProvider(llm, policy, request.provider)
   if (request.model === undefined) {
-    const models = (await llm.listModels(provider.id))
+    const models = (await llm.listModels(provider.id, signal))
       .filter(model => allowedRoutes.some(route => route.model === model.id))
     return models.length === 0
       ? `(no advertised models for ${provider.id})`

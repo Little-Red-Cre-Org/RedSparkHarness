@@ -25,6 +25,7 @@ import { LlmError } from '@deepseek-ai/dsh-llm/native'
  * provider name — that this plugin owns the format inside the record.
  */
 export const RECORD_SCOPE = 'llm-pi-ai'
+const INTERNAL_RECORD_IDS = new Set(['openai-codex-siwc-registration'])
 
 /**
  * The record address for one pi-ai provider id.
@@ -149,14 +150,16 @@ export function credentialStoreFrom(credentials: NativeCredentials | undefined):
         // Records another plugin owns are not this collection's to report:
         // their payloads are written in a format pi-ai never agreed to.
         if (credentialKeyScope(entry.key) !== RECORD_SCOPE) continue
+        const providerId = credentialKeyId(entry.key)
+        if (INTERNAL_RECORD_IDS.has(providerId)) continue
         mine.push({
-          providerId: credentialKeyId(entry.key),
+          providerId,
           type: entry.kind === 'api-key' ? 'api_key' : 'oauth',
         })
       }
       return mine
     },
-    async modify(providerId, mutate) {
+    async modify(providerId, mutate, options) {
       if (!isCredentialKeySegment(providerId)) {
         throw new LlmError(
           `llm-pi-ai: provider id "${providerId}" cannot address a stored credential record (a record id is a`
@@ -168,15 +171,16 @@ export function credentialStoreFrom(credentials: NativeCredentials | undefined):
       const stored = await writableStore(credentials).modifyRecord(recordKeyFor(providerId), async (current) => {
         const next = await mutate(toPiCredential(current))
         return next === undefined ? undefined : toRecord(next)
-      })
+      }, options?.signal === undefined ? {} : { signal: options.signal })
       return toPiCredential(stored)
     },
     // `async` so a missing service reaches the caller as a rejection: pi-ai's
     // store contract is promise-returning, and a synchronous throw would
     // escape the `ModelsError` wrapper every other storage failure gets.
-    async delete(providerId) {
+    async delete(providerId, options) {
       if (!isCredentialKeySegment(providerId)) return
-      await writableStore(credentials).deleteRecord(recordKeyFor(providerId))
+      await writableStore(credentials).deleteRecord(
+        recordKeyFor(providerId), options?.signal === undefined ? {} : { signal: options.signal })
     },
   }
 }

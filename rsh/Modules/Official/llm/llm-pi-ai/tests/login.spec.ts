@@ -3,6 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import type { AuthorizationFlow, NativeAuthorization } from '@deepseek-ai/dsh-authorization/native'
+import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import AuthorizationService from '@deepseek-ai/dsh-authorization'
 import type { AuthorizationInteraction, AuthorizationNotice, AuthorizationPrompt } from '@deepseek-ai/dsh-authorization'
 import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
@@ -10,17 +14,49 @@ import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
 import type { AuthEvent, AuthInteraction, AuthPrompt, AuthType, Credential } from '@earendil-works/pi-ai'
 
 const login = vi.hoisted(() => vi.fn())
+const nativeModels = vi.hoisted(() => ({ auth: undefined as unknown, collections: 0, refreshes: 0 }))
 
 // The whole of what this module does with pi-ai is run one provider's login
 // against a collection built with the harness store, so the collection is the
 // boundary worth observing; a real login would open a browser.
 vi.mock('@earendil-works/pi-ai', async importOriginal => ({
   ...await importOriginal<typeof import('@earendil-works/pi-ai')>(),
-  createModels: () => ({ setProvider: () => {}, login }),
+  createModels: (auth: unknown) => {
+    nativeModels.auth = auth
+    nativeModels.collections++
+    return {
+      setProvider: () => {},
+      login,
+      getAuth: async () => ({ auth: { apiKey: 'synthetic-access' } }),
+      refresh: async () => { nativeModels.refreshes++; return { errors: new Map() } },
+      getModels: () => [],
+    }
+  },
 }))
 
+vi.mock('../src/siwc.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/siwc.ts')>()
+  return {
+    ...actual,
+    createSiwcOAuth(credentials: Parameters<typeof actual.createSiwcOAuth>[0]): ReturnType<typeof actual.createSiwcOAuth> {
+      const oauth = actual.createSiwcOAuth(credentials)
+      return {
+        ...oauth,
+        login: interaction => login('openai-codex', 'oauth', interaction) as ReturnType<typeof oauth.login>,
+      }
+    },
+  }
+})
+
 const { credentialStoreFrom, authContextFrom, recordKeyFor } = await import('../src/auth.ts')
+const { catalogProvider } = await import('../src/catalog.ts')
 const { registerPiAiFlows } = await import('../src/login.ts')
+const { plugin: nativePlugin } = await import('../src/native.ts')
+const anthropicApiKey = catalogProvider('anthropic')?.auth.apiKey
+if (anthropicApiKey?.login !== undefined) {
+  anthropicApiKey.login = ((interaction: AuthInteraction) =>
+    login('anthropic', 'api_key', interaction) as Promise<Credential>) as typeof anthropicApiKey.login
+}
 
 const CODEX = recordKeyFor('openai-codex')
 const dirs: string[] = []
@@ -77,10 +113,83 @@ async function attempt(
 
 afterEach(async () => {
   login.mockReset()
+  nativeModels.auth = undefined
+  nativeModels.collections = 0
+  nativeModels.refreshes = 0
   await Promise.all(dirs.splice(0).map(dir => rm(dir, { recursive: true, force: true })))
 })
 
 describe('pi-ai login flows', () => {
+  it.each([false, true])('native login and catalog services follow optional authorization (%s)', async (withAuthorization) => {
+    const writeSignals: (AbortSignal | undefined)[] = []
+    const credentials = {
+      resolve: async () => undefined,
+      readRecord: async () => undefined,
+      listRecords: async () => [],
+      modifyRecord: async (_key: string, mutate: (record: undefined) => Promise<unknown>, options?: { signal?: AbortSignal }) => {
+        writeSignals.push(options?.signal)
+        return mutate(undefined)
+      },
+      deleteRecord: async () => {},
+    } as unknown as NativeCredentials
+    const flows: AuthorizationFlow[] = []
+    const authorization = {
+      registerFlow(flow: AuthorizationFlow) { flows.push(flow); return async () => {} },
+    } as unknown as NativeAuthorization
+    const services = new Map<string, unknown>()
+    const disposers: (() => void | Promise<void>)[] = []
+    const effects: (() => void | Promise<void>)[] = []
+    let recordUpdated: ((key: string) => void) | undefined
+    const signal = new AbortController().signal
+    const context = {
+      signal,
+      require: (name: string) => name === 'credentials'
+        ? credentials
+        : createLaunchEnvironmentSnapshot([{ source: 'process', values: {} }]),
+      optional: (name: string) => name === 'authorization' && withAuthorization ? authorization : undefined,
+      own(dispose: () => void | Promise<void>) { disposers.push(dispose); return async () => {} },
+      effect(dispose: () => void | Promise<void>) { effects.push(dispose); return async () => {} },
+      on: (_key: string, listener: (key: string) => void) => { recordUpdated = listener; return async () => {} },
+      provide: (name: string, service: unknown) => { services.set(name, service) },
+    } as unknown as NativeContext
+
+    try {
+      await nativePlugin.resolve({ providers: { 'openai-codex': {} } })(context)
+      const codex = flows.find(flow => flow.key === recordKeyFor('openai-codex'))
+      if (!withAuthorization) {
+        expect(codex).toBeUndefined()
+        expect(effects).toHaveLength(0)
+        return
+      }
+
+      expect(codex?.methods.map(method => method.id)).toEqual(['oauth'])
+      expect(effects).toHaveLength(flows.length)
+      const sessionSignal = new AbortController().signal
+      login.mockImplementation(async () => (
+        { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
+      ))
+      await codex?.run({ method: 'oauth', signal: sessionSignal, notify: () => {}, prompt: async () => '' })
+      expect(writeSignals).toEqual([sessionSignal])
+
+      const directory = services.get('modelDirectory') as {
+        catalog(selection: { provider: string; model: string }, signal: AbortSignal): Promise<unknown>
+      }
+      const catalog = () => directory.catalog({ provider: 'openai-codex', model: '' }, signal)
+      const before = nativeModels.collections
+      await catalog()
+      expect(nativeModels.collections).toBe(before + 1)
+      expect(nativeModels.refreshes).toBe(1)
+      const afterFirstCatalog = nativeModels.collections
+      recordUpdated?.(recordKeyFor('openai-codex'))
+      await catalog()
+      expect(nativeModels.collections).toBe(afterFirstCatalog + 1)
+      expect(nativeModels.refreshes).toBe(2)
+    } finally {
+      for (const dispose of disposers.reverse()) await dispose()
+      for (const dispose of effects.reverse()) await dispose()
+    }
+  })
+
   it('offers one flow per installed provider, with the methods that provider ships', async () => {
     const ctx = await harness()
     const offered = ctx.authorization.list()
