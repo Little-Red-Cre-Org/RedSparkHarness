@@ -281,6 +281,11 @@ export class PiAiAdapter extends LlmAdapter {
     super()
   }
 
+  /** Discard the current provider collection after one of this adapter's credentials changes. */
+  invalidate(): void {
+    this.snapshot = undefined
+  }
+
   /**
    * The snapshot for the current profiles. Resolution memoizes its result, so
    * an unchanged configuration is recognized by identity; a changed one gets a

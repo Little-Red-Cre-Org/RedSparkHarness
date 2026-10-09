@@ -29,7 +29,7 @@ export class NativeAdapterModelDirectory implements NativeModelDirectory {
       const providers = this.providers()
       const settled = await Promise.allSettled(providers.map(async (provider) => {
         try {
-          const models = await this.adapter.listModels(provider.id)
+          const models = await this.adapter.listModels(provider.id, signal)
           signal.throwIfAborted()
           const resolvedModels = await Promise.allSettled(models.map(async (model) => {
             const resolved = await this.adapter.resolveModel(provider.id, model.id, signal)

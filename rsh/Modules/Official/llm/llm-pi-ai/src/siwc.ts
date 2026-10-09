@@ -3,7 +3,8 @@
 import { createServer } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
-import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { createLocalJWKSet, jwtVerify } from 'jose'
+import type { JSONWebKeySet } from 'jose'
 import type { CredentialStore, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 
 const ISSUER = 'https://auth.openai.com'
@@ -18,7 +19,8 @@ const REGISTRATION_MARKER = 'siwc-registration-v1:'
 const REQUIRED_SCOPE = 'chatgpt.tokens.use.direct'
 const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
 const HOST_AGENT_NAME = 'DeepSeek Harness'
-const jwks = createRemoteJWKSet(new URL(JWKS_URL))
+const OAUTH_REQUEST_TIMEOUT_MS = 30_000
+const CALLBACK_TIMEOUT_MS = 10 * 60_000
 
 /** SIWC credential fields retained beside pi-ai's refreshable OAuth tokens. */
 export interface SiwcCredential extends OAuthCredential {
@@ -65,7 +67,6 @@ interface TokenResponse {
   readonly token_type?: unknown
   readonly expires_in?: unknown
   readonly scope?: unknown
-  readonly error?: unknown
 }
 
 interface RegistrationMetadata {
@@ -105,6 +106,8 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   readonly callback: Promise<CallbackResult>
   close(): Promise<void>
 }> {
+  const timeout = AbortSignal.timeout(CALLBACK_TIMEOUT_MS)
+  const callbackSignal = AbortSignal.any([signal, timeout])
   let resolveCallback!: (value: CallbackResult) => void
   let rejectCallback!: (error: Error) => void
   let settled = false
@@ -158,7 +161,7 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
       response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in was not completed. You can close this tab.')
       finish(new Error(oauthError === 'access_denied'
         ? 'Sign in with ChatGPT was cancelled or plan usage was not approved'
-        : `Sign in with ChatGPT returned OAuth error "${oauthError}"`))
+        : 'Sign in with ChatGPT returned an OAuth error'))
       return
     }
     if (code === undefined || code.length === 0) {
@@ -170,15 +173,17 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     finish({ code, ...clientId === undefined ? {} : { clientId } })
   })
 
-  const onAbort = (): void => finish(signal.reason instanceof Error ? signal.reason : new Error('Sign in with ChatGPT was cancelled'))
-  signal.throwIfAborted()
-  signal.addEventListener('abort', onAbort, { once: true })
+  const onAbort = (): void => finish(timeout.aborted
+    ? new Error('Sign in with ChatGPT timed out waiting for the browser callback')
+    : callbackSignal.reason instanceof Error ? callbackSignal.reason : new Error('Sign in with ChatGPT was cancelled'))
+  callbackSignal.throwIfAborted()
+  callbackSignal.addEventListener('abort', onAbort, { once: true })
   server.listen(0, '127.0.0.1')
   try {
-    await once(server, 'listening')
-    signal.throwIfAborted()
+    await once(server, 'listening', { signal: callbackSignal })
+    callbackSignal.throwIfAborted()
   } catch (error: unknown) {
-    signal.removeEventListener('abort', onAbort)
+    callbackSignal.removeEventListener('abort', onAbort)
     if (server.listening) {
       await new Promise<void>(resolve => server.close(() => resolve()))
     }
@@ -186,7 +191,7 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   }
   const address = server.address()
   if (address === null || typeof address === 'string') {
-    signal.removeEventListener('abort', onAbort)
+    callbackSignal.removeEventListener('abort', onAbort)
     await new Promise<void>(resolve => server.close(() => resolve()))
     throw new Error('Could not bind the Sign in with ChatGPT callback')
   }
@@ -194,7 +199,7 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     redirectUri: `http://127.0.0.1:${address.port}/auth/callback`,
     callback,
     async close() {
-      signal.removeEventListener('abort', onAbort)
+      callbackSignal.removeEventListener('abort', onAbort)
       if (!server.listening) return
       await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
     },
@@ -211,8 +216,7 @@ async function tokenResponse(response: Response, operation: string, signal: Abor
   }
   signal.throwIfAborted()
   if (!response.ok) {
-    const code = typeof body?.error === 'string' ? ` (${body.error})` : ''
-    throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}${code}`)
+    throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`)
   }
   if (body === undefined || body === null || Array.isArray(body) || typeof body !== 'object') {
     throw new Error(`Sign in with ChatGPT ${operation} returned an invalid token response`)
@@ -238,11 +242,16 @@ function expiresAt(value: unknown): number {
   return Date.now() + value * 1000
 }
 
-async function verifiedIdentity(idToken: string, clientId: string, nonce?: string): Promise<{
+async function verifiedIdentity(idToken: string, clientId: string, nonce: string | undefined, signal: AbortSignal): Promise<{
   readonly subject: string
   readonly email?: string
 }> {
-  const { payload } = await jwtVerify(idToken, jwks, {
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
+  const response = await fetch(JWKS_URL, { headers: { accept: 'application/json' }, signal: requestSignal })
+  if (!response.ok) throw new Error(`Sign in with ChatGPT JWKS request failed with HTTP ${response.status}`)
+  const keys = await response.json() as JSONWebKeySet
+  requestSignal.throwIfAborted()
+  const { payload } = await jwtVerify(idToken, createLocalJWKSet(keys), {
     issuer: ISSUER,
     audience: clientId,
     requiredClaims: ['exp'],
@@ -338,12 +347,13 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
           redirect_uri: listener.redirectUri,
           resource: RESOURCE,
         })
+        const requestSignal = AbortSignal.any([interaction.signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
         const tokens = await tokenResponse(await fetch(TOKEN_URL, {
           method: 'POST',
           headers: { 'content-type': 'application/x-www-form-urlencoded' },
           body: form,
-          signal: interaction.signal,
-        }), 'authorization-code exchange', interaction.signal)
+          signal: requestSignal,
+        }), 'authorization-code exchange', requestSignal)
         const access = requiredString(tokens.access_token, 'access token')
         const refresh = requiredString(tokens.refresh_token, 'refresh token')
         const idToken = requiredString(tokens.id_token, 'ID token')
@@ -354,7 +364,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         if (!scopes.includes(REQUIRED_SCOPE)) {
           throw new Error(`Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}`)
         }
-        const identity = await verifiedIdentity(idToken, issuedClientId, nonce)
+        const identity = await verifiedIdentity(idToken, issuedClientId, nonce, interaction.signal)
         if (previous !== undefined && identity.subject !== previous.subject) {
           throw new Error('Sign in with ChatGPT selected a different account than the saved registration')
         }
@@ -385,12 +395,13 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         refresh_token: credential.refresh,
         resource: RESOURCE,
       })
+      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
       const tokens = await tokenResponse(await fetch(TOKEN_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: form,
-        signal,
-      }), 'token refresh', signal)
+        signal: requestSignal,
+      }), 'token refresh', requestSignal)
       const scopes = scopesFrom(tokens.scope, credential.scopes)
       return {
         ...credential,

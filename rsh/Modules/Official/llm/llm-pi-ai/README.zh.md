@@ -92,11 +92,11 @@ kind: "package-reference"
 
 ### 登录提供方
 
-pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。`openai-codex` 路由使用本应用单独注册的 Sign in with ChatGPT，并且只接受已存储的 OAuth grant；它不共用 Codex CLI 凭据，也不接受 API key 覆盖。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
+pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。原生 Host 挂载可选 `authorization` 服务时也会提供这些流程。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。`openai-codex` 路由使用本应用单独注册的 Sign in with ChatGPT，并且只接受已存储的 OAuth grant；它不共用 Codex CLI 凭据，也不接受 API key 覆盖。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
 
 ### 解析模型目录
 
-`openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug 与显示名，随后会把该 slug 发送到公开 Responses endpoint。目录未给出的上下文限制、输出上限、价格与 reasoning 控件保持未声明，不从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
+`openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug 与显示名，随后会把该 slug 发送到公开 Responses endpoint。没有已保存的 SIWC grant 时，此路由不会展示 pi-ai 的静态 Codex 目录。目录未给出的上下文限制、输出上限、价格与 reasoning 控件保持未声明，不从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
 
 协议决策与验证边界见 [SIWC 提供方 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-codex-siwc-provider.zh.md)。真实账户登录、实时目录刷新与用户推理仍需凭据验证。
 
@@ -114,7 +114,7 @@ profile 通过可选 settings seam 每次操作重新读取：base 与用户的 
 
 ### 从端点发现模型
 
-插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由直接由目录回答，不发网络请求；`openai-codex` 是例外：其账户范围目录会在 `listModels` 时刷新，配置发现则使用与推理相同的 SIWC access token 请求 `GET https://api.openai.com/v1/models`；界面仅显示 `models[]` 中 `visibility: "list"` 的条目，以 `slug` 作为请求 id，以 `display_name` 作为名称。其他目录未描述的路由才会经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `settings.yaml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。通用解析器接受标准 `data` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`settings.yaml` 仍然是决定路由服务内容的唯一事实。
+插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由直接由目录回答，不发网络请求；`openai-codex` 是例外：其账户范围目录会在 `listModels` 时刷新，配置发现则使用与推理相同的 SIWC access token 请求 `GET https://api.openai.com/v1/models`；界面仅显示 `models[]` 中 `visibility: "list"` 的条目，以 `slug` 作为请求 id，以 `display_name` 作为名称。其他目录未描述的路由才会经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义。模型列表网络请求设有 30 秒期限并响应取消。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `settings.yaml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。通用解析器接受标准 `data` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`settings.yaml` 仍然是决定路由服务内容的唯一事实。
 
 ### 失败与恢复
 
@@ -128,7 +128,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
-`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件与 Fs。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置与交互授权。此入口不提供原生模型目录编辑或交互登录注册。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
+`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings 与 authorization。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。`llm-pi-ai` 凭据记录更新会丢弃适配器快照，后续目录查询便会读取新 grant。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现

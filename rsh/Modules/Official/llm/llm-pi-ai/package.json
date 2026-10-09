@@ -82,7 +82,8 @@
       "optional": [
         "attachments",
         "fs",
-        "settings"
+        "settings",
+        "authorization"
       ],
       "provides": [
         "model",

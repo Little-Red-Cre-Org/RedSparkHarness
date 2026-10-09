@@ -26,6 +26,43 @@ function memoryCredentials(): CredentialStore {
 }
 
 describe('Sign in with ChatGPT OAuth', () => {
+  it.each(['timeout', 'cancel'] as const)('closes the callback listener after %s', async (cause) => {
+    const controller = new AbortController()
+    const timeoutController = new AbortController()
+    const timeout = cause === 'timeout'
+      ? vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutController.signal)
+      : undefined
+    const authorizationReady = Promise.withResolvers<URL>()
+    const oauth = createSiwcOAuth(memoryCredentials())
+    const interaction = {
+      signal: controller.signal,
+      notify(event: { type: string; url?: string }) {
+        if (event.type === 'auth_url' && event.url !== undefined) authorizationReady.resolve(new URL(event.url))
+      },
+      prompt: async () => '',
+    } as ProviderAuthInteraction
+    try {
+      const login = oauth.login(interaction, { getDeviceId: () => 'callback-test-host' })
+      const authorization = await authorizationReady.promise
+      if (cause === 'timeout') timeoutController.abort()
+      else controller.abort(new Error('test cancelled the authorization'))
+
+      await expect(login).rejects.toThrow(cause === 'timeout'
+        ? 'timed out waiting for the browser callback'
+        : 'test cancelled the authorization')
+      const callback = new URL(authorization.searchParams.get('redirect_uri')!)
+      await expect(new Promise<void>((resolve, reject) => {
+        const request = httpGet(callback, (response) => {
+          response.resume()
+          response.on('end', resolve)
+        })
+        request.on('error', reject)
+      })).rejects.toMatchObject({ code: 'ECONNREFUSED' })
+    } finally {
+      timeout?.mockRestore()
+    }
+  })
+
   it('registers with PKCE, verifies the account token, and rotates the saved refresh grant', async () => {
     const { publicKey, privateKey } = await generateKeyPair('RS256')
     const kid = 'siwc-test-signing-key'

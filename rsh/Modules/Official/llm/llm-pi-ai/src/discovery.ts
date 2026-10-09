@@ -59,6 +59,19 @@ const MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
 /** Public Sign in with ChatGPT model catalog endpoint. */
 const CODEX_MODELS_URL = 'https://api.openai.com/v1/models'
+const DISCOVERY_REQUEST_TIMEOUT_MS = 30_000
+
+/** Combine one caller's cancellation with this listing request's deadline. */
+function discoverySignal(signal?: AbortSignal): AbortSignal {
+  return AbortSignal.any([...(signal === undefined ? [] : [signal]), AbortSignal.timeout(DISCOVERY_REQUEST_TIMEOUT_MS)])
+}
+
+/** Translate an aborted listing request without including its bearer token. */
+function discoveryAbortError(signal: AbortSignal | undefined, requestSignal: AbortSignal, error: unknown): LlmError | undefined {
+  if (signal?.aborted) return new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
+  if (requestSignal.aborted) return new LlmError('model discovery request timed out', 'DISCOVERY_FAILED', { cause: error })
+  return undefined
+}
 
 interface CodexModelEntry {
   slug?: unknown
@@ -288,6 +301,7 @@ export async function fetchCodexModels(
   }
 
   let response: Response
+  const requestSignal = discoverySignal(signal)
   try {
     const headers = new Headers()
     headers.set('accept', 'application/json')
@@ -296,10 +310,12 @@ export async function fetchCodexModels(
     response = await fetch(CODEX_MODELS_URL, {
       method: 'GET',
       headers,
-      ...signal === undefined ? {} : { signal },
+      signal: requestSignal,
     })
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
-    if (signal?.aborted) throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
+    const aborted = discoveryAbortError(signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw new LlmError(`could not reach ${CODEX_MODELS_URL}`, 'DISCOVERY_FAILED', { cause: error })
   }
   if (!response.ok) {
@@ -311,8 +327,10 @@ export async function fetchCodexModels(
   let text: string
   try {
     text = await readBounded(response, CODEX_MODELS_URL)
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
-    if (signal?.aborted) throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
+    const aborted = discoveryAbortError(signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw error
   }
   let body: unknown
@@ -429,6 +447,7 @@ export async function discoverModels(
   const supplied = request.apiKey ?? await stored?.resolveApiKey()
   const apiKey = supplied === undefined ? undefined : usableProbeKey(supplied)
   let response: Response
+  const requestSignal = discoverySignal(request.signal)
   try {
     const headers = new Headers(stored?.headers === undefined ? undefined : Object.entries(stored.headers))
     headers.set('accept', 'application/json')
@@ -442,12 +461,12 @@ export async function discoverModels(
     response = await fetch(url, {
       method: 'GET',
       headers,
-      ...request.signal === undefined ? {} : { signal: request.signal },
+      signal: requestSignal,
     })
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
-    if (request.signal?.aborted) {
-      throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
-    }
+    const aborted = discoveryAbortError(request.signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw new LlmError(`could not reach ${url}`, 'DISCOVERY_FAILED', { cause: error })
   }
   if (!response.ok) {
@@ -459,13 +478,13 @@ export async function discoverModels(
   let text: string
   try {
     text = await readBounded(response, url)
+    requestSignal.throwIfAborted()
   } catch (error: unknown) {
     // Cancellation during the body read rejects with the abort reason, which
     // may be any value; the caller gets the same coded failure it would have
     // for a cancellation before the request went out.
-    if (request.signal?.aborted) {
-      throw new LlmError('model discovery aborted by caller', 'ABORTED', { cause: error })
-    }
+    const aborted = discoveryAbortError(request.signal, requestSignal, error)
+    if (aborted !== undefined) throw aborted
     throw error
   }
   let body: unknown
