@@ -71,6 +71,8 @@ After an explicit build, `start:desktop` reconstructs the disposable project and
 pnpm run start:desktop
 ```
 
+To run a native Desktop composition during development, use `pnpm run dev:desktop --native-profile <dir>` or `pnpm run start:desktop --native-profile <dir>`. The directory must contain `rsh.profile.json` and `rsh.client.json`, where `rsh.profile.json` has no row providing `application` or `hostConnection` (Desktop supplies them) and exactly one native Session controller; this option is development-only.
+
 Workspace development runs the current CLI and private Desktop Host packages under the invoking Node.js and disables desktop package mutations. Its explicitly linked disposable profile is the only mode allowed to resolve bundles outside its own directory. Use an unpacked application to exercise the bundled Node.js, bundled pnpm, bundled dsh resources, plugin installation and repair paths.
 
 <a id="package"></a>

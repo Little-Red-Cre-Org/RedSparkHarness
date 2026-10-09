@@ -71,6 +71,8 @@ pnpm run dev:desktop
 pnpm run start:desktop
 ```
 
+开发时可通过 `pnpm run dev:desktop --native-profile <dir>` 或 `pnpm run start:desktop --native-profile <dir>` 运行原生 Desktop 组合。目录必须包含 `rsh.profile.json` 和 `rsh.client.json`，其中 `rsh.profile.json` 不得有提供 `application` 或 `hostConnection` 的行（由 Desktop 提供），且必须恰有一个原生 Session controller；此选项仅用于开发。
+
 Workspace 开发使用调用命令的 Node.js 运行当前 CLI 与私有 Desktop Host 包，并禁用桌面包修改；只有该模式明确链接的一次性 profile 可以从自身目录外解析 bundle。需要验证内置 Node.js、内置 pnpm、内置 dsh 资源、插件安装和修复时，应运行未封装安装器的应用目录。
 
 <a id="package"></a>

@@ -1,4 +1,5 @@
 /** Cordis-free native composition over Electron's existing private Fetch carrier. */
+import { realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadNativeProfile, readNativeProfile, profileDirectoryReloadMode } from '@deepseek-ai/dsh/native-profile'
 import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -11,14 +12,22 @@ import type { DesktopHostRuntime } from './runtime.ts'
  * Activate an explicitly native profile without a public HTTP listener or another Agent loop.
  * @param runtimeDir - immutable installed npm runtime root.
  * @param projectDir - installed or staged Desktop profile.
+ * @param allowLinkedPackages - development-only allowance for workspace packages outside installed roots.
  * @returns private native RPC and Client asset dispatch plus Host drain.
  */
-export async function createNativeDesktopRuntime(runtimeDir: string, projectDir: string): Promise<DesktopHostRuntime> {
+export async function createNativeDesktopRuntime(
+  runtimeDir: string,
+  projectDir: string,
+  allowLinkedPackages: boolean,
+): Promise<DesktopHostRuntime> {
   if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('dsh desktop: native profiles require configReload startup')
   const profile = readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
   const root = profile.scopes.find(scope => scope.parent === undefined)
   if (root === undefined) throw new Error('dsh desktop: native profile has no root scope')
-  const bundle = await prepareNativeClientBundle(projectDir, runtimeDir, true)
+  const bundleRuntimeDir = allowLinkedPackages
+    ? realpathSync(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh'))
+    : runtimeDir
+  const bundle = await prepareNativeClientBundle(projectDir, bundleRuntimeDir, !allowLinkedPackages)
   if (bundle === undefined) throw new Error('dsh desktop: native Host requires rsh.client.json')
   const assets = createNativeDesktopAssetHandler(runtimeDir, bundle, 'globalThis.__DSH_TRANSPORT__={ownsHost:true}')
   const channels = new Map<string, ConnectionFetchHandler>()
@@ -44,7 +53,8 @@ export async function createNativeDesktopRuntime(runtimeDir: string, projectDir:
   }
   const loaded = await loadNativeProfile({
     profile: 'desktop', profileDir: projectDir, patchFiles: [], target: 'host',
-    installAnchor: join(runtimeDir, 'package.json'), containedRoots: [projectDir, runtimeDir],
+    installAnchor: join(runtimeDir, 'package.json'),
+    ...(allowLinkedPackages ? {} : { containedRoots: [projectDir, runtimeDir] }),
     carrier: { plugin: carrier, scope: root.id },
   })
   if ([...loaded.requests.values()].some(request => request.plugin.provides.some(service => service === 'application' || service === 'hostConnection'))) {
