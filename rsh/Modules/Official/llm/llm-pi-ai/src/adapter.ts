@@ -335,6 +335,8 @@ function codexSubscriptionProvider(base: Provider, credentials: CredentialStore)
  */
 export class PiAiAdapter extends LlmAdapter {
   private snapshot: PiAiSnapshot | undefined
+  /** Cancels shared catalog refreshes of every snapshot when the adapter is disposed. */
+  private readonly lifetime = new AbortController()
 
   constructor(private readonly config: PiAiAdapterOptions) {
     super()
@@ -342,6 +344,12 @@ export class PiAiAdapter extends LlmAdapter {
 
   /** Discard the current provider collection after one of this adapter's credentials changes. */
   invalidate(): void {
+    this.snapshot = undefined
+  }
+
+  /** Cancel catalog refreshes still in flight and discard the provider collection. */
+  dispose(): void {
+    this.lifetime.abort()
     this.snapshot = undefined
   }
 
@@ -400,10 +408,11 @@ export class PiAiAdapter extends LlmAdapter {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
     }
     // A later refresh aborts the earlier one inside pi-ai, so one snapshot shares one flight.
-    // The shared flight ignores the caller signal; discovery times the /models request out itself.
+    // The shared flight ignores the caller signal and stops only on dispose; discovery times the /models request out itself.
     let refresh = snapshot.refreshes.get(provider)
     if (refresh === undefined) {
-      refresh = snapshot.models.refresh({ providers: [provider], force: true }).then((refreshed) => {
+      refresh = snapshot.models.refresh({ providers: [provider], force: true, signal: this.lifetime.signal }).then((refreshed) => {
+        if (refreshed.aborted) throw new LlmError('pi-ai catalog refresh aborted', 'ABORTED')
         const failure = refreshed.errors.get(provider)
         if (failure !== undefined) throw failure
       })
