@@ -442,7 +442,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       </details>
       <label>{t('userOverrides')}
         <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
-          value={drafts[row.namespace] ?? pretty(row.user)} disabled={saving === row.namespace}
+          value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
           onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
           style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
       </label>
