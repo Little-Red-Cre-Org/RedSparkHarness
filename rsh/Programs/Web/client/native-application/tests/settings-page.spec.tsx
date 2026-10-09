@@ -320,13 +320,15 @@ it.each([
   const authorizationCancel = vi.fn(async () => undefined)
   let releaseSecond!: () => void
   const dropSecond = new Promise<void>((resolve) => { releaseSecond = resolve })
-  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, _signal: AbortSignal) {
-    if (attemptId === undefined || authorizationFrames.mock.calls.length !== 2) {
+  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
+    const call = authorizationFrames.mock.calls.length
+    if (attemptId === undefined || call === 1) throw new Error('HTTP 409: unavailable attempt')
+    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
+    if (call === 2) {
+      await dropSecond
       throw new Error('HTTP 409: unavailable attempt')
     }
-    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
-    await dropSecond
-    throw new Error('HTTP 409: unavailable attempt')
+    await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
   })
   const actions = {
     settingsDescribe: vi.fn(async () => settingsDescription([])),
@@ -358,5 +360,158 @@ it.each([
   expect(authorizationList).toHaveBeenCalledTimes(2)
   expect(onAuthorized).toHaveBeenCalledOnce()
   expect(authorizationCancel).not.toHaveBeenCalled()
+  if (attemptId !== undefined) {
+    fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
+    expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
+    expect(screen.queryByText(en.authorizationDisconnected)).toBeNull()
+    expect(authorizationFrames).toHaveBeenCalledTimes(3)
+  }
   page.unmount()
+})
+
+it('a stale settings refresh cannot overwrite a newer one', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  let releaseStale!: () => void
+  const staleGate = new Promise<void>((resolve) => { releaseStale = resolve })
+  const credentialsDescribe = vi.fn(async () => {
+    if (credentialsDescribe.mock.calls.length === 1) {
+      await staleGate
+      return { DEEPSEEK_API_KEY: { configured: false, writable: true } }
+    }
+    return { DEEPSEEK_API_KEY: { configured: true, writable: true } }
+  })
+  const row: NativeSettingsDescriptor = {
+    namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user: {}, applies: 'live', secrets: [],
+    credentialRefs: ['DEEPSEEK_API_KEY'], revision: 1,
+  }
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([row])),
+    settingsMutate: vi.fn(), credentialsDescribe, credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
+    authorizationList: vi.fn(async () => [{
+      key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }], configured: false, writable: true, attemptId: 'a1',
+    }]),
+    authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+    authorizationFrames: vi.fn(async function* () { throw new Error('HTTP 409: unavailable attempt') }),
+  } as unknown as NativeSettingsActions
+  const page = render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const credential = () => screen.getByRole('form', { name: `${en.credential} DEEPSEEK_API_KEY` }).textContent ?? ''
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
+  await waitFor(() => { expect(credential()).toContain(`· ${en.configured}`) })
+  releaseStale()
+  await new Promise<void>((resolve) => { setTimeout(() => { resolve() }, 20) })
+  expect(credential()).toContain(`· ${en.configured}`)
+  expect(screen.queryByText(en.loadingSettings)).toBeNull()
+  page.unmount()
+
+  let listAttempt = 'a1'
+  let releaseCancel!: () => void
+  const cancelGate = new Promise<void>((resolve) => { releaseCancel = resolve })
+  let releaseSettle!: () => void
+  const settleGate = new Promise<void>((resolve) => { releaseSettle = resolve })
+  const authorizationFrames = vi.fn(async function* (_key: string, id: string, signal: AbortSignal) {
+    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'secret', message: 'Code' } } as const
+    if (id === 'a1') {
+      await settleGate
+      yield { type: 'settled', settlement: 'cancelled' } as const
+      return
+    }
+    await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
+  })
+  const resume = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
+    authorizationList: vi.fn(async () => [{
+      key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }], configured: false, writable: true,
+      attemptId: listAttempt,
+    }]),
+    authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(),
+    authorizationFrames, authorizationCancel: vi.fn(async () => { await cancelGate }),
+  } as unknown as NativeSettingsActions
+  const next = render(<SettingsPage actions={resume} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  fireEvent.change(await screen.findByLabelText('Code'), { target: { value: 'first-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.cancelSignIn }))
+  listAttempt = 'a2'
+  releaseSettle()
+  await waitFor(() => { expect(authorizationFrames.mock.calls.some(call => call[1] === 'a2')).toBe(true) })
+  fireEvent.change(await screen.findByLabelText('Code'), { target: { value: 'keep-me' } })
+  releaseCancel()
+  await new Promise<void>((resolve) => { setTimeout(() => { resolve() }, 20) })
+  expect(screen.getByLabelText<HTMLInputElement>('Code').value).toBe('keep-me')
+  next.unmount()
+})
+
+it('keeps settings drafts consistent across racing refreshes', async () => {
+  let user: Record<string, unknown> = { label: 'old' }
+  let revision = 1
+  let failDescribe = false
+  let releaseSave!: () => void
+  const saveGate = new Promise<void>((resolve) => { releaseSave = resolve })
+  let releaseNewer!: () => void
+  const newerGate = new Promise<void>((resolve) => { releaseNewer = resolve })
+  const row = (): NativeSettingsDescriptor => ({
+    namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user, applies: 'live', secrets: [],
+    credentialRefs: [], revision,
+  })
+  const settingsDescribe = vi.fn(async () => {
+    const call = settingsDescribe.mock.calls.length
+    if (call === 2) await saveGate
+    if (call === 3) await newerGate
+    if (failDescribe) {
+      failDescribe = false
+      throw new Error('describe failed')
+    }
+    return settingsDescription([row()])
+  })
+  const settingsMutate = vi.fn(async (_namespace: string, ops: readonly { value?: unknown }[]) => {
+    user = { label: ops[0]?.value }
+    revision += 1
+    return row()
+  })
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  let releaseSettle!: () => void
+  const settleGate = new Promise<void>((resolve) => { releaseSettle = resolve })
+  const authorizationFrames = vi.fn(async function* (_key: string, _id: string, signal: AbortSignal) {
+    if (authorizationFrames.mock.calls.length === 1) {
+      await settleGate
+      yield { type: 'settled', settlement: 'authorized' } as const
+      return
+    }
+    await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
+  })
+  const actions = {
+    settingsDescribe, settingsMutate,
+    credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
+    authorizationList: vi.fn(async () => [{
+      key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }], configured: false, writable: true, attemptId: 'a1',
+    }]),
+    authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+    authorizationFrames,
+  } as unknown as NativeSettingsActions
+  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
+  const pretty = (value: unknown) => JSON.stringify(value, null, 2)
+
+  // The save's superseded refresh returns first: the editor stays locked until the newer refresh applies the draft reset.
+  fireEvent.change(editor, { target: { value: '{ "label": "canonical" }' } })
+  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(2) })
+  releaseSettle()
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
+  releaseSave()
+  await new Promise<void>((resolve) => { setTimeout(resolve, 20) })
+  expect(editor.disabled).toBe(true)
+  releaseNewer()
+  await waitFor(() => { expect(editor.disabled).toBe(false) })
+  expect(editor.value).toBe(pretty({ label: 'canonical' }))
+
+  // A failed post-save describe keeps a later unsaved edit through the next refresh.
+  fireEvent.change(editor, { target: { value: '{ "label": "saved" }' } })
+  failDescribe = true
+  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  expect(await screen.findByRole('alert')).toBeTruthy()
+  const edited = '{ "label": "unsaved" }'
+  fireEvent.change(editor, { target: { value: edited } })
+  fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
+  expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 3`)).toBeTruthy()
+  expect(editor.value).toBe(edited)
 })

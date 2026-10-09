@@ -106,11 +106,12 @@ export function nativeSettingsDiff(
   return operations
 }
 
-function AuthorizationRow({ entry, actions, t, onSettled }: {
+function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
   onSettled: () => Promise<boolean>
+  refreshClick: number
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
   const [frames, setFrames] = useState<AuthorizationFrame[]>([])
@@ -123,11 +124,25 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   // Parent callbacks may change identity on every render; only a new attempt resubscribes.
   const settledRef = useRef(onSettled)
   settledRef.current = onSettled
+  const attemptRef = useRef(attemptId)
+  attemptRef.current = attemptId
+  const listedAttempt = useRef(entry.attemptId)
 
   // Undefined means not subscribed; refresh may resubscribe once per attempt.
+  // Clearing `stopped` must not replace a Sign in attempt the list does not list yet.
   useEffect(() => {
-    if (entry.attemptId !== undefined && entry.attemptId !== stopped) setAttemptId(entry.attemptId)
+    const listed = entry.attemptId
+    const listedChanged = listed !== listedAttempt.current
+    listedAttempt.current = listed
+    if (listed === undefined || listed === stopped) return
+    if (!listedChanged && attemptRef.current !== undefined && attemptRef.current !== listed) return
+    setAttemptId(listed)
   }, [entry, stopped])
+
+  // Only the Settings button increments this; a settled refresh must not clear the cap.
+  useEffect(() => {
+    setStopped(undefined)
+  }, [refreshClick])
 
   useEffect(() => {
     if (attemptId === undefined) return
@@ -148,6 +163,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     }
     setFrames([])
     setAnswers({})
+    setStopped(undefined)
     void (async () => {
       try {
         for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
@@ -190,7 +206,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     setError(undefined)
     try {
       await actions.authorizationCancel(entry.key, id)
-      setAnswers({})
+      if (attemptRef.current === id) setAnswers({})
     }
     catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
   }
@@ -248,7 +264,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
     {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
-    {stopped === undefined ? null : <p role="alert">{t('authorizationDisconnected')}</p>}
+    {stopped !== undefined && stopped === entry.attemptId ? <p role="alert">{t('authorizationDisconnected')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
@@ -284,11 +300,16 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
-  // Older refreshes cannot replace the latest authorization-list result.
+  const [refreshClick, setRefreshClick] = useState(0)
+  // Older refreshes cannot replace a newer refresh's results.
+  // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
+  const resetDrafts = useRef(false)
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
     const request = ++refreshes.current
+    if (!keepDrafts) resetDrafts.current = true
+    const latest = () => request === refreshes.current
     setLoading(true)
     setError(undefined)
     setCredentialError(undefined)
@@ -297,20 +318,25 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       const description = await actions.settingsDescribe(signal)
       try {
         const entries = await actions.authorizationList(signal)
-        if (request === refreshes.current) setAuthorizationEntries(entries)
+        if (latest()) setAuthorizationEntries(entries)
       } catch (cause: unknown) {
-        if (request === refreshes.current) {
+        if (latest()) {
           setAuthorizationEntries([])
           setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
         }
       }
       const rows = description.namespaces
-      setLimits(description.limits)
-      setNamespaces(rows)
-      setDrafts(current => keepDrafts ? current : Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
+      if (latest()) {
+        const reset = resetDrafts.current
+        if (reset) resetDrafts.current = false
+        setLimits(description.limits)
+        setNamespaces(rows)
+        if (reset) setDrafts(Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
+      }
       const refs = [...new Set(rows.flatMap(row => row.credentialRefs))]
-      if (refs.length === 0) setCredentials({})
-      else {
+      if (refs.length === 0) {
+        if (latest()) setCredentials({})
+      } else {
         try {
           const aggregate: Record<string, { configured: boolean; source?: string; writable: boolean }> = {}
           for (let offset = 0; offset < refs.length; offset += description.limits.maxCredentialRefsPerRead) {
@@ -318,15 +344,20 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
               refs.slice(offset, offset + description.limits.maxCredentialRefsPerRead), signal,
             ))
           }
-          setCredentials(aggregate)
+          if (latest()) setCredentials(aggregate)
         }
-        catch (cause: unknown) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+        catch (cause: unknown) {
+          if (latest()) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+        }
       }
       return true
     } catch (cause: unknown) {
-      setError(requestError(cause, t, 'native/settings'))
+      if (latest()) {
+        resetDrafts.current = false
+        setError(requestError(cause, t, 'native/settings'))
+      }
       return false
-    } finally { setLoading(false) }
+    } finally { if (latest()) setLoading(false) }
   }, [actions, t])
 
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
@@ -397,7 +428,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <button type="button" onClick={onBack}>{t('backToSessions')}</button>
     <h1>{t('settings')}</h1>
-    <button type="button" disabled={loading} onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
+    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
@@ -411,7 +442,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       </details>
       <label>{t('userOverrides')}
         <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
-          value={drafts[row.namespace] ?? pretty(row.user)} disabled={saving === row.namespace}
+          value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
           onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
           style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
       </label>
@@ -446,7 +477,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       <h2>{t('accounts')}</h2>
       {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
       {authorizationEntries.map(entry => <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
-        onSettled={authorizationSettled} />)}
+        onSettled={authorizationSettled} refreshClick={refreshClick} />)}
     </section>}
   </main>
 }
