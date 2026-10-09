@@ -98,7 +98,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：抽象 `CompactionEngine`、`CompactionTrigger`、`ManualCompactionError`、`ctx.compaction` 合并 |
+| [`src/index.ts`](src/index.ts) | 插件入口：抽象 `CompactionEngine`、`ctx.compaction` 合并 |
+| [`src/errors.ts`](src/errors.ts) | 与运行时无关的 `CompactionTrigger`、`ManualCompactionError` 及其错误码 |
+| [`src/native.ts`](src/native.ts) | 原生 `compaction` Service Definition（`./native`）：owner、操作与共享辅助函数 |
 | [`src/types.ts`](src/types.ts) | `CompactionResult` 与声明合并的 `compaction/*` 会话事件 |
 | [`src/tool-pairing.ts`](src/tool-pairing.ts) | 两个边界 helper 背后的每会话切分点平衡缓存 |
 | [`src/checkpoint.ts`](src/checkpoint.ts) | 无 Cordis 依赖的检查点来源构造函数与谓词（`./checkpoint` 叶子） |
@@ -112,6 +114,10 @@ kind: "package-reference"
 ### 事件
 
 `compaction/*` 事件通过 declaration merging 扩展 `SessionEventMap`（可合并扩展）——它们是会话事件，不是 Cordis `Events`，且都仅写入日志。生成的[持久化日志事件目录](../../../Docs/persistence-catalog.zh.md)拥有每个事件的 payload；`compaction/prune` 记录了与工具结果修剪器共享的影子价格协议。
+
+### 原生 profile
+
+`./native` 是供原生 profile 使用的无 Cordis Service Definition。它为 `NativeServices.compaction` 增补 `compactIfNeeded(owner, trigger, signal)` 与 `compactNow(owner, signal, sourceCommandId?)`。owner 是 Program 为每个会话提供的 writer 视图（`session`、`writerAvailable`、`append` 与 `flush()`），而不是 Cordis `Agent`。事件形状、标记对、检查点来源辅助函数、工具配对辅助函数与 `ManualCompactionError` 均与兼容入口共享，因此两种运行时持久化完全相同的 `compaction/*` 日志。运行时不变式伴生入口仍只用于兼容入口。
 
 </details>
 

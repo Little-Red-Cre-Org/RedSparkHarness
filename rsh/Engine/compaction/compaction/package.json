@@ -18,6 +18,10 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./invariant": {
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
@@ -36,6 +40,7 @@
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/native.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -47,6 +52,14 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",

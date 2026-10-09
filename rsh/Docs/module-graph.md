@@ -456,7 +456,10 @@ flowchart TD
   pkg_system_prompt --> pkg_scope
   pkg_skill --> pkg_llm
   pkg_skill --> pkg_scope
+  pkg_web --> pkg_launch_environment
   pkg_web --> pkg_llm
+  pkg_web --> pkg_native_runtime
+  pkg_web --> pkg_native_tools
   pkg_api_remotes --> pkg_scope
   pkg_attachment_local --> pkg_attachment
   pkg_attachment_local --> pkg_home_paths
@@ -492,11 +495,14 @@ flowchart TD
   pkg_sdk_protocol --> pkg_session
   pkg_sdk_protocol --> pkg_subagent_protocol
   pkg_web_fetch_http --> pkg_http_proxy
+  pkg_web_fetch_http --> pkg_native_runtime
   pkg_web_fetch_http --> pkg_timeout
   pkg_web_fetch_http --> pkg_web
   pkg_web_search_exa --> pkg_launch_environment
+  pkg_web_search_exa --> pkg_native_runtime
   pkg_web_search_exa --> pkg_web
   pkg_web_search_perplexity --> pkg_launch_environment
+  pkg_web_search_perplexity --> pkg_native_runtime
   pkg_web_search_perplexity --> pkg_web
   pkg_spill --> pkg_brand
   pkg_spill --> pkg_llm
@@ -660,7 +666,10 @@ flowchart TD
   pkg_web_search_deepseek --> pkg_compat_settings_definition
   pkg_web_search_deepseek --> pkg_credentials
   pkg_web_search_deepseek --> pkg_launch_environment
+  pkg_web_search_deepseek --> pkg_native_runtime
+  pkg_web_search_deepseek --> pkg_native_tools
   pkg_web_search_deepseek --> pkg_session
+  pkg_web_search_deepseek --> pkg_settings_definition
   pkg_web_search_deepseek --> pkg_web
   pkg_hook_protocol --> pkg_invariants
   pkg_hook_protocol --> pkg_session
@@ -796,6 +805,9 @@ flowchart TD
   pkg_tool_skill --> pkg_skill
   pkg_tool_skill --> pkg_tools
   pkg_tool_web --> pkg_llm
+  pkg_tool_web --> pkg_native_prompt
+  pkg_tool_web --> pkg_native_runtime
+  pkg_tool_web --> pkg_native_tools
   pkg_tool_web --> pkg_system_prompt
   pkg_tool_web --> pkg_tools
   pkg_tool_web --> pkg_web
@@ -1450,7 +1462,7 @@ flowchart TD
 | [`session`](../Engine/core/session) | `core` | [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope) |
 | [`system-prompt`](../Engine/core/system-prompt) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope) |
 | [`skill`](../Modules/Official/skill/skill) | `skill` | [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope) |
-| [`web`](../Modules/Official/web/web) | `web` | [`llm`](../Engine/llm/llm) |
+| [`web`](../Modules/Official/web/web) | `web` | [`launch-environment`](../Core/util/launch-environment), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools) |
 | [`api-remotes`](../Programs/Web/api/remotes) | `api` | [`scope`](../Engine/core/scope) |
 | [`attachment-local`](../Modules/Official/attachment/attachment-local) | `attachment` | [`attachment`](../Modules/Official/attachment/attachment), [`home-paths`](../Core/util/home-paths), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition) | `bridge` | [`settings-definition`](../Core/settings/settings-definition) |
@@ -1467,9 +1479,9 @@ flowchart TD
 | [`native-agent`](../Engine/core/native-agent) | `core` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
 | [`skill-badge`](../Modules/Official/skill/skill-badge) | `skill` | [`skill`](../Modules/Official/skill/skill) |
 | [`sdk-protocol`](../Engine/subagent/sdk-protocol) | `subagent` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`subagent-protocol`](../Engine/subagent/subagent-protocol) |
-| [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
-| [`web-search-exa`](../Modules/Official/web/web-search-exa) | `web` | [`launch-environment`](../Core/util/launch-environment), [`web`](../Modules/Official/web/web) |
-| [`web-search-perplexity`](../Modules/Official/web/web-search-perplexity) | `web` | [`launch-environment`](../Core/util/launch-environment), [`web`](../Modules/Official/web/web) |
+| [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | `web` | [`http-proxy`](../Core/util/http-proxy), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`timeout`](../Core/util/timeout), [`web`](../Modules/Official/web/web) |
+| [`web-search-exa`](../Modules/Official/web/web-search-exa) | `web` | [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`web`](../Modules/Official/web/web) |
+| [`web-search-perplexity`](../Modules/Official/web/web-search-perplexity) | `web` | [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`web`](../Modules/Official/web/web) |
 | [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`api-workspace-controller`](../Programs/Web/api/workspace-controller) | `api` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`host-directory-picker`](../Programs/Web/host/directory-picker), [`session`](../Engine/core/session), [`storage-domain`](../Core/storage/storage-domain), [`typert-protocol`](../Core/typert/protocol), [`workspace`](../Modules/Official/workspace/workspace) |
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
@@ -1509,7 +1521,7 @@ flowchart TD
 | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | `fs` | [`fs`](../Modules/Official/fs/fs), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) |
 | [`skill-filesystem`](../Modules/Official/skill/skill-filesystem) | `skill` | [`fs`](../Modules/Official/fs/fs), [`home-paths`](../Core/util/home-paths), [`skill`](../Modules/Official/skill/skill) |
 | [`sdk-child`](../Modules/Official/subagent/sdk-child) | `subagent` | [`attachment`](../Modules/Official/attachment/attachment), [`credentials`](../Modules/Official/credentials/credentials), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-subagent`](../Engine/subagent/native-subagent), [`sdk-protocol`](../Engine/subagent/sdk-protocol), [`sdk-runtime`](../Engine/subagent/sdk-runtime), [`session`](../Engine/core/session), [`subagent-protocol`](../Engine/subagent/subagent-protocol) |
-| [`web-search-deepseek`](../Modules/Official/web/web-search-deepseek) | `web` | [`agent`](../Engine/core/agent), [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition), [`credentials`](../Modules/Official/credentials/credentials), [`launch-environment`](../Core/util/launch-environment), [`session`](../Engine/core/session), [`web`](../Modules/Official/web/web) |
+| [`web-search-deepseek`](../Modules/Official/web/web-search-deepseek) | `web` | [`agent`](../Engine/core/agent), [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition), [`credentials`](../Modules/Official/credentials/credentials), [`launch-environment`](../Core/util/launch-environment), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`settings-definition`](../Core/settings/settings-definition), [`web`](../Modules/Official/web/web) |
 | [`hook-protocol`](../Modules/Official/hooks/hook-protocol) | `hooks` | [`invariants`](../Core/runtime-diagnostics/invariants), [`session`](../Engine/core/session), [`shell`](../Modules/Official/shell/shell) |
 | [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) | `bridge` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`system-prompt`](../Engine/core/system-prompt) |
 | [`file-reference`](../Engine/context/file-reference) | `context` | [`agent`](../Engine/core/agent) |
@@ -1537,7 +1549,7 @@ flowchart TD
 | [`tool-present`](../Modules/Official/fs/tool-present) | `fs` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`tool-str-replace-editor`](../Modules/Official/fs/tool-str-replace-editor) | `fs` | [`fs`](../Modules/Official/fs/fs), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`tools`](../Engine/core/tools) |
 | [`tool-skill`](../Modules/Official/skill/tool-skill) | `skill` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`skill`](../Modules/Official/skill/skill), [`tools`](../Engine/core/tools) |
-| [`tool-web`](../Modules/Official/web/tool-web) | `web` | [`llm`](../Engine/llm/llm), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`web`](../Modules/Official/web/web) |
+| [`tool-web`](../Modules/Official/web/tool-web) | `web` | [`llm`](../Engine/llm/llm), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`web`](../Modules/Official/web/web) |
 | [`spill-policy`](../Modules/Official/spill/spill-policy) | `spill` | [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`tools`](../Engine/core/tools) |
 | [`tool-todo`](../Modules/Official/todo/tool-todo) | `todo` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
 | [`plan-mode`](../Modules/Official/plan/plan-mode) | `plan` | [`agent`](../Engine/core/agent), [`commands`](../Modules/Official/interaction/commands), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-questions`](../Modules/Official/interaction/user-questions) |

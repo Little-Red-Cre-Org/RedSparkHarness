@@ -6,8 +6,8 @@
  * @module @deepseek-ai/dsh-web-fetch-http/provider
  */
 
-import { WebError } from '@deepseek-ai/dsh-web'
-import type { WebFetchBody, WebFetchProvider, WebFetchRequest, WebFetchResult } from '@deepseek-ai/dsh-web'
+import { WebError } from '@deepseek-ai/dsh-web/native'
+import type { WebFetchBody, WebFetchProvider, WebFetchRequest, WebFetchResult } from '@deepseek-ai/dsh-web/native'
 import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { Response } from 'undici'
 import { proxyRouteFor } from '@deepseek-ai/dsh-http-proxy'

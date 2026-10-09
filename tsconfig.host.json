@@ -123,6 +123,7 @@
     "snapshots/native-headless/model-choice-native.snapshot.ts",
     "snapshots/native-headless/goal-continuation.snapshot.ts",
     "snapshots/native-headless/fs-sandbox-tool-round.snapshot.ts",
+    "snapshots/native-headless/web-tools-native.snapshot.ts",
     "snapshots/native-sdk/goal-control.snapshot.ts",
     "snapshots/native-sdk/scheduled-root-origin.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",

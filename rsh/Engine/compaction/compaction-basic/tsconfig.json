@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../../Core/vendor/cosmokit"
@@ -35,6 +37,15 @@
     },
     {
       "path": "../compaction-tool-result-pruner"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-model-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.host.json"
     }
   ]
 }

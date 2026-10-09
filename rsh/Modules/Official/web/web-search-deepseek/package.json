@@ -11,6 +11,24 @@
     "directory": "rsh/Modules/Official/web/web-search-deepseek"
   },
   "type": "module",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "web",
+        "launchEnvironment"
+      ],
+      "optional": [
+        "settings",
+        "credentials"
+      ],
+      "provides": []
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -18,11 +36,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -33,7 +57,10 @@
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-web": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^"
@@ -48,6 +75,30 @@
     "@deepseek-ai/dsh-web": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^"
+    "@deepseek-ai/dsh-http-proxy": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-settings-definition": "workspace:^",
+    "@deepseek-ai/dsh-settings-file": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-compat-settings-definition": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-settings-definition": {
+      "optional": true
+    }
   }
 }

@@ -1865,6 +1865,10 @@ importers:
         version: 2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.55.2)(@types/node@22.20.0)(@types/react@18.3.31)(lightningcss@1.32.0)(postcss@8.5.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))
 
   rsh/Engine/compaction/command-compact:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -1892,6 +1896,10 @@ importers:
         version: link:../../core/session
 
   rsh/Engine/compaction/compaction:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -1914,6 +1922,15 @@ importers:
 
   rsh/Engine/compaction/compaction-basic:
     dependencies:
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -1972,6 +1989,9 @@ importers:
 
   rsh/Engine/compaction/compaction-tool-result-pruner:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -8441,9 +8461,24 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/agent
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../../../Core/util/launch-environment
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope
@@ -8487,9 +8522,18 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../../../Core/util/launch-environment
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
 
   rsh/Modules/Official/web/web-fetch-http:
     dependencies:
@@ -8509,6 +8553,12 @@ importers:
       '@deepseek-ai/dsh-http-proxy':
         specifier: workspace:^
         version: link:../../../../Core/util/http-proxy
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
@@ -8543,12 +8593,24 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../settings/settings
+      '@deepseek-ai/dsh-settings-definition':
+        specifier: workspace:^
+        version: link:../../../../Core/settings/settings-definition
+      '@deepseek-ai/dsh-settings-file':
+        specifier: workspace:^
+        version: link:../../settings/settings-file
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../web
@@ -8568,6 +8630,9 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../web
@@ -8587,6 +8652,9 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../web
@@ -8892,6 +8960,15 @@ importers:
       '@deepseek-ai/dsh-code-runtime-process-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/code-runtime-process-sandbox
+      '@deepseek-ai/dsh-command-compact':
+        specifier: workspace:^
+        version: link:../../Engine/compaction/command-compact
+      '@deepseek-ai/dsh-compaction-basic':
+        specifier: workspace:^
+        version: link:../../Engine/compaction/compaction-basic
+      '@deepseek-ai/dsh-compaction-tool-result-pruner':
+        specifier: workspace:^
+        version: link:../../Engine/compaction/compaction-tool-result-pruner
       '@deepseek-ai/dsh-credentials-local':
         specifier: workspace:^
         version: link:../../Modules/Official/credentials/credentials-local
@@ -9015,6 +9092,9 @@ importers:
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../Core/subprocess/subprocess-local
+      '@deepseek-ai/dsh-token-meter':
+        specifier: workspace:^
+        version: link:../../Engine/llm/token-meter
       '@deepseek-ai/dsh-tool-ask-user':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/tool-ask-user
@@ -9236,21 +9316,12 @@ importers:
       '@deepseek-ai/dsh-cmdline':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/boot/cmdline
-      '@deepseek-ai/dsh-command-compact':
-        specifier: workspace:^
-        version: link:../../Engine/compaction/command-compact
       '@deepseek-ai/dsh-command-goal':
         specifier: workspace:^
         version: link:../../Engine/goal/command-goal
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/commands
-      '@deepseek-ai/dsh-compaction-basic':
-        specifier: workspace:^
-        version: link:../../Engine/compaction/compaction-basic
-      '@deepseek-ai/dsh-compaction-tool-result-pruner':
-        specifier: workspace:^
-        version: link:../../Engine/compaction/compaction-tool-result-pruner
       '@deepseek-ai/dsh-cordis-client-runner':
         specifier: workspace:^
         version: link:../../Modules/Official/extensions/cordis-client-runner
@@ -9344,9 +9415,6 @@ importers:
       '@deepseek-ai/dsh-tmux-context':
         specifier: workspace:^
         version: link:../../Engine/context/tmux-context
-      '@deepseek-ai/dsh-token-meter':
-        specifier: workspace:^
-        version: link:../../Engine/llm/token-meter
       '@deepseek-ai/dsh-tool-bash':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/tool-bash
@@ -9392,9 +9460,18 @@ importers:
       '@deepseek-ai/dsh-user-question-broker':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/user-question-broker
+      '@deepseek-ai/dsh-web':
+        specifier: workspace:^
+        version: link:../../Modules/Official/web/web
       '@deepseek-ai/dsh-web-app':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/web-app
+      '@deepseek-ai/dsh-web-fetch-http':
+        specifier: workspace:^
+        version: link:../../Modules/Official/web/web-fetch-http
+      '@deepseek-ai/dsh-web-search-deepseek':
+        specifier: workspace:^
+        version: link:../../Modules/Official/web/web-search-deepseek
       '@deepseek-ai/dsh-webhook':
         specifier: workspace:^
         version: link:../../Modules/Official/webhook/webhook

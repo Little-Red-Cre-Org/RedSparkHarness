@@ -98,7 +98,9 @@ The replacement sits inside the lock bracket, so a crash between `compaction/sta
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: abstract `CompactionEngine`, `CompactionTrigger`, `ManualCompactionError`, `ctx.compaction` merge |
+| [`src/index.ts`](src/index.ts) | Plugin entry: abstract `CompactionEngine`, `ctx.compaction` merge |
+| [`src/errors.ts`](src/errors.ts) | Runtime-neutral `CompactionTrigger`, `ManualCompactionError`, and its codes |
+| [`src/native.ts`](src/native.ts) | Native `compaction` Service Definition (`./native`): owner, operations, shared helpers |
 | [`src/types.ts`](src/types.ts) | `CompactionResult` and the declaration-merged `compaction/*` session events |
 | [`src/tool-pairing.ts`](src/tool-pairing.ts) | Per-session cut-balance cache behind the two boundary helpers |
 | [`src/checkpoint.ts`](src/checkpoint.ts) | Cordis-free checkpoint source constructor and predicate (`./checkpoint` leaf) |
@@ -112,6 +114,10 @@ One log-recorded lock is shared by all entry points. Tail inspection finds the l
 ### Events
 
 The `compaction/*` events extend `SessionEventMap` (merge-extensible) via declaration merging — session events, not Cordis `Events`, and all log-only. The generated [persistence log event catalog](../../../Docs/persistence-catalog.md) owns the per-event payloads; `compaction/prune` documents the shadow-price protocol shared with the tool-result pruner.
+
+### Native profile
+
+`./native` is the Cordis-free Service Definition for native profiles. It augments `NativeServices.compaction` with `compactIfNeeded(owner, trigger, signal)` and `compactNow(owner, signal, sourceCommandId?)`. The owner is the Program's per-session writer view (`session`, `writerAvailable`, `append`, and `flush()`) rather than a Cordis `Agent`. Event shapes, the bracket, checkpoint source helpers, tool-pairing helpers, and `ManualCompactionError` are shared with the compatibility entry, so both runtimes persist identical `compaction/*` logs. The runtime invariant companion remains compatibility-only.
 
 </details>
 

@@ -4,12 +4,21 @@
  * @module @deepseek-ai/dsh-compaction-basic/summarizer
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { contentHasImage, createUserMessage, BlockAssembler, LlmError } from '@deepseek-ai/dsh-llm'
+import { contentHasImage, createUserMessage, BlockAssembler, LlmError } from '@deepseek-ai/dsh-llm/native'
 import type {
-  ContentBlock, FinishReason, GenerateOptions, Message, TokenUsage, ToolSchema,
-} from '@deepseek-ai/dsh-llm'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+  ContentBlock, FinishReason, GenerateOptions, LlmCallConfig, Message, StreamChunk, TokenUsage, ToolSchema,
+} from '@deepseek-ai/dsh-llm/native'
+import type { Session } from '@deepseek-ai/dsh-session/native'
+
+/** Model stream the summarizer calls once; Cordis `ctx.llm` and the native `model` service both satisfy it. */
+export type SummaryStream = (options: GenerateOptions) => AsyncIterable<StreamChunk>
+
+/** Session whose latest routed request is replayed, plus the runtime's fallback target. */
+export interface SummaryRoute {
+  readonly session: Session
+  /** Target used when neither configuration nor a routed request names one. */
+  readonly fallback?: Pick<LlmCallConfig, 'provider' | 'model'> | undefined
+}
 
 interface SummaryConfig {
   readonly summarizationProvider: string
@@ -94,49 +103,44 @@ export type SummaryResult = {
   | {
     /** Complete provider output before the text-only summary projection. */
     rawOutput: ContentBlock[]
-    /** Identifies exactly one call through this context's `ctx.llm.stream()`. */
+    /** Identifies exactly one call through the runtime's selected model stream. */
     llmStreamCall: true
   }
   | {
     /** Optional complete output from an unmarked template, remote, or other summarizer. */
     rawOutput?: ContentBlock[]
-    /** An unmarked result does not identify a call through this context's LLM seam. */
+    /** An unmarked result does not identify a call through the runtime's model stream. */
     llmStreamCall?: never
   }
 )
 
 /**
- * Run the default cache-reusing `ctx.llm.stream()` summarization call: replay
- * the conversation prefix, then append the compaction instruction as the final
- * user message so the provider's warm prefix cache is reused.
- * @param ctx - context providing the LLM service.
+ * Run the default cache-reusing summarization call: replay the conversation
+ * prefix, then append the compaction instruction as the final user message so
+ * the provider's warm prefix cache is reused. The target is the configured
+ * summarization model, else the latest routed request, else the runtime fallback.
+ * @param stream - the runtime's selected model stream.
  * @param config - resolved backend configuration.
  * @param input - replayed conversation prefix (system, tools, and leading messages) to condense.
- * @param agent - supplies routed-model history, fallback model, and session id.
+ * @param route - Session supplying routed-model history and id, plus the fallback target.
  * @param signal - optional cancellation forwarded to the adapter.
  * @returns safe text-only summary blocks and the exact call envelope and output.
  */
 export async function summarizeWithLlm(
-  ctx: Context,
+  stream: SummaryStream,
   config: SummaryConfig,
   input: SummarizationInput,
-  agent: Agent,
+  route: SummaryRoute,
   signal?: AbortSignal,
 ): Promise<SummaryResult> {
-  const latest = agent.session.requestHeader()?.config
+  const latest = route.session.requestHeader()?.config
   const configured = config.summarizationProvider.length === 0
     ? undefined
     : { provider: config.summarizationProvider, model: config.summarizationModel }
-  const agentTarget = agent.options.provider !== undefined
-    && agent.options.provider.length > 0
-    && agent.options.model !== undefined
-    && agent.options.model.length > 0
-    ? { provider: agent.options.provider, model: agent.options.model }
-    : undefined
-  const target = configured ?? latest ?? agentTarget
+  const target = configured ?? latest ?? route.fallback
   if (target === undefined) {
     throw new Error(
-      'no provider/model available for summarization: set both BasicCompactionConfig summarization fields, route one request, or set both AgentOptions fields',
+      'no provider/model available for summarization: set both BasicCompactionConfig summarization fields, route one request, or select a runtime default model',
     )
   }
 
@@ -154,11 +158,11 @@ export async function summarizeWithLlm(
     messages,
     ...input.tools === undefined ? {} : { tools: [...input.tools] },
     maxTokens: config.maxTokens,
-    sessionId: agent.session.id,
+    sessionId: route.session.id,
     purpose: 'compaction',
     ...signal === undefined ? {} : { signal },
   }
-  for await (const chunk of ctx.llm.stream(options)) assembler.push(chunk)
+  for await (const chunk of stream(options)) assembler.push(chunk)
   const error = finishError(assembler.finish)
   if (error !== undefined) throw error
 

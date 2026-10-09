@@ -60,6 +60,10 @@ Each Exa result maps to a `WebSearchSource`: `url`, `title`, the first non-blank
 
 Provider failures — HTTP errors, network failures, unparseable or wrong-shape bodies — surface as `WebError` `WEB_PROVIDER_ERROR`; an aborted request surfaces as `WEB_ABORTED`. HTTP redirects are rejected before the `Location` target is contacted and surface as `WEB_PROVIDER_ERROR`. Callers route on the code; the model-facing `web_search` tool surfaces failures to the model under its own error wrapper.
 
+### Native entry
+
+Native compositions import `./native`, which requires `web` and `launchEnvironment`. It registers the same `exa` provider with the same configuration and `$EXA_API_KEY` fallback as the Cordis entry. Removing the installation cancels admitted searches and waits for them to settle. Shipped native compositions do not install it; add the row and pin `searchProvider: exa` to select it ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+
 -----
 
 <a id="understand-the-implementation"></a>
