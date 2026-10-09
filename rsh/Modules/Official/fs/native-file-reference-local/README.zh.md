@@ -96,6 +96,8 @@ Tokens prefixed with @ are workspace paths the user explicitly referenced, relat
 - **命名空间跟随所选文件系统**：候选与 `fs` 提供方使用同一命名空间；若面向模型的 `read` 工具使用其他命名空间，就需要匹配的提供方。
 - **有界建议索引**：被排除的目录和超过 `maxEntries` 的条目不会被提供；`.gitignore` 文件不会改变遍历范围。
 
+**运行时不变量：** 每个 owner 的搜索索引只是可丢弃的建议性缓存，并非独立持久关系，因此不发布 invariant companion；文件系统结果和活动 owner 身份仍以所选 `fs` 与 `activeSessions` 服务为准。
+
 <a id="dev-note"></a>
 ### 开发备注
 

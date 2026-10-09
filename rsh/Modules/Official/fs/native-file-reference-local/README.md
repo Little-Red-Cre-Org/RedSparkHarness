@@ -96,6 +96,8 @@ These are current package constraints.
 - **Namespace follows the selected filesystem** — candidates match the `fs` provider's namespace; a model-facing `read` tool backed by another namespace needs a matching provider.
 - **Bounded advisory index** — excluded directories and entries beyond `maxEntries` are not offered, and `.gitignore` files do not affect traversal.
 
+**Runtime invariant:** No invariant companion is published because the per-owner search index is a disposable advisory cache, not a separate durable relation; the selected `fs` and `activeSessions` services remain authoritative for filesystem results and live owner identity.
+
 <a id="dev-note"></a>
 ### Dev Note
 
