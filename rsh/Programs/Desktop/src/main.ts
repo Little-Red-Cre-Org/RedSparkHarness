@@ -531,10 +531,15 @@ async function main(): Promise<void> {
       void showEmergencyError(error).catch((failure: unknown) => { console.error(failure) })
     })
     window.webContents.on('render-process-gone', (_event, details) => {
+      const crashedApplication = petUpdatesAllowed
       navigation = undefined
       emergencyDocument = false
       petUpdatesAllowed = false
       desktopPet.close()
+      if (crashedApplication && backendState().phase === 'ready') {
+        void navigateMain(applicationUrl).catch((failure: unknown) => { console.error(failure) })
+        return
+      }
       void showStartupError(new Error(`Desktop renderer exited: ${details.reason}`))
         .catch((failure: unknown) => { console.error(failure) })
     })

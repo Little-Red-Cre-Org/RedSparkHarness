@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-私有 Host 在导入任一组合前读取显式 profile runtime 标记。原生模式复用 CLI profile 校验与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
+私有 Host 在导入任一组合前读取显式 profile runtime 标记。原生模式复用 CLI profile 校验与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。只有 Desktop 以显式允许链接包方式启动的工作区开发项目跳过此包含检查，并从工作区构建其 Client。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
 
 ## 考虑过的替代方案
 

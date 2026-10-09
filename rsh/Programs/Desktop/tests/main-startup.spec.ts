@@ -325,7 +325,8 @@ describe('desktop main startup', () => {
 
     expect(() => invokeApplicationPet(window, presentation)).toThrow('Desktop pet updates require the primary application frame')
     expect(harness.desktopPetUpdate).not.toHaveBeenCalled()
-    await harness.errorPublished.promise
+    await vi.waitFor(() => { expect(window.urls.at(-1)).toBe('dsh-app://app/index.html') })
+    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'ready' })
   })
 
   it.each(['plugins', 'reset'])('runs %s recovery from a document with a broken preload', async (action) => {
