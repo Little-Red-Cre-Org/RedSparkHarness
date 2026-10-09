@@ -54,6 +54,9 @@
       "path": "../../../../Modules/Official/credentials/credentials"
     },
     {
+      "path": "../../../../Modules/Official/credentials/authorization"
+    },
+    {
       "path": "../../../../Modules/Official/interaction/native-approval"
     },
     {

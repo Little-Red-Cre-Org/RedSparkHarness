@@ -4,9 +4,12 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsDescriptor,
   type NativeSettingsPathOp, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
+import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
+import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
-import { SettingsPage, nativeSettingsDiff } from '../src/settings-page.tsx'
+import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 
 afterEach(cleanup)
 
@@ -75,7 +78,7 @@ it.each(locales)('persists serviceable edits and refreshes the canonical project
   })
   const client = {
     settingsDescribe: vi.fn(async () => settingsDescription(settings.describe())), settingsMutate,
-    credentialsDescribe: vi.fn(async () => ({})),
+    credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
 
   try {
@@ -114,6 +117,7 @@ it.each(locales)('renders write-only credentials and clears the value after stor
     settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(async () => ({ DEEPSEEK_API_KEY: { configured: false, writable: true } })),
+    authorizationList: vi.fn(async () => []),
     credentialsSet,
     credentialsUnset: vi.fn(async () => undefined),
   } as unknown as NativeSessionClient
@@ -147,7 +151,7 @@ it.each(locales)('saves a visible array field through its existing index ($langu
   const client = {
     settingsDescribe: vi.fn(async () => settingsDescription([row()])),
     settingsMutate,
-    credentialsDescribe: vi.fn(async () => ({})),
+    credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
   render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
@@ -170,7 +174,7 @@ it.each(locales)('reports unsupported structure edits instead of reporting a sav
   const client = {
     settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate,
-    credentialsDescribe: vi.fn(async () => ({})),
+    credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
   render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
@@ -203,7 +207,7 @@ it.each(locales)('aggregates credential reads above the advertised per-request b
   })
   const client = {
     settingsDescribe: vi.fn(async () => settingsDescription([row])),
-    settingsMutate: vi.fn(), credentialsDescribe,
+    settingsMutate: vi.fn(), credentialsDescribe, authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
   render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'credentials' })
@@ -221,7 +225,7 @@ it.each(locales)('refuses edits above the advertised atomic operation budget ($l
   const settingsMutate = vi.fn()
   const client = {
     settingsDescribe: vi.fn(async () => settingsDescription([row], { maxCredentialRefsPerRead: 64, maxSettingsOperations: 1 })),
-    settingsMutate, credentialsDescribe: vi.fn(async () => ({})),
+    settingsMutate, credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
   render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'bounded' })
@@ -231,4 +235,128 @@ it.each(locales)('refuses edits above the advertised atomic operation budget ($l
   fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
   expect((await screen.findByRole('alert')).textContent).toContain(strings.settingsOperationLimitExceeded)
   expect(settingsMutate).not.toHaveBeenCalled()
+})
+
+it('refresh mid-login then resume and finish', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  const scope = new NativeScope()
+  const events = new RuntimeEvents()
+  let configured = false
+  let answer: string | undefined
+  const credentials = {
+    describeRecord: vi.fn(async () => ({ configured, writable: true })),
+  } as unknown as NativeCredentials
+  const authorization = new NativeAuthorizationProvider(scope, credentials, { events })
+  authorization.registerFlow({
+    key,
+    label: 'OpenAI Codex',
+    methods: [{ id: 'oauth', label: 'OAuth' }],
+    async run(session) {
+      session.notify({ message: 'Open the authorization page', url: 'https://auth.example/device', code: 'ABCD-1234' })
+      answer = await session.prompt({ kind: 'secret', message: 'Authorization code' })
+      configured = true
+      authorization.recordUpdated(key)
+    },
+  })
+  const cancel = vi.fn(async (attemptId: string) => {
+    const attempt = authorization.current(key)
+    if (attempt?.id === attemptId) await attempt.cancel()
+  })
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    authorizationList: vi.fn(async () => Promise.all(authorization.list().map(async (entry) => {
+      const record = await credentials.describeRecord(key)
+      const attemptId = authorization.current(key)?.id
+      return { key: entry.key, label: entry.label, methods: entry.methods, configured: record.configured,
+        writable: record.writable, ...(attemptId === undefined ? {} : { attemptId }) }
+    }))),
+    authorizationBegin: vi.fn(async () => ({ attemptId: authorization.begin({ key }).id })),
+    authorizationFrames: vi.fn((frameKey: string, attemptId: string, signal: AbortSignal) => {
+      const attempt = authorization.current(key)
+      if (frameKey !== key || attempt?.id !== attemptId) throw new Error('missing authorization attempt')
+      return attempt.frames(signal)
+    }),
+    authorizationAnswer: vi.fn(async (_key: string, attemptId: string, promptId: string, value: string) => {
+      const attempt = authorization.current(key)
+      if (attempt?.id !== attemptId) throw new Error('missing authorization attempt')
+      attempt.answer(promptId as AuthorizationPromptId, value)
+    }),
+    authorizationCancel: vi.fn(async (_key: string, attemptId: string) => cancel(attemptId)),
+  } as unknown as NativeSettingsActions
+  const onAuthorized = vi.fn()
+  const props = { actions, t: (localeKey: keyof typeof en) => en[localeKey], onBack: () => undefined, onAuthorized }
+
+  try {
+    const firstPage = render(<SettingsPage {...props} />)
+    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
+    expect(await screen.findByText('ABCD-1234')).toBeTruthy()
+    await screen.findByLabelText('Authorization code')
+
+    firstPage.unmount()
+    expect(authorization.current(key)).toBeDefined()
+    expect(cancel).not.toHaveBeenCalled()
+
+    render(<SettingsPage {...props} />)
+    expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
+    const input = await screen.findByLabelText('Authorization code')
+    fireEvent.change(input, { target: { value: 'secret-answer' } })
+    fireEvent.click(screen.getByRole('button', { name: en.authorizationAnswer }))
+    expect(await screen.findByText(en.authorizationAuthorized)).toBeTruthy()
+    await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
+    await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
+    expect(answer).toBe('secret-answer')
+    expect(cancel).not.toHaveBeenCalled()
+  } finally { await authorization.dispose() }
+})
+
+it.each([
+  { name: 'settled before subscribe', attemptId: undefined },
+  { name: 'same id resubscribes once, then stops', attemptId: 'a1' },
+])('$name', async ({ attemptId }) => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
+    configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
+  const authorizationCancel = vi.fn(async () => undefined)
+  let releaseSecond!: () => void
+  const dropSecond = new Promise<void>((resolve) => { releaseSecond = resolve })
+  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, _signal: AbortSignal) {
+    if (attemptId === undefined || authorizationFrames.mock.calls.length !== 2) {
+      throw new Error('HTTP 409: unavailable attempt')
+    }
+    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
+    await dropSecond
+    throw new Error('HTTP 409: unavailable attempt')
+  })
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
+    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
+    authorizationBegin: vi.fn(async () => ({ attemptId: 'a1' })), authorizationFrames,
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel,
+  } as unknown as NativeSettingsActions
+  const onAuthorized = vi.fn(() => { throw new Error('native conversation: operation already pending') })
+  const page = render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined}
+    onAuthorized={onAuthorized} />)
+
+  if (attemptId === undefined) {
+    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.cancelSignIn })).toBeNull()
+  } else {
+    expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: en.cancelSignIn })).toBeTruthy()
+    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    releaseSecond()
+    expect(await screen.findByText(en.authorizationDisconnected)).toBeTruthy()
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    await new Promise<void>((resolve) => { setTimeout(() => { resolve() }, 20) })
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
+  }
+  expect(authorizationList).toHaveBeenCalledTimes(2)
+  expect(onAuthorized).toHaveBeenCalledOnce()
+  expect(authorizationCancel).not.toHaveBeenCalled()
+  page.unmount()
 })
