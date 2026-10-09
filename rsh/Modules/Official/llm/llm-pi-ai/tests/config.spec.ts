@@ -57,6 +57,17 @@ describe('reasoning schema boundary', () => {
   })
 })
 
+describe('ChatGPT-plan profile boundary', () => {
+  it('rejects static account model overrides', () => {
+    const config = Config({ providers: { 'openai-codex': {
+      models: [{ id: 'fixture-model' }],
+      modelOverrides: { 'fixture-model': { name: 'Fixture' } },
+    } } })
+    expect(() => { assertServiceable(config) })
+      .toThrow(/models and modelOverrides come from the signed-in account catalog/)
+  })
+})
+
 describe('modality schema boundary', () => {
   it('rejects a modality pi-ai does not know, at either level', () => {
     expect(configWith({ input: ['audio'] })).toThrow(/expected/)

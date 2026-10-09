@@ -25,6 +25,7 @@ import { LlmError } from '@deepseek-ai/dsh-llm/native'
  * provider name — that this plugin owns the format inside the record.
  */
 export const RECORD_SCOPE = 'llm-pi-ai'
+const INTERNAL_RECORD_IDS = new Set(['openai-codex-siwc-registration'])
 
 /**
  * The record address for one pi-ai provider id.
@@ -149,8 +150,10 @@ export function credentialStoreFrom(credentials: NativeCredentials | undefined):
         // Records another plugin owns are not this collection's to report:
         // their payloads are written in a format pi-ai never agreed to.
         if (credentialKeyScope(entry.key) !== RECORD_SCOPE) continue
+        const providerId = credentialKeyId(entry.key)
+        if (INTERNAL_RECORD_IDS.has(providerId)) continue
         mine.push({
-          providerId: credentialKeyId(entry.key),
+          providerId,
           type: entry.kind === 'api-key' ? 'api_key' : 'oauth',
         })
       }

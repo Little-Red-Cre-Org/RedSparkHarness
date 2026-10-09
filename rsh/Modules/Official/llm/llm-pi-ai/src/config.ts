@@ -78,6 +78,9 @@ export const DEFAULT_MAX_TOKENS = 32_768
  */
 export const DEFAULT_INPUT: readonly PiAiModality[] = ['text']
 
+const CODEX_SUBSCRIPTION_ROUTE = 'openai-codex'
+const CODEX_RESPONSES_BASE_URL = 'https://api.openai.com/v1'
+
 export type {
   PiAiCompatProfile,
   PiAiModality,
@@ -395,6 +398,50 @@ function assertValidHeaders(provider: string, headers: Readonly<Record<string, s
   }
 }
 
+/** Keep the SIWC route on its account OAuth and the documented public HTTP/SSE contract. */
+function assertCodexSubscriptionProfile(provider: string, source: PiAiProviderProfile): void {
+  if (provider !== CODEX_SUBSCRIPTION_ROUTE) return
+  if ((source.models?.length ?? 0) > 0 || Object.keys(source.modelOverrides ?? {}).length > 0) {
+    throw new Error('llm-pi-ai: openai-codex models and modelOverrides come from the signed-in account catalog')
+  }
+  if (source.defaultContextWindow !== undefined && source.defaultContextWindow !== DEFAULT_CONTEXT_WINDOW) {
+    throw new Error('llm-pi-ai: openai-codex does not accept a configured context limit')
+  }
+  if (source.defaultMaxTokens !== undefined && source.defaultMaxTokens !== DEFAULT_MAX_TOKENS) {
+    throw new Error('llm-pi-ai: openai-codex does not accept a configured output-token limit')
+  }
+  if (source.defaultInput !== undefined
+    && (source.defaultInput.length !== 1 || source.defaultInput[0] !== 'text')) {
+    throw new Error('llm-pi-ai: openai-codex publishes text-only input until the account catalog declares modalities')
+  }
+  if (source.api !== undefined && source.api !== 'openai-responses') {
+    throw new Error('llm-pi-ai: openai-codex uses the public OpenAI Responses protocol')
+  }
+  if (source.baseURL !== undefined && source.baseURL !== CODEX_RESPONSES_BASE_URL) {
+    throw new Error(`llm-pi-ai: openai-codex uses ${CODEX_RESPONSES_BASE_URL}`)
+  }
+  if (source.apiKeyEnv !== undefined) {
+    throw new Error('llm-pi-ai: openai-codex authenticates only through its Sign in with ChatGPT account')
+  }
+  if (Object.keys(source.headers ?? {}).some(name => name.toLowerCase() === 'authorization')) {
+    throw new Error('llm-pi-ai: openai-codex Authorization is owned by its Sign in with ChatGPT account')
+  }
+  if (source.transport !== undefined && source.transport !== 'sse') {
+    throw new Error('llm-pi-ai: openai-codex supports the public HTTP/SSE Responses transport only')
+  }
+  if (source.cacheRetention !== undefined || source.websocketConnectTimeoutMs !== undefined) {
+    throw new Error('llm-pi-ai: openai-codex does not support prompt cache retention or WebSocket controls')
+  }
+  const compat = source.compat
+  const hasCompatControls = Object.entries(compat ?? {}).some(([name]) =>
+    name !== 'chatTemplateKwargs' && name !== 'chatTemplateArgs')
+    || Object.keys(compat?.chatTemplateKwargs ?? {}).length > 0
+    || Object.keys(compat?.chatTemplateArgs ?? {}).length > 0
+  if (source.reasoning !== undefined || Object.keys(source.thinkingBudgets ?? {}).length > 0 || hasCompatControls) {
+    throw new Error('llm-pi-ai: openai-codex does not expose reasoning or Responses compatibility controls')
+  }
+}
+
 /**
  * Resolve scalar defaults and materialize each route's serviceable models.
  * Deferred catalog validation retains diagnostics without deleting configured
@@ -414,6 +461,7 @@ export function resolveProfiles(
   const resolved = new Map<string, ResolvedPiAiProviderProfile>()
   for (const [provider, source] of entries) {
     rejectRemovedFields(provider, source)
+    assertCodexSubscriptionProfile(provider, source)
     if (provider.length === 0) throw new Error('llm-pi-ai: provider names must be non-empty')
     if (source.baseURL !== undefined && source.baseURL.length === 0) {
       throw new Error(`llm-pi-ai: provider "${provider}" has an empty baseURL`)

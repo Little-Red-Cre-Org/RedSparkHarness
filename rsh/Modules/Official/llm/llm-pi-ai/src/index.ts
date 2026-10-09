@@ -250,6 +250,9 @@ export function apply(ctx: Context, config: Config): void {
     return {
       headers: profile.headers,
       resolveApiKey: () => resolveApiKey(provider, profile),
+      ...provider === 'openai-codex'
+        ? { resolveCodexAuth: (signal?: AbortSignal) => adapter.getProviderAuth(provider, signal) }
+        : {},
     }
   }
   // Interrogating an endpoint is a configuration-time action over a draft, so

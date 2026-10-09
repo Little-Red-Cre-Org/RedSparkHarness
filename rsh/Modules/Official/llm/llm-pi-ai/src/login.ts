@@ -15,6 +15,7 @@ import { isCredentialKeySegment } from '@deepseek-ai/dsh-credentials'
 import { catalogProvider, catalogProviderIds } from './catalog.ts'
 import { recordKeyFor } from './auth.ts'
 import type { PiAiAuthInjection } from './adapter.ts'
+import { createSiwcOAuth } from './siwc.ts'
 
 /**
  * The login methods one catalog provider offers.
@@ -120,11 +121,19 @@ function restate(prompt: AuthPrompt): AuthorizationPrompt {
 export function registerPiAiFlows(ctx: Context, auth: PiAiAuthInjection): void {
   for (const providerId of catalogProviderIds()) {
     const provider = catalogProvider(providerId)
-    const [first, ...rest] = loginMethods(provider)
+    const loginProvider = providerId === 'openai-codex' && provider !== undefined
+      ? {
+        ...provider,
+        auth: {
+          oauth: createSiwcOAuth(auth.credentials),
+        },
+      }
+      : provider
+    const [first, ...rest] = loginMethods(loginProvider)
     /* v8 ignore next 3 -- every id here names an installed provider and every
        installed provider ships a login, so no entry is skipped; the guard
        is what keeps that from becoming a crash if either stops being true. */
-    if (provider === undefined || first === undefined) continue
+    if (loginProvider === undefined || first === undefined) continue
     /* v8 ignore next 7 -- every installed catalog id is a lowercase
        hyphenated identifier; the guard keeps a future upstream id outside the
        record grammar (dotted or uppercase, as vendor ids elsewhere already
@@ -137,14 +146,14 @@ export function registerPiAiFlows(ctx: Context, auth: PiAiAuthInjection): void {
     }
     ctx.authorization.registerFlow({
       key: recordKeyFor(providerId),
-      label: provider.name,
+      label: loginProvider.name,
       methods: [first, ...rest],
       async run(session) {
         // A collection of its own, holding only the provider being signed
         // into: login is not serving requests, and the credential it produces
         // lands in the shared store either way.
         const models = createModels(auth)
-        models.setProvider(provider)
+        models.setProvider(loginProvider)
         // Total over the two ids declared above, and the seam only ever hands
         // back one a flow declared.
         const type: AuthType = session.method === 'oauth' ? 'oauth' : 'api_key'
