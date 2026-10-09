@@ -92,7 +92,9 @@ jobs:
         run: pnpm build:native
 
       - name: Entry tests (keyless)
-        run: node ./test/entry.test.js
+        run: |
+          node ./test/entry.test.js
+          node --test ./test/pull-node-image.test.js
 
       # NALR_REQUIRE_LANDLOCK: a self-skip on the very platform that exists to
       # prove enforcement would be a false green, so an unenforcing kernel
@@ -120,10 +122,11 @@ jobs:
 
       - name: Test the same musl addon on Node 24 without a compiler
         if: runner.os == 'Linux'
-        run: >-
-          docker run --rm -v "$PWD:$PWD" -w "$PWD"
-          node:24-alpine
-          node --test ./test/flock.test.js ./test/package-matrix.test.js
+        run: |
+          node ./scripts/pull-node-image.mjs node:24-alpine
+          docker run --pull=never --rm -v "$PWD:$PWD" -w "$PWD" \
+            node:24-alpine \
+            node --test ./test/flock.test.js ./test/package-matrix.test.js
 
       - uses: actions/setup-node@v4
         with:
@@ -134,10 +137,11 @@ jobs:
 
       - name: Test the same musl addon on Node 20 without a compiler
         if: runner.os == 'Linux'
-        run: >-
-          docker run --rm -v "$PWD:$PWD" -w "$PWD"
-          node:20-alpine
-          node --test ./test/flock.test.js ./test/package-matrix.test.js
+        run: |
+          node ./scripts/pull-node-image.mjs node:20-alpine
+          docker run --pull=never --rm -v "$PWD:$PWD" -w "$PWD" \
+            node:20-alpine \
+            node --test ./test/flock.test.js ./test/package-matrix.test.js
 
       - uses: actions/setup-node@v4
         with:
@@ -148,10 +152,11 @@ jobs:
 
       - name: Test the same musl addon on Node 22 without a compiler
         if: runner.os == 'Linux'
-        run: >-
-          docker run --rm -v "$PWD:$PWD" -w "$PWD"
-          node:22-alpine
-          node --test ./test/flock.test.js ./test/package-matrix.test.js
+        run: |
+          node ./scripts/pull-node-image.mjs node:22-alpine
+          docker run --pull=never --rm -v "$PWD:$PWD" -w "$PWD" \
+            node:22-alpine \
+            node --test ./test/flock.test.js ./test/package-matrix.test.js
 
       - uses: actions/setup-node@v4
         with:
@@ -162,7 +167,8 @@ jobs:
 
       - name: Test the same musl addon on Node 26 without a compiler
         if: runner.os == 'Linux'
-        run: >-
-          docker run --rm -v "$PWD:$PWD" -w "$PWD"
-          node:26-alpine
-          node --test ./test/flock.test.js ./test/package-matrix.test.js
+        run: |
+          node ./scripts/pull-node-image.mjs node:26-alpine
+          docker run --pull=never --rm -v "$PWD:$PWD" -w "$PWD" \
+            node:26-alpine \
+            node --test ./test/flock.test.js ./test/package-matrix.test.js

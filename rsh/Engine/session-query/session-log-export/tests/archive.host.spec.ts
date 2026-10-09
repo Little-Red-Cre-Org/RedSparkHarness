@@ -200,7 +200,7 @@ async function responseBytes(response: Response): Promise<Uint8Array> {
 /** Minimal ready services for the direct streamSessionLogZip chunking tests. */
 function directReady(): SessionLogExport.SessionLogExportReady {
   return {
-    sessionQuery: { traceSession: async () => { throw new Error('unused') } } as never,
+    sessionQuery: { traceSession: async () => { throw new Error('unused') } },
     sessionPersistence: { open: async () => { throw new Error('unused') } } as never,
     attachments: { readImage: async () => { throw new Error('no media') } } as never,
     sessions: undefined,
