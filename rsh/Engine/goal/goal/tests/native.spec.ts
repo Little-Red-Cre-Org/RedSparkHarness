@@ -41,6 +41,7 @@ async function fixture() {
     async readEvents() { await owner.flush(); return (await writer.read()).events },
     messages() { return [] }, async enqueue(message) { return message.id }, async remove() {},
     retain() { leases++; let released = false; return () => { if (!released) { released = true; leases-- } } },
+    retainBackground() { leases++; let released = false; return () => { if (!released) { released = true; leases-- } } },
     onEvent(observer) { observers.add(observer); return () => { observers.delete(observer) } },
     onIdle() { return async () => {} }, beforeStep() { return async () => {} },
   }

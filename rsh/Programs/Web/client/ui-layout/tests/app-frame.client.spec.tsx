@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Frame interactions with a real store and explicitly driven browser measurements. */
-import type { GlobalStandardProps, RenderOpts } from '@deepseek-ai/dsh-client-ui-slots'
+import type { RenderOpts } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render } from '@testing-library/react'
@@ -8,16 +8,10 @@ import { AppFrame } from '../src/client/AppFrame.tsx'
 import type { AppFrameProps } from '../src/client/AppFrame.tsx'
 import type { MainPanelId, RightbarOwnerProps, SidebarOwnerProps } from '../src/client/index.ts'
 import { createLayoutStore } from '../src/client/stores.ts'
-import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
-const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined })) as GlobalStandardProps['useResource']
 let selectedSession: SessionId | undefined
 let selectedSessionTitle: string | undefined
-let workspacesReady = true
-type AttentionSnapshot = Parameters<Parameters<AppFrameProps['useSessionPendingInteraction']>[0]>[0]
-const noAttention: AttentionSnapshot = new Map()
-const useSessionPendingInteraction: AppFrameProps['useSessionPendingInteraction'] = selector => selector(noAttention)
 
 let observers: ResizeObserverStub[]
 class ResizeObserverStub {
@@ -69,23 +63,13 @@ function mountFrame(windowWidth = frameWidth) {
     return <div data-testid={`${key}-content`} data-entry-key={options?.entryKey} />
   }
   const useSessions: AppFrameProps['useSessions'] = sel => sel({
-    ids: selectedSession === undefined ? [] : [selectedSession],
     byId: selectedSession === undefined ? {} : {
       [selectedSession]: {
-        id: selectedSession, displayTitle: 'Test', running: false, blank: false, updatedAt: 1,
         ...(selectedSessionTitle === undefined ? {} : { title: selectedSessionTitle }),
       },
     },
     current: selectedSession,
-    phase: 'ready',
-    subagentsByParent: {},
-    jobsBySession: {},
-    currentAddress: undefined,
   })
-  const workspaceState: WorkspaceSnapshot = {
-    items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
-    ...(workspacesReady ? {} : { state: 'loading' as const, phase: 'pending' as const }),
-  }
   const useStore = bindSnapshotSelector(instance)
   const usePanelInfo = bindSnapshotSelector({
     getSnapshot: () => instance.getSnapshot().panelInfo,
@@ -98,9 +82,6 @@ function mountFrame(windowWidth = frameWidth) {
       renderSlot={renderSlot}
       useSessions={useSessions}
       usePanelInfo={usePanelInfo}
-      useSessionPendingInteraction={useSessionPendingInteraction}
-      useResource={useResource}
-      useWorkspaces={sel => sel(workspaceState)}
       t={key => key === 'brand.localBuild' ? 'DSH Local Build' : key}
     />
   )
@@ -142,7 +123,6 @@ beforeEach(() => {
   frameWidth = 1920
   selectedSession = 's-test' as SessionId
   selectedSessionTitle = undefined
-  workspacesReady = true
   observers = []
   animationFrames = new Map()
   nextFrame = 1
@@ -214,8 +194,8 @@ describe('AppFrame', () => {
     expect(tracks(frame)).toEqual([280, 0])
   })
 
-  it('renders both occupants before workspace baselines settle', () => {
-    workspacesReady = false
+  it('renders its occupants without workspace or Session baselines', () => {
+    selectedSession = undefined
     const { getByTestId } = mountFrame()
     expect(getByTestId('main-content').getAttribute('data-entry-key')).toBe('conversation')
     expect(getByTestId('rightbar-content')).toBeTruthy()

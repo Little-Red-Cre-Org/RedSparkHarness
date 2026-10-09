@@ -43,6 +43,12 @@
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

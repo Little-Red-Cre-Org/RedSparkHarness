@@ -12,11 +12,13 @@
 
 私有 Desktop Host 从项目根目录读取可选的 `rsh.client.json`。修订版 1 列出唯一安装标识、已安装包名和可选 JSON 配置。包查找仅限 Desktop 项目与内置运行时。Host 在导入前校验包身份和已发布的 `dsh.native` 导出，要求目标包含 `client`，并拒绝包含 Cordis 的编译依赖图。
 
-所有选中入口合并为一个浏览器 ESM bundle，使共享导入保留唯一模块实例。Host 将 bundle URL、样式表、模块标识与选择项注入 `native.html`，并只从内存资源表提供生成文件。现有 `/` 与 `/index.html` 继续使用旧版应用。没有 Client profile 时，`/native.html` 不可用；profile 配置无效会导致 Host 启动失败，不会回退。
+原生 Host 将选中入口合并为一个浏览器 ESM bundle，使共享导入保留唯一模块实例。它会将 bundle URL、样式表、模块标识与选择项注入 `native.html`，并只从内存资源表提供生成文件，作为根应用提供此页面。兼容 Host 只提供现有应用，并会在启动前拒绝 `rsh.client.json`，因为其 Typert Session endpoint 不实现 Native Session 的响应、follow 和 image 路由。它对 `/native.html` 和 `/.dsh/native-client/` 资源返回 404；原生 profile 配置无效会导致 Native Host 启动失败，不会回退。
 
-此选择器只用于原生 Client 预览，不选择 Desktop Host 组合，也不代表生产 UI 已完成迁移。只有真实原生 renderer 覆盖受支持界面并通过 P5 profile 验收后，才能迁移默认页面。
+`rsh.client.json` 选择 Client 入口，但不选择 Host。profile 的 `package.json` 设置 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"`；组合配置保存在 `rsh.profile.json` 中。Desktop 默认 profile 仍使用兼容 Host；只有真实原生 renderer 覆盖受支持界面并通过 P5 profile 验收后，才能迁移默认页面。
 
 ## 考虑过的替代方案
+
+**由兼容 Host 提供 Native Client：** 兼容 Session endpoint 虽有部分名称相同，但响应不同且没有 Native follow 或 image 路由，因此无法提供页面必需的 Host API。
 
 **预览继续使用 Cordis Loader：** 浏览器路径仍依赖 Cordis，无法验证原生 Client runtime。
 

@@ -36,6 +36,8 @@ React、Session、原生模型选择、Agent 预设、todo Client 值及原生 S
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 
+可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。可见 Workspace 上下文来自 Session header 的 `cwd` 投影；完整 Workspace 浏览器以及 Workspace 列表、创建、搜索、移动和删除操作仍属于 P4 Workspace/Resource slice。
+
 <a id="invariants"></a>
 
 待答工具审批提供允许一次与拒绝操作。问题卡保留标题、详情、选项、多选及自定义文本。提交失败保留待答请求；取消禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
@@ -77,5 +79,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
-- 文件上传、完整 Sidebar、布局、浏览器授权流程、不透明凭据 grant 编辑及完整旧版插件 Settings 页面仍属于独立的原生 Client 迁移。
+- 当前 prompt 路径支持图片附件；更广泛的附件/资源管理、Workspace 列表/创建/搜索/移动/删除、浏览器授权流程、不透明凭据 grant 编辑及完整旧版插件 Settings 页面仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

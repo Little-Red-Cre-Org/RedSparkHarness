@@ -6,11 +6,11 @@ Status: implemented
 
 ## 问题
 
-原生 Client 预览仍将 Desktop Agent 与 Session 留在兼容 Host。原生安装需要选择实际 Host，同时保持现有 Desktop 默认项且不开放服务器。
+Desktop 默认仍使用兼容 Host。原生 Client 的 Session RPC、follow 与 image 路由要求原生 Session controller，因此兼容 profile 选择原生 Client 入口时必须在启动前失败。原生安装会选择匹配的 Host，同时保持现有 Desktop 默认项且不开放服务器。
 
 ## 决策
 
-私有 Host 在导入任一组合前读取显式 profile runtime 标记。原生模式复用 CLI profile 校验与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。只有 Desktop 以显式允许链接包方式启动的工作区开发项目跳过此包含检查，并从工作区构建其 Client。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
+私有 Host 在导入任一组合前，从已安装 profile 的 `package.json` 读取 `dsh.profile.runtime`；`dsh.profile.config` 指定保存组合配置的 `rsh.profile.json`。原生模式复用 CLI profile 校验与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。只有 Desktop 以显式允许链接包方式启动的工作区开发项目跳过此包含检查，并从工作区构建其 Client。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
 
 ## 考虑过的替代方案
 

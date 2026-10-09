@@ -247,10 +247,10 @@ export function collectNativeDependencyViolations(root: string): string[] {
       return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0] ?? specifier
     }
     const stylesheetReferenceAllowed = (owner: string, sourceFile: string, specifier: string): boolean => {
-      if (face !== 'client' || !specifier.endsWith('.css')) return false
+      if (face !== 'client' || (!specifier.endsWith('.css') && !specifier.endsWith('.css?inline'))) return false
       if (sourceFile.endsWith('.d.ts') && (specifier === '*.module.css' || specifier === '*.css')) return true
       if (specifier.startsWith('.')) {
-        const stylesheet = resolve(dirname(sourceFile), specifier)
+        const stylesheet = resolve(dirname(sourceFile), specifier.endsWith('?inline') ? specifier.slice(0, -'?inline'.length) : specifier)
         const path = relative(resolve(root, owner, 'src'), stylesheet)
         return !path.startsWith('..') && !isAbsolute(path) && existsSync(stylesheet)
       }

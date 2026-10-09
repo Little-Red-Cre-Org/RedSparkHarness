@@ -280,6 +280,14 @@ export class NativeContinuationRuntime {
     return live.activation.retainChild()
   }
 
+  /** Retain one exact resident Session writer for an owned background task. */
+  retainBackground(agent: NativeAgent): (() => void) | undefined {
+    const id = SessionId(agent.id)
+    const live = this.resident.get(id)
+    if (live === undefined || live.handle.agent !== agent) return undefined
+    return live.activation.retainBackground()
+  }
+
   /** Close creation and delivery admission and drain resident writers and Agents. @returns the memoized shutdown transaction. */
   dispose(): Promise<void> {
     if (this.closing !== undefined) return this.closing
@@ -310,6 +318,7 @@ export class NativeContinuationRuntime {
     const cancellation = new AbortController()
     const startup = Promise.withResolvers<NativeSessionContinuation>()
     const releaseResidentParent = this.retainChild(parent)
+    const releaseBackgroundParent = this.retainBackground(parent)
     const releaseParent = this.program.agents.onDispose(parent, async () => {
       cancellation.abort(new Error('native-continuation: parent is closing'))
       await startup.promise.then(() => undefined, () => undefined)
@@ -325,8 +334,13 @@ export class NativeContinuationRuntime {
     void this.materialize(parent, session, request, startupSignal).then(startup.resolve, startup.reject)
     void startup.promise.then((handle) => {
       cleanup()
-      void handle.done.then(() => { releaseResidentParent?.() }, () => { releaseResidentParent?.() })
-    }, () => { cleanup(); releaseResidentParent?.() })
+      const releaseForeground = (): void => { releaseResidentParent?.() }
+      void handle.waitForeground().then(releaseForeground, releaseForeground)
+      void handle.done.then(() => { releaseForeground(); releaseBackgroundParent?.() }, () => {
+        releaseForeground()
+        releaseBackgroundParent?.()
+      })
+    }, () => { cleanup(); releaseResidentParent?.(); releaseBackgroundParent?.() })
     return startup.promise
   }
 
@@ -392,7 +406,7 @@ export class NativeContinuationRuntime {
       resources.own(() => { releaseParent() })
       const handle: NativeSessionContinuation = { id: request.id, agent: registration.execution.agent,
         get isClosing() { return activation.isClosing },
-        ready: ready.promise, done: activation.done,
+        ready: ready.promise, waitForeground: () => activation.waitForeground(), done: activation.done,
         enqueue: (message, target, admissionSignal) => activation.enqueue(message, target, admissionSignal),
         // Interruption is request-only; execution and cleanup failures remain visible through done and dispose.
         interrupt: (reason) => { void activation.interrupt(reason) }, retainChild: () => activation.retainChild(),

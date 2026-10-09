@@ -13,6 +13,19 @@ const PROFILE_FILENAME = 'rsh.client.json'
 const ROUTE_PREFIX = '/.dsh/native-client/'
 const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u
 
+/** Follow the public-only clientBuildEnvironmentDefines contract without a Scripts runtime dependency. */
+function nativeClientEnvironmentDefines(): Record<string, string> {
+  const publicValues = Object.fromEntries(Object.entries(process.env)
+    .filter(([name, value]) => name.startsWith('DSH_CLIENT_') && value !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, value]) => [`process.env.${name}`, JSON.stringify(value)]))
+  return {
+    ...publicValues,
+    'process.env': '{}',
+    'process.env.NODE_ENV': '"production"',
+  }
+}
+
 /** One Host-owned response path and body in the compiled browser graph. */
 export interface NativeClientAsset {
   readonly contentType: string
@@ -205,7 +218,7 @@ export async function prepareNativeClientBundle(
     assetNames: 'assets/[name]-[hash]',
     publicPath: ROUTE_PREFIX.slice(0, -1),
     mainFields: ['browser', 'module', 'main'],
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: nativeClientEnvironmentDefines(),
     loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file', '.png': 'file', '.jpg': 'file' },
     plugins: [{ name: 'native-client-input-observation', setup(builder) {
       builder.onResolve({ filter: /.*/ }, (args) => {

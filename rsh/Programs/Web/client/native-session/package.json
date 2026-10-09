@@ -22,6 +22,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./list-types": {
+      "types": "./lib/types/list-types.d.ts",
+      "default": "./lib/list-types.js"
+    },
     "./package.json": "./package.json",
     "./follow-types": {
       "types": "./lib/types/follow-types.d.ts",
@@ -55,6 +59,7 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/list-types.js",
     "lib/follow-types.js",
     "lib/model-controls.js",
     "lib/human.js",

@@ -66,7 +66,7 @@ Automatic failures warn and retain the latest title; explicit `refresh()` reject
 
 ### Native runtime
 
-The `./native` entry provides the same titles for native profiles as the `sessionTitles` service. It requires `activeSessions`, folds each attached Session owner's log, and writes `session/title` through that owner. `get(agent)`, `rename(owner, title)`, `refresh(owner)`, and `register(provider)` behave like the Cordis methods; a native provider also receives `appendEvent` for its own log-only records. Automatic provider work starts after the main request's `request/header`, or after `step/end` when the route is unchanged, and keeps the owner open until the title is persisted. The shipped `native-tui` and `native-web` profiles install it with the first-prompt provider and the Cordis base bundle's limits.
+The `./native` entry provides the same titles for native profiles as the `sessionTitles` service. It requires `activeSessions`, folds each attached Session owner's log, and writes `session/title` through that owner. `get(agent)`, `rename(owner, title)`, `refresh(owner)`, and `register(provider)` behave like the Cordis methods; `drainOwner(owner)` waits for accepted title work without changing its revision. A native provider also receives `appendEvent` for its own log-only records. Automatic provider work starts after the main request's `request/header`, or after `step/end` when the route is unchanged, and keeps the owner open until the title is persisted. The shipped `native-tui` and `native-web` profiles install it with the first-prompt provider and the Cordis base bundle's limits.
 
 -----
 

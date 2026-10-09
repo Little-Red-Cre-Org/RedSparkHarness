@@ -33,11 +33,11 @@ Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，
 
 ### 显式原生组合
 
-私有 Desktop Host 可以在 `/native.html` 提供单独选择的原生 Client 页面。桌面项目根目录可选的 `rsh.client.json` 使用 `formatVersion: 1` 和 `installations` 数组；每项包含唯一 `id`、已安装包名 `plugin` 和可选 JSON `config`。Host 只从项目或内置运行时解析包，校验每个已导出 `package.json.dsh.native` 入口是否支持 `client`，并拒绝包含 Cordis 的浏览器依赖图。它会将所选入口合并打包，并通过 `/.dsh/native-client/` 提供 JavaScript、样式和生成的资源。
+Native Host 在应用根路径和 `/native.html` 提供所选原生 Client。桌面项目根目录可选的 `rsh.client.json` 使用 `formatVersion: 1` 和 `installations` 数组；每项包含唯一 `id`、已安装包名 `plugin` 和可选 JSON `config`。Native Host 只从项目或内置运行时解析包，校验每个已导出 `package.json.dsh.native` 入口是否支持 `client`，并拒绝包含 Cordis 的浏览器依赖图。它会将所选入口合并打包，并通过 `/.dsh/native-client/` 提供 JavaScript、样式和生成的资源。
 
-现有 profile 默认保留 Cordis Host。显式声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"` 则选择唯一原生 Host。此模式要求指定时的 `configReload` 为 `"startup"`，一个原生 Session controller 及其 Provider，并提供 `rsh.client.json`；根页面随后提供所选原生 Client。Host 与 Client 包必须解析到 profile 或内置运行时内，其导出文件必须位于各自包内。配置非法、Cordis patch 非空、Client 组合缺失以及另一个 application 或 Connection Provider 均阻止激活。Electron 持有私有传输；profile 不能通过它启动另一应用或 HTTP 监听器。共享 Session execution Provider 持有轮次与恢复。
+现有 profile 默认保留 Cordis Host。profile 在自己的 `package.json` 中设置 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"` 后选择唯一原生 Host；`rsh.profile.json` 保存组合配置。此模式要求指定时的 `configReload` 为 `"startup"`，一个原生 Session controller 及其 Provider，并提供 `rsh.client.json`；根页面随后提供所选原生 Client。Host 与 Client 包必须解析到 profile 或内置运行时内，其导出文件必须位于各自包内。配置非法、Cordis patch 非空、Client 组合缺失以及另一个 application 或 Connection Provider 均阻止激活。Electron 持有私有传输；profile 不能通过它启动另一应用或 HTTP 监听器。共享 Session execution Provider 持有轮次与恢复。
 
-兼容 Host 仍可提供原生 Client 预览，而不选择原生 Host。没有 `rsh.client.json` 时，其 `/native.html` 返回 404，`/` 保留现有应用。原生模式支持所选 Session Client 的能力。原生配置不支持兼容插件列表与变更操作，并显示本地化提示。
+兼容 Host 只提供现有应用。如果 profile 中包含 `rsh.client.json`，Host 会在启动时失败并提示配置 `dsh.profile.runtime: "native"`；兼容 Typert Session endpoint 不实现 Native Session 的响应、follow 和 image 路由。没有 `rsh.client.json` 时，`/native.html` 返回 404，`/` 保留现有应用。原生模式支持所选 Session Client 的能力。原生配置不支持兼容插件列表与变更操作，并显示本地化提示。
 
 ### 运行时与插件激活
 

@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { collectSlotEntries, oversizedSlotReports, resolveSlotEntries, validateSlotContracts } from './gen-client-catalog.ts'
+import { collectSlotEntries, isClientFaceSource, oversizedSlotReports, resolveSlotEntries, validateSlotContracts } from './gen-client-catalog.ts'
 import type { SlotDeclaration, SlotRegistration, TypeDeclaration } from './slot-walk.ts'
 
 /** A declaration with every field the catalog needs, overridable per case. */
@@ -46,6 +46,16 @@ const OWNER_TYPES = new Map<string, TypeDeclaration>([
 ])
 
 describe('client slot contract validation', () => {
+  it.each([
+    ['ignores packages without a Cordis client face', false, undefined, 'src/client/index.ts', false],
+    ['keeps the client face in a dual-face package', true, './native', 'src/client/index.ts', true],
+    ['excludes a dual-face Native entry', true, './native', 'src/native.ts', false],
+    ['excludes Native entry companions without narrowing the browser face', true, './native', 'src/native-ui.tsx', false],
+  ])('%s', (_case, hasClientFace, nativeEntry, source, expected) => {
+    expect(isClientFaceSource(`rsh/Programs/Web/client/demo/${source}`, 'rsh/Programs/Web/client/demo', hasClientFace, nativeEntry))
+      .toBe(expected)
+  })
+
   it('accepts a documented slot whose owner props resolve', () => {
     expect(validateSlotContracts(
       [declaration({ ownerType: 'DemoOwnerProps' })],
@@ -210,5 +220,13 @@ describe('the real workspace surface', () => {
     const root = entries.find(entry => entry.key === 'root')
     expect(root?.replaceRisk).toBe('shadows-shipped-ui')
     expect(root?.occupants.join(' ')).toContain('AppFrame')
+
+    // Native and Cordis SlotMaps are separate compositions, even when their
+    // package publishes both entries with the same key.
+    expect(entries.find(entry => entry.key === 'main')?.source)
+      .toContain('rsh/Programs/Web/client/ui-layout/src/client/')
+    expect(entries.find(entry => entry.key === 'sidebar')?.occupants)
+      .toEqual(['client-ui-sidebar SidebarRoot'])
+    expect(entries.some(entry => entry.key === 'native.conversation.actions')).toBe(false)
   })
 })
