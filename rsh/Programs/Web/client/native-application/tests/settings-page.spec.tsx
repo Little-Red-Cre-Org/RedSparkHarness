@@ -310,24 +310,42 @@ it('refresh mid-login then resume and finish', async () => {
   } finally { await authorization.dispose() }
 })
 
-it('fast settle: lost subscription falls back to the refreshed record', async () => {
+it.each([
+  { name: 'settled before subscribe', attemptId: undefined },
+  { name: 'same id resubscribes after a transient failure', attemptId: 'a1' },
+])('$name', async ({ attemptId }) => {
   const key = credentialKey('llm-pi-ai', 'openai-codex')
   const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
-    configured: false, writable: true }])
+    configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
   const authorizationCancel = vi.fn(async () => undefined)
+  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
+    if (attemptId === undefined || authorizationFrames.mock.calls.length === 1) throw new Error('HTTP 409: unavailable attempt')
+    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
+    await new Promise((resolve) => { signal.addEventListener('abort', resolve) })
+  })
   const actions = {
     settingsDescribe: vi.fn(async () => settingsDescription([])),
     settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
     credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
-    authorizationBegin: vi.fn(async () => ({ attemptId: 'a1' })),
-    authorizationFrames: vi.fn(() => { throw new Error('HTTP 409: unavailable attempt') }),
+    authorizationBegin: vi.fn(async () => ({ attemptId: 'a1' })), authorizationFrames,
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel,
   } as unknown as NativeSettingsActions
-  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const onAuthorized = vi.fn(() => { throw new Error('native conversation: operation already pending') })
+  const page = render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined}
+    onAuthorized={onAuthorized} />)
 
-  fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
-  expect(await screen.findByRole('button', { name: en.signIn })).toBeTruthy()
-  expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
+  if (attemptId === undefined) {
+    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.cancelSignIn })).toBeNull()
+  } else {
+    expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: en.cancelSignIn })).toBeTruthy()
+    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+  }
   expect(authorizationList).toHaveBeenCalledTimes(2)
+  expect(onAuthorized).toHaveBeenCalledOnce()
   expect(authorizationCancel).not.toHaveBeenCalled()
+  page.unmount()
 })

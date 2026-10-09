@@ -110,7 +110,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
-  onSettled: (settlement?: AuthorizationSettlement) => Promise<boolean>
+  onSettled: () => Promise<boolean>
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
   const [frames, setFrames] = useState<AuthorizationFrame[]>([])
@@ -122,9 +122,10 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   const settledRef = useRef(onSettled)
   settledRef.current = onSettled
 
+  // Undefined means not subscribed; every refreshed entry with a running id (even the same one) resubscribes.
   useEffect(() => {
     if (entry.attemptId !== undefined) setAttemptId(entry.attemptId)
-  }, [entry.attemptId])
+  }, [entry])
 
   useEffect(() => {
     if (attemptId === undefined) return
@@ -137,13 +138,17 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
       setLost(true)
     }
     setFrames([])
+    setAnswers({})
     void (async () => {
       try {
         for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
           setFrames(current => [...current, frame])
+          if (frame.type === 'prompt-closed') {
+            setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== frame.promptId)))
+          }
           if (frame.type === 'settled') {
             settlement = frame.settlement
-            void settledRef.current(frame.settlement)
+            void settledRef.current()
           }
         }
         if (settlement !== undefined) setAttemptId(undefined)
@@ -165,12 +170,18 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   }
   const decline = async (id: string, promptId: string): Promise<void> => {
     setError(undefined)
-    try { await actions.authorizationDecline(entry.key, id, promptId) }
+    try {
+      await actions.authorizationDecline(entry.key, id, promptId)
+      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
+    }
     catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
   }
   const cancel = async (id: string): Promise<void> => {
     setError(undefined)
-    try { await actions.authorizationCancel(entry.key, id) }
+    try {
+      await actions.authorizationCancel(entry.key, id)
+      setAnswers({})
+    }
     catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
   }
   const begin = async (): Promise<void> => {
@@ -225,7 +236,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
       : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
-    {lost && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
+    {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
@@ -301,10 +312,11 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     } finally { setLoading(false) }
   }, [actions, t])
 
-  // A cancelled or lost attempt may still have committed a credential, so refresh models after any end except failure.
-  const authorizationSettled = useCallback((settlement?: AuthorizationSettlement): Promise<boolean> => {
-    if (settlement !== 'failed') onAuthorized?.()
-    return refresh(true)
+  // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
+  const authorizationSettled = useCallback(async (): Promise<boolean> => {
+    const refreshed = await refresh(true)
+    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
+    return refreshed
   }, [onAuthorized, refresh])
 
   useEffect(() => {
