@@ -2094,17 +2094,17 @@
     {
       "doc": "rsh/Docs/subsystems/session-projection.md",
       "symbol": "ProjectionDefinition",
-      "source": "rsh/Engine/session/session-projection/src/index.ts"
+      "source": "rsh/Engine/session/session-projection/src/definition.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-projection.md",
       "symbol": "ProjectionSnapshot",
-      "source": "rsh/Engine/session/session-projection/src/index.ts"
+      "source": "rsh/Engine/session/session-projection/src/registry-core.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-projection.md",
       "symbol": "ProjectionChangeListener",
-      "source": "rsh/Engine/session/session-projection/src/index.ts"
+      "source": "rsh/Engine/session/session-projection/src/registry-core.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/core.md",

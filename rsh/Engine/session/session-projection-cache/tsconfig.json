@@ -21,6 +21,12 @@
       "path": "../../core/session"
     },
     {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.active-session-protocol.json"
+    },
+    {
       "path": "../../../Core/storage/storage"
     },
     {

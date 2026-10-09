@@ -11,7 +11,7 @@
     "build:native": "tsx ./scripts/build.ts",
     "build:test-oracle": "node ./scripts/build-test-oracle.mjs",
     "typecheck": "tsc --noEmit && tsc -b --dry",
-    "test": "node ./test/entry.test.js && node ./test/launcher.test.js && node --test ./test/flock.test.js ./test/package-matrix.test.js",
+    "test": "node ./test/entry.test.js && node ./test/launcher.test.js && node --test ./test/flock.test.js ./test/package-matrix.test.js && node --test ./test/pull-node-image.test.js",
     "test:entry": "node ./test/entry.test.js",
     "test:launcher": "node ./test/launcher.test.js",
     "test:flock": "node --test ./test/flock.test.js",

@@ -4,7 +4,6 @@ import type { Disposer, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ReasoningEffortId, StreamChunk, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session/native'
 import type { NativeSessionContinuations } from './continuation.ts'
-import type { NativeActiveSessionOperations } from './active-session.ts'
 import { NativeActiveSessionRegistry } from './active-session-registry.ts'
 
 export type * from './continuation.ts'
@@ -133,7 +132,6 @@ export interface NativeSessionExecutionOperations {
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     sessionExecution: NativeSessionExecutionOperations
-    activeSessions: NativeActiveSessionOperations
   }
 }
 

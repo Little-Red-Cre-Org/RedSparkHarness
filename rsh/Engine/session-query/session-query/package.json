@@ -23,6 +23,12 @@
     "./native": {
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
+    },
+    "./definition": {
+      "types": "./lib/types/definition.d.ts"
+    },
+    "./source": {
+      "types": "./lib/types/source.d.ts"
     }
   },
   "files": [
@@ -42,7 +48,9 @@
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-session-projection-cache": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-session-persistence": {
@@ -59,6 +67,12 @@
     },
     "@deepseek-ai/cordis": {
       "optional": true
+    },
+    "@deepseek-ai/dsh-native-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-native-session-execution": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -72,7 +86,8 @@
     "@deepseek-ai/dsh-session-projection-cache": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -85,11 +100,17 @@
         "activeSessions"
       ],
       "optional": [
-        "sessionPersistence"
+        "sessionPersistence",
+        "sessionProjections",
+        "sessionProjectionCache"
       ],
       "provides": [
         "sessionQuery"
       ]
     }
+  },
+  "dependencies": {
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-util-values": "workspace:^"
   }
 }

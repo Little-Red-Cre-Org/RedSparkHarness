@@ -2,12 +2,23 @@
   "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib/types"
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/types/tsconfig.host.tsbuildinfo"
   },
   "include": [
     "src"
   ],
+  "exclude": [
+    "src/types.ts",
+    "src/definition.ts"
+  ],
   "references": [
+    {
+      "path": "./tsconfig.types.json"
+    },
+    {
+      "path": "./tsconfig.definition.json"
+    },
     {
       "path": "../../../Core/vendor/cosmokit"
     },
@@ -16,6 +27,18 @@
     },
     {
       "path": "../../core/session"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.active-session-protocol.json"
     }
   ]
 }

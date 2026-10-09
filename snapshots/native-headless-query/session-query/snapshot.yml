@@ -1,0 +1,8 @@
+version: 1
+scenario: session-query
+profile: native-headless-query
+composition: native-session-query-time-context-disabled
+recording: authored
+header:
+  class: native-session-query
+  pin: true

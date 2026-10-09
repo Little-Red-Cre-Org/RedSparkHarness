@@ -77,6 +77,10 @@ function isShippedNativeProfile(name: string): boolean {
   return SHIPPED_NATIVE_PROFILES.includes(name)
 }
 
+function isHeadlessProfile(profile: string): boolean {
+  return profile === 'native-headless' || profile === 'native-headless-query'
+}
+
 /**
  * Resolve a shipped native composition for the selected platform.
  * @param home - Harness home used by durable providers.
@@ -153,7 +157,9 @@ export function shippedNativeProfileComposition(
         scope: ROOT,
         config: profile === 'native-web'
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
-          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 1000, maxPendingHumanRequests: 32 } : {}) },
+          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
+            ...(profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
+            ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxPendingHumanRequests: 32 } : {}) },
       },
       ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{
@@ -182,12 +188,24 @@ export function shippedNativeProfileComposition(
       ] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
-      ...(profile === 'native-headless' ? [
-        { id: 'session-query', plugin: '@deepseek-ai/dsh-session-query', scope: ROOT },
+      ...(isHeadlessProfile(profile) ? [
+        ...(profile === 'native-headless-query' ? [
+          { id: 'storage-hub', plugin: '@deepseek-ai/dsh-storage', scope: ROOT },
+          { id: 'storage-json', plugin: '@deepseek-ai/dsh-storage-json', scope: ROOT,
+            config: { root: join(home, 'storages') } },
+          { id: 'storage-domain', plugin: '@deepseek-ai/dsh-storage-domain', scope: ROOT,
+            config: { backend: 'json' } },
+          { id: 'session-projections', plugin: '@deepseek-ai/dsh-session-projection', scope: ROOT },
+          { id: 'session-projection-cache', plugin: '@deepseek-ai/dsh-session-projection-cache', scope: ROOT,
+            config: { writeEveryEvents: 200, writeIntervalMs: 5000 } },
+          { id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: ROOT,
+            config: { path: join(home, 'sessions', 'query.sqlite'), openAt: 'first-search' } },
+          { id: 'tool-session-query', plugin: '@deepseek-ai/dsh-tool-session-query', scope: ROOT },
+        ] : [{ id: 'session-query', plugin: '@deepseek-ai/dsh-session-query', scope: ROOT }]),
         { id: 'session-reference', plugin: '@deepseek-ai/dsh-session-reference', scope: ROOT },
       ] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? NATIVE_SESSION_TITLE_INSTALLATIONS : []),
-      ...(profile === 'native-headless' ? [
+      ...(isHeadlessProfile(profile) ? [
         { id: 'goal', plugin: '@deepseek-ai/dsh-goal', scope: ROOT },
         { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: ROOT },
         { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: ROOT },
@@ -238,7 +256,7 @@ export function shippedNativeProfileComposition(
       { id: 'fs', plugin: '@deepseek-ai/dsh-fs-sandbox', scope: ROOT },
       { id: 'policy', plugin: '@deepseek-ai/dsh-fs-observation-policy', scope: ROOT },
       { id: 'file-tools', plugin: '@deepseek-ai/dsh-tool-fs', scope: ROOT },
-      ...(profile === 'native-headless' ? [{ id: 'file-reference', plugin: '@deepseek-ai/dsh-native-file-reference-local', scope: ROOT }] : []),
+      ...(isHeadlessProfile(profile) ? [{ id: 'file-reference', plugin: '@deepseek-ai/dsh-native-file-reference-local', scope: ROOT }] : []),
       { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: ROOT },
       { id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: ROOT },
       { id: 'code-runtime', plugin: '@deepseek-ai/dsh-code-runtime-process-sandbox', scope: ROOT },

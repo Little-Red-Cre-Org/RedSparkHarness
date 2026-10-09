@@ -43,6 +43,9 @@
     },
     {
       "path": "../../session/session-projection"
+    },
+    {
+      "path": "../native-agent/tsconfig.host.json"
     }
   ]
 }

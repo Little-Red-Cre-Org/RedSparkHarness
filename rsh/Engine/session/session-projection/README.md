@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-session-projection` when clients need current per-session state—such as todos, goals, or conversation statistics—without replaying the raw event log. Domains define synchronous projections from committed session events, and clients receive complete, schema-validated JSON values through snapshots and change notifications. Snapshots identify the last event reflected by every returned value, so carriers can pair state with the matching history cut. Projection state can be checkpointed for faster cold reads, while host-only projections remain private to the host.
+Use `dsh-session-projection` when clients need current per-session state—such as todos, goals, or conversation statistics—without replaying the raw event log. Domains define synchronous projections from committed session events, and clients receive complete, schema-validated JSON values through snapshots and change notifications. Snapshots identify the last event reflected by every returned value, so carriers can pair state with the matching history cut. Cordis and Native Host providers use the same fold core, while host-only projections remain private to the host.
 
 ## Table of Contents
 
@@ -57,10 +57,14 @@ const definition = {
 
 `register(definition)` installs the unit; registrants with the same key and `stateVersion` share its cells, while an incompatible version or invalid `stateVersion` throws. Registration is an effect on the calling fiber, so the last unload removes the key and its cached cells. Carriers read a consistent synchronous cut over every client-visible unit with `snapshot(session)` — `{ asOfSeq, values }`, where `asOfSeq` is the seq of the last event every value reflects — and subscribe to per-change notifications with `onChanged(listener)`. `stateOf(session, key)` reads one unit's live read-only host state without computing unrelated views.
 
+The registry reports a throwing `onChanged` listener and continues the remaining listeners and projection units for that committed event.
+
 ```text
 const dispose = ctx.sessionProjections.register(definition)
 const { asOfSeq, values } = ctx.sessionProjections.snapshot(session)
 ```
+
+Native Host compositions use the `./native` entry and the same `ProjectionDefinition`. Its provider attaches to each published active owner, drives cells keyed by the exact resident Session instance, and disables each event callback before invoking its remover on detach or shutdown. If a remover throws, the callback stays inert and the error propagates after registry ownership is cleared. If observer registration fails partway through activation, the provider releases earlier registrations. Shutdown attempts every observer and owner-event removal, clears registry state, then reports cleanup failures as `AggregateError`.
 
 A domain that requires projected state declares `sessionProjections` as a Cordis service dependency; optional contributors may register under `ctx.inject(['sessionProjections'], …)`. Carriers use `ctx.get('sessionProjections')` and omit their block or frames when the registry is absent.
 
@@ -86,7 +90,9 @@ The package is the Service Definition and drive role of a capability seam: the f
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `SessionProjectionRegistry` service, `ProjectionDefinition`, snapshot and checkpoint machinery |
+| [`src/index.ts`](src/index.ts) | Cordis provider and registry adapter |
+| [`src/native.ts`](src/native.ts) | Native provider that attaches event drive to active Session owners |
+| [`src/registry-core.ts`](src/registry-core.ts) | Shared fold, snapshot, restore, and checkpoint algorithms |
 | [`src/types.ts`](src/types.ts) | The merge-extensible `SessionProjectionMap` and `SessionProjectionStateMap` type tables |
 | — | No runtime invariant companion is published; the registry's own contracts (duplicate-key and stateVersion rejection, effect-tied removal, the `Object.is` change gate) are enforced synchronously inside the service and proven by its spec, the drive relation (every committed `session/event` passes every unit) would require re-running the drive to check — duplicating the implementation rather than detecting drift — and the served-value relation (every served key has a live registration) lives on each carrier's wire path, which emits no cordis event this companion could observe; carrier specs assert it. Synchronous-unit discipline is enforced as far as practical by the boundary `schema.parse` (a Promise-returning view fails loudly). |
 

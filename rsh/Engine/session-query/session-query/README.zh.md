@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-session-query` 让应用代码可以列出、过滤、读取和搜索会话历史，检查带边界的事件上下文，并追踪会话或事件关系。读取优先使用实时会话而非持久化副本，并返回来自同一次一致观察的脱离存储克隆。本包还提供 Cordis-free Native Host 入口，可通过活动 Session owner 和可选持久化服务进行精确读取。排序全文搜索仍由 `dsh-session-query-sqlite` 等 Cordis 后端提供。
+`dsh-session-query` 让应用代码可以列出、过滤、读取和搜索会话历史，检查带边界的事件上下文，并追踪会话或事件关系。读取优先使用实时会话而非持久化副本，并返回来自同一次一致观察的脱离存储克隆。Cordis-free Native Host 入口复用相同查询 Definition 和精确读取实现；SQLite Native Provider 从同一来源组合这些读取与排序全文搜索。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当 Cordis 应用代码需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，使用 `ctx.sessionQuery`。已发布组合挂载 `@deepseek-ai/dsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）提供排序全文搜索。Native Host 组合也可挂载本包的 `./native` 入口，以提供下面列出的精确读取；它要求 `activeSessions`，并在选中时使用 `sessionPersistence`。
+当 Cordis 应用代码需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，使用 `ctx.sessionQuery`。已发布组合挂载 `@deepseek-ai/dsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）提供排序全文搜索。Native Host 组合可使用本包的 Cordis-free `./native` API；SQLite Native `./native` Provider 则从 `activeSessions` 与可选持久化服务提供组合查询服务。
 
 ### 你可以做什么
 
@@ -42,7 +42,7 @@ kind: "package-reference"
 | `traceEvent(request)` | 一个事件的位置替换与被引用源事件关系 |
 | `searchSessions(request)` / `searchEvents(request)` | 全文搜索分页结果，由挂载的后端实现 |
 
-Native 入口使用同一个 `sessionQuery` 服务键，提供 `listSessions`、`readSession`、`readTitleSnapshot(s)` 和 `readSurface`。活动历史通过精确 active owner 读取，由驻留 Session 在恢复时校验，并在接纳追加事件时持续验证；冷日志作为脱离运行时的数据进行回放验证，并在内存中补齐中断尾部。冷读不会挂载 Session，也不会修改存储。没有 `sessionPersistence` 时仍可列出和读取活动 owner，但无法访问已分离会话。
+Native runtime 实现相同的 `SessionQueryOperations` Definition，包括精确读取、过滤、事件窗口和关系追踪。选中的 Native SQLite Provider 是唯一的 `sessionQuery` Provider，并为这些操作增加排序搜索；仅精确读取的 runtime 会以 `SESSION_QUERY_SEARCH_DISABLED` 拒绝搜索。活动读取在 await 前捕获 owner 与事件数并固定此前缀；驻留 Session 会验证已接受的历史。冷读使用短生命周期句柄，在读取前后检查持久化绑定和修订，并对脱离运行时的 Session 回放校验。可选投影行只用于播种共享折叠，事件日志仍是权威。观察租约会固定 prepared 冷修订直到释放；runtime 关闭时停止准入、取消并等待已接受的读取，再释放 turn-boundary 注册。
 
 应用 handler 应在负责该请求的 Host 调用中读取这些数据：API handler 使用 `host.run()`，应用自身的执行使用 `host.runOwned()`，以便 Host 替换或关闭时等待所选 Provider 的调用排空（[Host 安装与清理](../../../Core/runtime-diagnostics/native-runtime/README.zh.md#installation-and-cleanup)）。
 
@@ -93,7 +93,11 @@ Native 入口使用同一个 `sessionQuery` 服务键，提供 `listSessions`、
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 服务定义：抽象 `SessionQueryEngine`、具体读取、配置校验 |
+| [`src/definition.ts`](src/definition.ts) | Cordis-free `SessionQueryOperations` Definition，由 Native 与 Cordis Provider 共用 |
+| [`src/index.ts`](src/index.ts) | Cordis Provider、Legacy query 适配器与配置校验 |
+| [`src/native.ts`](src/native.ts) | Cordis-free Native 查询 runtime 与共享服务导出 |
+| [`src/native-source.ts`](src/native-source.ts) | 带固定 live 切点的 active-owner 与持久化适配器 |
+| [`src/native-observation.ts`](src/native-observation.ts) | Native 来源选择、租约、修订校验与投影快照 |
 | [`src/corpus.ts`](src/corpus.ts) | 实时优先的语料库解析、可选持久化绑定、批量投影 |
 | [`src/observation.ts`](src/observation.ts) | 实时优先的定点观察，带按修订键控的有界 prepared-Session 缓存 |
 | [`src/cold-read.ts`](src/cold-read.ts) | 基于句柄的冷日志读取，附内存中的中断轮次闭合事件 |
@@ -153,7 +157,7 @@ Cordis `readSession` 会通过 `Session.fromRestore` 回放校验脱离存储的
 
 - **无调用方授权**——这是上下文范围内的可信基础设施；模型工具或 UI 必须限制调用方可检查的会话。
 - **无提供方协调器或回退**——服务在搜索上是抽象的，组合必须挂载具体后端；没有搜索提供方注册表或回退实现。
-- **Native 没有全文后端**——Native 入口只实现精确读取，不提供 SQLite 搜索、排序结果或游标世代。
+- **搜索需要选择一个后端**——Native 精确查询 Provider 会以 `SESSION_QUERY_SEARCH_DISABLED` 拒绝搜索；SQLite 包为 Cordis 与 Native 提供搜索实现，同一组合只选择一个 Provider。
 - **精确读取会检查完整历史**——Cordis 精确读取与 Native 冷读会回放校验完整日志；Native 活动读取使用驻留 Session 已验证的历史。surface 投影和事件追踪仍会检查所有相关事件，因此超大历史会产生逐次读取成本；`listSessions` 保持轻量。
 - **字面文本扫描，而非全文搜索**——`text` 过滤器用正则表达式扫描提取出的文档且不提供排名；带排名的搜索需要挂载后端。
 

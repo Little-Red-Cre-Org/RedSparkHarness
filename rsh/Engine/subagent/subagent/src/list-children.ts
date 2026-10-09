@@ -22,7 +22,7 @@ import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { Session, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection'
 import type { SessionProjectionCache } from '@deepseek-ai/dsh-session-projection-cache'
-import type { SessionObservation, SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
+import type { SessionObservation, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
 import type { SubagentListEntry } from './control-types.ts'
 import { SubagentError } from './error.ts'
 import type { SubagentIdentityProjection } from './projection-types.ts'
@@ -52,7 +52,7 @@ type CorpusRecord = { readonly header: SessionHeader; readonly live: Session | u
 
 interface ListingRuntime {
   readonly projections: SessionProjectionRegistry
-  readonly query: SessionQueryEngine
+  readonly query: Pick<SessionQueryOperations, 'listSessions' | 'observeSession'>
   readonly cache: SessionProjectionCache | undefined
   readonly corpus: ReadonlyMap<SessionId, CorpusRecord>
   readonly subagentParents: ReadonlySet<SessionId>
@@ -155,7 +155,7 @@ async function prepareListing(
     )
   }
   assertListingNotCancelled(signal)
-  const query = ctx.get('sessionQuery')
+  const query = ctx.get('sessionQuery') as Pick<SessionQueryOperations, 'listSessions' | 'observeSession'> | undefined
   if (query === undefined) {
     throw new SubagentError(
       'listing subagents requires the sessionQuery service (load @deepseek-ai/dsh-session-query)',
@@ -166,7 +166,7 @@ async function prepareListing(
   // cold candidate takes the authoritative preparation rung, so it carries
   // no error code and no configuration check.
   const cache = ctx.get('sessionProjectionCache')
-  let records: Awaited<ReturnType<SessionQueryEngine['listSessions']>>
+  let records: Awaited<ReturnType<SessionQueryOperations['listSessions']>>
   try {
     records = await query.listSessions(signal)
   } catch (error: unknown) {
@@ -295,7 +295,7 @@ function compareCorpusRecords(a: CorpusRecord, b: CorpusRecord): number {
  * throw — are final, so they report `corrupt`.
  */
 async function resolveColdIdentity(
-  query: SessionQueryEngine,
+  query: Pick<SessionQueryOperations, 'observeSession'>,
   cache: SessionProjectionCache | undefined,
   header: SessionHeader,
   hasChildren: boolean,

@@ -12,6 +12,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh --profile <name> --from-default-profile <template>` | Create a new custom profile from a shipped template, then boot it. |
 | `dsh --profile acp` | Serve automation clients over ACP stdio until disconnect. |
 | `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit. |
+| `dsh --profile native-headless-query "job"` | Run a Native headless session with workspace-authorized tools for prior session history. |
 | `dsh --profile rsh` | Open the persistent RedSpark terminal session. |
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
 | `dsh --profile native-sdk` | Serve text and image SDK turns, live model chunks, Session cancellation, next-step steering and closed-turn forks over JSON-RPC stdio. |
@@ -20,7 +21,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
-The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
+The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-headless`, `native-headless-query`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
@@ -46,6 +47,8 @@ A profile directory holds a `package.json` (out-of-tree plugin dependencies plus
 The `./native-profile` library export shares validated profile parsing and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
 
 Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
+
+Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, the profile records the invoking directory as the application's workspace root. It stores its index at `$DSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
 
 A native profile instead declares `dsh.profile.runtime: "native"` and `config: "rsh.profile.json"` in its package manifest. Its versioned JSON file lists scope identities and plugin installations, each with an id, package name, scope and complete config. Native `--patch` files are versioned JSON overlays that replace an existing installation's config or `disabled` value in argument order. The launcher validates every selected package's `dsh.native` metadata before importing entries, refuses nonempty Cordis patch layers, and starts one selected native application. See [native headless](../../Engine/core/native-headless/README.md) for the available one-shot application.
 

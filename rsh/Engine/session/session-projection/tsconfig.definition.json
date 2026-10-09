@@ -1,0 +1,23 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/definition-runtime",
+    "declarationDir": "lib/types",
+    "tsBuildInfoFile": "lib/definition.tsbuildinfo",
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
+  },
+  "include": [
+    "src/definition.ts"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.types.json"
+    },
+    {
+      "path": "../../core/session"
+    }
+  ]
+}

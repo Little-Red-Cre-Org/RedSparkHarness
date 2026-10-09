@@ -7,7 +7,7 @@ import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deep
 import { SessionId } from '@deepseek-ai/dsh-session'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
-import { EVENT_API, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
+import { EVENT_API, queryServiceApi, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
 import { hostInspectProviders } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
 import { FaceModelEmitter } from '../src/emitter.ts'
@@ -42,6 +42,39 @@ afterEach(() => {
 })
 
 describe('model-driven dsh-tools generation', () => {
+  it('keeps same-package projection declarations in the generated Service type closure', () => {
+    const sourceDeclarations = new WorkspaceAnalyzer({
+      root: workspaceRoot,
+      faces: ['host'],
+      packages: ['@deepseek-ai/dsh-session-projection'],
+      checkDiagnostics: false,
+    }).indexSourceDeclarations()
+    expect(sourceDeclarations.map(declaration => declaration.name)).toEqual(expect.arrayContaining([
+      'ProjectionDefinition',
+      'SessionProjectionMap',
+      'SessionProjectionStateMap',
+    ]))
+
+    const result = queryServiceApi('sessionProjections') as {
+      service: { methods: readonly { signature: string }[] }
+      referencedTypes: readonly { name: string; declaration: string }[]
+    }
+    const register = result.service.methods.find(method => method.signature.startsWith('register<'))
+    expect(register?.signature).toContain('ProjectionDefinition')
+    const declarations = new Map(result.referencedTypes.map(type => [type.name, type.declaration]))
+    expect([...declarations.keys()]).toEqual(expect.arrayContaining([
+      'ProjectionDefinition',
+      'SessionProjectionMap',
+      'SessionProjectionStateMap',
+    ]))
+    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('stateVersion: number'))
+    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('init('))
+    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('apply('))
+    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('wire?'))
+    expect(declarations.get('SessionProjectionMap')).toContain('export interface SessionProjectionMap')
+    expect(declarations.get('SessionProjectionStateMap')).toContain('export interface SessionProjectionStateMap')
+  }, 60_000)
+
   it('returns the specialized approval Service and its public types through Host Inspect', async () => {
     const ctx = new Context()
     try {

@@ -12,13 +12,47 @@ import type {
   SessionId,
   SessionLogOffset,
   SessionSeq,
+  SessionSeqCursor,
   OptionalSessionSeq,
   SurfaceEvent,
 } from '@deepseek-ai/dsh-session/native'
 import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
+import type { SessionPersistenceRevision } from '@deepseek-ai/dsh-session-persistence/native'
+import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection/native'
 import type { SessionSearchCursor } from './cursor.ts'
 
 export type { SessionSearchCursor } from './cursor.ts'
+
+/** One immutable live or prepared Session cut retained for a caller's read lifetime. */
+export interface SessionObservation extends Disposable {
+  /** Whether the cut came from an attached Session or a retained preparation. */
+  readonly source: 'live' | 'prepared'
+  /** Immutable Session identity metadata. */
+  readonly header: SessionHeader
+  /** Exact fork-inherited event count paired with `header`. */
+  readonly inheritedEventCount: SessionLogOffset
+  /** Immutable contiguous events at the captured cursor. */
+  readonly events: readonly SessionEvent[]
+  /** Last observed event seq, or -1 for an empty log. */
+  readonly cursor: SessionSeqCursor
+  /** Durable source revision for a cold prepared observation. */
+  readonly revision?: SessionPersistenceRevision
+  /** Projection baseline at the same cursor, when requested and available. */
+  readonly projections?: ProjectionSnapshot
+  /**
+   * Retain the same immutable cut for another owner.
+   * @returns an independently disposable lease over this observation.
+   */
+  retain(): SessionObservation
+}
+
+/** Cancellation and projection selection for one exact observation. */
+export interface SessionObservationOptions {
+  /** Optional cancellation while resolving a cold source. */
+  readonly signal?: AbortSignal
+  /** Whether to compute every projection or leave projection state untouched. */
+  readonly projectionMode?: 'all' | 'none'
+}
 
 /** Whether an event is current model context, replaced context, or raw-log-only. */
 export type SessionEventSurface = 'current' | 'shadowed' | 'log-only'

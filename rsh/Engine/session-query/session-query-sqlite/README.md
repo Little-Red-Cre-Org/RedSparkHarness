@@ -85,7 +85,7 @@ This section explains the design decisions behind the backend and points at the 
 The backend is built on one separation and three commitments:
 
 - **Derived index, never the source store.** The FTS rows live in a dedicated disposable database; the session-persistence database is never opened here.
-- **Live-preferred observation.** One serialized state machine compares persistence snapshot revisions, reads only new or changed logs through short-lived read handles, and reconciles in one transaction, so a search reflects the newest stable state.
+- **Live-preferred observation.** The shared query core reads only new or changed durable logs and captured live prefixes, rechecks the persistence binding, revisions, and live-owner identities, then commits one stable index generation in a transaction.
 - **Generation-bound cursors.** Every corpus change bumps a generation; cursors carry the generation they were created under and fail stale rather than returning a shifted page.
 - **Literal phrases as data.** Caller query text is quoted into one FTS5 phrase so query syntax stays inert, and reserved highlight markers are stripped from documents before indexing.
 
@@ -95,14 +95,15 @@ The design history lives in the [SQLite FTS5 session search note](../../../../.a
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service: config, openAt lifecycle, serialized reconciliation, query execution, cursors |
+| [`src/index.ts`](src/index.ts) | Cordis service, configuration, source adapters, and `openAt` lifecycle |
+| [`src/core.ts`](src/core.ts) | Cordis-free source observation, serialized reconciliation, transactions, FTS queries, and cursors |
 | [`src/query.ts`](src/query.ts) | Request normalization, parameterized predicates, snippets, predicate and binding budgets |
 | [`src/schema.ts`](src/schema.ts) | Database schema, application-id ownership, in-place reset, owner-only file creation |
 | — | No runtime invariant companion is published; reconciliation, cursor generations, and derived-index ownership are validated at each serialized query boundary. |
 
 ### Index lifecycle
 
-Persisted FTS rows live in a dedicated derived database and survive restarts; live sessions use connection-local TEMP tables that shadow the durable base for the same session and reveal it again when the live owner detaches. Both tables retain the exact inherited cut in numeric `seed_length`; reconstructed headers expose only `isSeeded`, while the cut participates in live fingerprints and persisted source revisions. Each search runs one serialized observation: list persistence snapshots, compare per-session revisions with the indexed rows, read only new or changed logs through a read handle (balancing an interrupted final turn in memory, never writing back), extract semantic documents, and commit the reconciliation in one transaction before running the query. Repeated queries and unchanged reopens read nothing; switching stores or observing new, changed, deleted, or externally repaired sources reconciles on the next stable observation. Source or transaction failure commits nothing and the next search retries.
+Persisted FTS rows live in a dedicated derived database and survive restarts; live sessions use connection-local TEMP tables that shadow the durable base for the same session and reveal it again when the live owner detaches. Both tables retain the exact inherited cut in numeric `seed_length`; reconstructed headers expose only `isSeeded`, while the cut participates in live fingerprints and persisted source revisions. Each search captures the persistence binding and live owners, compares durable revisions with indexed rows, reads only new or changed cold logs and the captured live prefixes, then rechecks source identity and revisions before committing one transaction. Replacing a live owner advances the generation even when its id, header, and events are unchanged, so prior cursors fail stale. Unchanged revisions reuse indexed rows; interrupted cold turns receive in-memory recovery closers, and queries never write back to the canonical log. Store replacement, changed or deleted logs, and external repairs reconcile on the next stable observation. Source or transaction failure commits nothing, and a later search retries.
 
 ### Schema ownership
 

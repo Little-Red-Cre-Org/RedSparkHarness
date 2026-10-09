@@ -355,6 +355,10 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-tool-session-query', ['lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-session-query-sqlite', ['lib/core.js', 'lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-session-projection-cache', ['lib/native.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-native-agent', ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([
       'lib/index.js',
@@ -369,6 +373,26 @@ describe('package payload constraints', () => {
 
   it('includes the separately published Todo Client entry', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-tool-todo' })).toContain('lib/client-native.js')
+  })
+
+  it('keeps the Native archive bundle beside the Client entry', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-session-log-export' })).toEqual([
+      'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('includes the Native projection bundle and emitted type runtime', () => {
+    expect(expectedDshPackageFiles({
+      name: '@deepseek-ai/dsh-session-projection',
+      exports: {
+        './types': {
+          types: './lib/types/types.d.ts',
+          default: './lib/types/types.js',
+        },
+      },
+    })).toEqual([
+      'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.js', 'lib/types/**/*.d.ts',
+    ])
   })
 
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {

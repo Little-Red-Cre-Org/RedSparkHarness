@@ -4,21 +4,19 @@
  * @module @deepseek-ai/dsh-tool-session-query/workspace-access
  */
 
-import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import {
   type SessionHeader,
   type SessionId as SessionIdValue,
-} from '@deepseek-ai/dsh-session'
-import type { TurnBoundaryProjection } from '@deepseek-ai/dsh-agent'
+} from '@deepseek-ai/dsh-session/native'
+import type { TurnBoundaryProjection } from '@deepseek-ai/dsh-native-agent/turn-boundary'
 import type {
   SessionLineageNode,
   SessionRecord,
-} from '@deepseek-ai/dsh-session-query'
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-session-projection'
+} from '@deepseek-ai/dsh-session-query/native'
 import { serviceBoundary } from './service-boundary.ts'
+import type { SessionQueryToolInvocation, SessionQueryToolServices } from './runtime.ts'
 
 interface Caller {
   readonly id: SessionIdValue
@@ -53,7 +51,7 @@ interface DescendantVisit {
   readonly next: DescendantVisit | undefined
 }
 
-function callerOf(exec: ToolRunContext, ctx: Context): Caller {
+function callerOf(exec: SessionQueryToolInvocation, ctx: SessionQueryToolServices): Caller {
   const agent = exec.agent
   if (agent === undefined) {
     throw new HarnessError(
@@ -73,7 +71,7 @@ function targetId(args: { readonly session_id?: string }, caller: Caller): Sessi
 }
 
 async function authorizeTarget(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   caller: Caller,
   target: SessionIdValue,
   signal: AbortSignal,
@@ -109,7 +107,7 @@ function assertObservedTargetAuthorized(
 }
 
 async function authorizeSessionIds(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   caller: Caller,
   ids: readonly SessionIdValue[],
   signal: AbortSignal,
@@ -135,7 +133,7 @@ async function authorizeSessionIds(
 }
 
 async function readTitles(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   caller: Caller,
   ids: readonly SessionIdValue[],
   signal: AbortSignal,
@@ -155,7 +153,7 @@ async function readTitles(
 }
 
 async function readTitle(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   caller: Caller,
   id: SessionIdValue,
   signal: AbortSignal,
@@ -164,7 +162,7 @@ async function readTitle(
 }
 
 function unavailableTitle(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   error: unknown,
 ): TitleView {
   const sanitized = serviceBoundary.sanitizeError(ctx, 'title observation item', error)

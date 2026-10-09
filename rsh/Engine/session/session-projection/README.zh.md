@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-当客户端需要当前的逐会话状态（例如待办事项、目标或对话统计）而不应自行重放原始事件日志时，使用 `dsh-session-projection`。领域根据已提交的会话事件定义同步投影，客户端则通过快照与变更通知接收经过 schema 校验的完整 JSON 值。快照标明所有返回值共同反映到的最后一个事件，因此载体可以把状态与对应的历史切面配对。投影状态可以通过检查点加快冷读，而仅供 host 使用的投影不会暴露给客户端。
+当客户端需要当前的逐会话状态（例如待办事项、目标或对话统计）而不应自行重放原始事件日志时，使用 `dsh-session-projection`。领域根据已提交的会话事件定义同步投影，客户端则通过快照与变更通知接收经过 schema 校验的完整 JSON 值。快照标明所有返回值共同反映到的最后一个事件，因此载体可以把状态与对应的历史切面配对。Cordis 与 Native Host Provider 使用同一折叠核心，而仅供 host 使用的投影不会暴露给客户端。
 
 ## 目录
 
@@ -57,10 +57,14 @@ const definition = {
 
 `register(definition)` 安装单元；具有相同 key 和 `stateVersion` 的注册方共享其 cell，版本不兼容或 `stateVersion` 非法时会 throw。注册是挂在调用方 fiber 上的 effect，因此最后一个注册方卸载后会移除 key 及其缓存 cell。载体用 `snapshot(session)` 对每个客户端可见单元读取一致的同步切面——`{ asOfSeq, values }`，其中 `asOfSeq` 是所有值共同反映到的最后一个事件的 seq——并用 `onChanged(listener)` 订阅逐变更通知。`stateOf(session, key)` 读取一个单元的实时只读 host 状态，不计算无关视图。
 
+若 `onChanged` 监听器抛出异常，注册表会报告该异常，并继续通知其余监听器和驱动本次已提交事件的投影单元。
+
 ```text
 const dispose = ctx.sessionProjections.register(definition)
 const { asOfSeq, values } = ctx.sessionProjections.snapshot(session)
 ```
+
+Native Host 组合使用 `./native` 入口与相同的 `ProjectionDefinition`。其 Provider 会为每个已发布活动 owner 挂载驱动，并按精确驻留 Session 实例维护 cell；owner 脱离或 Provider 关闭时，会先禁用每个事件回调，再调用其移除函数。若移除函数抛错，回调仍保持禁用，且在清除注册表所有权后传播错误。若 observer 注册在激活中途失败，Provider 会释放先前成功注册的 observer。关闭时会尝试移除每个 observer 和 owner 事件监听器、清空注册表状态，再通过 `AggregateError` 报告清理故障。
 
 必须使用投影状态的领域把 `sessionProjections` 声明为 Cordis 服务依赖；可选贡献方可以在 `ctx.inject(['sessionProjections'], …)` 下注册。载体使用 `ctx.get('sessionProjections')`，注册表缺席时省略自己的块或帧。
 
@@ -86,7 +90,9 @@ const { asOfSeq, values } = ctx.sessionProjections.snapshot(session)
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`SessionProjectionRegistry` 服务、`ProjectionDefinition`、快照与检查点机制 |
+| [`src/index.ts`](src/index.ts) | Cordis Provider 与注册表适配器 |
+| [`src/native.ts`](src/native.ts) | 为活动 Session owner 挂载事件驱动的 Native Provider |
+| [`src/registry-core.ts`](src/registry-core.ts) | 共享的折叠、快照、恢复与检查点算法 |
 | [`src/types.ts`](src/types.ts) | 可合并扩展的 `SessionProjectionMap` 与 `SessionProjectionStateMap` 类型表 |
 | — | 不发布运行时不变式伴生入口；注册表自身的约定（拒绝重复键和非法 stateVersion、随 effect 移除、以 `Object.is` 把守变更）由服务同步强制执行并经其规范验证；驱动关系若要检查就必须重新运行驱动，从而重复实现逻辑；所服务值之间的关系由载体协议路径负责。同步单元纪律则尽可能由边界 `schema.parse` 强制执行。 |
 

@@ -1,112 +1,210 @@
-/** Cordis-free exact session reads over the selected Native owners and persistence. */
+/** Cordis-free exact session reads over the selected Native authorities. */
 
+import { z } from 'zod'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/native'
-import { Session, SessionLogOffset, snapshotSessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import { foldSessionTitle } from '@deepseek-ai/dsh-session-title/native'
-import { readColdSessionLog } from './cold-read.ts'
-import { SessionQueryError } from './config.ts'
-import { assertSessionHeadersCompatible } from './sources.ts'
-import { currentSurfaceEvents } from './tracing.ts'
+import { SessionSeq, snapshotSessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeSessionProjectionCacheOperations } from '@deepseek-ai/dsh-session-projection-cache/native'
+import type { NativeSessionProjectionOperations } from '@deepseek-ai/dsh-session-projection/native'
+import { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
+import { foldSessionTitle, type SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
+import { SessionQueryError, type Config, SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY, SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE, SESSION_QUERY_READ_WINDOW_MAX } from './config.ts'
+import type { SessionQueryOperations } from './definition.ts'
+import { buildSessionEventSearchDocuments } from './documents.ts'
+import { filterSessionEventDocuments, filterSessionResults, materializeSessionEventResultFilters, materializeSessionResultFilters } from './filters.ts'
+import { NativeSessionObservationReader } from './native-observation.ts'
+import { createNativeSessionQuerySource, type NativeSessionQuerySource } from './native-source.ts'
+import { currentSurfaceEvents, eventRecords, traceEvent, traceSession } from './tracing.ts'
 import type {
+  SessionEventReadRequest,
+  SessionEventRecord,
+  SessionEventResultFilter,
+  SessionEventSearchDocument,
+  SessionEventSearchPage,
+  SessionEventSearchRequest,
+  SessionEventTraceObservation,
+  SessionEventTraceRequest,
+  SessionEventWindow,
+  SessionLineageTrace,
   SessionLogSnapshot,
+  SessionObservation,
+  SessionObservationOptions,
   SessionRecord,
+  SessionResultFilter,
+  SessionSearchExecContext,
+  SessionSearchHit,
+  SessionSearchPage,
+  SessionSearchRequest,
   SessionSurfaceSnapshot,
   SessionTitleObservation,
   SessionTitleObservationResult,
 } from './types.ts'
-export type { SessionSurfaceSnapshot } from './types.ts'
 
-/** Read-only exact session history selected from Native's active-owner registry and persistence. */
-export interface NativeSessionQueryOperations {
-  /** List stored sessions and exact active owners, newest first. */
-  listSessions(signal?: AbortSignal): Promise<SessionRecord[]>
-  /**
-   * Read one raw log without acquiring a writer.
-   * Cold logs are replay-validated; active history is validated by the resident Session.
-   * @param sessionId - the logical session identity.
-   * @param signal - optional cancellation for source lookup and history reading.
-   * @returns a detached complete raw log from one live-preferred source.
-   */
-  readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot>
-  /** Read the latest log-backed title from one live-preferred source. */
-  readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation>
-  /** Read titles in first-occurrence order, isolating per-session failures. */
-  readTitleSnapshots(sessionIds: readonly SessionId[], signal?: AbortSignal): Promise<SessionTitleObservationResult[]>
-  /** Read a validated current model surface from one live-preferred source. */
-  readSurface(sessionId: SessionId, signal?: AbortSignal): Promise<SessionSurfaceSnapshot>
-}
+export type * from './types.ts'
+export type { SessionQueryOperations } from './definition.ts'
+/** Compatibility name for Native consumers of the shared service Definition. */
+export type NativeSessionQueryOperations = SessionQueryOperations
+export type { Config, SessionQueryErrorCode } from './config.ts'
+export { SessionQueryError } from './config.ts'
+export {
+  SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
+  SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE,
+  SESSION_QUERY_READ_WINDOW_MAX,
+} from './config.ts'
+export { SessionSearchCursor } from './cursor.ts'
+export { buildSessionEventSearchDocuments } from './documents.ts'
+export { extractSessionEventText } from './extraction.ts'
+export { materializeSessionEventResultFilters, materializeSessionResultFilters } from './filters.ts'
+export { assertSessionHeadersCompatible } from './sources.ts'
+export { eventRecords, traceEvent, traceSession } from './tracing.ts'
+export { createNativeSessionQuerySource } from './native-source.ts'
+export type { NativeSessionQuerySource, NativeSessionQueryLiveSource, NativeSessionQueryPersistenceSource } from './native-source.ts'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { sessionQuery: NativeSessionQueryOperations }
+  interface NativeServices { sessionQuery: SessionQueryOperations }
 }
 
-interface LogicalSession {
-  readonly header: SessionHeader
-  readonly inheritedEventCount: SessionLogSnapshot['inheritedEventCount']
-  readonly events: SessionEvent[]
+/** Full-text operations supplied by one selected Native query backend. */
+export interface NativeSessionQuerySearchOperations {
+  /** Search across the observed session corpus. */
+  searchSessions(request: SessionSearchRequest, signal?: AbortSignal): Promise<SessionSearchPage<SessionSearchHit>>
+  /** Search events within one observed session. */
+  searchEvents(request: SessionEventSearchRequest, signal?: AbortSignal): Promise<SessionEventSearchPage>
 }
 
-/** Native exact reads share legacy query folds without acquiring a writer or registering validation Sessions. */
-class NativeSessionQuery implements NativeSessionQueryOperations {
+/** Native runtime options shared by exact-only and combined SQLite providers. */
+export interface NativeSessionQueryRuntimeOptions extends Config {
+  /** Shared state-fold registry for projection observations. */
+  readonly projections?: NativeSessionProjectionOperations
+  /** Matching durable projection rows used only as fold shortcuts. */
+  readonly checkpointCache?: NativeSessionProjectionCacheOperations
+  /** Selected full-text operations; absent operations report search-disabled. */
+  readonly search?: NativeSessionQuerySearchOperations
+}
+
+/** Runtime returned to a Native Provider that owns query admission and projections. */
+export interface NativeSessionQueryRuntime {
+  /** Sole live-preferred query service for the selected composition. */
+  readonly operations: SessionQueryOperations
+  /** Stop exact-read admission, join accepted source reads, and release the turn-boundary fold. */
+  close(): Promise<void>
+}
+
+/** Resolved per-provider limits used by the exact Native query implementation. */
+export interface ResolvedNativeSessionQueryConfig {
+  readonly readWindowMax: number
+  readonly persistedReadConcurrency: number
+  readonly preparedSessionCacheSize: number
+}
+
+const nativeConfigSchema = z.object({
+  readWindowMax: z.number().int().nonnegative().default(SESSION_QUERY_READ_WINDOW_MAX),
+  persistedReadConcurrency: z.number().int().positive().default(SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY),
+  preparedSessionCacheSize: z.number().int().positive().default(SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE),
+}).strict()
+
+/**
+ * Resolve Native query limits before service activation.
+ * @param input - Native profile configuration.
+ * @returns validated observation limits.
+ */
+export function resolveNativeSessionQueryConfig(input: unknown): ResolvedNativeSessionQueryConfig {
+  try {
+    return nativeConfigSchema.parse(input === undefined ? {} : input)
+  } catch (cause: unknown) {
+    throw new SessionQueryError('session-query: invalid Native query configuration', 'SESSION_QUERY_INVALID_CONFIG', { cause })
+  }
+}
+
+/**
+ * Build one exact query service over the same source supplied to the SQLite reconciler.
+ * @param source - selected persistence and active-owner adapters.
+ * @param options - projection, cache, and optional full-text operations.
+ * @returns the exact query service and its close operation.
+ */
+export function createNativeSessionQueryRuntime(
+  source: NativeSessionQuerySource,
+  options: NativeSessionQueryRuntimeOptions = {},
+): NativeSessionQueryRuntime {
+  const config = resolveNativeSessionQueryConfig({
+    readWindowMax: options.readWindowMax,
+    persistedReadConcurrency: options.persistedReadConcurrency,
+    preparedSessionCacheSize: options.preparedSessionCacheSize,
+  })
+  let unregisterTurnBoundary = options.projections?.register(turnBoundaryProjectionDefinition)
+  const reader = new NativeSessionObservationReader(
+    source,
+    options.projections,
+    options.checkpointCache,
+    config.preparedSessionCacheSize,
+  )
+  const operations = new NativeSessionQuery(reader, config, options.search)
+  return {
+    operations,
+    async close() {
+      await reader.close()
+      unregisterTurnBoundary?.()
+      unregisterTurnBoundary = undefined
+    },
+  }
+}
+
+/** Native exact query operations backed by caller-owned observation leases. */
+class NativeSessionQuery implements SessionQueryOperations {
   constructor(
-    private readonly active: NativeActiveSessionOperations,
-    private readonly persistence: Pick<NativeSessionPersistenceOperations, 'list' | 'open'> | undefined,
+    private readonly reader: NativeSessionObservationReader,
+    private readonly config: ResolvedNativeSessionQueryConfig,
+    private readonly search: NativeSessionQuerySearchOperations | undefined,
   ) {}
 
   /** @inheritdoc */
-  async listSessions(signal?: AbortSignal): Promise<SessionRecord[]> {
-    signal?.throwIfAborted()
-    const records = new Map<SessionId, SessionRecord>()
-    if (this.persistence !== undefined) {
-      try {
-        const stored = await this.persistence.list(signal === undefined ? undefined : { signal })
-        signal?.throwIfAborted()
-        for (const snapshot of stored) {
-          records.set(snapshot.header.id, {
-            header: structuredClone(snapshot.header),
-            live: false,
-            persisted: true,
-          })
-        }
-      } catch (error: unknown) {
-        if (signal?.aborted === true) signal.throwIfAborted()
-        throw mapPersistenceFailure('listing sessions', error)
-      }
-    }
-    for (const owner of this.active.owners()) {
-      const persisted = records.get(owner.session.id)
-      if (persisted !== undefined) assertSessionHeadersCompatible(owner.session.header, persisted.header)
-      records.set(owner.session.id, {
-        header: structuredClone(owner.session.header),
-        live: true,
-        persisted: persisted !== undefined,
-      })
-    }
-    signal?.throwIfAborted()
-    return [...records.values()].sort(compareSessions)
+  observeSession(sessionId: SessionId, options?: SessionObservationOptions): Promise<SessionObservation> {
+    return this.reader.read(sessionId, options)
+  }
+
+  /** @inheritdoc */
+  searchSessions(request: SessionSearchRequest, exec?: SessionSearchExecContext): Promise<SessionSearchPage<SessionSearchHit>> {
+    if (this.search === undefined) return Promise.reject(searchDisabled())
+    return this.search.searchSessions(structuredClone(request), exec?.signal)
+  }
+
+  /** @inheritdoc */
+  searchEvents(request: SessionEventSearchRequest, exec?: SessionSearchExecContext): Promise<SessionEventSearchPage> {
+    if (this.search === undefined) return Promise.reject(searchDisabled())
+    return this.search.searchEvents(structuredClone(request), exec?.signal)
+  }
+
+  /** @inheritdoc */
+  listSessions(signal?: AbortSignal): Promise<SessionRecord[]> {
+    return this.reader.list(signal)
   }
 
   /** @inheritdoc */
   async readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot> {
-    const source = await this.load(sessionId, signal)
-    return {
-      session: structuredClone(source.header),
-      inheritedEventCount: source.inheritedEventCount,
-      events: source.events.map(snapshotSessionEvent),
-    }
+    return this.withObservation(sessionId, signal, observation => ({
+      session: structuredClone(observation.header),
+      inheritedEventCount: observation.inheritedEventCount,
+      events: observation.events.map(snapshotSessionEvent),
+    }))
   }
 
   /** @inheritdoc */
-  async readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation> {
-    const source = await this.load(sessionId, signal)
-    const title = foldSessionTitle(source.events)
-    return {
-      session: structuredClone(source.header),
-      ...title === undefined ? {} : { title },
-    }
+  async filterSessions(filters: readonly SessionResultFilter[], signal?: AbortSignal): Promise<SessionRecord[]> {
+    const selected = materializeSessionResultFilters(filters)
+    return filterSessionResults(await this.reader.list(signal), selected)
+  }
+
+  /** @inheritdoc */
+  async readTitle(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleSnapshot | undefined> {
+    return (await this.readTitleSnapshot(sessionId, signal)).title
+  }
+
+  /** @inheritdoc */
+  readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation> {
+    return this.withObservation(sessionId, signal, observation => ({
+      session: structuredClone(observation.header),
+      ...foldTitle(observation.events),
+    }))
   }
 
   /** @inheritdoc */
@@ -114,180 +212,147 @@ class NativeSessionQuery implements NativeSessionQueryOperations {
     sessionIds: readonly SessionId[],
     signal?: AbortSignal,
   ): Promise<SessionTitleObservationResult[]> {
-    const results: SessionTitleObservationResult[] = []
-    for (const sessionId of new Set(sessionIds)) {
-      try {
-        results.push({ sessionId, status: 'fulfilled', value: await this.readTitleSnapshot(sessionId, signal) })
-      } catch (reason: unknown) {
-        if (signal?.aborted === true) signal.throwIfAborted()
-        results.push({ sessionId, status: 'rejected', reason })
+    const ids = [...new Set(sessionIds)]
+    const results = new Array<SessionTitleObservationResult>(ids.length)
+    let next = 0
+    const worker = async (): Promise<void> => {
+      while (next < ids.length) {
+        const index = next++
+        const sessionId = ids[index] as SessionId
+        try {
+          results[index] = { sessionId, status: 'fulfilled', value: await this.readTitleSnapshot(sessionId, signal) }
+        } catch (reason: unknown) {
+          if (signal?.aborted === true) return
+          results[index] = { sessionId, status: 'rejected', reason }
+        }
       }
     }
+    const workers = Math.min(ids.length, this.config.persistedReadConcurrency)
+    await Promise.allSettled(Array.from({ length: workers }, worker))
+    signal?.throwIfAborted()
     return results
   }
 
   /** @inheritdoc */
-  async readSurface(sessionId: SessionId, signal?: AbortSignal): Promise<SessionSurfaceSnapshot> {
-    const source = await this.load(sessionId, signal)
-    return {
-      session: structuredClone(source.header),
-      inheritedEventCount: source.inheritedEventCount,
-      capturedThroughSeq: source.events.at(-1)?.seq ?? null,
-      events: currentSurfaceEvents(sessionId, source.events),
-    }
+  async listEvents(sessionId: SessionId): Promise<SessionEventRecord[]> {
+    return this.withObservation(sessionId, undefined, observation => eventRecords(sessionId, observation.events))
   }
 
-  private async load(sessionId: SessionId, signal?: AbortSignal): Promise<LogicalSession> {
-    signal?.throwIfAborted()
-    const live = this.active.owners().find(owner => owner.session.id === sessionId)
-    if (live !== undefined) {
-      const source = await this.readOwner(live, signal)
-      if (source !== undefined) return source
-    }
-    if (this.persistence === undefined) {
-      const attached = this.active.owners().find(owner => owner.session.id === sessionId)
-      if (attached !== undefined) {
-        const source = await this.readOwner(attached, signal)
-        if (source !== undefined) return source
+  /** @inheritdoc */
+  async filterEvents(sessionId: SessionId, filters: readonly SessionEventResultFilter[]): Promise<SessionEventSearchDocument[]> {
+    const selected = materializeSessionEventResultFilters(filters)
+    return this.withObservation(sessionId, undefined, observation =>
+      filterSessionEventDocuments(buildSessionEventSearchDocuments(sessionId, observation.events), selected))
+  }
+
+  /** @inheritdoc */
+  async readSurface(sessionId: SessionId): Promise<SessionSurfaceSnapshot> {
+    return this.withObservation(sessionId, undefined, observation => ({
+      session: structuredClone(observation.header),
+      inheritedEventCount: observation.inheritedEventCount,
+      capturedThroughSeq: observation.cursor < 0 ? null : SessionSeq(observation.cursor),
+      events: currentSurfaceEvents(sessionId, observation.events),
+    }))
+  }
+
+  /** @inheritdoc */
+  async traceSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLineageTrace> {
+    return traceSession(await this.reader.list(signal), sessionId)
+  }
+
+  /** @inheritdoc */
+  async traceEvent(request: SessionEventTraceRequest, signal?: AbortSignal): Promise<SessionEventTraceObservation> {
+    const { sessionId, seq } = request
+    return this.withObservation(sessionId, signal, observation => ({
+      session: structuredClone(observation.header),
+      ...traceEvent(sessionId, observation.events, seq),
+    }))
+  }
+
+  /** @inheritdoc */
+  async readEvent(request: SessionEventReadRequest, signal?: AbortSignal): Promise<SessionEventWindow> {
+    const { sessionId, seq } = request
+    const before = readWindow('before', request.before, this.config.readWindowMax)
+    const after = readWindow('after', request.after, this.config.readWindowMax)
+    return this.withObservation(sessionId, signal, (observation) => {
+      const target = observation.events[seq]
+      if (target === undefined || target.seq !== seq) {
+        throw new SessionQueryError(`session "${sessionId}" has no event at seq ${seq}`, 'SESSION_QUERY_EVENT_NOT_FOUND')
       }
-      throw notFound(sessionId)
-    }
-
-    let listed: SessionHeader | undefined
-    try {
-      listed = (await this.persistence.list(signal === undefined ? undefined : { signal }))
-        .find(snapshot => snapshot.header.id === sessionId)?.header
-    } catch (error: unknown) {
-      if (signal?.aborted === true) signal.throwIfAborted()
-      throw mapPersistenceFailure(`listing session "${sessionId}"`, error)
-    }
-    signal?.throwIfAborted()
-    if (listed === undefined) {
-      const attached = this.active.owners().find(owner => owner.session.id === sessionId)
-      if (attached !== undefined) {
-        const source = await this.readOwner(attached, signal)
-        if (source !== undefined) return source
+      const startSeq = SessionSeq(Math.max(0, seq - before))
+      const endSeq = SessionSeq(Math.min(observation.events.length - 1, seq + after))
+      const targetSnapshot = snapshotSessionEvent(target)
+      return {
+        session: structuredClone(observation.header),
+        inheritedEventCount: observation.inheritedEventCount,
+        target: targetSnapshot,
+        events: observation.events.slice(startSeq, endSeq + 1).map(event => event === target
+          ? targetSnapshot
+          : snapshotSessionEvent(event)),
+        startSeq,
+        endSeq,
       }
-      throw notFound(sessionId)
-    }
+    })
+  }
 
-    let cold: LogicalSession
+  private async withObservation<T>(
+    sessionId: SessionId,
+    signal: AbortSignal | undefined,
+    read: (observation: SessionObservation) => T,
+  ): Promise<T> {
+    const observation = await this.reader.read(sessionId, {
+      projectionMode: 'none',
+      ...(signal === undefined ? {} : { signal }),
+    })
     try {
-      const loaded = await readColdSessionLog(this.persistence, sessionId, signal)
-      validateLog(sessionId, loaded.header, loaded.events, loaded.inheritedEventCount)
-      cold = { header: loaded.header, inheritedEventCount: loaded.inheritedEventCount, events: loaded.events }
-    } catch (error: unknown) {
-      if (signal?.aborted === true) signal.throwIfAborted()
-      throw mapSessionReadFailure(sessionId, error)
-    }
-    signal?.throwIfAborted()
-
-    const attached = this.active.owners().find(owner => owner.session.id === sessionId)
-    if (attached !== undefined) {
-      const source = await this.readOwner(attached, signal)
-      if (source !== undefined) return source
-    }
-    assertSessionHeadersCompatible(cold.header, listed)
-    return cold
-  }
-
-  private async readOwner(owner: NativeActiveSessionOwner, signal?: AbortSignal): Promise<LogicalSession | undefined> {
-    signal?.throwIfAborted()
-    let events: readonly SessionEvent[]
-    try {
-      events = await owner.readEvents(signal === undefined ? undefined : { signal })
-    } catch (error: unknown) {
-      if (signal?.aborted === true) signal.throwIfAborted()
-      if (!this.isCurrent(owner)) return undefined
-      throw mapSessionReadFailure(owner.session.id, error)
-    }
-    signal?.throwIfAborted()
-    if (!this.isCurrent(owner)) return undefined
-    return {
-      header: structuredClone(owner.session.header),
-      inheritedEventCount: SessionLogOffset(owner.inheritedEventCount),
-      events: events.map(event => structuredClone(event)),
+      return read(observation)
+    } finally {
+      observation[Symbol.dispose]()
     }
   }
+}
 
-  private isCurrent(owner: NativeActiveSessionOwner): boolean {
-    return this.active.owners().includes(owner)
+function foldTitle(events: readonly import('@deepseek-ai/dsh-session/native').SessionEvent[]): Pick<SessionTitleObservation, 'title'> {
+  const title = foldSessionTitle(events)
+  return title === undefined ? {} : { title }
+}
+
+function readWindow(name: 'before' | 'after', value: number | undefined, maximum: number): number {
+  if (value === undefined) return 0
+  if (!Number.isInteger(value) || value < 0 || value > maximum) {
+    throw new SessionQueryError(`${name} must be an integer between 0 and ${maximum}`, 'SESSION_QUERY_INVALID_WINDOW')
   }
+  return value
 }
 
-function validateLog(
-  sessionId: SessionId,
-  header: SessionHeader,
-  events: readonly SessionEvent[],
-  inheritedEventCount: SessionLogSnapshot['inheritedEventCount'],
-): void {
-  try {
-    Session.fromRestore(sessionId, structuredClone(events), structuredClone(header), inheritedEventCount, 'detached')
-  } catch (error: unknown) {
-    throw corruptSession(sessionId, error)
-  }
+function searchDisabled(): SessionQueryError {
+  return new SessionQueryError('session query search is disabled', 'SESSION_QUERY_SEARCH_DISABLED')
 }
 
-function compareSessions(a: SessionRecord, b: SessionRecord): number {
-  return b.header.createdAt - a.header.createdAt || a.header.id.localeCompare(b.header.id)
-}
-
-function notFound(sessionId: SessionId, cause?: unknown): SessionQueryError {
-  return new SessionQueryError(
-    `session "${sessionId}" not found`,
-    'SESSION_QUERY_SESSION_NOT_FOUND',
-    cause === undefined ? undefined : { cause },
-  )
-}
-
-function mapPersistenceFailure(action: string, error: unknown): SessionQueryError {
-  return new SessionQueryError(
-    `session persistence failed while ${action}: ${errorMessage(error)}`,
-    'SESSION_QUERY_PERSISTENCE_FAILED',
-    { cause: error },
-  )
-}
-
-function mapSessionReadFailure(sessionId: SessionId, error: unknown): SessionQueryError {
-  if (error instanceof SessionQueryError) return error
-  if (hasErrorName(error, 'SessionPersistenceNotFoundError')) return notFound(sessionId, error)
-  if (hasErrorName(error, 'SessionPersistenceCorruptionError')) return corruptSession(sessionId, error)
-  return mapPersistenceFailure(`reading session "${sessionId}"`, error)
-}
-
-function corruptSession(sessionId: SessionId, error: unknown): SessionQueryError {
-  return new SessionQueryError(
-    `stored session "${sessionId}" is corrupt: ${errorMessage(error)}`,
-    'SESSION_QUERY_CORRUPT_SESSION',
-    { cause: error },
-  )
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
-function hasErrorName(error: unknown, name: string): error is Error {
-  return error instanceof Error && error.name === name
-}
-
-/** Stateless Native query Provider over the selected Session authorities. */
+/** Native exact-read Provider; a full-text backend may replace it as the sole `sessionQuery` Provider. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@deepseek-ai/dsh-session-query',
   targets: ['host'],
   requires: ['activeSessions'],
-  optional: ['sessionPersistence'],
+  optional: ['sessionPersistence', 'sessionProjections', 'sessionProjectionCache'],
   provides: ['sessionQuery'],
   resolve(input) {
-    if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length !== 0)) {
-      throw new Error('session-query: native configuration must be empty')
-    }
+    const config = resolveNativeSessionQueryConfig(input)
     return (context) => {
-      context.provide('sessionQuery', new NativeSessionQuery(
+      const source = createNativeSessionQuerySource(
         context.require('activeSessions'),
         context.optional('sessionPersistence'),
-      ))
+      )
+      const projections = context.optional('sessionProjections')
+      const checkpointCache = context.optional('sessionProjectionCache')
+      const runtime = createNativeSessionQueryRuntime(source, {
+        ...config,
+        ...(projections === undefined ? {} : { projections }),
+        ...(checkpointCache === undefined ? {} : { checkpointCache }),
+      })
+      context.own(() => runtime.close())
+      context.provide('sessionQuery', runtime.operations)
     }
   },
 }

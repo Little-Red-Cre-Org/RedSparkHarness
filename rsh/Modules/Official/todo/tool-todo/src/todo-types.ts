@@ -22,3 +22,10 @@ declare module '@deepseek-ai/dsh-session/types' {
     'todo/write': { todos: TodoItem[] }
   }
 }
+
+declare module '@deepseek-ai/dsh-session/native' {
+  interface SessionEventMap {
+    /** Whole-list snapshot; latest write wins on replay. Log-only UI state; never derived history. */
+    'todo/write': { todos: TodoItem[] }
+  }
+}

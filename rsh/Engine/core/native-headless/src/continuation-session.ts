@@ -107,7 +107,7 @@ export class NativeContinuationSession {
 
   /**
    * Observe only backend-accepted events.
-   * @param observer - selected Program event observer.
+   * @param observer - selected Program event observer; thrown errors are reported without failing durable writes.
    * @returns exact listener removal.
    */
   onEvent(observer: AppendObserver): () => void { this.accepted.add(observer); return () => { this.accepted.delete(observer) } }
@@ -245,7 +245,13 @@ export class NativeContinuationSession {
         this.pending.splice(0, events.length)
       }
       await this.writer.flush()
-      for (const event of events) for (const observer of this.accepted) observer(event)
+      for (const event of events) {
+        for (const observer of this.accepted) {
+          try { observer(event) } catch (error: unknown) {
+            console.error('native-continuation: accepted-event observer failed', error)
+          }
+        }
+      }
     })
     this.persistence = operation.catch((error: unknown) => { this.failure = { error } })
     return operation

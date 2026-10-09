@@ -4,7 +4,7 @@ import {
   SessionQueryError,
   materializeSessionEventResultFilters,
   materializeSessionResultFilters,
-} from '@deepseek-ai/dsh-session-query'
+} from '@deepseek-ai/dsh-session-query/native'
 import type {
   SessionAvailability,
   SessionEventMetadataFilter,
@@ -13,7 +13,7 @@ import type {
   SessionResultFilter,
   SessionSearchCursor,
   SessionSearchRequest,
-} from '@deepseek-ai/dsh-session-query'
+} from '@deepseek-ai/dsh-session-query/native'
 
 /** Collision-free marker inserted before an FTS5 match by `highlight()`. */
 export const FTS_HIGHLIGHT_START = '\uFDD0'

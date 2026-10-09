@@ -1,4 +1,4 @@
-# Agent Note: Native exact session-query entry
+# Agent Note: Native session query and projection backend
 
 Status: implemented
 
@@ -6,28 +6,36 @@ English | [中文](2026-10-09-native-session-query-entry.zh.md)
 
 ## Problem
 
-Native Engine consumers had no exact session-query capability. The existing `SessionQueryEngine` and `SessionCorpus` are Cordis services, even though Native already has the two authorities needed for exact reads: `activeSessions` for attached writable owners and `sessionPersistence` for durable read handles.
+Native consumers need one query service over the attached Session owner and durable logs, plus full-text search and projections, without creating another Session writer or an independently implemented fold.
 
 ## Decision
 
-Add the Cordis-free `@deepseek-ai/dsh-session-query/native` entry and publish `NativeSessionQueryOperations` as the same `sessionQuery` capability. The provider requires `activeSessions` and treats `sessionPersistence` as optional. It lists persisted headers and exact active owners together, prefers a current active owner for body reads, and checks immutable headers when both sources are observed.
+`SessionQueryOperations` is the shared Cordis-free Definition implemented by Cordis and Native Providers. The Native source adapter reads active owners at a captured event cut and reads detached history through optional persistence handles. Active Sessions validate accepted history; cold logs are replay-validated on detached Sessions. Observation leases pin prepared cold revisions, and runtime close rejects new reads, cancels and joins accepted source work, then releases its turn-boundary registration.
 
-Active body reads use the exact owner's `readEvents()` method. Cold reads reuse `readColdSessionLog()`, which closes the persistence read handle and balances an interrupted tail only in memory. Both paths replay-validate a detached clone through `Session.fromRestore()` and reuse the shared title fold and current-surface tracing functions. The validation Session never acquires a writer or enters the active-owner registry; the query returns the original read events, excluding any local resume marker. Query never inserts a Session into a store, creates a writer, or keeps a second cache.
+The Native SQLite Provider combines exact operations and ranked search over that same source. Its Cordis-free core owns the derived FTS database, transactional reconciliation, and generation-bound cursors; it never becomes a Session store. Replacing a live owner advances the corpus generation even when its id, header, and events match, so earlier cursors fail stale. Exact-only compositions retain query operations and reject search with `SESSION_QUERY_SEARCH_DISABLED`.
 
-This Native entry implements exact list, raw-log, title, and current-surface reads used by Native references. The wider Native query surface remains open: observations, session/event filters, event-window and exact-event reads, session/event traces, provider-independent search, SQLite indexes, and ranked full-text search are not implemented here. Authorization and external Host presentation keep their separate boundaries.
+Cordis and Native projection Providers use one fold registry. Cells are keyed by the exact resident Session object, and the Native Provider follows active-owner attachment and removal. The registry preserves state-version registration sharing, late-registration replay, inherited cuts, detached checkpoint values, and same-event change notifications. Native checkpoint writes use the selected cache only after the canonical Session writer flushes; the cache is a fold shortcut over the authoritative log. Closing query and projection Providers drains their owned reads, listeners, timers, and writes. Native projection activation releases earlier observer registrations if a later registration fails; shutdown attempts every observer and owner-event removal, clears registry state, and reports cleanup failures after all attempts.
 
-Native cross-session references consume this exact query service through the shared projection and retention path. They preserve newly admitted canonical URI input and return sourced context messages; `NativeAgentInstructions.prepare()` orders workspace instructions before reference contexts, and Native headless appends both through the existing Session writer. Preparation waits for started reads and spill writes to settle on failure or cancellation before returning, so the writer and selected services can drain after the operation completes. The persisted model input therefore differs visibly from Cordis `@label` replacement; this batch does not claim those representations are equivalent.
+Native projection detach disables event delivery and removes registry ownership even when the listener remover fails; stale callbacks cannot drive folds. A registration disposer cannot remove a later registration of the same key after the registry is cleared. Native cache checks current exact-owner membership before each attachment, including after awaiting earlier startup writes. Cache detach marks the owner state detached before calling its event-listener remover; even if removal fails, it attempts the final checkpoint, evicts the owner state, and reports the remover error. Cache close attempts every observer and owner-listener removal, drains final writes, closes the domain, and aggregates cleanup failures. A callback left registered by a failed remover cannot enqueue cache work.
+
+Typert's shared-definition public type index includes source declarations from declaration-emitting project references in the same package and face. Only required `Context` members whose types resolve to a public export are service candidates; candidates whose exports resolve to anything other than a class or interface are rejected.
+
+Change-feed and accepted-event observers are reported individually when they throw. The registry continues the remaining listeners and projection units, and accepted-event observers do not turn a successful durable append and flush into a writer failure.
+
+The shipped `native-headless-query` profile selects the Native query, SQLite, projection, and cache Providers explicitly. Existing profile defaults remain unchanged. Engine tools and archive consumers use the shared query Definition; Host and SDK adapters keep their own ownership.
 
 ## Alternatives considered
 
-**Reuse the Cordis `SessionCorpus`.** It requires `Context`, `sessions`, and optional-service injection; importing it would pull Cordis into the Native entry and would not read from `activeSessions`.
+**Create a second Native query Definition or fold implementation.** Separate authorities can diverge in filtering, observation cuts, and projection semantics. Cordis and Native instead adapt to one Definition and one projection fold.
 
-**Maintain a Native query cache or writer.** A second cache or writer could diverge from active owners and durable history. Per-call reads already provide the exact snapshots this entry exposes.
+**Give queries a Session writer or index the canonical persistence database.** A query-owned writer can race Session appends, and an FTS transaction can corrupt or rewrite the source log. The SQLite database remains a disposable derived index over read-only source ports.
+
+**Select the Native query profile by default.** Existing compositions have established Provider choices and dependencies. The Native headless query profile is opt-in until release policy changes deliberately.
 
 ## Consequences
 
-Native callers can read detached history and prepare durable untrusted references without importing Cordis. With no persistence service, the query can still list and read active owners; detached sessions are unavailable. Cold title and surface reads load and validate the complete log on demand, so large histories have the same whole-log cost as existing exact reads. Native observation, filter, event, trace, and full-text migration remain future work.
+Native compositions can use the complete provider-independent query vocabulary and select ranked SQLite search without importing Cordis. Their search cursors are valid only for the corpus generation that produced them, and cold reads still pay the cost of loading authoritative event history when no compatible checkpoint shortens projection replay. Session format and writer ownership remain with the Session packages.
 
 ## Verification
 
-The focused Native query examples cover a cold persisted list/title/log/surface read, including an inherited fork prefix, without Session attachment or storage mutation, and exact active-owner precedence when an owner is replaced during a read. A compiled Native CLI workflow replay proves that its original URI message and sourced reference snapshot are both durable and that the model request receives the captured source text. Target package type checks, normal leaf producers, and the selected examples pass; broader Native query, Host, and Client acceptance is not implied.
+The focused observer and owner-incarnation regressions pass: a throwing projection listener does not starve later listeners or units, a throwing Native accepted-event observer does not poison the retained writer, and replacing an identical live owner invalidates both session-search and event-search cursors.

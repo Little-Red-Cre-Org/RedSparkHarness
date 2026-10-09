@@ -27,6 +27,8 @@ Use `dsh-tool-session-query` to let a model search earlier sessions, inspect eve
 
 Mount this package when the agent should be able to search its own prior sessions and inspect their relationships and events. The common path is explicit: mount the plugin over `ctx.sessionQuery` (backed by `dsh-session-query-sqlite`), then let the model call the tools.
 
+Native CLI users can select the shipped `native-headless-query` profile. It selects one combined SQLite query provider, the Session projection registry and durable cache, `session-reference`, and this package's Native Consumer; its SQLite search index opens on first search, while exact trace and read operations remain available when `openAt` is `never`.
+
 ### When to choose it
 
 Choose it when a deployment wants model-driven retrieval of prior work — for example a coding agent that searches what it did in earlier sessions before starting a task. Avoid it when only programmatic retrieval is needed: `ctx.sessionQuery` itself serves code callers without the model-facing schema, prompt, and authorization layer.
@@ -71,8 +73,8 @@ This section explains the design decisions behind the tools and points at the co
 The consumer is built on one separation and three commitments:
 
 - **Narrow read-only tools.** Five tools with flat snake-case schemas, each teaching one follow-up step; no cursor, offset, page-size, or model-controlled limit ever reaches the model.
-- **Authority derived from the caller, never the model.** Caller identity comes from `ToolExecution.exec.agent`; workspace is exact-string `cwd` equality, re-checked against the header observed with each result.
-- **One model-boundary sanitizer.** Every trusted `ctx.sessionQuery` call goes through the service boundary, which preserves cancellation and contains diagnostic and classification failures.
+- **Authority derived from the caller, never the model.** Caller identity comes from the compatibility tool Agent or Native invocation Session; workspace is exact-string `cwd` equality, re-checked against the header observed with each result.
+- **One model-boundary sanitizer.** Every trusted query call goes through the shared service boundary, which preserves cancellation and returns fixed safe failures; the compatibility adapter logs full diagnostics.
 - **No second truncation format.** Results stay complete; the generic spill policy owns bounded inline output.
 
 The design history lives in the [model-facing session query tools note](../../../../.agents/notes/archived/feature/2026-07-24-model-facing-session-query-tools.md) and the [session-search-not-shipped-default note](../../../../.agents/notes/archived/feature/2026-08-02-session-search-not-shipped-default.md).
@@ -82,11 +84,14 @@ The design history lives in the [model-facing session query tools note](../../..
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: config, prompt section, five tool registrations |
+| [`src/native.ts`](src/native.ts) | Cordis-free Native entry: prompt and five ValueTool registrations |
+| [`src/config.ts`](src/config.ts) | Shared config defaults and validation for both installers |
+| [`src/runtime.ts`](src/runtime.ts) | Query/projection services and caller facts shared by both installers |
 | [`src/input.ts`](src/input.ts) | Model schemas, argument normalization, filter construction |
 | [`src/workspace-access.ts`](src/workspace-access.ts) | Caller identity, workspace authorization, title access, lineage projection |
 | [`src/service-boundary.ts`](src/service-boundary.ts) | Trusted calls and model-safe error translation |
 | [`src/operations.ts`](src/operations.ts) | The five operation workflows |
-| [`src/presentation.ts`](src/presentation.ts) | Text result rendering and tool-call cards |
+| [`src/presentation.ts`](src/presentation.ts) | Text result rendering and tool-call cards using `@deepseek-ai/dsh-native-tools/presentation` types |
 
 ### Operation flow
 

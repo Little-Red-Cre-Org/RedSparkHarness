@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本包保存持久的逐会话投影检查点，让历史列表、统计信息与 goal 快照无需加载每个会话日志即可读取缓存值。冷投影折叠可从已检查点化的前缀之后继续，从而减少重启后的工作量。会话日志始终是权威：崩溃可能使检查点陈旧，但不会使其领先于已提交事件；不兼容记录会被忽略或备份。当重启的会话需要频繁读取投影时选择本包；当投影只服务活会话，或额外存储写入与无限增长的检查点保留成本超过节省的工作量时跳过本包。
+本包保存持久的逐会话投影检查点，让历史列表、统计信息与 goal 快照无需加载每个会话日志即可读取缓存值。Cordis 与 Native Host Provider 使用相同记录和身份校验。冷投影折叠可从已检查点化的前缀之后继续，从而减少重启后的工作量。会话日志始终是权威：崩溃可能使检查点陈旧，但不会使其领先于已提交事件；不兼容记录会被忽略或备份。当重启的会话需要频繁读取投影时选择本包；当投影只服务活会话，或额外存储写入与无限增长的检查点保留成本超过节省的工作量时跳过本包。
 
 ## 目录
 
@@ -52,9 +52,13 @@ kind: "package-reference"
 
 本插件注入 `storageDomain`、`sessionProjections` 与 `sessions`。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-projection-cache)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+Cordis-free 的 `./native` 入口提供 Native Host `sessionProjectionCache` 服务。它要求 `activeSessions`、`sessionProjections` 与 `storageDomain`，并接受相同的两个必填节流字段。Native owner 脱离时会在调用其监听器移除函数前将 owner 状态标记为已脱离。若移除抛出异常，缓存仍会尝试最终检查点、移出 owner 状态，并原样报告该异常；仍注册的回调不能排入缓存工作。Provider 关闭时会尝试移除两个 observer 和所有 owner 监听器，排空最终写入，关闭存储域，然后报告清理错误。
+
 ### 检查点如何写入
 
 三个必写点总是写入：会话创建保存由种子派生的切面，`turn/end` 保存列表读取所需的轮次终值，会话释放保存活会话的最终切面。其间，配置的条数与间隔节流随事件累积写入。每次写入通过领域写入链以原子方式替换该会话的完整记录；失败会记录警告并让缓存保持陈旧，后续写入会自行修复。
+
+对 Native owner，检查点会在一个 Session 切面捕获投影行，通过唯一 writer 持久化缓冲的 Session 事件，然后再写入检查点行。清理会先等待队列中的最终写入完成，再关闭存储域。
 
 ### 读取缓存值
 
@@ -89,6 +93,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`SessionProjectionCache` 服务、后台写入监听器、缓存读取 |
+| [`src/native.ts`](src/native.ts) | Native 缓存 Provider、精确 owner 监听器与写入排空 |
 | [`src/spec.ts`](src/spec.ts) | `session_projcache` 域 spec 与记录身份类型 |
 | — | 不发布运行时不变式伴生入口；完整正确性关系只能通过对持久化日志重新执行折叠来检查；持久化边界通过 schema 校验，读路径的版本与水位防护由包规范证明，相关局部约束在写入与读取路径强制执行。 |
 

@@ -2,6 +2,32 @@
  * @module @deepseek-ai/dsh-native-tools/presentation
  */
 
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+
+/** Category a UI may use for a generic tool-call icon or treatment. */
+export type ToolCallKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'fetch' | 'other'
+
+/** A model-facing file path and optional 1-based line to focus in a capable UI. */
+export interface FileLocation {
+  path: string
+  line?: number
+}
+
+/** Provider-neutral pending call view shared by Native and compatibility tools. */
+export interface GenericCallView {
+  card: 'generic'
+  /** Short, human-readable label shown as the pending call heading. */
+  title: string
+  /** Category for icon/treatment; defaults to `other` when omitted. */
+  kind?: ToolCallKind
+  /** Salient input for an expanded view; omit when no input should be shown. */
+  rawInput?: unknown
+  /** UI-facing content blocks shown with the pending call. */
+  content?: ContentBlock[]
+  /** Model-facing file paths and optional line locations for editor follow-along. */
+  locations?: FileLocation[]
+}
+
 /**
  * A single-file change a tool is about to make, for a UI that renders inline
  * diffs. `oldText` is `null` for a new-file create (nothing to diff against);

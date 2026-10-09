@@ -41,6 +41,13 @@
       "types": "./lib/types/inbox.d.ts",
       "default": "./lib/inbox.js"
     },
+    "./definition": {
+      "types": "./lib/types/definition.d.ts"
+    },
+    "./turn-boundary": {
+      "types": "./lib/types/turn-boundary.d.ts",
+      "default": "./lib/turn-boundary.js"
+    },
     "./consumed-work": {
       "types": "./lib/types/consumed-work.d.ts",
       "default": "./lib/consumed-work.js"
@@ -50,19 +57,27 @@
     "lib/index.js",
     "lib/inbox.js",
     "lib/consumed-work.js",
+    "lib/turn-boundary.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-session-projection": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-session-projection": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-session-projection": "workspace:^",
+    "zod": "^4.4.3"
   }
 }

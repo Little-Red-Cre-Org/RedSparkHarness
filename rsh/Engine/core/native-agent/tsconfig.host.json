@@ -20,6 +20,12 @@
     },
     {
       "path": "../session"
+    },
+    {
+      "path": "../../session/session-projection/tsconfig.types.json"
+    },
+    {
+      "path": "../../session/session-projection/tsconfig.definition.json"
     }
   ]
 }

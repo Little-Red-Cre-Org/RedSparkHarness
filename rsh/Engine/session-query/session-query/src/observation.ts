@@ -2,7 +2,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionHeader, SessionId , SessionLogOffset as SessionLogOffsetType , SessionSeqCursor } from '@deepseek-ai/dsh-session'
+import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
 import type {
   SessionPersistenceRevision,
@@ -12,41 +12,9 @@ import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
 import { SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE, SessionQueryError } from './config.ts'
 import { readColdSessionLog, type ColdSessionLog } from './cold-read.ts'
+import type { SessionObservation, SessionObservationOptions } from './types.ts'
 
-/** One exact immutable Session cut retained for the caller's read lifetime. */
-export interface SessionObservation extends Disposable {
-  /** Whether the cut came from an attached Session or a retained preparation. */
-  readonly source: 'live' | 'prepared'
-  /** Immutable Session identity metadata. */
-  readonly header: SessionHeader
-  /** Exact fork-inherited event count paired with {@link header}. */
-  readonly inheritedEventCount: SessionLogOffsetType
-  /**
-   * Immutable contiguous events at {@link cursor}. A live observation
-   * materializes this array on first read, so a consumer that reads only the
-   * header, cursor, or projections never copies the log.
-   */
-  readonly events: readonly SessionEvent[]
-  /** Last observed event seq, or -1 for an empty log. */
-  readonly cursor: SessionSeqCursor
-  /** Durable source revision for a cold prepared observation. */
-  readonly revision?: SessionPersistenceRevision
-  /** Exact projection baseline at {@link cursor}, when the registry is mounted. */
-  readonly projections?: ProjectionSnapshot
-  /**
-   * Retain the same immutable cut for another Host owner.
-   * @returns an independently disposable lease over this observation.
-   */
-  retain(): SessionObservation
-}
-
-/** Projection work and cancellation requested for one exact observation. */
-export interface SessionObservationOptions {
-  /** Optional cancellation while resolving a cold source. */
-  readonly signal?: AbortSignal
-  /** Whether to compute every projection or leave projection state untouched. */
-  readonly projectionMode?: 'all' | 'none'
-}
+export type { SessionObservation, SessionObservationOptions } from './types.ts'
 
 /**
  * One reusable cold observation: an unpublished restored Session plus the

@@ -5,12 +5,18 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-session-projection'
+import type {} from '@deepseek-ai/dsh-session-query'
 import z from '@deepseek-ai/schemastery'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_TIMEOUT_MS, resolveSessionQueryToolConfig } from './config.ts'
+import type { SessionQueryToolConfig } from './config.ts'
 import { toolInput } from './input.ts'
 import { operations } from './operations.ts'
 import { presentation } from './presentation.ts'
+import type { SessionQueryToolInvocation, SessionQueryToolServices } from './runtime.ts'
 
 /** Cordis plugin name used by Loader diagnostics. */
 export const name = 'tool-session-query'
@@ -18,30 +24,19 @@ export const name = 'tool-session-query'
 /** Capability services required by the model-facing consumer. */
 export const inject = ['tools', 'systemPrompt', 'sessionQuery', 'sessionProjections']
 
-/** Default maximum number of authorized search hits returned by one call. */
-export const DEFAULT_MAX_SEARCH_RESULTS = 100
+export { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_TIMEOUT_MS }
 
-/** Default cooperative deadline for either full-text search tool. */
-export const DEFAULT_SEARCH_TIMEOUT_MS = 30_000
+/** Deployment-owned compatibility config type backed by the shared resolver. */
+export interface Config extends SessionQueryToolConfig {}
 
-/** Deployment-owned search count and timeout bounds. */
-export interface Config {
-  /** Maximum authorized hits returned by one search call. Defaults to 100. */
-  maxSearchResults?: number
-  /** Cooperative full-text search deadline in milliseconds. Defaults to 30000. */
-  searchTimeoutMs?: number
-}
+/** Shared deployment config consumed by the Cordis and Native installers. */
+export type { SessionQueryToolConfig } from './config.ts'
 
 /** Schemastery config for Loader defaults and generated configuration docs. */
 export const Config: z<Config> = z.object({
   maxSearchResults: z.number().step(1).min(1).default(DEFAULT_MAX_SEARCH_RESULTS),
   searchTimeoutMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(DEFAULT_SEARCH_TIMEOUT_MS),
 })
-
-interface ResolvedConfig {
-  readonly maxSearchResults: number
-  readonly searchTimeoutMs: number
-}
 
 const TEXT_OUTPUT = {
   schema: { type: 'string' as const },
@@ -55,7 +50,12 @@ const PROMPT_TEXT =
 
 /** Register all five tools and their shared model guidance. */
 export function apply(ctx: Context, config: Config): void {
-  const resolved = resolveConfig(config)
+  const resolved = resolveSessionQueryToolConfig(config)
+  const services: SessionQueryToolServices = {
+    sessionQuery: ctx.sessionQuery,
+    sessionProjections: ctx.sessionProjections,
+    warn: (message) => { ctx.logger.warn(message) },
+  }
   ctx.systemPrompt.section({
     name: 'tool:session-query',
     order: ctx.systemPrompt.getSectionOrder('TOOL_SESSION_QUERY'),
@@ -68,7 +68,7 @@ export function apply(ctx: Context, config: Config): void {
     parameters: toolInput.sessionSearchParameters,
     output: TEXT_OUTPUT,
     timeoutMs: resolved.searchTimeoutMs,
-    execute: (args, exec) => operations.executeSessionSearch(ctx, args, exec, resolved.maxSearchResults),
+    execute: (args, exec) => operations.executeSessionSearch(services, args, invocation(exec), resolved.maxSearchResults),
     presentCall: presentation.presentSessionSearchCall,
   }))
 
@@ -78,7 +78,7 @@ export function apply(ctx: Context, config: Config): void {
     parameters: toolInput.eventSearchParameters,
     output: TEXT_OUTPUT,
     timeoutMs: resolved.searchTimeoutMs,
-    execute: (args, exec) => operations.executeEventSearch(ctx, args, exec, resolved.maxSearchResults),
+    execute: (args, exec) => operations.executeEventSearch(services, args, invocation(exec), resolved.maxSearchResults),
     presentCall: presentation.presentEventSearchCall,
   }))
 
@@ -88,7 +88,7 @@ export function apply(ctx: Context, config: Config): void {
     parameters: toolInput.targetSessionParameter,
     output: TEXT_OUTPUT,
     isConcurrencySafe: () => true,
-    execute: (args, exec) => operations.executeSessionTrace(ctx, args, exec),
+    execute: (args, exec) => operations.executeSessionTrace(services, args, invocation(exec)),
     presentCall: presentation.presentSessionTraceCall,
   }))
 
@@ -101,7 +101,7 @@ export function apply(ctx: Context, config: Config): void {
     },
     output: TEXT_OUTPUT,
     isConcurrencySafe: () => true,
-    execute: (args, exec) => operations.executeEventTrace(ctx, args, exec),
+    execute: (args, exec) => operations.executeEventTrace(services, args, invocation(exec)),
     presentCall: args => presentation.presentEventTargetCall('Trace event', args),
   }))
 
@@ -116,21 +116,15 @@ export function apply(ctx: Context, config: Config): void {
     },
     output: TEXT_OUTPUT,
     isConcurrencySafe: () => true,
-    execute: (args, exec) => operations.executeEventRead(ctx, args, exec),
+    execute: (args, exec) => operations.executeEventRead(services, args, invocation(exec)),
     presentCall: args => presentation.presentEventTargetCall('Read event', args),
   }))
 }
 
-function resolveConfig(config: Config): ResolvedConfig {
-  const maxSearchResults = config.maxSearchResults ?? DEFAULT_MAX_SEARCH_RESULTS
-  const searchTimeoutMs = config.searchTimeoutMs ?? DEFAULT_SEARCH_TIMEOUT_MS
-  if (!Number.isSafeInteger(maxSearchResults) || maxSearchResults < 1) {
-    throw new TypeError('tool-session-query: maxSearchResults must be a positive safe integer')
+function invocation(exec: ToolRunContext): SessionQueryToolInvocation {
+  const agent = exec.agent
+  return {
+    ...agent === undefined ? {} : { agent: { session: agent.session } },
+    signal: exec.signal,
   }
-  if (!Number.isInteger(searchTimeoutMs) || searchTimeoutMs < 1 || searchTimeoutMs > MAX_TIMER_DELAY_MS) {
-    throw new TypeError(
-      `tool-session-query: searchTimeoutMs must be a positive integer no greater than ${MAX_TIMER_DELAY_MS}`,
-    )
-  }
-  return { maxSearchResults, searchTimeoutMs }
 }

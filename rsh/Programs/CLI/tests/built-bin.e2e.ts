@@ -16,6 +16,8 @@ import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
 import { execa } from 'execa'
 import * as yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { loadNativeProfile } from '../src/native-profile-loader.ts'
+import { ensureShippedNativeProfile } from '../src/native-profile-template.ts'
 
 /** Published-entry acceptance for argument errors, profile lifecycle, and boot-free config dumps. */
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url))
@@ -945,6 +947,73 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(server.requests.length).toBeGreaterThan(0)
       expect(server.requests.every(request => request.path === '/chat/completions')).toBe(true)
       expect(JSON.stringify(server.requests.map(request => request.body))).toContain('answer from the published entry')
+    } finally {
+      await server.close()
+      rmSync(home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS + 30_000)
+
+  it('runs the opt-in Native query profile through a model-visible query tool call', async () => {
+    const apiKey = 'built-native-query-key'
+    const server = await startMockLlmServer({
+      sequence: ['tool_call_success', 'success'],
+      apiKey,
+      toolName: 'session_search',
+      toolArguments: JSON.stringify({ query: 'history' }),
+      successText: 'Native session query completed.',
+    })
+    const home = mkdtempSync(join(tmpdir(), 'dsh-native-query-profile-'))
+    const profileDir = join(home, 'profiles', 'native-headless-query')
+    const profilePath = join(profileDir, 'rsh.profile.json')
+    const installAnchor = fileURLToPath(new URL('../package.json', import.meta.url))
+    try {
+      ensureShippedNativeProfile('native-headless-query', home)
+      const profile = JSON.parse(readFileSync(profilePath, 'utf8')) as {
+        installations: Array<{ id: string; plugin: string; scope: string; config?: Record<string, unknown> }>
+      }
+      const app = profile.installations.find(row => row.id === 'app')
+      expect(app?.config).toMatchObject({ cwd: process.cwd() })
+      if (app === undefined) throw new Error('native query profile has no app installation')
+      app.config = { ...app.config, provider: 'deepseek', model: 'session-query-fixture' }
+      const modelProvider = profile.installations.find(row => row.id === 'pi-ai')
+      if (modelProvider === undefined) throw new Error('native query profile has no pi-ai installation')
+      modelProvider.config = {
+        providers: {
+          deepseek: {
+            apiKeyEnv: 'DEEPSEEK_API_KEY',
+            api: 'openai-completions',
+            baseURL: server.baseURL,
+            models: [{ id: 'session-query-fixture' }],
+          },
+        },
+      }
+      writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
+      const options = { profile: 'native-headless-query', patchFiles: [], target: 'host' as const, installAnchor, home }
+      const loaded = await loadNativeProfile(options)
+      expect(loaded.requests.get('session-query')?.plugin.name).toBe('@deepseek-ai/dsh-session-query-sqlite')
+      expect(loaded.requests.get('tool-session-query')?.plugin.name).toBe('@deepseek-ai/dsh-tool-session-query')
+
+      profile.installations.push({ id: 'session-query-exact', plugin: '@deepseek-ai/dsh-session-query', scope: 'root' })
+      writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
+      await expect(loadNativeProfile(options)).rejects.toThrow(/duplicate provider for sessionQuery/)
+      profile.installations.pop()
+      writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
+
+      const result = await runBuiltBin(
+        ['--profile', 'native-headless-query', 'search', 'prior', 'session', 'history'],
+        {
+          DSH_HOME: home,
+          DSH_TELEMETRY_DISABLED: '1',
+          DEEPSEEK_API_KEY: apiKey,
+          DEEPSEEK_BASE_URL: server.baseURL,
+        },
+      )
+      expect(result.code, result.stderr).toBe(0)
+      expect(result.stdout).toBe('Native session query completed.')
+      expect(server.requests).toHaveLength(2)
+      expect(JSON.stringify(server.requests[0]?.body)).toContain('session_search')
+      expect(JSON.stringify(server.requests[1]?.body)).toContain('No prior session matches found.')
+      expect(existsSync(join(home, 'sessions', 'query.sqlite'))).toBe(true)
     } finally {
       await server.close()
       rmSync(home, { recursive: true, force: true })

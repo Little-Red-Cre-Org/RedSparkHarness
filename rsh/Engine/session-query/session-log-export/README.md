@@ -1,5 +1,5 @@
 ---
-description: "Web Session-log ZIP export: Host streaming, the authenticated download route, the Session Header action, and the /export command."
+description: "Session-log ZIP export for Web downloads and Native Host consumers that need a canonical archive stream of a Session tree and its attachments."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-session-log-export` lets the Web interface download a session's full history: a `Download session log` menu item under the Session Header's more-actions button and an `/export` slash command both hand the session tree — the session, its sub-sessions, and attachments — to the browser as a ZIP download. The package owns the Host archive stream, its authenticated Fetch route, and the browser controls and feedback. The browser chooses the download destination. Setup and usage come first; implementation details follow.
+`dsh-session-log-export` lets Web users download a Session tree and its attachments as a ZIP. Native Host consumers can request the same canonical archive as a byte stream and choose how to deliver it. The package does not select a Host path or transport. Setup and usage come first; implementation details follow.
 
 ## Table of Contents
 
@@ -25,11 +25,11 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Use this package when the Web bundle should let users export a session log. It requires Connection, the command registry, Session query and persistence, and attachments. Mount the plugin, then choose `Download session log` from the Session Header's more-actions menu or type `/export`; the browser downloads `dsh-session-<id>.zip`.
+Use this package when Web users need a session download or a Native Host consumer needs an archive stream. Mount the Web plugin for the Session Header action and `/export`; select the Native entry with Session query, persistence, attachments, and active-session providers for programmatic access.
 
 ### When to choose it
 
-Choose it for a Web deployment that needs user-facing session export with a visible download dialog. Avoid it when a programmatic or Host-side export is needed: this package produces a browser download, not a Host path write. The logs are serialized from persistence read handles, so any mounted backend is supported.
+Choose it for a Web download or a Native Host caller that owns its stream destination. The Native API returns a filename and byte stream; the caller owns HTTP, file, or other transport. The archive reads canonical persistence handles, so each mounted persistence backend uses the same format.
 
 ### Composition
 
@@ -39,6 +39,8 @@ Choose it for a Web deployment that needs user-facing session export with a visi
 ```
 
 The Web bundle mounts the package with Connection, `dsh-commands`, `dsh-client-ui-commands`, and `dsh-client-ui-conversation`.
+
+The Native Host entry provides `sessionLogExport`. Call `createArchive(sessionId, { includeDescendants, signal })`; it returns the archive filename and stream, or `undefined` when the root Session is absent.
 
 ### Configuration
 
@@ -55,11 +57,11 @@ The Web bundle mounts the package with Connection, `dsh-commands`, `dsh-client-u
 
 ### What to expect
 
-The dialog reports three phases: preparing, download started, or failed. Closing the dialog does not cancel an in-flight download, and the dialog does not reopen when that operation later settles. One session admits one active download at a time; repeated gestures share that operation. The export includes the live session's newest events: the host endpoint flushes a live root session before reading, so a slash-triggered ZIP includes the `command/run` and `command/done` pair that started the download; cold persisted sessions need no flush. Each logical log uses the current generation's canonical filename inside the archive (`session.jsonl` for v0, otherwise `session.vN.jsonl`), including beneath each sub-session directory. Images use `media/<attachmentId>.<ext>`, and generic files use `files/<digest-prefix>/<digest>/<name>`. Generic-file bytes are read and compressed as bounded chunks, so exporting a large upload does not buffer it in full.
+The Web dialog reports three phases: preparing, download started, or failed. Closing the dialog does not cancel an in-flight download, and the dialog does not reopen when that operation later settles. One session admits one active browser download at a time; repeated gestures share that operation. Both Host paths flush a live Session before reading canonical persistence; Native export checks that the exact active owner remains the same through the read. Each logical log uses the current generation's canonical filename (`session.jsonl` for v0, otherwise `session.vN.jsonl`), including beneath each sub-session directory. Images use `media/<attachmentId>.<ext>`, and generic files use `files/<digest-prefix>/<digest>/<name>`. Generic-file bytes are read and compressed as bounded chunks, so exporting a large upload does not buffer it in full.
 
 ### Failures
 
-The dialog shows a preparation error when the preflight fails before ZIP streaming starts — for example an unreachable or misconfigured host endpoint. A descendant or attachment read failure after the browser accepts the GET is reported by the browser download manager, not by the dialog.
+The dialog shows a preparation error when the preflight fails before ZIP streaming starts — for example an unreachable or misconfigured host endpoint. A descendant or attachment read failure after the browser accepts the GET is reported by the browser download manager, not by the dialog. Native callers receive root preparation errors from `createArchive`; descendant or attachment errors fail the returned stream, and provider disposal aborts and drains accepted archive work.
 
 -----
 
@@ -73,7 +75,7 @@ This section explains how the package wires the export control and points at the
 
 ### Design split
 
-The package has two halves. The Host half ([`src/index.ts`](src/index.ts)) registers the `/export` command and contributes the exact `GET`/`HEAD /api/session.export` Fetch route to Connection; [`src/archive.ts`](src/archive.ts) builds the bounded ZIP stream. The browser half ([`src/client/index.ts`](src/client/index.ts)) provides the shared download controller and UI, and observes `command/executed` so only the submitting browser starts a download.
+The package has three parts. The Cordis adapter ([`src/index.ts`](src/index.ts)) registers the `/export` command and contributes the exact `GET`/`HEAD /api/session.export` Fetch route to Connection. The Native Host provider ([`src/native.ts`](src/native.ts)) exposes `sessionLogExport` and drains accepted reads and ZIP producers during disposal. Both adapters use [`src/archive.ts`](src/archive.ts) for canonical reads and bounded ZIP production; the browser controls live in [`src/client/index.ts`](src/client/index.ts). The Web route remains the Cordis adapter, so its transport migration is outside this Native capability.
 
 ### Download flow
 
@@ -94,6 +96,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Commands subsystem reference](../../../Docs/subsystems/commands.md) — the human-command registry the `/export` command registers on.
 - [dsh-client-ui-commands](../../../Programs/Web/client/ui-commands/README.md) — the browser command surface that renders and acknowledges `/export`.
 - [Session Query package map](../README.md) — the retrieval family this package belongs to.
+- [Native active-session protocol](../../core/native-session-execution/README.md) — the exact live owner flushed before a Native archive read.
 
 -----
 
@@ -121,7 +124,8 @@ None. The log-only command lifecycle and browser download do not change the deri
 
 These limits define when this package is a poor fit or needs special operational care. They are current package constraints, not a task backlog.
 
-- **Browser download, not a Host-path writer** — the browser chooses the local destination; no Host path or native folder action is returned.
+- **Stream, not a destination writer** — Native callers choose the transport or path, and the browser chooses its download destination.
+- **Web route remains Cordis-owned** — the Native service does not register or replace `/api/session.export`; Web transport migration belongs to its carrier owner.
 - **Preflight reports only pre-stream failures** — a descendant or attachment failure after the browser accepts the GET is reported by the browser download manager, not by the dialog.
 
 <a id="dev-note"></a>

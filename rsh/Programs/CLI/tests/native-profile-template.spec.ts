@@ -38,10 +38,32 @@ it('defines a native-web Host composition and Client profile without Cordis rows
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
-    for (const name of ['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
+    for (const name of ['native-headless', 'native-headless-query', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
       ensureShippedNativeProfile(name, home)
       expect(nativeProfileReloadMode(name, home)).toBe('startup')
     }
+    const queryProfile = JSON.parse(await readFile(join(home, 'profiles', 'native-headless-query', 'rsh.profile.json'), 'utf8')) as {
+      installations: Array<{ id: string; plugin: string; config?: unknown }>
+    }
+    expect(queryProfile.installations.find(row => row.id === 'session-query')).toEqual({
+      id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: 'root',
+      config: { path: join(home, 'sessions', 'query.sqlite'), openAt: 'first-search' },
+    })
+    expect(queryProfile.installations.find(row => row.id === 'storage-hub')).toEqual({
+      id: 'storage-hub', plugin: '@deepseek-ai/dsh-storage', scope: 'root',
+    })
+    expect(queryProfile.installations.find(row => row.id === 'storage-json')).toEqual({
+      id: 'storage-json', plugin: '@deepseek-ai/dsh-storage-json', scope: 'root',
+      config: { root: join(home, 'storages') },
+    })
+    expect(queryProfile.installations.find(row => row.id === 'storage-domain')).toEqual({
+      id: 'storage-domain', plugin: '@deepseek-ai/dsh-storage-domain', scope: 'root',
+      config: { backend: 'json' },
+    })
+    expect(queryProfile.installations.find(row => row.id === 'session-projection-cache')).toEqual({
+      id: 'session-projection-cache', plugin: '@deepseek-ai/dsh-session-projection-cache', scope: 'root',
+      config: { writeEveryEvents: 200, writeIntervalMs: 5000 },
+    })
     const client = JSON.parse(await readFile(join(home, 'profiles', 'native-web', 'rsh.client.json'), 'utf8')) as {
       installations: Array<{ id: string; plugin: string }>
     }
@@ -253,14 +275,42 @@ it.each(['native-headless', 'native-sdk', 'native-acp'] as const)('keeps title a
   expect(plugins).not.toContain('@deepseek-ai/dsh-plan-mode')
 })
 
-it('installs cold session query before references in the Native headless profile', () => {
-  const installations = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless', 'linux').installations
-  const query = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-query')
-  const reference = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-reference')
-  const instructions = installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-agent-instructions')
-  expect(query).toBeGreaterThan(installations.findIndex(row => row.id === 'session-execution'))
-  expect(reference).toBeGreaterThan(query)
+it('keeps exact query default and selects one SQLite provider only in the explicit Native profile', () => {
+  const installed = createRequire(new URL('../package.json', import.meta.url))
+  const standard = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless', 'linux').installations
+  const selected = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless-query', 'linux').installations
+  const standardQuery = standard.findIndex(row => row.id === 'session-query')
+  const reference = standard.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-reference')
+  const instructions = standard.findIndex(row => row.plugin === '@deepseek-ai/dsh-agent-instructions')
+  expect(standard[standardQuery]?.plugin).toBe('@deepseek-ai/dsh-session-query')
+  expect(standard.some(row => row.id === 'tool-session-query' || row.id === 'session-projections')).toBe(false)
+  expect(standardQuery).toBeGreaterThan(standard.findIndex(row => row.id === 'session-execution'))
+  expect(reference).toBeGreaterThan(standardQuery)
   expect(instructions).toBeGreaterThan(reference)
+
+  expect(selected.filter(row => [
+    '@deepseek-ai/dsh-session-query', '@deepseek-ai/dsh-session-query-sqlite',
+  ].includes(row.plugin))).toEqual([{
+    id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: 'root',
+    config: { path: join('/tmp/rsh-reference', 'sessions', 'query.sqlite'), openAt: 'first-search' },
+  }])
+  expect(standard.find(row => row.id === 'app')?.config).not.toHaveProperty('cwd')
+  expect(selected.find(row => row.id === 'app')?.config).toMatchObject({ cwd: process.cwd() })
+  const query = selected.findIndex(row => row.id === 'session-query')
+  const projection = selected.findIndex(row => row.id === 'session-projections')
+  const cache = selected.findIndex(row => row.id === 'session-projection-cache')
+  const tool = selected.findIndex(row => row.id === 'tool-session-query')
+  const selectedReference = selected.findIndex(row => row.plugin === '@deepseek-ai/dsh-session-reference')
+  expect(projection).toBeGreaterThan(selected.findIndex(row => row.id === 'session-execution'))
+  expect(cache).toBeGreaterThan(projection)
+  expect(query).toBeGreaterThan(cache)
+  expect(tool).toBeGreaterThan(query)
+  expect(selectedReference).toBeGreaterThan(tool)
+  for (const packageName of [
+    '@deepseek-ai/dsh-storage', '@deepseek-ai/dsh-storage-json', '@deepseek-ai/dsh-storage-domain',
+    '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-session-projection-cache',
+    '@deepseek-ai/dsh-session-query-sqlite', '@deepseek-ai/dsh-tool-session-query',
+  ]) expect(installed.resolve(`${packageName}/package.json`)).toBeTruthy()
 })
 
 it('installs plan mode beside the native TUI command registry', () => {

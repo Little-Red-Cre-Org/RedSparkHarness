@@ -435,7 +435,7 @@ export class WorkspaceAnalyzer {
    * Index top-level exported type declarations without promoting them to graph
    * roots. Consumers use this lexical index for ambiguity checks while all
    * semantic traversal continues through {@link TypeGraph}.
-   * @returns declarations from the selected faces and package projects.
+   * @returns exported declarations from selected package projects and their same-package references.
    */
   indexSourceDeclarations(): SourceDeclarationModel[] {
     const selected = this.options.packages === undefined ? undefined : new Set(this.options.packages)
@@ -443,7 +443,7 @@ export class WorkspaceAnalyzer {
     for (const registration of this.loadRegistrations()) {
       if (!this.options.faces.includes(registration.face)
         || (selected !== undefined && !selected.has(registration.name))) continue
-      for (const file of registration.config.parsed.fileNames) {
+      for (const file of this.sourceDeclarationFiles(registration)) {
         const relativeFile = slash(relative(this.options.root, file))
         if (!existsSync(file)
           || !isWithin(realPath(file), join(registration.root, 'src'))
@@ -481,6 +481,29 @@ export class WorkspaceAnalyzer {
       .sort((left, right) => left.face.localeCompare(right.face)
         || left.location.file.localeCompare(right.location.file)
         || left.location.line - right.location.line)
+  }
+
+  private sourceDeclarationFiles(registration: PackageRegistration): string[] {
+    const files = new Set(registration.config.parsed.fileNames)
+    const pending = [...(registration.config.parsed.projectReferences ?? [])]
+      .map(reference => projectConfigPath(resolve(dirname(registration.config.path), reference.path)))
+    const visited = new Set<string>()
+    while (pending.length > 0) {
+      const reference = pending.pop()
+      if (reference === undefined) continue
+      const configPath = realPath(reference)
+      if (visited.has(configPath)
+        || !isWithin(dirname(configPath), registration.root)
+        || isOtherFaceProject(configPath, registration.face)) continue
+      visited.add(configPath)
+      const config = this.caches.config(configPath)
+      if (config.parsed.options.declaration === true) {
+        for (const file of config.parsed.fileNames) files.add(file)
+      }
+      pending.push(...(config.parsed.projectReferences ?? []).map(reference =>
+        projectConfigPath(resolve(dirname(configPath), reference.path))))
+    }
+    return [...files]
   }
 
   private loadRegistrations(): PackageRegistration[] {
@@ -992,11 +1015,10 @@ class FaceAnalyzer {
         symbol = target
         declaration = preferredDeclaration(symbol)
       }
-      if (declaration === undefined || (!ts.isClassDeclaration(declaration) && !ts.isInterfaceDeclaration(declaration))) {
-        this.fail(member, `service ${memberName(member.name)} does not resolve to an exported class or interface`)
-      }
       const memberOwner = this.registrationForFile(member.getSourceFile().fileName)
-      const declarationOwner = this.registrationForFile(declaration.getSourceFile().fileName)
+      const declarationOwner = declaration === undefined
+        ? undefined
+        : this.registrationForFile(declaration.getSourceFile().fileName)
       const importedDefinition = memberOwner?.name !== declarationOwner?.name
         && this.serviceDefinitionPackages.includes(declarationOwner?.name ?? '')
       if (memberOwner?.name !== declarationOwner?.name && !importedDefinition) continue
@@ -1009,6 +1031,9 @@ class FaceAnalyzer {
         ?? exportedRecords.find(record => record.model.name !== 'default')
         ?? exportedRecords[0]
       if (exported === undefined) continue
+      if (declaration === undefined || (!ts.isClassDeclaration(declaration) && !ts.isInterfaceDeclaration(declaration))) {
+        this.fail(member, `service ${memberName(member.name)} does not resolve to an exported class or interface`)
+      }
       const symbolId = this.symbolId(symbol)
       const model = this.ensureDeclaration(symbol, declaration)
       const typeArguments = ts.isTypeReferenceNode(member.type)
@@ -2928,6 +2953,11 @@ function parseConfig(path: string): ParsedConfig {
 function projectConfigPath(path: string): string {
   if (extname(path) === '.json') return path
   return join(path, 'tsconfig.json')
+}
+
+function isOtherFaceProject(configPath: string, face: TypertFace): boolean {
+  return (face === 'host' && basename(configPath) === 'tsconfig.client.json')
+    || (face === 'client' && basename(configPath) === 'tsconfig.host.json')
 }
 
 function sourceFileHasSurface(sourceFile: ts.SourceFile): boolean {
