@@ -312,16 +312,21 @@ it('refresh mid-login then resume and finish', async () => {
 
 it.each([
   { name: 'settled before subscribe', attemptId: undefined },
-  { name: 'same id resubscribes after a transient failure', attemptId: 'a1' },
+  { name: 'same id resubscribes once, then stops', attemptId: 'a1' },
 ])('$name', async ({ attemptId }) => {
   const key = credentialKey('llm-pi-ai', 'openai-codex')
   const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
     configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
   const authorizationCancel = vi.fn(async () => undefined)
-  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
-    if (attemptId === undefined || authorizationFrames.mock.calls.length === 1) throw new Error('HTTP 409: unavailable attempt')
+  let releaseSecond!: () => void
+  const dropSecond = new Promise<void>((resolve) => { releaseSecond = resolve })
+  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, _signal: AbortSignal) {
+    if (attemptId === undefined || authorizationFrames.mock.calls.length !== 2) {
+      throw new Error('HTTP 409: unavailable attempt')
+    }
     yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
-    await new Promise((resolve) => { signal.addEventListener('abort', resolve) })
+    await dropSecond
+    throw new Error('HTTP 409: unavailable attempt')
   })
   const actions = {
     settingsDescribe: vi.fn(async () => settingsDescription([])),
@@ -343,6 +348,12 @@ it.each([
     expect(screen.getByRole('button', { name: en.cancelSignIn })).toBeTruthy()
     expect(screen.queryByText(en.signInIncomplete)).toBeNull()
     expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    releaseSecond()
+    expect(await screen.findByText(en.authorizationDisconnected)).toBeTruthy()
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    await new Promise<void>((resolve) => { setTimeout(() => { resolve() }, 20) })
+    expect(authorizationFrames).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
   }
   expect(authorizationList).toHaveBeenCalledTimes(2)
   expect(onAuthorized).toHaveBeenCalledOnce()

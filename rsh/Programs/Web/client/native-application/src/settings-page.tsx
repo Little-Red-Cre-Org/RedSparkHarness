@@ -118,14 +118,16 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [error, setError] = useState<string>()
   const [lost, setLost] = useState(false)
+  const [stopped, setStopped] = useState<string>()
+  const retried = useRef<string>()
   // Parent callbacks may change identity on every render; only a new attempt resubscribes.
   const settledRef = useRef(onSettled)
   settledRef.current = onSettled
 
-  // Undefined means not subscribed; every refreshed entry with a running id (even the same one) resubscribes.
+  // Undefined means not subscribed; refresh may resubscribe once per attempt.
   useEffect(() => {
-    if (entry.attemptId !== undefined) setAttemptId(entry.attemptId)
-  }, [entry])
+    if (entry.attemptId !== undefined && entry.attemptId !== stopped) setAttemptId(entry.attemptId)
+  }, [entry, stopped])
 
   useEffect(() => {
     if (attemptId === undefined) return
@@ -134,6 +136,13 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     // The attempt may settle before this subscription; the refreshed record then decides what to show.
     const lose = async (): Promise<void> => {
       setAttemptId(undefined)
+      setAnswers({})
+      if (retried.current === attemptId) {
+        setLost(false)
+        setStopped(attemptId)
+        return
+      }
+      retried.current = attemptId
       await settledRef.current()
       setLost(true)
     }
@@ -142,6 +151,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     void (async () => {
       try {
         for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
+          setLost(false)
           setFrames(current => [...current, frame])
           if (frame.type === 'prompt-closed') {
             setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== frame.promptId)))
@@ -187,6 +197,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   const begin = async (): Promise<void> => {
     setError(undefined)
     setLost(false)
+    setStopped(undefined)
     try {
       const attempt = await actions.authorizationBegin(entry.key, method)
       setAttemptId(attempt.attemptId)
@@ -237,6 +248,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
     {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
+    {stopped === undefined ? null : <p role="alert">{t('authorizationDisconnected')}</p>}
     {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
@@ -272,8 +284,11 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  // Older refreshes cannot replace the latest authorization-list result.
+  const refreshes = useRef(0)
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
+    const request = ++refreshes.current
     setLoading(true)
     setError(undefined)
     setCredentialError(undefined)
@@ -282,10 +297,12 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       const description = await actions.settingsDescribe(signal)
       try {
         const entries = await actions.authorizationList(signal)
-        setAuthorizationEntries(entries)
+        if (request === refreshes.current) setAuthorizationEntries(entries)
       } catch (cause: unknown) {
-        setAuthorizationEntries([])
-        setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
+        if (request === refreshes.current) {
+          setAuthorizationEntries([])
+          setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
+        }
       }
       const rows = description.namespaces
       setLimits(description.limits)
