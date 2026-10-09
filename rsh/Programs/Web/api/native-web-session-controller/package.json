@@ -56,6 +56,7 @@
         "attachments",
         "settings",
         "credentials",
+        "authorization",
         "sessionTitles",
         "commands"
       ],
@@ -89,6 +90,7 @@
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
+    "@deepseek-ai/dsh-authorization": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",

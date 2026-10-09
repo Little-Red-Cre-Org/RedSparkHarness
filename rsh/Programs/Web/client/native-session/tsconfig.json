@@ -18,6 +18,9 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
+      "path": "../../../../Modules/Official/credentials/authorization"
+    },
+    {
       "path": "../connection/tsconfig.client.json"
     },
     {

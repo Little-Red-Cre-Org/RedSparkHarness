@@ -2,6 +2,7 @@
 import { nativeWebHumanSchema, type NativeWebHumanAnswer, type NativeWebHumanId, type NativeWebHumanPrompt } from './human.ts'
 export type { NativeWebHumanAnswer, NativeWebHumanId, NativeWebHumanPrompt } from './human.ts'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
+import { z } from 'zod'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
@@ -13,6 +14,7 @@ import { nativeModelControlsSchema, type NativeModelControls } from './model-con
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
+import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -96,6 +98,22 @@ export interface NativeCredentialInfo {
   readonly writable: boolean
 }
 
+/** Safe metadata for one Host-registered authorization flow. */
+export interface NativeAuthorizationEntry {
+  /** Allowlisted credential record key. */
+  readonly key: string
+  /** User-facing flow name. */
+  readonly label: string
+  /** Flow methods in preference order. */
+  readonly methods: readonly AuthorizationMethod[]
+  /** Whether the credential record is configured. */
+  readonly configured: boolean
+  /** Whether the credential provider accepts writes. */
+  readonly writable: boolean
+  /** Current attempt identity, when the flow is running. */
+  readonly attemptId?: string
+}
+
 /** Structured rejection from one native Host RPC endpoint. */
 export class NativeSessionRpcError extends Error {
   /** @param code - stable native RPC failure code.
@@ -144,6 +162,49 @@ export interface NativeSessionClient {
    * @returns completion acknowledgement.
    */
   credentialsUnset(ref: string, signal?: AbortSignal): Promise<void>
+  /** List allowlisted authorization flows without reading credential records.
+   * @param signal - caller cancellation.
+   * @returns safe flow labels, methods and credential presence facts.
+   */
+  authorizationList(signal?: AbortSignal): Promise<readonly NativeAuthorizationEntry[]>
+  /** Start one allowlisted flow independently of the caller's page lifetime.
+   * @param key - allowlisted credential key.
+   * @param method - optional flow method id.
+   * @param signal - caller cancellation while the Host admits the attempt.
+   * @returns the current attempt identity.
+   */
+  authorizationBegin(key: string, method?: string, signal?: AbortSignal): Promise<{ readonly attemptId: string }>
+  /** Watch replayable authorization frames until this iteration ends.
+   * @param key - allowlisted credential key.
+   * @param attemptId - current attempt identity.
+   * @param signal - ends this frame iteration without cancelling the attempt.
+   * @returns secret-free frames from the beginning of the attempt.
+   */
+  authorizationFrames(key: string, attemptId: string, signal: AbortSignal): AsyncIterable<AuthorizationFrame>
+  /** Submit a value to one open authorization prompt.
+   * @param key - allowlisted credential key.
+   * @param attemptId - current attempt identity.
+   * @param promptId - open prompt identity.
+   * @param value - text or selected option id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host accepts the answer.
+   */
+  authorizationAnswer(key: string, attemptId: string, promptId: string, value: string, signal?: AbortSignal): Promise<void>
+  /** Decline one open authorization prompt.
+   * @param key - allowlisted credential key.
+   * @param attemptId - current attempt identity.
+   * @param promptId - open prompt identity.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host accepts the decline.
+   */
+  authorizationDecline(key: string, attemptId: string, promptId: string, signal?: AbortSignal): Promise<void>
+  /** Cancel an authorization attempt and wait for its Host drain.
+   * @param key - allowlisted credential key.
+   * @param attemptId - current attempt identity.
+   * @param signal - caller cancellation while waiting for the Host reply.
+   * @returns completion after the attempt releases its key.
+   */
+  authorizationCancel(key: string, attemptId: string, signal?: AbortSignal): Promise<void>
   /** Fetch verified bytes of an image recorded in the selected Session.
    * @param sessionId - recorded Session identity.
    * @param image - image reference obtained from its validated history.
@@ -291,6 +352,26 @@ function credentialInfo(value: unknown): NativeCredentialInfo {
     ...data.source === undefined ? {} : { source: data.source } }
 }
 
+const authorizationEntrySchema = z.strictObject({
+  key: z.string(), label: z.string(),
+  methods: z.array(z.strictObject({ id: z.string(), label: z.string() })),
+  configured: z.boolean(), writable: z.boolean(), attemptId: z.string().optional(),
+})
+const authorizationFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
+    message: z.string(), url: z.string().optional(), code: z.string().optional(),
+  }) }),
+  z.strictObject({ type: z.literal('prompt'), promptId: z.string(), prompt: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('text'), message: z.string(), placeholder: z.string().optional() }),
+    z.strictObject({ kind: z.literal('secret'), message: z.string(), placeholder: z.string().optional() }),
+    z.strictObject({ kind: z.literal('select'), message: z.string(), options: z.array(z.strictObject({
+      id: z.string(), label: z.string(), description: z.string().optional(),
+    })) }),
+  ]) }),
+  z.strictObject({ type: z.literal('prompt-closed'), promptId: z.string() }),
+  z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']), code: z.string().optional() }),
+])
+
 function header(value: unknown): SessionHeader {
   const data = fields(value)
   if (typeof data.id !== 'string' || data.id.length === 0 || data.version !== SESSION_FORMAT_VERSION
@@ -311,6 +392,10 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'credentials/set' || endpoint === 'credentials/unset') {
     if (fields(value).updated !== true) throw new TypeError('invalid native credential write acknowledgement')
     return undefined
+  }
+  if (endpoint === 'authorization/list') {
+    if (!Array.isArray(value)) throw new TypeError('native authorization list must be an array')
+    return value.map(item => authorizationEntrySchema.parse(item))
   }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
@@ -351,6 +436,18 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/answer-human':
       if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')
       break
+    case 'authorization/begin':
+      if (typeof data.attemptId !== 'string') throw new TypeError('invalid native authorization attempt')
+      break
+    case 'authorization/answer':
+      if (data.answered !== true) throw new TypeError('invalid native authorization answer acknowledgement')
+      return undefined
+    case 'authorization/decline':
+      if (data.declined !== true) throw new TypeError('invalid native authorization decline acknowledgement')
+      return undefined
+    case 'authorization/cancel':
+      if (data.cancelled !== true) throw new TypeError('invalid native authorization cancellation acknowledgement')
+      return undefined
     case 'session/rename-title':
     case 'session/refresh-title':
       if (data.changed !== true) throw new TypeError('invalid native Session title acknowledgement')
@@ -525,6 +622,29 @@ export function createNativeSessionClient(
     credentialsDescribe: (refs, signal) => call('credentials/describe', { refs }, signal),
     async credentialsSet(ref, value, signal) { await call('credentials/set', { ref, value }, signal) },
     async credentialsUnset(ref, signal) { await call('credentials/unset', { ref }, signal) },
+    authorizationList: signal => call('authorization/list', {}, signal),
+    authorizationBegin: (key, method, signal) => call('authorization/begin', { key, ...(method === undefined ? {} : { method }) }, signal),
+    async *authorizationFrames(key, attemptId, signal) {
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      const accepted = AbortSignal.any([lifetime, signal])
+      const response = await responseOperation('/api', 'native-session/authorization', { key, attemptId }, accepted)
+      if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+        throw new Error(`native authorization frames: invalid response HTTP ${response.status}`)
+      }
+      const frames = response.body.pipeThrough(new TextDecoderStream())
+        .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+      for await (const { data } of frames) yield authorizationFrameSchema.parse(JSON.parse(data)) as AuthorizationFrame
+    },
+    async authorizationAnswer(key, attemptId, promptId, value, signal) {
+      await call('authorization/answer', { key, attemptId, promptId, value }, signal)
+    },
+    async authorizationDecline(key, attemptId, promptId, signal) {
+      await call('authorization/decline', { key, attemptId, promptId }, signal)
+    },
+    async authorizationCancel(key, attemptId, signal) {
+      await call('authorization/cancel', { key, attemptId }, signal)
+    },
     async image(sessionId, image, signal) {
       const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
       accepted.throwIfAborted()

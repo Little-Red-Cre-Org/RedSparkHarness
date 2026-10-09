@@ -36,6 +36,8 @@ The optional prompt observer follows accepted durable events and transient assis
 
 The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`, `credentialsDescribe`, `credentialsSet` and `credentialsUnset` on the selected `/api` carrier. `settingsDescribe` returns the published namespace descriptors with request budgets supplied by the selected Host. The Settings page uses `maxCredentialRefsPerRead` for bounded credential batches and aggregates the results; it refuses edits above `maxSettingsOperations` before sending a mutation, because one revision-checked write stays atomic. The Host defaults these validated limits to 64 refs and 512 operations. Credential reads contain only presence, source and writability facts, and credential writes return acknowledgements without echoing their values. `NativeSessionRpcError` retains the Host code and conflict details for stale-write handling.
 
+Authorization methods list safe flow metadata, begin an attempt, stream replayable secret-free frames from the authorization Fetch route, and answer, decline or cancel by the current attempt identity.
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {

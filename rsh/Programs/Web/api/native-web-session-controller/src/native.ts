@@ -33,13 +33,16 @@ import type { NativeUserQuestionRegistry } from '@deepseek-ai/dsh-user-questions
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
+import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
+import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import { NativeWebAuthorization } from './authorization.ts'
 import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -63,6 +66,8 @@ export interface Config extends TurnConfig {
   readonly maxCredentialRefsPerRead: number
   /** Maximum path edits accepted by one Settings mutation; defaults to 512. */
   readonly maxSettingsOperations: number
+  /** Credential keys whose authorization flows the page may drive; defaults to empty. */
+  readonly authorizationKeys: readonly string[]
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -99,11 +104,12 @@ function settingsConflictDetails(error: unknown): Record<string, unknown> | unde
  */
 export function resolveNativeWebSessionConfig(input: unknown): Config {
   const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers,
-    maxPendingHumanRequests, maxCredentialRefsPerRead, maxSettingsOperations, ...turn } = object(input)
+    maxPendingHumanRequests, maxCredentialRefsPerRead, maxSettingsOperations, authorizationKeys, ...turn } = object(input)
   const settingsLimits = z.strictObject({
     maxCredentialRefsPerRead: z.number().int().min(1).refine(Number.isSafeInteger).default(64),
     maxSettingsOperations: z.number().int().min(1).refine(Number.isSafeInteger).default(512),
-  }).parse({ maxCredentialRefsPerRead, maxSettingsOperations })
+    authorizationKeys: z.array(z.string()).default([]),
+  }).parse({ maxCredentialRefsPerRead, maxSettingsOperations, authorizationKeys })
   return { ...resolveNativeHeadlessConfig(turn), maxPendingRequests: positive(maxPendingRequests, 'maxPendingRequests'),
     maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars'), maxFollowBufferBytes: positive(maxFollowBufferBytes, 'maxFollowBufferBytes'),
     maxFollowers: positive(maxFollowers, 'maxFollowers'),
@@ -112,7 +118,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate',
-  'credentials/describe', 'credentials/set', 'credentials/unset'])
+  'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
@@ -139,6 +145,7 @@ export interface NativeWebSelectionProviders {
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
   readonly credentials?: NativeCredentials | undefined
+  readonly authorization?: NativeWebAuthorization | undefined
   readonly titles?: NativeSessionTitles | undefined
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
@@ -424,6 +431,11 @@ export class NativeWebSessionService {
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
       }
+      if (endpoint.startsWith('authorization/')) {
+        const authorization = this.selections.authorization
+        if (authorization === undefined) throw new Error('native authorization: adapter is unavailable')
+        return { ok: true, value: await this.controls.run(signal, () => authorization.handle(endpoint, payload)) }
+      }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
@@ -537,6 +549,12 @@ export class NativeWebSessionService {
           message: conflict === undefined ? settingsRequest ? 'Settings request failed.' : 'Credentials request failed.'
             : 'Settings changed since it was loaded.',
           details: conflict ?? {},
+        } }
+      }
+      if (endpoint.startsWith('authorization/')) {
+        return { ok: false, error: {
+          code: 'native/authorization', message: 'Authorization request failed.',
+          details: error instanceof AuthorizationError ? { authorizationCode: error.code } : {},
         } }
       }
       return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
@@ -695,21 +713,25 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'sessionTitles', 'commands'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'sessionTitles', 'commands'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
     return (context) => {
       const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt,
         maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human,
-        maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations, ...turn } = config
+        maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations,
+        authorizationKeys: _authorizationKeys, ...turn } = config
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
       const models = context.optional('modelSelection')
+      const authorization = new NativeWebAuthorization(context.optional('authorization'), context.optional('credentials'),
+        config.authorizationKeys.map(parseCredentialKey))
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
+          authorization,
           commands: context.optional('commands'), commandScope: context.scope,
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
@@ -720,6 +742,8 @@ export const plugin: NativePlugin = {
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.image(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/authorization', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => authorization.frames(request) }))
       context.provide('nativeWebSession', service)
       context.provide('rootExecution', executor.rootExecution)
     }

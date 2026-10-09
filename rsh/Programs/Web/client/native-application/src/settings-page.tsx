@@ -1,14 +1,17 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { AuthorizationFrame, AuthorizationSettlement } from '@deepseek-ai/dsh-authorization/types'
 import type { ConversationLocaleKey } from './locales.ts'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
 export type NativeSettingsActions = Pick<NativeSessionClient,
-  'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'>
+  'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
+  | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -103,6 +106,113 @@ export function nativeSettingsDiff(
   return operations
 }
 
+function AuthorizationRow({ entry, actions, t, onSettled }: {
+  entry: NativeAuthorizationEntry
+  actions: NativeSettingsActions
+  t: Translate
+  onSettled: (settlement: AuthorizationSettlement) => void
+}) {
+  const [attemptId, setAttemptId] = useState(entry.attemptId)
+  const [frames, setFrames] = useState<AuthorizationFrame[]>([])
+  const [method, setMethod] = useState(entry.methods[0]?.id)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string>()
+  // Parent callbacks may change identity on every render; only a new attempt resubscribes.
+  const settledRef = useRef(onSettled)
+  settledRef.current = onSettled
+
+  useEffect(() => {
+    if (attemptId === undefined) return
+    const controller = new AbortController()
+    let settlement: AuthorizationSettlement | undefined
+    setFrames([])
+    void (async () => {
+      try {
+        for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
+          setFrames(current => [...current, frame])
+          if (frame.type === 'settled') {
+            settlement = frame.settlement
+            settledRef.current(frame.settlement)
+          }
+        }
+        if (settlement !== undefined) setAttemptId(undefined)
+      } catch (cause: unknown) {
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause))
+      }
+    })()
+    return () => { controller.abort() }
+  }, [actions, attemptId, entry.key])
+
+  const answer = async (id: string, promptId: string, value: string): Promise<void> => {
+    setError(undefined)
+    try { await actions.authorizationAnswer(entry.key, id, promptId, value) }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const decline = async (id: string, promptId: string): Promise<void> => {
+    setError(undefined)
+    try { await actions.authorizationDecline(entry.key, id, promptId) }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const cancel = async (id: string): Promise<void> => {
+    setError(undefined)
+    try { await actions.authorizationCancel(entry.key, id) }
+    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+  const begin = async (): Promise<void> => {
+    setError(undefined)
+    try {
+      const attempt = await actions.authorizationBegin(entry.key, method)
+      setAttemptId(attempt.attemptId)
+    } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
+  }
+
+  const settled = [...frames].reverse().find(frame => frame.type === 'settled')
+  return <div>
+    <p>{entry.label} · {entry.configured ? t('configured') : t('notConfigured')}</p>
+    {attemptId === undefined ? <div>
+      {entry.methods.length > 1 ? <label>{t('signInMethod')}
+        <select aria-label={t('signInMethod')} value={method} onChange={(event) => { setMethod(event.target.value) }}>
+          {entry.methods.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
+        </select>
+      </label> : null}
+      <button type="button" onClick={() => { void begin() }}>{t('signIn')}</button>
+    </div> : <>
+      <button type="button" onClick={() => { void cancel(attemptId) }}>{t('cancelSignIn')}</button>
+      {frames.map((frame, index) => {
+        if (frame.type !== 'prompt' || frames.slice(index + 1).some(later => later.type === 'prompt-closed' && later.promptId === frame.promptId)) return null
+        const value = answers[frame.promptId] ?? (frame.prompt.kind === 'select' ? frame.prompt.options[0]?.id ?? '' : '')
+        return <form key={frame.promptId} onSubmit={(event) => {
+          event.preventDefault()
+          void answer(attemptId, frame.promptId, value)
+        }}>
+          <label>{frame.prompt.message}{frame.prompt.kind === 'select'
+            ? <select aria-label={frame.prompt.message} value={value} onChange={(event) => {
+              setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
+            }}>
+              {frame.prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+            : <input type={frame.prompt.kind === 'secret' ? 'password' : 'text'} autoComplete={frame.prompt.kind === 'secret' ? 'off' : undefined}
+              placeholder={frame.prompt.placeholder} aria-label={frame.prompt.message} value={value} onChange={(event) => {
+                setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
+              }} />}
+          </label>
+          <button type="submit">{t('authorizationAnswer')}</button>
+          <button type="button" onClick={() => { void decline(attemptId, frame.promptId) }}>{t('decline')}</button>
+        </form>
+      })}
+    </>}
+    {frames.map((frame, index) => frame.type === 'notice' ? <p key={index}>
+      {frame.notice.message}{frame.notice.url === undefined ? null : <> <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a></>}
+      {frame.notice.code === undefined ? null : <> <code>{frame.notice.code}</code></>}
+    </p> : null)}
+    {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
+      : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
+    {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
+    </p>}
+    {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
+  </div>
+}
+
 function userSection(value: unknown): JsonObject {
   if (!isObject(value)) throw new TypeError('Settings user layer must be an object')
   return value
@@ -113,17 +223,19 @@ function pretty(value: unknown): string {
 }
 
 /** Registered schema-backed Settings with revision-safe JSON edits and schema-discovered credential refs.
- * @param props - selected native client, localized copy, and the route back to the Session page.
+ * @param props - selected native client, localized copy, the route back to the Session page, and an optional authorized callback.
  * @returns the native Settings and write-only credential page.
  */
-export function SettingsPage({ actions, t, onBack }: {
+export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   actions: NativeSettingsActions
   t: Translate
   onBack: () => void
+  onAuthorized?: () => void
 }) {
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
   const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
+  const [authorizationEntries, setAuthorizationEntries] = useState<readonly NativeAuthorizationEntry[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -138,6 +250,8 @@ export function SettingsPage({ actions, t, onBack }: {
     setCredentialError(undefined)
     try {
       const description = await actions.settingsDescribe(signal)
+      const entries = await actions.authorizationList(signal)
+      setAuthorizationEntries(entries)
       const rows = description.namespaces
       setLimits(description.limits)
       setNamespaces(rows)
@@ -162,6 +276,11 @@ export function SettingsPage({ actions, t, onBack }: {
       return false
     } finally { setLoading(false) }
   }, [actions, t])
+
+  const authorizationSettled = useCallback((settlement: AuthorizationSettlement): void => {
+    void refresh(true)
+    if (settlement === 'authorized') onAuthorized?.()
+  }, [onAuthorized, refresh])
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -269,5 +388,10 @@ export function SettingsPage({ actions, t, onBack }: {
         })}
       </div>}
     </section>)}
+    {authorizationEntries.length === 0 ? null : <section aria-label={t('accounts')}>
+      <h2>{t('accounts')}</h2>
+      {authorizationEntries.map(entry => <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
+        onSettled={authorizationSettled} />)}
+    </section>}
   </main>
 }

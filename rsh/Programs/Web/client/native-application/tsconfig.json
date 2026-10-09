@@ -21,6 +21,9 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
+      "path": "../../../../Modules/Official/credentials/authorization"
+    },
+    {
       "path": "../native-session"
     },
     {

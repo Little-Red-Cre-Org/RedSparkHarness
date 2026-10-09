@@ -94,6 +94,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
     settingsDescribe: vi.fn(),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(),
+    authorizationList: vi.fn(async () => []), authorizationBegin: vi.fn(), authorizationFrames: vi.fn(),
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     credentialsSet: vi.fn(),
     credentialsUnset: vi.fn(),
     list: vi.fn(async () => rows),
