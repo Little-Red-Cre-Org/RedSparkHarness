@@ -55,6 +55,9 @@
     },
     {
       "path": "../../../../Engine/core/approval-definition"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands/tsconfig.json"
     }
   ]
 }

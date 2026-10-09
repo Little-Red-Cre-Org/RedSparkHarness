@@ -9,6 +9,7 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
+import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
   NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
@@ -109,6 +110,10 @@ function updates(event: SessionEvent): SessionUpdate[] {
         content: result.content.flatMap(block => block.type === 'text'
           ? [{ type: 'content' as const, content: { type: 'text' as const, text: block.text } }] : []) }]
     }
+    case 'command/done': return event.data.text === undefined ? [] : [{
+      sessionUpdate: 'agent_message_chunk', messageId: String(event.data.commandId),
+      content: { type: 'text', text: event.data.text },
+    }]
     default: return [] // The merge-extensible Session map contains non-presentation facts.
   }
 }
@@ -364,10 +369,11 @@ export class NativeAcpApplication implements NativeApplication {
           try {
             const configOptions = await this.activate(record, params.sessionId, servers, requestSignal)
             this.sessions.set(params.sessionId, record)
+            await this.notifyAvailableCommands(record, params.sessionId)
             return { configOptions }
           } catch (error: unknown) {
             if (this.ownedExecutors.has(record)) {
-              try { await this.releaseSession(record) }
+              try { await this.releaseSession(record); this.sessions.delete(params.sessionId) }
               catch (cleanup: unknown) {
                 this.sessions.set(params.sessionId, record)
                 throw new AggregateError([error, cleanup], 'native ACP Session resume cleanup failed')
@@ -582,10 +588,11 @@ export class NativeAcpApplication implements NativeApplication {
     try {
       const configOptions = await this.activate(record, id, servers, signal, cwd)
       this.sessions.set(id, record)
+      await this.notifyAvailableCommands(record, id)
       return { sessionId: id, configOptions }
     } catch (error: unknown) {
       if (this.ownedExecutors.has(record)) {
-        try { await this.releaseSession(record) }
+        try { await this.releaseSession(record); this.sessions.delete(id) }
         catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native ACP Session creation cleanup failed') }
       }
       throw error
@@ -596,6 +603,46 @@ export class NativeAcpApplication implements NativeApplication {
     const connection = this.connection
     if (connection === undefined) throw new Error('native ACP: no connection')
     await connection.client.notify(methods.client.session.update, notification)
+  }
+
+  private async notifyAvailableCommands(record: OwnedSession, sessionId: string): Promise<void> {
+    const commands: NativeCommandOperations | undefined = this.context.optional('commands')
+    if (commands === undefined) return
+    await this.withRootCommandOwner(record, record.lifetime.signal, async (owner) => {
+      const availableCommands = commands.list(owner.agent.scope).map(({ name, description, input }) => ({ name, description,
+        ...input === undefined ? {} : { input: { hint: input.hint } } }))
+      await this.notify({ sessionId, update: { sessionUpdate: 'available_commands_update', availableCommands } })
+    })
+  }
+
+  private withRootCommandOwner<T>(record: OwnedSession, signal: AbortSignal,
+    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>): Promise<T> {
+    return this.rootExecution.maintenance({ route: record.rootRoute, id: record.id, resume: true }, (owner, admitted) => {
+      if (owner.invocation !== 'root' || this.rootExecution.capture(owner).id !== record.rootRoute) {
+        throw new Error('native ACP: command requires this Session root owner')
+      }
+      return operation(owner, admitted)
+    }, signal)
+  }
+
+  private async dispatchCommand(record: OwnedSession, line: string, signal: AbortSignal): Promise<boolean> {
+    const commands: NativeCommandOperations | undefined = this.context.optional('commands')
+    const parsed = commands?.parse(line)
+    if (commands === undefined || parsed === undefined) return false
+    return this.withRootCommandOwner(record, signal, async (owner, admitted) => {
+      if (!commands.list(owner.agent.scope).some(command => command.name === parsed.name)) return false
+      const release = owner.onEvent((event) => {
+        for (const update of updates(event)) {
+          record.notifications = record.notifications.then(() => this.notify({ sessionId: String(record.id), update }))
+          void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
+        }
+      })
+      try {
+        const result = await commands.dispatch({ agent: owner.agent, session: owner.session, line, attachments: [], signal: admitted })
+        if (result === undefined) throw new Error(`native ACP: command /${parsed.name} is no longer available`)
+        return true
+      } finally { release() }
+    })
   }
 
   private async prompt(params: PromptRequest, requestSignal: AbortSignal): Promise<PromptResponse> {
@@ -628,43 +675,48 @@ export class NativeAcpApplication implements NativeApplication {
       record.notifications = Promise.resolve()
       let exitCode: number
       try {
-        const hasImage = parts.some(part => part.type === 'image')
-        let input: Pick<NativeTurnRequest, 'message' | 'prepareMessage'>
-        if (hasImage) {
-          const directory = this.context.optional('modelDirectory')
-          if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
-          if (attachments === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
-          input = { prepareMessage: async (model, admitted) => {
-            const info = await directory.resolve(model.provider, model.model, admitted)
-            if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
-            admitted.throwIfAborted()
-            const content = await attachments.admitPromptContent(parts)
-            admitted.throwIfAborted()
-            return createUserMessage({ content, source: { kind: 'user' } })
-          } }
+        const commandLine = params.prompt.length === 1 && params.prompt[0]?.type === 'text' ? params.prompt[0].text : undefined
+        if (commandLine !== undefined && await this.dispatchCommand(record, commandLine, signal)) {
+          exitCode = 0
         } else {
+          const hasImage = parts.some(part => part.type === 'image')
+          let input: Pick<NativeTurnRequest, 'message' | 'prepareMessage'>
+          if (hasImage) {
+            const directory = this.context.optional('modelDirectory')
+            if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
+            if (attachments === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
+            input = { prepareMessage: async (model, admitted) => {
+              const info = await directory.resolve(model.provider, model.model, admitted)
+              if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
+              admitted.throwIfAborted()
+              const content = await attachments.admitPromptContent(parts)
+              admitted.throwIfAborted()
+              return createUserMessage({ content, source: { kind: 'user' } })
+            } }
+          } else {
+            signal.throwIfAborted()
+            const content = attachments === undefined
+              ? parts.map((part) => {
+                if (part.type !== 'text') throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
+                return part
+              }) : await attachments.admitPromptContent(parts)
+            input = { message: createUserMessage({ content, source: { kind: 'user' } }) }
+          }
           signal.throwIfAborted()
-          const content = attachments === undefined
-            ? parts.map((part) => {
-              if (part.type !== 'text') throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
-              return part
-            }) : await attachments.admitPromptContent(parts)
-          input = { message: createUserMessage({ content, source: { kind: 'user' } }) }
+          const result = await this.rootExecution.execute({ route: record.rootRoute,
+            id: SessionId(params.sessionId), resume: true,
+            ...input, onEvent: (event) => {
+              for (const update of updates(event)) {
+                record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
+                void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
+              }
+              if (event.type === 'turn/end') {
+                if (event.data.reason.kind === 'max-tokens') stopReason = 'max_tokens'
+                else if (event.data.reason.kind === 'interrupted') stopReason = 'cancelled'
+              }
+            } }, signal)
+          exitCode = result.exitCode
         }
-        signal.throwIfAborted()
-        const result = await this.rootExecution.execute({ route: record.rootRoute,
-          id: SessionId(params.sessionId), resume: true,
-          ...input, onEvent: (event) => {
-            for (const update of updates(event)) {
-              record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
-              void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
-            }
-            if (event.type === 'turn/end') {
-              if (event.data.reason.kind === 'max-tokens') stopReason = 'max_tokens'
-              else if (event.data.reason.kind === 'interrupted') stopReason = 'cancelled'
-            }
-          } }, signal)
-        exitCode = result.exitCode
       } catch (error: unknown) {
         if (isImageAdmissionError(error)) throw RequestError.invalidParams(undefined, error.message)
         if (!signal.aborted || error !== signal.reason) throw error
@@ -701,7 +753,8 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory'], provides: ['application', 'rootExecution'],
+    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands'],
+  provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {

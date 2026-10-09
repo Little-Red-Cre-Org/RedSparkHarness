@@ -37,6 +37,8 @@ import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credent
 import type {} from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
+import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
+import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 
@@ -109,7 +111,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'settings/describe', 'settings/mutate',
+  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate',
   'credentials/describe', 'credentials/set', 'credentials/unset'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
@@ -138,6 +140,8 @@ export interface NativeWebSelectionProviders {
   readonly settings?: NativeSettingsService | undefined
   readonly credentials?: NativeCredentials | undefined
   readonly titles?: NativeSessionTitles | undefined
+  readonly commands?: NativeCommandOperations | undefined
+  readonly commandScope?: NativeScope | undefined
 }
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
@@ -325,6 +329,43 @@ export class NativeWebSessionService {
     finally { remove() }
   }
 
+  private async command(payload: unknown, signal: AbortSignal): Promise<unknown> {
+    const request = z.strictObject({
+      sessionId: z.string().min(1).max(256),
+      line: z.string().min(1).max(this.config.maxPromptChars),
+    }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const commands = this.selections.commands
+    const scope = this.selections.commandScope
+    const parsed = commands?.parse(request.line)
+    if (commands === undefined || scope === undefined || parsed === undefined) {
+      throw new Error('native web session: command must be an available slash command')
+    }
+    if (!commands.list(scope).some(command => command.name === parsed.name)) {
+      throw new Error(`native web session: command /${parsed.name} is unavailable`)
+    }
+    if (this.turns.has(id)) throw new Error('native web session: command requires an idle Session')
+    const route = this.config.rootRouteId ?? brandString<NativeRootRouteId>('root')
+    return this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, accepted) => {
+      if (this.turns.has(id)) throw new Error('native web session: command requires an idle Session')
+      if (this.executor.rootExecution.capture(owner).id !== route) {
+        throw new Error('native web session: command requires this Program root owner')
+      }
+      if (!commands.list(owner.agent.scope).some(command => command.name === parsed.name)) {
+        throw new Error(`native web session: command /${parsed.name} is unavailable to this root owner`)
+      }
+      const result = await commands.dispatch({
+        agent: owner.agent,
+        session: owner.session,
+        line: request.line,
+        attachments: [],
+        signal: accepted,
+      })
+      if (result === undefined) throw new Error(`native web session: command /${parsed.name} is no longer available`)
+      return result
+    }, signal)
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -385,6 +426,7 @@ export class NativeWebSessionService {
       }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
+      if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
@@ -653,7 +695,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'sessionTitles'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'sessionTitles', 'commands'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -668,6 +710,7 @@ export const plugin: NativePlugin = {
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
+          commands: context.optional('commands'), commandScope: context.scope,
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())

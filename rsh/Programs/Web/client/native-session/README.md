@@ -28,6 +28,8 @@ Select after client-connection in the native profile and configure a positive in
 
 The `./list-types` export contains the neutral Host/Client wire row for stored Sessions. Its title projection stays beside the unchanged Session header and distinguishes resolved, absent and unavailable reads; the Host supplies it from durable title events.
 
+`executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
+
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
 
 The optional prompt observer follows accepted durable events and transient assistant text through the selected Connection Fetch response. The maintained eventsource-parser handles SSE framing. Event decoding uses the shared Session parser; missing terminal settlement, malformed frames or observer failure cancel the exact admission and await Host drain before rejection. Caller cancellation detaches following and still awaits durable settlement. A custom RPC carrier without response support rejects observed prompts before admission.

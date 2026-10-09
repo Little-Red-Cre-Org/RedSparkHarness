@@ -7,21 +7,22 @@ import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest,
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
-import { plugin as executionPlugin, type NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import { NativeAgentId, NativeAgentRegistry, plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
+import { NativeActiveSessionRegistry, NativeStepAdmission, plugin as executionPlugin, type NativeActiveSessionOperations, type NativeActiveSessionOwner, type NativeStepAdmissionHook } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { plugin as commandsPlugin, type NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import { plugin as tokenMeterPlugin } from '@deepseek-ai/dsh-token-meter/native'
+import type { NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
 import { NativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, type GenerateOptions, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { SessionId, type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { isCompactCheckpointSource, type NativeCompactionOperations } from '@deepseek-ai/dsh-compaction/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { PRUNE_MARKER, plugin as prunerPlugin } from '../../compaction-tool-result-pruner/src/native.ts'
 import { plugin as compactCommandPlugin } from '../../command-compact/src/native.ts'
-import { plugin as compactionPlugin, resolveNativeBasicCompactionConfig } from '../src/native.ts'
+import { NativeBasicCompaction, plugin as compactionPlugin, resolveNativeBasicCompactionConfig } from '../src/native.ts'
 
 type Script = ConstructorParameters<typeof MockAdapter>[0]
 
@@ -53,8 +54,9 @@ async function fixture(script: Script, options: FixtureOptions = {}) {
   let commands: NativeCommandOperations | undefined
   let compaction: NativeCompactionOperations | undefined
   let activeSessions: NativeActiveSessionOperations | undefined
+  let tokenMeter: NativeTokenMeterOperations | undefined
   const capture: NativePlugin = { apiVersion: 1, name: 'compaction-capture', targets: ['host'],
-    requires: ['application', 'sessionPersistence', 'commands', 'compaction', 'activeSessions'], provides: [],
+    requires: ['application', 'sessionPersistence', 'commands', 'compaction', 'activeSessions', 'tokenMeter'], provides: [],
     resolve: () => (context) => {
       const application = context.require('application')
       if (!(application instanceof NativeHeadlessApplication)) throw new Error('missing native headless')
@@ -63,6 +65,7 @@ async function fixture(script: Script, options: FixtureOptions = {}) {
       commands = context.require('commands')
       compaction = context.require('compaction')
       activeSessions = context.require('activeSessions')
+      tokenMeter = context.require('tokenMeter')
     } }
   const modelProvider: NativePlugin = { apiVersion: 1, name: 'compaction-model', targets: ['host'],
     requires: [], provides: ['model'], resolve: () => (context) => { context.provide('model', model) } }
@@ -85,12 +88,26 @@ async function fixture(script: Script, options: FixtureOptions = {}) {
   ]
   const host = new NativeHost(resolveInstallation(installation, 'host'))
   await host.start()
-  if (app === undefined || storage === undefined || commands === undefined || compaction === undefined || activeSessions === undefined) {
+  if (app === undefined || storage === undefined || commands === undefined || compaction === undefined
+    || activeSessions === undefined || tokenMeter === undefined) {
     throw new Error('missing compaction fixture services')
   }
-  const services = { app, storage, commands, compaction, activeSessions }
+  const services = { app, storage, commands, compaction, activeSessions, tokenMeter }
   return {
     ...services, model, root,
+    async replaceCompaction(config: Record<string, unknown>) {
+      await host.replace(resolveInstallation(installation.map(request => request.plugin === compactionPlugin
+        ? { ...request, config }
+        : request), 'host'))
+    },
+    async retain(id: SessionId) {
+      let release: (() => void) | undefined
+      await services.app.executeSessionOperation(
+        { id, resume: true }, async (owner) => { release = owner.retain() }, new AbortController().signal,
+      )
+      if (release === undefined) throw new Error('missing active owner retention')
+      return release
+    },
     async turn(id: SessionId, resume: boolean, text: string) {
       return services.app.executeTurn({ id, resume, message: createUserMessage({ source: { kind: 'user' },
         content: [{ type: 'text', text }] }) }, new AbortController().signal)
@@ -137,6 +154,66 @@ describe('native compaction configuration', () => {
   })
 })
 
+describe('native compaction hook lifecycle', () => {
+  it('drains an accepted attach callback before releasing the hook snapshot', async () => {
+    const agents = new NativeAgentRegistry({ emit: () => {} })
+    const session = { id: SessionId('native-compaction-attach-disposal') } as Session
+    const agent = { id: NativeAgentId(session.id), scope: new NativeScope() }
+    const unregisterAgent = agents.register(agent)
+    const activeSessions = new NativeActiveSessionRegistry(agents)
+    const admission = new NativeStepAdmission()
+    const owner = {
+      agent, session, invocation: 'root', inheritedEventCount: 0, writerAvailable: true,
+      beforeStep: (hook: NativeStepAdmissionHook, order: number) => admission.register(hook, order),
+    } as unknown as NativeActiveSessionOwner
+    const engine = new NativeBasicCompaction({ model: {} as never, tokenMeter: {} as never, activeSessions },
+      resolveNativeBasicCompactionConfig(undefined))
+    const compact = vi.spyOn(engine, 'compactIfNeeded').mockResolvedValue(null)
+    const dispose = engine.attach()
+    let unregisterOwner: (() => Promise<void>) | undefined
+    try {
+      const attaching = activeSessions.register(owner)
+      const disposing = dispose()
+      unregisterOwner = await attaching
+      await disposing
+      await admission.decide({ owner, turn: 0, step: 0, candidates: [], signal: new AbortController().signal,
+        registerCommitCheck: () => {} })
+      expect(compact).not.toHaveBeenCalled()
+    } finally {
+      await unregisterOwner?.()
+      await unregisterAgent()
+    }
+  })
+
+  it('attaches the replacement policy to an existing live owner', async () => {
+    const state = await fixture([
+      textResponse('First answer.'),
+      textResponse('Second answer.'),
+      textResponse('Compacted history.'),
+      textResponse('Third answer.'),
+    ], { contextWindow: 100_000, compaction: { thresholdRatio: 0.99, retainRatio: 0.1 } })
+    const id = SessionId('native-compaction-live-owner-replacement')
+    let release: (() => void) | undefined
+    try {
+      await state.turn(id, false, 'First question.')
+      await state.turn(id, true, 'detail '.repeat(1_200))
+      release = await state.retain(id)
+      const owner = state.activeSessions.owners()[0]
+      if (owner === undefined) throw new Error('missing active owner')
+      const totalTokens = state.tokenMeter.measure(owner.session).totalTokens
+      expect(totalTokens).toBeGreaterThan(1_000)
+      expect(state.model.requests.some(summaryRequest)).toBe(false)
+      await state.replaceCompaction({ thresholdRatio: 0.01, retainRatio: 0.001 })
+      expect(state.activeSessions.owners()).toEqual([owner])
+      await state.turn(id, true, 'Continue.')
+      expect(state.model.requests.some(summaryRequest)).toBe(true)
+    } finally {
+      release?.()
+      await state.close()
+    }
+  })
+})
+
 describe('native step-boundary pressure compaction', () => {
   it('replaces older history with one checkpoint before the next step enters', async () => {
     const state = await fixture([
@@ -168,6 +245,28 @@ describe('native step-boundary pressure compaction', () => {
       const next = state.model.requests[2]
       expect(JSON.stringify(next?.messages)).not.toContain('A'.repeat(100))
       expect(JSON.stringify(next?.messages)).toContain('condensed')
+    } finally { await state.close() }
+  })
+
+  it('rebuilds the next model input after recovering a context overflow', async () => {
+    const overflow: StreamChunk[] = [{ type: 'finish', reason: { kind: 'error', failure: {
+      message: 'context window exceeded', code: 'CONTEXT_WINDOW_EXCEEDED',
+    } } }]
+    const state = await fixture([
+      textResponse('Prior answer.'), overflow,
+      textResponse('Overflow checkpoint.'), textResponse('Recovered from the replacement surface.'),
+    ], { contextWindow: 100_000 })
+    const id = SessionId('native-compaction-overflow-rebuild')
+    try {
+      await state.turn(id, false, `Old request before overflow ${'history detail '.repeat(500)}`)
+      await state.turn(id, true, 'Current request after overflow.')
+
+      expect(state.model.requests.map(summaryRequest)).toEqual([false, false, true, false])
+      const retry = state.model.requests[3]
+      expect(JSON.stringify(retry?.messages)).toContain('Overflow checkpoint.')
+      expect(JSON.stringify(retry?.messages)).toContain('Current request after overflow.')
+      expect(JSON.stringify(retry?.messages)).not.toContain('history detail '.repeat(100))
+      expect((await state.events(id)).some(event => event.type === 'compaction/summary')).toBe(true)
     } finally { await state.close() }
   })
 

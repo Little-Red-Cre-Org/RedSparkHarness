@@ -48,6 +48,7 @@
       ],
       "apiVersion": 1,
       "optional": [
+        "modelExecution",
         "toolResultPruner"
       ]
     }

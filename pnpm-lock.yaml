@@ -8860,6 +8860,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -9661,6 +9664,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../../../Modules/Official/fs/fs
@@ -10329,6 +10335,9 @@ importers:
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../../client/connection
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
@@ -11148,6 +11157,9 @@ importers:
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../connection
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/commands
       '@deepseek-ai/dsh-native-model-selection':
         specifier: workspace:^
         version: link:../../../../Engine/llm/native-model-selection

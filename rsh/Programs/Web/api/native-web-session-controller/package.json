@@ -56,7 +56,8 @@
         "attachments",
         "settings",
         "credentials",
-        "sessionTitles"
+        "sessionTitles",
+        "commands"
       ],
       "provides": [
         "nativeWebSession",
@@ -91,7 +92,8 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-user-questions": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^"
+    "@deepseek-ai/dsh-attachment": "workspace:^",
+    "@deepseek-ai/dsh-commands": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

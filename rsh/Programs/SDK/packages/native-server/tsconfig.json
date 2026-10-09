@@ -15,6 +15,7 @@
     { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
     { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" },
     { "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json" },
-    { "path": "../../../../Engine/subagent/native-subagent" }
+    { "path": "../../../../Engine/subagent/native-subagent" },
+    { "path": "../../../../Modules/Official/interaction/commands/tsconfig.json" }
   ]
 }

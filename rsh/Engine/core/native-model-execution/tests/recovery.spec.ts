@@ -43,6 +43,7 @@ function fixture(attempts: readonly (readonly StreamChunk[] | Error)[], policy?:
   }
   const request = {
     session, turn: 1, step: 1, options,
+    rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
     append: (event: SessionEvent) => { pending.push(event) },
     persist: async () => { persisted++ },
     onChunk: (chunk: StreamChunk) => { chunks.push(chunk) },

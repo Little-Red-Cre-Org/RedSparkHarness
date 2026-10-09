@@ -28,6 +28,8 @@ kind: "package-reference"
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
+`executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
+
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
 
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。

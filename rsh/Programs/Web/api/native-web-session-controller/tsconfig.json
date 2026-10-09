@@ -91,6 +91,9 @@
     },
     {
       "path": "../../../../Modules/Official/webhook/webhook-github"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/commands/tsconfig.json"
     }
   ]
 }

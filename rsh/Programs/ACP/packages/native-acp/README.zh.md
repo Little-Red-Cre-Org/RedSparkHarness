@@ -40,6 +40,8 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会停止工具准入，并协作排空执行器与连接。MCP 撤销随取消开始。关闭失败会保留已关闭的 Session 记录，拒绝恢复、提示和配置修改；仅清理成功才移除该记录。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。
 
+安装 `commands` Provider 后，`session/new` 与 `session/resume` 会使用标准 `available_commands_update` 广告其中的命令。仅包含一条完整已注册斜杠命令（例如 `/compact`）的 `session/prompt` 会在确切 Session root owner 上通过同一 Provider 分派；普通提示文本不变。命令输出使用标准 `session/update` 消息，提示取消会通过其所有信号排空命令。
+
 ## 开发备注
 
 [原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权。本包不发布运行时不变量伴生入口，因为 ACP Session 表将每个协议 Session 与其执行器及 MCP 资源配对，而执行器拥有 Agent 执行和持久 Session 状态；ACP 记录保存传输与资源生命周期及临时控制，不是第二份 Session 投影。

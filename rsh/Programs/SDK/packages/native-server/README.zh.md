@@ -26,6 +26,8 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 原生路径还为已接收模型分块发送 `session.chunk`，并提供 `session/cancel`。取消仅针对当前已接收轮次，在持久化接收前或结束后返回 false，并等待其资源清理结束后响应。清理失败会拒绝取消请求。排队提示与其它 Session 独立接收。分块投影选定派发，`assistant/message` 或 `assistant/attempt` 仍是其持久化所有者。同 id 提示恢复存储历史。
 
+仅包含一条完整已注册斜杠命令（例如 `/compact`）的 `session/prompt` 会通过共享 `commands` Provider，在该 Session 的确切 root owner 上分派。其它文本（包括正文中含斜杠的内容）仍按普通提示处理。命令生命周期事实通过现有 `session.event` 流送达；取消会等待已接收命令排空。
+
 `session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。根执行要求 Session-execution 与活动所有者 Provider。精简组装可不安装 Subagent Provider；选定后它才启用 `subagent.finished` 投影，随附 native-sdk profile 会安装它。
 
 `session/prompt` 接受有序文本块及编码栅格图片（`{ type: "image", data, mimeType }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
