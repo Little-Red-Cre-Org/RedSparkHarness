@@ -154,7 +154,7 @@ describe('llm-pi-ai real dormant composition', () => {
       const [responsesUrl, responsesOptions] = fetch.mock.calls[1]!
       expect(responsesUrl).toBe('https://api.openai.com/v1/responses')
       expect(new Headers(responsesOptions?.headers).get('authorization')).toBe(`Bearer ${access}`)
-      expect(JSON.parse(String(responsesOptions?.body))).toMatchObject({ model: 'gpt-6.1-sol', store: false, stream: true,
+      expect(JSON.parse(responsesOptions?.body as string)).toMatchObject({ model: 'gpt-6.1-sol', store: false, stream: true,
         tools: [{ type: 'function', name: 'lookup' }] })
     } finally {
       fetch.mockRestore()

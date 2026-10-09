@@ -173,9 +173,11 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     finish({ code, ...clientId === undefined ? {} : { clientId } })
   })
 
-  const onAbort = (): void => finish(timeout.aborted
-    ? new Error('Sign in with ChatGPT timed out waiting for the browser callback')
-    : callbackSignal.reason instanceof Error ? callbackSignal.reason : new Error('Sign in with ChatGPT was cancelled'))
+  const onAbort = (): void => {
+    finish(timeout.aborted
+      ? new Error('Sign in with ChatGPT timed out waiting for the browser callback')
+      : callbackSignal.reason instanceof Error ? callbackSignal.reason : new Error('Sign in with ChatGPT was cancelled'))
+  }
   callbackSignal.throwIfAborted()
   callbackSignal.addEventListener('abort', onAbort, { once: true })
   server.listen(0, '127.0.0.1')
@@ -185,14 +187,14 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   } catch (error: unknown) {
     callbackSignal.removeEventListener('abort', onAbort)
     if (server.listening) {
-      await new Promise<void>(resolve => server.close(() => resolve()))
+      await new Promise<void>(resolve => server.close(() => { resolve() }))
     }
     throw error
   }
   const address = server.address()
   if (address === null || typeof address === 'string') {
     callbackSignal.removeEventListener('abort', onAbort)
-    await new Promise<void>(resolve => server.close(() => resolve()))
+    await new Promise<void>(resolve => server.close(() => { resolve() }))
     throw new Error('Could not bind the Sign in with ChatGPT callback')
   }
   return {
@@ -201,16 +203,16 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     async close() {
       callbackSignal.removeEventListener('abort', onAbort)
       if (!server.listening) return
-      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+      await new Promise<void>((resolve, reject) => server.close((error) => { if (error) reject(error); else resolve() }))
     },
   }
 }
 
 async function tokenResponse(response: Response, operation: string, signal: AbortSignal): Promise<TokenResponse> {
   signal.throwIfAborted()
-  let body: TokenResponse | undefined
+  let body: unknown
   try {
-    body = await response.json() as TokenResponse
+    body = await response.json()
   } catch {
     body = undefined
   }
@@ -411,11 +413,11 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         scopes,
       }
     },
-    async toAuth(credential) {
+    toAuth(credential) {
       if (!isSiwcCredential(credential) || !credential.scopes.includes(REQUIRED_SCOPE)) {
-        throw new Error('Sign in with ChatGPT again and grant ChatGPT plan usage for this subscription route')
+        return Promise.reject(new Error('Sign in with ChatGPT again and grant ChatGPT plan usage for this subscription route'))
       }
-      return { apiKey: credential.access }
+      return Promise.resolve({ apiKey: credential.access })
     },
   }
 }

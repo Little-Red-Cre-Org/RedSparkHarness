@@ -115,12 +115,11 @@ it.each(['success', 'cancel-drains-write', 'decline', 'removal-and-dispose'] as 
         })
         const attempt = state.authorization.begin({ key: KEY })
         const frames = attempt.frames()[Symbol.asyncIterator]()
-        const prompt = await frames.next()
-        expect(prompt.value?.type).toBe('prompt')
-        if (prompt.value?.type !== 'prompt') throw new Error('expected a prompt frame')
-        attempt.decline(prompt.value.promptId)
+        const prompt = (await frames.next()).value as AuthorizationFrame
+        if (prompt.type !== 'prompt') throw new Error('expected a prompt frame')
+        attempt.decline(prompt.promptId)
         await expect(attempt.outcome).resolves.toEqual({ status: 'cancelled' })
-        expect((await frames.next()).value).toEqual({ type: 'prompt-closed', promptId: prompt.value.promptId })
+        expect((await frames.next()).value).toEqual({ type: 'prompt-closed', promptId: prompt.promptId })
         expect((await frames.next()).value).toEqual({ type: 'settled', settlement: 'cancelled' })
         return
       }

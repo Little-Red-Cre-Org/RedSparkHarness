@@ -128,7 +128,7 @@ export interface NativeAuthorization {
 }
 
 interface PendingPrompt {
-  readonly finish: (value?: string, error?: unknown) => void
+  readonly finish: (value?: string, error?: Error) => void
 }
 
 interface AttemptState {
@@ -222,7 +222,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
     const state = this.createAttempt(flow, method)
     this.running.set(request.key, state)
     const alreadyAborted = request.signal?.aborted === true
-    if (alreadyAborted) state.controller.abort(request.signal?.reason)
+    if (alreadyAborted) state.controller.abort(request.signal.reason)
     else if (request.signal !== undefined) {
       const withdraw = (): void => { state.controller.abort(request.signal?.reason) }
       request.signal.addEventListener('abort', withdraw, { once: true })
@@ -297,8 +297,8 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
       key: state.key,
       method: state.method,
       frames: signal => this.frames(state, signal),
-      answer: (promptId, value) => this.finishPrompt(state, promptId, value),
-      decline: promptId => this.declinePrompt(state, promptId),
+      answer: (promptId, value) => { this.finishPrompt(state, promptId, value) },
+      decline: (promptId) => { this.declinePrompt(state, promptId) },
       cancel: () => {
         if (!state.controller.signal.aborted) state.controller.abort()
         return completion.promise
@@ -306,7 +306,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
       outcome: outcome.promise,
     }
     state.attempt = attempt
-    return state as AttemptState
+    return state
   }
 
   private async *frames(state: AttemptState, signal?: AbortSignal): AsyncIterable<AuthorizationFrame> {
@@ -341,7 +341,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
     if (state.frames.at(-1)?.type === 'settled') {
       return Promise.reject(new AuthorizationError('authorization attempt has settled', 'PROMPT_NOT_FOUND'))
     }
-    if (state.controller.signal.aborted) return Promise.reject(state.controller.signal.reason)
+    if (state.controller.signal.aborted) return Promise.reject(state.controller.signal.reason as Error)
     const promptId = brandString<AuthorizationPromptId>(globalThis.crypto.randomUUID())
     const view: AuthorizationPromptView = prompt.kind === 'select'
       ? { kind: prompt.kind, message: prompt.message, options: prompt.options }
@@ -349,7 +349,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
     this.push(state, { type: 'prompt', promptId, prompt: view })
     return new Promise<string>((resolve, reject) => {
       const detach: (() => void)[] = []
-      const finish = (value?: string, error?: unknown): void => {
+      const finish = (value?: string, error?: Error): void => {
         if (!state.prompts.has(promptId)) return
         state.prompts.delete(promptId)
         for (const remove of detach) remove()
@@ -358,22 +358,22 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
         else reject(error)
       }
       state.prompts.set(promptId, { finish })
-      const onAbort = (signal: AbortSignal): void => finish(undefined, signal.reason)
+      const onAbort = (signal: AbortSignal): void => { finish(undefined, signal.reason as Error) }
       const promptSignal = prompt.signal
       if (promptSignal !== undefined) {
-        const withdraw = (): void => onAbort(promptSignal)
+        const withdraw = (): void => { onAbort(promptSignal) }
         promptSignal.addEventListener('abort', withdraw, { once: true })
-        detach.push(() => promptSignal.removeEventListener('abort', withdraw))
+        detach.push(() => { promptSignal.removeEventListener('abort', withdraw) })
         if (promptSignal.aborted) withdraw()
       }
-      const withdrawAttempt = (): void => onAbort(state.controller.signal)
+      const withdrawAttempt = (): void => { onAbort(state.controller.signal) }
       state.controller.signal.addEventListener('abort', withdrawAttempt, { once: true })
-      detach.push(() => state.controller.signal.removeEventListener('abort', withdrawAttempt))
+      detach.push(() => { state.controller.signal.removeEventListener('abort', withdrawAttempt) })
       if (state.controller.signal.aborted) withdrawAttempt()
     })
   }
 
-  private finishPrompt(state: AttemptState, promptId: AuthorizationPromptId, value?: string, error?: unknown): void {
+  private finishPrompt(state: AttemptState, promptId: AuthorizationPromptId, value?: string, error?: Error): void {
     const prompt = state.prompts.get(promptId)
     if (prompt === undefined) throw new AuthorizationError(`authorization prompt "${promptId}" is not open`, 'PROMPT_NOT_FOUND')
     prompt.finish(value, error)
@@ -403,8 +403,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
         if (state.controller.signal.aborted) settlement = 'cancelled'
         else {
           const record = await this.credentials.describeRecord(state.key)
-          if (state.controller.signal.aborted) settlement = 'cancelled'
-          else if (state.observedCommit && record.configured) settlement = 'authorized'
+          if (state.observedCommit && record.configured) settlement = 'authorized'
           else {
             failure = new AuthorizationError(`authorization flow for "${state.key}" completed without committing its record`, 'NOT_COMMITTED')
           }
@@ -449,7 +448,7 @@ export const plugin: NativePlugin = {
     }
     return (context) => {
       const service = new NativeAuthorizationProvider(context.scope, context.require('credentials'), context)
-      context.on('credentials/record-updated', key => service.recordUpdated(key))
+      context.on('credentials/record-updated', (key) => { service.recordUpdated(key) })
       context.own(() => service.dispose())
       context.provide('authorization', service)
     }

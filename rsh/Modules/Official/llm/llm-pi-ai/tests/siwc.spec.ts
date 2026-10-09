@@ -77,7 +77,7 @@ describe('Sign in with ChatGPT OAuth', () => {
         return new Response(JSON.stringify({ keys: [jwk] }), { headers: { 'content-type': 'application/json' } })
       }
       if (url === 'https://auth.openai.com/api/accounts/oauth/token') {
-        const form = new URLSearchParams(String(init?.body))
+        const form = new URLSearchParams(init?.body as string)
         if (form.get('grant_type') === 'authorization_code') {
           expect(form.get('client_id')).toBe(issuedClientId)
           expect(form.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/)
