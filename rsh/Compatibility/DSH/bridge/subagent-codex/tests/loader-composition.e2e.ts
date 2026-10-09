@@ -20,7 +20,7 @@ const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8
 const bundlePatch = manifest.dsh?.bundle?.patch
 if (bundlePatch === undefined) throw new Error('Codex package must declare a Bundle patch')
 const bundlePatchPath = join(packageDir, bundlePatch)
-const repoTsconfig = fileURLToPath(new URL('../../../../../tsconfig.json', import.meta.url))
+const repoTsconfig = fileURLToPath(new URL('../../../../../../tsconfig.json', import.meta.url))
 
 describe('Codex provider public Loader composition', () => {
   it('loads the Bundle default, two named instances, their tools, and job controls without starting Codex', async () => {

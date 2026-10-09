@@ -46,6 +46,8 @@ export interface NativeModelStepRequest {
   readonly turn: number
   readonly step: number
   readonly options: GenerateOptions
+  /** Rebuild the model options from the current Session after recovery replaces its visible surface. */
+  readonly rebuildOptions: () => GenerateOptions
   /** Request controls and dispatch captured before their Session header is persisted. */
   readonly prepared?: NativePreparedModelStep
   readonly append: (event: SessionEvent) => void
@@ -155,7 +157,8 @@ export class NativeModelExecution {
    * @returns the recorded assistant message and terminal reason.
    */
   async execute(request: NativeModelStepRequest): Promise<NativeModelStepResult> {
-    const { session, turn, step, options, append, persist } = request
+    const { session, turn, step, append, persist } = request
+    let options = request.options
     const handle = request.prepared
     const dispatch = handle === undefined ? this.model.stream.bind(this.model) : this.prepared.get(handle)
     if (dispatch === undefined) throw new Error('native-model-execution: step was prepared by a different executor')
@@ -203,13 +206,22 @@ export class NativeModelExecution {
         // its normalized facts, and an unrecovered throw keeps its original error for the turn outcome.
         append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
         if (options.signal?.aborted === true) throw modelFailure.error
+        const generation = session.surface.replaceGeneration
         const action = await this.recover({
           session, turn, step, provider: options.provider, failure: normalizeLlmFailure(modelFailure.error),
           retryPolicy: this.retryPolicyFor(handle, options.provider),
           signal: options.signal ?? new AbortController().signal, append, persist,
         })
         options.signal?.throwIfAborted()
-        if (action?.kind === 'retry') continue
+        if (action?.kind === 'retry') {
+          if (session.surface.replaceGeneration !== generation) {
+            options = request.rebuildOptions()
+            if (handle !== undefined && !callConfigEquals(handle.config, options)) {
+              throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
+            }
+          }
+          continue
+        }
         throw modelFailure.error
       }
       if (assembler.finish.kind !== 'error' && assembler.finish.kind !== 'aborted') {
@@ -227,6 +239,7 @@ export class NativeModelExecution {
       const kind = assembler.finish.kind
       append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
       if (options.signal?.aborted === true) throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+      const generation = session.surface.replaceGeneration
       const action = await this.recover({
         session, turn, step, provider: options.provider, failure,
         retryPolicy: this.retryPolicyFor(handle, options.provider),
@@ -235,6 +248,12 @@ export class NativeModelExecution {
       options.signal?.throwIfAborted()
       if (action?.kind !== 'retry') {
         throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+      }
+      if (session.surface.replaceGeneration !== generation) {
+        options = request.rebuildOptions()
+        if (handle !== undefined && !callConfigEquals(handle.config, options)) {
+          throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
+        }
       }
     }
   }

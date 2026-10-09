@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "rsh/Engine/subagent/subagent-codex"
+    "directory": "rsh/Compatibility/DSH/bridge/subagent-codex"
   },
   "type": "module",
   "main": "lib/index.js",
@@ -42,9 +42,8 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-json-rpc-line": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
-    "@openai/codex": "0.159.0"
+    "@deepseek-ai/dsh-codex-app-server": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

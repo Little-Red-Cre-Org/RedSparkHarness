@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs'
 import { posix, resolve } from 'node:path'
+import { satisfies } from 'semver'
 import {
   buildRegistryIndex,
   resolveNpmPackageLock,
@@ -12,8 +13,13 @@ import {
 
 const DSH_PACKAGE = '@deepseek-ai/dsh'
 const CORDIS_PACKAGE = '@deepseek-ai/cordis'
+const SDK_CLIENT_PACKAGE = '@deepseek-ai/dsh-sdk-client'
 const NESTED_DSH_ALIAS = 'dsh-previous'
 const NESTED_DSH_PATH = `node_modules/${NESTED_DSH_ALIAS}`
+const OLD_CANONICAL_DSH_PATH = `${NESTED_DSH_PATH}/node_modules/${DSH_PACKAGE}`
+const NESTED_SDK_CLIENT_PATH = `${NESTED_DSH_PATH}/node_modules/${SDK_CLIENT_PACKAGE}`
+const ROOT_SDK_CLIENT_PATH = `node_modules/${SDK_CLIENT_PACKAGE}`
+const REACT_PACKAGES = ['react', 'react-dom'] as const
 const DEPENDENCY_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
 const TIMEOUT_MS = 300_000
 
@@ -39,14 +45,14 @@ function isDshPackage(name: string): boolean {
   return name === DSH_PACKAGE || name.startsWith(`${DSH_PACKAGE}-`)
 }
 
-function cloneForVersion(manifest: object, version: string): MutableRegistryManifest {
+function cloneForVersion(manifest: object, sourceVersion: string, version: string): MutableRegistryManifest {
   const cloned = structuredClone(manifest) as MutableRegistryManifest
   cloned.version = version
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = cloned[field]
     if (dependencies === undefined) continue
-    for (const name of Object.keys(dependencies)) {
-      if (isDshPackage(name)) dependencies[name] = `^${version}`
+    for (const [name, dependencyRange] of Object.entries(dependencies)) {
+      if (isDshPackage(name)) dependencies[name] = dependencyRange.replaceAll(sourceVersion, version)
     }
   }
   return cloned
@@ -71,7 +77,7 @@ export function buildDualDshRegistry(index: RegistryIndex, sourceVersion: string
     dshPackages++
     output.set(name, new Map(SYNTHETIC_DSH_VERSIONS.map(version => [
       version,
-      cloneForVersion(source, version),
+      cloneForVersion(source, sourceVersion, version),
     ])))
   }
   if (dshPackages === 0) throw new Error('registry contains no DSH packages')
@@ -126,9 +132,6 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
 
   for (const [path, manifest] of installed) {
     const name = packageNameAtPath(path, manifest)
-    if (name === 'react' || name === 'react-dom') {
-      errors.push(`${path}: ${name} is a browser build input, not a dependency of the synthetic DSH-only consumer`)
-    }
     if (name === undefined || !isDshPackage(name)) continue
     const version = manifest.version
     if (version !== nestedVersion && version !== rootVersion) {
@@ -136,12 +139,13 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
       continue
     }
     namesByVersion.get(version)?.add(name)
-    const expectedPath = version === rootVersion
-      ? `node_modules/${name}`
+    const expectedPaths = version === rootVersion
+      ? [`node_modules/${name}`]
       : name === DSH_PACKAGE
-        ? NESTED_DSH_PATH
-        : `${NESTED_DSH_PATH}/node_modules/${name}`
-    if (path !== expectedPath) {
+        ? [NESTED_DSH_PATH, OLD_CANONICAL_DSH_PATH]
+        : [`${NESTED_DSH_PATH}/node_modules/${name}`]
+    if (!expectedPaths.includes(path)) {
+      const expectedPath = expectedPaths.join(' or ')
       errors.push(`${path}: expected ${name}@${version} at ${expectedPath}`)
     }
 
@@ -156,14 +160,118 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
           errors.push(`${path}: ${field} ${dependency} does not resolve`)
           continue
         }
+        if (targetPath === OLD_CANONICAL_DSH_PATH
+          && (path !== NESTED_SDK_CLIENT_PATH || dependency !== DSH_PACKAGE)) {
+          errors.push(`${path}: only the old SDK client may resolve the extra canonical CLI at ${targetPath}`)
+        }
         checkedDshEdges++
-        const targetVersion = packageLock.packages[targetPath]?.version
+        const targetManifest = packageLock.packages[targetPath]
+        const targetVersion = targetManifest?.version
+        if (packageNameAtPath(targetPath, targetManifest ?? {}) !== dependency) {
+          errors.push(`${path}: ${field} ${dependency} resolves to ${targetPath} with a different package identity`)
+        }
         if (targetVersion !== version) {
           errors.push(
             `${path}: ${field} ${dependency} resolves to ${targetPath}@${String(targetVersion)}, expected ${version}`,
           )
         }
+        const range = manifest[field]?.[dependency]
+        if (range !== undefined && targetVersion !== undefined && !satisfies(targetVersion, range)) {
+          errors.push(`${path}: ${field} ${dependency} range ${range} does not include ${targetVersion}`)
+        }
       }
+    }
+  }
+
+  const oldAlias = packageLock.packages[NESTED_DSH_PATH]
+  const oldCanonical = packageLock.packages[OLD_CANONICAL_DSH_PATH]
+  if (oldAlias === undefined || packageNameAtPath(NESTED_DSH_PATH, oldAlias) !== DSH_PACKAGE) {
+    errors.push(`${NESTED_DSH_PATH}: expected ${DSH_PACKAGE}@${nestedVersion}`)
+  }
+  if (oldCanonical === undefined || packageNameAtPath(OLD_CANONICAL_DSH_PATH, oldCanonical) !== DSH_PACKAGE) {
+    errors.push(`${OLD_CANONICAL_DSH_PATH}: expected ${DSH_PACKAGE}@${nestedVersion}`)
+  }
+  if (oldAlias !== undefined && oldCanonical !== undefined) {
+    for (const field of [...DEPENDENCY_FIELDS, 'peerDependenciesMeta'] as const) {
+      if (JSON.stringify(oldAlias[field] ?? {}) !== JSON.stringify(oldCanonical[field] ?? {})) {
+        errors.push(`${OLD_CANONICAL_DSH_PATH}: ${field} differs from the dsh-previous release metadata`)
+      }
+    }
+  }
+
+  const sdkClients = [
+    { path: ROOT_SDK_CLIENT_PATH, version: rootVersion, cliPath: `node_modules/${DSH_PACKAGE}` },
+    { path: NESTED_SDK_CLIENT_PATH, version: nestedVersion, cliPath: OLD_CANONICAL_DSH_PATH },
+  ] as const
+  for (const sdk of sdkClients) {
+    const manifest = packageLock.packages[sdk.path]
+    if (manifest === undefined || packageNameAtPath(sdk.path, manifest) !== SDK_CLIENT_PACKAGE) {
+      errors.push(`${sdk.path}: expected ${SDK_CLIENT_PACKAGE}@${sdk.version}`)
+      continue
+    }
+    if (manifest.version !== sdk.version) {
+      errors.push(`${sdk.path}: expected ${SDK_CLIENT_PACKAGE}@${sdk.version}, got ${String(manifest.version)}`)
+    }
+    const range = manifest.dependencies?.[DSH_PACKAGE]
+    if (range !== sdk.version) {
+      errors.push(`${sdk.path}: expected an exact ${DSH_PACKAGE}@${sdk.version} dependency, got ${String(range)}`)
+    }
+    const targetPath = resolvePackagePath(packageLock.packages, sdk.path, DSH_PACKAGE)
+    const target = targetPath === undefined ? undefined : packageLock.packages[targetPath]
+    if (targetPath !== sdk.cliPath || target === undefined || packageNameAtPath(targetPath, target) !== DSH_PACKAGE) {
+      errors.push(`${sdk.path}: ${DSH_PACKAGE} must resolve to ${sdk.cliPath}`)
+    } else if (target.version !== sdk.version) {
+      errors.push(`${sdk.path}: ${DSH_PACKAGE} resolves to ${targetPath}@${String(target.version)}, expected ${sdk.version}`)
+    }
+  }
+
+  const sharedReactPaths = new Map<string, string>()
+  for (const dependency of REACT_PACKAGES) {
+    const rootPath = `node_modules/${dependency}`
+    sharedReactPaths.set(dependency, rootPath)
+    const copies = installed.filter(([path, manifest]) => packageNameAtPath(path, manifest) === dependency)
+    if (copies.length !== 1 || copies[0]?.[0] !== rootPath) {
+      errors.push(`expected one shared ${dependency} at ${rootPath}, got ${copies.map(([path]) => path).join(', ')}`)
+    }
+    if (packageNameAtPath(rootPath, packageLock.packages[rootPath] ?? {}) !== dependency) {
+      errors.push(`${rootPath}: expected package identity ${dependency}`)
+    }
+  }
+
+  const cliPaths = [`node_modules/${DSH_PACKAGE}`, NESTED_DSH_PATH, OLD_CANONICAL_DSH_PATH]
+  for (const cliPath of cliPaths) {
+    const cli = packageLock.packages[cliPath]
+    if (cli === undefined) continue
+    for (const dependency of REACT_PACKAGES) {
+      const range = cli.dependencies?.[dependency]
+      if (range === undefined) {
+        errors.push(`${cliPath}: missing declared ${dependency} dependency`)
+        continue
+      }
+      const targetPath = resolvePackagePath(packageLock.packages, cliPath, dependency)
+      const target = targetPath === undefined ? undefined : packageLock.packages[targetPath]
+      if (targetPath === undefined || targetPath !== sharedReactPaths.get(dependency) || target === undefined) {
+        errors.push(`${cliPath}: ${dependency} must resolve to the shared ${String(sharedReactPaths.get(dependency))}`)
+        continue
+      }
+      if (packageNameAtPath(targetPath, target) !== dependency) {
+        errors.push(`${cliPath}: ${dependency} resolves to ${targetPath} with a different package identity`)
+      }
+      if (target.version === undefined || !satisfies(target.version, range)) {
+        errors.push(`${cliPath}: ${dependency} range ${range} does not include ${String(target.version)}`)
+      }
+    }
+  }
+
+  const reactDomPath = sharedReactPaths.get('react-dom')
+  const reactPath = sharedReactPaths.get('react')
+  const reactDom = reactDomPath === undefined ? undefined : packageLock.packages[reactDomPath]
+  const react = reactPath === undefined ? undefined : packageLock.packages[reactPath]
+  const reactPeerRange = reactDom?.peerDependencies?.react
+  if (reactDomPath !== undefined && reactPath !== undefined && reactPeerRange !== undefined) {
+    const peerPath = resolvePackagePath(packageLock.packages, reactDomPath, 'react')
+    if (peerPath !== reactPath || react?.version === undefined || !satisfies(react.version, reactPeerRange)) {
+      errors.push(`${reactDomPath}: react peer ${reactPeerRange} must resolve to ${reactPath}`)
     }
   }
 

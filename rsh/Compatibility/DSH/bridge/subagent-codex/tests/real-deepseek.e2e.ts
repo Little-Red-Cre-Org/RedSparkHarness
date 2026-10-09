@@ -10,6 +10,7 @@ import {
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { Context } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -25,7 +26,11 @@ import {
 } from './deepseek-responses-bridge.ts'
 
 const execFileAsync = promisify(execFile)
-const codexPackageJson = createRequire(import.meta.url).resolve('@openai/codex/package.json')
+const officialPackageJson = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../../../Modules/Official/subagent/codex-app-server/package.json',
+)
+const codexPackageJson = createRequire(officialPackageJson).resolve('@openai/codex/package.json')
 const codexPackage = JSON.parse(readFileSync(
   codexPackageJson,
   'utf8',
@@ -110,8 +115,8 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)(
       const version = await execFileAsync(process.execPath, [codexEntry, '--version'], {
         env: { ...process.env, ...env },
       })
-      expect(codexPackage.version).toBe('0.159.0')
-      expect(version.stdout.trim()).toBe('codex-cli 0.159.0')
+      expect(codexPackage.version).toBe('0.161.0')
+      expect(version.stdout.trim()).toBe('codex-cli 0.161.0')
 
       const parent = {
         id: 'deepseek-e2e-parent',

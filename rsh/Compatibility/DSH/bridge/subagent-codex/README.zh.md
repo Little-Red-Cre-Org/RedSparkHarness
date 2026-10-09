@@ -9,7 +9,9 @@ kind: "package-bundle"
 
 ## 概述
 
-当委派工作需要在父会话工作区中的真实无人值守 Codex 会话内运行时，把 `@deepseek-ai/dsh-subagent-codex` 安装进 Profile。每次委派都会为一个自包含文本任务使用全新且隔离的 Codex 线程，并且只返回其最终答案或安全失败诊断。原生 Codex 配置和身份验证继续作为权威来源，而 `permissionMode` 选择非交互式审批和沙箱行为。Bundle 会提供兼容的原生 Codex 载荷，但只有配置委派工具后才会向模型公开相应能力。
+使用此 Bundle 可在父级工作区中将文本任务委派给无人值守的 Codex 会话。Official app-server 会启动全新线程，并且只返回最终答案或安全失败诊断。Codex 原生设置与身份验证仍由产品控制；permissionMode 选择非交互式策略。
+
+Native Codex 请求在启动前停止，因为 0.161 无法执行父级 authority 或继承的正数 maxSteps 上限。Cordis 路径可执行，但正确配置后的 workspace-write 产品探测返回 blocked by policy，继承仍未验证。Native 进程内 spawn 仍是可执行基线，默认路径不变。
 
 ## 目录
 
@@ -55,7 +57,7 @@ dsh --profile <name>
 | `approve-for-me` | `approvalPolicy: on-request`、`approvalsReviewer: auto_review`、`sandbox: workspace-write` | 由 Codex 自动评审权限请求，不等待人工 |
 | `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`、`sandbox: danger-full-access` | 跳过审批与 sandbox；必须显式选择该值 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-codex)是每个受支持字段及其 JSDoc 的穷尽式真源。已配置的 `model` 会原样传给每个临时 `thread/start`；省略时保留原生模型选择。提供方不会发现模型、改写别名、选择 `modelProvider` 或 `serviceTier`，也不会设置 fallback。具有凭证特征的环境变量会在显式 `env` 覆盖生效前被移除，因此供子进程使用的 API 密钥必须在该配置中显式提供。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-codex)是每个受支持字段及其 JSDoc 的穷尽式真源。已配置的 `model` 会原样传给每个临时 `thread/start`；省略时保留原生模型选择。提供方不会发现模型、改写别名、选择 `modelProvider` 或 `serviceTier`，也不会设置 fallback。具有凭证特征的环境变量会在显式 `env` 覆盖生效前被移除，因此供子进程使用的 API 密钥必须在该配置中显式提供。
 
 ### 暴露工具
 
@@ -93,12 +95,12 @@ dsh --profile <name>
 <details>
 <summary>实现细节——点击展开</summary>
 
-本节解释提供方如何驱动真实 Codex app-server，以及可观察行为从何而来；完整约定见[使用本包](#use-this-package)。
+本节解释 Cordis 兼容适配器如何委托 Official app-server 产品包；完整约定见[使用本包](#use-this-package)。
 
 ### 设计理念
 
-- **每次运行一个全新进程、线程与轮次。** 每次运行都会 spawn 全新 app-server、创建一个临时线程并恰好执行一个轮次；没有续接、恢复或池化。
-- **原生配置是权威。** Codex 配置与身份验证经父级 cwd、`HOME` 与 `CODEX_HOME` 保持原生；提供方只覆盖可选模型以及线程的 approval、reviewer 与 sandbox 字段。
+- **每次运行一个全新进程、线程与轮次。** Official 产品会启动全新 app-server、创建一个临时线程并恰好执行一个轮次；没有续接、恢复或池化。
+- **原生配置是权威。** Codex 配置与身份验证经父级 cwd、`HOME` 与 `CODEX_HOME` 保持原生；兼容提供方只提供可选模型、权限模式和显式环境覆盖。
 - **刻意无人值守。** 审批、用户输入与 MCP 请求都会在无人参与的情况下被应答或拒绝；未知服务器请求会使运行失败。
 
 ### 源码地图
@@ -106,13 +108,13 @@ dsh --profile <name>
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：config schema、提供方注册 |
-| [`src/run.ts`](src/run.ts) | 运行生命周期、轮次执行、结果选择与诊断 |
-| [`src/wire.ts`](src/wire.ts) | 最小的 app-server JSON-RPC 协议实现 |
+| [`src/run.ts`](src/run.ts) | 把 Cordis 任务与结果转换为 Official 产品 API |
+| [`src/wire.ts`](src/wire.ts) | Official wire 类型的兼容性重导出 |
 | [`cordis.patch.yml`](cordis.patch.yml) | 注册休眠提供方的 Profile patch 层 |
 
 ### 运行流程
 
-一次启动只接受非空的文本块序列，并根据父会话确定子级 cwd。它经子进程 seam spawn 固定命令，完成 `initialize` → `initialized` 握手，把 Profile 选择的模式与可选模型映射为官方 `thread/start` 字段并与 `{ cwd, ephemeral: true }` 一起发送，且仅在 Codex 返回有效的临时线程后发布运行。已发布的结果恰好启动一个轮次，只接受与此次运行的线程和轮次匹配的通知，并等待权威的 `turn/completed` 终态。以最后一条 `phase: "final_answer"` 的 `agentMessage` 为准；若 Codex 没有发出明确的最终阶段，则以最后一条 `phase` 为 null 或省略的消息作为兼容性回退。成功完成的轮次若没有非空白答案，结果也会判为错误。失败轮次使用粗粒度类别 `limit`、`access-policy`、`service`、`transport`、`product-error`、`invalid-result` 或 `unknown`；app-server 提前退出使用 `process`，适用的连接与 stream 失败保留数值 `httpStatusCode`。
+适配器只接受非空文本块，根据父会话确定子级 cwd，并把 Cordis 请求和配置的提供方字段转换为 `startCodexProductRun`。 [Official app-server 包](../../../../Modules/Official/subagent/codex-app-server/README.zh.md)拥有进程启动、版本化 JSON-RPC 协议、临时线程与轮次生命周期、答案选择、失败诊断和 managed-range 清理；本包把结果转换为旧版 `SubagentRun` 表面。
 
 </details>
 
@@ -123,11 +125,12 @@ dsh --profile <name>
 
 当包级约定不够用时阅读以下页面。它们从本提供方逐步进入它接入的 seam 与兄弟产品提供方。
 
-- [Subagent 子系统](../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
-- [dsh-subagent seam](../subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
-- [Claude Code subagent 提供方](../subagent-claude-code/README.zh.md)——经官方 Agent SDK 的兄弟产品后端。
-- [Claude Code 与 Codex 后端](../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-codex)——每个受支持配置字段及其源声明。
+- [Subagent 子系统](../../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
+- [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
+- [Official Codex app-server 产品包](../../../../Modules/Official/subagent/codex-app-server/README.zh.md)——协议、native driver、进程与清理的权威实现。
+- [Claude Code subagent 提供方](../../../../Engine/subagent/subagent-claude-code/README.zh.md)——经官方 Agent SDK 的兄弟产品后端。
+- [Claude Code 与 Codex 后端](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-codex)——每个受支持配置字段及其源声明。
 
 -----
 
@@ -187,8 +190,8 @@ Codex 子级会在一个全新的临时线程中，以单个轮次接收这些�
 
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为与限制以上文和包代码为准。
 
-- **包体积披露**——npm 元数据报告 `@openai/codex@0.159.0-darwin-arm64` 解包后为 331,552,702 字节（约 316 MiB）；这是披露数据，不是安装阈值。
-- **版本锁定的协议**——运行时依赖锁定为 `@openai/codex@0.159.0`；`thread/start` 权限字段遵循 v2 [`ThreadStartParams` 定义](https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/app-server-protocol/src/protocol/v2/thread.rs#L62-L166)。无密钥真实产品测试会生成已安装包的 schema 并检查这些字段；带凭证的随机数测试会检查产品连接。
+- **平台载荷选择**——`@openai/codex@0.161.0` 声明六个按平台划分的可选载荷；workspace lockfile 会为受支持的目标解析匹配包。
+- **版本锁定的协议**——Official runtime 包固定依赖 `@openai/codex@0.161.0`。其 v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) 包含权限字段，而 [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) 定义了可选推理 `effort`。无密钥真实产品测试会从 Official 包固定依赖生成 schema。
 
 </details>
 

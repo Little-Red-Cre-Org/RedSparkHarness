@@ -19,7 +19,9 @@ function fixture(chunks: readonly StreamChunk[]) {
     provider: 'mock', model: 'fixture', messages: [], tools: [], sessionId: id, signal: new AbortController().signal,
   }
   const execution = new NativeModelExecution({ async *stream() { yield* chunks } })
-  const request = { session, turn: 1, step: 1, options, append: (event: SessionEvent) => { pending.push(event) },
+  const request = { session, turn: 1, step: 1, options,
+    rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+    append: (event: SessionEvent) => { pending.push(event) },
     persist: async () => { persisted++ } }
   return { execution, request, pending, persisted: () => persisted }
 }

@@ -7,16 +7,13 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { parseArgs } from 'node:util'
+import { virtualStoreDirectories } from './gen-third-party-notices.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
 const TARGET_PACKAGE = '@deepseek-ai/dsh'
 const DEFAULT_TIMEOUT_MS = 300_000
 const TERMINATION_GRACE_MS = 1_000
 const FORCED_EXIT_TIMEOUT_MS = 5_000
-const INSTALLED_MANIFEST_GLOBS = [
-  'node_modules/.pnpm/*/node_modules/*/package.json',
-  'node_modules/.pnpm/*/node_modules/@*/*/package.json',
-]
 const PUBLISHED_FIELDS = [
   'dependencies',
   'optionalDependencies',
@@ -137,6 +134,13 @@ function workspaceManifestPaths(root: string, ref: string | undefined): string[]
   }).split('\n').filter(workspaceManifestPath).sort()
 }
 
+function installedManifestGlobs(root: string): string[] {
+  return virtualStoreDirectories(resolve(root, 'node_modules')).flatMap(virtualStore => [
+    resolve(virtualStore, '*/node_modules/*/package.json'),
+    resolve(virtualStore, '*/node_modules/@*/*/package.json'),
+  ])
+}
+
 function readGitFiles(root: string, ref: string, paths: readonly string[]): ReadonlyMap<string, string> {
   const output = execFileSync('git', ['cat-file', '--batch'], {
     cwd: root,
@@ -212,8 +216,8 @@ function addManifest(index: Map<string, Map<string, RegistryVersion>>, manifest:
  */
 export function buildRegistryIndex(root: string, ref?: string): RegistryIndex {
   const index = new Map<string, Map<string, RegistryVersion>>()
-  for (const path of globSync(INSTALLED_MANIFEST_GLOBS, { cwd: root }).sort()) {
-    const manifest = JSON.parse(readFileSync(resolve(root, path), 'utf8')) as PackageManifest
+  for (const path of globSync(installedManifestGlobs(root)).sort()) {
+    const manifest = JSON.parse(readFileSync(path, 'utf8')) as PackageManifest
     const copied = copyPublishedManifest(manifest, new Map())
     if (copied !== undefined) addManifest(index, copied)
   }

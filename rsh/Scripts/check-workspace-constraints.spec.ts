@@ -156,18 +156,18 @@ describe('runtime-layer constraints', () => {
     ])
   })
 
-  it('rejects an Engine dependency on the Program-owned SDK server', () => {
+  it('rejects a Module dependency on the Program-owned SDK server', () => {
     expect(collectRuntimeLayerViolations([{
       dir: 'rsh/Programs/SDK/packages/native-server',
       manifest: { name: '@deepseek-ai/dsh-native-sdk-server' },
     }, {
-      dir: 'rsh/Engine/subagent/subagent-codex',
+      dir: 'rsh/Modules/Official/subagent/codex-app-server',
       manifest: {
-        name: '@deepseek-ai/dsh-subagent-codex',
+        name: '@deepseek-ai/dsh-codex-app-server',
         dependencies: { '@deepseek-ai/dsh-native-sdk-server': 'workspace:^' },
       },
     }])).toEqual([
-      '@deepseek-ai/dsh-subagent-codex: dependencies.@deepseek-ai/dsh-native-sdk-server violates runtime-layer policy: Engine packages may not consume Program packages',
+      '@deepseek-ai/dsh-codex-app-server: dependencies.@deepseek-ai/dsh-native-sdk-server violates runtime-layer policy: Module packages may not consume Program packages',
     ])
   })
 
@@ -354,6 +354,7 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js']],
     ['@deepseek-ai/dsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([
       'lib/index.js',

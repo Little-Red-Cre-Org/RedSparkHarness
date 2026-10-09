@@ -24,7 +24,7 @@ English | [中文](README.md)
 <a id="use-this-package"></a>
 ## 使用本包
 
-SDK 客户端和服务端用本库处理 stdio 分帧；Codex 适配器用它处理 app-server 分帧。调用方提供可读流和可写流，调用 `start()`，并在释放流之前关闭传输。`close()` 会拒绝待完成请求并移除监听器，但不会销毁任一流。
+SDK 客户端和服务端用本库处理 stdio 分帧；Codex 产品驱动用它处理 app-server 分帧。调用方提供可读流和可写流，调用 `start()`，并在释放流之前关闭传输。`close()` 会拒绝待完成请求并移除监听器，但不会销毁任一流。
 
 ```text
 const transport = new JsonRpcLineTransport(input, output)
@@ -60,7 +60,7 @@ transport.close()
 
 - [工具库目录](../README.zh.md) — 其他共用原语。
 - [SDK 协议](../../../Engine/subagent/sdk-protocol/README.zh.md) — 使用这层传输的 SDK 方法和通知类型。
-- [Codex 适配器](../../../Engine/subagent/subagent-codex/README.zh.md) — 使用同一分帧方式承载的 app-server 方法。
+- [Codex 产品驱动](../../../Modules/Official/subagent/codex-app-server/README.zh.md) — 使用同一分帧方式承载的 app-server 方法。
 
 -----
 

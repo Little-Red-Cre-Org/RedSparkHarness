@@ -16,6 +16,7 @@ The `subagent/` group contains product adapters for the Native Subagent Provider
 | Package | Role | Native capability |
 |---|---|---|
 | [`sdk-child/`](sdk-child/README.md) | Runs a child through the standard `dsh --profile native-sdk` launcher over the Host-approved managed connection | `externalSubagentDriver` |
+| [`codex-app-server/`](codex-app-server/README.md) | Provides the Codex app-server driver for Native external subagents; currently refuses Native requests until authority and execution ceilings can be enforced | `externalSubagentDriver` |
 
 ## Related documentation
 

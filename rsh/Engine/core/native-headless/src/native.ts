@@ -853,6 +853,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           }
           const { message, finish } = await this.modelExecution.execute({
             session, turn, step, options, prepared: preparedStep, append: track, persist,
+            rebuildOptions: () => ({ ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal }),
             onChunk: (chunk) => {
               request.onChunk?.(chunk)
               for (const observe of this.rootChunkObservers.get(owner) ?? []) {
