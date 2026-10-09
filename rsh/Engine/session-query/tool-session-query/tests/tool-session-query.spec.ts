@@ -846,6 +846,16 @@ describe('workspace authority and lineage redaction', () => {
       secret: 'hidden-lineage-session-secret',
     },
     {
+      name: 'closed query provider',
+      makeError: () => new SessionQueryError(
+        'provider closed with hidden-lineage-session-secret',
+        'SESSION_QUERY_PROVIDER_CLOSED',
+      ),
+      code: 'SESSION_QUERY_TOOL_FAILED',
+      message: 'session query operation failed',
+      secret: 'hidden-lineage-session-secret',
+    },
+    {
       name: 'typed query error',
       makeError: () => new SessionQueryError(
         'unrelated persistence failure',

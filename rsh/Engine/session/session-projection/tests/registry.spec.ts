@@ -9,6 +9,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
 import { z } from 'zod'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
@@ -18,8 +20,11 @@ import SessionStore, {
   SessionSeq,
 } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
+import { Session as NativeSession, SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import { ProjectionRegistryCore } from '../src/registry-core.ts'
+import { NativeSessionProjectionRegistry, plugin as nativeProjectionPlugin } from '../src/native.ts'
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
   interface SessionProjectionStateMap {
@@ -118,6 +123,34 @@ async function harness(): Promise<{ ctx: Context; session: Session }> {
 
 const mark = (session: Session, marks: string[]): SessionEvent =>
   session.append('test/mark', { marks })
+
+function nativeService<K extends keyof NativeServices>(key: K, value: NativeServices[K]): NativePlugin {
+  return {
+    apiVersion: 1,
+    name: `native-projection-test-${key}`,
+    targets: ['host'],
+    requires: [],
+    provides: [key],
+    resolve: () => (context) => {
+      context.provide(key, value)
+    },
+  }
+}
+
+type NativeActiveSessionObserver = Parameters<NativeActiveSessionOperations['onAttached']>[0]
+
+function nativeHost(
+  active: NativeServices['activeSessions'],
+  config?: unknown,
+  plugins: readonly NativePlugin[] = [],
+): NativeHost {
+  const scope = new NativeScope()
+  return new NativeHost(resolveInstallation([
+    { plugin: nativeService('activeSessions', active), scope, config: undefined },
+    { plugin: nativeProjectionPlugin, scope, config },
+    ...plugins.map(plugin => ({ plugin, scope, config: undefined })),
+  ], 'host'))
+}
 
 const STATE_SEQUENCES = [
   [0, 0, 0, 0],
@@ -228,6 +261,76 @@ describe('SessionProjectionRegistry drive', () => {
     expect(snapshot.values['test/marks']).toEqual({ marks: [] })
   })
 
+  it('reads only materialized wire cells at their lowest common cached cut', async () => {
+    const core = new ProjectionRegistryCore()
+    const session = NativeSession.create(NativeSessionId('projection-cached-cut'))
+    const marks = marksUnit()
+    const applyMarks = vi.fn(marks.apply)
+    core.register({ ...marks, apply: applyMarks })
+    const stable = stableViewUnit(state => state.value)
+    const failure = new Error('projection apply failed')
+    let failOnce = true
+    const applyStable = vi.fn((state: StableViewState, event: SessionEvent) => {
+      if (failOnce) {
+        failOnce = false
+        throw failure
+      }
+      return stable.apply(state, event)
+    })
+    core.register({ ...stable, apply: applyStable })
+    const keys = ['test/marks', 'test/stable-view'] as const
+    expect(core.cachedSnapshot(session, keys)).toBeUndefined()
+
+    const event = mark(session, ['cached'])
+    expect(() => {
+      core.driveEvent(session, event)
+    }).toThrow(failure)
+    expect(core.cachedSnapshot(session, keys)).toEqual({
+      asOfSeq: -1,
+      values: {
+        'test/marks': { marks: ['cached'] },
+        'test/stable-view': { marks: [] },
+      },
+    })
+    expect(core.cachedSnapshot(session, ['test/marks'])).toEqual({
+      asOfSeq: event.seq,
+      values: { 'test/marks': { marks: ['cached'] } },
+    })
+
+    const current = core.snapshot(session, keys)
+    expect(current).toEqual({
+      asOfSeq: event.seq,
+      values: {
+        'test/marks': { marks: ['cached'] },
+        'test/stable-view': { marks: ['cached'] },
+      },
+    })
+    const applyCounts = [applyMarks.mock.calls.length, applyStable.mock.calls.length]
+    expect(core.hydrate(session, {}, [event], SessionLogOffset(0))).toEqual(current)
+    expect([applyMarks.mock.calls.length, applyStable.mock.calls.length]).toEqual(applyCounts)
+
+    const newer = mark(session, ['live'])
+    core.driveEvent(session, newer)
+    expect(core.cachedSnapshot(session, keys)).toEqual({
+      asOfSeq: newer.seq,
+      values: {
+        'test/marks': { marks: ['live'] },
+        'test/stable-view': { marks: ['live'] },
+      },
+    })
+    expect(core.hydrate(session, {
+      'test/marks': { ver: 1, seq: event.seq, val: { marks: ['cached'] } },
+    }, [event], SessionLogOffset(0)).asOfSeq).toBe(event.seq)
+    expect(core.cachedSnapshot(session, keys)).toEqual({
+      asOfSeq: newer.seq,
+      values: {
+        'test/marks': { marks: ['live'] },
+        'test/stable-view': { marks: ['live'] },
+      },
+    })
+
+  })
+
   it('notifies onChanged with the validated view and the causing seq, and skips same-reference applies', async () => {
     const { ctx, session } = await harness()
     ctx.sessionProjections.register(marksUnit())
@@ -239,6 +342,29 @@ describe('SessionProjectionRegistry drive', () => {
     // Non-matching event: apply returns the same reference — no notification.
     session.append('turn/start', { turn: 1 })
     expect(seen).toEqual([{ key: 'test/marks', value: { marks: ['a'] }, seq: event.seq, sessionId: String(session.id) }])
+  })
+
+  it('reports a throwing subscriber and continues later listeners and registered units', async () => {
+    const { ctx, session } = await harness()
+    ctx.sessionProjections.register(marksUnit())
+    ctx.sessionProjections.register(stableViewUnit(state => state.value))
+    ctx.sessionProjections.register(countUnit())
+    const changed: string[] = []
+    const failure = new Error('subscriber failed')
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    ctx.sessionProjections.onChanged(() => { throw failure })
+    ctx.sessionProjections.onChanged((_session, key) => { changed.push(key) })
+
+    try {
+      mark(session, ['observed'])
+      expect(changed).toEqual(['test/marks', 'test/stable-view'])
+      expect(ctx.sessionProjections.stateOf(session, 'test/count')).toBe(1)
+      expect(report).toHaveBeenCalledTimes(2)
+      expect(report).toHaveBeenCalledWith('session-projection: change listener failed for "test/marks"', failure)
+      expect(report).toHaveBeenCalledWith('session-projection: change listener failed for "test/stable-view"', failure)
+    } finally {
+      report.mockRestore()
+    }
   })
 
   it('does not compute a view while no change listener exists', async () => {
@@ -471,6 +597,7 @@ describe('SessionProjectionRegistry drive', () => {
     mark(session, ['kept'])
 
     first()
+    first()
 
     // The regression this counts against: without last-release semantics, one
     // session ending strips the projection from every other live session,
@@ -478,6 +605,28 @@ describe('SessionProjectionRegistry drive', () => {
     expect(ctx.sessionProjections.snapshot(session).values['test/marks']).toEqual({ marks: ['kept'] })
     second()
     expect(ctx.sessionProjections.snapshot(session).values).toEqual({})
+
+    const core = new ProjectionRegistryCore()
+    const oldDispose = core.register(marksUnit())
+    core.clear()
+    const currentDispose = core.register(marksUnit())
+    oldDispose()
+    const replacement = NativeSession.create(NativeSessionId('projection-disposer-incarnation'))
+    mark(replacement, ['current'])
+    expect(core.snapshot(replacement).values['test/marks']).toEqual({ marks: ['current'] })
+    currentDispose()
+    expect(core.snapshot(replacement).values).toEqual({})
+
+    const nativeRegistry = new NativeSessionProjectionRegistry()
+    const nativeFirst = nativeRegistry.register(marksUnit())
+    const nativeSecond = nativeRegistry.register(marksUnit())
+    const nativeSession = NativeSession.create(NativeSessionId('projection-native-repeated-disposer'))
+    nativeSession.append('test/mark', { marks: ['shared'] })
+    nativeFirst()
+    nativeFirst()
+    expect(nativeRegistry.snapshot(nativeSession).values['test/marks']).toEqual({ marks: ['shared'] })
+    nativeSecond()
+    expect(nativeRegistry.snapshot(nativeSession).values).toEqual({})
   })
 
   it('refuses to share a key across a stateVersion change', async () => {
@@ -561,6 +710,14 @@ describe('SessionProjectionRegistry drive', () => {
     // checkpoint both still serve the committed value.
     expect(ctx.sessionProjections.snapshot(session).values['test/marks']).toEqual({ marks: ['a'] })
     expect(ctx.sessionProjections.checkpoint(session)['test/marks']?.val).toEqual({ marks: ['a'] })
+
+    const core = new ProjectionRegistryCore()
+    core.register(marksUnit())
+    const hydrated = core.hydrateWithCheckpoint(session, {
+      'test/marks': { ver: 1, seq: SessionSeq(0), val: { marks: ['a'] } },
+    }, [], SessionLogOffset(1))
+    ;(hydrated.checkpoint['test/marks']?.val as { marks: string[] }).marks.push('INJECTED')
+    expect(core.stateOf(session, 'test/marks')).toEqual({ marks: ['a'] })
   })
 
   it('restoreFloor anchors one below the lowest usable watermark and at 0 for missing or mismatched rows', async () => {
@@ -595,6 +752,11 @@ describe('SessionProjectionRegistry drive', () => {
       { type: 'test/mark', seq: SessionSeq(3), time: 3, data: { marks: ['new'] } },
       { type: 'turn/end', seq: SessionSeq(4), time: 4, data: { turn: 1, reason: { kind: 'completed' } } },
     ]
+    expect(() => ctx.sessionProjections.restore({
+      'test/marks': { ver: 1, seq: SessionSeq(2), val: { marks: ['old', '2'] } },
+      'test/count': { ver: 1, seq: SessionSeq(2), val: 3 },
+    }, [tail[1]!], SessionLogOffset(3), RESTORE_HEADER, SessionLogOffset(0)))
+      .toThrow(/cannot restore across missing seq 3/)
     // marks row usable (watermark 2, tail starts at 3); count row mismatched — but
     // a mismatch with baseSeq > 0 cannot silently refold: it throws for a re-read.
     expect(() => ctx.sessionProjections.restore({
@@ -661,12 +823,14 @@ describe('SessionProjectionRegistry drive', () => {
     const { ctx } = await harness()
     ctx.sessionProjections.register(marksUnit())
     ctx.sessionProjections.register(countUnit())
-    const values = ctx.sessionProjections.viewCheckpoint({
+    const rows = {
       'test/marks': { ver: 1, seq: SessionSeq(4), val: { marks: ['stored'] } },
       'test/count': { ver: 99, seq: SessionSeq(4), val: 5 }, // mismatched: absent
-    })
+    }
+    const values = ctx.sessionProjections.viewCheckpoint(rows)
     expect(values['test/marks']).toEqual({ marks: ['stored'] })
     expect('test/count' in values).toBe(false)
+    expect(ctx.sessionProjections.viewCheckpoint(rows, [])).toEqual({})
     expect(ctx.sessionProjections.viewCheckpoint({})).toEqual({})
   })
 
@@ -773,5 +937,329 @@ describe('SessionProjectionRegistry drive', () => {
       stateVersion: 1,
     })
     expect(() => ctx.sessionProjections.snapshot(session)).toThrow()
+  })
+})
+
+describe('Native SessionProjectionRegistry lifecycle', () => {
+  it('restores cuts and attaches active owners without duplicate projection work', () => {
+    const registry = new NativeSessionProjectionRegistry()
+    registry.register(marksUnit())
+    registry.register(countUnit())
+
+    const coldSession = NativeSession.create(NativeSessionId('projection-cold-observation'))
+    const coldEvent = coldSession.append('test/mark', { marks: ['cold'] })
+    const detached = registry.observe({
+      header: coldSession.header,
+      inheritedEventCount: coldSession.inheritedEventCount,
+      checkpoint: {},
+      events: [coldEvent],
+      baseSeq: SessionLogOffset(0),
+    })
+    expect(detached.asOfSeq).toBe(coldEvent.seq)
+    expect(detached.values['test/marks']).toEqual({ marks: ['cold'] })
+    expect(detached.stateOf('test/count')).toBe(1)
+    expect(detached.stateOf('test/cut')).toBeUndefined()
+    const coldState = detached.stateOf('test/marks')
+    if (coldState === null || coldState === undefined) throw new Error('missing restored projection state')
+    coldState.marks.push('caller mutation')
+    expect(detached.stateOf('test/marks')).toEqual({ marks: ['cold'] })
+
+    const session = NativeSession.create(NativeSessionId('projection-resident-observation'))
+    const event = session.append('test/mark', { marks: ['resident'] })
+    const resident = registry.observe({
+      session,
+      header: session.header,
+      inheritedEventCount: session.inheritedEventCount,
+      checkpoint: {},
+      events: [event],
+      baseSeq: SessionLogOffset(0),
+    })
+    expect(resident.asOfSeq).toBe(event.seq)
+    expect(resident.values['test/marks']).toEqual({ marks: ['resident'] })
+    expect(registry.stateOf(session, 'test/count')).toBe(1)
+    const residentState = resident.stateOf('test/marks')
+    if (residentState === null || residentState === undefined) throw new Error('missing hydrated projection state')
+    residentState.marks.push('caller mutation')
+    expect(resident.stateOf('test/marks')).toEqual({ marks: ['resident'] })
+
+    const emptySession = NativeSession.create(NativeSessionId('projection-empty-attached-cut'))
+    const emptyCheckpoint = {
+      'test/marks': { ver: 1, seq: -1 as const, val: { marks: ['restored'] } },
+      'test/count': { ver: 1, seq: -1 as const, val: 41 },
+    }
+    const emptyCut = registry.hydrate(emptySession, emptyCheckpoint, [], SessionLogOffset(0))
+    expect(emptyCut).toEqual({
+      asOfSeq: -1,
+      values: { 'test/marks': { marks: ['restored'] } },
+    })
+    expect(registry.hydrate(emptySession, emptyCheckpoint, [], SessionLogOffset(0))).toEqual(emptyCut)
+    expect(registry.snapshot(emptySession)).toEqual(emptyCut)
+    expect(registry.snapshot(emptySession, [])).toEqual({ asOfSeq: -1, values: {} })
+    expect(registry.cachedSnapshot(emptySession)).toEqual(emptyCut)
+    expect(registry.cachedSnapshot(emptySession, [])).toBeUndefined()
+    expect(registry.viewCheckpoint({}, ['test/marks'])).toEqual({})
+    expect(registry.viewCheckpoint({}, [])).toEqual({})
+    let publishEmpty: ((event: SessionEvent) => void) | undefined
+    const emptyOwner = {
+      session: emptySession,
+      onEvent(observer: (event: SessionEvent) => void) {
+        publishEmpty = observer
+        return () => { publishEmpty = undefined }
+      },
+    } as unknown as NativeActiveSessionOwner
+    registry.attach(emptyOwner)
+    // Attach must retain the prepared cells instead of reseeding them.
+    expect(registry.stateOf(emptySession, 'test/count')).toBe(41)
+    const attachedEvent = emptySession.append('test/mark', { marks: ['attached'] })
+    if (publishEmpty === undefined) throw new Error('missing attached owner event observer')
+    publishEmpty(attachedEvent)
+    expect(registry.stateOf(emptySession, 'test/count')).toBe(42)
+    publishEmpty(attachedEvent)
+    expect(registry.stateOf(emptySession, 'test/count')).toBe(42)
+    registry.detach(emptyOwner)
+
+    const lateSession = NativeSession.create(NativeSessionId('projection-late-attached-history'))
+    lateSession.append('turn/start', { turn: 1 })
+    lateSession.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+    const lateUnit = countUnit()
+    const lateInit = vi.fn((header: SessionHeader, inheritedEventCount: SessionLogOffset) =>
+      lateUnit.init(header, inheritedEventCount))
+    const lateApply = vi.fn((state: number, event: SessionEvent) => lateUnit.apply(state, event))
+    const lateRegistry = new NativeSessionProjectionRegistry()
+    lateRegistry.register({ ...lateUnit, init: lateInit, apply: lateApply })
+    let publishLate: ((event: SessionEvent) => void) | undefined
+    const lateOwner = {
+      session: lateSession,
+      onEvent(observer: (event: SessionEvent) => void) {
+        publishLate = observer
+        return () => { publishLate = undefined }
+      },
+    } as unknown as NativeActiveSessionOwner
+    lateRegistry.attach(lateOwner)
+    expect(lateInit).not.toHaveBeenCalled()
+    expect(lateApply).not.toHaveBeenCalled()
+    const lateEvent = lateSession.append('turn/start', { turn: 2 })
+    if (publishLate === undefined) throw new Error('missing late owner event observer')
+    publishLate(lateEvent)
+    expect(lateInit).toHaveBeenCalledOnce()
+    expect(lateApply).toHaveBeenCalledTimes(3)
+    expect(lateRegistry.stateOf(lateSession, 'test/count')).toBe(3)
+    publishLate(lateEvent)
+    expect(lateApply).toHaveBeenCalledTimes(3)
+    lateRegistry.detach(lateOwner)
+  })
+
+  it('attempts every owner listener release and clears projection state after a synchronous disposer failure', () => {
+    const registry = new NativeSessionProjectionRegistry()
+    const firstSession = NativeSession.create(NativeSessionId('projection-dispose-first'))
+    const secondSession = NativeSession.create(NativeSessionId('projection-dispose-second'))
+    const firstListeners = new Set<(event: SessionEvent) => void>()
+    const secondListeners = new Set<(event: SessionEvent) => void>()
+    const firstFailure = new Error('first owner listener removal failed')
+    const releaseFirst = vi.fn(() => { throw firstFailure })
+    const releaseSecond = vi.fn()
+    const owner = (session: NativeSession, listeners: Set<(event: SessionEvent) => void>, release: () => void) => ({
+      session,
+      onEvent(observer: (event: SessionEvent) => void) {
+        listeners.add(observer)
+        return () => {
+          listeners.delete(observer)
+          release()
+        }
+      },
+    }) as unknown as NativeActiveSessionOwner
+    registry.register(marksUnit())
+    registry.attach(owner(firstSession, firstListeners, releaseFirst))
+    registry.attach(owner(secondSession, secondListeners, releaseSecond))
+
+    let disposeFailure: unknown
+    try {
+      registry.dispose()
+    } catch (failure: unknown) {
+      disposeFailure = failure
+    }
+
+    expect(disposeFailure).toBeInstanceOf(AggregateError)
+    if (!(disposeFailure instanceof AggregateError)) throw new Error('missing projection registry disposal aggregate')
+    expect(disposeFailure.errors).toEqual([firstFailure])
+    expect(releaseFirst).toHaveBeenCalledOnce()
+    expect(releaseSecond).toHaveBeenCalledOnce()
+    expect(firstListeners.size).toBe(0)
+    expect(secondListeners.size).toBe(0)
+    expect(registry.checkpoint(firstSession)).toEqual({})
+    expect(registry.checkpoint(secondSession)).toEqual({})
+  })
+})
+
+describe('Native session-projection configuration', () => {
+  it.each([
+    { name: 'null', config: null },
+    { name: 'array', config: [] },
+    { name: 'primitive', config: 'configured' },
+    { name: 'non-empty object', config: { enabled: true } },
+  ])('rejects $name configuration', ({ config }) => {
+    expect(() => nativeProjectionPlugin.resolve(config)).toThrow('session-projection: configuration must be empty')
+  })
+})
+
+describe('Native session-projection Provider lifecycle', () => {
+  it.each([
+    { name: 'installation rollback', registrationFails: true, cleanupFails: false, attachOwner: false, detachFails: false },
+    { name: 'rollback with cleanup failure', registrationFails: true, cleanupFails: true, attachOwner: false, detachFails: false },
+    { name: 'Host shutdown', registrationFails: false, cleanupFails: true, attachOwner: true, config: {}, detachFails: false },
+    { name: 'failed owner-event removal', registrationFails: false, cleanupFails: false, attachOwner: true, config: {}, detachFails: true },
+  ])('releases accepted observers during $name and preserves cleanup failures', async (options) => {
+    const { registrationFails, cleanupFails, attachOwner, config, detachFails } = options
+    const registrationFailure = new Error('detached observer registration failed')
+    const cleanupFailure = new Error('attached observer removal failed')
+    const ownerListenerFailure = new Error('active owner listener removal failed')
+    const attachedObservers = new Set<(owner: NativeActiveSessionOwner) => Promise<void>>()
+    const detachedObservers = new Set<(owner: NativeActiveSessionOwner) => Promise<void>>()
+    const ownerEvents = new Set<(event: SessionEvent) => void>()
+    const ownerSession = NativeSession.create(NativeSessionId('projection-provider-owner'))
+    const releaseOwner = vi.fn(() => { throw ownerListenerFailure })
+    const owner = {
+      session: ownerSession,
+      onEvent(observer: (event: SessionEvent) => void) {
+        ownerEvents.add(observer)
+        return () => {
+          if (detachFails) releaseOwner()
+          ownerEvents.delete(observer)
+          releaseOwner()
+        }
+      },
+    } as unknown as NativeActiveSessionOwner
+    let attachedObserver: ((owner: NativeActiveSessionOwner) => Promise<void>) | undefined
+    let detachedObserver: ((owner: NativeActiveSessionOwner) => Promise<void>) | undefined
+    const removeAttached = vi.fn((): Promise<void> => {
+      if (attachedObserver !== undefined) attachedObservers.delete(attachedObserver)
+      if (cleanupFails) throw cleanupFailure
+      return Promise.resolve()
+    })
+    const removeDetached = vi.fn((): Promise<void> => {
+      if (detachedObserver !== undefined) detachedObservers.delete(detachedObserver)
+      return Promise.resolve()
+    })
+    const onAttached: NativeActiveSessionOperations['onAttached'] = vi.fn((observer: NativeActiveSessionObserver) => {
+      attachedObserver = observer
+      attachedObservers.add(observer)
+      return removeAttached
+    })
+    const onDetached: NativeActiveSessionOperations['onDetached'] = vi.fn((observer: NativeActiveSessionObserver) => {
+      if (registrationFails) throw registrationFailure
+      detachedObserver = observer
+      detachedObservers.add(observer)
+      return removeDetached
+    })
+    const active = {
+      owners: () => attachOwner ? [owner] : [],
+      onAttached,
+      onDetached,
+    } as unknown as NativeActiveSessionOperations
+    const applied: number[] = []
+    const projectionConsumer: NativePlugin = {
+      apiVersion: 1,
+      name: 'native-projection-test-consumer',
+      targets: ['host'],
+      requires: ['sessionProjections'],
+      provides: [],
+      resolve: () => (context) => {
+        context.require('sessionProjections').register({
+          ...countUnit(),
+          apply: (state) => {
+            const next = state + 1
+            applied.push(next)
+            return next
+          },
+        })
+      },
+    }
+    const host = nativeHost(active, config, detachFails ? [projectionConsumer] : [])
+    let startupFailure: unknown
+    let shutdownFailure: unknown
+    try {
+      startupFailure = await host.start().then(() => undefined, (failure: unknown) => failure)
+      if (detachFails && startupFailure === undefined) {
+        if (attachedObserver === undefined || detachedObserver === undefined) throw new Error('missing active owner observers')
+        const publish = (turn: number): void => {
+          const event = ownerSession.append('turn/start', { turn })
+          for (const listener of ownerEvents) listener(event)
+        }
+
+        expect(ownerEvents.size).toBe(1)
+        await attachedObserver(owner)
+        expect(ownerEvents.size).toBe(1)
+        publish(1)
+        expect(applied).toEqual([1])
+        await expect(detachedObserver(owner)).rejects.toBe(ownerListenerFailure)
+        await expect(detachedObserver(owner)).resolves.toBeUndefined()
+        expect(ownerEvents.size).toBe(1)
+        publish(2)
+        expect(applied).toEqual([1])
+        await attachedObserver(owner)
+        expect(ownerEvents.size).toBe(2)
+        // Reattachment folds the committed event published while the owner was detached.
+        publish(3)
+        expect(applied).toEqual([1, 2, 3])
+      }
+    } finally {
+      shutdownFailure = await host.stop().then(() => undefined, (failure: unknown) => failure)
+    }
+
+    expect(removeAttached).toHaveBeenCalledOnce()
+    expect(attachedObservers.size).toBe(0)
+    if (registrationFails) {
+      expect(removeDetached).not.toHaveBeenCalled()
+      expect(detachedObservers.size).toBe(0)
+      if (attachedObserver !== undefined) await attachedObserver(owner)
+      expect(ownerEvents.size).toBe(0)
+      expect(releaseOwner).not.toHaveBeenCalled()
+      if (cleanupFails) {
+        expect(startupFailure).toBeInstanceOf(AggregateError)
+        if (!(startupFailure instanceof AggregateError)) throw new Error('missing activation and cleanup aggregate')
+        expect(startupFailure.errors).toEqual([registrationFailure, cleanupFailure])
+        expect(shutdownFailure).toBe(startupFailure)
+      } else {
+        expect(startupFailure).toBe(registrationFailure)
+        expect(shutdownFailure).toBe(startupFailure)
+      }
+      return
+    }
+
+    expect(startupFailure).toBeUndefined()
+    expect(removeDetached).toHaveBeenCalledOnce()
+    expect(detachedObservers.size).toBe(0)
+    if (detachFails) {
+      expect(releaseOwner).toHaveBeenCalledTimes(2)
+      expect(ownerEvents.size).toBe(2)
+      const terminal = ownerSession.append('turn/start', { turn: 4 })
+      for (const listener of ownerEvents) listener(terminal)
+      expect(applied).toEqual([1, 2, 3])
+    } else {
+      expect(releaseOwner).toHaveBeenCalledOnce()
+      expect(ownerEvents.size).toBe(0)
+    }
+    expect(shutdownFailure).toBeInstanceOf(AggregateError)
+    if (!(shutdownFailure instanceof AggregateError)) throw new Error('missing Native Host cleanup aggregate')
+    expect(shutdownFailure.errors).toHaveLength(1)
+    const ownerResourceFailure: unknown = shutdownFailure.errors[0]
+    expect(ownerResourceFailure).toBeInstanceOf(AggregateError)
+    if (!(ownerResourceFailure instanceof AggregateError)) throw new Error('missing Native resource-owner aggregate')
+    expect(ownerResourceFailure.errors).toHaveLength(1)
+    const providerFailure: unknown = ownerResourceFailure.errors[0]
+    expect(providerFailure).toBeInstanceOf(AggregateError)
+    if (!(providerFailure instanceof AggregateError)) throw new Error('missing Native projection cleanup aggregate')
+    if (detachFails) {
+      expect(providerFailure.errors).toHaveLength(1)
+      expect(providerFailure.errors[0]).toBeInstanceOf(AggregateError)
+      if (!(providerFailure.errors[0] instanceof AggregateError)) throw new Error('missing active owner cleanup aggregate')
+      expect(providerFailure.errors[0].errors).toEqual([ownerListenerFailure])
+    } else {
+      expect(providerFailure.errors).toHaveLength(2)
+      expect(providerFailure.errors[0]).toBe(cleanupFailure)
+      expect(providerFailure.errors[1]).toBeInstanceOf(AggregateError)
+      if (!(providerFailure.errors[1] instanceof AggregateError)) throw new Error('missing active owner cleanup aggregate')
+      expect(providerFailure.errors[1].errors).toEqual([ownerListenerFailure])
+    }
   })
 })

@@ -27,7 +27,7 @@ Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，�
 
 贡献可以声明正数 `timeoutMs` 作为主体预算；注册表只记录它。`aroundExecution(policy, scope?)` 在每个主体外层、结果处理之外安装策略。策略收到冻结的工具声明，并且必须恰好调用一次 `next(signal?)`。替换信号会与调用方信号合并，策略自身的结果即为最终结果。先注册的策略包在后注册的策略外层。`onSettlement(policy, scope?)` 安装同步策略，它看到每个已记录结果及其已解析参数的冻结副本，且只能返回用户消息。应用为其记录的每个结果调用一次 `settlementContexts()`，PTC dispatch 对嵌套调用也这样做。这两个钩子支撑原生超时与重复调用 guard。
 
-纯 `./types` 和 `./presentation` 出口与 Host、Client Consumer 共享持久 PTC 事件 payload 和文件 diff。注册表入口仅属于 Host。这些声明不安装 PTC executor，也不改变 Session 事件名或 payload 字段。
+纯 `./types` 和 `./presentation` 出口与 Host、Client Consumer 共享持久 PTC 事件 payload、通用调用视图和文件 diff。`./presentation` 是 `GenericCallView`、`ToolCallKind` 与 `FileLocation` 的权威声明；兼容 Tools 重新导出这些声明。注册表入口仅属于 Host。这些声明不安装 PTC executor，也不改变 Session 事件名或 payload 字段。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -47,7 +47,7 @@ Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，�
 
 不发布 invariant companion，因为不存在对所属应用持久结果接受状态的独立观察。
 
-不依赖框架的 `./presentation` 导出除了文件差异，还拥有搜索卡片的路径及分组匹配结果类型。兼容 Tools 重新导出同一组类型，原生搜索把有界展示元数据与权威 Tool 结果一起持久化。
+不依赖框架的 `./presentation` 导出拥有通用调用视图、搜索卡片的路径及分组匹配结果类型和文件差异。兼容 Tools 重新导出同一组类型，原生搜索把有界展示元数据与权威 Tool 结果一起持久化。
 
 <a id="dev-note"></a>
 ### 开发备注

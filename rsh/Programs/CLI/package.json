@@ -25,7 +25,8 @@
       "native-sdk-dsh-child",
       "native-web",
       "native-acp",
-      "native-tui"
+      "native-tui",
+      "native-headless-query"
     ],
     "configTrees": [
       {
@@ -44,6 +45,15 @@
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-session-query": "workspace:^",
+    "@deepseek-ai/dsh-session-query-sqlite": "workspace:^",
+    "@deepseek-ai/dsh-session-projection": "workspace:^",
+    "@deepseek-ai/dsh-session-projection-cache": "workspace:^",
+    "@deepseek-ai/dsh-session-reference": "workspace:^",
+    "@deepseek-ai/dsh-tool-session-query": "workspace:^",
+    "@deepseek-ai/dsh-storage": "workspace:^",
+    "@deepseek-ai/dsh-storage-domain": "workspace:^",
+    "@deepseek-ai/dsh-storage-json": "workspace:^",
     "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
     "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
     "commander": "^15.0.0",
@@ -145,9 +155,7 @@
     "@deepseek-ai/dsh-schedule": "workspace:^",
     "@deepseek-ai/dsh-sdk-app": "workspace:^",
     "@deepseek-ai/dsh-sdk-minimal": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-reference": "workspace:^",
     "@deepseek-ai/dsh-session-title": "workspace:^",
     "@deepseek-ai/dsh-session-title-first-prompt-llm": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",
@@ -214,7 +222,6 @@
     "@deepseek-ai/dsh-session-snapshot": "workspace:^",
     "@deepseek-ai/dsh-session-checkpoint-policy": "workspace:^",
     "@deepseek-ai/dsh-session-log-deepseek": "workspace:^",
-    "@deepseek-ai/dsh-session-query": "workspace:^",
     "@deepseek-ai/dsh-shell-env": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-settings-file": "workspace:^",

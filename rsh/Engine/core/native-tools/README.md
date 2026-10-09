@@ -27,7 +27,7 @@ Value contributions declare an output schema; the registry captures it, validate
 
 A contribution may declare a positive `timeoutMs` body budget; the registry only records it. `aroundExecution(policy, scope?)` installs a policy around every body, outside result processing. The policy receives the frozen tool declaration and must call `next(signal?)` exactly once. A replacement signal is combined with the caller's signal, and the policy's own result is the outcome. Earlier registrations surround later ones. `onSettlement(policy, scope?)` installs a synchronous policy that sees each recorded result with frozen copies of its parsed arguments and may return only user messages. Applications call `settlementContexts()` once for each result they record, and PTC dispatch does the same for nested calls. These two hooks back the native timeout and repeat-call guards.
 
-The pure `./types` and `./presentation` exports share durable PTC event payloads and file diffs with Host and Client consumers. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
+The pure `./types` and `./presentation` exports share durable PTC event payloads, generic call views and file diffs with Host and Client consumers. `./presentation` owns `GenericCallView`, `ToolCallKind` and `FileLocation`; compatibility Tools re-exports those declarations. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -47,7 +47,7 @@ The consuming application owns request-prefix changes from registered schemas.
 
 No invariant companion is published because there is no independent observation of the owning application's durable result acceptance.
 
-The framework-free `./presentation` export owns search-card path and grouped-match result types as well as file diffs. Compatibility Tools re-export these same types; native search results persist their bounded metadata with the authoritative Tool result.
+The framework-free `./presentation` export owns generic call views, search-card path and grouped-match result types, and file diffs. Compatibility Tools re-export these same types; native search results persist their bounded metadata with the authoritative Tool result.
 
 <a id="dev-note"></a>
 ### Dev Note

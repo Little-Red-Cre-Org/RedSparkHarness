@@ -283,7 +283,11 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
+  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js'],
+  '@deepseek-ai/dsh-session-query-sqlite': ['lib/core.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-projection-cache': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-projection': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-session-query': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
   '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-compaction': ['lib/native.js'],
@@ -342,6 +346,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
 const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
   // tsdown emits the SDK client's public entries and shared chunks together.
   '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  '@deepseek-ai/dsh-session-log-export': [
+    'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+  ],
 }
 
 function sameStringList(actual: readonly string[] | undefined, expected: readonly string[]): boolean {

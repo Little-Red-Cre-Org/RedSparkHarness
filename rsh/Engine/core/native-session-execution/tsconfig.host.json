@@ -8,7 +8,13 @@
   "include": [
     "src"
   ],
+  "exclude": [
+    "src/active-session-protocol.ts"
+  ],
   "references": [
+    {
+      "path": "./tsconfig.active-session-protocol.json"
+    },
     {
       "path": "../../session/session-persistence/tsconfig.host.json"
     },

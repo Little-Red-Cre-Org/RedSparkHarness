@@ -4,22 +4,21 @@
  * @module @deepseek-ai/dsh-tool-session-query/operations
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/native'
 import {
   SessionQueryError,
   type SessionEventSearchPage,
   type SessionEventSurface,
   type SessionRecord,
   type SessionSearchCursor,
-} from '@deepseek-ai/dsh-session-query'
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+} from '@deepseek-ai/dsh-session-query/native'
 import { toolInput } from './input.ts'
 import { presentation } from './presentation.ts'
 import { serviceBoundary } from './service-boundary.ts'
 import { workspaceAccess } from './workspace-access.ts'
+import type { SessionQueryToolInvocation, SessionQueryToolServices } from './runtime.ts'
 
 type SessionSearchArgs = Parameters<typeof toolInput.buildSessionFilters>[0]
 
@@ -53,9 +52,9 @@ interface SearchCollection<T> {
 }
 
 async function executeSessionSearch(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   args: SessionSearchArgs,
-  exec: ToolRunContext,
+  exec: SessionQueryToolInvocation,
   maxResults: number,
 ): Promise<string> {
   const caller = workspaceAccess.callerOf(exec, ctx)
@@ -115,9 +114,9 @@ async function executeSessionSearch(
 }
 
 async function executeEventSearch(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   args: EventSearchArgs,
-  exec: ToolRunContext,
+  exec: SessionQueryToolInvocation,
   maxResults: number,
 ): Promise<string> {
   const caller = workspaceAccess.callerOf(exec, ctx)
@@ -169,9 +168,9 @@ async function executeEventSearch(
 }
 
 async function executeSessionTrace(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   args: SessionTargetArgs,
-  exec: ToolRunContext,
+  exec: SessionQueryToolInvocation,
 ): Promise<string> {
   const caller = workspaceAccess.callerOf(exec, ctx)
   const sessionId = workspaceAccess.targetId(args, caller)
@@ -201,9 +200,9 @@ async function executeSessionTrace(
 }
 
 async function executeEventTrace(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   args: EventTargetArgs,
-  exec: ToolRunContext,
+  exec: SessionQueryToolInvocation,
 ): Promise<string> {
   toolInput.assertNonNegativeSafeInteger('seq', args.seq)
   const seq = SessionSeq(args.seq)
@@ -218,9 +217,9 @@ async function executeEventTrace(
 }
 
 async function executeEventRead(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   args: EventReadArgs,
-  exec: ToolRunContext,
+  exec: SessionQueryToolInvocation,
 ): Promise<string> {
   toolInput.assertNonNegativeSafeInteger('seq', args.seq)
   const seq = SessionSeq(args.seq)

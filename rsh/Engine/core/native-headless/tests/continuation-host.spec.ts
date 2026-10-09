@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
@@ -21,11 +22,38 @@ import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as presetsPlugin, type NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence/native'
+import { NativeSessionProjectionRegistry, type NativeProjectionDefinition } from '@deepseek-ai/dsh-session-projection/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '../src/native.ts'
 import { NativeContinuationActivation } from '../src/continuation-activation.ts'
 import type { NativeContinuationSession } from '../src/continuation-session.ts'
+
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    'test/native-observer-first': number
+    'test/native-observer-second': number
+  }
+
+  interface SessionProjectionMap {
+    'test/native-observer-first': number
+    'test/native-observer-second': number
+  }
+}
+
+type NativeObserverKey = 'test/native-observer-first' | 'test/native-observer-second'
+type NativeObserverUnit = Omit<NativeProjectionDefinition<NativeObserverKey, number>, 'wire'> & {
+  wire: NonNullable<NativeProjectionDefinition<NativeObserverKey, number>['wire']>
+}
+
+const observerUnit = (key: NativeObserverKey): NativeObserverUnit => ({
+  key,
+  stateSchema: z.number(),
+  init: () => 0,
+  apply: state => state + 1,
+  wire: { viewSchema: z.number(), view: state => state },
+  stateVersion: 1,
+})
 
 async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], selectedPreset = false) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-continuation-host-'))
@@ -82,6 +110,60 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
   return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, meter, events: host.events, presets,
     async close() { await host.stop(); await rm(root, { recursive: true }) } }
 }
+
+
+it('reports projection observers without starving units or poisoning the retained writer', async () => {
+  const state = await fixture([])
+  const id = SessionId('projection-observer-failure')
+  const projections = new NativeSessionProjectionRegistry()
+  projections.register(observerUnit('test/native-observer-first'))
+  projections.register(observerUnit('test/native-observer-second'))
+  const changed: string[] = []
+  const accepted: string[] = []
+  const observerFailure = new Error('projection subscriber failed')
+  const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+  projections.onChanged(() => { throw observerFailure })
+  projections.onChanged((_session, key) => { changed.push(key) })
+
+  try {
+    await state.app.executeSessionOperation({ id, resume: false }, async (owner) => {
+      projections.attach(owner)
+      const removeFailure = owner.onEvent(() => { throw observerFailure })
+      const removeAccepted = owner.onEvent((event) => { accepted.push(event.type) })
+      try {
+        owner.append('turn/start', { turn: 1 })
+        await owner.flush()
+        owner.append('step/start', { turn: 1, step: 1 })
+        await owner.flush()
+
+        expect(projections.stateOf(owner.session, 'test/native-observer-first')).toBe(2)
+        expect(projections.stateOf(owner.session, 'test/native-observer-second')).toBe(2)
+      } finally {
+        removeFailure()
+        removeAccepted()
+        projections.detach(owner)
+      }
+    }, new AbortController().signal)
+
+    expect(changed).toEqual([
+      'test/native-observer-first', 'test/native-observer-second',
+      'test/native-observer-first', 'test/native-observer-second',
+    ])
+    expect(accepted).toEqual(['turn/start', 'step/start'])
+    expect(report).toHaveBeenCalledTimes(6)
+    expect(report).toHaveBeenCalledWith('native-continuation: accepted-event observer failed', observerFailure)
+    const reader = await state.storage.open(id, 'read')
+    try {
+      expect((await reader.read()).events.map(event => event.type)).toEqual(['turn/start', 'step/start'])
+    } finally {
+      await reader.close()
+    }
+  } finally {
+    projections.dispose()
+    report.mockRestore()
+    await state.close()
+  }
+})
 
 
 

@@ -10,6 +10,7 @@ import z from '@deepseek-ai/schemastery'
 import { z as zod } from 'zod'
 import type { Agent, RequestErrorAction } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-session-projection'
+import type {} from '@deepseek-ai/dsh-session-projection/types'
 import type { RetryId } from './brand.ts'
 import { assertEmptyRetryConfig, recoverWithRetry, retryStateKey, type RetryInternals } from './core.ts'
 

@@ -22,7 +22,7 @@ import type { ContentBlock, MessageId, MessageSource } from '@deepseek-ai/dsh-ll
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionObservation, SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
+import type { SessionObservation, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
 import {
   childSessionMeta,
   captureDelegatedPolicyOverrides,
@@ -535,8 +535,8 @@ export class SubagentContinuationManager {
   }
 
   /** Resolve the Session query service used for cold child observations. */
-  private requireSessionQuery(): SessionQueryEngine {
-    const query = this.ctx.get('sessionQuery')
+  private requireSessionQuery(): Pick<SessionQueryOperations, 'observeSession'> {
+    const query = this.ctx.get('sessionQuery') as Pick<SessionQueryOperations, 'observeSession'> | undefined
     if (query === undefined) {
       throw new SubagentError(
         'continuable subagents require session query (load @deepseek-ai/dsh-session-query)',

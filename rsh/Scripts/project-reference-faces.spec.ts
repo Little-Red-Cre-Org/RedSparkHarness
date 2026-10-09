@@ -57,6 +57,50 @@ describe('Project Reference compiler faces', () => {
     expect(collectProjectReferenceFaceViolations(root)).toEqual([])
   })
 
+  it('allows same-face declaration-only leaves and rejects other split-package entries', () => {
+    const root = workspaceFixture({
+      host: [
+        './rsh/Programs/Web/api/split/tsconfig.protocol.json',
+        './rsh/Programs/Web/api/split/tsconfig.host.extra.json',
+        './rsh/Programs/Web/api/split/tsconfig.host.noemit.json',
+        './rsh/Programs/Web/api/split/tsconfig.host.inherited-noemit.json',
+      ],
+      client: ['./rsh/Programs/Web/api/split/tsconfig.protocol.json'],
+    })
+    const split = join(root, 'rsh/Programs/Web/api/split')
+    writeJson(join(split, 'tsconfig.protocol.json'), {
+      extends: './tsconfig.host.json',
+      compilerOptions: { composite: true, declaration: true, emitDeclarationOnly: true },
+      references: [],
+    })
+    writeJson(join(split, 'tsconfig.host.extra.json'), {
+      extends: './tsconfig.host.json',
+      compilerOptions: { composite: true, declaration: true },
+      references: [],
+    })
+    writeJson(join(split, 'tsconfig.host.noemit.json'), {
+      extends: './tsconfig.host.json',
+      compilerOptions: { composite: true, declaration: true, emitDeclarationOnly: true, noEmit: true },
+      references: [],
+    })
+    writeJson(join(split, 'tsconfig.host.noemit-base.json'), {
+      extends: './tsconfig.host.json',
+      compilerOptions: { noEmit: true },
+    })
+    writeJson(join(split, 'tsconfig.host.inherited-noemit.json'), {
+      extends: './tsconfig.host.noemit-base.json',
+      compilerOptions: { composite: true, declaration: true, emitDeclarationOnly: true },
+      references: [],
+    })
+
+    expect(collectProjectReferenceFaceViolations(root)).toEqual([
+      'tsconfig.client.json: Project Reference "./rsh/Programs/Web/api/split/tsconfig.protocol.json" enters split project rsh/Programs/Web/api/split from a Client config; reference "rsh/Programs/Web/api/split/tsconfig.client.json" instead',
+      'tsconfig.host.json: Project Reference "./rsh/Programs/Web/api/split/tsconfig.host.extra.json" enters split project rsh/Programs/Web/api/split from a Host config; reference "rsh/Programs/Web/api/split/tsconfig.host.json" instead',
+      'tsconfig.host.json: Project Reference "./rsh/Programs/Web/api/split/tsconfig.host.inherited-noemit.json" enters split project rsh/Programs/Web/api/split from a Host config; reference "rsh/Programs/Web/api/split/tsconfig.host.json" instead',
+      'tsconfig.host.json: Project Reference "./rsh/Programs/Web/api/split/tsconfig.host.noemit.json" enters split project rsh/Programs/Web/api/split from a Host config; reference "rsh/Programs/Web/api/split/tsconfig.host.json" instead',
+    ])
+  })
+
   it('rejects the opposite leaf and the solution root of a split project', () => {
     const root = workspaceFixture({
       host: [

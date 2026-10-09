@@ -1,4 +1,4 @@
-# Agent Note：Native 精确会话查询入口
+# Agent Note: Native 会话查询与投影后端
 
 Status: implemented
 
@@ -6,28 +6,36 @@ Status: implemented
 
 ## 问题
 
-Native Engine 消费方没有精确会话查询能力。现有 `SessionQueryEngine` 与 `SessionCorpus` 属于 Cordis 服务，但 Native 已有精确读取所需的两个权威：用于已连接可写 owner 的 `activeSessions`，以及用于持久化只读 handle 的 `sessionPersistence`。
+Native 消费方需要在已连接的 Session owner 与持久化日志上使用同一个查询服务，也需要全文搜索与投影；同时不能创建第二个 Session writer 或另行实现一套折叠算法。
 
 ## 决策
 
-新增 Cordis-free 的 `@deepseek-ai/dsh-session-query/native` 入口，并通过相同的 `sessionQuery` capability 暴露 `NativeSessionQueryOperations`。Provider 要求 `activeSessions`，并将 `sessionPersistence` 视为可选。它合并持久化 header 与精确活动 owner 的列表，正文读取优先选择当前活动 owner，并在同时观测到两侧时检查不可变 header。
+`SessionQueryOperations` 是 Cordis 与 Native Provider 共用的 Cordis-free Definition。Native 来源适配器在捕获的事件切点读取活动 owner，并通过可选持久化 handle 读取脱离运行时的历史。活动 Session 校验已接纳的历史；冷日志则通过脱离运行时的 Session 回放校验。观察租约会固定已准备的冷修订；runtime 关闭时拒绝新读取、取消并等待已接纳的来源工作，然后释放 turn-boundary 注册。
 
-活动正文读取调用精确 owner 的 `readEvents()`。冷读复用 `readColdSessionLog()`；该函数会关闭持久化读取 handle，并且只在内存中补齐中断尾部。两条路径都会在脱离存储的副本上通过 `Session.fromRestore()` 回放校验，并复用共享标题折叠与当前 surface 追踪函数。校验 Session 不会取得 writer 或进入 active-owner registry；查询返回原始读取事件，不包含本地恢复标记。查询不会向 store 注册 Session、创建 writer 或维护第二份缓存。
+Native SQLite Provider 在同一来源上组合精确查询和排序搜索。Cordis-free 核心管理派生 FTS 数据库、事务对账与世代绑定游标，但不会成为 Session 存储。即使 id、header 和事件相同，替换活动 owner 也会递增语料世代，使旧游标陈旧失败。仅精确查询的组合保留查询操作，并以 `SESSION_QUERY_SEARCH_DISABLED` 拒绝搜索。
 
-此 Native 入口只实现 Native 引用所需的精确列表、原始日志、标题与当前表层读取。更广的 Native 查询面仍未完成：观测、会话／事件过滤、事件窗口与精确事件读取、会话／事件追踪、与提供方无关的搜索、SQLite 索引和排序全文搜索都不在此实现中。授权和外部 Host 展示保留各自边界。
+Cordis 与 Native 投影 Provider 使用同一个折叠注册表。cell 以精确驻留 Session 对象为键，Native Provider 跟随活动 owner 的接入和移除。注册表保留按 stateVersion 共享注册、迟到注册时回放、继承切点、脱离的检查点值及同事件变更通知。Native 检查点写入只有在规范 Session writer 刷新后才使用选定缓存；缓存只是权威日志上的折叠捷径。关闭查询和投影 Provider 时，会排空其拥有的读取、监听器、计时器和写入。Native 投影激活的后续 observer 注册失败时会释放先前注册；关闭时会尝试移除全部 observer 与 owner 事件监听器、清空注册表状态，并在尝试完成后报告清理故障。
 
-Native 跨会话引用通过共享投影与保留逻辑消费此精确查询服务。它们保留新准入消息中的规范 URI 输入，并返回带 source 的上下文消息；`NativeAgentInstructions.prepare()` 将 workspace instructions 排在引用上下文之前，Native headless 再通过既有 Session writer 追加两者。失败或取消时，准备操作会先等待已启动的读取和 spill 写入结束再返回，因此操作完成后 writer 与所选服务可以安全清理。因此，持久化模型输入与 Cordis 的 `@label` 替换有可见差异；此批次不宣称两种表示完全等价。
+Native 投影脱离 owner 时会禁用事件传递，并在监听器移除失败时仍清除注册表所有权；残留回调不能驱动折叠。注册表清空后，旧注册的 disposer 不能移除同名的新注册。Native cache 每次挂载前都会核对当前精确 owner 是否仍在活动集合中，包括等待先前启动写入之后。缓存在调用事件监听器移除函数前会将 owner 状态标记为已脱离；即使移除失败，也会尝试最终检查点、移出 owner 状态，并报告移除错误。关闭时会尝试移除全部 observer 与 owner 监听器、排空最终写入、关闭存储域，再聚合清理故障。移除失败后仍注册的回调不能排入缓存工作。
+
+Typert 的 shared-definition 公共类型索引会纳入同一包、同一 face 中启用 declaration 输出的项目引用所包含的源声明。只有类型解析到公开导出的必需 `Context` 成员才是 service 候选；若该导出解析为 class 或 interface 之外的声明，分析会拒绝它。
+
+变更流和已接纳事件观察者若抛出异常，会逐个报告。注册表继续通知其余监听器并驱动剩余投影单元；已接纳事件观察者不会把成功持久化并刷新的追加变为 writer 故障。
+
+已发布的 `native-headless-query` profile 显式选择 Native query、SQLite、projection 与 cache Provider。现有 profile 默认值保持不变。Engine 工具和归档消费者使用共享 query Definition；Host 与 SDK 适配器仍由各自模块负责。
 
 ## 考虑过的替代方案
 
-**直接复用 Cordis `SessionCorpus`。** 它依赖 `Context`、`sessions` 和可选服务注入；导入它会把 Cordis 带入 Native 入口，也无法读取 `activeSessions`。
+**另建 Native query Definition 或折叠实现。** 分离的权威可能在过滤、观察切点与投影语义上分歧，因此 Cordis 与 Native 都适配同一个 Definition 和投影折叠。
 
-**维护 Native 查询缓存或 writer。** 第二份缓存或 writer 可能与活动 owner 和持久化历史分歧。按调用读取已能提供此入口公开的精确快照。
+**让查询持有 Session writer 或把索引写进规范持久化数据库。** 查询自有 writer 可能与 Session 追加竞争，FTS 事务也可能损坏或改写源日志。SQLite 数据库保持为只读来源端口之上的可丢弃派生索引。
+
+**默认选择 Native query profile。** 现有组合已有稳定的 Provider 选择和依赖。Native headless query profile 保持显式选择，直到发布策略有意改变。
 
 ## 影响
 
-Native 调用方可以读取脱离运行时的历史，并在不导入 Cordis 的情况下准备持久的不可信引用。没有持久化服务时，查询仍能列出和读取活动 owner，但无法读取已分离会话。冷标题与表层读取会按需载入并校验完整日志，因此大型历史的成本与现有精确读取相同。Native 观测、过滤、事件、追踪和全文搜索仍待迁移。
+Native 组合可以使用完整的提供方无关查询词汇，并在不导入 Cordis 的情况下选择 SQLite 排序搜索。搜索游标只对产生它的语料世代有效；没有兼容检查点缩短投影回放时，冷读仍需加载权威事件历史。Session 格式和 writer 所有权仍归 Session 包管理。
 
 ## 验证
 
-Native query 定向用例覆盖冷持久化列表、标题、日志与表层读取（包含 fork 继承前缀；不挂载 Session，也不修改存储），以及 owner 在读取期间被替换后仍精确处理活动优先级。已编译 Native CLI workflow replay 证明原 URI 消息与带 source 的引用快照都持久化，且模型请求收到捕获的来源文本。目标包类型检查、正常 leaf producer 和所选用例通过；这不代表更广泛的 Native 查询、Host 或 Client 验收。
+定向观察者与 owner 代际回归通过：抛出异常的投影监听器不会阻断后续监听器或单元；抛出异常的 Native 已接纳事件观察者不会破坏驻留 writer；替换一个内容完全相同的活动 owner 会同时使 session-search 和 event-search 游标失效。

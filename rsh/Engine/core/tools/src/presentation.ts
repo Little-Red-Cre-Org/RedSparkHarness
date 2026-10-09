@@ -6,62 +6,20 @@
  */
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { SearchResultView, FileDiff } from '@deepseek-ai/dsh-native-tools/presentation'
+import type {
+  FileDiff,
+  FileLocation,
+  GenericCallView,
+  SearchResultView,
+} from '@deepseek-ai/dsh-native-tools/presentation'
 
-export type { FileDiff } from '@deepseek-ai/dsh-native-tools/presentation'
-
-/**
- * Category of a tool call, used by a UI to pick an icon or treatment. The
- * provider-neutral vocabulary lets tools describe themselves without depending
- * on a particular client; `other` is the default.
- */
-export type ToolCallKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'fetch' | 'other'
-
-/**
- * A file location a tool reads or modifies, so a capable UI can "follow along" —
- * highlight or jump to the file (and line) as the tool runs. `path` is what the
- * tool operated on (the model-facing path); `line` is an optional 1-based line
- * to focus (e.g. a read's offset).
- */
-export interface FileLocation {
-  path: string
-  line?: number
-}
+export type { FileDiff, FileLocation, GenericCallView, ToolCallKind } from '@deepseek-ai/dsh-native-tools/presentation'
 
 /**
  * Provider-neutral pending-call presentation. Tools declare one tagged intent;
  * UI bridges map it without special-casing tool names.
  */
 export type ToolCallView = GenericCallView | TerminalCallView | DiffCallView
-
-/**
- * The default card: a titled tool-call row with an optional category icon, a
- * salient raw input, extra content blocks, and follow-along file locations. Any
- * tool whose call is not a terminal or a diff uses this.
- */
-export interface GenericCallView {
-  card: 'generic'
-  /**
-   * Human-readable, always-visible label describing what THIS call does. Keep it
-   * short — a UI shows it as a card header / log line.
-   */
-  title: string
-  /** Category for icon/treatment; defaults to `other` when omitted. */
-  kind?: ToolCallKind
-  /**
-   * The salient input to show in a detail/expanded view (e.g. a background
-   * job id). Omit to show nothing; a string renders as-is, an object as pretty
-   * JSON. NOT the full raw args object unless that is genuinely what a reader wants.
-   */
-  rawInput?: unknown
-  /**
-   * UI-facing content blocks to show on the pending call alongside the title.
-   * Omit to show none. A UI maps these to its own content blocks.
-   */
-  content?: ContentBlock[]
-  /** Files this call reads/modifies, for editor follow-along. Omit for a call that touches no file. */
-  locations?: FileLocation[]
-}
 
 /**
  * A call that IS a shell command running in a working directory: a capable UI

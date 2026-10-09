@@ -9,10 +9,9 @@
  * under `media/<attachmentId>.<ext>` (content-addressed, so one archive never
  * duplicates a shared image); each generic file sits under
  * `files/<prefix>/<digest>/<name>` and streams from the attachment store. No
- * manifest is written. Before each live session's log read, the SessionStore
- * flush barrier makes the current in-memory log durable; cold sessions need no
- * barrier. Request abort and response-consumer cancellation share one producer
- * signal and terminate the active compressor.
+ * manifest is written. The selected Host adapter flushes each live Session
+ * before its log read; cold sessions need no barrier. Request or provider abort
+ * and response-consumer cancellation stop the same producer and compressor.
  * Compression runs on the host with fflate's streaming Zip API, so the archive
  * bytes are produced incrementally and the host never holds the whole archive
  * in one buffer; production waits for consumer pull whenever the response queue
@@ -22,16 +21,15 @@
  */
 
 import { Zip, ZipDeflate } from 'fflate'
-import type { Context } from '@deepseek-ai/cordis'
 import type {
-  AttachmentStore, FileAttachmentRef, ImageAttachmentRef,
-} from '@deepseek-ai/dsh-attachment'
-import type { SessionLineageNode, SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+  AttachmentOperations, FileAttachmentRef, ImageAttachmentRef,
+} from '@deepseek-ai/dsh-attachment/native'
+import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { sessionFormatLogFilename } from '@deepseek-ai/dsh-session-format'
-import type { SessionEvent, SessionHeader, SessionId, SessionStore } from '@deepseek-ai/dsh-session'
-import type { SessionHandle, SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence'
+import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeSessionPersistenceOperations, SessionHandle } from '@deepseek-ai/dsh-session-persistence/native'
+import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionLineageNode, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
 
 /** Valid fflate DEFLATE levels accepted by session-log export. */
 export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
@@ -39,56 +37,16 @@ export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 /** Balanced default used when Session export configuration omits a compression level. */
 export const DEFAULT_SESSION_LOG_COMPRESSION_LEVEL: SessionLogCompressionLevel = 6
 
-/** The services a session-log export needs (the live-session store is optional). */
-export interface SessionLogExportDeps {
-  readonly sessionQuery: SessionQueryEngine | undefined
-  readonly sessionPersistence: SessionPersistence | undefined
-  readonly attachments: AttachmentStore | undefined
-  readonly sessions: SessionStore | undefined
-}
+/** Exact active-session binding rechecked after its canonical persistence read. */
+export type SessionLogFlushReceipt = () => void
 
-/** The export services narrowed to the mounted ones streaming actually reads. */
-export interface SessionLogExportReady {
-  readonly sessionQuery: SessionQueryEngine
-  readonly sessionPersistence: SessionPersistence
-  readonly attachments: AttachmentStore
-  readonly sessions: SessionStore | undefined
-}
-
-/**
- * Resolve the persistence, session-query, and attachment services a log export needs.
- * @param ctx - the composed host context.
- * @returns the export services (absent when the deployment does not mount them).
- */
-export function sessionLogExportDeps(ctx: Context): SessionLogExportDeps {
-  return {
-    sessionQuery: ctx.get('sessionQuery'),
-    sessionPersistence: ctx.get('sessionPersistence'),
-    attachments: ctx.get('attachments'),
-    sessions: ctx.get('sessions'),
-  }
-}
-
-/**
- * Flush one currently live session through the store's authoritative durability
- * barrier immediately before its logical log is read. A cold or absent id has
- * no in-memory work to flush.
- * @param deps - export services, including the optional live-session store.
- * @param id - the session whose artifact is about to be read.
- * @param signal - optional cancellation observed around the flush barrier.
- */
-export async function flushLiveSessionLog(
-  deps: Pick<SessionLogExportDeps, 'sessions'>,
-  id: SessionId,
-  signal?: AbortSignal,
-): Promise<void> {
-  signal?.throwIfAborted()
-  const sessions = deps.sessions
-  if (sessions === undefined) return
-  const session = sessions.get(id)
-  if (session === undefined) return
-  await sessions.flush(session)
-  signal?.throwIfAborted()
+/** Cordis-free providers consumed by the shared archive algorithm. */
+export interface SessionLogArchivePorts {
+  readonly sessionQuery: Pick<SessionQueryOperations, 'traceSession'>
+  readonly sessionPersistence: Pick<NativeSessionPersistenceOperations, 'open'>
+  readonly attachments: Pick<AttachmentOperations, 'readImage' | 'readFileStream'>
+  /** Flushes a live Session and may return a check that rejects owner replacement during the read. */
+  readonly flushLiveSession: (id: SessionId, signal?: AbortSignal) => Promise<SessionLogFlushReceipt | undefined>
 }
 
 /** One exported file: a serialized session log or one referenced attachment object. */
@@ -146,7 +104,7 @@ export function serializeSessionLog(
  * @returns the serialized JSONL text, or `undefined` when the session does not exist.
  */
 export async function readSessionLogText(
-  persistence: SessionPersistence,
+  persistence: Pick<NativeSessionPersistenceOperations, 'open'>,
   id: SessionId,
   signal?: AbortSignal,
 ): Promise<string | undefined> {
@@ -166,6 +124,24 @@ export async function readSessionLogText(
   } finally {
     await handle.close()
   }
+}
+
+/** Flush through the selected Host adapter, then recheck an exact owner when the adapter supplies a receipt.
+ * @param ports - the archive's canonical query, persistence, and flush operations.
+ * @param id - the Session to read.
+ * @param signal - optional cancellation for flush, open, and read.
+ * @returns canonical JSONL text, or `undefined` when the Session is absent.
+ */
+export async function readSessionLogAfterFlush(
+  ports: SessionLogArchivePorts,
+  id: SessionId,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const receipt = await ports.flushLiveSession(id, signal)
+  const content = await readSessionLogText(ports.sessionPersistence, id, signal)
+  signal?.throwIfAborted()
+  receipt?.()
+  return content
 }
 
 /** Zip extension for each accepted raster media type. */
@@ -328,7 +304,7 @@ export function sessionLogZipFilename(sessionId: string): string {
  * @returns the export entries in zip order.
  */
 export async function* sessionLogZipEntries(
-  deps: SessionLogExportReady,
+  deps: SessionLogArchivePorts,
   rootContent: string,
   sessionId: SessionId,
   includeDescendants: boolean,
@@ -353,8 +329,7 @@ export async function* sessionLogZipEntries(
         const id = node.session.header.id
         if (seen.has(id)) continue
         seen.add(id)
-        await flushLiveSessionLog(deps, id, signal)
-        const content = await readSessionLogText(deps.sessionPersistence, id, signal)
+        const content = await readSessionLogAfterFlush(deps, id, signal)
         signal?.throwIfAborted()
         if (content === undefined) {
           throw new Error(`subagent "${id}" has no stored log`)
@@ -510,40 +485,52 @@ async function pushArtifactChunks(
   } while (!finalChunk)
 }
 
-/**
- * Stream one session-log ZIP as a WHATWG ReadableStream. The root log is read
- * and serialized by the caller before this is called (a missing root or
- * missing services answer cleanly before any byte is produced); each entry is
- * then encoded and deflated in bounded chunks as it is produced, so the
- * archive bytes arrive incrementally. A descendant that fails to read errors
- * the stream (fail-loud, never silent under-export).
- * @param deps - the mounted export services (the caller answered 500 before this runs).
- * @param rootContent - the already-serialized root log (first zip entry).
- * @param sessionId - the root session id.
- * @param includeDescendants - whether to include every subagent descendant.
- * @param compressionLevel - validated fflate DEFLATE level for every ZIP entry.
- * @param signal - request cancellation combined with response-consumer cancellation.
- * @returns the zip byte stream.
+/** Producer handle retained by the Native provider until cancellation has drained it. */
+export interface ManagedSessionLogZip {
+  readonly stream: ReadableStream<Uint8Array>
+  /** Completes after the ZIP producer stops reading and compressing entries. */
+  readonly done: Promise<void>
+  /** Abort the producer and terminate its active compressor.
+   * @param reason - the cancellation reason.
+   */
+  cancel(reason: unknown): void
+}
+
+/** Build one archive stream and expose producer settlement to its resource owner.
+ * @param deps - canonical query, persistence, attachment, and flush operations.
+ * @param rootContent - serialized root log yielded as the first archive entry.
+ * @param sessionId - root Session id.
+ * @param includeDescendants - whether to export all descendants.
+ * @param compressionLevel - validated DEFLATE level.
+ * @param signal - request and provider cancellation.
+ * @returns the stream, producer settlement, and cancellation operation.
  */
-export function streamSessionLogZip(
-  deps: SessionLogExportReady,
+export function streamSessionLogZipManaged(
+  deps: SessionLogArchivePorts,
   rootContent: string,
   sessionId: SessionId,
   includeDescendants: boolean,
   compressionLevel: SessionLogCompressionLevel,
   signal: AbortSignal,
-): ReadableStream<Uint8Array> {
+): ManagedSessionLogZip {
   const consumerAbort = new AbortController()
   const producerSignal = AbortSignal.any([signal, consumerAbort.signal])
+  const producerSettled = Promise.withResolvers<void>()
+  const done = producerSettled.promise
   let zip: Zip | undefined
   let zipTerminated = false
+  let consumerCancelled = false
   const capacity = new ResponseCapacityGate()
   const terminateZip = (): void => {
     if (zip === undefined || zipTerminated) return
     zipTerminated = true
     zip.terminate()
   }
-  return new ReadableStream<Uint8Array>({
+  const cancel = (reason: unknown): void => {
+    consumerAbort.abort(reason instanceof Error ? reason : new Error('session log export stream cancelled'))
+    terminateZip()
+  }
+  const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       // fflate invokes the callback synchronously per compressed chunk, so a
       // single push can enqueue ahead of a slow consumer; the capacity gate
@@ -579,7 +566,9 @@ export function streamSessionLogZip(
           // error) must fail the download rather than ship a truncated archive.
           /* v8 ignore next -- typed backends reject with Error, and DOMException is one in Node */
           terminateZip()
-          controller.error(error instanceof Error ? error : new Error(String(error)))
+          if (!consumerCancelled) controller.error(error instanceof Error ? error : new Error(String(error)))
+        } finally {
+          producerSettled.resolve()
         }
       })()
     },
@@ -587,13 +576,34 @@ export function streamSessionLogZip(
       capacity.pulled()
     },
     cancel(reason) {
-      consumerAbort.abort(
-        reason instanceof Error ? reason : new Error('session log export stream cancelled'),
-      )
-      terminateZip()
+      consumerCancelled = true
+      cancel(reason)
     },
   }, {
     highWaterMark: RESPONSE_HIGH_WATER_MARK_BYTES,
     size: chunk => chunk.byteLength,
   })
+  return { stream, done, cancel }
+}
+
+/** Create a bounded ZIP byte stream for the Cordis route adapter.
+ * @param deps - canonical query, persistence, attachment, and flush operations.
+ * @param rootContent - serialized root log yielded as the first archive entry.
+ * @param sessionId - root Session id.
+ * @param includeDescendants - whether to export all descendants.
+ * @param compressionLevel - validated DEFLATE level.
+ * @param signal - request and consumer cancellation.
+ * @returns the bounded ZIP stream.
+ */
+export function streamSessionLogZip(
+  deps: SessionLogArchivePorts,
+  rootContent: string,
+  sessionId: SessionId,
+  includeDescendants: boolean,
+  compressionLevel: SessionLogCompressionLevel,
+  signal: AbortSignal,
+): ReadableStream<Uint8Array> {
+  return streamSessionLogZipManaged(
+    deps, rootContent, sessionId, includeDescendants, compressionLevel, signal,
+  ).stream
 }

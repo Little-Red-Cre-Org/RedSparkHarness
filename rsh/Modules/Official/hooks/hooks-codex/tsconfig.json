@@ -30,6 +30,9 @@
       "path": "../../../../Engine/core/session"
     },
     {
+      "path": "../../../../Engine/session/session-projection"
+    },
+    {
       "path": "../../../../Engine/llm/llm"
     },
     {

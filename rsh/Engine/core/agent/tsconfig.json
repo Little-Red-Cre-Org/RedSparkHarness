@@ -24,9 +24,6 @@
       "path": "../session"
     },
     {
-      "path": "../../session/session-projection"
-    },
-    {
       "path": "../system-prompt"
     },
     {
@@ -37,6 +34,9 @@
     },
     {
       "path": "../native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../session/session-projection/tsconfig.types.json"
     }
   ]
 }

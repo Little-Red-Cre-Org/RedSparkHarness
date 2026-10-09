@@ -34,13 +34,8 @@ import type {
 import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
 import { projectionCacheDomainSpec } from './spec.ts'
 import type { CheckpointIdentity, CheckpointRecord } from './spec.ts'
-
-/** Complete identity written by the current cache generation. */
-type CurrentCheckpointIdentity = CheckpointIdentity & {
-  formatVersion: number
-  isSeeded: boolean
-  inheritedEventCount: SessionLogOffset
-}
+import { identityMatches, identityOf, predecessorIdentityMatches } from './identity.ts'
+import type { CurrentCheckpointIdentity } from './identity.ts'
 
 const PREDECESSOR_TITLE_KEY = 'title' as Extract<keyof SessionProjectionMap, string>
 
@@ -389,57 +384,6 @@ export class SessionProjectionCache extends Service {
     if (this.table === undefined) throw new Error('session projection cache is not initialized')
     return this.table
   }
-}
-
-/** Project a header onto the identity fields a record is bound to. */
-function identityOf(
-  header: SessionHeader,
-  inheritedEventCount: SessionLogOffset,
-): CurrentCheckpointIdentity {
-  const cut = SessionLogOffset(inheritedEventCount)
-  if (!header.isSeeded && cut !== 0) {
-    throw new Error('unseeded projection-cache identity inherited event count must be 0')
-  }
-  return {
-    formatVersion: header.version,
-    createdAt: header.createdAt,
-    ...header.cwd === undefined ? {} : { cwd: header.cwd },
-    isSeeded: header.isSeeded,
-    inheritedEventCount: cut,
-  }
-}
-
-/**
- * Whether a stored record's bound identity names the caller's lifecycle.
- * An absent format generation cannot prove the fold semantics and never
- * matches. Once the format matches, absent lineage fields (records admitted
- * via `compatibleVersions` predate them) read as the unseeded lineage: exact
- * for an unseeded caller, while a seeded caller fails the match.
- */
-function identityMatches(stored: CheckpointIdentity, expected: CurrentCheckpointIdentity): boolean {
-  return stored.formatVersion === expected.formatVersion
-    && lifecycleIdentityMatches(stored, expected)
-}
-
-/** Match one predecessor cache record to the authoritative listed lifecycle. */
-function predecessorIdentityMatches(
-  stored: CheckpointIdentity,
-  expected: CurrentCheckpointIdentity,
-): boolean {
-  const predecessor = stored.formatVersion === undefined
-    || stored.formatVersion < expected.formatVersion
-  return predecessor && lifecycleIdentityMatches(stored, expected)
-}
-
-/** Match the format-independent fields that distinguish one Session lifecycle. */
-function lifecycleIdentityMatches(
-  stored: CheckpointIdentity,
-  expected: CurrentCheckpointIdentity,
-): boolean {
-  return stored.createdAt === expected.createdAt
-    && stored.cwd === expected.cwd
-    && (stored.isSeeded ?? false) === expected.isSeeded
-    && (stored.inheritedEventCount ?? 0) === expected.inheritedEventCount
 }
 
 export default SessionProjectionCache

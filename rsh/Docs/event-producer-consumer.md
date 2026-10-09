@@ -7,7 +7,7 @@ This matrix shows which packages dispatch each harness-owned event and which pac
 
 | Event | Mode | Declared in | Dispatchers | Listeners |
 | --- | --- | --- | --- | --- |
-| `agent-loop/config-start-failed` | `emit` | [`rsh/Engine/core/agent-loop/src/index.ts:253`](../Engine/core/agent-loop/src/index.ts) | [`agent-loop`](../Engine/core/agent-loop) (`events.dispatch`) | - |
+| `agent-loop/config-start-failed` | `emit` | [`rsh/Engine/core/agent-loop/src/index.ts:202`](../Engine/core/agent-loop/src/index.ts) | [`agent-loop`](../Engine/core/agent-loop) (`events.dispatch`) | - |
 | `agent-preset/selected` | `emit` | [`rsh/Engine/preset/agent-presets/src/types.ts:85`](../Engine/preset/agent-presets/src/types.ts) | [`agent-presets`](../Engine/preset/agent-presets) (`emit`) | [`api-remotes`](../Programs/Web/api/remotes) |
 | `agent/assistant-stream` | `emit` | [`rsh/Engine/core/agent/src/runtime-types.ts:373`](../Engine/core/agent/src/runtime-types.ts) | [`agent-loop`](../Engine/core/agent-loop) (`emit`) | [`headless`](../Compatibility/DSH/bundle/headless), [`api-session-controller`](../Programs/Web/api/session-controller) |
 | `agent/created` | `emit` | [`rsh/Engine/core/agent/src/runtime-types.ts:258`](../Engine/core/agent/src/runtime-types.ts) | [`agent`](../Engine/core/agent) (`events.dispatch`) | [`agent-presets`](../Engine/preset/agent-presets), [`file-reference-local`](../Engine/context/file-reference-local), [`goal-round-driver`](../Engine/goal/goal-round-driver), [`loader-smoke`](../Tests/test-support/loader-smoke), [`schedule`](../Engine/schedule/schedule), [`task-scheduler`](../Modules/Official/automation/task-scheduler), `tool-agent-team`, [`tool-subagent`](../Engine/subagent/tool-subagent) |

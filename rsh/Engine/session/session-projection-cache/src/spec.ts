@@ -11,9 +11,9 @@
  */
 
 import { z } from 'zod'
-import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session'
-import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
+import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session/native'
+import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain/native'
 
 /**
  * One persisted checkpoint row (the RFC's `(sessionId, key, ver, seq, val)`

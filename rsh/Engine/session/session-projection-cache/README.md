@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This package keeps durable per-session projection checkpoints so history lists, statistics, and goal snapshots can read cached values without loading each session log. Cold projection folds can resume after the checkpointed prefix, reducing restart work. The session log remains authoritative: a crash can leave a checkpoint stale, but never ahead of committed events, and incompatible records are ignored or backed up. Choose it for restarted sessions with frequent projection reads; skip it when projections are live-only or extra storage writes and unbounded checkpoint retention outweigh the saved work.
+This package keeps durable per-session projection checkpoints so history lists, statistics, and goal snapshots can read cached values without loading each session log. Cordis and Native Host providers use the same records and identity checks. Cold projection folds can resume after the checkpointed prefix, reducing restart work. The session log remains authoritative: a crash can leave a checkpoint stale, but never ahead of committed events, and incompatible records are ignored or backed up. Choose it for restarted sessions with frequent projection reads; skip it when projections are live-only or extra storage writes and unbounded checkpoint retention outweigh the saved work.
 
 ## Table of Contents
 
@@ -52,9 +52,13 @@ The cache opens its domain through the storage stack, so base mounts `storage`, 
 
 The plugin injects `storageDomain`, `sessionProjections`, and `sessions`. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-projection-cache) is the exhaustive source for every accepted field and its JSDoc.
 
+The Cordis-free `./native` entry provides the Native Host `sessionProjectionCache` service. It requires `activeSessions`, `sessionProjections`, and `storageDomain`, and accepts the same two required throttle fields. Native owner detach marks the owner state detached before calling its listener remover. If removal throws, the cache still attempts the final checkpoint, evicts the owner state, and reports that same error; a callback left registered cannot schedule cache work. Provider close attempts both observer removers and every owner listener remover, drains final writes, and closes the domain before reporting cleanup failures.
+
 ### How checkpoints are written
 
 Three mandatory points always write: session creation persists the seed-derived cut, `turn/end` persists the value that listing reads want, and session disposal persists the final live cut. Between them, the configured count and interval throttles write as events accumulate. Every write atomically replaces the session's complete record through the domain write chain; a failure logs a warning and keeps the cache stale, and the next write self-heals.
+
+For Native owners, a checkpoint captures projection rows at one Session cut, flushes buffered Session events through the sole writer, and writes the durable rows afterward. Teardown drains queued final writes before the domain closes.
 
 ### Reading cached values
 
@@ -89,6 +93,7 @@ The cache stores one version-stamped document per session in the `session_projca
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `SessionProjectionCache` service, write-behind listeners, cache reads |
+| [`src/native.ts`](src/native.ts) | Native cache provider, exact-owner listeners, and write drain |
 | [`src/spec.ts`](src/spec.ts) | The `session_projcache` domain spec and record identity types |
 | — | No runtime invariant companion is published; the cache's correctness relation (a stored row equals the registry fold at its `seq` watermark) is only checkable by re-running the fold over the persisted log — duplicating the implementation rather than detecting drift — and its staleness is by design (fail-soft writes). The durable boundary is schema-validated by the cache's own zod parse on every read, and the read ladder's version/watermark guards are proven by the package spec. |
 

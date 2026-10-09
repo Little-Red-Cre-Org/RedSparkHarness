@@ -1,5 +1,5 @@
 ---
-description: "Web 会话日志 ZIP 导出：Host 流式传输、认证下载路由、Session Header 操作与 /export 命令。"
+description: "面向 Web 下载与 Native Host 消费者的会话日志 ZIP 导出，可提供包含会话树与附件的规范归档流。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-session-log-export` 让 Web 界面可以下载会话的完整历史：Session Header 更多操作按钮下的 `下载 Session 日志` 菜单项与 `/export` 斜杠命令都会把会话树——会话本身、其子会话与附件——作为 ZIP 交给浏览器下载。本包拥有 Host 归档流、经过认证的 Fetch 路由以及浏览器控件和反馈。下载目标位置由浏览器选择。设置与用法在前，随后说明实现细节。
+`dsh-session-log-export` 让 Web 用户可以把 Session 树与附件下载为 ZIP。Native Host 消费者可以请求相同的规范归档字节流，并自行选择交付方式。本包不选择 Host 路径或传输方式。设置与用法在前，随后说明实现细节。
 
 ## 目录
 
@@ -25,11 +25,11 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当 Web bundle 需要让用户导出会话日志时使用本包。它需要 Connection、命令注册表、Session 查询与持久化以及附件服务。挂载插件，然后在 Session Header 的更多操作菜单中选择 `下载 Session 日志` 或输入 `/export`；浏览器会下载 `dsh-session-<id>.zip`。
+当 Web 用户需要下载会话，或 Native Host 消费者需要归档流时使用本包。挂载 Web 插件以提供 Session Header 操作和 `/export`；若需程序化访问，则选择 Native 入口并提供 Session 查询、持久化、附件和活动会话服务。
 
 ### 何时选择
 
-为需要带可见下载弹窗的面向用户的会话导出的 Web 部署选择它。需要程序化或 Host 侧导出时避免使用：本包产生的是浏览器下载，而非 Host 路径写入。日志从持久化读句柄序列化而来，因此任何已挂载后端都受支持。
+为 Web 下载或自行管理流目标位置的 Native Host 调用方选择它。Native API 返回文件名和字节流；HTTP、文件或其他传输方式由调用方负责。归档从规范持久化句柄读取，因此各类已挂载后端使用同一格式。
 
 ### 组合
 
@@ -39,6 +39,8 @@ kind: "package-reference"
 ```
 
 Web bundle 将本包与 Connection、`dsh-commands`、`dsh-client-ui-commands` 和 `dsh-client-ui-conversation` 一起挂载。
+
+Native Host 入口提供 `sessionLogExport`。调用 `createArchive(sessionId, { includeDescendants, signal })`；若根 Session 不存在则返回 `undefined`，否则返回归档文件名与字节流。
 
 ### 配置
 
@@ -55,11 +57,11 @@ Web bundle 将本包与 Connection、`dsh-commands`、`dsh-client-ui-commands` �
 
 ### 预期行为
 
-弹窗报告三个阶段：准备中、开始下载或失败。关闭弹窗不会取消正在进行的下载，该操作随后结束时弹窗也不会重新打开。每个会话同时只允许一项下载，重复操作共用该任务。导出包含实时会话的最新事件：Host 端点在读取前会 flush 活动的根会话，因此斜杠命令触发的 ZIP 会包含启动下载的 `command/run` 与 `command/done` 事件对；非活动的持久化会话不需要 flush。每份逻辑日志在归档中使用当前 generation 的规范文件名（v0 为 `session.jsonl`，其他版本为 `session.vN.jsonl`），每个子会话目录下也遵循同一规则。图片使用 `media/<attachmentId>.<ext>`，通用文件使用 `files/<digest-prefix>/<digest>/<name>`。通用文件以有界分块读取并压缩，因此导出大型上传文件时不会把它完整缓冲进内存。
+Web 弹窗报告三个阶段：准备中、开始下载或失败。关闭弹窗不会取消正在进行的下载，该操作随后结束时弹窗也不会重新打开。每个会话同时只允许一项浏览器下载，重复操作共用该任务。两种 Host 路径都会在读取规范持久化前 flush 实时 Session；Native 导出会检查整个读取期间的确切活动所有者是否保持不变。每份逻辑日志使用当前 generation 的规范文件名（v0 为 `session.jsonl`，其他版本为 `session.vN.jsonl`），每个子会话目录下也遵循同一规则。图片使用 `media/<attachmentId>.<ext>`，通用文件使用 `files/<digest-prefix>/<digest>/<name>`。通用文件以有界分块读取并压缩，因此导出大型上传文件时不会把它完整缓冲进内存。
 
 ### 失败
 
-当 ZIP 流式传输开始前的预检失败时——例如 Host 端点不可达或配置错误——弹窗显示准备阶段错误。浏览器接受 GET 后发生的子会话或附件读取失败由浏览器下载管理器报告，不通过弹窗报告。
+当 ZIP 流式传输开始前的预检失败时——例如 Host 端点不可达或配置错误——弹窗显示准备阶段错误。浏览器接受 GET 后发生的子会话或附件读取失败由浏览器下载管理器报告，不通过弹窗报告。Native 调用方会从 `createArchive` 收到根日志准备错误；后续的子会话或附件错误会使返回流失败，Provider 释放时会中止并排空已接纳的归档工作。
 
 -----
 
@@ -73,7 +75,7 @@ Web bundle 将本包与 Connection、`dsh-commands`、`dsh-client-ui-commands` �
 
 ### 设计拆分
 
-本包分为两部分。Host 半包（[`src/index.ts`](src/index.ts)）注册 `/export` 命令，并向 Connection 贡献精确的 `GET`/`HEAD /api/session.export` Fetch 路由；[`src/archive.ts`](src/archive.ts) 构建有界 ZIP 流。浏览器半包（[`src/client/index.ts`](src/client/index.ts)）提供共享下载控制器和 UI，并观察 `command/executed`，因此只有提交命令的浏览器会启动下载。
+本包分为三部分。Cordis adapter（[`src/index.ts`](src/index.ts)）注册 `/export` 命令，并向 Connection 贡献精确的 `GET`/`HEAD /api/session.export` Fetch 路由。Native Host Provider（[`src/native.ts`](src/native.ts)）提供 `sessionLogExport`，并在释放时排空已接纳的读取与 ZIP producer。两个 adapter 都使用 [`src/archive.ts`](src/archive.ts) 读取规范日志并有界生成 ZIP；浏览器控件位于 [`src/client/index.ts`](src/client/index.ts)。Web 路由仍使用 Cordis adapter，因此其传输迁移不属于此 Native 能力。
 
 ### 下载流程
 
@@ -94,6 +96,7 @@ Host 路由是由该功能拥有的精确 Fetch 路由贡献。Connection 应用
 - [命令子系统参考](../../../Docs/subsystems/commands.zh.md)——`/export` 命令注册的用户命令注册表。
 - [dsh-client-ui-commands](../../../Programs/Web/client/ui-commands/README.zh.md)——渲染并确认 `/export` 的浏览器命令界面。
 - [会话查询包映射](../README.zh.md)——本包所属的检索包族。
+- [Native 活动会话协议](../../core/native-session-execution/README.zh.md)——Native 归档读取前 flush 的确切活动所有者。
 
 -----
 
@@ -121,7 +124,8 @@ Host 路由是由该功能拥有的精确 Fetch 路由贡献。Connection 应用
 
 这些限制说明本包何时不合适，或何时需要特别的运维注意。它们是当前包约束，不是任务积压。
 
-- **浏览器下载，而非 Host 路径写入**——目标位置由浏览器选择；不会返回 Host 路径或原生文件夹操作。
+- **流，而非目标位置写入器**——Native 调用方选择传输或路径，浏览器选择下载位置。
+- **Web 路由仍由 Cordis 持有**——Native 服务不会注册或替换 `/api/session.export`；Web 传输迁移由其载体所有者负责。
 - **预检只报告流式传输前的失败**——浏览器接受 GET 后发生的子会话或附件读取失败由浏览器下载管理器报告，不通过弹窗报告。
 
 <a id="dev-note"></a>

@@ -4,28 +4,11 @@
 
 本文定义逻辑会话语料库的查询词汇；当 live 数据存在时，该语料库优先使用 live 数据。[Service Definition 包](../../Engine/session-query/session-query)负责精确读取、来源优先级、关系追踪、语义提取，以及与提供方无关的过滤器；[SQLite 提供方](../../Engine/session-query/session-query-sqlite)负责具体全文索引的生命周期。
 
-本包的 Native Host 入口通过同一个 `sessionQuery` 服务键公开 `NativeSessionQueryOperations`。它只通过 `activeSessions.owners()` 与 `owner.readEvents()` 选择活动历史，只通过可选的 `sessionPersistence` 只读 handle 读取冷历史。活动 owner 提供的历史由驻留 Session 在恢复时校验，并在接纳追加事件时持续验证；冷日志作为脱离运行时的数据，通过 `Session.fromRestore()` 回放验证，不取得 writer，也不把校验 Session 发布到 active owners。本 Native 批次为会话引用实现精确列表、原始日志、标题和当前表层读取。它尚未闭合更广泛的 Native 查询能力：`observeSession`、`filterSessions`、`listEvents`、`filterEvents`、`readEvent`、`traceSession`、`traceEvent`、与提供方无关的搜索、SQLite 索引和排序全文搜索仍在此入口之外。
+Cordis-free Native 入口通过同一个 `sessionQuery` 服务键发布相同的 `SessionQueryOperations`。它从 `activeSessions` 读取活动历史，并从可选的 `sessionPersistence` 读取冷历史；驻留 Session 校验活动历史，脱离运行时的冷日志则在不取得 writer 的前提下通过回放校验。Native runtime 提供精确读取、观察租约、过滤器、事件窗口与关系追踪。选定 SQLite 提供方后，会在同一组已捕获来源上增加排序搜索；未选择搜索提供方时，搜索以 `SESSION_QUERY_SEARCH_DISABLED` 失败。
 
 ```ts type-equiv
-/** Read-only exact session history selected from Native's active-owner registry and persistence. */
-interface NativeSessionQueryOperations {
-  /** List stored sessions and exact active owners, newest first. */
-  listSessions(signal?: AbortSignal): Promise<SessionRecord[]>
-  /**
-   * Read one raw log without acquiring a writer.
-   * Cold logs are replay-validated; active history is validated by the resident Session.
-   * @param sessionId - the logical session identity.
-   * @param signal - optional cancellation for source lookup and history reading.
-   * @returns a detached complete raw log from one live-preferred source.
-   */
-  readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot>
-  /** Read the latest log-backed title from one live-preferred source. */
-  readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation>
-  /** Read titles in first-occurrence order, isolating per-session failures. */
-  readTitleSnapshots(sessionIds: readonly SessionId[], signal?: AbortSignal): Promise<SessionTitleObservationResult[]>
-  /** Read a validated current model surface from one live-preferred source. */
-  readSurface(sessionId: SessionId, signal?: AbortSignal): Promise<SessionSurfaceSnapshot>
-}
+/** Compatibility name for Native consumers of the shared service Definition. */
+type NativeSessionQueryOperations = SessionQueryOperations
 ```
 
 源码：[`rsh/Engine/session-query/session-query/src/native.ts`](../../Engine/session-query/session-query/src/native.ts)
@@ -380,6 +363,7 @@ type SessionQueryErrorCode =
   | 'SESSION_QUERY_INVALID_SURFACE'
   | 'SESSION_QUERY_INVALID_WINDOW'
   | 'SESSION_QUERY_PERSISTENCE_FAILED'
+  | 'SESSION_QUERY_PROVIDER_CLOSED'
   | 'SESSION_QUERY_SEARCH_DISABLED'
   | 'SESSION_QUERY_SESSION_NOT_FOUND'
   | 'SESSION_QUERY_STALE_CURSOR'
@@ -394,38 +378,36 @@ type SessionQueryErrorCode =
 
 Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
-<a id="ctxsessionquery--sessionqueryengine-abstract-seam"></a>
+<a id="ctxsessionquery--sessionqueryoperations"></a>
 
-### `ctx.sessionQuery` — `SessionQueryEngine` (abstract seam)
+### `ctx.sessionQuery` — `SessionQueryOperations`
 
-Unified live-preferred session query service.
-
-Exact reads, filters, and traces are backend-independent concrete behavior. A backend implements full-text observation, reconciliation, ranking, cursor generations, and query execution on the same `ctx.sessionQuery` service.
+Full logical-corpus service implemented by exactly one selected Provider.
 
 ```ts cordis-catalog
 /**
  * Observe one exact live or prepared Session without a persistence listing preflight.
  * @param sessionId - logical Session identity.
- * @param options - cancellation and projection selection for this read.
+ * @param options - cancellation and projection selection.
  * @returns a caller-owned observation lease.
  */
-observeSession( sessionId: SessionId, options: SessionObservationOptions = {}, ): Promise<SessionObservation>
+observeSession(sessionId: SessionId, options?: SessionObservationOptions): Promise<SessionObservation>
 
 /**
  * Search the live-preferred logical corpus and group by session.
- * @param request - query text, metadata filters, page size, and cursor.
+ * @param request - query text, filters, page size, and cursor.
  * @param exec - optional cancellation control.
  * @returns session hits ranked by their strongest matching event.
  */
-abstract searchSessions( request: SessionSearchRequest, exec?: SessionSearchExecContext, ): Promise<SessionSearchPage<SessionSearchHit>>
+searchSessions(request: SessionSearchRequest, exec?: SessionSearchExecContext): Promise<SessionSearchPage<SessionSearchHit>>
 
 /**
  * Search events within one live-preferred logical session.
  * @param request - target session, query text, filters, page size, and cursor.
  * @param exec - optional cancellation control.
- * @returns matching event hits and their target header from one indexed generation.
+ * @returns matching events and their target header from one index generation.
  */
-abstract searchEvents( request: SessionEventSearchRequest, exec?: SessionSearchExecContext, ): Promise<SessionEventSearchPage>
+searchEvents(request: SessionEventSearchRequest, exec?: SessionSearchExecContext): Promise<SessionEventSearchPage>
 
 /**
  * List the complete logical corpus using live-preferred records.
@@ -435,12 +417,13 @@ abstract searchEvents( request: SessionEventSearchRequest, exec?: SessionSearchE
 listSessions(signal?: AbortSignal): Promise<SessionRecord[]>
 
 /**
- * Read and replay-validate one complete logical session log without making it live.
+ * Read one complete logical session without making it live. Detached logs are replay-validated;
+ * live history comes from the active owner's validated resident Session.
  * @param sessionId - live or persisted session id to read.
+ * @param signal - optional cancellation for source resolution and reading.
  * @returns cloned header and complete raw event log from one observation.
- * @throws when persistence, header compatibility, or replay validation fails.
  */
-async readSession(sessionId: SessionId): Promise<SessionLogSnapshot>
+readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot>
 
 /**
  * Filter the complete logical corpus with provider-independent predicates.
@@ -448,86 +431,80 @@ async readSession(sessionId: SessionId): Promise<SessionLogSnapshot>
  * @param signal - optional cancellation for persistence listing.
  * @returns matching cloned records in deterministic newest-first order.
  */
-async filterSessions( filters: readonly SessionResultFilter[], signal?: AbortSignal, ): Promise<SessionRecord[]>
+filterSessions(filters: readonly SessionResultFilter[], signal?: AbortSignal): Promise<SessionRecord[]>
 
 /**
- * Fold the latest log-backed title from one live-preferred logical session.
+ * Read only the latest log-backed title.
  * @param sessionId - live or persisted session id to read.
- * @param signal - optional cancellation for source resolution and title folding.
- * @returns latest title snapshot, or `undefined` when the log has no title event.
+ * @param signal - optional cancellation for source resolution.
+ * @returns the latest title snapshot, or `undefined` when absent.
  */
-async readTitle( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionTitleSnapshot | undefined>
+readTitle(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleSnapshot | undefined>
 
 /**
- * Fold the latest title and return its source header from one corpus observation.
+ * Read the latest log-backed title together with its source header.
  * @param sessionId - live or persisted session id to read.
- * @param signal - optional cancellation for source resolution and title folding.
- * @returns cloned source header and optional latest title snapshot.
+ * @param signal - optional cancellation for source resolution.
+ * @returns the source header and optional title snapshot.
  */
-async readTitleSnapshot( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionTitleObservation>
+readTitleSnapshot(sessionId: SessionId, signal?: AbortSignal): Promise<SessionTitleObservation>
 
 /**
- * Fold titles for unique sessions from one cancellable corpus observation.
- *
- * Results preserve first-occurrence input order. Operational failures stay
- * isolated per session, while cancellation rejects the complete operation.
- * @param sessionIds - live or persisted session ids to observe.
+ * Read titles for unique sessions in first-occurrence order, isolating per-session failures.
+ * @param sessionIds - logical session ids to observe.
  * @param signal - optional cancellation shared by all source reads.
  * @returns one fulfilled or rejected result per unique requested id.
  */
-async readTitleSnapshots( sessionIds: readonly SessionId[], signal?: AbortSignal, ): Promise<SessionTitleObservationResult[]>
+readTitleSnapshots(sessionIds: readonly SessionId[], signal?: AbortSignal): Promise<SessionTitleObservationResult[]>
 
 /**
- * List lightweight raw-log event records for one logical session.
+ * List lightweight event records in ascending sequence order.
  * @param sessionId - live-preferred session id to read.
- * @returns event records in ascending seq order.
+ * @returns one record per raw event.
  */
-async listEvents(sessionId: SessionId): Promise<SessionEventRecord[]>
+listEvents(sessionId: SessionId): Promise<SessionEventRecord[]>
 
 /**
- * Scan first-party semantic event documents with provider-independent filters.
+ * Scan semantic event documents with provider-independent filters.
  * @param sessionId - live-preferred session id to scan.
  * @param filters - ANDed metadata and literal-text predicates.
- * @returns matching semantic documents in ascending seq order.
+ * @returns matching semantic documents in ascending sequence order.
  */
-async filterEvents( sessionId: SessionId, filters: readonly SessionEventResultFilter[], ): Promise<SessionEventSearchDocument[]>
+filterEvents(sessionId: SessionId, filters: readonly SessionEventResultFilter[]): Promise<SessionEventSearchDocument[]>
 
 /**
- * Read one session's complete current model surface from one corpus observation.
+ * Read the complete current model surface from one corpus observation.
  * @param sessionId - live-preferred session id to read.
- * @returns cloned header, current surface, and the last sequence number included in the raw-log capture.
- * @throws when source resolution fails or the session surface is invalid.
+ * @returns cloned header, surface, and captured raw-log watermark.
  */
-async readSurface(sessionId: SessionId): Promise<SessionSurfaceSnapshot>
+readSurface(sessionId: SessionId): Promise<SessionSurfaceSnapshot>
 
 /**
  * Trace known ancestry and descendants from one corpus observation.
  * @param sessionId - logical session id to trace.
  * @param signal - optional cancellation for persistence listing.
- * @returns a complete lineage or the first parent that could not be resolved.
- * @throws when corpus resolution fails, the target is absent, or its known ancestry cycles.
+ * @returns complete lineage or the first unresolved parent.
  */
-async traceSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLineageTrace>
+traceSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLineageTrace>
 
 /**
  * Trace one event's direct positional replacements and cited source events.
- * @param request - target session id and event seq.
- * @param signal - optional cancellation for persisted source resolution.
- * @returns source header, direct links, and the target's positional replacement chain.
- * @throws when source resolution fails, the target is absent, or surface/source-event validation fails.
+ * @param request - target session id and event sequence.
+ * @param signal - optional cancellation for source resolution.
+ * @returns source header, direct links, and positional replacement chain.
  */
-async traceEvent(request: SessionEventTraceRequest, signal?: AbortSignal): Promise<SessionEventTraceObservation>
+traceEvent(request: SessionEventTraceRequest, signal?: AbortSignal): Promise<SessionEventTraceObservation>
 
 /**
- * Read one full event plus a bounded raw-log context window.
- * @param request - target session/seq and context sizes.
- * @param signal - optional cancellation for persisted source resolution.
- * @returns cloned target and neighboring events.
+ * Read one full event and a bounded raw-log context window.
+ * @param request - target session/sequence and context sizes.
+ * @param signal - optional cancellation for source resolution.
+ * @returns cloned target and neighboring raw events.
  */
-async readEvent(request: SessionEventReadRequest, signal?: AbortSignal): Promise<SessionEventWindow>
+readEvent(request: SessionEventReadRequest, signal?: AbortSignal): Promise<SessionEventWindow>
 ```
 
 Types: [SessionId](core.zh.md) · [SessionTitleSnapshot](session-title.zh.md)
 
-Source: [`rsh/Engine/session-query/session-query/src/index.ts`](../../Engine/session-query/session-query/src/index.ts)
+Source: [`rsh/Engine/session-query/session-query/src/definition.ts`](../../Engine/session-query/session-query/src/definition.ts)
 <!-- END GENERATED cordis-surface -->

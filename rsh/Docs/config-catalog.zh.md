@@ -113,7 +113,7 @@ export interface Config {
 
 依赖：[`AgentOptions`](subsystems/core.zh.md) · [`SessionId`](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/agent-loop/src/index.ts:318`](../Engine/core/agent-loop/src/index.ts)
+来源：[`rsh/Engine/core/agent-loop/src/index.ts:274`](../Engine/core/agent-loop/src/index.ts)
 
 <a id="deepseek-aidsh-agent-presets"></a>
 
@@ -1460,7 +1460,7 @@ export interface ReplayModelConfig {
 export type Config = Readonly<Record<string, never>>
 ```
 
-来源：[`rsh/Engine/llm/llm-retry/src/index.ts:24`](../Engine/llm/llm-retry/src/index.ts)
+来源：[`rsh/Engine/llm/llm-retry/src/index.ts:25`](../Engine/llm/llm-retry/src/index.ts)
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -1968,7 +1968,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Engine/session/session-projection-cache/src/index.ts:63`](../Engine/session/session-projection-cache/src/index.ts)
+来源：[`rsh/Engine/session/session-projection-cache/src/index.ts:58`](../Engine/session/session-projection-cache/src/index.ts)
 
 <a id="deepseek-aidsh-session-query-sqlite"></a>
 
@@ -1978,7 +1978,10 @@ export interface Config {
 
 ```ts config-catalog
 /** Combined session-query configuration backed by SQLite full-text search. */
-export interface Config extends SessionQueryConfig {
+export type Config = SessionQuerySqliteConfig
+
+/** Combined session-query configuration backed by SQLite full-text search. */
+export interface SessionQuerySqliteConfig extends SessionQueryConfig {
   /**
    * Dedicated derived-index path; `:memory:` is supported for ephemeral
    * indexes. Missing directories and database files are created owner-only on
@@ -2014,9 +2017,9 @@ export type OpenAt = 'startup' | 'first-search' | 'never'
 export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 ```
 
-依赖：[`SessionQueryConfig`](../Engine/session-query/session-query/src/index.ts)
+依赖：SessionQueryConfig（`@deepseek-ai/dsh-session-query/native`）
 
-来源：[`rsh/Engine/session-query/session-query-sqlite/src/index.ts:92`](../Engine/session-query/session-query-sqlite/src/index.ts)
+来源：[`rsh/Engine/session-query/session-query-sqlite/src/index.ts:64`](../Engine/session-query/session-query-sqlite/src/index.ts)
 
 <a id="deepseek-aidsh-session-reference"></a>
 
@@ -2985,8 +2988,11 @@ export interface Config {
 需要：`tools` · `systemPrompt` · `sessionQuery` · `sessionProjections`
 
 ```ts config-catalog
+/** Deployment-owned compatibility config type backed by the shared resolver. */
+export interface Config extends SessionQueryToolConfig {}
+
 /** Deployment-owned search count and timeout bounds. */
-export interface Config {
+export interface SessionQueryToolConfig {
   /** Maximum authorized hits returned by one search call. Defaults to 100. */
   maxSearchResults?: number
   /** Cooperative full-text search deadline in milliseconds. Defaults to 30000. */
@@ -2994,7 +3000,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Engine/session-query/tool-session-query/src/index.ts:28`](../Engine/session-query/tool-session-query/src/index.ts)
+来源：[`rsh/Engine/session-query/tool-session-query/src/index.ts:30`](../Engine/session-query/tool-session-query/src/index.ts)
 
 <a id="deepseek-aidsh-tool-skill"></a>
 

@@ -4,12 +4,12 @@
  * @module @deepseek-ai/dsh-tool-session-query/service-boundary
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import {
   SessionQueryError,
   type SessionQueryErrorCode,
-} from '@deepseek-ai/dsh-session-query'
+} from '@deepseek-ai/dsh-session-query/native'
+import type { SessionQueryToolServices } from './runtime.ts'
 
 interface ModelSafeServiceFailure {
   readonly code: SessionQueryErrorCode | 'SESSION_QUERY_TOOL_FAILED'
@@ -71,6 +71,10 @@ const SAFE_SESSION_QUERY_FAILURES = {
     code: 'SESSION_QUERY_PERSISTENCE_FAILED',
     message: 'session history storage is unavailable',
   },
+  SESSION_QUERY_PROVIDER_CLOSED: {
+    code: 'SESSION_QUERY_TOOL_FAILED',
+    message: 'session query operation failed',
+  },
   SESSION_QUERY_SEARCH_DISABLED: {
     code: 'SESSION_QUERY_SEARCH_DISABLED',
     message: 'session search is disabled in this deployment',
@@ -97,7 +101,7 @@ function unauthorizedTarget(): HarnessError {
 }
 
 async function call<Value>(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   signal: AbortSignal,
   operation: string,
   invoke: () => Promise<Value>,
@@ -114,14 +118,14 @@ async function call<Value>(
 }
 
 function sanitizeError(
-  ctx: Context,
+  ctx: SessionQueryToolServices,
   operation: string,
   error: unknown,
 ): HarnessError {
   const generic = genericFailure()
   const diagnostic = fullError(error)
   try {
-    ctx.logger.warn(`tool-session-query: ${operation} failed: ${diagnostic}`)
+    ctx.warn?.(`tool-session-query: ${operation} failed: ${diagnostic}`)
     if (error instanceof SessionQueryError) {
       const code: unknown = error.code
       const failure = typeof code === 'string' && Object.hasOwn(SAFE_SESSION_QUERY_FAILURES, code)

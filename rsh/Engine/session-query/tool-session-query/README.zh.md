@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当 agent 应该能搜索自己的既往会话并检查其关系与事件时挂载本包。常用路径是显式的：在 `ctx.sessionQuery`（由 `dsh-session-query-sqlite` 支撑）之上挂载插件，然后让模型调用这些工具。
 
+Native CLI 用户可以选择内置的 `native-headless-query` profile。它会选择一个组合式 SQLite 查询 Provider、Session 投影注册表与持久缓存、`session-reference` 以及本包的 Native Consumer；SQLite 搜索索引在首次搜索时打开，而 `openAt` 为 `never` 时精确追踪与读取仍可用。
+
 ### 何时选择
 
 当部署需要模型驱动的既往工作检索时选择它——例如 coding agent（编程智能体）在开始任务前搜索更早会话中做过的事。只需要程序化检索时避免使用：`ctx.sessionQuery` 本身服务代码调用方，无需面向模型的 schema、提示词与授权层。
@@ -71,8 +73,8 @@ kind: "package-reference"
 本消费方建立在一个分离与三项承诺之上：
 
 - **窄而只读的工具。** 五个带扁平 snake-case schema 的工具，每个都引导一个后续步骤；游标、偏移、分页大小或模型可控上限永远不会到达模型。
-- **授权来自调用方，绝不由模型提供。** 调用方身份来自 `ToolExecution.exec.agent`；工作区是字符串精确 `cwd` 相等，并对照每次结果观察到的 header 重新校验。
-- **一个模型边界净化器。** 每个可信 `ctx.sessionQuery` 调用都经过服务边界，它保留取消，并将诊断与分类失败限制在边界内。
+- **授权来自调用方，绝不由模型提供。** 调用方身份来自兼容层工具 Agent 或 Native 调用的 Session；工作区是字符串精确 `cwd` 相等，并对照每次结果观察到的 header 重新校验。
+- **一个模型边界净化器。** 每个可信查询调用都经过共享服务边界，它保留取消并返回固定安全错误；兼容层适配器记录完整诊断。
 - **不引入第二种截断格式。** 结果保持完整；通用 spill 策略负责有界内联输出。
 
 设计历史记录在[面向模型的会话查询工具笔记](../../../../.agents/notes/archived/feature/2026-07-24-model-facing-session-query-tools.md)与 [session-search-not-shipped-default 笔记](../../../../.agents/notes/archived/feature/2026-08-02-session-search-not-shipped-default.md)中。
@@ -82,11 +84,14 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：配置、提示词章节、五个工具注册 |
+| [`src/native.ts`](src/native.ts) | Cordis-free Native 入口：提示词与五个 ValueTool 注册 |
+| [`src/config.ts`](src/config.ts) | 两种安装共用的配置默认值与校验 |
+| [`src/runtime.ts`](src/runtime.ts) | 两种安装共用的查询/投影服务与调用方信息 |
 | [`src/input.ts`](src/input.ts) | 模型 schema、参数规范化、过滤器构造 |
 | [`src/workspace-access.ts`](src/workspace-access.ts) | 调用方身份、工作区授权、标题访问、血缘投影 |
 | [`src/service-boundary.ts`](src/service-boundary.ts) | 可信调用与模型安全错误转换 |
 | [`src/operations.ts`](src/operations.ts) | 五个操作工作流 |
-| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片 |
+| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片，类型来自 `@deepseek-ai/dsh-native-tools/presentation` |
 
 ### 操作流程
 

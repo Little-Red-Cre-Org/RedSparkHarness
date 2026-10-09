@@ -1,5 +1,5 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -138,7 +138,15 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
       expect.objectContaining({ name: 'ReexportedBox', aliases: ['ReexportedBox', 'Box'] }),
       expect.objectContaining({ name: 'ReexportedZodType', aliases: ['ReexportedZodType', 'ZodType'] }),
     ]))
+    const zodPackagePath = realpathSync(resolve(import.meta.dirname, '../node_modules/zod/package.json'))
+    const zodPackage = JSON.parse(readFileSync(zodPackagePath, 'utf8')) as { version: string }
+    const zodDeclaration = realpathSync(join(dirname(zodPackagePath), 'v4/classic/schemas.d.cts'))
+    const reexportedZod = clientPackage?.exports.find(exported => exported.name === 'ReexportedZodType')
+    expect(reexportedZod?.symbol).toBe(
+      `<external>:${normalizedPath(relative(fixtureRoot, zodDeclaration))}#ZodType`,
+    )
     const host = model.faces.find(face => face.face === 'host')
+    expect(host?.packages[0]?.services.map(service => service.key)).not.toContain('ignoredInline')
     expect(host?.graph.nodes).toContainEqual(expect.objectContaining({
       kind: 'conditional',
     }))
@@ -192,7 +200,20 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
       location: { file: 'packages/host/src/index.ts' },
       text: "'demo/ready'(agent: Agent<{ ready: true }>, payload: Box<Payload>): void",
     })
-    expect(model).toMatchSnapshot()
+    const snapshotZodSymbol = `<external>:zod@${zodPackage.version}/v4/classic/schemas.d.cts#ZodType`
+    const snapshotModel = {
+      ...model,
+      faces: model.faces.map(face => face.face === 'client' ? {
+        ...face,
+        packages: face.packages.map(pkg => pkg.name === '@fixture/client' ? {
+          ...pkg,
+          exports: pkg.exports.map(exported => exported.name === 'ReexportedZodType'
+            ? { ...exported, symbol: snapshotZodSymbol }
+            : exported),
+        } : pkg),
+      } : face),
+    }
+    expect(snapshotModel).toMatchSnapshot()
   })
 
   it('merges bounded package programs into the same face model', () => {
@@ -1133,15 +1154,34 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
   it('confines explicit face projects to their selected Typert face', () => {
     const root = copyFixture('typert-split-project-')
     configureDualRuntimeClient(root, true)
+    const packageRoot = join(root, 'packages/client')
+    writeFileSync(join(packageRoot, 'src/host-leaf.ts'), 'export interface HostLeafMarker { readonly hostLeaf: true }\n')
+    writeFileSync(join(packageRoot, 'src/client-leaf.ts'), 'export interface ClientLeafMarker { readonly clientLeaf: true }\n')
+    for (const face of ['host', 'client'] as const) {
+      const configPath = join(packageRoot, `tsconfig.${face}.json`)
+      const config = JSON.parse(readFileSync(configPath, 'utf8')) as {
+        references: { path: string }[]
+      }
+      config.references.push({ path: `./tsconfig.${face}-leaf.json` })
+      writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
+      writeFileSync(join(packageRoot, `tsconfig.${face}-leaf.json`), `${JSON.stringify({
+        extends: '../../tsconfig.base.json',
+        compilerOptions: { rootDir: 'src', outDir: `lib/${face}-types`, declaration: true },
+        files: [`src/${face}-leaf.ts`],
+      }, null, 2)}\n`)
+    }
 
     const markers = new WorkspaceAnalyzer({ root }).indexSourceDeclarations()
       .filter(declaration => declaration.package === '@fixture/client'
-        && declaration.name.endsWith('OnlyMarker'))
+        && declaration.name.endsWith('Marker'))
       .map(declaration => ({ face: declaration.face, name: declaration.name }))
-    expect(markers).toEqual([
+    expect(markers).toHaveLength(4)
+    expect(markers).toEqual(expect.arrayContaining([
       { face: 'client', name: 'ClientOnlyMarker' },
+      { face: 'client', name: 'ClientLeafMarker' },
       { face: 'host', name: 'HostOnlyMarker' },
-    ])
+      { face: 'host', name: 'HostLeafMarker' },
+    ]))
   })
 
   it('uses only exported Client roots from a partial Client project', () => {

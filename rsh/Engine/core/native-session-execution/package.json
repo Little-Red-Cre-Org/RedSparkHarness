@@ -47,6 +47,9 @@
     "./read-history": {
       "types": "./lib/types/read-history.d.ts",
       "default": "./lib/read-history.js"
+    },
+    "./active-session-protocol": {
+      "types": "./lib/types/active-session-protocol.d.ts"
     }
   },
   "files": [

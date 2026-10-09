@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { Context, type Fiber } from '@deepseek-ai/cordis'
 import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import { NativeSessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection/native'
+import type { NativeSessionProjectionCacheOperations } from '@deepseek-ai/dsh-session-projection-cache/native'
 import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@deepseek-ai/dsh-session'
 import { Session as NativeSession } from '@deepseek-ai/dsh-session/native'
+import type { SessionAppendInput } from '@deepseek-ai/dsh-session/native'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/native'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeContext, NativeServices } from '@deepseek-ai/dsh-native-runtime'
 import SessionPersistence, {
   SessionPersistenceCorruptionError,
   SessionPersistenceNotFoundError,
@@ -20,6 +23,7 @@ import type {
   SessionHandleReadResult,
   SessionPersistenceSnapshot,
 } from '@deepseek-ai/dsh-session-persistence'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import SessionQueryEngine, {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   type SessionEventSurface,
@@ -27,8 +31,14 @@ import SessionQueryEngine, {
 } from '@deepseek-ai/dsh-session-query'
 import { SessionTitleProviderId, SessionTitleService } from '@deepseek-ai/dsh-session-title'
 import { TestSessionQueryEngine } from './test-service.ts'
-import { plugin as nativeSessionQueryPlugin } from '../src/native.ts'
-import type { NativeSessionQueryOperations } from '../src/native.ts'
+import {
+  createNativeSessionQueryRuntime,
+  createNativeSessionQuerySource,
+  plugin as nativeSessionQueryPlugin,
+  SessionQueryError,
+  SESSION_QUERY_READ_WINDOW_MAX,
+} from '../src/native.ts'
+import type { NativeSessionQueryOperations, NativeSessionQuerySource } from '../src/native.ts'
 
 const TITLE_SERVICE_CONFIG = { fallbackMaxWords: 8, fallbackMaxBytes: 64, maxTitleBytes: 256 }
 
@@ -118,6 +128,7 @@ class TestPersistence extends SessionPersistence {
     signal?: AbortSignal,
   ) => Promise<{ meta: SessionHeader; events: SessionEvent[] }>) | undefined
   static afterList: (() => void) | undefined
+  static afterStat: (() => void) | undefined
   static listCalls = 0
   static readCalls: SessionIdType[] = []
   static listSignals: Array<AbortSignal | undefined> = []
@@ -135,6 +146,7 @@ class TestPersistence extends SessionPersistence {
     this.readEffect = undefined
     this.readOverride = undefined
     this.afterList = undefined
+    this.afterStat = undefined
     this.listCalls = 0
     this.readCalls = []
     this.listSignals = []
@@ -159,8 +171,9 @@ class TestPersistence extends SessionPersistence {
 
   stat(id: SessionIdType): Promise<SessionPersistenceSnapshot | undefined> {
     const entry = TestPersistence.entries.get(id)
-    if (entry === undefined) return Promise.resolve(undefined)
-    return Promise.resolve({ header: structuredClone(entry.meta), revision: entryRevision(entry) })
+    const record = entry === undefined ? undefined : { header: structuredClone(entry.meta), revision: entryRevision(entry) }
+    TestPersistence.afterStat?.()
+    return Promise.resolve(record)
   }
 
   list(options?: { signal?: AbortSignal }): Promise<readonly SessionPersistenceSnapshot[]> {
@@ -202,7 +215,10 @@ async function installNativeSessionQuery(
   const activate = nativeSessionQueryPlugin.resolve(undefined)
   await activate({
     require: () => active,
-    optional: () => persistence,
+    optional: (key: keyof NativeServices) => key === 'sessionPersistence'
+      ? persistence as NativeServices['sessionPersistence'] | undefined
+      : undefined,
+    own: () => {},
     provide: (key: string, service: unknown) => { services.set(key, service) },
   } as unknown as NativeContext)
   const service = services.get('sessionQuery')
@@ -210,16 +226,40 @@ async function installNativeSessionQuery(
   return service as NativeSessionQueryOperations
 }
 
-function nativeOwner(meta: SessionHeader, events: SessionEvent[], readEvents = () => Promise.resolve(events)): NativeActiveSessionOwner {
+function nativeOwner(
+  meta: SessionHeader,
+  events: SessionEvent[],
+  readEvents = (options?: { maxEvents?: number }) => Promise.resolve(events.slice(0, options?.maxEvents ?? events.length)),
+): NativeActiveSessionOwner {
   return {
     agent: {},
-    session: events.length === 0
-      ? NativeSession.create(meta.id, undefined, meta)
-      : NativeSession.create(meta.id, events, meta, SessionLogOffset(0)),
+    session: activeSession(meta, events),
     inheritedEventCount: SessionLogOffset(0),
     writerAvailable: true,
     readEvents,
   } as unknown as NativeActiveSessionOwner
+}
+
+function activeSession(meta: SessionHeader, events: readonly SessionEvent[]): NativeSession {
+  const session = NativeSession.create(meta.id, undefined, meta)
+  if (events.length > 0) session.appendBatch(events.map(sessionAppendInput))
+  return session
+}
+
+function sessionAppendInput(event: SessionEvent): SessionAppendInput {
+  const options = 'surfaceOp' in event && event.surfaceOp !== undefined
+    ? {
+      surfaceOp: event.surfaceOp,
+      ...'sourceEventSeqs' in event && event.sourceEventSeqs !== undefined
+        ? { sourceEventSeqs: [...event.sourceEventSeqs] }
+        : {},
+    }
+    : 'ignorable' in event && event.ignorable ? { ignorable: true as const } : undefined
+  return {
+    type: event.type,
+    data: event.data,
+    ...options === undefined ? {} : { opts: options },
+  } as SessionAppendInput
 }
 
 function nativeOwners(...owners: NativeActiveSessionOwner[]): NativeActiveSessionOperations {
@@ -1334,6 +1374,213 @@ describe('session-query exact reads', () => {
 })
 
 describe('native session-query exact reads', () => {
+  it.each([
+    { reason: 'returns no checkpoint', failure: undefined },
+    { reason: 'throws while reading', failure: new Error('checkpoint storage unavailable') },
+  ])('folds a cold projection when the checkpoint cache $reason', async ({ failure }) => {
+    const stored = header('native-observation-checkpoint-fallback', 4)
+    TestPersistence.reset([{ meta: stored, events: eventLog('checkpoint fallback') }])
+    const cachedCheckpoint = vi.fn(() => {
+      if (failure !== undefined) throw failure
+      return undefined
+    })
+    const cache = { cachedCheckpoint } as unknown as NativeSessionProjectionCacheOperations
+    const runtime = createNativeSessionQueryRuntime(
+      createNativeSessionQuerySource(nativeOwners(), new TestPersistence(new Context())),
+      { projections: new NativeSessionProjectionRegistry(), checkpointCache: cache },
+    )
+
+    try {
+      const observation = await runtime.operations.observeSession(stored.id)
+      try {
+        expect(observation.source).toBe('prepared')
+        expect(observation.projections?.asOfSeq).toBe(SessionSeq(0))
+        expect(cachedCheckpoint).toHaveBeenCalledOnce()
+      } finally {
+        observation[Symbol.dispose]()
+      }
+    } finally {
+      await runtime.close()
+    }
+  })
+
+  it('keeps pinned cold observations immutable across revisions and LRU eviction', async () => {
+    const stored = header('native-observation-lease', 4)
+    const other = header('native-observation-lease-other', 5)
+    const extra = header('native-observation-lease-extra', 6)
+    TestPersistence.reset([
+      { meta: stored, events: eventLog('revision one') },
+      { meta: other, events: eventLog('other session') },
+      { meta: extra, events: eventLog('extra session') },
+    ])
+    const persistence = new TestPersistence(new Context())
+    const source = createNativeSessionQuerySource(nativeOwners(), persistence)
+    const runtime = createNativeSessionQueryRuntime(source, { preparedSessionCacheSize: 1 })
+    const leases: Array<Awaited<ReturnType<NativeSessionQueryOperations['observeSession']>>> = []
+
+    try {
+      const first = await runtime.operations.observeSession(stored.id)
+      leases.push(first)
+      const entry = TestPersistence.entries.get(stored.id)
+      if (entry === undefined) throw new Error('persisted observation fixture disappeared')
+      entry.events.push({ ...eventLog('revision two')[0]!, seq: SessionSeq(1), time: 11 })
+
+      const revised = await runtime.operations.observeSession(stored.id)
+      leases.push(revised)
+      expect(first.source).toBe('prepared')
+      expect(first.revision).not.toBe(revised.revision)
+      expect(first.events.map(event => event.seq)).toEqual([SessionSeq(0)])
+      expect(revised.events.map(event => event.seq)).toEqual([SessionSeq(0), SessionSeq(1)])
+      expect(revised.events[1]).toMatchObject({
+        type: 'user/message', seq: SessionSeq(1), data: { content: [{ type: 'text', text: 'revision two' }] },
+      })
+      const retained = revised.retain()
+      leases.push(retained)
+      expect(retained).not.toBe(revised)
+      expect(retained.events).toBe(revised.events)
+
+      const otherLease = await runtime.operations.observeSession(other.id)
+      leases.push(otherLease)
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id])
+      const pinnedHit = await runtime.operations.observeSession(stored.id)
+      leases.push(pinnedHit)
+      expect(pinnedHit.events).toBe(revised.events)
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id])
+
+      const extraLease = await runtime.operations.observeSession(extra.id)
+      leases.push(extraLease)
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id, extra.id])
+      otherLease[Symbol.dispose]()
+      const pinnedOverCapacityHit = await runtime.operations.observeSession(stored.id)
+      leases.push(pinnedOverCapacityHit)
+      expect(pinnedOverCapacityHit.events).toBe(revised.events)
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id, extra.id])
+      pinnedOverCapacityHit[Symbol.dispose]()
+
+      first[Symbol.dispose]()
+      revised[Symbol.dispose]()
+      expect(() => revised.retain()).toThrow('is disposed')
+      expect(retained.events[1]).toMatchObject({ data: { content: [{ text: 'revision two' }] } })
+      pinnedHit[Symbol.dispose]()
+      const retainedHit = await runtime.operations.observeSession(stored.id)
+      leases.push(retainedHit)
+      expect(retainedHit.events).toBe(retained.events)
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id, extra.id])
+      retainedHit[Symbol.dispose]()
+      retained[Symbol.dispose]()
+      const afterEviction = await runtime.operations.observeSession(stored.id)
+      leases.push(afterEviction)
+      expect(afterEviction.events.map(event => event.seq)).toEqual([SessionSeq(0), SessionSeq(1)])
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id, other.id, extra.id, stored.id])
+    } finally {
+      for (const lease of leases) lease[Symbol.dispose]()
+      await runtime.close()
+    }
+  })
+
+  it('retries a cold observation when its revision changes during the read', async () => {
+    const stored = header('native-observation-revision-churn', 6)
+    TestPersistence.reset([{ meta: stored, events: eventLog('revision one') }])
+    let statCalls = 0
+    TestPersistence.afterStat = () => { statCalls += 1 }
+    TestPersistence.readEffect = () => {
+      const entry = TestPersistence.entries.get(stored.id)
+      if (entry === undefined) throw new Error('persisted revision fixture disappeared')
+      entry.events.push({ ...eventLog('revision two')[0]!, seq: SessionSeq(1), time: 11 })
+    }
+    const persistence = new TestPersistence(new Context())
+    const runtime = createNativeSessionQueryRuntime(createNativeSessionQuerySource(nativeOwners(), persistence))
+
+    try {
+      const observation = await runtime.operations.observeSession(stored.id)
+      try {
+        expect(observation.revision).toBe(SessionPersistenceRevision('events:2'))
+        expect(observation.events.map(event => event.seq)).toEqual([SessionSeq(0), SessionSeq(1)])
+        expect(observation.events[1]).toMatchObject({ data: { content: [{ text: 'revision two' }] } })
+      } finally {
+        observation[Symbol.dispose]()
+      }
+      expect(TestPersistence.readCalls).toEqual([stored.id, stored.id])
+      expect(statCalls).toBe(4)
+    } finally {
+      await runtime.close()
+    }
+  })
+
+  const initialBinding = {}
+  const replacementBinding = {}
+  const finalBinding = {}
+  it.each([
+    {
+      operation: 'observe',
+      phase: 'after each initial stat',
+      identities: [{}, {}, {}, {}],
+      expectedStats: 2,
+      expectedReads: 0,
+      expectedLists: 0,
+    },
+    {
+      operation: 'observe',
+      phase: 'after each cold read',
+      identities: [initialBinding, initialBinding, replacementBinding, replacementBinding, replacementBinding, finalBinding],
+      expectedStats: 2,
+      expectedReads: 2,
+      expectedLists: 0,
+    },
+    {
+      operation: 'observe',
+      phase: 'after the post-read stat',
+      identities: [initialBinding, initialBinding, initialBinding, replacementBinding, {}, finalBinding],
+      expectedStats: 3,
+      expectedReads: 1,
+      expectedLists: 0,
+    },
+    {
+      operation: 'list',
+      phase: 'during both list attempts',
+      identities: [{}, {}, {}, {}],
+      expectedStats: 0,
+      expectedReads: 0,
+      expectedLists: 2,
+    },
+  ] as const)('rejects repeated persistence binding changes $phase', async ({ operation, identities, expectedStats, expectedReads, expectedLists }) => {
+    const stored = header('native-observation-binding-churn', 7)
+    TestPersistence.reset([{ meta: stored, events: eventLog('binding churn') }])
+    let statCalls = 0
+    let bindingCalls = 0
+    TestPersistence.afterStat = () => { statCalls += 1 }
+    const persistence = new TestPersistence(new Context())
+    const base = createNativeSessionQuerySource(nativeOwners(), persistence)
+    const store = base.persistenceBinding().store
+    if (store === undefined) throw new Error('persistent binding fixture has no store')
+    const source: NativeSessionQuerySource = {
+      liveOwners: () => [],
+      persistenceBinding: () => {
+        const identity = identities[bindingCalls]
+        if (identity === undefined) throw new Error('binding identity fixture was exhausted')
+        bindingCalls += 1
+        return { identity, store }
+      },
+    }
+    const runtime = createNativeSessionQueryRuntime(source)
+
+    try {
+      const result = operation === 'list'
+        ? runtime.operations.listSessions()
+        : runtime.operations.observeSession(stored.id)
+      await expect(result).rejects.toMatchObject({
+        code: 'SESSION_QUERY_SOURCE_CONFLICT',
+        message: 'session source changed repeatedly during observation',
+      })
+      expect(bindingCalls).toBe(identities.length)
+      expect(statCalls).toBe(expectedStats)
+      expect(TestPersistence.readCalls).toHaveLength(expectedReads)
+      expect(TestPersistence.listCalls).toBe(expectedLists)
+    } finally {
+      await runtime.close()
+    }
+  })
+
   it('merges persisted and live records and returns unique isolated title observations', async () => {
     const durable = header('native-list-a', 20)
     const active = header('native-list-b', 20)
@@ -1465,7 +1712,7 @@ describe('native session-query exact reads', () => {
         data: { title: 'Live title', messageSeqs: [SessionSeq(0)], source: { kind: 'fallback' as const } },
       },
     ]
-    const session = NativeSession.create(stored.id, activeEvents, stored, SessionLogOffset(0))
+    const session = activeSession(stored, activeEvents)
     let ownerIsCurrent = true
     let replaceDuringRead = false
     const readEvents = vi.fn(() => {
@@ -1499,9 +1746,8 @@ describe('native session-query exact reads', () => {
       session: stored,
       events: [{ seq: SessionSeq(0), data: { content: [{ text: 'live owner' }] } }],
     })
-    const readSignal = new AbortController().signal
-    await expect(query.readSurface(stored.id, readSignal)).resolves.toMatchObject({ session: stored })
-    expect(readEvents).toHaveBeenLastCalledWith({ signal: readSignal })
+    await expect(query.readSurface(stored.id)).resolves.toMatchObject({ session: stored })
+    expect(readEvents).toHaveBeenLastCalledWith(expect.objectContaining({ maxEvents: SessionLogOffset(2) }))
     expect(readEvents).toHaveBeenCalledTimes(3)
     expect(TestPersistence.readCalls).toEqual([])
 
@@ -1528,14 +1774,30 @@ describe('native session-query exact reads', () => {
 
     TestPersistence.listFailure = new Error('index unavailable')
     await expect(query.listSessions()).rejects.toMatchObject({ code: 'SESSION_QUERY_PERSISTENCE_FAILED' })
+    TestPersistence.listFailure = undefined
+    TestPersistence.readFailure = new Error('reader unavailable')
     await expect(query.readSession(stored.id)).rejects.toMatchObject({ code: 'SESSION_QUERY_PERSISTENCE_FAILED' })
 
-    TestPersistence.listFailure = undefined
+    const typedSourceFailure = new SessionQueryError('source changed', 'SESSION_QUERY_SOURCE_CONFLICT')
+    TestPersistence.readFailure = typedSourceFailure
+    await expect(query.readSession(stored.id)).rejects.toBe(typedSourceFailure)
+
+    TestPersistence.readFailure = undefined
+    const statFailure = new Error('stat unavailable')
+    TestPersistence.afterStat = () => {
+      TestPersistence.afterStat = undefined
+      throw statFailure
+    }
+    await expect(query.readSession(stored.id)).rejects.toMatchObject({
+      code: 'SESSION_QUERY_PERSISTENCE_FAILED', cause: statFailure,
+    })
+
+    TestPersistence.readFailure = undefined
     const reason = new Error('listing cancelled')
     const loadController = new AbortController()
-    TestPersistence.listOverride = () => {
+    TestPersistence.readOverride = () => {
       loadController.abort(reason)
-      return Promise.reject(new Error('aborted query listing'))
+      return Promise.reject(new Error('aborted query read'))
     }
     await expect(query.readSession(stored.id, loadController.signal)).rejects.toBe(reason)
 
@@ -1547,9 +1809,9 @@ describe('native session-query exact reads', () => {
     await expect(query.listSessions(controller.signal)).rejects.toBe(reason)
 
     const titleController = new AbortController()
-    TestPersistence.listOverride = () => {
+    TestPersistence.readOverride = () => {
       titleController.abort(reason)
-      return Promise.resolve([])
+      return Promise.reject(new Error('aborted title read'))
     }
     await expect(query.readTitleSnapshots([stored.id], titleController.signal)).rejects.toBe(reason)
 
@@ -1571,13 +1833,33 @@ describe('native session-query exact reads', () => {
     await expect(query.readSession(stored.id)).rejects.toMatchObject({ code: 'SESSION_QUERY_CORRUPT_SESSION' })
 
     TestPersistence.reset([{ meta: stored, events: eventLog() }])
-    const entry = TestPersistence.entries.get(stored.id)!
-    TestPersistence.listOverride = () => {
-      const snapshots = [{ header: structuredClone(entry.meta), revision: entryRevision(entry) }]
-      TestPersistence.entries.delete(stored.id)
-      return Promise.resolve(snapshots)
+    TestPersistence.readEffect = () => {
+      const entry = TestPersistence.entries.get(stored.id)
+      if (entry === undefined) throw new Error('persisted header fixture disappeared')
+      entry.meta = { ...entry.meta, cwd: '/changed-during-read' }
     }
-    const missingReadFailure = await query.readSession(stored.id).then(
+    await expect(query.readSession(stored.id)).rejects.toMatchObject({ code: 'SESSION_QUERY_SOURCE_CONFLICT' })
+
+    TestPersistence.reset([{ meta: stored, events: eventLog() }])
+    const defaultWindow = await query.readEvent({ sessionId: stored.id, seq: SessionSeq(0) })
+    expect(defaultWindow).toMatchObject({ startSeq: SessionSeq(0), endSeq: SessionSeq(0), target: { seq: SessionSeq(0) } })
+    await expect(query.readEvent({ sessionId: stored.id, seq: SessionSeq(1) })).rejects.toMatchObject({
+      code: 'SESSION_QUERY_EVENT_NOT_FOUND',
+    })
+    for (const request of [
+      { sessionId: stored.id, seq: SessionSeq(0), before: -1 },
+      { sessionId: stored.id, seq: SessionSeq(0), after: SESSION_QUERY_READ_WINDOW_MAX + 1 },
+    ]) {
+      await expect(query.readEvent(request)).rejects.toMatchObject({ code: 'SESSION_QUERY_INVALID_WINDOW' })
+    }
+
+    const missingAfterStat = header('native-missing-after-stat', 4)
+    TestPersistence.reset([{ meta: missingAfterStat, events: eventLog() }])
+    TestPersistence.afterStat = () => {
+      TestPersistence.afterStat = undefined
+      TestPersistence.entries.delete(missingAfterStat.id)
+    }
+    const missingReadFailure = await query.readSession(missingAfterStat.id).then(
       () => undefined,
       (reason: unknown) => reason,
     )
@@ -1606,16 +1888,98 @@ describe('native session-query exact reads', () => {
       return rejectUnknown(new Error('active owner storage read stopped'))
     })
     const cancellingQuery = await installNativeSessionQuery(nativeOwners(cancellingOwner), undefined)
-    await expect(cancellingQuery.readSurface(stored.id, activeCancelController.signal)).rejects.toBe(activeCancelReason)
+    await expect(cancellingQuery.readTitleSnapshot(stored.id, activeCancelController.signal)).rejects.toBe(activeCancelReason)
   })
 
-  it('attaches an owner found during a cold listing and prefers a replacement after live reads settle', async () => {
+  it('keeps a captured live cut fixed and joins an admitted read on close', async () => {
+    const meta = header('native-captured-cut', 7)
+    const session = NativeSession.create(meta.id, undefined, meta)
+    const durableEvents = [session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'first' }], source: { kind: 'user' },
+    }), { surfaceOp: 'append' })]
+    let readGate = Promise.withResolvers<undefined>()
+    let started = Promise.withResolvers<number>()
+    const owner = {
+      agent: {},
+      session,
+      inheritedEventCount: SessionLogOffset(0),
+      writerAvailable: true,
+      async readEvents(options?: { maxEvents?: number }) {
+        const maxEvents = options?.maxEvents ?? SessionLogOffset(0)
+        started.resolve(maxEvents)
+        await readGate.promise
+        return structuredClone(durableEvents.slice(0, maxEvents))
+      },
+    } as unknown as NativeActiveSessionOwner
+    const stat = vi.fn(async (_id: SessionIdType, _options?: { signal?: AbortSignal }) => undefined)
+    const list = vi.fn(async (_options?: { signal?: AbortSignal }) => [])
+    const nativePersistence = { stat, list } as unknown as NativeSessionPersistenceOperations
+    const persistenceStore = createNativeSessionQuerySource(
+      { owners: () => [] } as unknown as NativeActiveSessionOperations,
+      nativePersistence,
+    ).persistenceBinding().store
+    if (persistenceStore === undefined) throw new Error('Native persistence adapter omitted its store')
+    await persistenceStore.stat(meta.id)
+    await persistenceStore.list()
+    const sourceSignal = new AbortController().signal
+    await persistenceStore.stat(meta.id, sourceSignal)
+    await persistenceStore.list(sourceSignal)
+    expect(stat).toHaveBeenNthCalledWith(1, meta.id, undefined)
+    expect(stat).toHaveBeenNthCalledWith(2, meta.id, { signal: sourceSignal })
+    expect(list).toHaveBeenNthCalledWith(1, undefined)
+    expect(list).toHaveBeenNthCalledWith(2, { signal: sourceSignal })
+
+    const source = createNativeSessionQuerySource({ owners: () => [owner] } as unknown as NativeActiveSessionOperations)
+    const capturedOwner = source.liveOwners()[0]
+    if (capturedOwner === undefined) throw new Error('captured Native owner is missing')
+    expect(() => capturedOwner.readEvents(SessionLogOffset(2))).toThrow(RangeError)
+    const runtime = createNativeSessionQueryRuntime(source)
+
+    const firstRead = runtime.operations.readSurface(meta.id)
+    await expect(started.promise).resolves.toBe(SessionLogOffset(1))
+    durableEvents.push(session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'later' }], source: { kind: 'user' },
+    }), { surfaceOp: 'append' }))
+    readGate.resolve(undefined)
+    await expect(firstRead).resolves.toMatchObject({
+      capturedThroughSeq: SessionSeq(0),
+      events: [{ seq: SessionSeq(0), data: { content: [{ text: 'first' }] } }],
+    })
+    const liveLease = await runtime.operations.observeSession(meta.id)
+    const retainedLive = liveLease.retain()
+    liveLease[Symbol.dispose]()
+    expect(retainedLive.events).toBe(liveLease.events)
+    expect(retainedLive.events).toHaveLength(2)
+    retainedLive[Symbol.dispose]()
+
+    readGate = Promise.withResolvers<undefined>()
+    started = Promise.withResolvers<number>()
+    const pendingRead = runtime.operations.readSurface(meta.id).then(
+      () => undefined,
+      (reason: unknown) => reason,
+    )
+    await started.promise
+    let closed = false
+    const closing = runtime.close().then(() => { closed = true })
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(closed).toBe(false)
+    readGate.resolve(undefined)
+    await expect(pendingRead).resolves.toMatchObject({ code: 'SESSION_QUERY_PROVIDER_CLOSED' })
+    await closing
+    expect(closed).toBe(true)
+    await expect(runtime.operations.observeSession(meta.id)).rejects.toMatchObject({
+      code: 'SESSION_QUERY_PROVIDER_CLOSED',
+    })
+    await runtime.close()
+  })
+
+  it('prefers an owner attached during point metadata reads and a replacement after live reads settle', async () => {
     const stored = header('native-owner-race', 4)
     const events = eventLog('durable owner race')
     TestPersistence.reset()
     let current: NativeActiveSessionOwner[] = []
     const persistence = new TestPersistence(new Context())
-    TestPersistence.afterList = () => { current = [nativeOwner(stored, events)] }
+    TestPersistence.afterStat = () => { current = [nativeOwner(stored, events)] }
     const query = await installNativeSessionQuery({ owners: () => current } as unknown as NativeActiveSessionOperations, persistence)
     await expect(query.readSurface(stored.id)).resolves.toMatchObject({
       session: stored, capturedThroughSeq: SessionSeq(0), events: [{ seq: SessionSeq(0) }],
@@ -1629,7 +1993,10 @@ describe('native session-query exact reads', () => {
       return rejectUnknown<SessionEvent[]>(new Error('new owner detached during listing'))
     })
     const detachedDuringListing = nativeOwner(stored, events, detachDuringListingRead)
-    TestPersistence.afterList = () => { current = [detachedDuringListing] }
+    TestPersistence.afterStat = () => {
+      TestPersistence.afterStat = undefined
+      current = [detachedDuringListing]
+    }
     const detachedQuery = await installNativeSessionQuery(
       { owners: () => current } as unknown as NativeActiveSessionOperations,
       persistence,
@@ -1663,11 +2030,7 @@ describe('native session-query exact reads', () => {
       current = []
       return rejectUnknown(new Error('replacement owner disappeared'))
     })
-    const replacedOriginal = nativeOwner(stored, events, () => {
-      current = [disappearing]
-      return rejectUnknown(new Error('original owner was replaced'))
-    })
-    current = [replacedOriginal]
+    current = [disappearing]
     const missingQuery = await installNativeSessionQuery({ owners: () => current } as unknown as NativeActiveSessionOperations, undefined)
     await expect(missingQuery.readSurface(stored.id)).rejects.toMatchObject({
       code: 'SESSION_QUERY_SESSION_NOT_FOUND',
@@ -1686,7 +2049,7 @@ describe('native session-query exact reads', () => {
       session: stored, capturedThroughSeq: SessionSeq(0), events: [{ seq: SessionSeq(0) }],
     })
     expect(detachAfterColdRead).toHaveBeenCalledOnce()
-    expect(TestPersistence.readCalls).toEqual([stored.id])
+    expect(TestPersistence.readCalls).toEqual([stored.id, stored.id])
 
     TestPersistence.reset([{ meta: stored, events }])
     current = []
@@ -1705,7 +2068,7 @@ describe('native session-query exact reads', () => {
 
   it('validates Native provider configuration and isolates persistent open/read failures', async () => {
     for (const input of [null, [], 'bad', { unknown: true }]) {
-      expect(() => nativeSessionQueryPlugin.resolve(input)).toThrow('native configuration must be empty')
+      expect(() => nativeSessionQueryPlugin.resolve(input)).toThrow(expectCode('SESSION_QUERY_INVALID_CONFIG'))
     }
     expect(() => nativeSessionQueryPlugin.resolve({})).not.toThrow()
 

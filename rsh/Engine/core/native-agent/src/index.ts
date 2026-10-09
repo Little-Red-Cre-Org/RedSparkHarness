@@ -2,12 +2,16 @@
 import { InitiatorRunTracker } from './initiator-runs.ts'
 export { InitiatorRunTracker } from './initiator-runs.ts'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import { type NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-session/types'
 import { NativeAgentExecution } from './execution.ts'
+import type { NativeAgent, NativeAgentEventDispatcher, NativeAgentId as NativeAgentIdType } from './definition.ts'
 
 export type { NativeAgentExecution, NativeAgentExecutionStatus } from './execution.ts'
+export type * from './definition.ts'
+/** Branded Native Agent identity produced by the `NativeAgentId()` factory. */
+export type NativeAgentId = NativeAgentIdType
 export type * from './lifecycle-types.ts'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -18,28 +22,14 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 export type { InboxTarget } from './inbox.ts'
 import type {} from './inbox.ts'
 
-/** Opaque identity for one live native Agent. */
-export type NativeAgentId = Branded<'NativeAgentId'>
-
 /**
  * Brand a nonempty native Agent identity at a string input boundary.
  * @param value - raw identity supplied by an application or integration.
  * @returns the opaque native Agent identity.
  */
-export function NativeAgentId(value: string): NativeAgentId {
+export function NativeAgentId(value: string): NativeAgentIdType {
   if (value.length === 0) throw new Error('native-agent: id must be nonempty')
-  return brandString<NativeAgentId>(value)
-}
-
-/** A live Agent's identity and scope visibility; Session ownership remains in the application. */
-export interface NativeAgent {
-  readonly id: NativeAgentId
-  readonly scope: NativeScope
-}
-
-/** Scoped event dispatch that reports native Agent lifecycle edges. */
-export interface NativeAgentEventDispatcher {
-  emit(scope: NativeScope, key: 'agent/created' | 'agent/disposed', agent: NativeAgent): void
+  return brandString<NativeAgentIdType>(value)
 }
 
 interface Entry {
@@ -63,7 +53,7 @@ function isNativePromise(value: unknown): value is Promise<unknown> {
  * the explicit initiator through native asynchronous work.
  */
 export class NativeAgentRegistry {
-  private readonly entries = new Map<NativeAgentId, Entry>()
+  private readonly entries = new Map<NativeAgentIdType, Entry>()
   private readonly initiators = new AsyncLocalStorage<NativeAgent | undefined>()
   private readonly initiatorRuns = new InitiatorRunTracker()
   private state: 'active' | 'closing' | 'disposed' = 'active'
@@ -163,7 +153,7 @@ export class NativeAgentRegistry {
    * @param id - opaque identity to resolve.
    * @returns the matching Agent while its registration is live.
    */
-  get(id: NativeAgentId): NativeAgent | undefined {
+  get(id: NativeAgentIdType): NativeAgent | undefined {
     const entry = this.entries.get(id)
     return entry?.release === undefined ? entry?.agent : undefined
   }
