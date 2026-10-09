@@ -4,8 +4,11 @@
  * prompt is immutable for a session, so guidance travels as a plugin-sourced
  * user notice in the durable inbox instead of a prompt section: entering plan
  * mode narrates the switch together with the deployment guidance. Selections
- * made during an open turn are applied by a step-admission hook, the native
- * counterpart of the framework pre-step.
+ * made during an open turn are applied at the next accepted step, the native
+ * counterpart of the framework pre-step. A selection without a notice to
+ * deliver commits in the step-admission hook; a narrated one commits only when
+ * its notice's `user/message` is durable, because admission is in memory and
+ * the step persists admitted input after the hook returns.
  *
  * Agent Note:
  * - .agents/notes/implemented/architecture/2026-10-08-native-session-title-and-plan-mode.md
@@ -38,7 +41,7 @@ const PLAN_ADMISSION_ORDER = 100
 interface NativePlanState {
   /** Last logged plan mode. */
   active: boolean
-  /** Mode in force at the last accepted step: what the model was last told. */
+  /** What the model was last told: the mode at the last accepted step, or the mode a durable notice announced. */
   told: boolean | undefined
   /** Whether a turn is open. */
   turnOpen: boolean
@@ -79,7 +82,10 @@ function applyPlanEvent(state: NativePlanState, event: SessionEvent): void {
   else if (event.type === 'turn/start') state.turnOpen = true
   else if (event.type === 'turn/end') state.turnOpen = false
   else if (event.type === 'step/start') state.told = state.active
-  else if (event.type === 'user/message' && event.data.id === state.notice?.id) state.notice = undefined
+  else if (event.type === 'user/message' && state.notice !== undefined && event.data.id === state.notice.id) {
+    state.told = state.notice.active
+    state.notice = undefined
+  }
 }
 
 /** Native plan-mode plugin over the selected tool registry and active session owners. */
@@ -143,8 +149,17 @@ export const plugin: NativePlugin = {
         const buffered: SessionEvent[] = []
         let ready = false
         const stop = owner.onEvent((event) => {
-          if (ready) applyPlanEvent(state, event)
-          else buffered.push(event)
+          if (!ready) { buffered.push(event); return }
+          const notice = state.notice
+          applyPlanEvent(state, event)
+          if (notice === undefined || event.type !== 'user/message' || event.data.id !== notice.id) return
+          // The notice is now durable in history, the first point at which a
+          // narrated selection may commit. The append joins the same step.
+          try {
+            selections.commitNarrated(owner.session.id, view(owner, state), notice.active)
+          } catch (error: unknown) {
+            console.warn(`dsh-plan-mode: failed to append selected plan mode after its notice; the selection stays pending: ${String(error)}`)
+          }
         })
         try {
           const events = await owner.readEvents()
@@ -171,19 +186,30 @@ export const plugin: NativePlugin = {
           const decision = await next()
           if (decision.kind === 'reject' || step.signal.aborted || selected === undefined
             || selections.pending(key) !== selected || state.notice !== notice) return decision
-          const needsNotice = selected.narrate && selections.narration(view(owner, state), selected.active) !== undefined
-          const noticeAdmitted = notice !== undefined && notice.active === selected.active
-            && step.candidates.some(message => message.id === notice.id)
-            && decision.messages.some(message => message.id === notice.id)
-          if (needsNotice && !noticeAdmitted) return decision
+          // Admission is only in memory: a narrated selection waits for its
+          // notice's durable `user/message` (the event observer above), so a
+          // notice that fails to persist or is rejected after this hook keeps
+          // the selection pending and its guidance queued.
+          if (selections.awaitsNarration(key, view(owner, state))) return decision
           try {
             selections.applyBoundary(key, view(owner, state))
           } catch (error: unknown) {
-            console.warn(`dsh-plan-mode: failed to append selected plan mode at step start: ${String(error)}`)
+            console.warn(`dsh-plan-mode: failed to append selected plan mode at step start; the selection stays pending: ${String(error)}`)
           }
           return decision
         }, PLAN_ADMISSION_ORDER)
-        states.set(owner.agent, { owner, state, releases: [stop, admission] })
+        // A notice withdrawn after admission is not retried by the step that
+        // dropped it; re-queue the guidance of a still-pending selection once
+        // the turn settles so the next accepted step delivers it.
+        const idle = owner.onIdle(async () => {
+          if (selections.pending(owner.session.id) === undefined || !owner.writerAvailable) return
+          try {
+            await reconcile(owner, state, context.signal)
+          } catch (error: unknown) {
+            console.warn(`dsh-plan-mode: failed to re-queue the plan notice of a pending selection: ${String(error)}`)
+          }
+        })
+        states.set(owner.agent, { owner, state, releases: [stop, admission, idle] })
       }
       const detach = async (agent: NativeAgent): Promise<void> => {
         const entry = states.get(agent)
