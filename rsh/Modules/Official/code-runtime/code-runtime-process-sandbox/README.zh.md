@@ -11,7 +11,7 @@ kind: "package-reference"
 
 ## 概述
 
-原生 Host profile 在 `read-only` 或 `workspace-write` 文件策略下需要允许 `run_code` 时，可选择此 Provider。每段程序在由选定操作系统沙箱包裹的全新受管理进程中运行，已声明的 binding 调用通过 JSON 行协议返回。Provider 通过 `NativeSandboxPolicy` 解析当前准确 Session，并将有效模式和工作区根目录同时传给 `ProcessSandbox.confine()` 与子进程 `cwd`；仅当 Session 没有覆盖项时才使用显式部署默认值。此仅执行受约束代码的 Provider 会拒绝有效 Session 模式为 `danger-full-access` 的调用；只有 profile 明确允许未受限执行时才能选择其他运行时。沙箱 runner 启动失败会终止本次调用，不会以未受限方式重试。所选沙箱后端会报告文件效果隔离是完整还是部分。
+当原生 Host profile 的文件策略允许 `run_code` 使用 `read-only` 或 `workspace-write` 时选择此 Provider，并且仅当 profile 明确允许未受限执行时才选择其他运行时。每段程序都在选定操作系统沙箱约束的全新受管理进程中运行，已声明的 binding 调用通过 JSON 行返回。当前 Session 的有效模式和工作区根目录决定执行约束与子进程 `cwd`，并且只有在 Session 没有覆盖项时才使用显式部署默认值。此 Provider 仅执行受约束代码，会拒绝有效模式为 `danger-full-access` 的 Session，并在 runner 启动失败时终止调用且不回退至未受限执行。所选后端会报告文件效果隔离为完整或部分。
 
 ## 目录
 

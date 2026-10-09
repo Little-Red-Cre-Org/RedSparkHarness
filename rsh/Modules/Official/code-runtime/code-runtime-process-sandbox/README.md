@@ -11,7 +11,7 @@ Binding arguments and resolutions use lossless JSON without a transport byte cei
 
 ## Summary
 
-Use this provider when a native Host profile permits `run_code` under `read-only` or `workspace-write` file policy. Each program runs in a fresh managed process wrapped by the selected OS sandbox, and declared binding calls return through a JSON line protocol. The Provider resolves the exact live Session through `NativeSandboxPolicy` and passes its effective mode and workspace root to both `ProcessSandbox.confine()` and the child process `cwd`; explicit deployment defaults apply only where the Session has no override. This confined-only Provider rejects an effective `danger-full-access` Session; select another runtime only where the profile explicitly permits unconfined execution. Runner startup failure stops the call without an unconfined retry. The selected sandbox backend reports whether its file-effect enforcement is full or partial.
+Use this Provider in a native Host profile that permits `run_code` under `read-only` or `workspace-write` file policy, and choose another runtime only when the profile explicitly permits unconfined execution. Each program runs in a fresh managed process under the selected OS sandbox, and declared binding calls return through JSON lines. The live Session's effective mode and workspace root drive confinement and child `cwd`, with deployment defaults only when no Session override exists. The confined-only Provider rejects effective `danger-full-access` Sessions, and runner startup failure stops the call without an unconfined retry. The selected backend reports full or partial file-effect enforcement.
 
 ## Table of Contents
 
