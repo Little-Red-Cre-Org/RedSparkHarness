@@ -6,7 +6,7 @@ import { runDesktopHost } from '../src/index.ts'
 
 const roots: { root: string; links: string[] }[] = []
 
-async function fixture(linked = false): Promise<{
+async function fixture(linked: readonly string[] = []): Promise<{
   project: string
   runtime: string
   enteredPath: string
@@ -56,7 +56,6 @@ async function fixture(linked = false): Promise<{
     installations: [{ id: 'client', plugin: '@fixture/dsh-client' }],
   }))
 
-  const packageRoot = linked ? join(workspace, 'packages') : join(project, 'node_modules')
   const packages = [
     {
       name: '@fixture/dsh-credentials',
@@ -82,7 +81,7 @@ async function fixture(linked = false): Promise<{
     },
   ]
   for (const row of packages) {
-    const source = join(packageRoot, ...row.name.split('/'))
+    const source = join(linked.includes(row.name) ? join(workspace, 'packages') : join(project, 'node_modules'), ...row.name.split('/'))
     await mkdir(source, { recursive: true })
     await writeFile(join(source, 'package.json'), JSON.stringify({
       name: row.name,
@@ -91,7 +90,7 @@ async function fixture(linked = false): Promise<{
       dsh: { native: { ...row.manifest, optional: [] } },
     }))
     await writeFile(join(source, 'native.js'), row.source)
-    if (linked) {
+    if (linked.includes(row.name)) {
       const link = join(project, 'node_modules', ...row.name.split('/'))
       await mkdir(join(link, '..'), { recursive: true })
       await symlink(source, link, process.platform === 'win32' ? 'junction' : 'dir')
@@ -172,14 +171,20 @@ it('cancels a route request and drains active work during Host stop', async () =
 })
 
 it('allows workspace-linked native packages only when explicitly enabled', async () => {
-  const { project, runtime } = await fixture(true)
+  const rejected = await fixture(['@fixture/dsh-host'])
+  await expect(runDesktopHost(rejected.runtime, rejected.project, async () => {}))
+    .rejects.toMatchObject({
+      message: 'native installation host: invalid package @fixture/dsh-host',
+      cause: { message: 'package identity differs or package is outside the installed profile/runtime' },
+    })
+  const { project, runtime } = await fixture(['@fixture/dsh-credentials', '@fixture/dsh-host', '@fixture/dsh-client'])
   const output: Buffer[] = []
-  await expect(runDesktopHost(runtime, project, async (frame) => { output.push(frame) }))
-    .rejects.toThrow('native Client installation client package @fixture/dsh-client is not installed in the profile or runtime')
   const host = await runDesktopHost(runtime, project, async (frame) => { output.push(frame) }, { allowLinkedPackages: true })
   try {
     await host.fetch(command(5, 'dsh-app://app/api/test'), null)
-    expect(decode(output).some(frame => frame.type === 1 && frame.streamId === 5)).toBe(true)
+    const frames = decode(output).filter(frame => frame.streamId === 5)
+    expect(JSON.parse(frames.find(frame => frame.type === 1)!.payload.toString())).toMatchObject({ status: 200 })
+    expect(Buffer.concat(frames.filter(frame => frame.type === 2).map(frame => frame.payload)).toString()).toBe('api fixture')
   } finally {
     await host.dispose()
   }

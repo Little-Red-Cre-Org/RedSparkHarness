@@ -306,7 +306,7 @@ describe('desktop main startup', () => {
     expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', message: 'Desktop renderer exited: crashed' })
   })
 
-  it('rejects old app-frame pet updates while the main window navigates away', async () => {
+  it.each([1, 2])('rejects old app-frame pet updates while the main window navigates away after %i crash(es)', async (crashes) => {
     await import('../src/main.ts')
     await harness.preparing.promise
     harness.prepared.resolve()
@@ -325,8 +325,18 @@ describe('desktop main startup', () => {
 
     expect(() => invokeApplicationPet(window, presentation)).toThrow('Desktop pet updates require the primary application frame')
     expect(harness.desktopPetUpdate).not.toHaveBeenCalled()
-    await vi.waitFor(() => { expect(window.urls.at(-1)).toBe('dsh-app://app/index.html') })
-    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'ready' })
+    const startupUrl = 'dsh-app://shell/startup.html'
+    const applicationUrl = 'dsh-app://app/index.html'
+    await vi.waitFor(() => { invokeApplicationPet(window, presentation) })
+    expect(window.urls).toEqual([startupUrl, applicationUrl, applicationUrl])
+    if (crashes === 1) {
+      expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'ready' })
+      return
+    }
+    window.webContents.emit('render-process-gone', {}, { reason: 'crashed' })
+    await harness.errorPublished.promise
+    expect(window.urls).toEqual([startupUrl, applicationUrl, applicationUrl, startupUrl])
+    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', message: 'Desktop renderer exited: crashed' })
   })
 
   it.each(['plugins', 'reset'])('runs %s recovery from a document with a broken preload', async (action) => {

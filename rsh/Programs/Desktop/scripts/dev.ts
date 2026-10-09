@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     release,
   })
   if (values['native-profile'] !== undefined) {
-    const source = resolve(values['native-profile'])
+    const source = resolve(process.env.INIT_CWD ?? process.cwd(), values['native-profile'])
     copyFileSync(join(source, 'rsh.profile.json'), join(projectDir, 'rsh.profile.json'))
     copyFileSync(join(source, 'rsh.client.json'), join(projectDir, 'rsh.client.json'))
     const manifestPath = join(projectDir, 'package.json')
