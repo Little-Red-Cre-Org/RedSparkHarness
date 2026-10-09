@@ -29,3 +29,5 @@ pi-ai 的 `openai-codex` 目录描述的是某个捆绑版本，而不是登录 
 该路由要求本应用注册的 SIWC 登录并获得 `chatgpt.tokens.use.direct`；旧 OAuth 记录或无关记录不能激活该路由。消费者请求模型列表时会刷新账户专属目录，提供方或网络失败会直接返回，不会回退到 pi-ai 捆绑的 Codex 目录。能力未知的模型在适配器公开描述中保持 text-only 且不声明尺寸。实现包含列表与推理 wiring 的 composition fixture；真实账户登录、在线目录与用户推理仍需使用真实凭据验证。
 
 ID-token 验证将 `jose` 作为直接运行时依赖。代码审查范围是 `llm-pi-ai` SIWC 提供方及其两个 adapter 契约；不会迁移 Agent、Session 或 subagent 权威。
+
+原生 Provider 把同一组不依赖 Cordis 的 flow 注册到可选的原生 `authorization` 服务，flow 的凭据写入携带本次尝试的 signal。token、refresh、JWKS 与目录请求各有 30 秒期限，浏览器回调最多等待 10 分钟；JWKS 通过该 signal 拉取，而不是经由 `createRemoteJWKSet`。`llm-pi-ai` 的凭据记录一经提交，适配器就丢弃缓存的 provider collection，下一次列表会用新的 grant 加载账户目录。
