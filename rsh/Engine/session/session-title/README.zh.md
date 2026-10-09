@@ -66,7 +66,7 @@ kind: "package-reference"
 
 ### 原生运行时
 
-`./native` 入口以 `sessionTitles` 服务为原生 profile 提供同样的标题。它依赖 `activeSessions`，折叠每个已附着 Session owner 的日志，并通过该 owner 写入 `session/title`。`get(agent)`、`rename(owner, title)`、`refresh(owner)` 与 `register(provider)` 的行为与 Cordis 方法一致；原生提供方还会收到 `appendEvent`，用于写入自己的纯日志记录。自动提供方工作在主请求的 `request/header` 之后启动，路由未变时在 `step/end` 之后启动，并在标题持久化前保持 owner 打开。内置 `native-tui` 与 `native-web` profile 以首消息提供方和 Cordis 基础 bundle 的上限安装它。
+`./native` 入口以 `sessionTitles` 服务为原生 profile 提供同样的标题。它依赖 `activeSessions`，折叠每个已附着 Session owner 的日志，并通过该 owner 写入 `session/title`。`get(agent)`、`rename(owner, title)`、`refresh(owner)` 与 `register(provider)` 的行为与 Cordis 方法一致；`drainOwner(owner)` 等待已接受的标题工作结算且不改变修订号。原生提供方还会收到 `appendEvent`，用于写入自己的纯日志记录。自动提供方工作在主请求的 `request/header` 之后启动，路由未变时在 `step/end` 之后启动，并在标题持久化前保持 owner 打开。内置 `native-tui` 与 `native-web` profile 以首消息提供方和 Cordis 基础 bundle 的上限安装它。
 
 -----
 

@@ -18,14 +18,36 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
+  "dsh": {
+    "native": {
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "tokenMeter"
+      ],
+      "provides": [
+        "toolResultPruner"
+      ],
+      "apiVersion": 1,
+      "optional": []
+    }
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-compaction": "workspace:^",
@@ -33,9 +55,15 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

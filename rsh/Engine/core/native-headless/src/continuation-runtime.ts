@@ -335,7 +335,7 @@ export class NativeContinuationRuntime {
     void startup.promise.then((handle) => {
       cleanup()
       const releaseForeground = (): void => { releaseResidentParent?.() }
-      void handle.foregroundSettled.then(releaseForeground, releaseForeground)
+      void handle.waitForeground().then(releaseForeground, releaseForeground)
       void handle.done.then(() => { releaseForeground(); releaseBackgroundParent?.() }, () => {
         releaseForeground()
         releaseBackgroundParent?.()
@@ -406,7 +406,7 @@ export class NativeContinuationRuntime {
       resources.own(() => { releaseParent() })
       const handle: NativeSessionContinuation = { id: request.id, agent: registration.execution.agent,
         get isClosing() { return activation.isClosing },
-        ready: ready.promise, foregroundSettled: activation.foregroundSettled, done: activation.done,
+        ready: ready.promise, waitForeground: () => activation.waitForeground(), done: activation.done,
         enqueue: (message, target, admissionSignal) => activation.enqueue(message, target, admissionSignal),
         // Interruption is request-only; execution and cleanup failures remain visible through done and dispose.
         interrupt: (reason) => { void activation.interrupt(reason) }, retainChild: () => activation.retainChild(),

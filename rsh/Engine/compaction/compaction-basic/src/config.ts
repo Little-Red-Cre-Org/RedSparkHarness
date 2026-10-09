@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-compaction-basic/config
  */
 
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import type {
   BasicCompactionConfig,

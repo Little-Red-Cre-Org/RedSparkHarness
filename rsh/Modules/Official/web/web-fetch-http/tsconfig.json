@@ -25,6 +25,9 @@
     },
     {
       "path": "../../../../Core/util/http-proxy"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

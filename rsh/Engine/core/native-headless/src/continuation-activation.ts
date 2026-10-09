@@ -31,7 +31,6 @@ export interface NativeContinuationDriver {
 /** Existing Agent execution drives all accepted work; the durable inbox is the only message queue. */
 export class NativeContinuationActivation {
   private readonly closed = Promise.withResolvers<void>()
-  private readonly firstForegroundSettled = Promise.withResolvers<void>()
   private changed = Promise.withResolvers<undefined>()
   private turn: AbortController | undefined
   private turnSettled: Promise<void> | undefined
@@ -65,11 +64,8 @@ export class NativeContinuationActivation {
   /** Whether this residency epoch has stopped admitting messages or owned descendants. */
   get isClosing(): boolean { return this.closing !== undefined }
 
-  /** Whether foreground descendants or owned background tasks still hold residency. */
+  /** Whether admitted descendants or retained work still hold residency. */
   get isRetained(): boolean { return this.children > 0 || this.backgroundTasks > 0 }
-
-  /** First foreground turn completion, independent of separately retained background tasks. */
-  get foregroundSettled(): Promise<void> { return this.firstForegroundSettled.promise }
 
   /**
    * Durably accept one message and wake the selected ordinary turn driver.
@@ -102,7 +98,7 @@ export class NativeContinuationActivation {
     }
   }
 
-  /** Retain writer residency while allowing the current foreground turn to settle. */
+  /** Retain root background work without blocking its ordinary foreground result. */
   retainBackground(): () => void {
     if (this.closing !== undefined) throw new Error('native-continuation: Activation is closing')
     this.backgroundTasks += 1
@@ -115,14 +111,16 @@ export class NativeContinuationActivation {
     }
   }
 
-  /** Wait until queued foreground work and retained foreground descendants settle. */
+  /** Wait for foreground turns while allowing background-only root work to continue. */
   async waitForeground(): Promise<void> {
-    for (;;) {
-      if (this.closing !== undefined) return this.done
-      if (this.children === 0 && this.turn === undefined && !this.owner.hasPending) return
-      const changed = this.changed.promise
-      if (this.children === 0 && this.turn === undefined && !this.owner.hasPending) return
-      await changed
+    while (true) {
+      if (this.closing !== undefined) { await this.done; return }
+      if (this.turn === undefined && !this.owner.hasPending && this.children === 0) {
+        if (this.backgroundTasks > 0) return
+        await this.done
+        return
+      }
+      await this.changed.promise
     }
   }
 
@@ -150,7 +148,8 @@ export class NativeContinuationActivation {
   }
 
   private wake(): void {
-    this.signalChange()
+    this.changed.resolve(undefined)
+    this.changed = Promise.withResolvers<undefined>()
     if (this.closing !== undefined || this.pumping !== undefined) return
     const completion = Promise.withResolvers<void>()
     this.pumping = completion.promise
@@ -171,10 +170,7 @@ export class NativeContinuationActivation {
     while (this.closing === undefined) {
       const changed = this.changed.promise
       if (!this.owner.hasPending) {
-        if (this.children === 0) {
-          this.firstForegroundSettled.resolve()
-          if (this.backgroundTasks === 0) return
-        }
+        if (this.children === 0 && this.backgroundTasks === 0) return
         await changed
         continue
       }
@@ -204,13 +200,12 @@ export class NativeContinuationActivation {
         if (this.turn === controller) this.turn = undefined
         if (this.turnSettled === settled.promise) this.turnSettled = undefined
         settled.resolve()
-        this.signalChange()
       }
+      this.wake()
     }
   }
 
   private async closeInternal(): Promise<void> {
-    this.firstForegroundSettled.resolve()
     const failures: unknown[] = this.failure === undefined ? [] : [this.failure.error]
     const pump = this.pumping
     if (pump !== undefined) {
@@ -229,10 +224,5 @@ export class NativeContinuationActivation {
       this.closed.reject(error)
       throw error
     }
-  }
-
-  private signalChange(): void {
-    this.changed.resolve(undefined)
-    this.changed = Promise.withResolvers<undefined>()
   }
 }

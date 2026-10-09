@@ -86,7 +86,10 @@ export interface NativeSessionTitles {
    * @returns the latest accepted title, or undefined when no eligible text exists.
    */
   refresh(owner: NativeActiveSessionOwner, signal?: AbortSignal): Promise<SessionTitleSnapshot | undefined>
-  /** Wait for accepted title work on this owner's Session without affecting its current revision. */
+  /** Wait for title work already admitted for this owner's Session without changing its revision.
+   * @param owner - exact attached Session writer.
+   * @returns completion after accepted title work settles.
+   */
   drainOwner(owner: NativeActiveSessionOwner): Promise<void>
   /**
    * Register the sole optional provider.

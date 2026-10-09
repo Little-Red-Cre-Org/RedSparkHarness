@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-compaction-basic/types
  */
 
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
 
 /** Policy fields shared by the default policy and exact model overrides. */
 export interface CompactionPolicyConfig {

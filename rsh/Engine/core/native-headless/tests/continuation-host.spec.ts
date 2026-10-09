@@ -205,14 +205,15 @@ it('does not mark a continuation foreground-settled before queued turns finish, 
     await activation.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'First.' }] }), 'next-turn', new AbortController().signal)
     await started[0]!.promise
     await activation.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Second.' }] }), 'next-turn', new AbortController().signal)
-    let foregroundSettled = false
-    void activation.foregroundSettled.then(() => { foregroundSettled = true })
+    let foregroundFinished = false
+    const foreground = activation.waitForeground()
+    void foreground.then(() => { foregroundFinished = true })
     gates[0]!.resolve(undefined)
     await started[1]!.promise
-    expect(foregroundSettled).toBe(false)
+    expect(foregroundFinished).toBe(false)
     gates[1]!.resolve(undefined)
-    await activation.foregroundSettled
-    expect(foregroundSettled).toBe(true)
+    await foreground
+    expect(foregroundFinished).toBe(true)
     expect(activation.isRetained).toBe(true)
     expect(closed).toBe(false)
   } finally {

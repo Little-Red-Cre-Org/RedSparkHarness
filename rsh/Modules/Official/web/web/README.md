@@ -81,6 +81,10 @@ A provider's availability is a cheap local check — for example whether its API
 
 Failures throw `WebError` with a stable, machine-routable code; the message adds detail such as the missing provider id or the ambiguous candidate set. Callers route on the code and decide how to degrade. To change which backend a call uses, reconfigure the pinned id, mount or unmount providers, or fix the provider's configuration so its availability check passes.
 
+### Native entry
+
+Native compositions import `./native`, which provides the `web` service and requires `launchEnvironment`. It reuses the same selection rules, duplicate-id rejection, `maxResults` capping and `WebError` codes from the shared `selection.ts`. Configured pins win over `$DSH_WEB_SEARCH_PROVIDER` / `$DSH_WEB_FETCH_PROVIDER` read from the process layer. Native providers receive the consuming invocation's cancellation signal and Session `appendEvent`; removing a provider closes its admission, cancels its admitted operations and resolves after they settle. The shipped `native-headless`, `native-web` and `native-tui` compositions install it with `searchProvider: deepseek-official` and `fetchProvider: http` ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+
 -----
 
 <a id="understand-the-implementation"></a>

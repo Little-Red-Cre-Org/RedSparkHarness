@@ -18,7 +18,7 @@ export interface NativeActiveSessionDriver {
   readonly rootOperations?: NativeRootSessionOperations | undefined
   /** Retain the existing root or child epoch. @returns exact idempotent retention release. */
   retain(): () => void
-  /** Retain the exact writer for an owned background task without blocking main-turn settlement. */
+  /** Retain background work without delaying a root's foreground result. @returns exact release. */
   retainBackground(): () => void
   /**
    * Admit through the Program's sole inbox and optionally wake its existing driver.
@@ -101,7 +101,11 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   /** @inheritdoc */
   retain(): () => void { this.assertAdmitting(); return this.driver.retain() }
   /** @inheritdoc */
-  retainBackground(): () => void { this.assertAdmitting(); return this.driver.retainBackground() }
+  retainBackground(): () => void {
+    this.assertAdmitting()
+    if (this.invocation !== 'root') throw new Error('native-active-session: background retention requires a root owner')
+    return this.driver.retainBackground()
+  }
   /** @inheritdoc */
   onEvent(observer: (event: SessionEvent) => void): () => void { this.assertAdmitting(); return this.owner.onEvent(observer) }
   /** @inheritdoc */

@@ -587,12 +587,13 @@ Source: [`rsh/Modules/Official/interaction/permission-presets/src/types.ts:57`](
 /**
  * Whether plan mode is in force from this point on: log-only, non-surface,
  * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through the projection unit's fold.
+ * inactive through the projection unit's fold (Cordis) or the native
+ * plan state fold.
  */
 'plan/mode': { active: boolean }
 ```
 
-Source: [`rsh/Modules/Official/plan/plan-mode/src/index.ts:47`](../Modules/Official/plan/plan-mode/src/index.ts)
+Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Official/plan/plan-mode/src/common.ts)
 
 ### `request/*`
 
@@ -720,26 +721,29 @@ Source: [`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/
 #### `session/title` — log-only
 
 ```ts persistence-catalog
-/** Latest-wins title fact; log-only and excluded from model history. */
+/**
+ * Latest-wins session title snapshot. Log-only: it never enters the model
+ * surface or derived history.
+ */
 'session/title': SessionTitleEventData
 ```
 
 Types: [SessionTitleEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title/src/types.ts:109`](../Engine/session/session-title/src/types.ts)
+Source: [`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/session-title/src/facts.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 
 #### `session/title-llm-request` — log-only
 
 ```ts persistence-catalog
-/** Log-only exact request record before auxiliary title-model dispatch. */
+/** Log-only pre-dispatch record of one session-title model request. */
 'session/title-llm-request': SessionTitleLlmRequestEventData
 ```
 
 Types: [SessionTitleLlmRequestEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title/src/types.ts:111`](../Engine/session/session-title/src/types.ts)
+Source: [`rsh/Engine/session/session-title-llm/src/core.ts:41`](../Engine/session/session-title-llm/src/core.ts)
 
 ### `session-log-deepseek/*`
 

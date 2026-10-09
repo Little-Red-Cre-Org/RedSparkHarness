@@ -67,6 +67,10 @@ The provider keeps requests anonymous and bounded: it accepts only `http:` and `
 
 Failures throw `WebError` with a machine-routable code: `WEB_INVALID_URL`, `WEB_BLOCKED_URL`, `WEB_FETCH_TOO_LARGE`, `WEB_FETCH_TIMEOUT`, `WEB_REDIRECT_BLOCKED`, `WEB_UNSUPPORTED_CONTENT_TYPE`, `WEB_ABORTED`, or `WEB_PROVIDER_ERROR`. Direct callers can route on the code; the model-facing `web_fetch` tool surfaces the failure text to the model under its own error wrapper.
 
+### Native entry
+
+Native compositions import `./native`, which requires `web`. It registers the same `http` provider with the same limits, public-destination policy and fetch timeout as the Cordis entry, and receives the consuming invocation's cancellation signal. Removing the installation cancels admitted fetches and waits for them to settle ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+
 -----
 
 <a id="understand-the-implementation"></a>

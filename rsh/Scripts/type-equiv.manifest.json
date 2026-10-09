@@ -1354,12 +1354,22 @@
     {
       "doc": "rsh/Docs/subsystems/compaction.md",
       "symbol": "CompactionTrigger",
-      "source": "rsh/Engine/compaction/compaction/src/index.ts"
+      "source": "rsh/Engine/compaction/compaction/src/errors.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/compaction.md",
       "symbol": "ManualCompactionErrorCode",
-      "source": "rsh/Engine/compaction/compaction/src/index.ts"
+      "source": "rsh/Engine/compaction/compaction/src/errors.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "NativeCompactionOwner",
+      "source": "rsh/Engine/compaction/compaction/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/compaction.md",
+      "symbol": "NativeCompactionOperations",
+      "source": "rsh/Engine/compaction/compaction/src/native.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/compaction.md",
@@ -1834,7 +1844,7 @@
     {
       "doc": "rsh/Docs/subsystems/plan.md",
       "symbol": "PlanModeConfig",
-      "source": "rsh/Modules/Official/plan/plan-mode/src/index.ts"
+      "source": "rsh/Modules/Official/plan/plan-mode/src/common.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/invariants.md",
