@@ -76,10 +76,8 @@ interface PiAiSnapshot {
   profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>
   /** Providers for exactly those profiles; never mutated once published. */
   models: Models
-  /** In-flight Codex refreshes keyed by provider; tied to this snapshot's lifetime. */
+  /** In-flight Codex catalog refreshes keyed by provider; concurrent callers share one. */
   refreshes: Map<string, Promise<void>>
-  /** Cancels work owned by this snapshot when it is invalidated or disposed. */
-  controller: AbortController
 }
 
 /** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
@@ -337,20 +335,22 @@ function codexSubscriptionProvider(base: Provider, credentials: CredentialStore)
  */
 export class PiAiAdapter extends LlmAdapter {
   private snapshot: PiAiSnapshot | undefined
+  /** Cancels shared catalog refreshes of every snapshot when the adapter is disposed. */
+  private readonly lifetime = new AbortController()
 
   constructor(private readonly config: PiAiAdapterOptions) {
     super()
   }
 
-  /** Abort snapshot work and discard the provider collection after credentials change. */
+  /** Discard the current provider collection after one of this adapter's credentials changes. */
   invalidate(): void {
-    this.snapshot?.controller.abort()
     this.snapshot = undefined
   }
 
-  /** Cancel work owned by the current provider collection and discard it. */
+  /** Cancel catalog refreshes still in flight and discard the provider collection. */
   dispose(): void {
-    this.invalidate()
+    this.lifetime.abort()
+    this.snapshot = undefined
   }
 
   /**
@@ -370,7 +370,7 @@ export class PiAiAdapter extends LlmAdapter {
           : profile.piProvider)
       }
     }
-    this.snapshot = { profiles, models, refreshes: new Map(), controller: new AbortController() }
+    this.snapshot = { profiles, models, refreshes: new Map() }
     return this.snapshot
   }
 
@@ -408,10 +408,11 @@ export class PiAiAdapter extends LlmAdapter {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
     }
     // A later refresh aborts the earlier one inside pi-ai, so one snapshot shares one flight.
-    // The shared flight uses the snapshot lifetime signal; discovery also times the /models request out itself.
+    // The shared flight ignores the caller signal and stops only on dispose; discovery times the /models request out itself.
     let refresh = snapshot.refreshes.get(provider)
     if (refresh === undefined) {
-      refresh = snapshot.models.refresh({ providers: [provider], force: true, signal: snapshot.controller.signal }).then((refreshed) => {
+      refresh = snapshot.models.refresh({ providers: [provider], force: true, signal: this.lifetime.signal }).then((refreshed) => {
+        if (refreshed.aborted) throw new LlmError('pi-ai catalog refresh aborted', 'ABORTED')
         const failure = refreshed.errors.get(provider)
         if (failure !== undefined) throw failure
       })

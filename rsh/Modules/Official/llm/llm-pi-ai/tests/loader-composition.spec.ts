@@ -306,17 +306,22 @@ describe('llm-pi-ai real dormant composition', () => {
     }
   })
 
-  it('aborts the Codex catalog refresh when the composition is disposed', async () => {
+  it.each([
+    ['aborts the shared Codex catalog refresh on dispose', 'dispose'],
+    ['keeps the shared Codex catalog refresh across a credential update', 'credential update'],
+  ] as const)('%s', async (_name, interrupt) => {
     const { ctx, settingsPath } = await loadComposition()
-    await ctx.credentials.modifyRecord(LlmPiAi.recordKeyFor('openai-codex'), () => Promise.resolve({
+    const key = LlmPiAi.recordKeyFor('openai-codex')
+    const grant = (access: string) => ctx.credentials.modifyRecord(key, () => Promise.resolve({
       kind: 'grant', payload: {
-        type: 'oauth', access: 'synthetic-account-access-token', refresh: 'synthetic-account-refresh-token',
+        type: 'oauth', access, refresh: 'synthetic-account-refresh-token',
         expires: Date.now() + 3_600_000, siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id',
         issuer: 'https://auth.openai.com', subject: 'fixture-account-subject', idToken: 'fixture-id-token',
         extAgentHostId: 'urn:uuid:fixture-host-id',
         scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
       },
     }))
+    await grant('synthetic-account-access-token')
     await writeFile(settingsPath, [
       'llm-pi-ai:', '  providers:', '    openai-codex:',
       '      transport: sse', '',
@@ -333,19 +338,25 @@ describe('llm-pi-ai real dormant composition', () => {
       signal.addEventListener('abort', () => { reject(signal.reason as Error) }, { once: true })
     }))
     const pending = ctx.llm.listModels('openai-codex')
-    let disposed = false
     try {
       await vi.waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1) })
-      await ctx.fiber.dispose()
-      disposed = true
-      context = undefined
-      expect(requestSignal?.aborted).toBe(true)
-      await pending.catch(() => undefined)
-    } finally {
-      if (!disposed) {
+      if (interrupt === 'dispose') {
         await ctx.fiber.dispose()
         context = undefined
+        expect(requestSignal?.aborted).toBe(true)
+        await pending.catch(() => undefined)
+        return
       }
+      await grant('rotated-account-access-token')
+      await new Promise(resolve => setTimeout(resolve, 0))
+      expect(requestSignal?.aborted).toBe(false)
+      release(new Response(JSON.stringify({ models: [
+        { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      ] })))
+      expect(await pending).toEqual([{
+        provider: 'openai-codex', id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', inputModalities: ['text'],
+      }])
+    } finally {
       release(new Response(JSON.stringify({ models: [] })))
       await pending.catch(() => undefined)
       fetch.mockRestore()
