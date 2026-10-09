@@ -89,8 +89,9 @@ export function createPiAiFlows(
   const flows: AuthorizationFlow[] = []
   for (const providerId of catalogProviderIds()) {
     const provider = catalogProvider(providerId)
+    // pi-ai names its ChatGPT backend login "OpenAI Codex (legacy)"; this route is SIWC.
     const loginProvider = providerId === 'openai-codex' && provider !== undefined
-      ? { ...provider, auth: { oauth: createSiwcOAuth(auth.credentials) } }
+      ? { ...provider, name: 'ChatGPT subscription (Sign in with ChatGPT)', auth: { oauth: createSiwcOAuth(auth.credentials) } }
       : provider
     const [first, ...rest] = loginMethods(loginProvider)
     if (loginProvider === undefined || first === undefined) continue

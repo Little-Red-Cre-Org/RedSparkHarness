@@ -10,7 +10,7 @@ The Desktop default remains the compatibility Host. Native Client Session RPC, f
 
 ## Decision
 
-The private Host reads `dsh.profile.runtime` from the installed profile's `package.json` before importing either assembly; `dsh.profile.config` names `rsh.profile.json`, which contains the composition. Native mode shares CLI profile validation and installation planning, supplies Electron's existing Connection carrier within the same scope plan, and activates the selected Session controller and Providers once. Its selected Client replaces the root page. Both package and export realpaths must stay within the installed profile or runtime. The planning loader's only allowed computed import is the export already resolved from a validated installed manifest.
+The private Host reads `dsh.profile.runtime` from the installed profile's `package.json` before importing either assembly; `dsh.profile.config` names `rsh.profile.json`, which contains the composition. Native mode shares CLI profile validation and installation planning, supplies Electron's existing Connection carrier within the same scope plan, and activates the selected Session controller and Providers once. Its selected Client replaces the root page. Both package and export realpaths must stay within the installed profile or runtime. Only the workspace development project, which the Desktop spawns with linked packages explicitly allowed, skips this containment and builds its Client from the workspace. The planning loader's only allowed computed import is the export already resolved from a validated installed manifest.
 
 ## Alternatives considered
 

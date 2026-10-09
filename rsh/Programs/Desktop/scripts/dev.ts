@@ -1,7 +1,7 @@
 /** Build and launch the unpackaged Electron shell against the current workspace. */
 
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -81,7 +81,10 @@ async function launchElectron(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({ options: { 'skip-build': { type: 'boolean', default: false } } })
+  const { values } = parseArgs({ options: {
+    'skip-build': { type: 'boolean', default: false },
+    'native-profile': { type: 'string' },
+  } })
   if (!values['skip-build']) {
     await runPackageScript('build', REPOSITORY_ROOT)
     await runPackageScript('build', APP_ROOT)
@@ -101,13 +104,23 @@ async function main(): Promise<void> {
     nodeVersion: process.versions.node,
     pnpmVersion,
   }
+  const projectDir = join(DEVELOPMENT_ROOT, 'project')
   prepareDevelopmentProject({
-    projectDir: join(DEVELOPMENT_ROOT, 'project'),
+    projectDir,
     cliDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'CLI'),
     hostDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'DesktopHost'),
     dependencyDir: join(REPOSITORY_ROOT, 'node_modules', '.pnpm', 'node_modules'),
     release,
   })
+  if (values['native-profile'] !== undefined) {
+    const source = resolve(process.env.INIT_CWD ?? process.cwd(), values['native-profile'])
+    copyFileSync(join(source, 'rsh.profile.json'), join(projectDir, 'rsh.profile.json'))
+    copyFileSync(join(source, 'rsh.client.json'), join(projectDir, 'rsh.client.json'))
+    const manifestPath = join(projectDir, 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { dsh: { profile: Record<string, unknown> } }
+    manifest.dsh.profile = { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' }
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
+  }
   await launchElectron()
 }
 
