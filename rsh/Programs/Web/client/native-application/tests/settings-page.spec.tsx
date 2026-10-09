@@ -439,3 +439,75 @@ it('a stale settings refresh cannot overwrite a newer one', async () => {
   expect(screen.getByLabelText<HTMLInputElement>('Code').value).toBe('keep-me')
   next.unmount()
 })
+
+it('preserves a draft reset when a newer refresh replaces it', async () => {
+  let user = { label: 'old' }
+  let revision = 1
+  let releaseSlow!: () => void
+  const slow = new Promise<void>((resolve) => { releaseSlow = resolve })
+  const row = (): NativeSettingsDescriptor => ({
+    namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user, applies: 'live', secrets: [],
+    credentialRefs: [], revision,
+  })
+  const settingsDescribe = vi.fn(async () => {
+    if (settingsDescribe.mock.calls.length === 2) await slow
+    return settingsDescription([row()])
+  })
+  const settingsMutate = vi.fn(async () => {
+    user = { label: 'canonical' }
+    revision = 2
+    return row()
+  })
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  let releaseSettle!: () => void
+  const settleGate = new Promise<void>((resolve) => { releaseSettle = resolve })
+  const actions = {
+    settingsDescribe, settingsMutate,
+    credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
+    authorizationList: vi.fn(async () => [{
+      key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }], configured: false, writable: true, attemptId: 'a1',
+    }]),
+    authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+    authorizationFrames: vi.fn(async function* () {
+      await settleGate
+      yield { type: 'settled', settlement: 'authorized' } as const
+    }),
+  } as unknown as NativeSettingsActions
+  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
+  fireEvent.change(editor, { target: { value: '{ "label": "stale" }' } })
+  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(2) })
+  releaseSettle()
+  await waitFor(() => { expect(editor.value).toBe(JSON.stringify({ label: 'canonical' }, null, 2)) })
+  releaseSlow()
+  await new Promise<void>((resolve) => { setTimeout(resolve, 20) })
+  expect(editor.value).toBe(JSON.stringify({ label: 'canonical' }, null, 2))
+})
+
+it('refresh settles authorization and drops a stale disconnect warning', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  let listed: string | undefined = 'a1'
+  const authorizationList = vi.fn(async () => [{
+    key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
+    configured: false, writable: true, ...(listed === undefined ? {} : { attemptId: listed }),
+  }])
+  const authorizationFrames = vi.fn(async function* () { throw new Error('HTTP 409: unavailable attempt') })
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
+    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
+    authorizationBegin: vi.fn(), authorizationFrames,
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+  } as unknown as NativeSettingsActions
+  const onAuthorized = vi.fn()
+  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} onAuthorized={onAuthorized} />)
+  expect(await screen.findByText(en.authorizationDisconnected)).toBeTruthy()
+  expect(onAuthorized).toHaveBeenCalledOnce()
+  listed = undefined
+  fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
+  await waitFor(() => { expect(onAuthorized).toHaveBeenCalledTimes(2) })
+  await waitFor(() => { expect(authorizationFrames).toHaveBeenCalledTimes(3) })
+  await new Promise<void>((resolve) => { setTimeout(resolve, 20) })
+  expect(screen.queryByText(en.authorizationDisconnected)).toBeNull()
+})

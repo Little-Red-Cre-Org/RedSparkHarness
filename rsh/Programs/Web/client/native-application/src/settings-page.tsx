@@ -264,7 +264,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
     {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
-    {stopped === undefined ? null : <p role="alert">{t('authorizationDisconnected')}</p>}
+    {stopped !== undefined && stopped === entry.attemptId ? <p role="alert">{t('authorizationDisconnected')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
@@ -302,10 +302,13 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [notice, setNotice] = useState<string>()
   const [refreshClick, setRefreshClick] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
+  // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
+  const resetDrafts = useRef(false)
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
     const request = ++refreshes.current
+    if (!keepDrafts) resetDrafts.current = true
     const latest = () => request === refreshes.current
     setLoading(true)
     setError(undefined)
@@ -324,9 +327,11 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       }
       const rows = description.namespaces
       if (latest()) {
+        const reset = resetDrafts.current
+        if (reset) resetDrafts.current = false
         setLimits(description.limits)
         setNamespaces(rows)
-        setDrafts(current => keepDrafts ? current : Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
+        if (reset) setDrafts(Object.fromEntries(rows.map(row => [row.namespace, pretty(row.user)])))
       }
       const refs = [...new Set(rows.flatMap(row => row.credentialRefs))]
       if (refs.length === 0) {
@@ -420,7 +425,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <button type="button" onClick={onBack}>{t('backToSessions')}</button>
     <h1>{t('settings')}</h1>
-    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void refresh(true) }}>{t('refreshSettings')}</button>
+    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
