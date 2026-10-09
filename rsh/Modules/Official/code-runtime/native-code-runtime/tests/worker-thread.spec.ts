@@ -2,6 +2,7 @@
 import { EventEmitter } from 'node:events'
 import type { PassThrough } from 'node:stream'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import type { CodeBindingNamespace, CodeJsonValue, NativeCodeRunRequest } from '../src/types.ts'
 import { encodeWorkerJson } from '../src/worker-json.ts'
 import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig, runWithExecutionStartObserver } from '../src/worker-thread.ts'
@@ -77,8 +78,14 @@ function latestWorker(): ControlledWorker {
 function runtime(config: unknown = { computeMs: 10_000, maxWallMs: 10_000 }): NativeWorkerThreadCodeRuntime {
   return new NativeWorkerThreadCodeRuntime(resolveNativeWorkerThreadConfig(config))
 }
+function session(): Session {
+  const id = SessionId('native-code-runtime-test')
+  return Session.create(id, undefined, {
+    version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: process.cwd(), isSeeded: false, delegationDepth: 0,
+  })
+}
 function request(overrides: Partial<NativeCodeRunRequest> = {}): NativeCodeRunRequest {
-  return { program: 'return 1', bindings: [], ...overrides }
+  return { program: 'return 1', bindings: [], session: session(), ...overrides }
 }
 async function flush(): Promise<void> { await new Promise<void>(resolve => setImmediate(resolve)) }
 

@@ -27,7 +27,7 @@ Each `run()` type-strips erasable TypeScript, starts a fresh worker with an empt
 
 `nativeCodeRuntimeChildPath()` resolves the private child used by process-confined Providers. The child delegates TypeScript execution and binding serialization to this package’s worker implementation; it is not an application launcher or a public package bin. The process Provider owns OS confinement and complete process-range termination.
 
-The caller may provide `NativeCodeRunRequest.onStop` to cancel its own binding calls when a started native execution stops. Providers notify once before awaiting binding replies; the caller still owns their completion and failures. Requests that resolve or reject before execution starts do not notify.
+`NativeCodeRunRequest` carries the live Native Session on the Host side, but this worker provider does not serialize it or enforce its file policy. The PTC and Headless Consumers reject this provider when the active Session policy is restricted; select the process-sandbox provider for confinement under `read-only` or `workspace-write`. That confined-only provider rejects an effective `danger-full-access` Session. The caller may provide `onStop` to cancel its own binding calls when a started native execution stops. Providers notify once before awaiting binding replies; the caller still owns their completion and failures. Requests that resolve or reject before execution starts do not notify.
 
 <a id="model-experience"></a>
 ## Model Experience

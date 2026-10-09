@@ -508,10 +508,17 @@ export class NativeHeadlessApplication implements NativeApplication {
   }
 
   /** Run code through the profile-selected Provider and convert a program failure into one tool failure. */
-  private async executeCode(call: ToolCallBlock, signal: AbortSignal): Promise<{ text: string; error?: { name: string; code: string } }> {
+  private async executeCode(
+    call: ToolCallBlock, session: Session, signal: AbortSignal,
+  ): Promise<{ text: string; error?: { name: string; code: string } }> {
     const runtime = this.codeRuntime
     if (runtime === undefined) throw new Error('native-headless: run_code requires a code runtime')
-    const result = await runtime.run({ program: codeProgram(call.arguments), bindings: [], signal })
+    const sessionPolicy = this.sandboxPolicy?.resolve({ session })
+    if (runtime.isolation !== 'process-sandbox'
+      && (sessionPolicy !== undefined ? sessionPolicy.mode !== 'danger-full-access' : this.fs.sandboxMode !== undefined)) {
+      throw new Error('native-headless: restricted file policy requires a process-sandbox code runtime')
+    }
+    const result = await runtime.run({ program: codeProgram(call.arguments), bindings: [], signal, session })
     if (result.error === undefined) return { text: JSON.stringify(result) }
     return {
       text: JSON.stringify(result),
@@ -921,7 +928,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
               } else if (config.builtinTools && call.name === 'run_code' && this.codeRuntime !== undefined) {
-                const outcome = await this.executeCode(call, signal)
+                const outcome = await this.executeCode(call, session, signal)
                 content = [{ type: 'text', text: outcome.text }]
                 if (outcome.error !== undefined) {
                   isError = true

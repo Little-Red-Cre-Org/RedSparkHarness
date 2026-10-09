@@ -91,8 +91,13 @@ export const plugin: NativePlugin = {
           },
         },
         async execute(call) {
-          if (runtime.isolation === 'process-sandbox' && policy?.config.workspaceRoot !== call.session.header.cwd) {
+          const sessionPolicy = policy?.resolve({ session: call.session })
+          if (runtime.isolation === 'process-sandbox' && sessionPolicy?.workspaceRoot !== call.session.header.cwd) {
             throw new Error('tool-code-runtime: codeRuntime sandbox workspace differs from Session cwd')
+          }
+          if (runtime.isolation !== 'process-sandbox'
+            && (sessionPolicy !== undefined ? sessionPolicy.mode !== 'danger-full-access' : filesystem.sandboxMode !== undefined)) {
+            throw new Error('tool-code-runtime: restricted file policy requires a process-sandbox code runtime')
           }
           const { code, description } = call.arguments as { code: string; description: string }
           if (description.trim().length === 0) {
@@ -123,7 +128,7 @@ export const plugin: NativePlugin = {
           let value: CodeRunResult
           try {
             value = await runtime.run({
-              program: code, bindings, signal: dispatch.signal,
+              program: code, bindings, signal: dispatch.signal, session: call.session,
               onStop() { void closeDispatch() },
             })
           }
