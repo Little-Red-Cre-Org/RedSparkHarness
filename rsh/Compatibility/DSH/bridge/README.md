@@ -26,3 +26,4 @@ The [filesystem subsystem](../../../Docs/subsystems/filesystem.md) defines the s
 | [`compat-fs-policy/`](compat-fs-policy/README.md) | Filesystem observation policy for native events |
 | [`compat-fs-sandbox/`](compat-fs-sandbox/README.md) | Policy-required sandbox filesystem Provider |
 | [`compat-tool-fs/`](compat-tool-fs/README.md) | Legacy filesystem tool and prompt contributions |
+| [`subagent-codex/`](subagent-codex/README.md) | Codex app-server subagent adapter for Cordis compatibility profiles |

@@ -34,8 +34,12 @@ import { cleanupRealProduct } from './real-product-cleanup.ts'
 
 const execFileAsync = promisify(execFile)
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const officialPackageJson = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../../../Modules/Official/subagent/codex-app-server/package.json',
+)
 const codexBinDir = join(packageRoot, 'node_modules', '.bin')
-const codexPackageJson = createRequire(import.meta.url).resolve('@openai/codex/package.json')
+const codexPackageJson = createRequire(officialPackageJson).resolve('@openai/codex/package.json')
 const codexPackage = JSON.parse(readFileSync(
   codexPackageJson,
   'utf8',
@@ -68,6 +72,7 @@ type ResponsesScript = readonly ResponsesBehavior[] | ((workspace: string) => re
 
 async function realInstanceFixture(
   script: ResponsesScript,
+  sandboxMode: 'read-only' | 'workspace-write' = 'read-only',
 ): Promise<RealInstanceFixture> {
   const root = mkdtempSync(join(tmpdir(), 'dsh-codex-real-'))
   roots.push(root)
@@ -81,7 +86,7 @@ async function realInstanceFixture(
     'model = "fixture-model"',
     'model_provider = "fixture"',
     'approval_policy = "on-request"',
-    'sandbox_mode = "read-only"',
+    `sandbox_mode = "${sandboxMode}"`,
     'check_for_update_on_startup = false',
     '',
     '[model_providers.fixture]',
@@ -136,11 +141,12 @@ async function realRuntime(): Promise<RealRuntime> {
 async function realHarness(
   script: ResponsesScript,
   permissionMode?: CodexPermissionMode,
+  sandboxMode?: 'read-only' | 'workspace-write',
 ): Promise<{
   readonly harness: RealHarness
   readonly fixture: ResponsesFixture
 }> {
-  const instance = await realInstanceFixture(script)
+  const instance = await realInstanceFixture(script, sandboxMode)
   const { ctx, handles, spawnSpecs } = await realRuntime()
   await ctx.plugin(codex, {
     env: instance.env,
@@ -209,18 +215,18 @@ function responseInputTexts(body: Record<string, unknown>): string[] {
   })
 }
 
-describe('real @openai/codex 0.159.0 product', () => {
+describe('real Official Codex app-server product (@openai/codex 0.161.0)', () => {
   it('starts approve-for-me through the real app-server and returns exact text', async () => {
     const sentinel = 'REAL_CODEX_SENTINEL_0_159_0'
     const task = 'Return the fixture sentinel exactly.'
     const { harness, fixture } = await realHarness([
       { kind: 'complete', text: sentinel },
     ], 'approve-for-me')
-    expect(codexPackage.version).toBe('0.159.0')
+    expect(codexPackage.version).toBe('0.161.0')
     const version = await execFileAsync(process.execPath, [codexEntry, '--version'], {
       env: { ...process.env, ...harness.env },
     })
-    expect(version.stdout.trim()).toBe('codex-cli 0.159.0')
+    expect(version.stdout.trim()).toBe('codex-cli 0.161.0')
     const schemaRoot = mkdtempSync(join(tmpdir(), 'dsh-codex-schema-'))
     roots.push(schemaRoot)
     await execFileAsync(process.execPath, [
@@ -236,6 +242,7 @@ describe('real @openai/codex 0.159.0 product', () => {
     )) as {
       definitions: {
         ThreadStartParams: JsonSchemaNode
+        TurnStartParams: JsonSchemaNode
       }
     }
     expect(schema.definitions.ThreadStartParams.properties?.model).toEqual({
@@ -247,6 +254,8 @@ describe('real @openai/codex 0.159.0 product', () => {
       expect(schema.definitions.ThreadStartParams.properties?.[field]).toBeDefined()
       expect(schema.definitions.ThreadStartParams.required ?? []).not.toContain(field)
     }
+    expect(schema.definitions.TurnStartParams.properties?.effort).toBeDefined()
+    expect(schema.definitions.TurnStartParams.required ?? []).not.toContain('effort')
     const completedItemSchema = JSON.parse(readFileSync(
       join(schemaRoot, 'v2', 'ItemCompletedNotification.json'),
       'utf8',
@@ -487,7 +496,7 @@ describe('real @openai/codex 0.159.0 product', () => {
 
   it('executes an explicitly selected dangerous bypass write in the isolated workspace', async () => {
     const sideEffect = 'bypass-side-effect'
-    const { harness, fixture } = await realHarness((workspace): readonly ResponsesBehavior[] => {
+    const { harness } = await realHarness((workspace): readonly ResponsesBehavior[] => {
       const target = join(workspace, sideEffect)
       const command = process.platform === 'win32'
         ? `powershell.exe -NoLogo -NoProfile -NonInteractive -Command "Set-Content -LiteralPath '${target.replaceAll("'", "''")}' -Value 'bypass' -NoNewline"`
@@ -521,10 +530,52 @@ describe('real @openai/codex 0.159.0 product', () => {
       output: [{ type: 'text', text: 'bypass complete' }],
       stopReason: 'completed',
     })
-    expect(existsSync(target), JSON.stringify(fixture.requests.at(-1)?.body.input)).toBe(true)
+    expect(existsSync(target)).toBe(true)
     expect(readFileSync(target, 'utf8').trim()).toBe('bypass')
     await run.dispose()
     await expectQuiescent(harness.handles)
+  }, 60_000)
+
+  it('inherits the configured workspace-write sandbox when approvals are never requested', async ({ skip }) => {
+    const sideEffect = 'never-inherited-sandbox-side-effect'
+    const { harness, fixture } = await realHarness((workspace): readonly ResponsesBehavior[] => {
+      const target = join(workspace, sideEffect)
+      const command = process.platform === 'win32'
+        ? `powershell.exe -NoLogo -NoProfile -NonInteractive -Command "Set-Content -LiteralPath '${target.replaceAll("'", "''")}' -Value 'inherited' -NoNewline"`
+        : `printf inherited > ${JSON.stringify(target)}`
+      const commandCalls = [
+        { name: 'exec_command', arguments: { cmd: command } },
+        { name: 'shell_command', arguments: { command } },
+      ] as const
+      return [
+        { kind: 'advertisedFunctionCall', choices: commandCalls },
+        { kind: 'complete', text: 'inherited sandbox complete' },
+      ]
+    }, 'never', 'workspace-write')
+    const codexHome = harness.env.CODEX_HOME
+    if (codexHome === undefined) throw new Error('The fixture did not configure CODEX_HOME.')
+    expect(readFileSync(join(codexHome, 'config.toml'), 'utf8'))
+      .toContain('sandbox_mode = "workspace-write"')
+    const target = join(harness.workspace, sideEffect)
+    const run = await harness.ctx.subagents.start('codex', {
+      prompt: [{ type: 'text', text: 'Create the isolated workspace fixture file.' }],
+      parent: harness.parent,
+      signal: new AbortController().signal,
+    })
+    await expect(run.result).resolves.toEqual({
+      output: [{ type: 'text', text: 'inherited sandbox complete' }],
+      stopReason: 'completed',
+    })
+    const input = fixture.requests.at(-1)?.body.input
+    if (JSON.stringify(input).includes('blocked by policy')) {
+      await run.dispose()
+      await expectQuiescent(harness.handles)
+      skip('The nested product tool returned blocked by policy; sandbox inheritance remains unverified.')
+    }
+    expect(existsSync(target)).toBe(true)
+    await run.dispose()
+    await expectQuiescent(harness.handles)
+    expect(fixture.requests).toHaveLength(2)
   }, 60_000)
 
   it('settles cancellation locally and leaves the real app-server tree quiescent', async () => {

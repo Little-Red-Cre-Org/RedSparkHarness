@@ -52,6 +52,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/interaction/native-approval',
   'rsh/Modules/Official/interaction/user-question-broker',
   'rsh/Modules/Official/subagent/sdk-child',
+  'rsh/Modules/Official/subagent/codex-app-server',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
@@ -96,6 +97,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Engine/llm/native-model-selection', ['host']],
   ['rsh/Modules/Official/interaction/user-question-broker', ['host']],
   ['rsh/Modules/Official/subagent/sdk-child', ['host']],
+  ['rsh/Modules/Official/subagent/codex-app-server', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Modules/Official/code-runtime/native-code-runtime', ['host']],
@@ -314,6 +316,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session/session-persistence', ['./deletion']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
   ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],
+  ['rsh/Modules/Official/subagent/codex-app-server', ['./wire']],
 ])
 
 /** Additional native exports compiled only for the Host. */
@@ -373,5 +376,6 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Core/storage/storage/backend', ['host']],
   ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
   ['rsh/Modules/Official/shell/shell-env/definition', ['host']],
+  ['rsh/Modules/Official/subagent/codex-app-server/wire', ['host']],
   ['rsh/Engine/preset/agent-presets/native-definition', ['host']],
 ])

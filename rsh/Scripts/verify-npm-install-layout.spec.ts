@@ -11,9 +11,16 @@ function validLayout(): NpmPackageLock {
     packages: {
       '': { dependencies: { '@deepseek-ai/dsh': '0.2.0', 'dsh-previous': 'npm:@deepseek-ai/dsh@0.1.0' } },
       'node_modules/@deepseek-ai/cordis': { version: '4.0.1' },
+      'node_modules/react': { version: '18.3.1' },
+      'node_modules/react-dom': { version: '18.3.1', peerDependencies: { react: '^18.2.0' } },
       'node_modules/@deepseek-ai/dsh': {
         version: '0.2.0',
-        dependencies: { '@deepseek-ai/dsh-child': '^0.2.0' },
+        dependencies: {
+          '@deepseek-ai/dsh-child': '^0.2.0',
+          '@deepseek-ai/dsh-sdk-client': '^0.2.0',
+          react: '^18.2.0',
+          'react-dom': '^18.2.0',
+        },
         peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
       },
       'node_modules/@deepseek-ai/dsh-child': {
@@ -21,11 +28,35 @@ function validLayout(): NpmPackageLock {
         dependencies: { '@deepseek-ai/dsh-leaf': '^0.2.0' },
       },
       'node_modules/@deepseek-ai/dsh-leaf': { version: '0.2.0' },
+      'node_modules/@deepseek-ai/dsh-sdk-client': {
+        version: '0.2.0',
+        dependencies: { '@deepseek-ai/dsh': '0.2.0' },
+      },
       'node_modules/dsh-previous': {
         name: '@deepseek-ai/dsh',
         version: '0.1.0',
-        dependencies: { '@deepseek-ai/dsh-child': '^0.1.0' },
+        dependencies: {
+          '@deepseek-ai/dsh-child': '^0.1.0',
+          '@deepseek-ai/dsh-sdk-client': '^0.1.0',
+          react: '^18.2.0',
+          'react-dom': '^18.2.0',
+        },
         peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+      },
+      'node_modules/dsh-previous/node_modules/@deepseek-ai/dsh': {
+        name: '@deepseek-ai/dsh',
+        version: '0.1.0',
+        dependencies: {
+          '@deepseek-ai/dsh-child': '^0.1.0',
+          '@deepseek-ai/dsh-sdk-client': '^0.1.0',
+          react: '^18.2.0',
+          'react-dom': '^18.2.0',
+        },
+        peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+      },
+      'node_modules/dsh-previous/node_modules/@deepseek-ai/dsh-sdk-client': {
+        version: '0.1.0',
+        dependencies: { '@deepseek-ai/dsh': '0.1.0' },
       },
       'node_modules/dsh-previous/node_modules/@deepseek-ai/dsh-child': {
         version: '0.1.0',
@@ -37,17 +68,30 @@ function validLayout(): NpmPackageLock {
 }
 
 describe('npm install layout verifier', () => {
-  it('creates two incompatible versions of every DSH package', () => {
+  it('preserves an exact SDK pin and accepts its isolated two-release layout', () => {
     const index: RegistryIndex = new Map([
       ['@deepseek-ai/dsh', new Map([['0.1.1-rc.2', {
         name: '@deepseek-ai/dsh',
         version: '0.1.1-rc.2',
-        dependencies: { '@deepseek-ai/dsh-child': '^0.1.1-rc.2' },
+        dependencies: {
+          '@deepseek-ai/dsh-child': '^0.1.1-rc.2',
+          '@deepseek-ai/dsh-sdk-client': '^0.1.1-rc.2',
+        },
         peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+      }]])],
+      ['@deepseek-ai/dsh-sdk-client', new Map([['0.1.1-rc.2', {
+        name: '@deepseek-ai/dsh-sdk-client',
+        version: '0.1.1-rc.2',
+        dependencies: { '@deepseek-ai/dsh': '0.1.1-rc.2' },
       }]])],
       ['@deepseek-ai/dsh-child', new Map([['0.1.1-rc.2', {
         name: '@deepseek-ai/dsh-child',
         version: '0.1.1-rc.2',
+      }]])],
+      ['@deepseek-ai/dsh-sdk-client', new Map([['0.1.1-rc.2', {
+        name: '@deepseek-ai/dsh-sdk-client',
+        version: '0.1.1-rc.2',
+        dependencies: { '@deepseek-ai/dsh': '0.1.1-rc.2' },
       }]])],
       ['@deepseek-ai/cordis', new Map([['4.0.1', {
         name: '@deepseek-ai/cordis',
@@ -58,35 +102,32 @@ describe('npm install layout verifier', () => {
     const dual = buildDualDshRegistry(index, '0.1.1-rc.2')
 
     expect([...dual.get('@deepseek-ai/dsh')?.keys() ?? []]).toEqual(['0.1.0', '0.2.0'])
-    expect(dual.get('@deepseek-ai/dsh')?.get('0.1.0')).toMatchObject({
-      version: '0.1.0',
-      dependencies: { '@deepseek-ai/dsh-child': '^0.1.0' },
-      peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+    expect(dual.get('@deepseek-ai/dsh')?.get('0.1.0')?.dependencies).toEqual({
+      '@deepseek-ai/dsh-child': '^0.1.0',
+      '@deepseek-ai/dsh-sdk-client': '^0.1.0',
     })
-    expect(dual.get('@deepseek-ai/dsh')?.get('0.2.0')).toMatchObject({
-      version: '0.2.0',
-      dependencies: { '@deepseek-ai/dsh-child': '^0.2.0' },
+    expect(dual.get('@deepseek-ai/dsh-sdk-client')?.get('0.1.0')?.dependencies).toEqual({
+      '@deepseek-ai/dsh': '0.1.0',
     })
     expect(dual.get('@deepseek-ai/cordis')).toBe(index.get('@deepseek-ai/cordis'))
-  })
-
-  it('accepts isolated DSH releases with one shared Cordis installation', () => {
     expect(assertDualDshInstallLayout(validLayout())).toEqual({
-      dshPackagesPerVersion: 3,
-      checkedDshEdges: 4,
+      dshPackagesPerVersion: 4,
+      checkedDshEdges: 10,
     })
   })
 
-  it.each([
-    ['react', 'node_modules/react'],
-    ['react-dom', 'node_modules/react-dom'],
-    ['react', 'node_modules/dsh-previous/node_modules/react'],
-    ['react-dom', 'node_modules/dsh-previous/node_modules/react-dom'],
-  ])('rejects browser runtime %s installed at %s in the DSH-only consumer', (name, path) => {
+  it('rejects duplicate React copies and versions outside the CLI declarations', () => {
     const layout = validLayout()
-    const packages = { ...layout.packages, [path]: { version: '18.3.1' } }
+    const packages = {
+      ...layout.packages,
+      'node_modules/react': { version: '17.0.0' },
+      'node_modules/react-dom': { version: '17.0.0', peerDependencies: { react: '^18.2.0' } },
+      'node_modules/dsh-previous/node_modules/react': { version: '18.3.1' },
+      'node_modules/dsh-previous/node_modules/react-dom': { version: '18.3.1' },
+    }
+
     expect(() => assertDualDshInstallLayout({ ...layout, packages })).toThrow(
-      `${path}: ${name} is a browser build input`,
+      /expected one shared react[\s\S]*expected one shared react-dom[\s\S]*range \^18\.2\.0 does not include 17\.0\.0/,
     )
   })
 

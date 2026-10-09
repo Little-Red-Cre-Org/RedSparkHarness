@@ -4,7 +4,7 @@
 import { resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
 import type {} from '@deepseek-ai/dsh-subagent'
 import type {} from '@deepseek-ai/dsh-tools'
-import { bootProductionProfile } from '../../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
+import { bootProductionProfile } from '../../../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
 
 const configPath = process.argv[2]
 const bundlePatchPath = process.argv[3]
