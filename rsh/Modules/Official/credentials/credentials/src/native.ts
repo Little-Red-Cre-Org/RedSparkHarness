@@ -56,9 +56,29 @@ export interface NativeCredentials {
   readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
   listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
+  /**
+   * Read-decide-replace one record under the Provider's write queue.
+   * @param key - record address.
+   * @param mutate - decides the next record from the current one; undefined keeps it.
+   * @param options - `signal` is checked inside the queue before the read and
+   *   again before the commit; a write already committing finishes, a queued
+   *   or deciding one rejects with the signal's reason and writes nothing.
+   * @returns the committed record, or the unchanged current one.
+   */
   modifyRecord(
     key: CredentialKey,
     mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+    options?: NativeCredentialWriteOptions,
   ): Promise<CredentialRecord | undefined>
-  deleteRecord(key: CredentialKey): Promise<void>
+  /**
+   * Remove one record under the Provider's write queue.
+   * @param key - record address.
+   * @param options - `signal` is checked inside the queue before the removal commits.
+   */
+  deleteRecord(key: CredentialKey, options?: NativeCredentialWriteOptions): Promise<void>
+}
+
+/** Cancellation for one queued record write. */
+export interface NativeCredentialWriteOptions {
+  readonly signal?: AbortSignal
 }

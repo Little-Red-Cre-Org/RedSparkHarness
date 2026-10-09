@@ -28,16 +28,18 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
 
+import { AuthorizationDeclinedError, AuthorizationError } from './errors.ts'
 import type {
-  AuthorizationEntry, AuthorizationMethod, AuthorizationNotice, AuthorizationOutcome, AuthorizationPrompt,
+  AuthorizationEntry, AuthorizationFlow, AuthorizationNotice, AuthorizationOutcome, AuthorizationPrompt,
   AuthorizationSettlement,
 } from './types.ts'
 
+export { AuthorizationDeclinedError, AuthorizationError } from './errors.ts'
 export type {
-  AuthorizationEntry, AuthorizationMethod, AuthorizationNotice, AuthorizationOutcome, AuthorizationPrompt,
-  AuthorizationPromptOption, AuthorizationSettlement, AuthorizationStatus,
+  AuthorizationEntry, AuthorizationFlow, AuthorizationMethod, AuthorizationNotice, AuthorizationOutcome,
+  AuthorizationPrompt, AuthorizationPromptOption, AuthorizationSession, AuthorizationSettlement,
+  AuthorizationStatus,
 } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -56,84 +58,6 @@ declare module '@deepseek-ai/cordis' {
      */
     'authorization/settled'(key: CredentialKey, settlement: AuthorizationSettlement): void
   }
-}
-
-/** Stable error taxonomy for authorization failures. */
-export class AuthorizationError extends HarnessError {
-  constructor(message: string, code: string, options?: ErrorOptions) {
-    super(message, code, options)
-    this.name = 'AuthorizationError'
-  }
-}
-
-/**
- * The rejection an {@link AuthorizationInteraction.prompt} uses to say the
- * human declined — dismissed the question, chose not to answer — rather than
- * that the surface broke. An attempt whose flow fails after a prompt was
- * declined settles as `cancelled`, the same outcome as a withdrawn signal,
- * because the human saying no is a refusal, not a breakage. Only a human's
- * "no" may reject with this class: a prompt withdrawn by its own `signal` (a
- * flow retiring the losing question of a race) must reject with something
- * else, or a later genuine failure would be misread as a decline.
- */
-export class AuthorizationDeclinedError extends AuthorizationError {
-  constructor(message = 'the authorization prompt was declined') {
-    super(message, 'DECLINED')
-    this.name = 'AuthorizationDeclinedError'
-  }
-}
-
-/**
- * What a running flow is given to talk to the human. Every member is scoped to
- * one attempt: the flow neither knows nor chooses which surface is listening.
- */
-export interface AuthorizationSession {
-  /** The method id the caller picked, always one this flow declared. */
-  readonly method: string
-  /** Aborted when the caller withdraws or `cancel()` is called for this key. */
-  readonly signal: AbortSignal
-  /**
-   * Report progress, or tell the human what to do next. Fire-and-forget: a
-   * surface that cannot render a notice must not stall the flow.
-   * @param notice - the message, and any page or code it refers to.
-   */
-  notify(notice: AuthorizationNotice): void
-  /**
-   * Ask the human a question the flow cannot answer for itself.
-   * @param prompt - what to ask, and how it should be presented.
-   * @returns what the human typed, or the chosen option's id.
-   * @throws when the human declines, or the prompt's own signal withdraws it.
-   */
-  prompt(prompt: AuthorizationPrompt): Promise<string>
-}
-
-/**
- * A plugin's knowledge of how to obtain one credential. The flow owns the
- * write: `run()` resolving means the record for `key` is committed through
- * `ctx.credentials` during that run, which the seam confirms — a commit
- * observed within the attempt, still present after it — before reporting
- * success. Committing inside the flow is what lets a library that persists
- * through its own store adapter (pi-ai's `Models.login()`) stay the single
- * writer instead of being copied back out and written twice.
- */
-export interface AuthorizationFlow {
-  /** The credential record this flow writes. Its scope names the owning plugin. */
-  readonly key: CredentialKey
-  /** User-facing name of what is being authorized. */
-  readonly label: string
-  /**
-   * The methods offered, most preferred first; a caller naming none gets the
-   * first. Typed non-empty because a flow with nothing to run is a flow that
-   * cannot be begun, and the type says so at the one place flows are written.
-   */
-  readonly methods: readonly [AuthorizationMethod, ...AuthorizationMethod[]]
-  /**
-   * Run one attempt to obtain and commit the credential.
-   * @param session - the chosen method, the cancellation signal, and the interaction callbacks.
-   * @returns once the record is committed.
-   * @throws when the attempt fails or the human declines.
-   */
-  run(session: AuthorizationSession): Promise<void>
 }
 
 /**

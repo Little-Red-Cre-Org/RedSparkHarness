@@ -5676,6 +5676,10 @@ importers:
         version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/credentials/authorization:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5689,6 +5693,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Modules/Official/credentials/credentials:
     dependencies:
