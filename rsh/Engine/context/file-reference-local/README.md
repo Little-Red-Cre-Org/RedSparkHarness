@@ -70,7 +70,8 @@ The provider maintains one reusable `WorkspaceFileSearch` per agent, rooted at t
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `LocalFileReferenceService`: config validation, per-agent searches, prompt install |
-| [`src/search.ts`](src/search.ts) | `WorkspaceFileSearch`: traversal, ranking, exclusion, staleness and background rebuild |
+| [`src/search.ts`](src/search.ts) | Cordis filesystem adapter for the shared traversal and ranking core |
+| [`../file-reference/src/search-core.ts`](../file-reference/src/search-core.ts) | Provider-neutral bounded index, ranking, exclusion, staleness and background rebuild |
 | — | No runtime invariant companion is published; per-agent indexes are private advisory caches whose invalidation and disposal are observed directly through service tests. |
 
 ### Main flow
@@ -86,7 +87,7 @@ A `list(agent, query, signal)` call either lists one directory's entries or read
 
 Read these pages when the package-level contract is not enough. They move from the seam this provider implements to the tools its candidates point at.
 
-- [File-reference seam](../file-reference/README.md) — the service contract and `@file` grammar this provider implements.
+- [File-reference seam](../file-reference/README.md) — the service contracts, Native provider entry, and `@file` grammar this provider implements.
 - [Session-reference subsystem](../../../Docs/subsystems/session-reference.md) — the shared file-reference contract behind host UIs.
 - [Filesystem tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs) — the `read` tool whose namespace discovery must match.
 - [Context group map](../README.md) — sibling request-context packages.

@@ -238,6 +238,7 @@ export function shippedNativeProfileComposition(
       { id: 'fs', plugin: '@deepseek-ai/dsh-fs-sandbox', scope: ROOT },
       { id: 'policy', plugin: '@deepseek-ai/dsh-fs-observation-policy', scope: ROOT },
       { id: 'file-tools', plugin: '@deepseek-ai/dsh-tool-fs', scope: ROOT },
+      ...(profile === 'native-headless' ? [{ id: 'file-reference', plugin: '@deepseek-ai/dsh-native-file-reference-local', scope: ROOT }] : []),
       { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: ROOT },
       { id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: ROOT },
       { id: 'code-runtime', plugin: '@deepseek-ai/dsh-code-runtime-process-sandbox', scope: ROOT },

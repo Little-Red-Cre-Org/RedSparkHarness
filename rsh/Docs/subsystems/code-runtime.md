@@ -39,8 +39,10 @@ interface CodeRunRequest {
 Native Hosts also accept `NativeCodeRunRequest`, which adds a stop callback for cancelling caller-owned bindings. It is called once when execution that has started stops, before the Provider waits for those calls to settle; a request resolved or rejected before execution starts does not notify. Cordis `CodeRuntimeDefinition` Providers accept only the shared request.
 
 ```ts type-equiv
-/** Native-only run request with a stop notification for caller-owned bindings. */
+/** Native-only request; Session stays host-side so Providers can resolve its policy. */
 interface NativeCodeRunRequest extends CodeRunRequest {
+  /** Exact live Session for this run; Providers use it for scoped execution policy and never serialize it to a worker. */
+  session: Session
   /**
    * Notify the caller once a started native execution stops, before waiting
    * for caller-owned binding calls. Use the notification to begin cancelling

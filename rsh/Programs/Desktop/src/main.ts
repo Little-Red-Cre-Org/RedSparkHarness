@@ -530,11 +530,18 @@ async function main(): Promise<void> {
     window.webContents.on('preload-error', (_event, _path, error) => {
       void showEmergencyError(error).catch((failure: unknown) => { console.error(failure) })
     })
+    let reloadedAfterCrash = false
     window.webContents.on('render-process-gone', (_event, details) => {
+      const crashedApplication = petUpdatesAllowed
       navigation = undefined
       emergencyDocument = false
       petUpdatesAllowed = false
       desktopPet.close()
+      if (crashedApplication && !reloadedAfterCrash && backendState().phase === 'ready') {
+        reloadedAfterCrash = true
+        void navigateMain(applicationUrl).catch(showStartupError).catch((failure: unknown) => { console.error(failure) })
+        return
+      }
       void showStartupError(new Error(`Desktop renderer exited: ${details.reason}`))
         .catch((failure: unknown) => { console.error(failure) })
     })

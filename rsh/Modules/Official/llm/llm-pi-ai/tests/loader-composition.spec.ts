@@ -17,6 +17,7 @@ import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import LlmRuntime, { createMessage, createUserMessage, userAgent } from '@deepseek-ai/dsh-llm'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm'
 import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
 import AuthorizationService from '@deepseek-ai/dsh-authorization'
 import FileSettingsProvider from '@deepseek-ai/dsh-settings-file'
@@ -101,7 +102,7 @@ async function loadComposition(): Promise<{ ctx: Context; settingsPath: string }
 }
 
 describe('llm-pi-ai real dormant composition', () => {
-  it('activates the Codex subscription route and sends GPT-6.1 tools with the stored OAuth grant', async () => {
+  it('loads the account catalog before first inference and streams public Responses', async () => {
     const message = { type: 'message', id: 'msg_codex', role: 'assistant', status: 'completed',
       content: [{ type: 'output_text', text: 'hello from Codex', annotations: [] }] }
     const events = [
@@ -113,39 +114,196 @@ describe('llm-pi-ai real dormant composition', () => {
       { type: 'response.completed', response: { id: 'resp_codex', status: 'completed', output: [message],
         usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 } } },
     ]
-    const server = await mockServer([{ events: events.map(event => JSON.stringify(event)) }])
     const { ctx, settingsPath } = await loadComposition()
     const key = LlmPiAi.recordKeyFor('openai-codex')
     expect(ctx.authorization.describe(key)?.methods.map(method => method.id)).toEqual(['oauth'])
-    const access = `test.${Buffer.from(JSON.stringify({
-      'https://api.openai.com/auth': { chatgpt_account_id: 'test-account' },
-    })).toString('base64url')}.test`
+    const access = 'synthetic-account-access-token'
     await ctx.credentials.modifyRecord(key, () => Promise.resolve({
-      kind: 'grant', payload: { type: 'oauth', access, refresh: 'test-refresh', expires: Date.now() + 3_600_000 },
+      kind: 'grant', payload: {
+        type: 'oauth', access, refresh: 'synthetic-account-refresh-token', expires: Date.now() + 3_600_000,
+        siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id', issuer: 'https://auth.openai.com',
+        subject: 'fixture-account-subject', idToken: 'fixture-id-token', extAgentHostId: 'urn:uuid:fixture-host-id',
+        scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
+      },
     }))
+    const fetch = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [
+        { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      ] })))
+      .mockResolvedValueOnce(new Response(
+        events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+        { headers: { 'content-type': 'text/event-stream' } },
+      ))
     await writeFile(settingsPath, [
       'llm-pi-ai:', '  providers:', '    openai-codex:',
-      '      transport: sse', `      baseURL: ${server.url}`, '',
+      '      transport: sse', '',
     ].join('\n'))
-    await vi.waitFor(() => {
-      expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
-    }, { timeout: 5000 })
-    expect((await ctx.llm.listModels('openai-codex')).map(model => model.id)).toContain('gpt-6.1-sol')
-    const result = await assemble(ctx, {
-      provider: 'openai-codex', model: 'gpt-6.1-sol', messages: [],
-      tools: [{ name: 'lookup', description: 'Look up a value.', parameters: { type: 'object' } }],
-    })
-    expect(result.finish).toEqual({ kind: 'stop' })
-    expect(result.message.content).toEqual([{ type: 'text', text: 'hello from Codex' }])
-    expect(server.paths).toEqual(['/codex/responses'])
-    expect(server.headers[0]?.authorization).toBe(`Bearer ${access}`)
-    expect(server.headers[0]?.['chatgpt-account-id']).toBe('test-account')
-    expect(server.requests[0]).toMatchObject({ model: 'gpt-6.1-sol', store: false, stream: true,
-      tools: [{ type: 'function', name: 'lookup' }] })
+    try {
+      await vi.waitFor(() => {
+        expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
+      }, { timeout: 5000 })
+      const result = await assemble(ctx, {
+        provider: 'openai-codex', model: 'gpt-6.1-sol', system: 'You are the harness.',
+        messages: [createMessage({
+          role: 'assistant',
+          content: [{ type: 'tool-call', id: 'call_lookup' as ToolCallId, name: 'lookup', arguments: '{}' }],
+          source: {
+            kind: 'model', provider: 'openai-codex', model: 'gpt-6.1-sol',
+            replayState: {
+              response: {
+                kind: 'pi-ai', version: 2, api: 'openai-responses', provider: 'openai-codex',
+                model: 'gpt-6.1-sol', stopReason: 'toolUse',
+              },
+              blocks: [{ type: 'tool-call' }],
+            },
+          },
+        })],
+        tools: [{ name: 'lookup', description: 'Look up a value.', parameters: { type: 'object' } }],
+      })
+      expect(result.finish).toEqual({ kind: 'stop' })
+      expect(result.message.content).toEqual([{ type: 'text', text: 'hello from Codex' }])
+      expect(fetch).toHaveBeenCalledTimes(2)
+      const [modelsUrl, modelsOptions] = fetch.mock.calls[0]!
+      expect(modelsUrl).toBe('https://api.openai.com/v1/models')
+      expect(new Headers(modelsOptions?.headers).get('authorization')).toBe(`Bearer ${access}`)
+      const [responsesUrl, responsesOptions] = fetch.mock.calls[1]!
+      expect(responsesUrl).toBe('https://api.openai.com/v1/responses')
+      expect(new Headers(responsesOptions?.headers).get('authorization')).toBe(`Bearer ${access}`)
+      const body = JSON.parse(responsesOptions?.body as string) as {
+        input: { role?: string; type?: string; content?: string; name?: string; namespace?: string }[]
+        tools: { type: string; name: string; tools?: { type: string; name: string }[] }[]
+      }
+      expect(body).toMatchObject({ model: 'gpt-6.1-sol', store: false, stream: true })
+      expect(body.input.find(item => item.role === 'developer')?.content).toContain('You are the harness.')
+      expect(body.input.some(item => item.role === 'system')).toBe(false)
+      expect(body.input).toContainEqual(expect.objectContaining({
+        type: 'function_call', name: 'lookup', namespace: 'harness',
+      }))
+      expect(body.tools).toEqual([expect.objectContaining({
+        type: 'namespace',
+        name: 'harness',
+        tools: [expect.objectContaining({ type: 'function', name: 'lookup' })],
+      })])
+    } finally {
+      fetch.mockRestore()
+    }
     const llm = ctx.llm
     await ctx.fiber.dispose()
     context = undefined
     expect(llm.listProviders()).toEqual([])
+  })
+
+  it('replays a real Codex reasoning and tool-call turn natively on the next turn', async () => {
+    const reasoning = { type: 'reasoning', id: 'rs_codex', summary: [], encrypted_content: 'encrypted-reasoning' }
+    const call = { type: 'function_call', id: 'fc_codex', call_id: 'call_codex', name: 'lookup',
+      arguments: '{}', namespace: 'harness', status: 'completed' }
+    const answer = { type: 'message', id: 'msg_codex', role: 'assistant', status: 'completed',
+      content: [{ type: 'output_text', text: 'done', annotations: [] }] }
+    const sse = (events: unknown[]): Response => new Response(
+      events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+      { headers: { 'content-type': 'text/event-stream' } },
+    )
+    const { ctx, settingsPath } = await loadComposition()
+    await ctx.credentials.modifyRecord(LlmPiAi.recordKeyFor('openai-codex'), () => Promise.resolve({
+      kind: 'grant', payload: {
+        type: 'oauth', access: 'synthetic-account-access-token', refresh: 'synthetic-account-refresh-token',
+        expires: Date.now() + 3_600_000, siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id',
+        issuer: 'https://auth.openai.com', subject: 'fixture-account-subject', idToken: 'fixture-id-token',
+        extAgentHostId: 'urn:uuid:fixture-host-id',
+        scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
+      },
+    }))
+    const fetch = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [
+        { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      ] })))
+      .mockResolvedValueOnce(sse([
+        { type: 'response.output_item.added', output_index: 0, item: { ...reasoning, encrypted_content: undefined } },
+        { type: 'response.output_item.done', output_index: 0, item: reasoning },
+        { type: 'response.output_item.added', output_index: 1, item: { ...call, arguments: '' } },
+        { type: 'response.function_call_arguments.delta', output_index: 1, item_id: 'fc_codex', delta: '{}' },
+        { type: 'response.output_item.done', output_index: 1, item: call },
+        { type: 'response.completed', response: { id: 'resp_1', status: 'completed', output: [reasoning, call],
+          usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 } } },
+      ]))
+      .mockResolvedValueOnce(sse([
+        { type: 'response.output_item.added', output_index: 0, item: { ...answer, content: [] } },
+        { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'done' },
+        { type: 'response.output_item.done', output_index: 0, item: answer },
+        { type: 'response.completed', response: { id: 'resp_2', status: 'completed', output: [answer],
+          usage: { input_tokens: 3, output_tokens: 4, total_tokens: 7 } } },
+      ]))
+    await writeFile(settingsPath, ['llm-pi-ai:', '  providers:', '    openai-codex:', '      transport: sse', ''].join('\n'))
+    try {
+      await vi.waitFor(() => {
+        expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
+      }, { timeout: 5000 })
+      const tools = [{ name: 'lookup', description: 'Look up a value.', parameters: { type: 'object' } }]
+      const first = await assemble(ctx, { provider: 'openai-codex', model: 'gpt-6.1-sol', messages: [], tools })
+      const toolCall = first.message.content.find(block => block.type === 'tool-call')
+      expect(toolCall).toMatchObject({ name: 'lookup' })
+      await assemble(ctx, {
+        provider: 'openai-codex', model: 'gpt-6.1-sol', tools,
+        messages: [first.message, createUserMessage({
+          content: [{ type: 'tool-result', toolCallId: toolCall!.id, content: [{ type: 'text', text: '42' }] }],
+          source: { kind: 'plugin', plugin: 'test' },
+        })],
+      })
+      const body = JSON.parse(fetch.mock.calls[2]![1]?.body as string) as { input: unknown[] }
+      expect(body.input).toContainEqual(expect.objectContaining({ type: 'reasoning', encrypted_content: 'encrypted-reasoning' }))
+      expect(body.input).toContainEqual(expect.objectContaining({
+        type: 'function_call', id: 'fc_codex', call_id: 'call_codex', namespace: 'harness',
+      }))
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
+  it('shares one Codex catalog refresh across concurrent listings', async () => {
+    const { ctx, settingsPath } = await loadComposition()
+    const key = LlmPiAi.recordKeyFor('openai-codex')
+    await ctx.credentials.modifyRecord(key, () => Promise.resolve({
+      kind: 'grant', payload: {
+        type: 'oauth', access: 'synthetic-account-access-token', refresh: 'synthetic-account-refresh-token',
+        expires: Date.now() + 3_600_000, siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id',
+        issuer: 'https://auth.openai.com', subject: 'fixture-account-subject', idToken: 'fixture-id-token',
+        extAgentHostId: 'urn:uuid:fixture-host-id',
+        scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
+      },
+    }))
+    let released = false
+    let release = (_response: Response): void => {}
+    const gate = new Promise<Response>((resolve) => {
+      release = (response) => { released = true; resolve(response) }
+    })
+    await writeFile(settingsPath, [
+      'llm-pi-ai:', '  providers:', '    openai-codex:',
+      '      transport: sse', '',
+    ].join('\n'))
+    await vi.waitFor(() => {
+      expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
+    }, { timeout: 5000 })
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(() => gate)
+    const pending = Promise.all([
+      ctx.llm.listModels('openai-codex'),
+      ctx.llm.listModels('openai-codex'),
+    ])
+    try {
+      await vi.waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1) })
+      release(new Response(JSON.stringify({ models: [
+        { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      ] })))
+      const [first, second] = await pending
+      expect(first).toEqual(second)
+      expect(first).toEqual([{
+        provider: 'openai-codex', id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', inputModalities: ['text'],
+      }])
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {
+      if (!released) release(new Response('{}', { status: 500 }))
+      await pending.catch(() => undefined)
+      fetch.mockRestore()
+    }
   })
 
   it('boots with zero routes and registers one the moment settings supply a profile', async () => {

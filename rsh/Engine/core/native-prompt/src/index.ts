@@ -1,12 +1,21 @@
 /** Ordered, reversible prompt-section contributions for native applications. */
 import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
 
+/** Session-level tool allowlist that can constrain a scoped prompt contribution. */
+export interface NativePromptRenderContext {
+  readonly allowedTools?: readonly string[]
+}
+
 /** One named section whose text is resolved before the model-visible message is logged. */
 export interface NativePromptSection {
   readonly name: string
   readonly order: number
-  /** @param scope - exact consuming Agent scope. @returns text logged by the Program before its request. */
-  text(scope: NativeScope): string | Promise<string>
+  /**
+   * @param scope - exact consuming Agent scope.
+   * @param context - Session tool allowlist constraint, when supplied.
+   * @returns text logged by the Program before its request.
+   */
+  text(scope: NativeScope, context?: NativePromptRenderContext): string | Promise<string>
 }
 
 /** Native system-prompt registry; applications own final assembly and Session logging. */
@@ -30,12 +39,13 @@ export class NativePromptRegistry {
   /**
    * Render current sections in stable order, omitting empty text.
    * @param scope - consuming scope, defaulting to the Provider scope for diagnostics.
+   * @param context - Session tool allowlist constraint, when available.
    * @returns assembled system-prompt additions.
    */
-  async render(scope = this.scope): Promise<string> {
+  async render(scope = this.scope, context?: NativePromptRenderContext): Promise<string> {
     const ordered = [...this.sections.visible(scope).values()].sort((left, right) => left.order - right.order
       || (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
-    const text = await Promise.all(ordered.map(async section => section.text(scope)))
+    const text = await Promise.all(ordered.map(async section => section.text(scope, context)))
     return text.filter(part => part.length > 0).join('\n\n')
   }
 

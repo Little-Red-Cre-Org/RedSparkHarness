@@ -21,7 +21,8 @@ const roleNames = Array.from({ length: 4 }, (_, index) => join(scene, sessionFix
 const referenceSessionId = SessionId('workflow-native-reference')
 const referenceFact = 'Prior finding: the fixture token is empty.'
 const referenceMention = formatSessionReferenceMention({ sessionId: referenceSessionId, label: 'prior finding' })
-const task = `Run a two-child workflow and one structured Ralph round. Use this prior finding: ${referenceMention}`
+const task = 'Inspect @README.md, then run a two-child workflow and one structured Ralph round.'
+  + ` Use this prior finding: ${referenceMention}`
 const workflowScript = "const first = await agent('inspect first item'); const second = await agent('inspect second item'); return { results: [first, second] }"
 const report = { status: 'complete', summary: 'workspace inspected', evidence: ['README.md exists'], nextSteps: [], blocker: '' }
 
@@ -103,6 +104,7 @@ it('replays real workflow children and a committed structured report through dsh
     mkdirSync(workspace)
     mkdirSync(sessions)
     await seedReferenceSession(sessions)
+    writeFileSync(join(workspace, 'README.md'), 'A workspace file explicitly referenced by the user.\n')
     const packages = [
       ['native-headless', 'rsh/Engine/core/native-headless'],
       ['native-agent', 'rsh/Engine/core/native-agent'],
@@ -123,6 +125,9 @@ it('replays real workflow children and a committed structured report through dsh
       ['tool-ralph', 'rsh/Engine/workflow/tool-ralph'],
       ['session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
       ['fs-local', 'rsh/Modules/Official/fs/fs-local'],
+      ['fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+      ['tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+      ['native-file-reference-local', 'rsh/Modules/Official/fs/native-file-reference-local'],
     ] as const
     for (const [name, path] of packages) {
       const link = join(modules, '@deepseek-ai', `dsh-${name}`)
@@ -166,9 +171,11 @@ it('replays real workflow children and a committed structured report through dsh
     };`)
 
     const composition = shippedNativeProfileComposition(home, 'native-headless')
-    const selected = new Set(['app', 'agents', 'session-execution', 'session-query', 'session-reference', 'agent-instructions',
-      'tools', 'prompt', 'subagents', 'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool', 'model-execution',
-      'storage', 'fs', 'pi-ai'])
+    const selected = new Set([
+      'app', 'agents', 'session-execution', 'session-query', 'session-reference', 'agent-instructions',
+      'tools', 'prompt', 'subagents', 'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool',
+      'model-execution', 'storage', 'fs', 'policy', 'file-tools', 'file-reference', 'pi-ai',
+    ])
     const installations = composition.installations.map(row => {
       if (!selected.has(row.id)) return { ...row, disabled: true }
       if (row.id === 'app') return { ...row, config: { provider: 'fixture', model: 'native-workflow',

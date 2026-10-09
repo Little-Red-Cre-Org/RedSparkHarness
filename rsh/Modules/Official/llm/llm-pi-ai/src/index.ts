@@ -56,6 +56,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { credentialKeyScope } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
 import type { AdapterRegistrationHandle, DirectoryRegistrationHandle, LlmConfigurableProvider } from '@deepseek-ai/dsh-llm'
@@ -212,6 +213,9 @@ export function apply(ctx: Context, config: Config): void {
       )
     },
   })
+  ctx.on('credentials/record-updated', (key) => {
+    if (credentialKeyScope(key) === 'llm-pi-ai') adapter.invalidate()
+  })
   // Independent of the route set: signing in is what makes a route worth
   // adding, so the flows are offered before any profile names their provider.
   // Scoped to the authorization seam rather than injected outright, because a
@@ -250,6 +254,9 @@ export function apply(ctx: Context, config: Config): void {
     return {
       headers: profile.headers,
       resolveApiKey: () => resolveApiKey(provider, profile),
+      ...provider === 'openai-codex'
+        ? { resolveCodexAuth: (signal?: AbortSignal) => adapter.getProviderAuth(provider, signal) }
+        : {},
     }
   }
   // Interrogating an endpoint is a configuration-time action over a draft, so

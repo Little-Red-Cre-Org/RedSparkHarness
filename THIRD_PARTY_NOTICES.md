@@ -78,6 +78,7 @@ External packages installed for runtime use or distributed inside the prebuilt b
 | [`ink`](https://github.com/vadimdemedes/ink) | MIT |
 | [`ink-text-input`](https://github.com/vadimdemedes/ink-text-input) | MIT |
 | [`ipaddr.js`](https://github.com/whitequark/ipaddr.js) | MIT |
+| [`jose`](https://github.com/panva/jose) | MIT |
 | [`js-yaml`](https://github.com/nodeca/js-yaml) | MIT |
 | [`katex`](https://github.com/KaTeX/KaTeX) | MIT |
 | [`koffi`](https://github.com/Koromix/koffi) | MIT |

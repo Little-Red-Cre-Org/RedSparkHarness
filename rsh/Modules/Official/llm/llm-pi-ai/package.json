@@ -50,7 +50,8 @@
     "@deepseek-ai/schemastery": "workspace:^",
     "@earendil-works/pi-ai": "^1.0.0",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "jose": "6.2.3"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -81,7 +82,8 @@
       "optional": [
         "attachments",
         "fs",
-        "settings"
+        "settings",
+        "authorization"
       ],
       "provides": [
         "model",

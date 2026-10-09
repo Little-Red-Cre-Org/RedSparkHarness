@@ -97,9 +97,10 @@ export async function runDesktopHost(
   mkdirSync(absoluteProject, { recursive: true })
   const absoluteRuntime = resolve(runtimeDir)
   const version = dshVersion(absoluteRuntime)
+  const allowLinkedPackages = options.allowLinkedPackages === true
   const runtime = profileDirectoryRuntime(absoluteProject) === 'native'
-    ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject))
-    : await import('./legacy-host.ts').then(module => module.createLegacyDesktopRuntime(absoluteRuntime, absoluteProject, options.allowLinkedPackages === true))
+    ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
+    : await import('./legacy-host.ts').then(module => module.createLegacyDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
   const requests = new Map<number, AbortController>()
   let disposing: Promise<void> | undefined
 

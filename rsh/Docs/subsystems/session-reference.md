@@ -20,6 +20,26 @@ interface FileReferenceCandidate {
 }
 ```
 
+Native Consumers use the exact active Agent and Session pair when requesting candidates; the Native Provider resolves that pair through the active-session owner and reads paths through the selected filesystem service.
+
+```ts type-equiv
+/** Path-only candidates from the exact active Agent and Session workspace. */
+interface NativeFileReferenceOperations {
+  /**
+   * List deterministic path candidates without reading file contents.
+   * @param agent - exact Native Agent whose scope is consuming the candidates.
+   * @param session - exact live Session whose cwd bounds discovery.
+   * @param query - path text following `@` or `@"`.
+   * @param signal - caller cancellation.
+   * @returns ranked workspace-relative file and directory candidates.
+   * @throws when the exact Agent and Session do not have a live owner.
+   */
+  list(agent: NativeAgent, session: Session, query: string, signal: AbortSignal): Promise<FileReferenceCandidate[]>
+}
+```
+
+Source: [`rsh/Engine/context/file-reference/src/native.ts`](../../Engine/context/file-reference/src/native.ts)
+
 ## Inputs and candidates
 
 `SessionReferenceInput` is the host-independent selection. The id is authoritative; the label is display metadata carried into the snapshot.
@@ -221,9 +241,10 @@ async listCandidates( agent: Agent, query: string = '', limit: number = this.con
 /**
  * Snapshot all references for one accepted direct message and return one aggregated durable context.
  * Automatic budgets use the last assembled route, or agent options before any assembly.
+ * It snapshots direct content and validates references before asynchronous model-budget lookup.
  * Missing model capacity or adapter uses 64 KiB; other metadata lookup failures and cancellation reject preparation.
  * Truncated previews include omission facts and a full-snapshot spill locator, or an explicit unavailable notice.
- * Cancellation prevents context publication, including when storage completes after cancellation.
+ * Cancellation or failure waits for started reads and spill writes to settle before returning; cancellation prevents context publication.
  * @param agent - target agent; references to it are rejected.
  * @param content - already host-normalized readable message content.
  * @param references - structured source sessions in mention order.

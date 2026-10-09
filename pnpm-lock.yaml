@@ -2099,6 +2099,15 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../core/agent
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
 
   rsh/Engine/context/file-reference-local:
     dependencies:
@@ -2482,6 +2491,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../session
 
   rsh/Engine/core/native-agent:
     dependencies:
@@ -2565,6 +2577,9 @@ importers:
         specifier: workspace:^
         version: link:../../workspace/workspace-definition
     devDependencies:
+      '@deepseek-ai/dsh-file-reference':
+        specifier: workspace:^
+        version: link:../../context/file-reference
       '@deepseek-ai/dsh-llm-retry':
         specifier: workspace:^
         version: link:../../llm/llm-retry
@@ -2574,6 +2589,9 @@ importers:
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../../Modules/Official/code-runtime/native-code-runtime
+      '@deepseek-ai/dsh-native-file-reference-local':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/native-file-reference-local
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../../Modules/Official/guard/repeat-tool-reminder
@@ -2589,6 +2607,9 @@ importers:
       '@deepseek-ai/dsh-tool-code-runtime':
         specifier: workspace:^
         version: link:../../../Modules/Official/code-runtime/tool-code-runtime
+      '@deepseek-ai/dsh-tool-fs':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/tool-fs
 
   rsh/Engine/core/native-jobs:
     dependencies:
@@ -5618,6 +5639,9 @@ importers:
       '@deepseek-ai/dsh-sandbox-local':
         specifier: workspace:^
         version: link:../../sandbox/sandbox-local
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
       '@deepseek-ai/dsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
@@ -5655,6 +5679,10 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+    devDependencies:
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/code-runtime/tool-code-runtime:
     dependencies:
@@ -5691,6 +5719,10 @@ importers:
         version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/credentials/authorization:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5704,6 +5736,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Modules/Official/credentials/credentials:
     dependencies:
@@ -6168,6 +6203,40 @@ importers:
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-projection
+
+  rsh/Modules/Official/fs/native-file-reference-local:
+    dependencies:
+      '@deepseek-ai/dsh-file-reference':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/file-reference
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../fs
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../fs-local
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
 
   rsh/Modules/Official/fs/tool-fs:
     dependencies:
@@ -6906,6 +6975,9 @@ importers:
       '@earendil-works/pi-ai':
         specifier: ^1.0.0
         version: 1.0.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(supports-color@9.4.0)(zod@4.4.3))(@smithy/signature-v4@5.7.3)(supports-color@9.4.0)(undici@8.11.2)(ws@8.21.0)(zod@4.4.3)
+      jose:
+        specifier: 6.2.3
+        version: 6.2.3
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -9023,6 +9095,9 @@ importers:
       '@deepseek-ai/dsh-native-code-runtime':
         specifier: workspace:^
         version: link:../../Modules/Official/code-runtime/native-code-runtime
+      '@deepseek-ai/dsh-native-file-reference-local':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/native-file-reference-local
       '@deepseek-ai/dsh-native-headless':
         specifier: workspace:^
         version: link:../../Engine/core/native-headless

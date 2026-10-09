@@ -53,9 +53,10 @@ export abstract class LlmAdapter {
    * The result is advisory: an adapter may accept unlisted model ids, and
    * consumers must not turn absence into request rejection.
    * @param _provider - one provider route owned by this adapter.
+   * @param _signal - optional cancellation for this catalog lookup.
    * @returns discoverable models in adapter-preferred order.
    */
-  listModels(_provider: string): Promise<readonly LlmModelInfo[]> {
+  listModels(_provider: string, _signal?: AbortSignal): Promise<readonly LlmModelInfo[]> {
     return Promise.resolve([])
   }
 

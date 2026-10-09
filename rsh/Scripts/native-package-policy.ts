@@ -54,6 +54,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/subagent/sdk-child',
   'rsh/Modules/Official/subagent/codex-app-server',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
+  'rsh/Modules/Official/fs/native-file-reference-local',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
   'rsh/Programs/Web/client/native-session',
@@ -100,6 +101,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/subagent/codex-app-server', ['host']],
   ['rsh/Engine/core/native-session-execution', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
+  ['rsh/Modules/Official/fs/native-file-reference-local', ['host']],
   ['rsh/Modules/Official/code-runtime/native-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
@@ -188,6 +190,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/preset/agent-presets', 'Native standing composition leases and compatibility presets share durable selection facts'],
   ['rsh/Modules/Official/workspace/workspace', 'Native and Cordis Workspace Providers share the durable v2 registry'],
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
+  ['rsh/Modules/Official/credentials/authorization', 'Cordis service and native Provider share authorization protocol and error types'],
   ['rsh/Modules/Official/settings/settings-file', 'Cordis and native settings Providers share the document format and atomic file owner'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
@@ -281,6 +284,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Additional Cordis-free exports shared by mixed packages' native entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
   ['rsh/Engine/session/session-projection', ['./types']],
@@ -293,6 +297,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/spill/spill-policy', ['./notice']],
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
+  ['rsh/Modules/Official/credentials/authorization', ['./types']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
@@ -350,6 +355,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/core/native-model-execution/model-directory', ['host']],
   ['rsh/Engine/core/native-model-execution/adapter-directory', ['host']],
   ['rsh/Engine/llm/native-model-selection/types', ['host', 'client']],
+  ['rsh/Modules/Official/credentials/authorization/types', ['host', 'client']],
   ['rsh/Programs/CLI/native-profile', ['host']],
   ['rsh/Programs/DesktopHost/native-host', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox/roots', ['host']],
