@@ -306,6 +306,52 @@ describe('llm-pi-ai real dormant composition', () => {
     }
   })
 
+  it('aborts the Codex catalog refresh when the composition is disposed', async () => {
+    const { ctx, settingsPath } = await loadComposition()
+    await ctx.credentials.modifyRecord(LlmPiAi.recordKeyFor('openai-codex'), () => Promise.resolve({
+      kind: 'grant', payload: {
+        type: 'oauth', access: 'synthetic-account-access-token', refresh: 'synthetic-account-refresh-token',
+        expires: Date.now() + 3_600_000, siwc: 'chatgpt-plan', clientId: 'fixture-issued-client-id',
+        issuer: 'https://auth.openai.com', subject: 'fixture-account-subject', idToken: 'fixture-id-token',
+        extAgentHostId: 'urn:uuid:fixture-host-id',
+        scopes: ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct'],
+      },
+    }))
+    await writeFile(settingsPath, [
+      'llm-pi-ai:', '  providers:', '    openai-codex:',
+      '      transport: sse', '',
+    ].join('\n'))
+    await vi.waitFor(() => {
+      expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai-codex'])
+    }, { timeout: 5000 })
+    let requestSignal: AbortSignal | undefined
+    let release = (_response: Response): void => {}
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => new Promise<Response>((resolve, reject) => {
+      const signal = init!.signal!
+      requestSignal = signal
+      release = resolve
+      signal.addEventListener('abort', () => { reject(signal.reason as Error) }, { once: true })
+    }))
+    const pending = ctx.llm.listModels('openai-codex')
+    let disposed = false
+    try {
+      await vi.waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1) })
+      await ctx.fiber.dispose()
+      disposed = true
+      context = undefined
+      expect(requestSignal?.aborted).toBe(true)
+      await pending.catch(() => undefined)
+    } finally {
+      if (!disposed) {
+        await ctx.fiber.dispose()
+        context = undefined
+      }
+      release(new Response(JSON.stringify({ models: [] })))
+      await pending.catch(() => undefined)
+      fetch.mockRestore()
+    }
+  })
+
   it('boots with zero routes and registers one the moment settings supply a profile', async () => {
     vi.stubEnv('PI_COMPOSITION_KEY', '')
     const server = await mockServer([{ events: textEvents }])

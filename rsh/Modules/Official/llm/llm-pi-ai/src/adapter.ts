@@ -76,8 +76,10 @@ interface PiAiSnapshot {
   profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>
   /** Providers for exactly those profiles; never mutated once published. */
   models: Models
-  /** In-flight Codex catalog refreshes keyed by provider; concurrent callers share one. */
+  /** In-flight Codex refreshes keyed by provider; tied to this snapshot's lifetime. */
   refreshes: Map<string, Promise<void>>
+  /** Cancels work owned by this snapshot when it is invalidated or disposed. */
+  controller: AbortController
 }
 
 /** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
@@ -340,9 +342,15 @@ export class PiAiAdapter extends LlmAdapter {
     super()
   }
 
-  /** Discard the current provider collection after one of this adapter's credentials changes. */
+  /** Abort snapshot work and discard the provider collection after credentials change. */
   invalidate(): void {
+    this.snapshot?.controller.abort()
     this.snapshot = undefined
+  }
+
+  /** Cancel work owned by the current provider collection and discard it. */
+  dispose(): void {
+    this.invalidate()
   }
 
   /**
@@ -362,7 +370,7 @@ export class PiAiAdapter extends LlmAdapter {
           : profile.piProvider)
       }
     }
-    this.snapshot = { profiles, models, refreshes: new Map() }
+    this.snapshot = { profiles, models, refreshes: new Map(), controller: new AbortController() }
     return this.snapshot
   }
 
@@ -400,10 +408,10 @@ export class PiAiAdapter extends LlmAdapter {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
     }
     // A later refresh aborts the earlier one inside pi-ai, so one snapshot shares one flight.
-    // The shared flight ignores the caller signal; discovery times the /models request out itself.
+    // The shared flight uses the snapshot lifetime signal; discovery also times the /models request out itself.
     let refresh = snapshot.refreshes.get(provider)
     if (refresh === undefined) {
-      refresh = snapshot.models.refresh({ providers: [provider], force: true }).then((refreshed) => {
+      refresh = snapshot.models.refresh({ providers: [provider], force: true, signal: snapshot.controller.signal }).then((refreshed) => {
         const failure = refreshed.errors.get(provider)
         if (failure !== undefined) throw failure
       })
