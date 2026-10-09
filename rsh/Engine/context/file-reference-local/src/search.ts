@@ -17,6 +17,7 @@ export {
   DEFAULT_FILE_SEARCH_MAX_ENTRIES,
   DEFAULT_FILE_SEARCH_MAX_RESULTS,
 }
+/** Configuration for the local workspace file-reference search adapter. */
 export type FileSearchConfig = FileReferenceSearchConfig
 export { activeAtToken, formatFileMention } from '@deepseek-ai/dsh-file-reference/grammar'
 
