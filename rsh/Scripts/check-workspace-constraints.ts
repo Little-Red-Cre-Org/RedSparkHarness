@@ -190,6 +190,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-web-search-perplexity': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-web': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-authorization': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],

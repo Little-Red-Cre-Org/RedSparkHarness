@@ -609,6 +609,7 @@
       "@deepseek-ai/dsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
       "@deepseek-ai/dsh-agent-instructions/native": ["./rsh/Engine/context/agent-instructions/src/native.ts"],
       "@deepseek-ai/dsh-agent-preset-standing/native": ["./rsh/Engine/preset/agent-preset-standing/src/native.ts"],
+      "@deepseek-ai/dsh-authorization/native": ["./rsh/Modules/Official/credentials/authorization/src/native.ts"],
       "@deepseek-ai/dsh-bash-local/native": ["./rsh/Modules/Official/shell/bash-local/src/native.ts"],
       "@deepseek-ai/dsh-bash-sandbox/native": ["./rsh/Modules/Official/shell/bash-sandbox/src/native.ts"],
       "@deepseek-ai/dsh-client-locale/dictionary": ["./rsh/Programs/Web/client/locale/src/dictionary.ts"],

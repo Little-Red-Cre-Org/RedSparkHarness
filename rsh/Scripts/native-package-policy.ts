@@ -178,6 +178,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/preset/agent-presets', 'Native standing composition leases and compatibility presets share durable selection facts'],
   ['rsh/Modules/Official/workspace/workspace', 'Native and Cordis Workspace Providers share the durable v2 registry'],
   ['rsh/Modules/Official/credentials/credentials-local', 'Cordis service and native credential installer share the file backend'],
+  ['rsh/Modules/Official/credentials/authorization', 'Cordis service and native Provider share authorization protocol and error types'],
   ['rsh/Modules/Official/settings/settings-file', 'Cordis and native settings Providers share the document format and atomic file owner'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],

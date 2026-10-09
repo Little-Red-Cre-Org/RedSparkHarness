@@ -3908,10 +3908,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type AttachmentId = Branded<\'AttachmentId\'>;',
   },
   {
-    name: 'AuthorizationAttemptId',
-    declaration: 'export type AuthorizationAttemptId = Branded<\'AuthorizationAttemptId\'>;',
-  },
-  {
     name: 'AuthorizationEntry',
     declaration: 'export interface AuthorizationEntry {\n    key: CredentialKey;\n    label: string;\n    methods: readonly AuthorizationMethod[];\n    inFlight: boolean;\n}',
   },
@@ -3922,10 +3918,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AuthorizationFlow',
     declaration: 'export interface AuthorizationFlow {\n    readonly key: CredentialKey;\n    readonly label: string;\n    readonly methods: readonly [\n        AuthorizationMethod,\n        ...AuthorizationMethod[]\n    ];\n    run(session: AuthorizationSession): Promise<void>;\n}',
-  },
-  {
-    name: 'AuthorizationFrame',
-    declaration: 'export type AuthorizationFrame = {\n    type: \'started\';\n    attemptId: AuthorizationAttemptId;\n} | {\n    type: \'notice\';\n    notice: AuthorizationNotice;\n} | {\n    type: \'prompt\';\n    attemptId: AuthorizationAttemptId;\n    promptId: AuthorizationPromptId;\n    prompt: AuthorizationPromptView;\n} | {\n    type: \'settled\';\n    status: \'authorized\' | \'cancelled\';\n};',
   },
   {
     name: 'AuthorizationInteraction',
@@ -3948,16 +3940,8 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type AuthorizationPrompt = {\n    signal?: AbortSignal;\n} & ({\n    kind: \'text\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'secret\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'select\';\n    message: string;\n    options: readonly AuthorizationPromptOption[];\n});',
   },
   {
-    name: 'AuthorizationPromptId',
-    declaration: 'export type AuthorizationPromptId = Branded<\'AuthorizationPromptId\'>;',
-  },
-  {
     name: 'AuthorizationPromptOption',
     declaration: 'export interface AuthorizationPromptOption {\n    id: string;\n    label: string;\n    description?: string;\n}',
-  },
-  {
-    name: 'AuthorizationPromptView',
-    declaration: 'export type AuthorizationPromptView = {\n    kind: \'text\' | \'secret\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'select\';\n    message: string;\n    options: readonly AuthorizationPromptOption[];\n};',
   },
   {
     name: 'AuthorizationRequest',

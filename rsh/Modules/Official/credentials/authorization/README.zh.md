@@ -68,6 +68,10 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 
 每个凭据同时只允许一次尝试。交互随请求传入而非存放在注册表中，因此提问恰好抵达发问的那个页面；无头调用方传入一个直接拒绝的交互实现。当记录在尝试期间被提交并被观察到时，`begin()` 报告 `{ status: 'authorized' }`；当人拒绝或调用方撤销时，报告 `{ status: 'cancelled' }`。`cancel(key)` 从第二次调用撤销正在运行的尝试，服务于那种用第二次调用来响应「取消」按钮、却不持有第一次调用 signal 的请求/响应式传输。
 
+### 原生 Host 入口
+
+原生 Host 组合从 `@deepseek-ai/dsh-authorization/native` 导入 `plugin`，并与 credentials Provider 一起安装。`NativeAuthorization` 返回的尝试可通过 `frames()` 重放对话，供重新连接的界面恢复显示。取消、移除 flow 和释放 Provider 会等待 `run()` 及其已接纳的凭据写入完成后再释放键。
+
 ### 可能出错的地方
 
 - **没有 flow 的凭据是惰性的**——对没有任何 flow 认领的键调用 `begin()` 会抛出 `NO_FLOW`；被卸载插件遗留的记录可以删除，但无法重新授权。
@@ -98,12 +102,13 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition：flow 注册表、每键单尝试生命周期、交互路由、提交确认 |
+| [`src/native.ts`](src/native.ts) | Native Host Provider：帧重放、prompt 与排空式取消 |
 | [`src/types.ts`](src/types.ts) | 跨进程安全的词汇：方法、notice、prompt、结果、entry |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`authorization/settled` 点名的键必已释放 |
 
 ### 生命周期
 
-每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。被撤销的尝试会立即结算，即使 flow 从未响应它的 signal——被遗弃的运行任其自行结束，而它若仍设法提交了一条记录，那也是一条人确实授权过的记录。键在 `authorization/settled` 触发之前释放，因此以启动下一次尝试来响应的监听器不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
+Cordis 服务每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。被撤销的尝试会立即结算，即使 flow 从未响应它的 signal——被遗弃的运行任其自行结束，而它若仍设法提交了一条记录，那也是一条人确实授权过的记录。键在 `authorization/settled` 触发之前释放，因此以启动下一次尝试来响应的监听器不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
 
 ### 交互词汇
 
