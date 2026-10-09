@@ -36,7 +36,6 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
-import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
@@ -145,7 +144,6 @@ export interface NativeWebSelectionProviders {
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
   readonly credentials?: NativeCredentials | undefined
-  readonly authorization?: NativeWebAuthorization | undefined
   readonly titles?: NativeSessionTitles | undefined
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
@@ -431,11 +429,6 @@ export class NativeWebSessionService {
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
       }
-      if (endpoint.startsWith('authorization/')) {
-        const authorization = this.selections.authorization
-        if (authorization === undefined) throw new Error('native authorization: adapter is unavailable')
-        return { ok: true, value: await this.controls.run(signal, () => authorization.handle(endpoint, payload)) }
-      }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
@@ -549,12 +542,6 @@ export class NativeWebSessionService {
           message: conflict === undefined ? settingsRequest ? 'Settings request failed.' : 'Credentials request failed.'
             : 'Settings changed since it was loaded.',
           details: conflict ?? {},
-        } }
-      }
-      if (endpoint.startsWith('authorization/')) {
-        return { ok: false, error: {
-          code: 'native/authorization', message: 'Authorization request failed.',
-          details: error instanceof AuthorizationError ? { authorizationCode: error.code } : {},
         } }
       }
       return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
@@ -726,18 +713,20 @@ export const plugin: NativePlugin = {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
       })
       const models = context.optional('modelSelection')
-      const authorization = new NativeWebAuthorization(context.optional('authorization'), context.optional('credentials'),
-        config.authorizationKeys.map(parseCredentialKey))
+      const selectedAuthorization = context.optional('authorization')
+      const authorization = new NativeWebAuthorization(selectedAuthorization === undefined ? undefined : {
+        authorization: selectedAuthorization, credentials: context.require('credentials'),
+      }, config.authorizationKeys.map(parseCredentialKey), context.signal)
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
-          authorization,
           commands: context.optional('commands'), commandScope: context.scope,
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
-        (endpoint, payload, signal) => service.handle(endpoint, payload, signal)))
+        (endpoint, payload, signal) => endpoint.startsWith('authorization/')
+          ? authorization.handle(endpoint, payload) : service.handle(endpoint, payload, signal)))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',

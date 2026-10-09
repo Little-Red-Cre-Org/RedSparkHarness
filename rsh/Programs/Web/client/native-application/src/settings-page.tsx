@@ -110,21 +110,32 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
-  onSettled: (settlement: AuthorizationSettlement) => void
+  onSettled: (settlement?: AuthorizationSettlement) => Promise<boolean>
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
   const [frames, setFrames] = useState<AuthorizationFrame[]>([])
   const [method, setMethod] = useState(entry.methods[0]?.id)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [error, setError] = useState<string>()
+  const [lost, setLost] = useState(false)
   // Parent callbacks may change identity on every render; only a new attempt resubscribes.
   const settledRef = useRef(onSettled)
   settledRef.current = onSettled
 
   useEffect(() => {
+    if (entry.attemptId !== undefined) setAttemptId(entry.attemptId)
+  }, [entry.attemptId])
+
+  useEffect(() => {
     if (attemptId === undefined) return
     const controller = new AbortController()
     let settlement: AuthorizationSettlement | undefined
+    // The attempt may settle before this subscription; the refreshed record then decides what to show.
+    const lose = async (): Promise<void> => {
+      setAttemptId(undefined)
+      await settledRef.current()
+      setLost(true)
+    }
     setFrames([])
     void (async () => {
       try {
@@ -132,12 +143,13 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
           setFrames(current => [...current, frame])
           if (frame.type === 'settled') {
             settlement = frame.settlement
-            settledRef.current(frame.settlement)
+            void settledRef.current(frame.settlement)
           }
         }
         if (settlement !== undefined) setAttemptId(undefined)
-      } catch (cause: unknown) {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause))
+        else if (!controller.signal.aborted) await lose()
+      } catch {
+        if (!controller.signal.aborted) await lose()
       }
     })()
     return () => { controller.abort() }
@@ -145,7 +157,10 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
 
   const answer = async (id: string, promptId: string, value: string): Promise<void> => {
     setError(undefined)
-    try { await actions.authorizationAnswer(entry.key, id, promptId, value) }
+    try {
+      await actions.authorizationAnswer(entry.key, id, promptId, value)
+      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
+    }
     catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
   }
   const decline = async (id: string, promptId: string): Promise<void> => {
@@ -160,6 +175,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
   }
   const begin = async (): Promise<void> => {
     setError(undefined)
+    setLost(false)
     try {
       const attempt = await actions.authorizationBegin(entry.key, method)
       setAttemptId(attempt.attemptId)
@@ -209,6 +225,7 @@ function AuthorizationRow({ entry, actions, t, onSettled }: {
       : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
+    {lost && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
     {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
@@ -242,16 +259,23 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [saving, setSaving] = useState<string>()
   const [error, setError] = useState<string>()
   const [credentialError, setCredentialError] = useState<string>()
+  const [authorizationError, setAuthorizationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
     setLoading(true)
     setError(undefined)
     setCredentialError(undefined)
+    setAuthorizationError(undefined)
     try {
       const description = await actions.settingsDescribe(signal)
-      const entries = await actions.authorizationList(signal)
-      setAuthorizationEntries(entries)
+      try {
+        const entries = await actions.authorizationList(signal)
+        setAuthorizationEntries(entries)
+      } catch (cause: unknown) {
+        setAuthorizationEntries([])
+        setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
+      }
       const rows = description.namespaces
       setLimits(description.limits)
       setNamespaces(rows)
@@ -277,9 +301,10 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     } finally { setLoading(false) }
   }, [actions, t])
 
-  const authorizationSettled = useCallback((settlement: AuthorizationSettlement): void => {
-    void refresh(true)
-    if (settlement === 'authorized') onAuthorized?.()
+  // A cancelled or lost attempt may still have committed a credential, so refresh models after any end except failure.
+  const authorizationSettled = useCallback((settlement?: AuthorizationSettlement): Promise<boolean> => {
+    if (settlement !== 'failed') onAuthorized?.()
+    return refresh(true)
   }, [onAuthorized, refresh])
 
   useEffect(() => {
@@ -388,8 +413,9 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
         })}
       </div>}
     </section>)}
-    {authorizationEntries.length === 0 ? null : <section aria-label={t('accounts')}>
+    {authorizationEntries.length === 0 && authorizationError === undefined ? null : <section aria-label={t('accounts')}>
       <h2>{t('accounts')}</h2>
+      {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
       {authorizationEntries.map(entry => <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
         onSettled={authorizationSettled} />)}
     </section>}

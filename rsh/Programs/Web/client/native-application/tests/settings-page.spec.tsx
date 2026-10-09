@@ -309,3 +309,25 @@ it('refresh mid-login then resume and finish', async () => {
     expect(cancel).not.toHaveBeenCalled()
   } finally { await authorization.dispose() }
 })
+
+it('fast settle: lost subscription falls back to the refreshed record', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
+    configured: false, writable: true }])
+  const authorizationCancel = vi.fn(async () => undefined)
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
+    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
+    authorizationBegin: vi.fn(async () => ({ attemptId: 'a1' })),
+    authorizationFrames: vi.fn(() => { throw new Error('HTTP 409: unavailable attempt') }),
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel,
+  } as unknown as NativeSettingsActions
+  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+  expect(await screen.findByRole('button', { name: en.signIn })).toBeTruthy()
+  expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
+  expect(authorizationList).toHaveBeenCalledTimes(2)
+  expect(authorizationCancel).not.toHaveBeenCalled()
+})

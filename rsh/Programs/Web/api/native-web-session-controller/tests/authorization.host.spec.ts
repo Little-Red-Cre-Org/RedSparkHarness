@@ -17,15 +17,22 @@ it('allows only configured keys and keeps a disconnected authorization attempt r
     key: otherKey, label: 'Other', methods: [{ id: 'oauth', label: 'OAuth' }],
     async run() {},
   })
-  const host = new NativeWebAuthorization(authorization, credentials, [key])
+  const host = new NativeWebAuthorization({ authorization, credentials }, [key], new AbortController().signal)
 
   try {
-    const { attemptId } = await host.handle('authorization/begin', { key, method: 'oauth' }) as { attemptId: string }
-    expect(await host.handle('authorization/list', {})).toEqual([{
+    const begin = await host.handle('authorization/begin', { key, method: 'oauth' })
+    expect(begin.ok).toBe(true)
+    if (!begin.ok) throw new Error(begin.error.message)
+    const { attemptId } = begin.value as { attemptId: string }
+    const list = await host.handle('authorization/list', {})
+    expect(list.ok).toBe(true)
+    if (!list.ok) throw new Error(list.error.message)
+    expect(list.value).toEqual([{
       key, label: 'Codex', methods: [{ id: 'oauth', label: 'OAuth' }], configured: false, writable: true, attemptId,
     }])
-    await expect(host.handle('authorization/begin', { key: otherKey })).rejects.toThrow()
-    await expect(host.handle('authorization/answer', { key, attemptId: 'wrong', promptId: 'prompt', value: 'x' })).rejects.toThrow()
+    expect(await host.handle('authorization/begin', { key: otherKey })).toMatchObject({ ok: false, error: { code: 'native/authorization' } })
+    expect(await host.handle('authorization/answer', { key, attemptId: 'wrong', promptId: 'prompt', value: 'x' }))
+      .toMatchObject({ ok: false, error: { code: 'native/authorization' } })
 
     const wrongAttempt = await host.frames(new Request('http://localhost/api/native-session/authorization', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key, attemptId: 'wrong' }),
@@ -43,7 +50,8 @@ it('allows only configured keys and keeps a disconnected authorization attempt r
     expect((await reader?.read())?.done).toBe(true)
     expect(authorization.current(key)?.id).toBe(attemptId)
 
-    await expect(host.handle('authorization/cancel', { key, attemptId })).resolves.toEqual({ cancelled: true })
+    const cancel = await host.handle('authorization/cancel', { key, attemptId })
+    expect(cancel.ok && cancel.value).toEqual({ cancelled: true })
     expect(authorization.current(key)).toBeUndefined()
   } finally { await authorization.dispose() }
 })

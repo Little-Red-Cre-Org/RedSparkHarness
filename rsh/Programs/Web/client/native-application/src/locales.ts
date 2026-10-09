@@ -24,6 +24,7 @@ export const zh = {
   credentialSaved: '凭据已保存；主机只返回配置状态。', removeCredential: '移除凭据',
   credentialRemoved: '凭据已移除。', credentialError: '凭据请求失败',
   accounts: '账户', signIn: '登录', signInMethod: '登录方式', cancelSignIn: '取消登录', decline: '拒绝',
+  signInIncomplete: '登录未完成，请重试',
   authorizationAnswer: '提交', authorizationAuthorized: '授权成功。', authorizationCancelled: '授权已取消。',
   authorizationFailed: '授权失败。', authorizationError: '授权请求失败',
 } as const
@@ -54,6 +55,7 @@ export const en: Record<keyof typeof zh, string> = {
   credentialSaved: 'Credential saved; the Host returned its status only.', removeCredential: 'Remove credential',
   credentialRemoved: 'Credential removed.', credentialError: 'Credential request failed',
   accounts: 'Accounts', signIn: 'Sign in', signInMethod: 'Sign-in method', cancelSignIn: 'Cancel sign-in', decline: 'Decline',
+  signInIncomplete: 'Sign-in did not complete, please try again',
   authorizationAnswer: 'Submit', authorizationAuthorized: 'Authorization complete.', authorizationCancelled: 'Authorization cancelled.',
   authorizationFailed: 'Authorization failed.', authorizationError: 'Authorization request failed',
 }
