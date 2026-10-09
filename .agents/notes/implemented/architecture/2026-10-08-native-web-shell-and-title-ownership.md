@@ -1,8 +1,8 @@
 # Agent Note: Native Web shell modules share one Session authority
 
-English | [中文](2026-10-08-native-web-shell-and-title-ownership.zh.md)
-
 Status: implemented
+
+English | [中文](2026-10-08-native-web-shell-and-title-ownership.zh.md)
 
 ## Problem
 

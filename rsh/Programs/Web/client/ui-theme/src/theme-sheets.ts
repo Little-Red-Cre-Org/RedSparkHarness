@@ -19,7 +19,9 @@ const STYLES = [
   ['redspark.css', redspark],
 ] as const
 
-/** Install each global sheet once and return its exact DOM cleanup. */
+/** Install each global sheet once and return its exact DOM cleanup.
+ * @returns A cleanup function that removes the style elements installed by this call.
+ */
 export function installThemeStyles(): () => void {
   if (typeof document === 'undefined') return () => {}
   const tags = STYLES.map(([name, css]) => {

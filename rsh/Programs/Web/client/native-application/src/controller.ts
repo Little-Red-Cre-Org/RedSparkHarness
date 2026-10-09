@@ -143,7 +143,10 @@ export class NativeConversationController {
     return this.run(() => this.restore(id))
   }
 
-  /** Pin an edited title through the selected Host's existing Session writer. */
+  /** Pin an edited title through the selected Host's existing Session writer.
+   * @param id - ID of the Session whose title to rename.
+   * @param title - New title to persist.
+   */
   renameTitle(id: SessionId, title: string): Promise<void> {
     this.assertReady()
     this.publish({ state: 'loading', error: undefined })
@@ -153,7 +156,9 @@ export class NativeConversationController {
     })
   }
 
-  /** Explicitly refresh the selected Host title provider or deterministic fallback. */
+  /** Explicitly refresh the selected Host title provider or deterministic fallback.
+   * @param id - ID of the Session whose title to refresh.
+   */
   refreshTitle(id: SessionId): Promise<void> {
     this.assertReady()
     this.publish({ state: 'loading', error: undefined })

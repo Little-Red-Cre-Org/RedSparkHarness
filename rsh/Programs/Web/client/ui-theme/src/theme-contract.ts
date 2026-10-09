@@ -10,7 +10,10 @@ export const DEFAULT_PREFERENCE: ThemePreference = 'system'
 /** Default conversation content font size in px. */
 export const DEFAULT_FONT_SIZE = 14
 
-/** Narrow a wire or installer value to a supported appearance choice. */
+/** Narrow a wire or installer value to a supported appearance choice.
+ * @param value - Value to narrow to a supported appearance choice.
+ * @returns Whether the value is a supported appearance choice.
+ */
 export function isThemePreference(value: unknown): value is ThemePreference {
   return THEME_PREFERENCES.some(preference => preference === value)
 }
