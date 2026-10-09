@@ -9,6 +9,7 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { plugin as agentPlugin, NativeAgentId, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import type { NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { plugin as executionPlugin, type NativeSessionExecutionOperations, type NativeSessionContinuation,
   type NativeActiveSessionOperations, type NativeActiveSessionOwner,
   type NativeContinuationObservation } from '@deepseek-ai/dsh-native-session-execution'
@@ -23,6 +24,8 @@ import { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-pers
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '../src/native.ts'
+import { NativeContinuationActivation } from '../src/continuation-activation.ts'
+import type { NativeContinuationSession } from '../src/continuation-session.ts'
 
 async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], selectedPreset = false) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-continuation-host-'))
@@ -133,6 +136,92 @@ it('routes root maintenance and execution through the original Agent without an 
     await state.app.dispose()
     expect(() => state.app.rootExecution.settle({ route: routeId, id }, signal)).toThrow('application is disposed')
   } finally { await state.close() }
+})
+
+it('settles each root turn while a background owner keeps the same writer for a later prompt', async () => {
+  const state = await fixture([textResponse('First reply.'), textResponse('Second reply.')])
+  const id = SessionId('background-owner-root')
+  const signal = new AbortController().signal
+  let releaseBackground: (() => void) | undefined
+  const attached = Promise.withResolvers<undefined>()
+  const remove = state.activeSessions.onAttached(async (owner) => {
+    if (owner.session.id !== id) return
+    releaseBackground = owner.retainBackground()
+    attached.resolve(undefined)
+  })
+  try {
+    const first = state.app.executeRootTurn({ id, resume: false, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'First question.' }] }) }, signal)
+    await attached.promise
+    await expect(first).resolves.toMatchObject({ answer: 'First reply.' })
+    expect(state.activeSessions.owners().find(owner => owner.session.id === id)?.writerAvailable).toBe(true)
+
+    await expect(state.app.executeRootTurn({ id, resume: true, message: createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Second question.' }] }) }, signal)).resolves.toMatchObject({ answer: 'Second reply.' })
+    expect(state.model.requests).toHaveLength(2)
+    let fullySettled = false
+    const settlement = state.app.waitRootSettlement(id, signal).then(() => { fullySettled = true })
+    await Promise.resolve()
+    expect(fullySettled).toBe(false)
+
+    releaseBackground?.()
+    releaseBackground = undefined
+    await settlement
+    expect(state.activeSessions.owners().some(owner => owner.session.id === id)).toBe(false)
+  } finally {
+    releaseBackground?.()
+    await remove()
+    await state.close()
+  }
+})
+
+it('does not mark a continuation foreground-settled before queued turns finish, but drains its background owner later', async () => {
+  let queued = 0
+  let closed = false
+  const owner = {
+    get hasPending() { return queued > 0 },
+    async enqueue(message: { readonly id: string }) { queued++; return message.id },
+    async discard() { queued = 0 },
+    async close() { closed = true },
+  } as unknown as NativeContinuationSession
+  const gates = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+  const started = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+  let runs = 0
+  const execution = {
+    run: (operation: (signal: AbortSignal) => Promise<unknown>) => operation(new AbortController().signal),
+  } as unknown as NativeAgentExecution
+  const activation = new NativeContinuationActivation(owner, execution, {
+    async run() {
+      const index = runs++
+      started[index]?.resolve(undefined)
+      await gates[index]!.promise
+      queued--
+      return { exitCode: 0 }
+    },
+    async release() {}, async settled() {},
+  }, false)
+  const releaseBackground = activation.retainBackground()
+  try {
+    await activation.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'First.' }] }), 'next-turn', new AbortController().signal)
+    await started[0]!.promise
+    await activation.enqueue(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Second.' }] }), 'next-turn', new AbortController().signal)
+    let foregroundFinished = false
+    const foreground = activation.waitForeground()
+    void foreground.then(() => { foregroundFinished = true })
+    gates[0]!.resolve(undefined)
+    await started[1]!.promise
+    expect(foregroundFinished).toBe(false)
+    gates[1]!.resolve(undefined)
+    await foreground
+    expect(foregroundFinished).toBe(true)
+    expect(activation.isRetained).toBe(true)
+    expect(closed).toBe(false)
+  } finally {
+    gates.forEach((gate) => { gate.resolve(undefined) })
+    releaseBackground()
+    await activation.done
+  }
+  expect(closed).toBe(true)
 })
 
 it('catalogs selected descendants through ordinary sessions and rejects foreign inspection paths', async () => {

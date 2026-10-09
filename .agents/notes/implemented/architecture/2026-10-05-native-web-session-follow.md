@@ -14,6 +14,8 @@ The selected Connection supplies an authenticated Fetch response for a feature-o
 
 The executor forwards accepted durable events and transient assistant text separately. The unread Host queue and active followers have explicit configured limits. Queue overflow cancels the exact turn and fails settlement; distinct execution or cleanup failures remain in the combined failure; detach releases unread data and its follower slot. Host disposal closes streams and drains the existing execution owner.
 
+Controller removal closes request admission and drains accepted calls before disposing its Session executor. That disposal detaches the exact Session owner and aborts retained title-provider work before the controller awaits its follow tasks; the drain still waits for provider cleanup when its registration remains installed.
+
 The Client uses maintained eventsource-parser framing and the existing Session parser. Malformed frames, premature EOF and observer failures cancel the admitted turn and await durable settlement. Caller abort detaches the stream but cannot make the prompt resolve before writer cleanup. A carrier lacking Fetch responses rejects observed prompts before admission.
 
 The page appends durable facts to its shared transcript projection. Temporary text has a configured visible tail and an explicit truncation indicator; it disappears when the durable assistant record arrives or settlement refreshes history. Configured event limits reject excessive presentation state. Cold restore reads durable history only.

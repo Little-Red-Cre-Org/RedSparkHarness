@@ -12,11 +12,13 @@ The native browser bootstrap can compose Client plugins without Cordis, but Desk
 
 The private Desktop Host reads optional `rsh.client.json` from its project root. Revision 1 lists unique installation ids, installed package names, and optional JSON configuration. Package lookup is limited to the Desktop project and bundled runtime. The Host validates the package identity and published `dsh.native` export before importing it, requires the `client` target, and rejects a compiled graph containing Cordis.
 
-All selected entries are compiled into one browser ESM bundle so shared imports keep one module instance. The Host injects the bundle URL, stylesheets, module ids, and selections into `native.html`, then serves only emitted files from its in-memory asset map. The existing `/` and `/index.html` routes remain on the legacy application. An absent Client profile leaves `/native.html` unavailable; an invalid configured profile fails Host startup without falling back.
+The Native Host compiles selected entries into one browser ESM bundle so shared imports keep one module instance. It injects the bundle URL, stylesheets, module ids, and selections into `native.html`, then serves only emitted files from its in-memory asset map as the root application. The compatibility Host serves only the existing application and rejects `rsh.client.json` before startup because its Typert Session endpoints do not implement the Native Session response, follow, and image routes. It returns 404 for `/native.html` and `/.dsh/native-client/` assets; an invalid configured profile fails Native Host startup without falling back.
 
-This selector is limited to the native Client preview; it does not choose the Desktop Host composition or declare the migrated production UI. Default-page migration remains gated on a real native renderer and the P5 profile acceptance checks.
+`rsh.client.json` selects Client entries but does not select the Host. The profile's `package.json` sets `dsh.profile.runtime: "native"` and `dsh.profile.config: "rsh.profile.json"`; `rsh.profile.json` contains the composition. The default Desktop profile remains on the compatibility Host; default-page migration remains gated on a real native renderer and the P5 profile acceptance checks.
 
 ## Alternatives considered
+
+**Serve the Native Client from the compatibility Host:** Compatibility Session endpoints share some names but have different responses and no Native follow or image routes, so the page would not have its required Host API.
 
 **Keep using the Cordis Loader for the preview:** The browser path would continue to require Cordis and could not validate the native Client runtime.
 

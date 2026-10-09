@@ -28,6 +28,8 @@ import {
   isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
   type ThemePreference, type ThemeSettings,
 } from '../theme-settings.ts'
+import type { ThemeDefinition, ThemeSnapshot } from '../theme-contract.ts'
+export type { ThemeDefinition, ThemeSnapshot } from '../theme-contract.ts'
 
 export type { AppearanceRowComponentProps, AppearanceRowInjected } from './AppearanceRow.tsx'
 export type { FontSizeRowComponentProps, FontSizeRowInjected } from './FontSizeRow.tsx'
@@ -62,37 +64,6 @@ export interface ThemeTokenModes {
 
 /** Override-layer dictionary: token names to per-mode value pairs. */
 export type ThemeTokenOverrides = Record<string, ThemeTokenModes>
-
-/** One selectable theme: id, dark/light semantics, and alias-token overrides. */
-export interface ThemeDefinition {
-  /** Theme id (the setTheme argument for concrete themes). */
-  id: string
-  /**
-   * Which base palette this theme builds on. The presenter switches
-   * `body[data-ds-dark-theme]` from this field — never from the id.
-   */
-  colorScheme: 'light' | 'dark'
-  /** Alias-layer overrides applied as inline CSS variables over the base palette. */
-  tokens: ThemeTokens
-}
-
-/** Immutable theme state published on every change. */
-export interface ThemeSnapshot {
-  /** The persisted preference (may be `system`). */
-  preference: ThemePreference
-  /** Conversation content font size in px (integer within FONT_SIZE_MIN..FONT_SIZE_MAX). */
-  fontSize: number
-  /**
-   * The resolved active theme (`system` resolved via prefers-color-scheme)
-   * with override layers folded into its tokens (seq order, later layers win
-   * per-token; each value picked for the active color scheme).
-   */
-  active: ThemeDefinition
-  /** Registered themes in registration order. */
-  themes: readonly ThemeDefinition[]
-  /** Monotonic change counter (registry or active changes). */
-  revision: number
-}
 
 /** One theme token exposed to pre-definition Cordis inspection. */
 export interface ThemeTokenInspection {

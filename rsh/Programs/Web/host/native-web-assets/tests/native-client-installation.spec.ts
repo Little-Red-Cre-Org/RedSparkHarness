@@ -2,7 +2,7 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { prepareNativeClientBundle } from '../src/native-client.ts'
 
 it('keeps workspace Client resolution explicit and rejects installed package escapes', async () => {
@@ -40,6 +40,59 @@ it('keeps workspace Client resolution explicit and rejects installed package esc
     await writeFile(join(project, 'rsh.client.json'), JSON.stringify({ formatVersion: 1, installations: [{ id: 'client', plugin: 'contained-client' }] }))
     expect((await prepareNativeClientBundle(project, runtime, true))?.wire.modules).toEqual([{ id: 'client' }])
   } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
+it('defines only public Client environment values and fixes the browser bundle to production', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-client-env-'))
+  const project = join(home, 'profile'), runtime = join(home, 'runtime')
+  const fixture = join(runtime, 'node_modules', 'native-env-fixture')
+  vi.stubEnv('DSH_CLIENT_TITLE', 'Native browser shell')
+  vi.stubEnv('DSH_CLIENT_UNSET', undefined)
+  vi.stubEnv('DSH_HOST_SECRET', 'host-only')
+  vi.stubEnv('NODE_ENV', 'development')
+  try {
+    await mkdir(project, { recursive: true })
+    await mkdir(fixture, { recursive: true })
+    await writeFile(join(fixture, 'package.json'), JSON.stringify({
+      name: 'native-env-fixture', type: 'module', exports: { './native': './native.mjs' },
+      dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
+    }))
+    await writeFile(join(fixture, 'native.mjs'), [
+      'export const environment = {',
+      '  title: process.env.DSH_CLIENT_TITLE,',
+      '  missing: process.env.DSH_CLIENT_UNSET,',
+      '  secret: process.env.DSH_HOST_SECRET,',
+      '  all: process.env,',
+      '  nodeEnv: process.env.NODE_ENV,',
+      '}',
+    ].join('\n'))
+    await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
+      formatVersion: 1, installations: [{ id: 'client', plugin: 'native-env-fixture' }],
+    }))
+
+    const bundle = await prepareNativeClientBundle(project, runtime)
+    const asset = bundle?.assets.get(bundle.wire.bundle)
+    expect(asset?.contentType).toBe('text/javascript; charset=utf-8')
+    const module = await import(`data:text/javascript;base64,${Buffer.from(asset!.body).toString('base64')}`) as {
+      plugins: {
+        client: {
+          environment: {
+            title: string
+            missing: undefined
+            secret: undefined
+            all: Record<string, never>
+            nodeEnv: string
+          }
+        }
+      }
+    }
+    expect(module.plugins.client.environment).toEqual({
+      title: 'Native browser shell', missing: undefined, secret: undefined, all: {}, nodeEnv: 'production',
+    })
+  } finally {
+    vi.unstubAllEnvs()
     await rm(home, { recursive: true, force: true })
   }
 })

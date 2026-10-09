@@ -22,6 +22,14 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./theme-contract": {
+      "types": "./lib/types/theme-contract.d.ts",
+      "default": "./lib/theme-contract.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -36,11 +44,28 @@
       ],
       "platform": "web",
       "immediately": true
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [],
+      "optional": [],
+      "provides": [
+        "clientNativeTheme"
+      ]
     }
   },
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -64,6 +89,8 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
+    "lib/theme-contract.js",
     "lib/styles",
     "lib/types/**/*.d.ts"
   ],
@@ -72,6 +99,7 @@
     "watch": "tsdown --watch"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   }
 }

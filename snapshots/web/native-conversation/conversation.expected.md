@@ -14,3 +14,7 @@ Read
 tool-card.txt
 Assistant
 Native browser answer.
+User
+Second prompt while the title is pending.
+Assistant
+Native browser answer.

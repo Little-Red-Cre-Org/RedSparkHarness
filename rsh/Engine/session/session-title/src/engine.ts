@@ -320,6 +320,15 @@ export class SessionTitleEngine<T extends SessionTitleTarget, R extends SessionT
     if (state !== undefined) await this.drain(state.operations)
   }
 
+  /** Wait for title work already admitted for one live target without changing its revision.
+   * @param target - live title target.
+   * @returns completion after accepted work for that target settles.
+   */
+  async settle(target: T): Promise<void> {
+    const state = this.work.get(target)
+    if (state !== undefined) await this.drain(state.operations)
+  }
+
   /**
    * Stop accepting work for one Session without waiting for its provider.
    * Remaining work stays in the engine's lifetime registry and `dispose()` drains it.

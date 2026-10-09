@@ -12,7 +12,7 @@
  * `--check` verifies the committed artifact is fresh.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { globSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import {
   declaredTypes,
@@ -29,8 +29,57 @@ import { PACKAGE_SOURCE_GLOBS } from './workspace-manifest-globs.ts'
 const root = resolve(import.meta.dirname, '..', '..')
 const OUT = 'rsh/Modules/Official/extensions/cordis-client-runner/src/client/slot-catalog.ts'
 
-/** Source globs: every workspace package's sources, `.tsx` included (a contract may live in one). */
-const SOURCE_GLOBS = [...PACKAGE_SOURCE_GLOBS]
+/** Manifest fields that identify the Cordis browser face and its separate Native entry. */
+interface ClientCatalogManifest {
+  dsh?: {
+    client?: unknown
+    native?: { entry?: unknown } | null
+  }
+}
+
+/**
+ * Select the source files belonging to the manifest-declared `dsh.client` face.
+ * A dual-face package's `dsh.native.entry` source stem and its companions are
+ * separate composition inputs, even when they declare the same SlotMap keys.
+ * @param scanRoot - repository root.
+ * @returns source paths to scan and index for the Cordis client catalog.
+ */
+function clientSourcePaths(scanRoot: string): string[] {
+  const packageCache = new Map<string, ClientCatalogManifest>()
+  const files = [...new Set(globSync([...PACKAGE_SOURCE_GLOBS], { cwd: scanRoot })
+    .map(path => path.replaceAll('\\', '/'))
+    .filter(path => !path.endsWith('.d.ts'))
+    .sort())]
+  return files.filter((rel) => {
+    const sourceMarker = rel.indexOf('/src/')
+    if (sourceMarker < 0) return false
+    const packageRoot = rel.slice(0, sourceMarker)
+    let manifest = packageCache.get(packageRoot)
+    if (manifest === undefined) {
+      manifest = JSON.parse(readFileSync(resolve(scanRoot, `${packageRoot}/package.json`), 'utf8')) as ClientCatalogManifest
+      packageCache.set(packageRoot, manifest)
+    }
+    const dsh = manifest.dsh
+    const hasClientFace = dsh?.client !== undefined
+    const native = dsh?.native
+    const nativeEntry = native === undefined || native === null
+      ? undefined
+      : typeof native.entry === 'string'
+        ? native.entry
+        : (() => { throw new Error(`gen-client-catalog: ${packageRoot} declares dsh.native without a string entry.`) })()
+    return isClientFaceSource(rel, packageRoot, hasClientFace, nativeEntry)
+  })
+}
+
+/** Whether a package source path belongs to its manifest-selected client face. */
+export function isClientFaceSource(rel: string, packageRoot: string, hasClientFace: boolean, nativeEntry?: string): boolean {
+  if (!hasClientFace) return false
+  if (nativeEntry === undefined) return true
+  const entry = nativeEntry.replace(/^\.\//, '').replace(/\.(?:[cm]?[jt]sx?)$/, '')
+  const nativeStem = `${packageRoot}/src/${entry}`
+  return !(rel === `${nativeStem}.ts` || rel === `${nativeStem}.tsx`
+    || rel.startsWith(`${nativeStem}-`) || rel.startsWith(`${nativeStem}/`))
+}
 
 /** Slot cardinalities the contract allows. */
 const KINDS = ['single', 'list', 'keyed', 'chain'] as const
@@ -131,10 +180,11 @@ export interface SlotEntry {
  * @throws when any declared slot is unteachable or the scan contradicts itself.
  */
 export function collectSlotEntries(scanRoot: string): SlotEntry[] {
-  const files = scanSlotFiles(scanRoot, SOURCE_GLOBS)
+  const sourcePaths = clientSourcePaths(scanRoot)
+  const files = scanSlotFiles(scanRoot, sourcePaths)
   const declarations = files.flatMap(file => slotDeclarations(file))
   const registrations = files.flatMap(file => slotRegistrations(file))
-  const types = indexExportedTypes(scanRoot, SOURCE_GLOBS)
+  const types = indexExportedTypes(scanRoot, PACKAGE_SOURCE_GLOBS)
   const problems = validateSlotContracts(declarations, registrations, types)
   if (problems.length > 0) {
     throw new Error(`gen-client-catalog: ${String(problems.length)} contract violation(s):\n${problems.map(problem => `  ${problem}`).join('\n')}`)

@@ -1,5 +1,5 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
-import type { NativeSessionClient, NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeSessionFollowFrame, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
@@ -13,7 +13,7 @@ export interface ConversationSnapshot {
   readonly modelControls?: NativeModelControls | undefined
   readonly human?: NativeWebHumanPrompt | undefined
   readonly answeringHuman?: boolean | undefined
-  readonly sessions: readonly SessionHeader[]
+  readonly sessions: readonly NativeSessionListItem[]
   readonly selected?: SessionId
   readonly events: readonly SessionEvent[]
   readonly liveText?: string | undefined
@@ -34,7 +34,11 @@ export class NativeConversationController {
   private readonly listeners = new Set<() => void>()
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
+  private readonly background = new Set<Promise<void>>()
+  private rosterRevision = 0
   private turn: AbortController | undefined
+  private foregroundAdmission: { readonly sessionId: SessionId } | undefined
+  private followErrorOwner: { readonly sessionId: SessionId } | undefined
   private closing: Promise<void> | undefined
 
   /**
@@ -85,15 +89,32 @@ export class NativeConversationController {
     this.publish({ selected: id, header: history.header, events: history.events })
   }
 
+  private async reload(id?: SessionId): Promise<void> {
+    const revision = ++this.rosterRevision
+    const sessions = await this.client.list(this.lifetime.signal)
+    if (revision !== this.rosterRevision || this.lifetime.signal.aborted) return
+    this.publish({ sessions })
+    if (id !== undefined && this.snapshot.selected === id) await this.restore(id)
+  }
+
+  private refreshRoster(): void {
+    if (this.lifetime.signal.aborted) return
+    const work = this.reload().catch((error: unknown) => {
+      this.publish({ error: error instanceof Error ? error.message : String(error) })
+    }).finally(() => { this.background.delete(work) })
+    this.background.add(work)
+  }
+
   /** Read the persisted index without automatically resuming a Session.
    * @returns completion after the initial index request.
    */
   load(): Promise<void> {
     return this.run(async () => {
+      const revision = ++this.rosterRevision
       const [sessions, modelControls] = await Promise.all([
         this.client.list(this.lifetime.signal), this.client.modelControls(this.lifetime.signal),
       ])
-      this.publish({ sessions, modelControls, error: undefined })
+      if (revision === this.rosterRevision) this.publish({ sessions, modelControls, error: undefined })
     })
   }
 
@@ -102,11 +123,12 @@ export class NativeConversationController {
    */
   create(): Promise<void> {
     this.assertReady()
+    this.followErrorOwner = undefined
     this.publish({ state: 'loading', error: undefined })
     return this.run(async () => {
       const { sessionId } = await this.client.create(this.lifetime.signal)
       await this.restore(sessionId)
-      this.publish({ sessions: await this.client.list(this.lifetime.signal) })
+      await this.reload()
     })
   }
 
@@ -116,8 +138,34 @@ export class NativeConversationController {
    */
   select(id: SessionId): Promise<void> {
     this.assertReady()
+    this.followErrorOwner = undefined
     this.publish({ state: 'loading', error: undefined })
     return this.run(() => this.restore(id))
+  }
+
+  /** Pin an edited title through the selected Host's existing Session writer.
+   * @param id - ID of the Session whose title to rename.
+   * @param title - New title to persist.
+   */
+  renameTitle(id: SessionId, title: string): Promise<void> {
+    this.assertReady()
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      await this.client.renameTitle(id, title, this.lifetime.signal)
+      await this.reload(id)
+    })
+  }
+
+  /** Explicitly refresh the selected Host title provider or deterministic fallback.
+   * @param id - ID of the Session whose title to refresh.
+   */
+  refreshTitle(id: SessionId): Promise<void> {
+    this.assertReady()
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      await this.client.refreshTitle(id, this.lifetime.signal)
+      await this.reload(id)
+    })
   }
 
   /** Refresh provider-owned menus without changing Session intent.
@@ -184,9 +232,13 @@ export class NativeConversationController {
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const turn = new AbortController()
     const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
+    const admission = { sessionId: id }
+    this.foregroundAdmission = admission
+    this.followErrorOwner = admission
     this.turn = turn
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
+      let turnFailed = false
       try {
         const images: NativeImageUpload[] = []
         const policy = this.snapshot.modelControls?.images
@@ -219,19 +271,36 @@ export class NativeConversationController {
           }
         }
         const result = await this.client.prompt(id, text, true, signal,
-          (frame) => { this.observe(frame) }, images)
+          (frame) => { this.observe(frame, admission) }, images,
+          (error) => {
+            if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
+              this.publish({ error: error instanceof Error ? error.message : String(error) })
+            }
+          })
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }
+      } catch (error: unknown) {
+        turnFailed = true
+        throw error
       } finally {
+        if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
         this.turn = undefined
         this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
-        if (!this.lifetime.signal.aborted) await this.restore(id)
+        if (!this.lifetime.signal.aborted && this.snapshot.selected === id) {
+          try { await this.reload(id) }
+          catch (error: unknown) { if (!turnFailed) throw error }
+        }
       }
     })
   }
 
-  private observe(frame: NativeSessionFollowFrame): void {
+  private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId }): void {
+    if (frame.type === 'title-updated') {
+      this.refreshRoster()
+      return
+    }
+    if (this.foregroundAdmission !== admission || this.snapshot.selected !== admission.sessionId) return
     if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
     else if (frame.type === 'human-removed') { if (this.snapshot.human?.id === frame.id) this.publish({ human: undefined, answeringHuman: false }) }
     else if (frame.type === 'event') {
@@ -279,8 +348,13 @@ export class NativeConversationController {
   close(): Promise<void> {
     if (this.closing !== undefined) return this.closing
     this.lifetime.abort(new Error('native conversation: disposed'))
+    this.followErrorOwner = undefined
     this.snapshot = Object.freeze({ ...this.snapshot, state: 'closed' })
     this.listeners.clear()
-    return this.closing = Promise.allSettled([...this.pending]).then(() => undefined)
+    return this.closing = (async () => {
+      while (this.pending.size > 0 || this.background.size > 0) {
+        await Promise.allSettled([...this.pending, ...this.background])
+      }
+    })()
   }
 }

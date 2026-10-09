@@ -53,6 +53,8 @@ The [native turn executor](../native-headless/README.md) registers each active S
 
 `continuations.catalog()` supplies read-only candidate paths from the selected Program. `continuations.inspect()` checks their parent links and requires a subagent endpoint; the consumer interprets descriptor events. Neither operation creates an Agent or writer.
 
+Each child handle exposes `ready`, `waitForeground()`, and `done`: the method waits for its first foreground turn and foreground descendants, while background work may remain; `done` waits for writer, Agent, and settlement-notification cleanup.
+
 `lifetime` resolves to `turn` at admission unless the caller explicitly selects `agent`. Agent-owned delegation survives ordinary contribution removal and permits the next parent turn to register a new exact Session while the child continues. Admission still requires the current active parent; retained background work cannot admit calls through an expired Session. Its caller supplies the background owner's cancellation signal. Settlement removes the Agent cleanup contribution when no background operation remains.
 
 A delegation may supply `prepare` to install child-scoped contributions before the executor renders system text or selects tool schemas. The callback receives the exact registered child and a bound resource owner. The executor waits for preparation, rollback and resource release before completing delegation; preparation and cleanup failures retain independent causes. `onReady` remains a publication callback after initial facts persist, not a setup window.

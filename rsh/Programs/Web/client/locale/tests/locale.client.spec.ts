@@ -2,8 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as nativeRendererPlugin } from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type { LocaleSettings, LocaleSnapshot } from '@deepseek-ai/dsh-client-locale/client'
 import { FALLBACK_LOCALE, LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
+import { plugin as nativeLocalePlugin, type NativeLocaleService } from '../src/native.ts'
 const make = (host?: StubSettingsScope<LocaleSettings>): {
   ctx: Context
   svc: LocaleRuntime
@@ -124,6 +127,47 @@ describe('LocaleRuntime', () => {
       expect(spy).toHaveBeenCalledOnce()
     } finally {
       spy.mockRestore()
+    }
+  })
+
+  it('contains native locale listener failures and drains subscriptions when a consumer is removed', async () => {
+    const scope = new NativeScope()
+    const localeRequest = { plugin: nativeLocalePlugin, scope, config: { locale: 'en' } }
+    const listenerFailure = new Error('native locale listener failed')
+    let service: NativeLocaleService | undefined
+    const seen: number[] = []
+    const observer: NativePlugin = {
+      apiVersion: 1,
+      name: 'native-locale-observer-test',
+      targets: ['client'],
+      requires: ['clientLocale'],
+      provides: [],
+      resolve: () => (context) => {
+        service = context.require('clientLocale')
+        context.own(service.subscribe(() => { throw listenerFailure }))
+        context.own(service.subscribe(() => { seen.push(service!.getSnapshot().revision) }))
+      },
+    }
+    const observerRequest = { plugin: observer, scope, config: undefined }
+    const host = new NativeHost(resolveInstallation([
+      { plugin: nativeRendererPlugin, scope, config: undefined }, localeRequest, observerRequest,
+    ], 'client'))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await host.start()
+      service!.setLocale('zh')
+      expect(service!.getSnapshot()).toEqual({ locale: 'zh', revision: 1 })
+      expect(seen).toEqual([1])
+      expect(error).toHaveBeenCalledWith('[native-locale] subscriber failed:', listenerFailure)
+      expect(error).toHaveBeenCalledOnce()
+
+      await host.remove(observerRequest)
+      service!.setLocale('en')
+      expect(seen).toEqual([1])
+      expect(error).toHaveBeenCalledOnce()
+    } finally {
+      await host.stop()
+      error.mockRestore()
     }
   })
 

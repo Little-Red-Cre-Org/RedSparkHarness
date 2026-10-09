@@ -9,8 +9,8 @@
  */
 import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/native'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {

@@ -116,11 +116,16 @@ export interface NativeActiveSessionOwner {
   remove(ids: readonly MessageId[], target: InboxTarget, signal: AbortSignal): Promise<void>
   /**
    * Retain this root or child residency without acquiring another writer or execution owner.
+   * The enclosing main turn waits for this retention to release.
    * @returns exact idempotent release; Program cancellation overrides retention and still drains work.
    */
   retain(): () => void
-  /** Retain root background work without delaying its foreground result; cancellation still drains it. */
-  retainBackground?(): () => void
+  /**
+   * Retain this exact writer for an owned background task without extending main-turn settlement.
+   * Owner cancellation still closes admission and drains its Consumers before the writer closes.
+   * @returns exact idempotent release.
+   */
+  retainBackground(): () => void
   /**
    * Observe only backend-accepted events; observers must not synchronously await new persistence.
    * @param observer - synchronous durable-event observer.
