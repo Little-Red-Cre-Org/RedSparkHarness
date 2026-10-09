@@ -11,7 +11,7 @@ kind: "package-reference"
 
 ## 概述
 
-原生 Host profile 在 `read-only` 或 `workspace-write` 文件策略下需要允许 `run_code` 时，可选择此 Provider。每段程序在由选定操作系统沙箱包裹的全新受管理进程中运行，已声明的 binding 调用通过 JSON 行协议返回。沙箱 runner 启动失败会终止本次调用，不会以未受限方式重试。所选沙箱后端会报告文件效果隔离是完整还是部分。
+原生 Host profile 在 `read-only` 或 `workspace-write` 文件策略下需要允许 `run_code` 时，可选择此 Provider。每段程序在由选定操作系统沙箱包裹的全新受管理进程中运行，已声明的 binding 调用通过 JSON 行协议返回。Provider 通过 `NativeSandboxPolicy` 解析当前准确 Session，并将有效模式和工作区根目录同时传给 `ProcessSandbox.confine()` 与子进程 `cwd`；仅当 Session 没有覆盖项时才使用显式部署默认值。此仅执行受约束代码的 Provider 会拒绝有效 Session 模式为 `danger-full-access` 的调用；只有 profile 明确允许未受限执行时才能选择其他运行时。沙箱 runner 启动失败会终止本次调用，不会以未受限方式重试。所选沙箱后端会报告文件效果隔离是完整还是部分。
 
 ## 目录
 
@@ -27,7 +27,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用此包
 
-在明确选择原生运行时的 `dsh` profile 中，将 Host `./native` 入口与 `dsh-subprocess-local`、`dsh-sandbox-local`、`dsh-native-sandbox-policy` 一同选择。应用和沙箱策略必须使用相同的工作区根目录。本包不更改默认应用 profile。可选 `computeMs`、`maxWallMs`、`maxOutputBytes` 和 `maxOldGenerationSizeMb` 使用[代码运行时 Definition](../native-code-runtime/README.zh.md#configuration)所说明的已校验默认值。
+在明确选择原生运行时的 `dsh` profile 中，将 Host `./native` 入口与 `dsh-subprocess-local`、`dsh-sandbox-local`、`dsh-native-sandbox-policy` 一同选择。本包不更改默认应用 profile。可选 `computeMs`、`maxWallMs`、`maxOutputBytes` 和 `maxOldGenerationSizeMb` 使用[代码运行时 Definition](../native-code-runtime/README.zh.md#configuration)所说明的已校验默认值。
 
 runner 不可用时会以 `SANDBOX_UNAVAILABLE` 失败。程序异常、时间预算、中止、无效 JSON 值或输出超限会返回结构化 `run_code` 失败；Host 关闭时会先终止并等待受管理进程范围退出。
 

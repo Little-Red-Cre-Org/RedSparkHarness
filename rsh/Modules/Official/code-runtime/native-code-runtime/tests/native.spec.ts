@@ -2,8 +2,16 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig, type NativeCodeRuntime } from '../src/index.ts'
 import { plugin } from '../src/native.ts'
+
+function session(): Session {
+  const id = SessionId('native-code-runtime-host-test')
+  return Session.create(id, undefined, {
+    version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: process.cwd(), isSeeded: false, delegationDepth: 0,
+  })
+}
 
 describe('native code runtime', () => {
   it('matches its native manifest and admits default profile configuration', () => {
@@ -37,6 +45,7 @@ describe('native code runtime', () => {
       await expect(runtime.run({
         program: 'console.log("before"); return await tools.echo({ answer: 42 })',
         bindings: [{ global: 'tools', functions: { echo: async (args) => { calls.push(args); return args as { answer: number } } } }],
+        session: session(),
       })).resolves.toEqual({ logs: ['before'], value: { answer: 42 } })
       expect(calls).toEqual([{ answer: 42 }])
     } finally {
@@ -49,11 +58,11 @@ describe('native code runtime', () => {
     const controller = new AbortController()
     try {
       setTimeout(() => { controller.abort('operator stopped') }, 50)
-      await expect(runtime.run({ program: 'for (;;) {}', bindings: [], signal: controller.signal }))
+      await expect(runtime.run({ program: 'for (;;) {}', bindings: [], signal: controller.signal, session: session() }))
         .resolves.toEqual({ logs: [], error: { kind: 'abort', message: 'operator stopped' } })
     } finally {
       await runtime.dispose()
     }
-    await expect(runtime.run({ program: 'return 1', bindings: [] })).rejects.toThrow('run() after disposal')
+    await expect(runtime.run({ program: 'return 1', bindings: [], session: session() })).rejects.toThrow('run() after disposal')
   })
 })

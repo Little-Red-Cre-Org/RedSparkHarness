@@ -27,7 +27,7 @@ kind: "package-reference"
 
 `nativeCodeRuntimeChildPath()` 解析受进程约束 Provider 使用的私有子进程。子进程将 TypeScript 执行和 binding 序列化交给本包的 worker 实现；它不是应用启动器，也不是公开 package bin。进程 Provider 拥有操作系统约束和完整进程范围的终止职责。
 
-调用方可提供 `NativeCodeRunRequest.onStop`，在已开始的原生执行停止时取消自己持有的 binding 调用。Provider 会在等待 binding 回复前通知一次；调用方仍负责这些调用的完成与失败。执行尚未开始便已解析或拒绝的请求不会触发通知。
+`NativeCodeRunRequest` 会在 Host 侧携带当前 Native Session，但此 worker Provider 不会序列化它，也不执行其文件策略。当前 Session 受限时，PTC 与 Headless Consumer 会拒绝此 Provider；在 `read-only` 或 `workspace-write` 下约束执行应选择 process-sandbox Provider，该仅执行受约束代码的 Provider 会拒绝有效模式为 `danger-full-access` 的 Session。调用方可提供 `onStop`，在已开始的原生执行停止时取消自己持有的 binding 调用。Provider 会在等待 binding 回复前通知一次；调用方仍负责这些调用的完成与失败。执行尚未开始便已解析或拒绝的请求不会触发通知。
 
 <a id="model-experience"></a>
 ## 模型体验

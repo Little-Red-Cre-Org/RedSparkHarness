@@ -23,7 +23,7 @@ kind: "package-reference"
 
 `./native` 入口接受 `maxParallelSubCalls`（默认 `10`，正安全整数）及 `sdkPrompt`（默认 `false`，布尔值）。它要求 `tools`、`codeRuntime` 和 `fs`，可选读取 `sandboxPolicy` 及 `promptSections`。启用 `sdkPrompt` 必须选择提示词 Provider，并在 Consumer 作用域安装可撤销的 `tools:sdk` 段。profile 独立选择这些 Provider。所选运行时语言决定代码 schema 和 SDK 声明；Python 说明涵盖普通 JSON 参数、静态 TypedDict 声明、`asyncio.gather` 与 `print`，不支持的语言会拒绝安装。重复名称会失败，作用域可见性、参数校验、取消及释放均使用普通工具注册表。
 
-存在文件策略时必须使用执行沙箱约束的代码运行时，除非所选策略显式为 `danger-full-access`。`process-sandbox` 运行时要求显式策略。每次受限执行前，Session 工作区必须等于策略配置的工作区；不匹配时会在进入 Provider 前拒绝。运行时拥有资源限制与执行隔离，本模块不会替换 Provider 或扩大其策略。
+存在文件策略时必须使用执行沙箱约束的代码运行时，除非当前 Session 解析出的模式为 `danger-full-access`。`process-sandbox` 运行时要求显式策略，并在执行前从同一个 Session 解析有效工作区；Session 没有匹配工作区时会在进入 Provider 前拒绝。当前 Session 受限时会拒绝其他运行时。本模块不会替换 Provider 或扩大其资源限制与执行隔离策略。
 
 此工具注册为值贡献。注册表先校验传输结果，再呈现其文本，并为程序消费者保留独立的标准结果；格式错误的运行时结果以 INVALID_TOOL_OUTPUT 拒绝。每次运行前，Consumer 查询 Agent 可见的标准工具 schema，将其函数安装到 `tools`，排除 `run_code`。每个 binding 使用原生有序调度，返回工具标准值。工具失败在程序中以带有 `toolName` 的 `ToolCallError` 拒绝。可见的仅呈现贡献会在进入运行时前使 SDK 查询失败。Consumer 在每种 Provider 结果后关闭并排空调度，包括异常；Session 写入失败会使外层调用拒绝。
 

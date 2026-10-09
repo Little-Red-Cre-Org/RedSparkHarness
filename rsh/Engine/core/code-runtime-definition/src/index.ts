@@ -48,8 +48,8 @@ export interface CodeRuntimeDefinition {
 /** Native implementations also own and drain their execution substrates. */
 export interface NativeCodeRuntime extends CodeRuntimeDefinition {
   /**
-   * Execute one program with an optional native stop notification for binding cleanup.
-   * @param request - the program, its bindings, abort signal, and optional stop callback.
+   * Execute one program with its live Session and an optional native stop notification for binding cleanup.
+   * @param request - the program, its bindings, Session policy context, abort signal, and optional stop callback.
    * @returns the run outcome, including any program or substrate failure.
    */
   run(request: NativeCodeRunRequest): Promise<CodeRunResult>

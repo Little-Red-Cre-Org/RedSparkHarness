@@ -11,7 +11,7 @@ Binding arguments and resolutions use lossless JSON without a transport byte cei
 
 ## Summary
 
-Use this provider when a native Host profile permits `run_code` under `read-only` or `workspace-write` file policy. Each program runs in a fresh managed process wrapped by the selected OS sandbox, and declared binding calls return through a JSON line protocol. Runner startup failure stops the call without an unconfined retry. The selected sandbox backend reports whether its file-effect enforcement is full or partial.
+Use this provider when a native Host profile permits `run_code` under `read-only` or `workspace-write` file policy. Each program runs in a fresh managed process wrapped by the selected OS sandbox, and declared binding calls return through a JSON line protocol. The Provider resolves the exact live Session through `NativeSandboxPolicy` and passes its effective mode and workspace root to both `ProcessSandbox.confine()` and the child process `cwd`; explicit deployment defaults apply only where the Session has no override. This confined-only Provider rejects an effective `danger-full-access` Session; select another runtime only where the profile explicitly permits unconfined execution. Runner startup failure stops the call without an unconfined retry. The selected sandbox backend reports whether its file-effect enforcement is full or partial.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Use this provider when a native Host profile permits `run_code` under `read-only
 <a id="use-this-package"></a>
 ## Use this package
 
-Select the Host `./native` entry beside `dsh-subprocess-local`, `dsh-sandbox-local`, and `dsh-native-sandbox-policy` in an explicitly native `dsh` profile. Its application and sandbox policy must use the same workspace root. This package does not change the default application profile. Its optional `computeMs`, `maxWallMs`, `maxOutputBytes`, and `maxOldGenerationSizeMb` settings use the validated defaults documented by [the code-runtime definition](../native-code-runtime/README.md#configuration).
+Select the Host `./native` entry beside `dsh-subprocess-local`, `dsh-sandbox-local`, and `dsh-native-sandbox-policy` in an explicitly native `dsh` profile. This package does not change the default application profile. Its optional `computeMs`, `maxWallMs`, `maxOutputBytes`, and `maxOldGenerationSizeMb` settings use the validated defaults documented by [the code-runtime definition](../native-code-runtime/README.md#configuration).
 
 An unavailable runner fails with `SANDBOX_UNAVAILABLE`. A program exception, time budget, abort, invalid JSON value, or output cap returns a structured `run_code` failure; Host shutdown terminates the managed process range before completing.
 

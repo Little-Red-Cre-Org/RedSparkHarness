@@ -12,13 +12,18 @@ import type { Readable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import type { NativeCodeRuntime } from './index.ts'
 import { DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from './vocabulary.ts'
-import type { CodeBindingNamespace, CodeJsonValue, CodeRunFailure, CodeRunResult, NativeCodeRunRequest } from './types.ts'
+import type { CodeBindingNamespace, CodeJsonValue, CodeRunFailure, CodeRunRequest, CodeRunResult, NativeCodeRunRequest } from './types.ts'
 import type { ReplyMessage, WorkerBootData, WorkerToHost } from './protocol.ts'
 import { jsonStringBytesUpTo, jsonValueBytesUpTo, truncateJsonStringBytes } from './output-json.ts'
 import { decodeWorkerJson, encodeWorkerJson, snapshotCodeJsonValue } from './worker-json.ts'
 import type { WorkerJsonWire } from './worker-json.ts'
 
-const executionStartObservers = new WeakMap<NativeCodeRunRequest, () => void>()
+type WorkerRequestRunner = (
+  request: CodeRunRequest,
+  onExecutionStart: () => void,
+  onStop?: NativeCodeRunRequest['onStop'],
+) => Promise<CodeRunResult>
+const workerRequestRunners = new WeakMap<object, WorkerRequestRunner>()
 
 /** Explicit code-runtime limits selected by a native profile. */
 export interface Config {
@@ -287,7 +292,10 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
   private disposed = false
 
   /** @param config - fully resolved execution limits. */
-  constructor(config: ResolvedConfig) { this.config = config }
+  constructor(config: ResolvedConfig) {
+    this.config = config
+    workerRequestRunners.set(this, (request, observer, onStop) => this.runRequest(request, onStop, observer))
+  }
 
   /**
    * Dispose to quiescence: mark the service unusable, fail every in-flight
@@ -310,6 +318,14 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
    * @returns the run's outcome per the seam contract.
    */
   async run(request: NativeCodeRunRequest): Promise<CodeRunResult> {
+    return await this.runRequest(request, request.onStop)
+  }
+
+  private async runRequest(
+    request: CodeRunRequest,
+    onStop?: NativeCodeRunRequest['onStop'],
+    onExecutionStart?: () => void,
+  ): Promise<CodeRunResult> {
     if (this.disposed) throw new Error('native-code-runtime: run() after disposal')
     const bindings = this.validateBindings(request)
     if (request.signal?.aborted) {
@@ -327,7 +343,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
       return this.failureBeforeWorker({ kind: 'exception', message: messageOf(error) })
     }
 
-    return await this.execute(request, code, bindings)
+    return await this.execute(request, code, bindings, onStop, onExecutionStart)
   }
 
   /** Apply the outer-output ledger to failures that occur before a worker owns one. */
@@ -336,7 +352,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
   }
 
   /** Reject malformed binding globals or typed-error declarations before creating a worker. */
-  private validateBindings(request: NativeCodeRunRequest): Map<string, CodeBindingNamespace> {
+  private validateBindings(request: CodeRunRequest): Map<string, CodeBindingNamespace> {
     const bindings = new Map<string, CodeBindingNamespace>()
     for (const namespace of request.bindings) {
       if (!IDENTIFIER.test(namespace.global) || PORTABLE_RESERVED_WORDS.has(namespace.global)) {
@@ -381,9 +397,11 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
 
   /** Spawn the worker for one validated, type-stripped run and drive it to settlement. */
   private execute(
-    request: NativeCodeRunRequest,
+    request: CodeRunRequest,
     code: string,
     bindings: Map<string, CodeBindingNamespace>,
+    onStop?: NativeCodeRunRequest['onStop'],
+    onExecutionStart?: () => void,
   ): Promise<CodeRunResult> {
     const bootData: WorkerBootData = {
       code,
@@ -455,7 +473,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
           await Promise.all([worker.terminate(), stdoutDrained, stderrDrained])
           const result = terminalOverride ?? (typeof finalize === 'function' ? finalize() : finalize)
           try {
-            if (executionStarted) request.onStop?.(result.error)
+            if (executionStarted) onStop?.(result.error)
             resolve(result)
           } finally { this.live.delete(live); finishResolve() }
         }).catch((error: unknown) => {
@@ -534,7 +552,7 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
         if (message.type === 'started') {
           if (executionStarted) return
           executionStarted = true
-          try { executionStartObservers.get(request)?.() }
+          try { onExecutionStart?.() }
           catch (error: unknown) {
             finish(() => output.failure([...logs, ...strayLogs], { kind: 'worker-exit', message: 'execution start observer failed: ' + messageOf(error) }))
           }
@@ -590,13 +608,13 @@ export class NativeWorkerThreadCodeRuntime implements NativeCodeRuntime {
 /** Internal bridge used by the private process-child entry to forward the actual worker start. */
 export async function runWithExecutionStartObserver(
   runtime: NativeWorkerThreadCodeRuntime,
-  request: NativeCodeRunRequest,
+  request: CodeRunRequest,
   observer: () => void,
 ): Promise<CodeRunResult> {
-  const observedRequest = { ...request }
-  executionStartObservers.set(observedRequest, observer)
-  try { return await runtime.run(observedRequest) }
-  finally { executionStartObservers.delete(observedRequest) }
+  const onStop: NativeCodeRunRequest['onStop'] = 'session' in request ? (request as NativeCodeRunRequest).onStop : undefined
+  const run = workerRequestRunners.get(runtime)
+  if (run === undefined) throw new Error('native-code-runtime: observed execution requires its own worker runtime')
+  return await run(request, observer, onStop)
 }
 
 export default NativeWorkerThreadCodeRuntime
