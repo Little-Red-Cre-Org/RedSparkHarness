@@ -21,6 +21,12 @@ class ActiveSessionsFixture implements NativeActiveSessionOperations {
   private readonly attached = new Set<(owner: NativeActiveSessionOwner) => Promise<void>>()
   private readonly detached = new Set<(owner: NativeActiveSessionOwner) => Promise<void>>()
 
+  async register(owner: NativeActiveSessionOwner): Promise<() => Promise<void>> {
+    await this.attach(owner)
+    let release: Promise<void> | undefined
+    return () => release ??= this.detach(owner)
+  }
+
   owner(agent: NativeActiveSessionOwner['agent'], session: NativeActiveSessionOwner['session']) {
     return [...this.current].find(owner => owner.agent === agent && owner.session === session)
   }
@@ -113,43 +119,46 @@ it('lists through the selected filesystem, gates its prompt on read, and drains 
     ], 'host'))
     try {
       await host.start()
-      if (filesystem === undefined || references === undefined || promptSections === undefined) {
+      const selectedFilesystem = filesystem
+      const selectedReferences = references
+      const selectedPromptSections = promptSections
+      if (selectedFilesystem === undefined || selectedReferences === undefined || selectedPromptSections === undefined) {
         throw new Error('Native file-reference Provider did not publish its selected services')
       }
       const signal = new AbortController().signal
-      expect(await references.list(initialOwner.agent, initialOwner.session, 'README.md', signal))
+      expect(await selectedReferences.list(initialOwner.agent, initialOwner.session, 'README.md', signal))
         .toEqual([{ path: 'README.md', kind: 'file' }])
       let reverseDirectoryOrder = false
-      const listDirectory = filesystem.listDir.bind(filesystem)
-      filesystem.listDir = async (target, listSignal) => {
+      const listDirectory = selectedFilesystem.listDir.bind(selectedFilesystem)
+      selectedFilesystem.listDir = async (target, listSignal) => {
         const entries = [...await listDirectory(target, listSignal)]
           .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
         return reverseDirectoryOrder ? entries.reverse() : entries
       }
-      const firstOrder = await references.list(initialOwner.agent, initialOwner.session, 'README', signal)
+      const firstOrder = await selectedReferences.list(initialOwner.agent, initialOwner.session, 'README', signal)
       expect(firstOrder).toEqual([{ path: 'README.md', kind: 'file' }])
       const reversedOwner = owner(workspace, 'file-reference-reversed-order', scope)
       await active.detach(initialOwner)
       reverseDirectoryOrder = true
       await active.attach(reversedOwner)
-      expect(await references.list(reversedOwner.agent, reversedOwner.session, 'README', signal)).toEqual(firstOrder)
+      expect(await selectedReferences.list(reversedOwner.agent, reversedOwner.session, 'README', signal)).toEqual(firstOrder)
       if (linked && await lstat(join(workspace, 'escape')).then(() => true, () => false)) {
-        expect(await references.list(reversedOwner.agent, reversedOwner.session, 'escape/', signal)).toEqual([])
+        expect(await selectedReferences.list(reversedOwner.agent, reversedOwner.session, 'escape/', signal)).toEqual([])
       }
-      expect(await promptSections.render(reversedOwner.agent.scope)).toContain(FILE_REFERENCE_PROMPT)
-      expect(await promptSections.render(reversedOwner.agent.scope, { allowedTools: [] })).toBe('')
+      expect(await selectedPromptSections.render(reversedOwner.agent.scope)).toContain(FILE_REFERENCE_PROMPT)
+      expect(await selectedPromptSections.render(reversedOwner.agent.scope, { allowedTools: [] })).toBe('')
 
       const pendingOwner = owner(workspace, 'file-reference-pending', scope)
       await active.attach(pendingOwner)
       const entered = Promise.withResolvers<undefined>()
       const unblock = Promise.withResolvers<undefined>()
-      const orderedListDirectory = filesystem.listDir.bind(filesystem)
-      filesystem.listDir = async (target, listSignal) => {
+      const orderedListDirectory = selectedFilesystem.listDir.bind(selectedFilesystem)
+      selectedFilesystem.listDir = async (target, listSignal) => {
         entered.resolve(undefined)
         await unblock.promise
         return orderedListDirectory(target, listSignal)
       }
-      const pending = references.list(pendingOwner.agent, pendingOwner.session, 'README', signal)
+      const pending = selectedReferences.list(pendingOwner.agent, pendingOwner.session, 'README', signal)
       await entered.promise
       let detached = false
       const detaching = active.detach(pendingOwner).then(() => { detached = true })
@@ -158,7 +167,7 @@ it('lists through the selected filesystem, gates its prompt on read, and drains 
       unblock.resolve(undefined)
       await detaching
       await expect(pending).rejects.toThrow()
-      expect(() => references.list(pendingOwner.agent, pendingOwner.session, 'README', signal))
+      expect(() => selectedReferences.list(pendingOwner.agent, pendingOwner.session, 'README', signal))
         .toThrow('no active owner')
     } finally {
       await host.stop()
