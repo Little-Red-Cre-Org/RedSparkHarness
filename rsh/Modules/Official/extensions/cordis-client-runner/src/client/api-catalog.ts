@@ -889,15 +889,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ThemeDefinition',
-    declaration: 'export interface ThemeDefinition {\n    id: string;\n    colorScheme: \'light\' | \'dark\';\n    tokens: ThemeTokens;\n}',
+    declaration: 'export interface ThemeDefinition {\n    readonly id: string;\n    readonly colorScheme: \'light\' | \'dark\';\n    readonly tokens: Readonly<Record<string, string>>;\n}',
   },
   {
     name: 'ThemePreference',
-    declaration: 'export type ThemePreference = typeof THEME_PREFERENCES[number];',
+    declaration: 'export type ThemePreference = \'light\' | \'dark\' | \'system\';',
   },
   {
     name: 'ThemeSnapshot',
-    declaration: 'export interface ThemeSnapshot {\n    preference: ThemePreference;\n    fontSize: number;\n    active: ThemeDefinition;\n    themes: readonly ThemeDefinition[];\n    revision: number;\n}',
+    declaration: 'export interface ThemeSnapshot {\n    readonly preference: ThemePreference;\n    readonly fontSize: number;\n    readonly active: ThemeDefinition;\n    readonly themes: readonly ThemeDefinition[];\n    readonly revision: number;\n}',
   },
   {
     name: 'ThemeTokenModes',
@@ -906,10 +906,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ThemeTokenOverrides',
     declaration: 'export type ThemeTokenOverrides = Record<string, ThemeTokenModes>;',
-  },
-  {
-    name: 'ThemeTokens',
-    declaration: 'export type ThemeTokens = Record<string, string>;',
   },
   {
     name: 'Translate',

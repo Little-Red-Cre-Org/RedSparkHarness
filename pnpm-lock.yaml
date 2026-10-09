@@ -10405,6 +10405,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence
+      '@deepseek-ai/dsh-session-title':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-title
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -11047,6 +11050,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -11119,12 +11125,33 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:^
+        version: link:../locale
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../native-session
+      '@deepseek-ai/dsh-client-ui-layout':
+        specifier: workspace:^
+        version: link:../ui-layout
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-session':
+        specifier: workspace:^
+        version: link:../ui-session
+      '@deepseek-ai/dsh-client-ui-sidebar':
+        specifier: workspace:^
+        version: link:../ui-sidebar
+      '@deepseek-ai/dsh-client-ui-sidebar-right':
+        specifier: workspace:^
+        version: link:../ui-sidebar-right
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-client-ui-theme':
+        specifier: workspace:^
+        version: link:../ui-theme
       '@deepseek-ai/dsh-client-ui-tool':
         specifier: workspace:^
         version: link:../ui-tool
@@ -11143,6 +11170,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../../../Modules/Official/todo/tool-todo
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -12019,28 +12049,32 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-layout:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
+      '@deepseek-ai/dsh-client-store':
+        specifier: workspace:^
+        version: link:../store
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
-      '@deepseek-ai/dsh-brand':
-        specifier: workspace:^
-        version: link:../../../../Core/util/brand
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
-      '@deepseek-ai/dsh-client-store':
-        specifier: workspace:^
-        version: link:../store
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
       '@deepseek-ai/dsh-client-ui-session':
         specifier: workspace:^
         version: link:../ui-session
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../ui-slots
       '@deepseek-ai/dsh-client-ui-theme':
         specifier: workspace:^
         version: link:../ui-theme
@@ -12604,6 +12638,22 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   rsh/Programs/Web/client/ui-session:
+    dependencies:
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-util-workspace-path':
+        specifier: workspace:^
+        version: link:../../../../Core/util/workspace-path
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -12617,12 +12667,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../ui-slots
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -12854,6 +12898,25 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-sidebar:
+    dependencies:
+      '@deepseek-ai/dsh-client-store':
+        specifier: workspace:^
+        version: link:../store
+      '@deepseek-ai/dsh-client-ui-layout':
+        specifier: workspace:^
+        version: link:../ui-layout
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -12864,27 +12927,18 @@ importers:
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
-      '@deepseek-ai/dsh-client-store':
-        specifier: workspace:^
-        version: link:../store
       '@deepseek-ai/dsh-client-test-runtime':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/client-runtime
-      '@deepseek-ai/dsh-client-ui-layout':
-        specifier: workspace:^
-        version: link:../ui-layout
-      '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: workspace:^
-        version: link:../ui-primitives
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
       '@deepseek-ai/dsh-client-ui-session':
         specifier: workspace:^
         version: link:../ui-session
-      '@deepseek-ai/dsh-client-ui-slots':
+      '@deepseek-ai/dsh-client-ui-theme':
         specifier: workspace:^
-        version: link:../ui-slots
+        version: link:../ui-theme
       '@deepseek-ai/dsh-client-ui-workspace':
         specifier: workspace:^
         version: link:../ui-workspace
@@ -13074,6 +13128,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -13167,10 +13224,10 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-    devDependencies:
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
+    devDependencies:
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -13234,6 +13291,9 @@ importers:
 
   rsh/Programs/Web/client/ui-theme:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery

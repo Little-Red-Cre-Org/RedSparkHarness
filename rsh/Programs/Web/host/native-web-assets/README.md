@@ -39,7 +39,7 @@ None.
 <a id="known-limitations-and-deferred-work"></a>
 
 - This package does not select a Client profile or compose the full native Web application; callers provide the registry and selected asset bundle.
-- The supported product Client roster has not moved to the native page; the compatibility Host still serves the legacy application by default.
+- The native-web first-use roster selects six optional shell installers alongside the application, renderer, Connection and Session Consumer: locale, theme, Session presentation, layout, left sidebar and right details sidebar. The Host also installs the Session-title projection and first-prompt provider. This is a selected Native composition, not the complete legacy Client roster; the compatibility Host still serves the legacy application by default.
 
 No invariant companion is published because route responses are derived from the installed frontend and the supplied immutable bundle, with no independent persistent state.
 

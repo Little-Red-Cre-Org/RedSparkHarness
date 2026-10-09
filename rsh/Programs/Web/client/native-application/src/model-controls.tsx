@@ -2,14 +2,19 @@
 import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
 import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { ConversationLocaleKey } from './locales.ts'
-import type { NativeConversationController } from './controller.ts'
+import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 
-/** Shared view reads and mutations stay with the existing conversation controller.
- * @param props - selected controller and locale-owned copy.
+/** Session facts arrive from the framework hook; mutations are narrow injected callbacks.
+ * @param props - selected snapshot, commands and locale-owned copy.
  * @returns current route, effort and installed composition choices.
  */
-export function ModelControls({ controller, t }: { controller: NativeConversationController; t: (key: ConversationLocaleKey) => string }) {
-  const snapshot = controller.getSnapshot()
+export function ModelControls({ snapshot, selectModel, selectPreset, refreshModelControls, t }: {
+  snapshot: ConversationSnapshot
+  selectModel: NativeConversationController['selectModel']
+  selectPreset: NativeConversationController['selectPreset']
+  refreshModelControls: NativeConversationController['refreshModelControls']
+  t: (key: ConversationLocaleKey) => string
+}) {
   const controls = snapshot.modelControls
   const selected = foldNativeModelSelectionState(snapshot.events).next ?? controls?.catalog?.default
   const catalogModels = controls?.catalog?.groups.flatMap(group => group.models.map(model => ({
@@ -27,7 +32,7 @@ export function ModelControls({ controller, t }: { controller: NativeConversatio
       value={selected === undefined ? '' : encode(selected.provider, selected.model)}
       onChange={(event) => {
         const model = catalogModels.find(item => encode(item.provider, item.id) === event.target.value)
-        if (model !== undefined) void controller.selectModel({ provider: model.provider, model: model.id })
+        if (model !== undefined) void selectModel({ provider: model.provider, model: model.id })
       }}>
       {selected === undefined ? <option value="">{t('unavailable')}</option> : current === undefined
         ? <option value={encode(selected.provider, selected.model)}>{selected.provider} / {selected.model}</option> : null}
@@ -36,7 +41,7 @@ export function ModelControls({ controller, t }: { controller: NativeConversatio
     </select></label>
     <label>{t('reasoning')}<select aria-label={t('reasoning')} disabled={!ready || !controls?.canSelectModel || selected === undefined}
       value={selected?.reasoningEffort ?? ''} onChange={(event) => {
-        if (selected !== undefined) void controller.selectModel({ provider: selected.provider, model: selected.model,
+        if (selected !== undefined) void selectModel({ provider: selected.provider, model: selected.model,
           ...event.target.value === '' ? {} : { reasoningEffort: event.target.value } })
       }}>
       <option value="">{t('providerDefault')}</option>
@@ -46,12 +51,12 @@ export function ModelControls({ controller, t }: { controller: NativeConversatio
     </select></label>
     <label>{t('preset')}<select aria-label={t('preset')} value={preset?.preset ?? ''}
       disabled={!ready || preset?.locked !== false || controls?.presets.length === 0}
-      onChange={(event) => { void controller.selectPreset(event.target.value) }}>
+      onChange={(event) => { void selectPreset(event.target.value) }}>
       {preset?.preset == null ? <option value="">{t('noPreset')}</option> : !controls?.presets.some(item => item.id === preset.preset)
         ? <option value={preset.preset}>{preset.preset}</option> : null}
       {controls?.presets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
     </select></label>
-    <button disabled={snapshot.state !== 'ready'} onClick={() => { void controller.refreshModelControls() }}>{t('refreshModels')}</button>
+    <button disabled={snapshot.state !== 'ready'} onClick={() => { void refreshModelControls() }}>{t('refreshModels')}</button>
     {controls?.catalog?.failures.map(failure => <p key={failure.id} role="alert">{failure.name}: {failure.message}</p>)}
   </fieldset>
 }

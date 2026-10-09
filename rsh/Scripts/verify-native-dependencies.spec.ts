@@ -214,6 +214,7 @@ it('keeps a mixed Cordis and native package explicitly classified', () => {
     },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
+  writeFileSync(join(dir, 'src/backend.ts'), 'export {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
 })
 
@@ -358,4 +359,14 @@ it('admits existing Client stylesheets while rejecting missing assets and Host s
   writeFileSync(join(host, 'index.ts'), 'import "./card.module.css"')
   writeFileSync(join(host, 'card.module.css'), '.card {}')
   expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./card.module.css'))).toBe(true)
+})
+
+it('admits only the Client producer’s explicit inline CSS query', () => {
+  const root = fixture('export {}')
+  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
+  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?inline"; export { css }')
+  writeFileSync(join(owner, 'theme.css'), '.root { color: red; }')
+  expect(collectNativeDependencyViolations(root)).toEqual([])
+  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?raw"; export { css }')
+  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./theme.css?raw'))).toBe(true)
 })

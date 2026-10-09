@@ -33,7 +33,9 @@ Configuration requires positive integers maxLiveTextChars and maxLiveEvents and 
 
 React, Session, native model selection, agent preset selection, todo Client values and the native Session error class use the application's shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer. `native-runtime` remains a production dependency because published declarations reference it. `client-native-session` is a peer and development dependency because the page imports `NativeSessionRpcError` at runtime and must share its constructor with the selected Consumer.
 
-The native-web first-use roster selects only this application, renderer, Connection and Session Consumer; legacy defaults remain unchanged.
+The native-web first-use roster selects this application, renderer, Connection, Session Consumer and six optional shell installers: locale, theme, Session presentation, layout, left sidebar and right details sidebar. Its Host profile also selects the Session-title projection and first-prompt provider; legacy defaults remain unchanged.
+
+The optional Native shell composes the shared frame, left Session navigation, right Session details, locale and theme through their declared Client capabilities. Session rows read the selected Host's durable title projection; fallback/provider generation, rename and refresh append title facts through that Host's existing Session and RootExecution authority. The Client reuses its current Native Session controller and layout stores, with no second Session store. The visible Workspace context is projected from the Session header's `cwd`; a Workspace browser and Workspace list/create/search/move/delete operations remain for the P4 Workspace/Resource slice.
 
 Pending tool approvals offer allow-once and reject actions. Question cards preserve headings, detail, choices, multiple selection and custom text. Submission failures retain the request; cancellation disables input and keeps execution busy until Host settlement. Reload restores durable decision and tool-result facts, not obsolete pending presentations.
 
@@ -71,5 +73,5 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
-- File uploads, full Sidebar, layout, browser authorization flows, opaque credential grant editing and the complete legacy plugin Settings page remain separate native Client migrations.
+- The current prompt path supports image attachments; broader attachment/resource management, Workspace list/create/search/move/delete, browser authorization flows, opaque credential grant editing and the complete legacy plugin Settings page remain separate native Client work.
 - A Settings owner must explicitly publish its schema metadata; this page does not edit hidden `role('secret')` values or create authorization grants.

@@ -5,11 +5,11 @@ import type { NativeConversationController } from './controller.ts'
 import type { ConversationLocaleKey } from './locales.ts'
 
 /** Render one exact pending approval or question batch.
- * @param props - controller, observed presentation, submission state and locale.
+ * @param props - observed presentation, answer callback, submission state and locale.
  * @returns actionable pending request card.
  */
-export function HumanInteraction({ controller, prompt, disabled, t }: {
-  controller: NativeConversationController
+export function HumanInteraction({ answerHuman, prompt, disabled, t }: {
+  answerHuman: NativeConversationController['answerHuman']
   prompt: NativeWebHumanPrompt
   disabled: boolean
   t: (key: ConversationLocaleKey) => string
@@ -18,13 +18,13 @@ export function HumanInteraction({ controller, prompt, disabled, t }: {
   const [custom, setCustom] = useState<Record<string, string>>({})
   if (prompt.kind === 'approval') return <section aria-label={t('approval')}>
     <h2>{t('approval')}</h2><p>{prompt.toolName}</p>{prompt.reason === undefined ? null : <p>{prompt.reason}</p>}
-    <button disabled={disabled} onClick={() => { void controller.answerHuman(prompt, { kind: 'approval', outcome: 'allowed-once' }) }}>{t('allow')}</button>
-    <button disabled={disabled} onClick={() => { void controller.answerHuman(prompt, { kind: 'approval', outcome: 'rejected' }) }}>{t('deny')}</button>
+    <button disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-once' }) }}>{t('allow')}</button>
+    <button disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'rejected' }) }}>{t('deny')}</button>
   </section>
   return <form aria-label={t('questions')} onSubmit={(event) => {
     event.preventDefault()
     if (disabled) return
-    void controller.answerHuman(prompt, { kind: 'questions', answer: { answers: prompt.questions.map(question => ({
+    void answerHuman(prompt, { kind: 'questions', answer: { answers: prompt.questions.map(question => ({
       id: question.id, selected: [...choices[question.id] ?? []],
       ...custom[question.id] ? { custom: custom[question.id] } : {},
     })) } })

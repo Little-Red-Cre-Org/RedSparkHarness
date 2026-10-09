@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { NativeClientBundle } from '../src/native-client.ts'
 import { createDesktopAssetHandler } from '../src/web-assets.ts'
 
 const roots: string[] = []
@@ -27,22 +26,6 @@ async function desktopFixture(): Promise<{ runtime: string; dist: string }> {
   return { runtime, dist }
 }
 
-function nativeBundle(): NativeClientBundle {
-  return {
-    wire: {
-      formatVersion: 1,
-      bundle: '/.dsh/native-client/profile.js',
-      styles: [],
-      modules: [{ id: 'renderer' }],
-      selections: [{ id: 'renderer', config: { theme: 'violet' } }],
-    },
-    assets: new Map([
-      ['/.dsh/native-client/profile.js', { contentType: 'text/javascript; charset=utf-8', body: new TextEncoder().encode('export const plugins = {}') }],
-      ['/.dsh/native-client/theme.css', { contentType: 'text/css; charset=utf-8', body: new TextEncoder().encode('.root { color: purple; }') }],
-    ]),
-  }
-}
-
 function context(): { value: Context; emit: ReturnType<typeof vi.fn>; fetchBundle: ReturnType<typeof vi.fn> } {
   const emit = vi.fn()
   const fetchBundle = vi.fn(async (request: Request) => new Response(new URL(request.url).pathname))
@@ -58,14 +41,15 @@ afterEach(async () => {
 })
 
 describe('Desktop Web asset routes', () => {
-  it('keeps the legacy page, delegates plugin bundles, and hides the native page without a profile', async () => {
+  it('serves the legacy page and keeps native page and assets unavailable', async () => {
     const { runtime } = await desktopFixture()
     const host = context()
-    const handler = createDesktopAssetHandler(host.value, runtime, undefined)
+    const handler = createDesktopAssetHandler(host.value, runtime)
 
     expect(handler.requestBodyMode({ method: 'GET', url: new URL('https://dsh.example/') })).toBe('buffered')
     expect((await handler.fetch(new Request('https://dsh.example/', { method: 'POST' }))).status).toBe(405)
     expect((await handler.fetch(new Request('https://dsh.example/native.html'))).status).toBe(404)
+    expect((await handler.fetch(new Request('https://dsh.example/.dsh/native-client/profile.js'))).status).toBe(404)
     const page = await handler.fetch(new Request('https://dsh.example/'))
     expect(page.headers.get('content-type')).toBe('text/html; charset=utf-8')
     expect(await page.text()).toContain('globalThis.__DSH_TRANSPORT__')
@@ -76,32 +60,10 @@ describe('Desktop Web asset routes', () => {
     expect(host.fetchBundle).toHaveBeenCalledWith(pluginRequest)
   })
 
-  it('injects native profile data and serves Host-built JavaScript and styles', async () => {
-    const { runtime } = await desktopFixture()
-    const host = context()
-    const bundle = nativeBundle()
-    const handler = createDesktopAssetHandler(host.value, runtime, bundle)
-
-    const page = await handler.fetch(new Request('https://dsh.example/native.html'))
-    const html = await page.text()
-    expect(page.status).toBe(200)
-    expect(html).toContain('__DSH_NATIVE_CLIENT_BOOT__')
-    expect(html).toContain('profile.js')
-
-    const script = await handler.fetch(new Request(`https://dsh.example${bundle.wire.bundle}`))
-    expect(script.headers.get('content-type')).toBe('text/javascript; charset=utf-8')
-    expect(await script.text()).toContain('export const plugins')
-    const stylePath = '/.dsh/native-client/theme.css'
-    const head = await handler.fetch(new Request(`https://dsh.example${stylePath}`, { method: 'HEAD' }))
-    expect(head.headers.get('content-type')).toBe('text/css; charset=utf-8')
-    expect(await head.text()).toBe('')
-    expect((await handler.fetch(new Request('https://dsh.example/.dsh/native-client/unknown.js'))).status).toBe(404)
-  })
-
   it('serves frontend files safely and falls back to the legacy page for missing paths', async () => {
     const { runtime, dist } = await desktopFixture()
     const host = context()
-    const handler = createDesktopAssetHandler(host.value, runtime, undefined)
+    const handler = createDesktopAssetHandler(host.value, runtime)
 
     const favicon = await handler.fetch(new Request('https://dsh.example/favicon.svg'))
     expect(favicon.headers.get('content-type')).toBe('image/svg+xml')

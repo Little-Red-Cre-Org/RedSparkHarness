@@ -17,19 +17,27 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type {
-  PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
+  PropsLocale, PropsRenderSlots, PropsStore, SnapshotSelectorHook,
 } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PanelInfo } from './service.ts'
+import type { SessionTitleSource } from './DocumentTitle.tsx'
 import { computeColumns, RIGHTBAR_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
 import { DocumentTitle } from './DocumentTitle.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
 
-/** Full composed props: runtime share + child-slot render share + store share. */
-export type AppFrameProps =
-  & PropsRuntime<'root'>
-  & PropsRenderSlots<'sidebar' | 'main' | 'rightbar' | 'shell.overlay'>
+type UseSessions = SnapshotSelectorHook<SessionTitleSource>
+type UseCurrentSessionTitle = SnapshotSelectorHook<string | undefined>
+type FrameProps = PropsRenderSlots<'sidebar' | 'main' | 'rightbar' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
   & PropsLocale<'common'>
+  & { usePanelInfo: SnapshotSelectorHook<PanelInfo> }
+
+/** Props delivered by the ordinary Cordis Client composition. */
+export type AppFrameProps = FrameProps & { useSessions: UseSessions }
+
+/** Props delivered by the Native root owner. */
+export type NativeAppFrameProps = FrameProps & { useCurrentSessionTitle: UseCurrentSessionTitle }
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
@@ -37,7 +45,7 @@ function CenterColumn(props: { children?: ReactNode }) {
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
-function MainPanel({ usePanelInfo, renderSlot }: Pick<PropsRuntime<'root'>, 'usePanelInfo'> & PropsRenderSlots<'main'>) {
+function MainPanel({ usePanelInfo, renderSlot }: Pick<FrameProps, 'usePanelInfo'> & PropsRenderSlots<'main'>) {
   const panelId = usePanelInfo(info => info.activePanelId)
   return renderSlot('main', {}, { entryKey: panelId ?? 'conversation' })
 }
@@ -118,14 +126,23 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
 }
 
 /** The three-column frame (see module doc). */
-export function AppFrame({
-  useStore,
-  useSessions,
-  usePanelInfo,
-  actions,
-  renderSlot,
-  t,
-}: AppFrameProps) {
+export function AppFrame(props: AppFrameProps) {
+  const productTitle = process.env.DSH_CLIENT_TITLE ?? props.t('brand.localBuild')
+  return <AppFrameBody {...props}
+    documentTitle={<DocumentTitle productTitle={productTitle} useSessions={props.useSessions} usePanelInfo={props.usePanelInfo} />} />
+}
+
+/** Native root frame variant with its own Host-owned title projection. */
+export function NativeAppFrame({ useCurrentSessionTitle, ...props }: NativeAppFrameProps) {
+  const productTitle = process.env.DSH_CLIENT_TITLE ?? props.t('brand.localBuild')
+  return <AppFrameBody {...props}
+    documentTitle={<DocumentTitle productTitle={productTitle} useCurrentSessionTitle={useCurrentSessionTitle}
+      usePanelInfo={props.usePanelInfo} />} />
+}
+
+function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTitle }: FrameProps & {
+  documentTitle: ReactNode
+}) {
   const layoutInfo = useStore(state => state.layoutInfo)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const viewport = layoutInfo.viewportWidth
@@ -189,7 +206,6 @@ export function AppFrame({
   const onRightbarDrag = useCallback((dx: number) => {
     actions.setRightbar(rightbarBase.current - dx)
   }, [actions])
-  const productTitle = process.env.DSH_CLIENT_TITLE ?? t('brand.localBuild')
   const sidebar = useMemo(() => renderSlot('sidebar', {
     collapsed: sidebarCollapsed,
     width: cols.sidebar,
@@ -213,11 +229,7 @@ export function AppFrame({
       data-rightbar-instant={layoutInfo.rightbarInstant || undefined}
       data-dragging={dragging || undefined}
     >
-      <DocumentTitle
-        productTitle={productTitle}
-        useSessions={useSessions}
-        usePanelInfo={usePanelInfo}
-      />
+      {documentTitle}
       <div className={css.sidebarCol}>
         {sidebar}
       </div>
