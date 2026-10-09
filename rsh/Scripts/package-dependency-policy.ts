@@ -21,7 +21,7 @@ const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
 
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime'],
+  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
   '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
@@ -38,7 +38,25 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
   ],
   '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
+  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
+  '@deepseek-ai/dsh-client-ui-session': [
+    '@deepseek-ai/dsh-client-native-session',
+    '@deepseek-ai/dsh-client-ui-slots',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-session',
+  ],
+  '@deepseek-ai/dsh-client-ui-layout': [
+    '@deepseek-ai/dsh-brand',
+    '@deepseek-ai/dsh-client-store',
+    '@deepseek-ai/dsh-client-ui-slots',
+    '@deepseek-ai/dsh-native-runtime',
+  ],
+  '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
+  '@deepseek-ai/dsh-client-ui-sidebar': [
+    '@deepseek-ai/dsh-client-ui-layout',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-workspace-definition',
+  ],
   '@deepseek-ai/dsh-task-scheduler': [
     '@deepseek-ai/dsh-native-agent',
     '@deepseek-ai/dsh-native-runtime',
@@ -95,6 +113,14 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
   '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
+  '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
+  '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
+  '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
+  '@deepseek-ai/dsh-client-ui-sidebar': [
+    '@deepseek-ai/dsh-client-store',
+    '@deepseek-ai/dsh-client-ui-primitives',
+    '@deepseek-ai/dsh-client-ui-slots',
+  ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Legacy Host peers omitted by the separately published native entry. */
@@ -113,6 +139,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
     '@deepseek-ai/dsh-session-projection',
     '@deepseek-ai/dsh-user-approval',
   ],
+  '@deepseek-ai/dsh-session-title': ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants'],
   '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
   '@deepseek-ai/dsh-webhook': [
     '@deepseek-ai/dsh-agent',
@@ -126,7 +153,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-tool': ['react'],
   '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-  '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+  '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-native-application': [
     'react',
     '@deepseek-ai/dsh-session',
@@ -173,7 +200,6 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
   '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],
   '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
-  '@deepseek-ai/dsh-client-ui-slots': ['SlotCore', 'SlotOwnershipError', 'StaleAuthorizationError', 'standardHookPropName'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-llm/native': ['createUserMessage', 'ReasoningEffortId'],

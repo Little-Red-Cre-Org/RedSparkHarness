@@ -2101,7 +2101,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/session/session-title/src/index.ts:56`](../Engine/session/session-title/src/index.ts)
+Source: [`rsh/Engine/session/session-title/src/index.ts:59`](../Engine/session/session-title/src/index.ts)
 
 <a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
 

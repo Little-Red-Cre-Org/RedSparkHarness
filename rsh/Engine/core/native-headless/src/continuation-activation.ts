@@ -31,12 +31,14 @@ export interface NativeContinuationDriver {
 /** Existing Agent execution drives all accepted work; the durable inbox is the only message queue. */
 export class NativeContinuationActivation {
   private readonly closed = Promise.withResolvers<void>()
+  private readonly firstForegroundSettled = Promise.withResolvers<void>()
   private changed = Promise.withResolvers<undefined>()
   private turn: AbortController | undefined
   private turnSettled: Promise<void> | undefined
   private pumping: Promise<void> | undefined
   private closing: Promise<void> | undefined
   private children = 0
+  private backgroundTasks = 0
   private initial: boolean
   private result: NativeSessionTurnResult | undefined
   private failure: { readonly error: unknown } | undefined
@@ -63,8 +65,11 @@ export class NativeContinuationActivation {
   /** Whether this residency epoch has stopped admitting messages or owned descendants. */
   get isClosing(): boolean { return this.closing !== undefined }
 
-  /** Whether admitted descendants or capability Consumers still hold residency. */
-  get isRetained(): boolean { return this.children > 0 }
+  /** Whether foreground descendants or owned background tasks still hold residency. */
+  get isRetained(): boolean { return this.children > 0 || this.backgroundTasks > 0 }
+
+  /** First foreground turn completion, independent of separately retained background tasks. */
+  get foregroundSettled(): Promise<void> { return this.firstForegroundSettled.promise }
 
   /**
    * Durably accept one message and wake the selected ordinary turn driver.
@@ -97,6 +102,30 @@ export class NativeContinuationActivation {
     }
   }
 
+  /** Retain writer residency while allowing the current foreground turn to settle. */
+  retainBackground(): () => void {
+    if (this.closing !== undefined) throw new Error('native-continuation: Activation is closing')
+    this.backgroundTasks += 1
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      this.backgroundTasks -= 1
+      this.wake()
+    }
+  }
+
+  /** Wait until queued foreground work and retained foreground descendants settle. */
+  async waitForeground(): Promise<void> {
+    for (;;) {
+      if (this.closing !== undefined) return this.done
+      if (this.children === 0 && this.turn === undefined && !this.owner.hasPending) return
+      const changed = this.changed.promise
+      if (this.children === 0 && this.turn === undefined && !this.owner.hasPending) return
+      await changed
+    }
+  }
+
   /**
    * Interrupt only the current turn; unclaimed input stays parked until another message wakes it.
    * @param reason - cancellation cause for the selected driver.
@@ -121,8 +150,7 @@ export class NativeContinuationActivation {
   }
 
   private wake(): void {
-    this.changed.resolve(undefined)
-    this.changed = Promise.withResolvers<undefined>()
+    this.signalChange()
     if (this.closing !== undefined || this.pumping !== undefined) return
     const completion = Promise.withResolvers<void>()
     this.pumping = completion.promise
@@ -130,7 +158,7 @@ export class NativeContinuationActivation {
     void completion.promise.then(() => {
       this.pumping = undefined
       if (this.closing !== undefined) return
-      if (this.owner.hasPending || this.children > 0) this.wake()
+      if (this.owner.hasPending || this.children > 0 || this.backgroundTasks > 0) this.wake()
       else void this.close().catch((error: unknown) => { this.failure ??= { error } })
     }, (error: unknown) => {
       this.pumping = undefined
@@ -143,7 +171,10 @@ export class NativeContinuationActivation {
     while (this.closing === undefined) {
       const changed = this.changed.promise
       if (!this.owner.hasPending) {
-        if (this.children === 0) return
+        if (this.children === 0) {
+          this.firstForegroundSettled.resolve()
+          if (this.backgroundTasks === 0) return
+        }
         await changed
         continue
       }
@@ -173,11 +204,13 @@ export class NativeContinuationActivation {
         if (this.turn === controller) this.turn = undefined
         if (this.turnSettled === settled.promise) this.turnSettled = undefined
         settled.resolve()
+        this.signalChange()
       }
     }
   }
 
   private async closeInternal(): Promise<void> {
+    this.firstForegroundSettled.resolve()
     const failures: unknown[] = this.failure === undefined ? [] : [this.failure.error]
     const pump = this.pumping
     if (pump !== undefined) {
@@ -196,5 +229,10 @@ export class NativeContinuationActivation {
       this.closed.reject(error)
       throw error
     }
+  }
+
+  private signalChange(): void {
+    this.changed.resolve(undefined)
+    this.changed = Promise.withResolvers<undefined>()
   }
 }

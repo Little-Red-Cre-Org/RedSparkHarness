@@ -231,10 +231,18 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
       '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
+      '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
+      '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
+      '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
+      '@deepseek-ai/dsh-client-ui-sidebar': [
+        '@deepseek-ai/dsh-client-store',
+        '@deepseek-ai/dsh-client-ui-primitives',
+        '@deepseek-ai/dsh-client-ui-slots',
+      ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
       '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
+      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-client-ui-tool': ['react'],
       '@deepseek-ai/dsh-client-native-application': [
         'react',
@@ -248,11 +256,29 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
-      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime'],
+      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
       '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
-      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
+      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
+      '@deepseek-ai/dsh-client-ui-session': [
+        '@deepseek-ai/dsh-client-native-session',
+        '@deepseek-ai/dsh-client-ui-slots',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-session',
+      ],
+      '@deepseek-ai/dsh-client-ui-layout': [
+        '@deepseek-ai/dsh-brand',
+        '@deepseek-ai/dsh-client-store',
+        '@deepseek-ai/dsh-client-ui-slots',
+        '@deepseek-ai/dsh-native-runtime',
+      ],
+      '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
+      '@deepseek-ai/dsh-client-ui-sidebar': [
+        '@deepseek-ai/dsh-client-ui-layout',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-workspace-definition',
+      ],
       '@deepseek-ai/dsh-client-native-session': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-client-connection',
@@ -792,6 +818,32 @@ describe('face-aware source classification', () => {
     )).toEqual(['peerRequiredHostExports lists unused @f/browser export browser'])
   })
 
+  it('classifies only the declared Native Client face as Client and retains mixed declaration imports', () => {
+    const observed = sourceFacts({
+      'src/index.ts': "import { hostValue } from '@f/host'; void hostValue",
+      'src/native.ts': "export { plugin } from './native-ui.ts'",
+      'src/native-ui.ts': [
+        "import { clientValue, type ClientShape } from '@f/client-feature'",
+        'void clientValue',
+        'export type { ClientShape }',
+      ].join('\n'),
+    }, {
+      exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+      dsh: { native: { entry: './native', targets: ['client'] } },
+    }, 'client-host', policy({
+      publishedTypeDependencies: { '@f/probe': ['@f/client-feature'] },
+    }))
+
+    expect(observed.hostRuntimeSourceUses.has('@f/client-feature')).toBe(false)
+    expect(observed.hostRuntimeSourceUses.has('@f/host')).toBe(true)
+    expect(observed.clientRuntimeSourceUses.has('@f/client-feature')).toBe(true)
+    expect(observed.publishedTypeSourceUses.has('@f/client-feature')).toBe(true)
+    expect(collectHostDependencyExportPolicyViolations(
+      [observed], new Set([...observed.workspaceNames, '@f/host', '@f/client-feature']),
+      policy({ duplicateSafePackages: [], safeHostDependencyExports: {}, peerRequiredHostExports: {} }),
+    )).toEqual(["rsh/g/probe/src/index.ts:1:10: @f/host#hostValue is not classified as safe or peer-required — import { hostValue } from '@f/host'; void hostValue"])
+  })
+
   it('identifies exact runtime exports without treating type imports as values', () => {
     const source = [
       "import defaultValue, { value as local, type Kind } from '@f/root'",
@@ -869,6 +921,50 @@ describe('dependency sections', () => {
     expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
       missing: [dependency],
     } }))).toContain('publishedTypeDependencies names unmanaged package missing')
+  })
+
+  it.each([
+    {
+      state: 'present',
+      sections: {
+        dependencies: { '@types/react': '~18.3.1' },
+        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0' },
+        peerDependencies: { [CORDIS]: 'workspace:^' },
+      },
+    },
+    {
+      state: 'devOnly',
+      sections: {
+        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0', '@types/react': '~18.3.1' },
+        peerDependencies: { [CORDIS]: 'workspace:^' },
+      },
+    },
+    {
+      state: 'missing',
+      sections: {
+        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0' },
+        peerDependencies: { [CORDIS]: 'workspace:^' },
+      },
+    },
+  ])('requires a published DefinitelyTyped provider declaration ($state)', ({ state, sections }) => {
+    const dependency = '@types/react'
+    const typePolicy = policy({ publishedTypeDependencies: { '@f/probe': [dependency] } })
+    const subject = sourceFacts({ 'src/index.ts': "import type { ReactNode } from 'react'" }, sections,
+      'client-host', typePolicy)
+    const stateFacts = { facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames }
+
+    expect(subject.allSourceUses.has(dependency)).toBe(true)
+    expect(subject.publishedTypeSourceUses.has(dependency)).toBe(true)
+    expect(expectedPackageDependencies(subject).get(dependency)?.section).toBe('dependencies')
+    expect(collectPublishedTypeDependencyPolicyViolations([subject], typePolicy)).toEqual([])
+    const violations = collectPackageDependencyViolations(stateFacts)
+    if (state === 'present') {
+      expect(violations).toEqual([])
+      return
+    }
+    expect(violations).toContain(
+      `rsh/g/probe/package.json: ${dependency} (rsh/g/probe/src/index.ts) must be dependencies-only; found ${state === 'devOnly' ? 'devDependencies' : 'no dependency section'}`,
+    )
   })
 
   it('requires published type peers to have a source use and a required peer declaration', () => {

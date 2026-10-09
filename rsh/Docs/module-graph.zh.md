@@ -711,6 +711,8 @@ flowchart TD
   pkg_session_title --> pkg_brand
   pkg_session_title --> pkg_invariants
   pkg_session_title --> pkg_llm
+  pkg_session_title --> pkg_native_runtime
+  pkg_session_title --> pkg_native_session_execution
   pkg_session_title --> pkg_session
   pkg_session_title --> pkg_session_projection
   pkg_bash_local --> pkg_compat_settings_definition
@@ -1023,7 +1025,10 @@ flowchart TD
   pkg_session_title_all_prompts_llm --> pkg_session
   pkg_session_title_all_prompts_llm --> pkg_session_title
   pkg_session_title_all_prompts_llm --> pkg_session_title_llm
+  pkg_session_title_first_prompt_llm --> pkg_brand
   pkg_session_title_first_prompt_llm --> pkg_llm
+  pkg_session_title_first_prompt_llm --> pkg_native_model_execution
+  pkg_session_title_first_prompt_llm --> pkg_native_runtime
   pkg_session_title_first_prompt_llm --> pkg_session
   pkg_session_title_first_prompt_llm --> pkg_session_title
   pkg_session_title_first_prompt_llm --> pkg_session_title_llm
@@ -1501,7 +1506,7 @@ flowchart TD
 | [`lsp-stdio`](../Modules/Official/lsp/lsp-stdio) | `lsp` | [`brand`](../Core/util/brand), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`lsp`](../Modules/Official/lsp/lsp), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy) | `sandbox` | [`agent`](../Engine/core/agent), [`invariants`](../Core/runtime-diagnostics/invariants), [`sandbox`](../Modules/Official/sandbox/sandbox), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt) |
 | [`session-telemetry`](../Engine/session/session-telemetry) | `session` | [`agent`](../Engine/core/agent), [`session`](../Engine/core/session) |
-| [`session-title`](../Engine/session/session-title) | `session` | [`agent`](../Engine/core/agent), [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
+| [`session-title`](../Engine/session/session-title) | `session` | [`agent`](../Engine/core/agent), [`brand`](../Core/util/brand), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
 | [`bash-local`](../Modules/Official/shell/bash-local) | `shell` | [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition), [`shell`](../Modules/Official/shell/shell), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`pwsh-local`](../Modules/Official/shell/pwsh-local) | `shell` | [`compat-settings-definition`](../Compatibility/DSH/bridge/compat-settings-definition), [`shell`](../Modules/Official/shell/shell), [`subprocess`](../Core/subprocess/subprocess), [`timeout`](../Core/util/timeout) |
 | [`terminal`](../Modules/Official/terminal/terminal) | `terminal` | [`agent`](../Engine/core/agent), [`brand`](../Core/util/brand) |
@@ -1560,7 +1565,7 @@ flowchart TD
 | [`message-feedback`](../Modules/Official/feedback/message-feedback) | `feedback` | [`brand`](../Core/util/brand), [`command-feedback`](../Modules/Official/feedback/command-feedback), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`typert-protocol`](../Core/typert/protocol) |
 | [`host-plugin-inventory`](../Programs/Web/host/plugin-inventory) | `host` | [`agent-presets`](../Engine/preset/agent-presets), [`brand`](../Core/util/brand), [`typert-protocol`](../Core/typert/protocol) |
 | [`session-title-all-prompts-llm`](../Engine/session/session-title-all-prompts-llm) | `session` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-title`](../Engine/session/session-title), [`session-title-llm`](../Engine/session/session-title-llm) |
-| [`session-title-first-prompt-llm`](../Engine/session/session-title-first-prompt-llm) | `session` | [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-title`](../Engine/session/session-title), [`session-title-llm`](../Engine/session/session-title-llm) |
+| [`session-title-first-prompt-llm`](../Engine/session/session-title-first-prompt-llm) | `session` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`native-model-execution`](../Engine/core/native-model-execution), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session), [`session-title`](../Engine/session/session-title), [`session-title-llm`](../Engine/session/session-title-llm) |
 | [`tool-bash`](../Modules/Official/shell/tool-bash) | `shell` | [`agent`](../Engine/core/agent), [`jobs`](../Engine/jobs/jobs), [`llm`](../Engine/llm/llm), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`shell`](../Modules/Official/shell/shell), [`shell-env`](../Modules/Official/shell/shell-env), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) |
 | [`tool-pwsh`](../Modules/Official/shell/tool-pwsh) | `shell` | [`agent`](../Engine/core/agent), [`jobs`](../Engine/jobs/jobs), [`llm`](../Engine/llm/llm), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`shell`](../Modules/Official/shell/shell), [`shell-env`](../Modules/Official/shell/shell-env), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) |
 | [`agent-loop-testkit`](../Tests/test-support/agent-loop-testkit) | `test-support` | [`agent`](../Engine/core/agent), [`agent-loop`](../Engine/core/agent-loop), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |

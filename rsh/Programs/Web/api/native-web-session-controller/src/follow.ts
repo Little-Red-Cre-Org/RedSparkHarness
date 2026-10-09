@@ -45,6 +45,13 @@ export class NativeSessionFeed {
    */
   failure(): Error | undefined { return this.error }
 
+  /** Surface a late owner-drain failure to an already attached follower. */
+  fail(error: Error): void {
+    if (this.detached || this.ended || this.error !== undefined) return
+    this.error = error
+    this.wake?.()
+  }
+
   /**
    * @param signal - exact authenticated follower cancellation.
    * @param release - releases the Host's follower admission once, including natural EOF.

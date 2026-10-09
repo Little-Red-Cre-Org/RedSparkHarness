@@ -35,6 +35,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
+import type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
+export type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
@@ -182,7 +184,11 @@ export interface NativeSessionClient {
    * @param signal - caller cancellation.
    * @returns stored Session headers.
    */
-  list(signal?: AbortSignal): Promise<readonly SessionHeader[]>
+  list(signal?: AbortSignal): Promise<readonly NativeSessionListItem[]>
+  /** Pin a title through the selected Host Session owner. */
+  renameTitle(sessionId: SessionId, title: string, signal?: AbortSignal): Promise<void>
+  /** Deliberately unpin and regenerate through the selected Host provider or fallback. */
+  refreshTitle(sessionId: SessionId, signal?: AbortSignal): Promise<void>
   /**
    * @param signal - caller cancellation.
    * @returns a durably created blank Session.
@@ -205,10 +211,12 @@ export interface NativeSessionClient {
    * @param signal - abort cancels and drains this turn.
    * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
+   * @param onFollowError - background follow failure after turn settlement, when present.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[]): Promise<{
+    observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
+    onFollowError?: (error: unknown) => void): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -299,12 +307,33 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
-    return value.map(header)
+    return value.map((item) => {
+      const data = fields(item)
+      const projection = fields(data.titleProjection)
+      const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved'
+        && typeof projection.title === 'string' && projection.title.length > 0
+        ? { status: 'resolved', title: projection.title }
+        : projection.status === 'absent'
+          ? { status: 'absent' }
+          : projection.status === 'unavailable'
+            ? { status: 'unavailable' }
+            : (() => { throw new TypeError('invalid native Session title projection') })()
+      const actions = data.titleActions === undefined ? undefined : fields(data.titleActions)
+      if (actions !== undefined && (typeof actions.rename !== 'boolean' || typeof actions.refresh !== 'boolean')) {
+        throw new Error('native session: invalid title action capabilities')
+      }
+      return { header: header(data.header), titleProjection,
+        ...(actions === undefined ? {} : { titleActions: { rename: actions.rename as boolean, refresh: actions.refresh as boolean } }) }
+    })
   }
   const data = fields(value)
   switch (endpoint) {
     case 'session/answer-human':
       if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')
+      break
+    case 'session/rename-title':
+    case 'session/refresh-title':
+      if (data.changed !== true) throw new TypeError('invalid native Session title acknowledgement')
       break
     case 'session/select-model':
     case 'session/select-preset':
@@ -340,6 +369,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'title-updated' && Object.keys(data).length === 1) return { type: 'title-updated' }
   if (data.type === 'human' && Object.keys(data).length === 2) return { type: 'human', prompt: nativeWebHumanSchema.parse(data.prompt) as NativeWebHumanPrompt }
   if (data.type === 'human-removed' && typeof data.id === 'string' && data.id.length > 0 && Object.keys(data).length === 2) return { type: 'human-removed', id: data.id as NativeWebHumanId }
   if (data.type === 'event' && Object.keys(data).length === 2) {
@@ -372,6 +402,7 @@ export function createNativeSessionClient(
   const shutdown = new AbortController()
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
+  const pendingFollows = new Set<Promise<void>>()
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
@@ -380,7 +411,7 @@ export function createNativeSessionClient(
   }
   async function prompt(
     sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    images?: readonly NativeImageUpload[],
+    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void,
   ) {
     const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     accepted.throwIfAborted()
@@ -392,50 +423,80 @@ export function createNativeSessionClient(
       ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
+    let turnSettled = false
+    const wasTurnSettled = (): boolean => turnSettled
+    let followFailure: unknown
     const abort = (): void => {
       following.abort(accepted.reason)
-      cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
-      // Settlement reports cancellation failures after the original turn's response has drained.
-      void cancellation.then(() => undefined, () => undefined)
+      if (!turnSettled) {
+        cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
+        // Settlement reports cancellation failures after the original turn's response has drained.
+        void cancellation.then(() => undefined, () => undefined)
+      }
     }
     accepted.addEventListener('abort', abort, { once: true })
     if (accepted.aborted) abort()
+    let followComplete = false
+    const isFollowComplete = (): boolean => followComplete
+    let followWork: Promise<void> | undefined
     try {
-      let followFailure: { error: unknown } | undefined
       if (observe !== undefined && responseOperation !== undefined) {
-        try {
-          const response = await responseOperation('/api', 'native-session/follow', { sessionId, admissionId }, following.signal)
-          if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-            throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
-          }
-          let terminal = false
-          const events = response.body.pipeThrough(new TextDecoderStream())
-            .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-          let nextSeq: number | undefined
-          for await (const { data } of events) {
-            const frame = followFrame(JSON.parse(data))
-            if (terminal) throw new Error('native Session follow: output after settlement')
-            if (frame.type === 'event') {
-              if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
-              nextSeq = frame.event.seq + 1
+        const activeFollow = (async () => {
+          try {
+            const response = await responseOperation('/api', 'native-session/follow', { sessionId, admissionId }, following.signal)
+            if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+              throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
             }
-            if (frame.type === 'settled') terminal = true
-            observe(frame)
+            let terminal = false
+            const events = response.body.pipeThrough(new TextDecoderStream())
+              .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+            let nextSeq: number | undefined
+            for await (const { data } of events) {
+              const frame = followFrame(JSON.parse(data))
+              if (terminal) throw new Error('native Session follow: output after settlement')
+              if (frame.type === 'event') {
+                if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
+                nextSeq = frame.event.seq + 1
+              }
+              if (frame.type === 'settled') terminal = true
+              observe(frame)
+            }
+            if (!terminal) throw new Error('native Session follow: EOF before settlement')
+          } catch (error: unknown) {
+            if (!wasTurnSettled() && !accepted.aborted) { followFailure = error; abort() }
+            else {
+              try { onFollowError?.(error) }
+              catch (callbackError: unknown) { console.error('native Session follow error observer failed:', callbackError) }
+            }
           }
-          if (!terminal) throw new Error('native Session follow: EOF before settlement')
-        } catch (error: unknown) {
-          if (!accepted.aborted) { followFailure = { error }; abort() }
-        }
+        })().finally(() => { followComplete = true })
+        followWork = activeFollow
+        pendingFollows.add(activeFollow)
+        void activeFollow.then(() => { pendingFollows.delete(activeFollow) })
       }
-      const [settlement] = await Promise.allSettled([call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)])
+
+      const settlementWork = call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)
+        .then((value) => { turnSettled = true; return { status: 'fulfilled' as const, value } },
+          (reason: unknown) => { turnSettled = true; return { status: 'rejected' as const, reason } })
+      if (followWork !== undefined) {
+        const first = await Promise.race([followWork.then(() => 'follow' as const), settlementWork.then(() => 'settlement' as const)])
+        if (first === 'follow') await followWork
+      }
+      const settlement = await settlementWork
+      if (isFollowComplete() && followWork !== undefined) await followWork
       const controls = await Promise.allSettled(cancellation === undefined ? [] : [cancellation])
-      const errors = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason as unknown] : [])
-      if (followFailure !== undefined) errors.unshift(followFailure.error)
+      const errors: unknown[] = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected'
+        ? [outcome.reason as unknown] : [])
+      if (followFailure !== undefined) errors.unshift(followFailure)
       if (errors.length === 1) throw errors[0]
       if (errors.length > 1) throw new AggregateError(errors, 'native Session settlement and cancellation failed')
       if (settlement.status === 'rejected') throw settlement.reason
       return settlement.value
-    } finally { if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId); accepted.removeEventListener('abort', abort) }
+    } finally {
+      if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId)
+      if (followWork === undefined || isFollowComplete()) accepted.removeEventListener('abort', abort)
+      else void followWork.then(() => { accepted.removeEventListener('abort', abort) })
+    }
   }
   return {
     settingsDescribe: signal => call('settings/describe', {}, signal),
@@ -458,7 +519,9 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      await Promise.allSettled([...pendingPrompts])
+      while (pendingPrompts.size > 0 || pendingFollows.size > 0) {
+        await Promise.allSettled([...pendingPrompts, ...pendingFollows])
+      }
     },
     async answerHuman(sessionId, id, answer, signal) {
       const admissionId = admissions.get(sessionId)
@@ -466,6 +529,8 @@ export function createNativeSessionClient(
       await call('session/answer-human', { sessionId, admissionId, id, answer }, signal)
     },
     list: signal => call('session/list', {}, signal),
+    async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
+    async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
     async selectModel(sessionId, request, signal) {
       await call('session/select-model', { sessionId, ...request }, signal)
@@ -475,8 +540,8 @@ export function createNativeSessionClient(
     },
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
-    prompt(sessionId, text, resume, signal, observe, images) {
-      const pending = prompt(sessionId, text, resume, signal, observe, images)
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError)
       pendingPrompts.add(pending)
       const settled = (): void => { pendingPrompts.delete(pending) }
       void pending.then(settled, settled)

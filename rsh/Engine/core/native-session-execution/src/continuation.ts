@@ -45,6 +45,8 @@ export interface NativeSessionContinuation {
   readonly isClosing: boolean
   /** Resolves after first turn setup and descriptor publication, independently of model completion. */
   readonly ready: Promise<void>
+  /** Resolves after the first foreground turn and its foreground descendants settle; background work may remain. */
+  readonly foregroundSettled: Promise<void>
   /** Resolves after writer and Agent release and any settlement notification admission. */
   readonly done: Promise<void>
   /**

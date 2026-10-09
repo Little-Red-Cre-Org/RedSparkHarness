@@ -79,7 +79,7 @@ it.each(locales)('persists serviceable edits and refreshes the canonical project
   } as unknown as NativeSessionClient
 
   try {
-    render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+    render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
     await screen.findByRole('heading', { name: 'llm-pi-ai' })
     const editor = screen.getByLabelText(`${strings.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
     fireEvent.change(editor, { target: { value: JSON.stringify({ providers: { deepseek: {} } }, null, 2) } })
@@ -117,7 +117,7 @@ it.each(locales)('renders write-only credentials and clears the value after stor
     credentialsSet,
     credentialsUnset: vi.fn(async () => undefined),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
 
   expect(await screen.findByRole('heading', { name: 'llm-pi-ai' })).toBeTruthy()
   const input = screen.getByLabelText(`${strings.credentialValue} DEEPSEEK_API_KEY`) as HTMLInputElement
@@ -149,7 +149,7 @@ it.each(locales)('saves a visible array field through its existing index ($langu
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), {
     target: { value: JSON.stringify({ rows: [{ enabled: false }] }) },
@@ -172,7 +172,7 @@ it.each(locales)('reports unsupported structure edits instead of reporting a sav
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'profiles' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), { target: { value: JSON.stringify({ rows: [] }) } })
   fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
@@ -205,7 +205,7 @@ it.each(locales)('aggregates credential reads above the advertised per-request b
     settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate: vi.fn(), credentialsDescribe,
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'credentials' })
   await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
   expect(credentialsDescribe.mock.calls.map(([batch]) => batch)).toEqual([refs.slice(0, 64), refs.slice(64)])
@@ -223,7 +223,7 @@ it.each(locales)('refuses edits above the advertised atomic operation budget ($l
     settingsDescribe: vi.fn(async () => settingsDescription([row], { maxCredentialRefsPerRead: 64, maxSettingsOperations: 1 })),
     settingsMutate, credentialsDescribe: vi.fn(async () => ({})),
   } as unknown as NativeSessionClient
-  render(<SettingsPage client={client} t={key => strings[key]} onBack={() => undefined} />)
+  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
   await screen.findByRole('heading', { name: 'bounded' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} bounded`), {
     target: { value: JSON.stringify({ first: true, second: true }) },

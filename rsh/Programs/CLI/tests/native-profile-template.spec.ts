@@ -17,6 +17,12 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     })
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
+    expect(profile.installations.find(row => row.id === 'session-title')).toEqual({
+      id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
+      config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 },
+    })
+    expect(profile.installations.find(row => row.id === 'session-title-provider')?.plugin)
+      .toBe('@deepseek-ai/dsh-session-title-first-prompt-llm')
     expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
     expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
     expect(profile.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))).toEqual([
@@ -41,6 +47,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     }
     expect(client.installations.map(row => row.id)).toEqual([
       'application', 'renderer', 'connection', 'session',
+      'locale', 'theme', 'session-presentation', 'layout', 'sidebar', 'sidebar-right',
     ])
     expect(existsSync(join(home, 'profiles', 'native-web', 'rsh.profile.json'))).toBe(true)
   } finally {

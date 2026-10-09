@@ -38,6 +38,7 @@ import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
+import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
 import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
@@ -49,7 +50,8 @@ import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
-import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
+import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
+import { plugin, resolveNativeWebSessionConfig, type NativeWebSessionService } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
@@ -460,7 +462,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await conversation.load()
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
-    expect((await client.list()).map(header => header.id)).toEqual([sessionId])
+    const sessions = await client.list()
+    expect(sessions.map(session => session.header.id)).toEqual([sessionId])
+    expect(sessions[0]?.titleProjection).toEqual({ status: 'absent' })
     expect((await client.modelControls()).catalog?.groups[0]?.models[0]?.id).toBe('chosen')
     await conversation.selectPreset('alternate')
     await conversation.selectModel({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
@@ -815,4 +819,119 @@ it.each([
     ? { catalog: null, canSelectModel: 'true', presets: [] }
     : { catalog: null, canSelectModel: true, presets: [{ id: '', name: 'invalid' }] } }))
   await expect(client.modelControls()).rejects.toThrow()
+})
+
+it('removes the Native Web controller after cancelling and draining retained title work', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-web-controller-removal-'))
+  const cwd = join(directory, 'work')
+  await mkdir(cwd)
+  const scope = new NativeScope()
+  const providerStarted = Promise.withResolvers<undefined>()
+  const providerAbortObserved = Promise.withResolvers<undefined>()
+  const releaseProviderCleanup = Promise.withResolvers<undefined>()
+  const sessionId = SessionId('controller-removal-title')
+  let providerSignal: AbortSignal | undefined
+  let nativeWebSession: NativeWebSessionService | undefined
+  let persistence: NativeSessionPersistenceOperations | undefined
+  const model: NativePlugin = {
+    apiVersion: 1, name: 'controller-removal-model', targets: ['host'], requires: [], provides: ['model'],
+    resolve: () => (context) => {
+      context.provide('model', { async *stream() { yield* textResponse('Foreground reply') } })
+    },
+  }
+  const carrier: NativePlugin = {
+    apiVersion: 1, name: 'controller-removal-carrier', targets: ['host'], requires: [], provides: ['hostConnection'],
+    resolve: () => (context) => {
+      const connection: HostConnectionHandle = {
+        rpc: { handle: () => () => Promise.resolve(), intercept: () => () => Promise.resolve() },
+        fetch: { register: () => () => Promise.resolve() },
+        createSharedFetchHandler: () => ({ requestBodyMode: () => 'buffered', fetch: async () => new Response(null, { status: 404 }) }),
+        requestRejection: () => undefined,
+        authorizeIndex: () => false,
+        authenticatedUrl: baseUrl => baseUrl,
+      }
+      context.provide('hostConnection', connection)
+    },
+  }
+  const titleProvider: NativePlugin = {
+    apiVersion: 1, name: 'controller-removal-title-provider', targets: ['host'], requires: ['sessionTitles'], provides: [],
+    resolve: () => (context) => {
+      context.effect(context.require('sessionTitles').register({
+        id: SessionTitleProviderId('controller-removal-title-provider'), automatic: 'first-prompt',
+        async generate(request) {
+          providerSignal = request.signal
+          providerStarted.resolve(undefined)
+          const observeAbort = (): void => { providerAbortObserved.resolve(undefined) }
+          if (request.signal.aborted) observeAbort()
+          else request.signal.addEventListener('abort', observeAbort, { once: true })
+          await providerAbortObserved.promise
+          await releaseProviderCleanup.promise
+          return { title: 'late provider title', messageSeqs: request.messages.map(message => message.seq) }
+        },
+      }))
+    },
+  }
+  const capture: NativePlugin = {
+    apiVersion: 1, name: 'controller-removal-capture', targets: ['host'], requires: ['nativeWebSession', 'sessionPersistence'], provides: [],
+    resolve: () => (context) => {
+      nativeWebSession = context.require('nativeWebSession')
+      persistence = context.require('sessionPersistence')
+    },
+  }
+  const controllerRequest = { plugin, scope, config: {
+    cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
+    maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 10000,
+    maxFollowers: 2, maxPendingHumanRequests: 2,
+  } }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: agents, scope, config: undefined },
+    { plugin: execution, scope, config: undefined },
+    { plugin: model, scope, config: undefined },
+    { plugin: modelExecution, scope, config: undefined },
+    { plugin: approval, scope, config: undefined },
+    { plugin: permissionPresets, scope, config: { presets: {
+      'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
+    } } },
+    { plugin: sandboxPolicy, scope, config: { mode: 'danger-full-access', workspaceRoot: cwd } },
+    { plugin: sandboxedFilesystem, scope, config: { cwd } },
+    { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
+    { plugin: sessionTitles, scope, config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
+    { plugin: titleProvider, scope, config: undefined },
+    { plugin: carrier, scope, config: undefined },
+    controllerRequest,
+    { plugin: capture, scope, config: undefined },
+  ], 'host'))
+  let removing: Promise<void> | undefined
+  try {
+    await host.start()
+    if (nativeWebSession === undefined || persistence === undefined) throw new Error('missing Native Web Session fixture')
+    const prompted = await nativeWebSession.handle('session/prompt', {
+      sessionId, text: 'First prompt', resume: false, follow: true,
+    }, new AbortController().signal)
+    await providerStarted.promise
+    expect(prompted).toMatchObject({ ok: true, value: { exitCode: 0 } })
+    const readTitles = async () => {
+      const reader = await persistence!.open(sessionId, 'read')
+      try {
+        return (await reader.read()).events.filter(event => event.type === 'session/title')
+          .map(event => event.type === 'session/title' ? { seq: event.seq, title: event.data.title, source: event.data.source } : undefined)
+      } finally { await reader.close() }
+    }
+    const titlesBeforeRemoval = await readTitles()
+    let removed = false
+    removing = host.remove(controllerRequest).then(() => { removed = true })
+    await vi.waitFor(() => { expect(providerSignal?.aborted).toBe(true) })
+    await providerAbortObserved.promise
+    expect(removed).toBe(false)
+    expect(host.diagnostics().find(entry => entry.name === titleProvider.name)?.state).toBe('ready')
+    releaseProviderCleanup.resolve(undefined)
+    await removing
+    expect(removed).toBe(true)
+    expect(await readTitles()).toEqual(titlesBeforeRemoval)
+  } finally {
+    releaseProviderCleanup.resolve(undefined)
+    if (removing !== undefined) await Promise.allSettled([removing])
+    await host.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
 })

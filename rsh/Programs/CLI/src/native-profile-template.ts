@@ -25,6 +25,12 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'renderer', plugin: '@deepseek-ai/dsh-client-ui-renderer' },
   { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
   { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session', config: { maxFollowBufferChars: 1000000 } },
+  { id: 'locale', plugin: '@deepseek-ai/dsh-client-locale' },
+  { id: 'theme', plugin: '@deepseek-ai/dsh-client-ui-theme' },
+  { id: 'session-presentation', plugin: '@deepseek-ai/dsh-client-ui-session' },
+  { id: 'layout', plugin: '@deepseek-ai/dsh-client-ui-layout' },
+  { id: 'sidebar', plugin: '@deepseek-ai/dsh-client-ui-sidebar' },
+  { id: 'sidebar-right', plugin: '@deepseek-ai/dsh-client-ui-sidebar-right' },
 ] as const
 
 function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
@@ -125,6 +131,12 @@ export function shippedNativeProfileComposition(
         scope: ROOT,
         config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32, maxPendingHumanRequests: 32 },
       }] : []),
+      ...(profile === 'native-web' ? [
+        { id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: ROOT,
+          config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
+        { id: 'session-title-provider', plugin: '@deepseek-ai/dsh-session-title-first-prompt-llm', scope: ROOT,
+          config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
+      ] : []),
       ...(profile === 'native-tui' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-tui' ? [
         { id: 'user-questions', plugin: '@deepseek-ai/dsh-user-questions', scope: ROOT },

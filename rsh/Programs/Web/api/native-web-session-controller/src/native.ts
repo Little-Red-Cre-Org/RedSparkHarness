@@ -9,6 +9,8 @@ import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
+import { foldSessionTitle } from '@deepseek-ai/dsh-session-title/native'
+import type { NativeSessionTitles } from '@deepseek-ai/dsh-session-title/native'
 import { createNativeHeadlessApplication, resolveNativeHeadlessConfig, type Config as TurnConfig,
   type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -36,6 +38,7 @@ import type {} from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -106,7 +109,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'settings/describe', 'settings/mutate',
+  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'settings/describe', 'settings/mutate',
   'credentials/describe', 'credentials/set', 'credentials/unset'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
@@ -121,6 +124,7 @@ function credentialRefsRequest(maxCredentialRefsPerRead: number) {
 }
 const nativeCredentialSet = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), value: z.string().min(1) })
 const nativeCredentialUnset = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/) })
+const sessionTitleReadConcurrency = 4
 
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
@@ -133,6 +137,7 @@ export interface NativeWebSelectionProviders {
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
   readonly credentials?: NativeCredentials | undefined
+  readonly titles?: NativeSessionTitles | undefined
 }
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
@@ -152,6 +157,7 @@ export class NativeWebSessionService {
   private readonly requests: NativeConnectionRequestOwner
   private readonly controls: NativeConnectionRequestOwner
   private readonly settlements: NativeConnectionRequestOwner
+  private readonly followTasks = new Set<Promise<void>>()
 
   /**
    * @param executor - shared Program executor, not another Agent loop.
@@ -260,15 +266,22 @@ export class NativeWebSessionService {
       }
     })
     const done = execution.then((result) => {
-      feed?.finish()
       const failure = feed?.failure()
       if (failure !== undefined) throw failure
       return result
     }, (error: unknown) => {
-      feed?.finish()
       if (error instanceof Error) throw error
       throw new Error(String(error), { cause: error })
     })
+    const followTask = done.then(
+      () => this.finishFollow(id, feed),
+      () => this.finishFollow(id, feed),
+    ).catch((error: unknown) => {
+      feed?.fail(error instanceof Error ? error : new Error(String(error), { cause: error }))
+      this.requests.recordCleanupFailure(error)
+    }).finally(() => { feed?.finish() })
+    this.followTasks.add(followTask)
+    void followTask.then(() => { this.followTasks.delete(followTask) })
     const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
@@ -295,6 +308,21 @@ export class NativeWebSessionService {
     turn.following = true
     this.followers++
     return turn.feed.response(signal, () => { this.followers-- })
+  }
+
+  private async finishFollow(id: SessionId, feed: NativeSessionFeed | undefined): Promise<void> {
+    const titles = this.selections.titles
+    if (feed === undefined || titles === undefined) return
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner === undefined) return
+    try { this.executor.rootExecution.capture(owner) }
+    catch { return }
+    const remove = owner.onEvent((event) => {
+      if (event.type === 'session/title') feed.push({ type: 'title-updated' })
+    })
+    try { await titles.drainOwner(owner) }
+    finally { remove() }
   }
 
   /** Read only an image already recorded in this Program's workspace Session.
@@ -367,8 +395,10 @@ export class NativeWebSessionService {
         const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
           : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
             : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
-              : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
-                : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
+              : endpoint === 'session/rename-title' ? ['sessionId', 'title']
+                : endpoint === 'session/refresh-title' ? ['sessionId']
+                  : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
+                    : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
         if (endpoint === 'session/model-controls') return {
           catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog({
@@ -380,13 +410,26 @@ export class NativeWebSessionService {
           presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
             ...description === undefined ? {} : { description } })) ?? [],
         }
-        if (endpoint === 'session/list') return (await this.persistence.list({ signal: accepted })).map(item => item.header)
+        if (endpoint === 'session/list') return this.listSessions(accepted)
         if (endpoint === 'session/create') {
           const id = SessionId(randomUUID())
           await this.executor.executeSessionOperation({ id, resume: false }, () => Promise.resolve(undefined), accepted)
           return { sessionId: id }
         }
         const id = sessionId(fields.sessionId)
+        if (endpoint === 'session/rename-title' || endpoint === 'session/refresh-title') {
+          const titles = this.selections.titles
+          if (titles === undefined || !this.canManageTitle(id)) throw new Error('native web session: title changes are unavailable for this Session owner')
+          if (endpoint === 'session/rename-title') {
+            if (typeof fields.title !== 'string') throw new TypeError('native web session: title must be a string')
+            await this.executor.executeSessionOperation({ id, resume: true, route: this.titleRoute() },
+              async (owner) => { await titles.rename(owner, fields.title as string) }, accepted)
+          } else {
+            await this.executor.executeSessionOperation({ id, resume: true, route: this.titleRoute() },
+              async (owner) => { await titles.refresh(owner, accepted) }, accepted)
+          }
+          return { changed: true }
+        }
         if (endpoint === 'session/select-model' || endpoint === 'session/select-preset') {
           if (this.turns.has(id)) throw new Error('native web session: selection requires an idle Session')
           const expectedRevision = fields.expectedRevision === null ? null
@@ -416,7 +459,7 @@ export class NativeWebSessionService {
         }
         if (endpoint === 'session/history') return readNativeSessionHistory(id, {
           active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
-          label: 'native web session', onCleanupFailure: (error) =>{  this.requests.recordCleanupFailure(error) },
+          label: 'native web session', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
         }, accepted)
         if (endpoint === 'session/answer-human') {
           accepted.throwIfAborted()
@@ -456,6 +499,65 @@ export class NativeWebSessionService {
       }
       return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
     }
+  }
+
+  private async listSessions(signal: AbortSignal): Promise<NativeSessionListItem[]> {
+    const stored = await this.persistence.list({ signal })
+    signal.throwIfAborted()
+    const sessions = [...new Map(stored.map(snapshot => [snapshot.header.id, snapshot.header])).values()]
+    const result = new Map<SessionId, NativeSessionListItem>()
+    let cursor = 0
+    const readNext = async (): Promise<void> => {
+      for (;;) {
+        signal.throwIfAborted()
+        const header = sessions[cursor++]
+        if (header === undefined) return
+        let titleProjection: NativeSessionListItem['titleProjection']
+        try {
+          const history = await readNativeSessionHistory(header.id, {
+            active: this.active,
+            persistence: this.persistence,
+            maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web Session title',
+            onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
+          }, signal)
+          const title = foldSessionTitle(history.events)
+          titleProjection = title === undefined ? { status: 'absent' } : { status: 'resolved', title: title.title }
+        } catch {
+          if (signal.aborted) signal.throwIfAborted()
+          titleProjection = { status: 'unavailable' }
+        }
+        const canManageTitle = !this.turns.has(header.id) && this.canManageTitle(header.id)
+        result.set(header.id, { header, titleProjection,
+          titleActions: { rename: canManageTitle, refresh: canManageTitle } })
+      }
+    }
+    const readers = Array.from({ length: Math.min(sessionTitleReadConcurrency, sessions.length) }, () => readNext())
+    const settlements = await Promise.allSettled(readers)
+    signal.throwIfAborted()
+    const unexpected = settlements.find(settlement => settlement.status === 'rejected')
+    if (unexpected?.status === 'rejected') throw unexpected.reason
+    return sessions.map(header => result.get(header.id) as NativeSessionListItem)
+  }
+
+  /** Whether the selected root route can operate on this stored or attached Session. */
+  private canManageTitle(id: SessionId): boolean {
+    if (this.selections.titles === undefined) return false
+    const roots = this.executor.rootExecution
+    const route = this.titleRoute()
+    try {
+      roots.resolve(route)
+      const owners = this.active.owners().filter(owner => owner.session.id === id)
+      if (owners.some(owner => owner.invocation === 'delegated')) return false
+      const owner = owners.find(candidate => candidate.invocation === 'root')
+      return owner === undefined || owner.writerAvailable && roots.capture(owner).id === route
+    } catch {
+      return false
+    }
+  }
+
+  private titleRoute(): NativeRootRouteId {
+    return this.config.rootRouteId ?? brandString<NativeRootRouteId>('root')
   }
 
   private async configuration(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
@@ -532,16 +634,18 @@ export class NativeWebSessionService {
     return ref
   }
 
-  /** Close admission, cancel turns and await accepted readers and writer settlement.
-   * @returns completion including actual reader cleanup failures.
+  /** Close requests, dispose the Session executor, and drain title follow tasks.
+   * @returns completion including accepted request and executor cleanup failures.
    */
   async close(): Promise<void> {
     this.human.close()
     this.shutdown.abort(new Error('native Session follow: disposed'))
     const results = await Promise.allSettled([this.requests.close(), this.controls.close(), this.settlements.close()])
+    const executor = await Promise.allSettled([this.executor.dispose()])
+    while (this.followTasks.size > 0) await Promise.allSettled([...this.followTasks])
     this.turns.clear()
-    const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
-    if (errors.length > 0) throw new AggregateError(errors, 'native web session: request cleanup failed')
+    const errors = [...results, ...executor].flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
+    if (errors.length > 0) throw new AggregateError(errors, 'native web session: request and executor cleanup failed')
   }
 }
 
@@ -549,7 +653,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'sessionTitles'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -563,7 +667,7 @@ export const plugin: NativePlugin = {
       const models = context.optional('modelSelection')
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
-          settings: context.optional('settings'), credentials: context.optional('credentials'),
+          settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())

@@ -722,29 +722,26 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 #### `session/title` — log-only
 
 ```ts persistence-catalog
-/**
- * Latest-wins session title snapshot. Log-only: it never enters the model
- * surface or derived history.
- */
+/** Latest-wins title fact; log-only and excluded from model history. */
 'session/title': SessionTitleEventData
 ```
 
 类型：[SessionTitleEventData](subsystems/session-title.zh.md)
 
-来源：[`rsh/Engine/session/session-title/src/index.ts:77`](../Engine/session/session-title/src/index.ts)
+来源：[`rsh/Engine/session/session-title/src/types.ts:109`](../Engine/session/session-title/src/types.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 
 #### `session/title-llm-request` — log-only
 
 ```ts persistence-catalog
-/** Log-only pre-dispatch record of one session-title model request. */
+/** Log-only exact request record before auxiliary title-model dispatch. */
 'session/title-llm-request': SessionTitleLlmRequestEventData
 ```
 
 类型：[SessionTitleLlmRequestEventData](subsystems/session-title.zh.md)
 
-来源：[`rsh/Engine/session/session-title-llm/src/index.ts:45`](../Engine/session/session-title-llm/src/index.ts)
+来源：[`rsh/Engine/session/session-title/src/types.ts:111`](../Engine/session/session-title/src/types.ts)
 
 ### `session-log-deepseek/*`
 

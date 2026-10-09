@@ -21,7 +21,7 @@ type LayoutState = {
   layoutInfo: LayoutInfo
 }
 
-type LayoutInfo = {
+export type LayoutInfo = {
   sidebar: number
   /** Last positive frame measurement; window width bootstraps the first render. */
   viewportWidth: number

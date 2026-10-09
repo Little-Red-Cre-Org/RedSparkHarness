@@ -1066,7 +1066,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         throw error
       }
       if (observation.epoch === undefined) return result
-      await this.waitRootEpoch(request.id, signal, observation.epoch)
+      await this.waitRootForeground(signal, observation.epoch)
       return observation.epoch.lastResult ?? result
     } finally { observation.release?.() }
   }
@@ -1327,6 +1327,32 @@ export class NativeHeadlessApplication implements NativeApplication {
    */
   async waitRootSettlement(id: SessionId, signal: AbortSignal): Promise<NativeTurnResult | undefined> {
     return this.waitRootEpoch(id, signal)
+  }
+
+  private async waitRootForeground(signal: AbortSignal, activation: NativeContinuationActivation): Promise<NativeTurnResult | undefined> {
+    const onAbort = (): void => { void activation.close().catch(() => undefined) }
+    signal.addEventListener('abort', onAbort, { once: true })
+    try {
+      if (signal.aborted) onAbort()
+      try { await activation.waitForeground() }
+      catch (error: unknown) {
+        throw new AggregateError([...signal.aborted ? [signal.reason as unknown] : [], error],
+          'native-headless: root foreground settlement failed')
+      }
+      if (signal.aborted) {
+        try { await activation.done }
+        catch (error: unknown) {
+          throw new AggregateError([signal.reason as unknown, error], 'native-headless: root foreground cancellation cleanup failed')
+        }
+      }
+      signal.throwIfAborted()
+      if (!activation.isRetained) {
+        try { await activation.done }
+        catch (error: unknown) { throw new AggregateError([error], 'native-headless: root epoch cleanup failed') }
+      }
+      signal.throwIfAborted()
+      return activation.lastResult
+    } finally { signal.removeEventListener('abort', onAbort) }
   }
 
   private async waitRootEpoch(id: SessionId, signal: AbortSignal,
@@ -1950,6 +1976,12 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (invocation !== 'root') throw new Error('native-headless: one-shot delegation cannot retain residency')
         return this.retainRoot(owner, agent, config)
       },
+      retainBackground: () => {
+        const retention = this.continuationRuntime.retainBackground(agent)
+        if (retention !== undefined) return retention
+        if (invocation !== 'root') throw new Error('native-headless: one-shot delegation cannot retain background work')
+        return this.retainRootBackground(owner, agent, config)
+      },
       ...invocation === 'root' ? { rootOperations: this.rootSessionOperations(agent, owner.session.id) } : {},
       enqueue: (message, target, wake, signal) =>
         this.continuationRuntime.forParent(agent, owner.session).deliver(owner.session.id, message, target, wake, signal),
@@ -2025,7 +2057,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     return { agent, session: continuation.session, displayRootAgent: root, displayRootSessionId: SessionId(root.id) }
   }
 
-  private retainRoot(owner: NativeContinuationSession, agent: NativeAgent, config: Config): () => void {
+  private rootActivation(owner: NativeContinuationSession, agent: NativeAgent, config: Config): NativeContinuationActivation {
     const id = owner.session.id
     let epoch = this.rootEpochs.get(id)
     if (epoch === undefined) {
@@ -2053,7 +2085,15 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (turn !== undefined) turn.release = activation.retainChild()
     }
     if (epoch.owner !== owner) throw new Error('native-headless: root retention requires the exact resident writer')
-    return epoch.activation.retainChild()
+    return epoch.activation
+  }
+
+  private retainRoot(owner: NativeContinuationSession, agent: NativeAgent, config: Config): () => void {
+    return this.rootActivation(owner, agent, config).retainChild()
+  }
+
+  private retainRootBackground(owner: NativeContinuationSession, agent: NativeAgent, config: Config): () => void {
+    return this.rootActivation(owner, agent, config).retainBackground()
   }
 
   private async disposeInternal(): Promise<void> {

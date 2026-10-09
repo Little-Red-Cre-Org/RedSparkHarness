@@ -295,6 +295,26 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
         },
       },
     }, tscSourceMapPlugin(), {
+      // Native feature installers own the lifetime of sheets they read as text.
+      // Resolve `?inline` against source files because tsc preserves the import
+      // but does not copy CSS into `lib/types`.
+      name: 'dsh-css-text-inline',
+      resolveId(source: string, importer: string | undefined) {
+        if (!source.endsWith(INLINE_CSS_QUERY)) return null
+        const stylesheet = source.slice(0, -INLINE_CSS_QUERY.length)
+        if (!stylesheet.endsWith('.css')) return null
+        const abs = importer !== undefined ? sourceAssetPath(stylesheet, importer) : stylesheet
+        return INLINE_CSS_VIRTUAL_PREFIX + abs + CSS_VIRTUAL_SUFFIX
+      },
+      async load(this: { addWatchFile(id: string): void }, virtualId: string) {
+        if (!virtualId.startsWith(INLINE_CSS_VIRTUAL_PREFIX)) return null
+        const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+        this.addWatchFile(fileId)
+        const source = await readFile(fileId)
+        const { code } = transform({ filename: fileId, code: source, minify: true })
+        return `export default ${JSON.stringify(code.toString())};`
+      },
+    }, {
       // Contract 4. The import survives verbatim and the sheet lands beside the
       // JavaScript, so the shell's CSS Modules pipeline sees a real stylesheet.
       name: 'dsh-css-asset',

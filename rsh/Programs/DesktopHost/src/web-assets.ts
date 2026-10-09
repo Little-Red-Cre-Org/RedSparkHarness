@@ -1,4 +1,4 @@
-/** Desktop-owned Web asset routes for legacy and explicitly native Client pages. */
+/** Desktop-owned Web asset routes for the legacy Client page. */
 import { createRequire } from 'node:module'
 import { realpathSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -8,7 +8,6 @@ import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-client-modules'
 import type {} from '@deepseek-ai/dsh-http-routes-cordis'
 import { renderIndexInjections, type IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
-import type { NativeClientBundle } from './native-client.ts'
 
 /** Desktop stream endpoint shared with the injected browser transport. */
 export const DESKTOP_STREAM_PATH = '/.dsh/remote-stream'
@@ -44,17 +43,10 @@ const MIME: Readonly<Record<string, string>> = {
   '.webmanifest': 'application/manifest+json',
 }
 
-/** Serve the installed frontend and Host-owned native Client assets. */
-export function createDesktopAssetHandler(
-  ctx: Context,
-  runtimeDir: string,
-  nativeClient: NativeClientBundle | undefined,
-): ConnectionFetchHandler {
+/** Serve the installed legacy frontend and its Host-owned transport. */
+export function createDesktopAssetHandler(ctx: Context, runtimeDir: string): ConnectionFetchHandler {
   const require = createRequire(join(runtimeDir, 'package.json'))
   const distIndex = require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')
-  const distNativeIndex = nativeClient === undefined
-    ? undefined
-    : require.resolve('@deepseek-ai/dsh-web-frontend/dist/native.html')
   const distRoot = realpathSync(dirname(distIndex))
   const renderIndex = async (): Promise<Response> => {
     const rows: IndexInjection[] = [{ kind: 'script', placement: 'head', text: DESKTOP_TRANSPORT_SCRIPT }]
@@ -62,30 +54,11 @@ export function createDesktopAssetHandler(
     const body = renderIndexInjections(await readFile(distIndex, 'utf8'), rows)
     return new Response(body, { headers: { 'content-type': HTML_CONTENT_TYPE } })
   }
-  const renderNativeIndex = async (): Promise<Response> => {
-    if (distNativeIndex === undefined || nativeClient === undefined) return new Response(null, { status: 404 })
-    const rows: IndexInjection[] = [
-      { kind: 'script', placement: 'head', text: DESKTOP_TRANSPORT_SCRIPT },
-      { kind: 'global', name: '__DSH_NATIVE_CLIENT_BOOT__', value: nativeClient.wire },
-    ]
-    const body = renderIndexInjections(await readFile(distNativeIndex, 'utf8'), rows)
-    return new Response(body, { headers: { 'content-type': HTML_CONTENT_TYPE } })
-  }
   return {
     requestBodyMode: () => 'buffered',
     async fetch(request): Promise<Response> {
       if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405 })
       const url = new URL(request.url)
-      const nativeAsset = nativeClient?.assets.get(url.pathname)
-      if (nativeAsset !== undefined) {
-        let body: ArrayBuffer | null = null
-        if (request.method !== 'HEAD') {
-          const copy = new Uint8Array(nativeAsset.body.byteLength)
-          copy.set(nativeAsset.body)
-          body = copy.buffer
-        }
-        return new Response(body, { headers: { 'content-type': nativeAsset.contentType } })
-      }
       if (url.pathname.startsWith('/.dsh/native-client/')) return new Response(null, { status: 404 })
       if (url.pathname.startsWith('/plugins/')) return ctx.clientModules.fetchBundle(request)
       let pathname: string
@@ -94,7 +67,7 @@ export function createDesktopAssetHandler(
       } catch {
         return new Response(null, { status: 400 })
       }
-      if (pathname === '/native.html') return renderNativeIndex()
+      if (pathname === '/native.html') return new Response(null, { status: 404 })
       if (pathname === '/' || pathname === '/index.html') return renderIndex()
       const target = resolve(normalize(join(distRoot, pathname)))
       if (target !== distRoot && !target.startsWith(distRoot + sep)) return new Response(null, { status: 403 })

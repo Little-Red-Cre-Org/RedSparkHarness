@@ -2,11 +2,11 @@
  * Stylesheets enter client bundles through virtual modules, so the loader must
  * register their physical files as watch dependencies.
  */
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { clientBundle } from '../Programs/Web/client/tsdown.client.ts'
+import { clientBundle, staticLinkedLeaf } from '../Programs/Web/client/tsdown.client.ts'
 
 interface CssPlugin {
   name: string
@@ -24,6 +24,16 @@ function cssPlugin(name: 'dsh-css-modules-inline' | 'dsh-css-global-inline' | 'd
   const plugins = (client as { plugins: CssPlugin[] }).plugins
   const plugin = plugins.find(candidate => candidate.name === name)
   if (plugin === undefined) throw new Error(`${name} missing from client config`)
+  return plugin
+}
+
+function staticLinkedCssPlugin(): CssPlugin {
+  const configs = staticLinkedLeaf('@deepseek-ai/dsh-client-test-native', ['lib/types/native.js'])({
+    env: { DSH_BUILD_FACE: 'client' },
+  })
+  const plugins = (configs[0] as { plugins: CssPlugin[] }).plugins
+  const plugin = plugins.find(candidate => candidate.name === 'dsh-css-text-inline')
+  if (plugin === undefined) throw new Error('static-linked inline CSS plugin missing')
   return plugin
 }
 
@@ -91,6 +101,33 @@ describe('client bundle global CSS', () => {
       const output = await plugin.load.call({ addWatchFile: id => watched.push(id) }, virtualId)
 
       expect(watched).toEqual([stylesheet])
+      expect(output).toContain('export default "body{color:red}"')
+      expect(output).not.toContain('data-plugin-css')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('static-linked native inline CSS', () => {
+  it('resolves emitted imports to source sheets and compiles them as owned text', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-static-native-inline-css-'))
+    try {
+      const source = join(root, 'src', 'styles', 'base.css')
+      const importer = join(root, 'lib', 'types', 'native.js')
+      await mkdir(join(root, 'src', 'styles'), { recursive: true })
+      await mkdir(join(root, 'lib', 'types'), { recursive: true })
+      await writeFile(source, 'body { color: red; }\n')
+      const plugin = staticLinkedCssPlugin()
+      const virtualId = plugin.resolveId?.('./styles/base.css?inline', importer)
+      if (typeof virtualId !== 'string' || plugin.load === undefined) {
+        throw new Error('static-linked CSS plugin hooks are incomplete')
+      }
+      const watched: string[] = []
+
+      const output = await plugin.load.call({ addWatchFile: id => watched.push(id) }, virtualId)
+
+      expect(watched).toEqual([source])
       expect(output).toContain('export default "body{color:red}"')
       expect(output).not.toContain('data-plugin-css')
     } finally {
