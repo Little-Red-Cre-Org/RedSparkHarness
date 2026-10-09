@@ -12,6 +12,7 @@ import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -174,6 +175,13 @@ export interface NativeSessionClient {
    * @returns completion after old Agent drain and accepted successor activation.
    */
   selectPreset(request: NativeAgentPresetSelectionRequest, signal?: AbortSignal): Promise<void>
+  /** Execute one exact registered slash command on the selected idle Session owner.
+   * @param sessionId - selected stored Session.
+   * @param line - complete slash command line.
+   * @param signal - caller cancellation; the Host drains the command before settlement.
+   * @returns the durable command lifecycle identity and normalized outcome.
+   */
+  executeCommand(sessionId: SessionId, line: string, signal?: AbortSignal): Promise<CommandExecution>
   /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
@@ -303,6 +311,18 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   }
   const data = fields(value)
   switch (endpoint) {
+    case 'session/command': {
+      const result = fields(data.result)
+      if (typeof data.commandId !== 'string' || data.commandId.length === 0
+        || result.kind !== 'success' && result.kind !== 'error'
+        || result.text !== undefined && typeof result.text !== 'string'
+        || result.kind === 'error' && typeof result.text !== 'string'
+        || result.sourceEventSeq !== undefined && (typeof result.sourceEventSeq !== 'number'
+          || !Number.isSafeInteger(result.sourceEventSeq) || result.sourceEventSeq < 0)) {
+        throw new TypeError('invalid native Session command result')
+      }
+      return data
+    }
     case 'session/answer-human':
       if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')
       break
@@ -473,6 +493,7 @@ export function createNativeSessionClient(
     async selectPreset({ id, ...request }, signal) {
       await call('session/select-preset', { sessionId: id, ...request }, signal)
     },
+    executeCommand: (sessionId, line, signal) => call('session/command', { sessionId, line }, signal),
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
     prompt(sessionId, text, resume, signal, observe, images) {

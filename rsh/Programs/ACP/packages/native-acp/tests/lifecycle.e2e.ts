@@ -216,6 +216,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   let holdPermission = false
   const permissionRequests: Record<string, unknown>[] = []
   let lastUpdate: unknown
+  const sessionUpdates: unknown[] = []
   const requests: unknown[] = []
   const server = createServer((request, response) => {
     let body = ''
@@ -254,7 +255,10 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
   const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
-  transport.onNotification((method, params) => { if (method === 'session/update') lastUpdate = params.update })
+  transport.onNotification((method, params) => { if (method === 'session/update') {
+    lastUpdate = params.update
+    sessionUpdates.push(params.update)
+  } })
   transport.onRequest(async (method, params) => {
     expect(method).toBe('session/request_permission')
     expect(lastUpdate).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-call' })
@@ -274,6 +278,14 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
       .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
     const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
+    expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
+      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
+    const requestsBeforeCompact = requests.length
+    expect(await transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'text', text: '/compact' }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(requests).toHaveLength(requestsBeforeCompact)
+    expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'agent_message_chunk',
+      content: { type: 'text', text: 'No compactable history yet.' } })
     await expect(transport.request('session/prompt', { sessionId: created.sessionId,
       prompt: [{ type: 'image', mimeType: 'image/png', data: 'not-base64' }] }, signal)).rejects.toThrow()
     expect(requests).toHaveLength(0)
@@ -309,6 +321,8 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     expect(await cancelledPermission).toMatchObject({ stopReason: 'cancelled' })
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
+    expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
+      availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
     expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
     expect(permissionRequests).toHaveLength(2)
     permissionRelease.resolve(undefined)

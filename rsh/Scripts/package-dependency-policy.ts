@@ -31,6 +31,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
     '@deepseek-ai/dsh-native-model-selection',
     '@deepseek-ai/dsh-agent-presets',
     '@deepseek-ai/dsh-brand',
+    '@deepseek-ai/dsh-commands',
   ],
   '@deepseek-ai/dsh-client-native-application': [
     '@deepseek-ai/dsh-native-runtime',

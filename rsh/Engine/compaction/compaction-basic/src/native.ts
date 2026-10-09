@@ -14,15 +14,18 @@ import type {
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
+import type { NativeModelExecution, NativeModelRecoveryRequest } from '@deepseek-ai/dsh-native-model-execution'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm/native'
+import type { Session } from '@deepseek-ai/dsh-session/native'
 import type {
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeStepAdmissionHook,
 } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
 import type { NativeToolResultPrunerOperations } from '@deepseek-ai/dsh-compaction-tool-result-pruner/native'
-import { resolveConfig } from './config.ts'
+import { resolveConfig, resolveTargetPolicy } from './config.ts'
 import {
-  compactForStepPressure, compactForTrigger, compactIdleSurface, compactTurnRegion, summarizeConversation,
+  compactForStepPressure, compactForTrigger, compactIdleSurface, compactTurnRegion, routedTarget, summarizeConversation,
 } from './policy.ts'
 import type { RegionDependencies } from './region.ts'
 import type { BasicCompactionConfig, ResolvedConfig } from './types.ts'
@@ -73,6 +76,7 @@ export function resolveNativeBasicCompactionConfig(input: unknown): ResolvedNati
 /** Native services the Provider reads. */
 export interface NativeBasicCompactionServices {
   readonly model: NativeModel
+  readonly modelExecution?: NativeModelExecution | undefined
   readonly tokenMeter: NativeTokenMeterOperations
   readonly activeSessions: NativeActiveSessionOperations
   readonly toolResultPruner?: NativeToolResultPrunerOperations | undefined
@@ -86,6 +90,7 @@ export interface NativeBasicCompactionServices {
 export class NativeBasicCompaction implements NativeCompactionOperations {
   private readonly warnedPressureConfigTargets = new Set<string>()
   private readonly hooks = new Map<NativeActiveSessionOwner, () => Promise<void>>()
+  private readonly overflowRetries = new WeakMap<Session, { turn: number; step: number; retries: number }>()
 
   /**
    * @param services - selected model, token meter, active owners and optional pruner.
@@ -97,31 +102,92 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
   ) {}
 
   /**
-   * Register automatic pressure compaction on every future active owner.
-   * @returns removal of both lifecycle observers.
+   * Register automatic pressure compaction on every current and future active owner.
+   * @returns removal of lifecycle observers after accepted callbacks and hooks drain.
    */
   attach(): () => Promise<void> {
     const { activeSessions } = this.services
+    const recoveryLifetime = new AbortController()
+    const recoveries = new Set<Promise<unknown>>()
+    let closing = false
+    const installHook = (owner: NativeActiveSessionOwner): void => {
+      if (this.hooks.has(owner)) return
+      this.hooks.set(owner, owner.beforeStep(this.admission(owner), this.config.admissionOrder))
+    }
     const releases = [
-      activeSessions.onAttached(async (owner) => {
-        this.hooks.set(owner, owner.beforeStep(this.admission(owner), this.config.admissionOrder))
-        await Promise.resolve()
+      activeSessions.onAttached((owner) => {
+        installHook(owner)
+        return Promise.resolve()
       }),
       activeSessions.onDetached(async (owner) => {
         const release = this.hooks.get(owner)
-        this.hooks.delete(owner)
         await release?.()
+        if (this.hooks.get(owner) === release) this.hooks.delete(owner)
       }),
     ]
+    for (const owner of activeSessions.owners()) installHook(owner)
+    const removeRecovery = this.config.compaction.auto ? this.services.modelExecution?.onRecovery(async (request, next) => {
+      if (closing) return undefined
+      if (request.signal.aborted || request.failure.code !== CONTEXT_WINDOW_EXCEEDED_CODE) return next()
+      const owner = activeSessions.owners().find(candidate => candidate.session === request.session)
+      const target = routedTarget(request.session)
+      if (owner === undefined || target === undefined) return undefined
+      const state = this.overflowRetries.get(request.session)
+      const retries = state?.turn === request.turn && state.step === request.step ? state.retries : 0
+      const policy = resolveTargetPolicy(this.config.compaction, target)
+      if (retries >= policy.maxOverflowRetries) return undefined
+
+      const generation = request.session.surface.replaceGeneration
+      const signal = AbortSignal.any([request.signal, recoveryLifetime.signal])
+      const operation = this.recoverOverflow(request, owner, retries, generation, signal)
+      const tracked = operation.finally(() => recoveries.delete(tracked))
+      recoveries.add(tracked)
+      return tracked
+    }) : undefined
     return async () => {
-      const failures = (await Promise.allSettled([
-        ...releases.map(async (release) => { await release() }),
-        ...[...this.hooks.values()].map(async (release) => { await release() }),
-      ])).filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      closing = true
+      recoveryLifetime.abort(new Error('compaction-basic: native Provider disposed'))
+      removeRecovery?.()
+      const observers = await Promise.allSettled(releases.map(async (release) => { await release() }))
+      const hooks = await Promise.allSettled([...this.hooks.values()].map(async (release) => { await release() }))
+      const recoveryResults = await Promise.allSettled([...recoveries])
       this.hooks.clear()
+      const failures = [...observers, ...hooks, ...recoveryResults]
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
       if (failures.length > 0) {
         throw new AggregateError(failures.map(failure => failure.reason as unknown), 'compaction-basic: hook cleanup failed')
       }
+    }
+  }
+
+  private async recoverOverflow(
+    request: NativeModelRecoveryRequest,
+    owner: NativeActiveSessionOwner,
+    retries: number,
+    generation: number,
+    signal: AbortSignal,
+  ): Promise<{ readonly kind: 'retry' } | undefined> {
+    try {
+      const result = await this.compactIfNeeded(owner, 'context-overflow', signal)
+      signal.throwIfAborted()
+      if (request.session.surface.replaceGeneration <= generation) return undefined
+      this.overflowRetries.set(request.session, { turn: request.turn, step: request.step, retries: retries + 1 })
+      if (result !== null) {
+        console.info(`compaction (context overflow recovery): shadowed ${result.shadowedSeqs.length} surface nodes `
+          + `(seqs ${result.shadowedRange.start}-${result.shadowedRange.end}, ~${result.shadowedTokenCount} tokens)`)
+      }
+      return { kind: 'retry' }
+    } catch (error: unknown) {
+      if (signal.aborted) return undefined
+      if (request.session.surface.replaceGeneration > generation) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn(`compaction-basic: context-overflow compaction failed after durable surface progress: ${message}; retrying from the replacement surface`)
+        this.overflowRetries.set(request.session, { turn: request.turn, step: request.step, retries: retries + 1 })
+        return { kind: 'retry' }
+      }
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`compaction-basic: context-overflow compaction failed: ${message}; preserving the original request error`)
+      return undefined
     }
   }
 
@@ -179,12 +245,13 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
 /** Install the native compaction Provider over the selected model and token meter. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-compaction-basic', targets: ['host'],
-  requires: ['model', 'tokenMeter', 'activeSessions'], optional: ['toolResultPruner'], provides: ['compaction'],
+  requires: ['model', 'tokenMeter', 'activeSessions'], optional: ['modelExecution', 'toolResultPruner'], provides: ['compaction'],
   resolve(input) {
     const config = resolveNativeBasicCompactionConfig(input)
     return (context) => {
       const engine = new NativeBasicCompaction({
         model: context.require('model'),
+        modelExecution: context.optional('modelExecution'),
         tokenMeter: context.require('tokenMeter'),
         activeSessions: context.require('activeSessions'),
         toolResultPruner: context.optional('toolResultPruner'),

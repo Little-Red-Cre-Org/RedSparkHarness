@@ -12,6 +12,7 @@ import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
 import { SessionId, SessionSeq, type SessionEvent, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeApprovalOutcome, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
@@ -511,6 +512,9 @@ export class NativeSdkApplication implements NativeApplication {
     const sessionId = nonempty(raw.sessionId, 'sessionId')
     const parts = this.promptParts(raw)
     const attachments = this.context.require('attachments')
+    const commands: NativeCommandOperations | undefined = this.context.optional('commands')
+    const commandLine = parts.length === 1 && parts[0]?.type === 'text' ? parts[0].text : undefined
+    const command = commandLine === undefined ? undefined : commands?.parse(commandLine)
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<string>()
     const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
@@ -520,23 +524,49 @@ export class NativeSdkApplication implements NativeApplication {
         this.activeTurns.set(sessionId, admission)
         const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
         signal.throwIfAborted()
-        const content = await attachments.admitPromptContent(parts)
-        signal.throwIfAborted()
-        const message = createUserMessage({ content, source: { kind: 'user' } })
         const id = SessionId(sessionId)
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
-        await executor.executeRootTurn({ id, resume, message,
-          onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
-            this.notifySessionEvent(transport, sessionId, event)
-            if (!admission.received && event.type === 'agent/inbox/spliced'
-            && event.data.inserted.some(input => input.id === message.id)) {
-              admission.received = true
-              this.acceptedRootSessions.add(sessionId)
-              accepted.resolve(String(message.id))
-              transport.notify('session.status', { sessionId, status: 'running' })
-            }
-          } }, signal)
-        if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
+        const available = command === undefined ? undefined : commands?.list(this.context.scope)
+          .some(descriptor => descriptor.name === command.name)
+        if (command !== undefined && available === true && commands !== undefined) {
+          await executor.executeSessionOperation({ id, resume }, async (owner, effective) => {
+            if (executor.rootExecution.capture(owner).id !== SDK_ROOT_ROUTE) throw new Error('native SDK: command requires this application root owner')
+            this.acceptedRootSessions.add(sessionId)
+            const release = owner.onEvent((event) => {
+              this.notifySessionEvent(transport, sessionId, event)
+              if (!admission.received && event.type === 'command/run' && event.data.name === command.name) {
+                admission.received = true
+                accepted.resolve(String(event.data.commandId))
+                transport.notify('session.status', { sessionId, status: 'running' })
+              }
+            })
+            try {
+              if (!commands.list(owner.agent.scope).some(descriptor => descriptor.name === command.name)) {
+                throw new Error(`native SDK: command /${command.name} is unavailable to this root owner`)
+              }
+              const result = await commands.dispatch({ agent: owner.agent, session: owner.session,
+                line: commandLine as string, attachments: [], signal: effective })
+              if (result === undefined) throw new Error(`native SDK: command /${command.name} is no longer available`)
+              return result
+            } finally { release() }
+          }, signal)
+        } else {
+          const content = await attachments.admitPromptContent(parts)
+          signal.throwIfAborted()
+          const message = createUserMessage({ content, source: { kind: 'user' } })
+          await executor.executeRootTurn({ id, resume, message,
+            onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
+              this.notifySessionEvent(transport, sessionId, event)
+              if (!admission.received && event.type === 'agent/inbox/spliced'
+              && event.data.inserted.some(input => input.id === message.id)) {
+                admission.received = true
+                this.acceptedRootSessions.add(sessionId)
+                accepted.resolve(String(message.id))
+                transport.notify('session.status', { sessionId, status: 'running' })
+              }
+            } }, signal)
+        }
+        if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable input receipt')
       } catch (error: unknown) {
         if (error instanceof AggregateError) admission.failure = error
         if (admission.received) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
@@ -558,7 +588,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
-    'agentPresets', 'workspaceRegistry'],
+    'agentPresets', 'workspaceRegistry', 'commands'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)
