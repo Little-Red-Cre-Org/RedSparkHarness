@@ -55,7 +55,7 @@ const { plugin: nativePlugin } = await import('../src/native.ts')
 const anthropicApiKey = catalogProvider('anthropic')?.auth.apiKey
 if (anthropicApiKey?.login !== undefined) {
   anthropicApiKey.login = ((interaction: AuthInteraction) =>
-    login('anthropic', 'api_key', interaction)) as typeof anthropicApiKey.login
+    login('anthropic', 'api_key', interaction) as Promise<Credential>) as typeof anthropicApiKey.login
 }
 
 const CODEX = recordKeyFor('openai-codex')

@@ -379,10 +379,10 @@ export class PiAiAdapter extends LlmAdapter {
       void refresh.then(clear, clear)
     }
     if (signal === undefined) return refresh
-    if (signal.aborted) throw signal.reason
+    signal.throwIfAborted()
     const shared = refresh
     return new Promise<void>((resolve, reject) => {
-      const onAbort = (): void => { reject(signal.reason) }
+      const onAbort = (): void => { reject(signal.reason as Error) }
       signal.addEventListener('abort', onAbort, { once: true })
       shared.then(resolve, reject).finally(() => { signal.removeEventListener('abort', onAbort) })
     })
