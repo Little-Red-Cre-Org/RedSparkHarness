@@ -222,16 +222,24 @@ export class AuthorizationService extends Service {
     request.signal?.addEventListener('abort', withdraw, { once: true })
     this.running.set(key, { controller })
     let settlement: AuthorizationSettlement = 'failed'
+    let failure: unknown
     try {
       const outcome = await this.attempt(flow, method, controller.signal, request.interaction)
       settlement = outcome.status
       return outcome
+    } catch (error: unknown) {
+      failure = error
+      throw error
     } finally {
       request.signal?.removeEventListener('abort', withdraw)
       this.running.delete(key)
       // After the slot is released, so a listener that reacts by starting the
       // next attempt is not refused by the one that just finished.
       this.settle(key, settlement)
+      if (settlement === 'failed') {
+        const message = failure instanceof Error ? failure.message : String(failure)
+        console.warn('authorization: flow failed', key, message)
+      }
     }
   }
 

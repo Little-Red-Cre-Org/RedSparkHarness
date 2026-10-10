@@ -25,7 +25,7 @@ export class HarnessError extends Error {
  * {@link HarnessError.code}.
  * @param value - the caught value (`unknown` in catch clauses).
  * @returns the outermost message first, each cause appended with `: ` (skipped
- * when it repeats the wrapper message verbatim), and AggregateError members
+ * when the wrapper message already contains it), and AggregateError members
  * bracketed and `; `-joined.
  */
 export function errorChain(value: unknown): string {
@@ -52,9 +52,8 @@ export function errorChain(value: unknown): string {
       const causeText = current.cause === undefined || current.cause === null
         ? ''
         : render(current.cause)
-      // Wrappers like `new HarnessError(String(value), code, { cause: value })`
-      // repeat their cause verbatim; rendering it again would only add noise.
-      const cause = causeText === '' || causeText === message ? '' : `: ${causeText}`
+      // Wrappers may already include their cause in the message.
+      const cause = causeText === '' || message.includes(causeText) ? '' : `: ${causeText}`
       return `${message}${members}${cause}`
     } catch {
       // Only hostile coercion or hostile accessors (a throwing toString /

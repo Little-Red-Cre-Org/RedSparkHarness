@@ -175,10 +175,11 @@ export type AuthorizationPromptView = {
  *   declined, or withdrawn by the flow racing it against a callback).
  * - `settled`: the last frame; the attempt has fully drained and released its key.
  *   `code` is present only for `failed`: an `AuthorizationError` code, or
- *   `FLOW_FAILED` for any other flow error.
+ *   `FLOW_FAILED` for any other flow error. `message` carries the failure
+ *   diagnostic and must not contain credential values.
  */
 export type AuthorizationFrame =
   | { type: 'notice'; notice: AuthorizationNotice }
   | { type: 'prompt'; promptId: AuthorizationPromptId; prompt: AuthorizationPromptView }
   | { type: 'prompt-closed'; promptId: AuthorizationPromptId }
-  | { type: 'settled'; settlement: AuthorizationSettlement; code?: string }
+  | { type: 'settled'; settlement: AuthorizationSettlement; code?: string; message?: string }

@@ -18,9 +18,30 @@ const REGISTRATION_STORE_ID = 'openai-codex-siwc-registration'
 const REGISTRATION_MARKER = 'siwc-registration-v1:'
 const REQUIRED_SCOPE = 'chatgpt.tokens.use.direct'
 const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
-const HOST_AGENT_NAME = 'DeepSeek Harness'
+const HOST_AGENT_NAME = 'RedSpark Harness'
 const OAUTH_REQUEST_TIMEOUT_MS = 30_000
 const CALLBACK_TIMEOUT_MS = 10 * 60_000
+
+const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] = [
+  ['type', value => value === 'oauth'],
+  ['siwc', value => value === 'chatgpt-plan'],
+  ['issuer', value => value === ISSUER],
+  ['clientId', value => typeof value === 'string'],
+  ['subject', value => typeof value === 'string'],
+  ['idToken', value => typeof value === 'string'],
+  ['extAgentHostId', value => typeof value === 'string'],
+  ['scopes', value => Array.isArray(value)],
+  ['access', value => typeof value === 'string'],
+  ['refresh', value => typeof value === 'string'],
+  ['expires', value => typeof value === 'number'],
+]
+
+function invalidSiwcCredentialFields(value: unknown): string[] {
+  const credential = value !== null && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return SIWC_CREDENTIAL_FIELDS
+    .filter(([field, valid]) => !valid(credential[field]))
+    .map(([field]) => field)
+}
 
 /** SIWC credential fields retained beside pi-ai's refreshable OAuth tokens. */
 export interface SiwcCredential extends OAuthCredential {
@@ -40,19 +61,7 @@ export interface SiwcCredential extends OAuthCredential {
  * @returns whether value has the saved SIWC OAuth credential shape.
  */
 export function isSiwcCredential(value: unknown): value is SiwcCredential {
-  if (value === null || typeof value !== 'object') return false
-  const credential = value as Partial<SiwcCredential>
-  return credential.type === 'oauth'
-    && credential.siwc === 'chatgpt-plan'
-    && credential.issuer === ISSUER
-    && typeof credential.clientId === 'string'
-    && typeof credential.subject === 'string'
-    && typeof credential.idToken === 'string'
-    && typeof credential.extAgentHostId === 'string'
-    && Array.isArray(credential.scopes)
-    && typeof credential.access === 'string'
-    && typeof credential.refresh === 'string'
-    && typeof credential.expires === 'number'
+  return invalidSiwcCredentialFields(value).length === 0
 }
 
 interface CallbackResult {
@@ -169,7 +178,7 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
       finish(new Error('Sign in with ChatGPT returned no authorization code'))
       return
     }
-    response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in complete. You can close this tab.')
+    response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in received. Return to RedSpark Harness to finish.')
     finish({ code, ...clientId === undefined ? {} : { clientId } })
   })
 
@@ -220,7 +229,11 @@ async function tokenResponse(response: Response, operation: string): Promise<Tok
     body = undefined
   }
   if (!response.ok) {
-    throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`)
+    const errorCode = body !== null && typeof body === 'object' && !Array.isArray(body)
+      ? (body as { error?: unknown }).error
+      : undefined
+    throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`
+      + (typeof errorCode === 'string' ? ` (${errorCode})` : ''))
   }
   if (body === undefined || body === null || Array.isArray(body) || typeof body !== 'object') {
     throw new Error(`Sign in with ChatGPT ${operation} returned an invalid token response`)
@@ -255,11 +268,19 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
   if (!response.ok) throw new Error(`Sign in with ChatGPT JWKS request failed with HTTP ${response.status}`)
   const keys = await response.json() as JSONWebKeySet
   requestSignal.throwIfAborted()
-  const { payload } = await jwtVerify(idToken, createLocalJWKSet(keys), {
-    issuer: ISSUER,
-    audience: clientId,
-    requiredClaims: ['exp'],
-  })
+  const keySet = createLocalJWKSet(keys)
+  let payload: Awaited<ReturnType<typeof jwtVerify>>['payload']
+  try {
+    ({ payload } = await jwtVerify(idToken, keySet, {
+      issuer: ISSUER,
+      audience: clientId,
+      requiredClaims: ['exp'],
+    }))
+  } catch (error: unknown) {
+    const joseError = error as Error & { code?: string; claim?: string }
+    throw new Error(`Sign in with ChatGPT ID token verification failed: ${joseError.code ?? joseError.name}`
+      + (joseError.claim === undefined ? '' : ` (${joseError.claim})`))
+  }
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('Sign in with ChatGPT ID token has no subject')
   }
@@ -324,7 +345,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         interaction.notify({
           type: 'auth_url',
           url: authorize.toString(),
-          instructions: 'Continue in your browser to authorize DeepSeek Harness for ChatGPT plan usage.',
+          instructions: 'Continue in your browser to authorize RedSpark Harness for ChatGPT plan usage.',
         })
         const returned = await listener.callback
         interaction.signal.throwIfAborted()
@@ -367,7 +388,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         }
         const scopes = scopesFrom(tokens.scope)
         if (!scopes.includes(REQUIRED_SCOPE)) {
-          throw new Error(`Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}`)
+          throw new Error(`Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}; granted scopes: ${scopes.join(', ') || 'none'}`)
         }
         const identity = await verifiedIdentity(idToken, issuedClientId, nonce, interaction.signal)
         if (previous !== undefined && identity.subject !== previous.subject) {
@@ -418,9 +439,12 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
       }
     },
     toAuth(credential) {
-      if (!isSiwcCredential(credential) || !credential.scopes.includes(REQUIRED_SCOPE)) {
-        return Promise.reject(new Error('Sign in with ChatGPT again and grant ChatGPT plan usage for this subscription route'))
+      if (!isSiwcCredential(credential)) {
+        return Promise.reject(new Error('ChatGPT subscription credential is incomplete; sign in with ChatGPT again'
+          + ` (missing or invalid fields: ${invalidSiwcCredentialFields(credential).join(', ')})`))
       }
+      if (!credential.scopes.includes(REQUIRED_SCOPE)) return Promise.reject(new Error(
+        'ChatGPT plan usage was not granted for this account; sign in with ChatGPT again and approve plan usage'))
       return Promise.resolve({ apiKey: credential.access })
     },
   }
