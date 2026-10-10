@@ -7,7 +7,7 @@ import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsD
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountSummary, NativeAccountUsage, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 
@@ -15,9 +15,50 @@ afterEach(cleanup)
 
 const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
 const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
+const emptyAccountActions = {
+  accountsList: async () => [],
+  accountsUsage: async () => ({ status: 'unsupported' as const }),
+  accountsSignOut: async () => undefined,
+}
+function renderSettingsPage(props: {
+  actions: NativeSettingsActions
+  t: (key: keyof typeof en) => string
+  onBack: () => void
+  onAuthorized?: () => void
+}) {
+  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...props.actions }} />)
+}
 const settingsDescription = (
   namespaces: readonly (NativeSettingsDescriptor | ServiceNativeSettingsDescriptor)[], limits = defaultLimits,
 ) => ({ namespaces, limits })
+
+const chatGptAccount: NativeAccountSummary = {
+  key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
+  identity: { email: 'account@example.com', name: null, avatarUrl: null }, plan: null,
+}
+const readyUsage: Extract<NativeAccountUsage, { status: 'ready' }> = {
+  status: 'ready', email: null, plan: 'Plus',
+  quotas: [{ name: 'codex', primary: { usedPercent: 35, windowSeconds: 3600, resetsAt: null }, secondary: null }],
+  credits: null,
+}
+
+function accountPageActions(
+  accountsUsage: NativeSettingsActions['accountsUsage'],
+  accountsList = vi.fn(async () => [chatGptAccount]),
+) {
+  return {
+    ...emptyAccountActions,
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(),
+    credentialsDescribe: vi.fn(async () => ({})),
+    credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
+    authorizationList: vi.fn(async () => []),
+    authorizationBegin: vi.fn(), authorizationFrames: vi.fn(async function* () {}),
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+    accountsList,
+    accountsUsage,
+  } as unknown as NativeSettingsActions
+}
 
 async function expectSettingsOutput(name: string, language: string): Promise<void> {
   const output = {
@@ -29,6 +70,33 @@ async function expectSettingsOutput(name: string, language: string): Promise<voi
   }
   await expect(JSON.stringify(output, null, 2)).toMatchFileSnapshot(`./expected/settings-page-${name}.${language}.txt`)
 }
+
+it('renders ChatGPT plan and remaining quota', async () => {
+  const actions = accountPageActions(vi.fn(async () => readyUsage))
+  renderSettingsPage({ actions, t: key => en[key], onBack: () => undefined })
+
+  expect(await screen.findByText('Plan: Plus')).toBeTruthy()
+  expect(screen.getByText('Remaining 65%')).toBeTruthy()
+  expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
+})
+
+it('keeps ready usage and shows a stale hint after refresh failure', async () => {
+  const accountsUsage = vi.fn()
+    .mockResolvedValueOnce(readyUsage)
+    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
+  const accountsList = vi.fn(async () => [chatGptAccount])
+  const actions = accountPageActions(accountsUsage, accountsList)
+  renderSettingsPage({ actions, t: key => en[key], onBack: () => undefined })
+
+  expect(await screen.findByText('Remaining 65%')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
+
+  expect(await screen.findByText(en.usageStale)).toBeTruthy()
+  expect(screen.getByText('Plan: Plus')).toBeTruthy()
+  expect(screen.getByText('Remaining 65%')).toBeTruthy()
+  expect(accountsUsage).toHaveBeenCalledTimes(2)
+  expect(accountsList).toHaveBeenCalledTimes(2)
+})
 
 it('writes changed user fields without replacing a parent that contains a hidden secret', () => {
   expect(() => nativeSettingsDiff(
@@ -82,7 +150,7 @@ it.each(locales)('persists serviceable edits and refreshes the canonical project
   } as unknown as NativeSessionClient
 
   try {
-    render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+    renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
     await screen.findByRole('heading', { name: 'llm-pi-ai' })
     const editor = screen.getByLabelText(`${strings.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
     fireEvent.change(editor, { target: { value: JSON.stringify({ providers: { deepseek: {} } }, null, 2) } })
@@ -121,7 +189,7 @@ it.each(locales)('renders write-only credentials and clears the value after stor
     credentialsSet,
     credentialsUnset: vi.fn(async () => undefined),
   } as unknown as NativeSessionClient
-  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+  renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
 
   expect(await screen.findByRole('heading', { name: 'llm-pi-ai' })).toBeTruthy()
   const input = screen.getByLabelText(`${strings.credentialValue} DEEPSEEK_API_KEY`) as HTMLInputElement
@@ -153,7 +221,7 @@ it.each(locales)('saves a visible array field through its existing index ($langu
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
-  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+  renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
   await screen.findByRole('heading', { name: 'profiles' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), {
     target: { value: JSON.stringify({ rows: [{ enabled: false }] }) },
@@ -176,7 +244,7 @@ it.each(locales)('reports unsupported structure edits instead of reporting a sav
     settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
-  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+  renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
   await screen.findByRole('heading', { name: 'profiles' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} profiles`), { target: { value: JSON.stringify({ rows: [] }) } })
   fireEvent.click(screen.getByRole('button', { name: strings.saveSettings }))
@@ -209,7 +277,7 @@ it.each(locales)('aggregates credential reads above the advertised per-request b
     settingsDescribe: vi.fn(async () => settingsDescription([row])),
     settingsMutate: vi.fn(), credentialsDescribe, authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
-  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+  renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
   await screen.findByRole('heading', { name: 'credentials' })
   await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
   expect(credentialsDescribe.mock.calls.map(([batch]) => batch)).toEqual([refs.slice(0, 64), refs.slice(64)])
@@ -227,7 +295,7 @@ it.each(locales)('refuses edits above the advertised atomic operation budget ($l
     settingsDescribe: vi.fn(async () => settingsDescription([row], { maxCredentialRefsPerRead: 64, maxSettingsOperations: 1 })),
     settingsMutate, credentialsDescribe: vi.fn(async () => ({})), authorizationList: vi.fn(async () => []),
   } as unknown as NativeSessionClient
-  render(<SettingsPage actions={client} t={key => strings[key]} onBack={() => undefined} />)
+  renderSettingsPage({ actions: client, t: key => strings[key], onBack: () => undefined })
   await screen.findByRole('heading', { name: 'bounded' })
   fireEvent.change(screen.getByLabelText(`${strings.userOverrides} bounded`), {
     target: { value: JSON.stringify({ first: true, second: true }) },
@@ -287,7 +355,7 @@ it('refresh mid-login then resume and finish', async () => {
   const props = { actions, t: (localeKey: keyof typeof en) => en[localeKey], onBack: () => undefined, onAuthorized }
 
   try {
-    const firstPage = render(<SettingsPage {...props} />)
+    const firstPage = renderSettingsPage(props)
     fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
     expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
     expect(await screen.findByText('ABCD-1234')).toBeTruthy()
@@ -297,7 +365,7 @@ it('refresh mid-login then resume and finish', async () => {
     expect(authorization.current(key)).toBeDefined()
     expect(cancel).not.toHaveBeenCalled()
 
-    render(<SettingsPage {...props} />)
+    renderSettingsPage(props)
     expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
     const input = await screen.findByLabelText('Authorization code')
     fireEvent.change(input, { target: { value: 'secret-answer' } })
@@ -338,8 +406,7 @@ it.each([
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel,
   } as unknown as NativeSettingsActions
   const onAuthorized = vi.fn(() => { throw new Error('native conversation: operation already pending') })
-  const page = render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined}
-    onAuthorized={onAuthorized} />)
+  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], onBack: () => undefined, onAuthorized })
 
   if (attemptId === undefined) {
     fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
@@ -393,7 +460,7 @@ it('a stale settings refresh cannot overwrite a newer one', async () => {
     authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     authorizationFrames: vi.fn(async function* () { throw new Error('HTTP 409: unavailable attempt') }),
   } as unknown as NativeSettingsActions
-  const page = render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], onBack: () => undefined })
   const credential = () => screen.getByRole('form', { name: `${en.credential} DEEPSEEK_API_KEY` }).textContent ?? ''
   await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
   await waitFor(() => { expect(credential()).toContain(`· ${en.configured}`) })
@@ -427,7 +494,7 @@ it('a stale settings refresh cannot overwrite a newer one', async () => {
     authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(),
     authorizationFrames, authorizationCancel: vi.fn(async () => { await cancelGate }),
   } as unknown as NativeSettingsActions
-  const next = render(<SettingsPage actions={resume} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  const next = renderSettingsPage({ actions: resume, t: localeKey => en[localeKey], onBack: () => undefined })
   fireEvent.change(await screen.findByLabelText('Code'), { target: { value: 'first-secret' } })
   fireEvent.click(screen.getByRole('button', { name: en.cancelSignIn }))
   listAttempt = 'a2'
@@ -487,7 +554,7 @@ it('keeps settings drafts consistent across racing refreshes', async () => {
     authorizationBegin: vi.fn(), authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     authorizationFrames,
   } as unknown as NativeSettingsActions
-  render(<SettingsPage actions={actions} t={localeKey => en[localeKey]} onBack={() => undefined} />)
+  renderSettingsPage({ actions, t: localeKey => en[localeKey], onBack: () => undefined })
   const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
   const pretty = (value: unknown) => JSON.stringify(value, null, 2)
 

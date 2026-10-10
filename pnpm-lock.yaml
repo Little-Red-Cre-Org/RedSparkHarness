@@ -11322,6 +11322,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-layout':
         specifier: workspace:^
         version: link:../ui-layout
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer

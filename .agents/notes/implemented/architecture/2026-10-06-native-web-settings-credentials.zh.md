@@ -22,7 +22,7 @@ Host 将 `maxCredentialRefsPerRead` 和 `maxSettingsOperations` 校验为正安�
 
 ## 支持范围
 
-该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。UI 不编辑隐藏的 `role('secret')` 字段，不创建授权 grant，不完成不透明 grant 记录编辑，也不复刻旧版插件设置页。浏览器授权登录属于独立工作。
+该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。UI 不编辑隐藏的 `role('secret')` 字段，不创建授权 grant，不完成不透明 grant 记录编辑，也不复刻旧版插件设置页。ChatGPT 账户卡复用选定 Host 的授权流程；见[账户卡决策](../feature/2026-10-10-native-web-chatgpt-account-card.zh.md)。
 
 ## 考虑过的替代方案
 

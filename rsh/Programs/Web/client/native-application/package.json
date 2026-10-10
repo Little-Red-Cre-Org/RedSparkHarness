@@ -52,6 +52,7 @@
     "lib/native.js",
     "lib/controller.js",
     "lib/native-*.js",
+    "lib/**/*.css",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -84,6 +85,7 @@
     "@deepseek-ai/dsh-client-ui-sidebar": "workspace:^",
     "@deepseek-ai/dsh-client-ui-sidebar-right": "workspace:^",
     "@deepseek-ai/dsh-client-ui-theme": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",

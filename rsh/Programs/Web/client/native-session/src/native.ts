@@ -119,7 +119,7 @@ export interface NativeAccountSummary {
   readonly key: string
   readonly provider: 'openai-codex'
   readonly status: 'signed-out' | 'ready' | 'unavailable'
-  readonly identity: { readonly email: string | null; readonly name: string | null; readonly avatarUrl: null }
+  readonly identity: { readonly email: string | null; readonly name: string | null; readonly avatarUrl: string | null }
   readonly plan: string | null
 }
 
@@ -423,7 +423,7 @@ const authorizationEntrySchema = z.strictObject({
 })
 const accountSummarySchema = z.strictObject({
   key: z.string(), provider: z.literal('openai-codex'), status: z.enum(['signed-out', 'ready', 'unavailable']),
-  identity: z.strictObject({ email: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.null() }),
+  identity: z.strictObject({ email: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.string().nullable() }),
   plan: z.string().nullable(),
 })
 const quotaWindowSchema = z.strictObject({

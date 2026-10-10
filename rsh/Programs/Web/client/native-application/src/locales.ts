@@ -28,6 +28,11 @@ export const zh = {
   authorizationDisconnected: '登录进度连接已断开，请点击“刷新设置”重试',
   authorizationAnswer: '提交', authorizationAuthorized: '授权成功。', authorizationCancelled: '授权已取消。',
   authorizationFailed: '授权失败。', authorizationError: '授权请求失败',
+  chatGptAccount: 'ChatGPT 账户', plan: '套餐', remaining: '剩余', minutes: ' 分钟', hours: ' 小时', days: ' 天',
+  resetsAt: '重置时间：', credits: '额度', unlimited: '无限', refreshAccount: '刷新账户', signOut: '退出登录',
+  signingOut: '正在退出…', signedOut: '未登录 ChatGPT 账户。', loadingAccount: '正在读取账户用量…',
+  accountUnavailable: '账户用量不可用。', usageStale: '刷新失败，以下用量可能已过期。', accountError: '账户操作失败。',
+  accountListError: '读取账户列表失败。',
 } as const
 
 /** Complete English pair for the native page's Chinese key set. */
@@ -60,6 +65,11 @@ export const en: Record<keyof typeof zh, string> = {
   authorizationDisconnected: 'Lost connection to sign-in progress; click Refresh settings to retry',
   authorizationAnswer: 'Submit', authorizationAuthorized: 'Authorization complete.', authorizationCancelled: 'Authorization cancelled.',
   authorizationFailed: 'Authorization failed.', authorizationError: 'Authorization request failed',
+  chatGptAccount: 'ChatGPT account', plan: 'Plan', remaining: 'Remaining', minutes: ' min', hours: ' hr', days: ' d',
+  resetsAt: 'Resets:', credits: 'Credits', unlimited: 'Unlimited', refreshAccount: 'Refresh account', signOut: 'Sign out',
+  signingOut: 'Signing out…', signedOut: 'No ChatGPT account is signed in.', loadingAccount: 'Loading account usage…',
+  accountUnavailable: 'Account usage is unavailable.', usageStale: 'Refresh failed; this usage may be out of date.', accountError: 'Account operation failed.',
+  accountListError: 'Could not load accounts.',
 }
 
 /** Native page translation keys. */

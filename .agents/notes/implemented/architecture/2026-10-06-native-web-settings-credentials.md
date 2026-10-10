@@ -22,7 +22,7 @@ The Host validates `maxCredentialRefsPerRead` and `maxSettingsOperations` as pos
 
 ## Supported scope
 
-The surface covers schemas explicitly published by active Settings registrations and credential references in their current resolved values. Secret fields must be reachable through the Settings redactor's `object`, `dict` or `array` traversal; unsupported secret schema nodes remain unsafe to publish. The UI does not edit hidden `role('secret')` fields, create authorization grants, complete opaque grant-record editing or reproduce the legacy plugin settings page. Browser authorization login remains separate work.
+The surface covers schemas explicitly published by active Settings registrations and credential references in their current resolved values. Secret fields must be reachable through the Settings redactor's `object`, `dict` or `array` traversal; unsupported secret schema nodes remain unsafe to publish. The UI does not edit hidden `role('secret')` fields, create authorization grants, complete opaque grant-record editing or reproduce the legacy plugin settings page. The ChatGPT account card reuses the selected Host authorization flow; see the [account card decision](../feature/2026-10-10-native-web-chatgpt-account-card.md).
 
 ## Alternatives considered
 

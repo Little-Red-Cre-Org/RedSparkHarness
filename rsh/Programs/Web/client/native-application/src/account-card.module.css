@@ -1,0 +1,82 @@
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--dsw-alias-border-secondary, #d9d9d9);
+  border-radius: 12px;
+  background: var(--dsw-alias-surface-primary, #fff);
+}
+
+.header,
+.identity,
+.actions,
+.quotaHeading {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.identity {
+  min-width: 0;
+  gap: 12px;
+}
+
+.identity h3,
+.identity p,
+.quotaWindow p {
+  margin: 0;
+}
+
+.identity p {
+  overflow-wrap: anywhere;
+  color: var(--dsw-alias-text-secondary, #666);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--dsw-alias-text-secondary, #666);
+  object-fit: cover;
+}
+
+.actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.quotas {
+  display: grid;
+  gap: 14px;
+}
+
+.quotaWindow {
+  display: grid;
+  gap: 6px;
+}
+
+.quotaHeading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quotaWindow progress {
+  width: 100%;
+  accent-color: var(--dsw-alias-control-primary, #1688ff);
+}
+
+.quotaWindow p,
+.credits {
+  color: var(--dsw-alias-text-secondary, #666);
+}
+
+.authorization {
+  border-top: 1px solid var(--dsw-alias-border-secondary, #d9d9d9);
+  padding-top: 12px;
+}
