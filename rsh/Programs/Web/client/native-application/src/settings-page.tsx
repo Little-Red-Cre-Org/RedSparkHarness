@@ -15,7 +15,7 @@ type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'uns
 export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
-  | 'accountsList' | 'accountsUsage' | 'accountsSignOut'>
+  | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -321,7 +321,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     setAccountsError(undefined)
     try {
       const summaries = await actions.accountsList(signal)
-      if (latest() && !signal?.aborted) setAccounts(summaries.filter(account => account.provider === 'openai-codex'))
+      if (latest() && !signal?.aborted) setAccounts(summaries)
     } catch (cause: unknown) {
       if (latest() && !signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
     } finally {

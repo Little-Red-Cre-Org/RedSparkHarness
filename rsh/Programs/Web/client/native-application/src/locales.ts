@@ -33,6 +33,8 @@ export const zh = {
   signingOut: '正在退出…', signedOut: '未登录 ChatGPT 账户。', loadingAccount: '正在读取账户用量…',
   accountUnavailable: '账户用量不可用。', usageStale: '刷新失败，以下用量可能已过期。', accountError: '账户操作失败。',
   accountListError: '读取账户列表失败。',
+  deepSeekAccount: 'DeepSeek 账户', signedIn: '已登录', accountSignedOut: '未登录。', loadingBalance: '正在读取账户余额…',
+  balanceUnavailable: '账户余额不可用。', balanceStale: '刷新失败，以下余额可能已过期。', balance: '余额', bonusBalance: '赠送余额',
 } as const
 
 /** Complete English pair for the native page's Chinese key set. */
@@ -70,6 +72,8 @@ export const en: Record<keyof typeof zh, string> = {
   signingOut: 'Signing out…', signedOut: 'No ChatGPT account is signed in.', loadingAccount: 'Loading account usage…',
   accountUnavailable: 'Account usage is unavailable.', usageStale: 'Refresh failed; this usage may be out of date.', accountError: 'Account operation failed.',
   accountListError: 'Could not load accounts.',
+  deepSeekAccount: 'DeepSeek account', signedIn: 'Signed in', accountSignedOut: 'Account is signed out.', loadingBalance: 'Loading account balance…',
+  balanceUnavailable: 'Account balance is unavailable.', balanceStale: 'Refresh failed; this balance may be out of date.', balance: 'Balance', bonusBalance: 'Bonus balance',
 }
 
 /** Native page translation keys. */

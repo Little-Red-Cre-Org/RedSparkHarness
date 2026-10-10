@@ -214,6 +214,7 @@ export const plugin: NativePlugin = {
             authorizationCancel: client.authorizationCancel.bind(client),
             accountsList: client.accountsList.bind(client),
             accountsUsage: client.accountsUsage.bind(client),
+            accountsBalance: client.accountsBalance.bind(client),
             accountsSignOut: client.accountsSignOut.bind(client),
           },
         }),
