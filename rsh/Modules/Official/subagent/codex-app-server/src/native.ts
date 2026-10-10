@@ -73,7 +73,7 @@ function unsupportedRequest(request: NativeExternalSubagentRequest): void {
 
 function enforceNativeAuthorityAndLimits(): never {
   throw new Error(
-    'codex-app-server: Codex 0.161 cannot enforce Native parent authority or execution ceilings; refusing every Native request before product startup',
+    'codex-app-server: this adapter cannot enforce Native parent authority or execution ceilings; refusing every Native request before product startup',
   )
 }
 

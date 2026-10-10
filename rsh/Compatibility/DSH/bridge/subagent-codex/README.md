@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 Use this Bundle to delegate a text task to an unattended Codex session in the parent workspace. The Official app-server starts a fresh thread and returns only the final answer or a safe failure diagnostic. Codex native settings and authentication remain in control; permissionMode selects the non-interactive policy.
 
-Native Codex requests stop before startup because 0.161 cannot enforce parent authority or the inherited positive maxSteps limit. The Cordis route runs, but workspace-write inheritance is unverified: the correctly configured product probe returned blocked by policy. Native in-process spawn remains the executable baseline; the default route is unchanged.
+Native Codex requests stop before startup because this adapter does not yet enforce parent authority or the inherited positive maxSteps limit. The Cordis route runs, but workspace-write inheritance is unverified: the correctly configured product probe returned blocked by policy. Native in-process spawn remains the executable baseline; the default route is unchanged.
 
 ## Table of Contents
 
@@ -190,8 +190,8 @@ These limits define when this provider is a poor fit or needs special operationa
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior and limits live in the sections above and in the package code.
 
-- **Platform payload selection** — `@openai/codex@0.161.0` declares six platform-specific optional payloads; the workspace lockfile resolves the matching package for supported targets.
-- **Version-pinned protocol** — the Official runtime package pins `@openai/codex@0.161.0`. Its v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) includes the permission fields, and [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) defines optional reasoning `effort`. The keyless real-product test generates schema from the Official package's pinned dependency.
+- **Platform payload selection** — `@openai/codex@0.162.1` declares six platform-specific optional payloads; the workspace lockfile resolves the matching package for supported targets.
+- **Version-pinned protocol** — the Official runtime package pins `@openai/codex@0.162.1`. Its v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) includes the permission fields, and [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) defines optional reasoning `effort` and Codex turn ancestry fields `parentTurnId`/`rootTurnId`. The adapter leaves ancestry unset because it has no Codex parent-turn IDs; it never substitutes an RSH Session ID. The keyless real-product test generates schema from the Official package's pinned dependency.
 
 </details>
 
