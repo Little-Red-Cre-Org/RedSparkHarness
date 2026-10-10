@@ -29,7 +29,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
 
-import { AuthorizationDeclinedError, AuthorizationError } from './errors.ts'
+import { AuthorizationDeclinedError, AuthorizationError, isSafeDiagnostic } from './errors.ts'
 import type {
   AuthorizationEntry, AuthorizationFlow, AuthorizationNotice, AuthorizationOutcome, AuthorizationPrompt,
   AuthorizationSettlement,
@@ -222,16 +222,23 @@ export class AuthorizationService extends Service {
     request.signal?.addEventListener('abort', withdraw, { once: true })
     this.running.set(key, { controller })
     let settlement: AuthorizationSettlement = 'failed'
+    let failure: unknown
     try {
       const outcome = await this.attempt(flow, method, controller.signal, request.interaction)
       settlement = outcome.status
       return outcome
+    } catch (error: unknown) {
+      failure = error
+      throw error
     } finally {
       request.signal?.removeEventListener('abort', withdraw)
       this.running.delete(key)
       // After the slot is released, so a listener that reacts by starting the
       // next attempt is not refused by the one that just finished.
       this.settle(key, settlement)
+      if (settlement === 'failed') {
+        console.warn('authorization: flow failed', key, isSafeDiagnostic(failure) ? failure.code : 'FLOW_FAILED')
+      }
     }
   }
 

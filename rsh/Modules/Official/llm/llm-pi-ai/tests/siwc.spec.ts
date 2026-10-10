@@ -1,7 +1,10 @@
 import { get as httpGet } from 'node:http'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { describe, expect, it, vi } from 'vitest'
+import { ModelsError } from '@earendil-works/pi-ai'
 import type { Credential, CredentialStore, ProviderAuthInteraction } from '@earendil-works/pi-ai'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { errorChain } from '@deepseek-ai/dsh-llm/native'
 import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
 
 function memoryCredentials(): CredentialStore {
@@ -70,6 +73,8 @@ describe('Sign in with ChatGPT OAuth', () => {
     const issuedClientId = 'issued-test-client-id'
     const access = 'synthetic-account-access-token'
     const refresh = 'synthetic-account-refresh-token'
+    let grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
+    let tokenError: { error?: unknown; error_description?: unknown } | undefined
     let expiration: number | undefined = Math.floor(Date.now() / 1000) + 3600
     const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = input instanceof Request ? input.url : String(input)
@@ -79,6 +84,9 @@ describe('Sign in with ChatGPT OAuth', () => {
       if (url === 'https://auth.openai.com/api/accounts/oauth/token') {
         const form = new URLSearchParams(init?.body as string)
         if (form.get('grant_type') === 'authorization_code') {
+          if (tokenError !== undefined) return new Response(JSON.stringify(tokenError), {
+            status: 400, headers: { 'content-type': 'application/json' },
+          })
           expect(form.get('client_id')).toBe(issuedClientId)
           expect(form.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/)
           expect(await credentials.read('openai-codex-siwc-registration')).toEqual({
@@ -99,7 +107,7 @@ describe('Sign in with ChatGPT OAuth', () => {
               .sign(privateKey),
             token_type: 'Bearer',
             expires_in: 3600,
-            scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+            scope: grantScopes,
           }), { headers: { 'content-type': 'application/json' } })
         }
         expect(form.get('grant_type')).toBe('refresh_token')
@@ -120,26 +128,29 @@ describe('Sign in with ChatGPT OAuth', () => {
     const nextAuthorization = (): Promise<URL> => new Promise((resolve) => { authorizationWaiters.push(resolve) })
     const credentials = memoryCredentials()
     const oauth = createSiwcOAuth(credentials)
+    let authorizationInstructions: string | undefined
     const interaction = {
       signal: new AbortController().signal,
-      notify(event: { type: string; url?: string }) {
+      notify(event: { type: string; url?: string; instructions?: string }) {
         if (event.type === 'auth_url' && event.url !== undefined) {
           authorizationWaiters.shift()?.(new URL(event.url))
         }
+        authorizationInstructions = event.instructions
       },
       prompt: async () => '',
     } as ProviderAuthInteraction
-    const completeCallback = async (authorization: URL): Promise<void> => {
+    const completeCallback = async (authorization: URL): Promise<string> => {
       const callback = new URL(authorization.searchParams.get('redirect_uri')!)
       callback.search = new URLSearchParams({
         state: authorization.searchParams.get('state')!,
         code: 'synthetic-code',
         client_id: issuedClientId,
       }).toString()
-      await new Promise<void>((resolve, reject) => {
+      return new Promise<string>((resolve, reject) => {
         const request = httpGet(callback, (response) => {
-          response.resume()
-          response.on('end', resolve)
+          const chunks: Buffer[] = []
+          response.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+          response.on('end', () => { resolve(Buffer.concat(chunks).toString('utf8')) })
         })
         request.on('error', reject)
       })
@@ -150,13 +161,15 @@ describe('Sign in with ChatGPT OAuth', () => {
       const authorization = await authorizationReady
       authorizationNonce = authorization.searchParams.get('nonce') ?? ''
       expect(authorization.searchParams.get('client_id')).toBe('dynamic_agent_client')
+      expect(authorization.searchParams.get('agent_name_hint')).toBe('RedSpark Harness')
+      expect(authorizationInstructions).toBe('Continue in your browser to authorize RedSpark Harness for ChatGPT plan usage.')
       expect(authorization.searchParams.get('code_challenge_method')).toBe('S256')
       expect(authorization.searchParams.get('ext_agent_host_id')).toBe('stable-host-id')
       expect(await credentials.read('openai-codex-siwc-registration')).toEqual({
         type: 'api_key',
         key: 'siwc-registration-v1:{"extAgentHostId":"stable-host-id"}',
       })
-      await completeCallback(authorization)
+      expect(await completeCallback(authorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
 
       const credential = await login
       expect(isSiwcCredential(credential)).toBe(true)
@@ -166,20 +179,64 @@ describe('Sign in with ChatGPT OAuth', () => {
         subject: 'synthetic-account-subject', extAgentHostId: 'stable-host-id',
       })
       expect(credential.scopes).toContain('chatgpt.tokens.use.direct')
+      await expect(oauth.toAuth(credential)).resolves.toEqual({ apiKey: access })
+      await expect(oauth.toAuth({ ...credential, clientId: undefined })).rejects.toThrow(
+        'ChatGPT subscription credential is incomplete; sign in with ChatGPT again (missing or invalid fields: clientId)')
+      const missingScopeCredential = { ...credential, scopes: ['openid', 'profile'] }
+      const missingScopeMessage = 'ChatGPT plan usage was not granted for this account; sign in with ChatGPT again and approve plan usage'
+      await expect(oauth.toAuth(missingScopeCredential)).rejects.toThrow(missingScopeMessage)
+      const missingScopeFailure: unknown = await oauth.toAuth(missingScopeCredential).then(
+        () => new Error('expected toAuth to reject'),
+        (error: unknown) => error,
+      )
+      const modelsError = new ModelsError('oauth', 'OAuth auth derivation failed for openai-codex', { cause: missingScopeFailure })
+      expect(errorChain(modelsError)).toBe(`OAuth auth derivation failed for openai-codex: ${missingScopeMessage}`)
       const rotated = await oauth.refresh(credential, new AbortController().signal)
       expect(rotated).toMatchObject({
         access: 'synthetic-rotated-access-token',
         refresh: 'synthetic-rotated-refresh-token',
         subject: 'synthetic-account-subject',
       })
+      tokenError = { error: 'invalid_grant', error_description: 'private diagnostic text' }
+      const failedAuthorizationReady = nextAuthorization()
+      const failedLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+        .then(() => undefined, (error: unknown) => error)
+      const failedAuthorization = await failedAuthorizationReady
+      authorizationNonce = failedAuthorization.searchParams.get('nonce') ?? ''
+      expect(await completeCallback(failedAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
+      const exchangeFailure = await failedLogin
+      expect(exchangeFailure).toBeInstanceOf(HarnessError)
+      expect(exchangeFailure).toMatchObject({ code: 'SIWC_TOKEN_EXCHANGE_FAILED' })
+      expect((exchangeFailure as Error).message)
+        .toBe('Sign in with ChatGPT authorization-code exchange failed with HTTP 400 (invalid_grant)')
+
+      tokenError = undefined
+      grantScopes = 'openid profile email'
+      const missingScopeAuthorizationReady = nextAuthorization()
+      const missingScopeLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+        .then(() => undefined, (error: unknown) => error)
+      const missingScopeAuthorization = await missingScopeAuthorizationReady
+      authorizationNonce = missingScopeAuthorization.searchParams.get('nonce') ?? ''
+      expect(await completeCallback(missingScopeAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
+      const scopeFailure = await missingScopeLogin
+      expect(scopeFailure).toBeInstanceOf(HarnessError)
+      expect(scopeFailure).toMatchObject({ code: 'SIWC_SCOPE_NOT_GRANTED' })
+      expect((scopeFailure as Error).message)
+        .toBe('Sign in with ChatGPT did not grant chatgpt.tokens.use.direct; granted scopes: openid, profile, email')
+      grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
       for (const invalidExpiration of [undefined, Math.floor(Date.now() / 1000) - 60]) {
         expiration = invalidExpiration
         const invalidAuthorizationReady = nextAuthorization()
         const invalidLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+          .then(() => undefined, (error: unknown) => error)
         const invalidAuthorization = await invalidAuthorizationReady
         authorizationNonce = invalidAuthorization.searchParams.get('nonce') ?? ''
         await completeCallback(invalidAuthorization)
-        await expect(invalidLogin).rejects.toThrow(/exp/i)
+        const code = invalidExpiration === undefined ? 'ERR_JWT_CLAIM_VALIDATION_FAILED' : 'ERR_JWT_EXPIRED'
+        const identityFailure = await invalidLogin
+        expect(identityFailure).toBeInstanceOf(HarnessError)
+        expect(identityFailure).toMatchObject({ code: 'SIWC_ID_TOKEN_INVALID' })
+        expect((identityFailure as Error).message).toBe(`Sign in with ChatGPT ID token verification failed: ${code} (exp)`)
       }
     } finally {
       fetch.mockRestore()

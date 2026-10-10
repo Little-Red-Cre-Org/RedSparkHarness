@@ -23,7 +23,7 @@ This dependency-free library owns `HarnessError`, `isHarnessError` and `errorCha
 <a id="use-errors"></a>
 ## Use errors
 
-Extend `HarnessError` with a stable machine-readable code and optional standard `cause`. Route failures by code; `errorChain` renders messages, nested causes and aggregate members for diagnostics only. It tolerates circular causes and hostile accessors. `isHarnessError` checks constructor identity, so plain objects and errors from another realm do not qualify.
+Extend `HarnessError` with a stable machine-readable code and optional standard `cause`. Route failures by code; `errorChain` renders messages, nested causes and aggregate members for diagnostics only, without repeating a cause already included in its wrapper message. It tolerates circular causes and hostile accessors. `isHarnessError` checks constructor identity, so plain objects and errors from another realm do not qualify.
 
 No invariant companion is published: errors are ordinary values with no separately maintained service state.
 
