@@ -12,7 +12,11 @@ const decimal = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
 const wallet = z.object({ currency: z.enum(['CNY', 'USD']), balance: z.string().regex(decimal) })
 const summary = z.object({ normal_wallets: z.array(wallet), bonus_wallets: z.array(wallet) })
 
-/** Parse a Platform current-user response without retaining unrelated fields. */
+/**
+ * Parse a Platform current-user response without retaining unrelated fields.
+ * @param value - current-user business payload.
+ * @returns the display profile.
+ */
 export function profile(value: unknown): AccountProfile {
   const parsed = user.safeParse(value)
   if (!parsed.success) throw new PlatformAuthError('protocol')
@@ -25,10 +29,27 @@ export function profile(value: unknown): AccountProfile {
   }
 }
 
-/** Read one profile or balance field; authenticated rejection remains distinguishable for expiry. */
+/**
+ * Read one profile or balance field; authenticated rejection remains distinguishable for expiry.
+ * @param field - which field to read.
+ * @param origin - validated Platform origin.
+ * @param token - stored account grant.
+ * @param signal - cancellation and timeout.
+ * @param headers - client identity headers.
+ * @returns the field outcome; failures are `failed`, never a zero balance.
+ */
 export async function readAccountDetail(
   field: 'profile', origin: string, token: string, signal: AbortSignal, headers: Record<string, string>,
 ): Promise<AccountProfileResult>
+/**
+ * Read one profile or balance field; authenticated rejection remains distinguishable for expiry.
+ * @param field - which field to read.
+ * @param origin - validated Platform origin.
+ * @param token - stored account grant.
+ * @param signal - cancellation and timeout.
+ * @param headers - client identity headers.
+ * @returns the field outcome; failures are `failed`, never a zero balance.
+ */
 export async function readAccountDetail(
   field: 'balance', origin: string, token: string, signal: AbortSignal, headers: Record<string, string>,
 ): Promise<AccountBalanceResult>

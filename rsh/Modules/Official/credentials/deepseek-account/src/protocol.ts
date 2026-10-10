@@ -14,7 +14,12 @@ export class AccountUnauthorizedError extends PlatformAuthError {
   constructor() { super('expired') }
 }
 
-/** Validate the configured Platform origin, allowing HTTPS only. */
+/**
+ * Validate the configured Platform origin, allowing HTTPS only.
+ * @param value - configured origin.
+ * @param allowLoopbackHttp - development-only loopback HTTP opt-in.
+ * @returns normalized origin.
+ */
 export function platformOrigin(value: string, allowLoopbackHttp: boolean): string {
   const url = new URL(value)
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
@@ -25,7 +30,13 @@ export function platformOrigin(value: string, allowLoopbackHttp: boolean): strin
   return url.origin
 }
 
-/** Accept only a Platform-owned browser page on the configured origin and fixed path. */
+/**
+ * Accept only a Platform-owned browser page on the configured origin and fixed path.
+ * @param value - URL returned by Platform.
+ * @param origin - configured Platform origin.
+ * @param path - required page path.
+ * @returns the validated URL.
+ */
 export function browserUrl(value: string, origin: string, path: string): string {
   let url: URL
   try { url = new URL(value) } catch {
@@ -54,7 +65,15 @@ export const exchange = z.object({
   token: z.string().regex(/^[\x21-\x7e]+$/), authorized_url: z.url(), user: z.unknown().optional(),
 })
 
-/** POST one authorization operation and return its business payload. */
+/**
+ * POST one authorization operation and return its business payload.
+ * @param origin - validated Platform origin.
+ * @param signal - cancellation and timeout.
+ * @param headers - client identity headers.
+ * @param method - auth-api operation name.
+ * @param body - request body, never logged.
+ * @returns the business payload.
+ */
 export async function requestPlatform(
   origin: string, method: string, body: unknown, signal: AbortSignal, headers: Record<string, string>,
 ): Promise<unknown> {
@@ -63,7 +82,15 @@ export async function requestPlatform(
   }, signal)
 }
 
-/** GET one fixed account endpoint with its grant in the Platform authorization header. */
+/**
+ * GET one fixed account endpoint with its grant in the Platform authorization header.
+ * @param origin - validated Platform origin.
+ * @param signal - cancellation and timeout.
+ * @param headers - client identity headers.
+ * @param path - account endpoint.
+ * @param token - stored account grant.
+ * @returns the business payload.
+ */
 export function requestAccount(
   origin: string, path: '/auth-api/v0/users/current' | '/api/v0/users/get_user_summary',
   token: string, signal: AbortSignal, headers: Record<string, string>,
@@ -71,7 +98,14 @@ export function requestAccount(
   return platformRequest(`${origin}${path}`, { method: 'GET', headers: { ...headers, 'x-dsh-auth-token': token } }, signal)
 }
 
-/** End a Platform session using its logout endpoint. */
+/**
+ * End a Platform session using its logout endpoint.
+ * @param origin - validated Platform origin.
+ * @param signal - cancellation and timeout.
+ * @param headers - client identity headers.
+ * @param token - stored account grant.
+ * @returns after Platform confirms logout.
+ */
 export async function logoutAccount(
   origin: string, token: string, signal: AbortSignal, headers: Record<string, string>,
 ): Promise<void> {
