@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-authorization` lets a configuration UI or another caller obtain credentials through a human-guided sign-in, code entry, or question. Each attempt sends notices and prompts only to the surface that started it. It reports `authorized` only after the new credential has been stored; a refusal or withdrawal reports `cancelled`, while failures remain errors. Native failed-settlement frames include a code and include a diagnostic message only for `AuthorizationError`; other flow error messages are omitted. Authorization failure logs contain the credential key and error code or name only. Choose it for credentials that cannot be supplied through configuration. It requires the credential store and an integration that defines the available authorization methods; the package provides no provider-specific methods itself.
+`dsh-authorization` lets a configuration UI or another caller obtain credentials through a human-guided sign-in, code entry, or question. Each attempt sends notices and prompts only to the surface that started it. It reports `authorized` only after the new credential has been stored; a refusal or withdrawal reports `cancelled`, while failures remain errors. Failed frames and logs carry a code; only an `AuthorizationError` adds its message. Choose it for credentials that cannot be supplied through configuration. It requires the credential store and an integration that defines the available authorization methods; the package provides no provider-specific methods itself.
 
 ## Table of Contents
 
