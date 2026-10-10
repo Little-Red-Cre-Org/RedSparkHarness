@@ -166,10 +166,13 @@ it('renders DeepSeek identity, wallet balance and bonus balance', async () => {
   expect(accountsUsage).toHaveBeenCalledWith(chatGptAccount.key, expect.anything())
 })
 
-it('keeps ready DeepSeek balances and shows a stale hint after refresh failure', async () => {
+it.each([
+  { contact: 'user@example.com', notice: en.balanceStale, keepsBalance: true },
+  { contact: null, notice: en.balanceUnavailable, keepsBalance: false },
+])('DeepSeek refresh failure with contact $contact keeps balance: $keepsBalance', async ({ contact, notice, keepsBalance }) => {
   const deepSeek: NativeAccountSummary = {
     key: 'deepseek-account/default', provider: 'deepseek-account', status: 'ready', plan: null,
-    identity: { email: null, contact: 'user@example.com', name: 'DeepSeek User', avatarUrl: null },
+    identity: { email: null, contact, name: 'DeepSeek User', avatarUrl: null },
   }
   const accountsBalance = vi.fn()
     .mockResolvedValueOnce({ status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }], bonusWallets: [] })
@@ -181,8 +184,8 @@ it('keeps ready DeepSeek balances and shows a stale hint after refresh failure',
   expect(await screen.findByText('¥12.30')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
 
-  expect(await screen.findByText(en.balanceStale)).toBeTruthy()
-  expect(screen.getByText('¥12.30')).toBeTruthy()
+  expect(await screen.findByText(notice)).toBeTruthy()
+  expect(screen.queryByText('¥12.30') !== null).toBe(keepsBalance)
   expect(accountsBalance).toHaveBeenCalledTimes(2)
 })
 

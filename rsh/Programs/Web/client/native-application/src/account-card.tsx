@@ -71,7 +71,7 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
   const identity = account.provider === 'deepseek-account'
-    ? account.identity.contact ?? account.identity.name : account.identity.email
+    ? account.identity.contact : account.identity.email
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -132,7 +132,7 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
         <div>
           <h3>{account.provider === 'deepseek-account' ? t('deepSeekAccount') : t('chatGptAccount')}</h3>
           {account.provider === 'deepseek-account' ? <>
-            <p>{account.identity.name ?? t('signedIn')}</p>
+            {account.identity.name !== null ? <p>{account.identity.name}</p> : account.status === 'ready' ? <p>{t('signedIn')}</p> : null}
             {account.identity.contact === null ? null : <p>{account.identity.contact}</p>}
           </> : <>
             {email === null ? null : <p>{email}</p>}
