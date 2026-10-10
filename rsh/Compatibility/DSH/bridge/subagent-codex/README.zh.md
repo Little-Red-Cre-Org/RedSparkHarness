@@ -11,7 +11,7 @@ kind: "package-bundle"
 
 使用此 Bundle 可在父级工作区中将文本任务委派给无人值守的 Codex 会话。Official app-server 会启动全新线程，并且只返回最终答案或安全失败诊断。Codex 原生设置与身份验证仍由产品控制；permissionMode 选择非交互式策略。
 
-Native Codex 请求在启动前停止，因为 0.161 无法执行父级 authority 或继承的正数 maxSteps 上限。Cordis 路径可执行，但正确配置后的 workspace-write 产品探测返回 blocked by policy，继承仍未验证。Native 进程内 spawn 仍是可执行基线，默认路径不变。
+Native Codex 请求在启动前停止，因为此适配器尚未执行父级 authority 或继承的正数 maxSteps 上限。Cordis 路径可执行，但正确配置后的 workspace-write 产品探测返回 blocked by policy，继承仍未验证。Native 进程内 spawn 仍是可执行基线，默认路径不变。
 
 ## 目录
 
@@ -190,8 +190,8 @@ Codex 子级会在一个全新的临时线程中，以单个轮次接收这些�
 
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为与限制以上文和包代码为准。
 
-- **平台载荷选择**——`@openai/codex@0.161.0` 声明六个按平台划分的可选载荷；workspace lockfile 会为受支持的目标解析匹配包。
-- **版本锁定的协议**——Official runtime 包固定依赖 `@openai/codex@0.161.0`。其 v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) 包含权限字段，而 [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) 定义了可选推理 `effort`。无密钥真实产品测试会从 Official 包固定依赖生成 schema。
+- **平台载荷选择**——`@openai/codex@0.162.1` 声明六个按平台划分的可选载荷；workspace lockfile 会为受支持的目标解析匹配包。
+- **版本锁定的协议**——Official runtime 包固定依赖 `@openai/codex@0.162.1`。其 v2 [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) 包含权限字段，而 [`TurnStartParams`](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) 定义了可选推理 `effort` 和 Codex turn ancestry 字段 `parentTurnId`/`rootTurnId`。适配器没有 Codex parent-turn ID，因此不设置这些字段，也不会使用 RSH Session ID 替代。无密钥真实产品测试会从 Official 包固定依赖生成 schema。
 
 </details>
 

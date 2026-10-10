@@ -215,18 +215,18 @@ function responseInputTexts(body: Record<string, unknown>): string[] {
   })
 }
 
-describe('real Official Codex app-server product (@openai/codex 0.161.0)', () => {
+describe('real Official Codex app-server product (@openai/codex 0.162.1)', () => {
   it('starts approve-for-me through the real app-server and returns exact text', async () => {
     const sentinel = 'REAL_CODEX_SENTINEL_0_159_0'
     const task = 'Return the fixture sentinel exactly.'
     const { harness, fixture } = await realHarness([
       { kind: 'complete', text: sentinel },
     ], 'approve-for-me')
-    expect(codexPackage.version).toBe('0.161.0')
+    expect(codexPackage.version).toBe('0.162.1')
     const version = await execFileAsync(process.execPath, [codexEntry, '--version'], {
       env: { ...process.env, ...harness.env },
     })
-    expect(version.stdout.trim()).toBe('codex-cli 0.161.0')
+    expect(version.stdout.trim()).toBe('codex-cli 0.162.1')
     const schemaRoot = mkdtempSync(join(tmpdir(), 'dsh-codex-schema-'))
     roots.push(schemaRoot)
     await execFileAsync(process.execPath, [
@@ -256,6 +256,10 @@ describe('real Official Codex app-server product (@openai/codex 0.161.0)', () =>
     }
     expect(schema.definitions.TurnStartParams.properties?.effort).toBeDefined()
     expect(schema.definitions.TurnStartParams.required ?? []).not.toContain('effort')
+    for (const field of ['parentTurnId', 'rootTurnId'] as const) {
+      expect(schema.definitions.TurnStartParams.properties?.[field]).toBeDefined()
+      expect(schema.definitions.TurnStartParams.required ?? []).not.toContain(field)
+    }
     const completedItemSchema = JSON.parse(readFileSync(
       join(schemaRoot, 'v2', 'ItemCompletedNotification.json'),
       'utf8',

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-08-native-codex-app-server-0161.md
-2026-10-08-native-codex-app-server-0161.md: 2bec1240f39a90f1919d32e97774e94b53fdd2c6
-2026-10-08-native-codex-app-server-0161.zh.md: c2ee8f70d73f6c6cbf5bc693a9a8ceebec0514f5
+2026-10-08-native-codex-app-server-0161.md: 3783f314afa7ef39abec6b596612b83f3abd3a1a
+2026-10-08-native-codex-app-server-0161.zh.md: 539c2507a23b0f7ea6f71913e90daf727f185386

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run a one-shot text delegation in a fresh Codex app-server thread and return its selected final answer or a safe failure diagnostic. The runner uses pinned @openai/codex@0.161.0 while keeping Codex settings and authentication product-owned. Native requests stop before process startup because the product cannot enforce parent tool authority or the inherited positive maxSteps ceiling.
+Run a one-shot text delegation in a fresh Codex app-server thread and return its selected final answer or a safe failure diagnostic. The runner uses pinned @openai/codex@0.162.1 while keeping Codex settings and authentication product-owned. Native requests stop before process startup because this adapter does not yet enforce parent tool authority or the inherited positive maxSteps ceiling.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Run a one-shot text delegation in a fresh Codex app-server thread and return its
 | Route | Current status | Evidence boundary |
 |---|---|---|
 | DSH Cordis Codex compatibility runner | Executable one-shot text route through the Official product runner | After fixing sandboxMode propagation, the two affected real-product permission cases were rerun: the explicit bypass marker write passed; the never plus configured workspace-write case confirmed that config.toml contains workspace-write but skipped after the nested product tool returned blocked by policy. The write and inheritance remain unverified. The earlier three-file 64-pass/1-skip result predates this fixture correction and is superseded for inheritance attribution. |
-| Native Codex external driver | No Native request can execute; every request is refused before `childConnection.connect()` because Codex 0.161 cannot enforce exact parent authority and the positive `maxSteps` ceiling. Deployment `permissionMode`, including full access, cannot override refusal. | The existing `native-admission.spec.ts` regression confirms pre-connect refusal under bypass-configured permissions. This establishes the refusal contract only. |
+| Native Codex external driver | No Native request can execute; every request is refused before `childConnection.connect()` because this adapter does not enforce exact parent authority and the positive `maxSteps` ceiling. Deployment `permissionMode`, including full access, cannot override refusal. | The existing `native-admission.spec.ts` regression confirms pre-connect refusal under bypass-configured permissions. This establishes the refusal contract only. |
 | Native in-process spawn provider | The shipped Native profile template selects the in-process `spawn` provider except for `native-sdk-dsh-child`, which selects `dsh-sdk`; this Codex driver replaces neither route. | Native child execution is owned by [native-subagent](../../../../Engine/subagent/native-subagent/README.md). The `native-admission.spec.ts` case above covers only this package's pre-connect refusal. |
 
 <a id="use-this-package"></a>
@@ -64,7 +64,7 @@ An accepted compatibility run starts a managed child range, initializes the app-
 
 No runtime invariant companion is published because the package has no separate package-owned observations that can drift; Core owns the child range and the Official runner owns the app-server lifecycle.
 
-The wire contract follows the stable upstream [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) and [`TurnStartParams` schema](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json). The latter declares optional `effort`, which carries `reasoningEffort`.
+The wire contract follows the stable upstream [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) and [`TurnStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json). The latter declares optional `effort`, `parentTurnId`, and `rootTurnId`. This adapter has no Codex turn IDs, so it leaves both ancestry fields unset; an RSH Session ID is not a Codex turn ID. These fields do not enforce the parent tool grants or execution ceilings required by Native requests.
 
 <a id="further-exploration"></a>
 ## Further Exploration
@@ -94,7 +94,7 @@ Independent of the parent model request. Reuse depends on Codex's own model, ins
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Native authority and execution ceilings** — Codex 0.161 exposes no app-server request fields for Native tool grants or `maxSteps`/`maxTokens`. The Native driver rejects every external request before connecting until the product can enforce those parent-owned constraints; deployment permission settings cannot replace them.
+- **Native authority and execution ceilings** — this adapter does not yet enforce Native tool grants or `maxSteps`/`maxTokens`. It rejects every external request before connecting until it can enforce those parent-owned constraints; deployment permission settings cannot replace them.
 - **Text input only** — image and other non-text blocks are rejected before process startup.
 - **No inherited conversation** — each run creates a new ephemeral thread and has no resume or pooling path.
 - **No optional Native request capabilities** — persona, tool filtering, structured output, and parent approval relay are unsupported and rejected.
