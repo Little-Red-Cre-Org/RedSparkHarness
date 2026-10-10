@@ -714,9 +714,10 @@ export const plugin: NativePlugin = {
       })
       const models = context.optional('modelSelection')
       const selectedAuthorization = context.optional('authorization')
-      const authorization = new NativeWebAuthorization(selectedAuthorization === undefined ? undefined : {
-        authorization: selectedAuthorization, credentials: context.require('credentials'),
-      }, config.authorizationKeys.map(parseCredentialKey), context.signal)
+      const selectedCredentials = context.optional('credentials')
+      const providers = selectedAuthorization === undefined || selectedCredentials === undefined
+        ? undefined : { authorization: selectedAuthorization, credentials: selectedCredentials }
+      const authorization = new NativeWebAuthorization(providers, config.authorizationKeys.map(parseCredentialKey), context.signal)
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
