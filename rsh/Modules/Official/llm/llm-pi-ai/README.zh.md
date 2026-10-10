@@ -128,7 +128,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
-`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings 与 authorization。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。`llm-pi-ai` 凭据记录更新会丢弃适配器快照，后续目录查询便会读取新 grant。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
+`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。任一受支持账户的凭据记录更新都会触发 `accounts/changed`。`llm-pi-ai` 凭据记录更新会丢弃适配器快照，后续目录查询便会读取新 grant。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
