@@ -57,6 +57,28 @@ const cases = [
       credits: { unlimited: false, balance: '12.50' },
     },
   },
+  {
+    name: 'treats null additional quotas as absent and keeps empty entries',
+    status: 200,
+    body: { additional_rate_limits: [
+      { limit_name: 'null', rate_limit: null },
+      { limit_name: 'missing' },
+    ] },
+    expected: {
+      status: 'ready', email: null, plan: null,
+      quotas: [
+        { name: 'null', primary: null, secondary: null },
+        { name: 'missing', primary: null, secondary: null },
+      ],
+      credits: null,
+    },
+  },
+  {
+    name: 'treats a null additional quota list as absent',
+    status: 200,
+    body: { additional_rate_limits: null },
+    expected: { status: 'ready', email: null, plan: null, quotas: [], credits: null },
+  },
   { name: 'returns a safe HTTP failure', status: 401, body: {}, expected: { status: 'failed', reason: 'HTTP 401' } },
 ] as const
 

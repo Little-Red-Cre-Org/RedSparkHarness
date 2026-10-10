@@ -3,6 +3,7 @@ import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credenti
 import { NativeAuthorizationProvider } from '@deepseek-ai/dsh-authorization/native'
 import { NativeHost, NativeScope, RuntimeEvents, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
+import type { NativeAccounts } from '@deepseek-ai/dsh-llm-pi-ai/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -12,8 +13,24 @@ import { plugin as sandboxedFilesystem } from '../../../../../Modules/Official/f
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { NativeWebAuthorization } from '../src/authorization.ts'
+import { NativeWebAccounts, NativeWebAuthorization } from '../src/authorization.ts'
 import { plugin } from '../src/native.ts'
+
+it('filters account listings to configured keys', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  const otherKey = credentialKey('llm-pi-ai', 'anthropic')
+  const visible = {
+    key, provider: 'openai-codex' as const, status: 'ready' as const,
+    identity: { email: null, name: null, avatarUrl: null }, plan: null,
+  }
+  const hidden = { ...visible, key: otherKey }
+  const accounts = { list: vi.fn(async () => [visible, hidden]) } as unknown as NativeAccounts
+  const host = new NativeWebAccounts(accounts, [key])
+  const emptyHost = new NativeWebAccounts(accounts, [])
+
+  expect(await host.handle('accounts/list', {})).toEqual({ ok: true, value: [visible] })
+  expect(await emptyHost.handle('accounts/list', {})).toEqual({ ok: true, value: [] })
+})
 
 it('allows only configured keys and keeps a disconnected authorization attempt running', async () => {
   const key = credentialKey('llm-pi-ai', 'openai-codex')

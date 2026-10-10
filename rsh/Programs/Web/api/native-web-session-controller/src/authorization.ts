@@ -143,7 +143,8 @@ export class NativeWebAccounts {
     try {
       if (endpoint === 'accounts/list') {
         accountsListRequest.parse(payload)
-        return { ok: true, value: await this.accounts?.list(signal) ?? [] }
+        const entries = await this.accounts?.list(signal) ?? []
+        return { ok: true, value: entries.filter(entry => this.keys.includes(entry.key)) }
       }
       const { key: rawKey } = accountKeyRequest.parse(payload)
       const key = parseCredentialKey(rawKey)

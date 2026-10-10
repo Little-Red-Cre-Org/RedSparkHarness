@@ -112,12 +112,15 @@ function parseUsage(value: unknown): Extract<AccountUsage, { status: 'ready' }> 
   if (data.code_review_rate_limit !== undefined && data.code_review_rate_limit !== null) {
     quotas.push(quota(data.code_review_rate_limit, 'code-review'))
   }
-  if (data.additional_rate_limits !== undefined) {
+  if (data.additional_rate_limits !== undefined && data.additional_rate_limits !== null) {
     if (!Array.isArray(data.additional_rate_limits)) throw new TypeError('invalid additional quotas')
     for (const entry of data.additional_rate_limits) {
       const additional = object(entry)
       if (typeof additional.limit_name !== 'string') throw new TypeError('invalid quota name')
-      quotas.push(quota(additional.rate_limit, additional.limit_name))
+      const rateLimit = additional.rate_limit
+      quotas.push(rateLimit === undefined || rateLimit === null
+        ? { name: additional.limit_name, primary: null, secondary: null }
+        : quota(rateLimit, additional.limit_name))
     }
   }
   let credits: Extract<AccountUsage, { status: 'ready' }>['credits'] = null
