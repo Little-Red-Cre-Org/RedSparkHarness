@@ -87,7 +87,8 @@
       ],
       "provides": [
         "model",
-        "modelDirectory"
+        "modelDirectory",
+        "accounts"
       ]
     }
   },

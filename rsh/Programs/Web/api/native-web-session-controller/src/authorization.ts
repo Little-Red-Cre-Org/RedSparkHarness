@@ -4,6 +4,7 @@ import { parseCredentialKey, type CredentialKey, type NativeCredentials } from '
 import type { AuthorizationPromptId, NativeAuthorization, NativeAuthorizationAttempt } from '@deepseek-ai/dsh-authorization/native'
 import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
 import type { ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
+import type { NativeAccounts } from '@deepseek-ai/dsh-llm-pi-ai/native'
 
 const listRequest = z.strictObject({})
 const beginRequest = z.strictObject({ key: z.string(), method: z.string().optional() })
@@ -12,6 +13,8 @@ const answerRequest = z.strictObject({
 })
 const declineRequest = z.strictObject({ key: z.string(), attemptId: z.string(), promptId: z.string() })
 const cancelRequest = z.strictObject({ key: z.string(), attemptId: z.string() })
+const accountsListRequest = z.strictObject({})
+const accountKeyRequest = z.strictObject({ key: z.string() })
 
 /** Restrict browser authorization to configured credential keys and safe flow metadata. */
 export class NativeWebAuthorization {
@@ -116,5 +119,48 @@ export class NativeWebAuthorization {
     const attempt = this.requireAuthorization().current(key)
     if (attempt?.id !== attemptId) throw new Error('native authorization: unavailable attempt')
     return attempt
+  }
+}
+
+/** Allowlisted browser operations for account metadata and usage. */
+export class NativeWebAccounts {
+  /**
+   * @param accounts - selected account provider, when installed.
+   * @param keys - credential keys the browser may address.
+   */
+  constructor(
+    private readonly accounts: NativeAccounts | undefined,
+    private readonly keys: readonly CredentialKey[],
+  ) {}
+
+  /** Handle one authenticated account RPC request.
+   * @param endpoint - account RPC endpoint.
+   * @param payload - unknown request fields.
+   * @param signal - caller cancellation.
+   * @returns a safe account result or command acknowledgement.
+   */
+  async handle(endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    try {
+      if (endpoint === 'accounts/list') {
+        accountsListRequest.parse(payload)
+        return { ok: true, value: await this.accounts?.list(signal) ?? [] }
+      }
+      const { key: rawKey } = accountKeyRequest.parse(payload)
+      const key = parseCredentialKey(rawKey)
+      if (!this.keys.includes(key)) throw new Error('account key is not allowlisted')
+      if (endpoint === 'accounts/usage') {
+        return { ok: true, value: this.accounts === undefined ? { status: 'unsupported' } : await this.accounts.usage(key, signal) }
+      }
+      if (endpoint === 'accounts/balance') {
+        return { ok: true, value: this.accounts === undefined ? { status: 'unsupported' } : await this.accounts.balance(key, signal) }
+      }
+      if (endpoint === 'accounts/sign-out') {
+        await this.accounts?.signOut(key, signal)
+        return { ok: true, value: { updated: true } }
+      }
+      throw new Error('unsupported endpoint')
+    } catch {
+      return { ok: false, error: { code: 'native/accounts', message: 'Account request failed.', details: {} } }
+    }
   }
 }

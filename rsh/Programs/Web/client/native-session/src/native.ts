@@ -114,6 +114,47 @@ export interface NativeAuthorizationEntry {
   readonly attemptId?: string
 }
 
+/** Safe account summary returned by the selected Host. */
+export interface NativeAccountSummary {
+  readonly key: string
+  readonly provider: 'openai-codex'
+  readonly status: 'signed-out' | 'ready' | 'unavailable'
+  readonly identity: { readonly email: string | null; readonly name: string | null; readonly avatarUrl: null }
+  readonly plan: string | null
+}
+
+/** Provider-reported quota window, with reset time in Unix seconds. */
+export interface NativeQuotaWindow {
+  readonly usedPercent: number
+  readonly windowSeconds: number | null
+  readonly resetsAt: number | null
+}
+
+/** Provider-reported quota group. */
+export interface NativeQuota {
+  readonly name: string
+  readonly primary: NativeQuotaWindow | null
+  readonly secondary: NativeQuotaWindow | null
+}
+
+/** Account usage, including the absent-provider response used by this RPC. */
+export type NativeAccountUsage =
+  | {
+    readonly status: 'ready'
+    readonly email: string | null
+    readonly plan: string | null
+    readonly quotas: readonly NativeQuota[]
+    readonly credits: { readonly unlimited: boolean; readonly balance: string | null } | null
+  }
+  | { readonly status: 'signed-out' }
+  | { readonly status: 'failed'; readonly reason: string }
+  | { readonly status: 'unsupported' }
+
+/** Account balance status. */
+export interface NativeAccountBalance {
+  readonly status: 'unsupported'
+}
+
 /** Structured rejection from one native Host RPC endpoint. */
 export class NativeSessionRpcError extends Error {
   /** @param code - stable native RPC failure code.
@@ -167,6 +208,29 @@ export interface NativeSessionClient {
    * @returns safe flow labels, methods and credential presence facts.
    */
   authorizationList(signal?: AbortSignal): Promise<readonly NativeAuthorizationEntry[]>
+  /** List supported Host accounts without returning credential values.
+   * @param signal - caller cancellation.
+   * @returns safe account summaries; empty when the Host has no account provider.
+   */
+  accountsList(signal?: AbortSignal): Promise<readonly NativeAccountSummary[]>
+  /** Read provider-reported usage for one configured account key.
+   * @param key - allowlisted credential record key.
+   * @param signal - caller cancellation.
+   * @returns usage status and quota metadata without tokens.
+   */
+  accountsUsage(key: string, signal?: AbortSignal): Promise<NativeAccountUsage>
+  /** Read account balance for one configured account key.
+   * @param key - allowlisted credential record key.
+   * @param signal - caller cancellation.
+   * @returns balance status; unsupported when no provider is installed.
+   */
+  accountsBalance(key: string, signal?: AbortSignal): Promise<NativeAccountBalance>
+  /** Sign out of one configured account key.
+   * @param key - allowlisted credential record key.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host deletes its account credential record.
+   */
+  accountsSignOut(key: string, signal?: AbortSignal): Promise<void>
   /** Start one allowlisted flow independently of the caller's page lifetime.
    * @param key - allowlisted credential key.
    * @param method - optional flow method id.
@@ -357,6 +421,25 @@ const authorizationEntrySchema = z.strictObject({
   methods: z.array(z.strictObject({ id: z.string(), label: z.string() })),
   configured: z.boolean(), writable: z.boolean(), attemptId: z.string().optional(),
 })
+const accountSummarySchema = z.strictObject({
+  key: z.string(), provider: z.literal('openai-codex'), status: z.enum(['signed-out', 'ready', 'unavailable']),
+  identity: z.strictObject({ email: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.null() }),
+  plan: z.string().nullable(),
+})
+const quotaWindowSchema = z.strictObject({
+  usedPercent: z.number(), windowSeconds: z.number().nullable(), resetsAt: z.number().nullable(),
+})
+const quotaSchema = z.strictObject({
+  name: z.string(), primary: quotaWindowSchema.nullable(), secondary: quotaWindowSchema.nullable(),
+})
+const accountUsageSchema = z.discriminatedUnion('status', [
+  z.strictObject({ status: z.literal('ready'), email: z.string().nullable(), plan: z.string().nullable(),
+    quotas: z.array(quotaSchema), credits: z.strictObject({ unlimited: z.boolean(), balance: z.string().nullable() }).nullable() }),
+  z.strictObject({ status: z.literal('signed-out') }),
+  z.strictObject({ status: z.literal('failed'), reason: z.string() }),
+  z.strictObject({ status: z.literal('unsupported') }),
+])
+const accountBalanceSchema = z.strictObject({ status: z.literal('unsupported') })
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
     message: z.string(), url: z.string().optional(), code: z.string().optional(),
@@ -396,6 +479,16 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'authorization/list') {
     if (!Array.isArray(value)) throw new TypeError('native authorization list must be an array')
     return value.map(item => authorizationEntrySchema.parse(item))
+  }
+  if (endpoint === 'accounts/list') {
+    if (!Array.isArray(value)) throw new TypeError('native account list must be an array')
+    return value.map(item => accountSummarySchema.parse(item))
+  }
+  if (endpoint === 'accounts/usage') return accountUsageSchema.parse(value)
+  if (endpoint === 'accounts/balance') return accountBalanceSchema.parse(value)
+  if (endpoint === 'accounts/sign-out') {
+    if (fields(value).updated !== true) throw new TypeError('invalid native account sign-out acknowledgement')
+    return undefined
   }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
@@ -623,6 +716,10 @@ export function createNativeSessionClient(
     async credentialsSet(ref, value, signal) { await call('credentials/set', { ref, value }, signal) },
     async credentialsUnset(ref, signal) { await call('credentials/unset', { ref }, signal) },
     authorizationList: signal => call('authorization/list', {}, signal),
+    accountsList: signal => call('accounts/list', {}, signal),
+    accountsUsage: (key, signal) => call('accounts/usage', { key }, signal),
+    accountsBalance: (key, signal) => call('accounts/balance', { key }, signal),
+    async accountsSignOut(key, signal) { await call('accounts/sign-out', { key }, signal) },
     authorizationBegin: (key, method, signal) => call('authorization/begin', { key, ...(method === undefined ? {} : { method }) }, signal),
     async *authorizationFrames(key, attemptId, signal) {
       const responseOperation = rpc.response
