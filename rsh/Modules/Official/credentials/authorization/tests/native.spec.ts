@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { credentialKey, type CredentialKey, type CredentialRecord, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type NativeAuthorization } from '../src/native.ts'
@@ -7,7 +8,11 @@ import type { AuthorizationFrame } from '../src/types.ts'
 const KEY = credentialKey('llm-pi-ai', 'openai-codex')
 const OTHER = credentialKey('llm-pi-ai', 'anthropic')
 
-it('does not expose an unexpected flow error message', async () => {
+it.each([
+  [new Error('{"device_code":"secret-device-code","user_code":"ABCD"}'), { code: 'FLOW_FAILED' }],
+  [new HarnessError('token exchange failed with HTTP 400', 'SIWC_TOKEN_EXCHANGE_FAILED'),
+    { code: 'SIWC_TOKEN_EXCHANGE_FAILED', message: 'token exchange failed with HTTP 400' }],
+])('exposes only curated flow failure diagnostics (%#)', async (failure, expected) => {
   const state = harness()
   const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
   try {
@@ -15,14 +20,14 @@ it('does not expose an unexpected flow error message', async () => {
       key: KEY,
       label: 'Codex',
       methods: [{ id: 'oauth', label: 'Sign in' }],
-      async run() { throw new Error('{"device_code":"secret-device-code","user_code":"ABCD"}') },
+      async run() { throw failure },
     })
     const attempt = state.authorization.begin({ key: KEY })
     const outcome = attempt.outcome.catch((error: unknown) => error)
     const frames: AuthorizationFrame[] = []
     for await (const frame of attempt.frames()) frames.push(frame)
     expect(await outcome).toBeInstanceOf(Error)
-    expect(frames.at(-1)).toEqual({ type: 'settled', settlement: 'failed', code: 'FLOW_FAILED' })
+    expect(frames.at(-1)).toEqual({ type: 'settled', settlement: 'failed', ...expected })
     expect(warning.mock.calls.flat().some(value => String(value).includes('secret-device-code'))).toBe(false)
   } finally {
     warning.mockRestore()

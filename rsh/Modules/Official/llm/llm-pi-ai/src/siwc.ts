@@ -3,7 +3,7 @@
 import { createServer } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
-import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import type { JSONWebKeySet } from 'jose'
 import type { CredentialStore, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
@@ -221,6 +221,9 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   }
 }
 
+// RFC 6749 token-endpoint error codes; any other server value is omitted from diagnostics.
+const OAUTH_ERROR_CODES = ['invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client', 'unsupported_grant_type', 'invalid_scope']
+
 async function tokenResponse(response: Response, operation: string): Promise<TokenResponse> {
   // The fetch signal also bounds this body read, so it fails if that signal aborts.
   let body: unknown
@@ -234,9 +237,9 @@ async function tokenResponse(response: Response, operation: string): Promise<Tok
       ? (body as { error?: unknown }).error
       : undefined
     const message = `Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`
-      + (typeof errorCode === 'string' && /^[a-z_]{1,64}$/.test(errorCode) ? ` (${errorCode})` : '')
+      + (typeof errorCode === 'string' && OAUTH_ERROR_CODES.includes(errorCode) ? ` (${errorCode})` : '')
     if (operation === 'authorization-code exchange') {
-      throw new AuthorizationError(message, 'SIWC_TOKEN_EXCHANGE_FAILED')
+      throw new HarnessError(message, 'SIWC_TOKEN_EXCHANGE_FAILED')
     }
     throw new Error(message)
   }
@@ -283,7 +286,7 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
     }))
   } catch (error: unknown) {
     const joseError = error as Error & { code?: string; claim?: string }
-    throw new AuthorizationError(
+    throw new HarnessError(
       `Sign in with ChatGPT ID token verification failed: ${joseError.code ?? joseError.name}`
         + (joseError.claim === undefined ? '' : ` (${joseError.claim})`),
       'SIWC_ID_TOKEN_INVALID',
@@ -396,7 +399,7 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         }
         const scopes = scopesFrom(tokens.scope)
         if (!scopes.includes(REQUIRED_SCOPE)) {
-          throw new AuthorizationError(
+          throw new HarnessError(
             `Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}; granted scopes: ${scopes.filter(scope => SCOPES.split(' ').includes(scope)).join(', ') || 'none'}`,
             'SIWC_SCOPE_NOT_GRANTED',
           )

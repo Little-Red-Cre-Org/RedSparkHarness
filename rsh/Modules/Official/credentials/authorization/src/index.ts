@@ -29,7 +29,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
 
-import { AuthorizationDeclinedError, AuthorizationError } from './errors.ts'
+import { AuthorizationDeclinedError, AuthorizationError, isSafeDiagnostic } from './errors.ts'
 import type {
   AuthorizationEntry, AuthorizationFlow, AuthorizationNotice, AuthorizationOutcome, AuthorizationPrompt,
   AuthorizationSettlement,
@@ -237,10 +237,7 @@ export class AuthorizationService extends Service {
       // next attempt is not refused by the one that just finished.
       this.settle(key, settlement)
       if (settlement === 'failed') {
-        const diagnostic = failure instanceof AuthorizationError
-          ? failure.code
-          : failure instanceof Error ? failure.name : 'UnknownError'
-        console.warn('authorization: flow failed', key, diagnostic)
+        console.warn('authorization: flow failed', key, isSafeDiagnostic(failure) ? failure.code : 'FLOW_FAILED')
       }
     }
   }

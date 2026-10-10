@@ -3,7 +3,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { describe, expect, it, vi } from 'vitest'
 import { ModelsError } from '@earendil-works/pi-ai'
 import type { Credential, CredentialStore, ProviderAuthInteraction } from '@earendil-works/pi-ai'
-import { AuthorizationError } from '@deepseek-ai/dsh-authorization/src/errors.ts'
+import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
 import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
 
@@ -205,7 +205,7 @@ describe('Sign in with ChatGPT OAuth', () => {
       authorizationNonce = failedAuthorization.searchParams.get('nonce') ?? ''
       expect(await completeCallback(failedAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
       const exchangeFailure = await failedLogin
-      expect(exchangeFailure).toBeInstanceOf(AuthorizationError)
+      expect(exchangeFailure).toBeInstanceOf(HarnessError)
       expect(exchangeFailure).toMatchObject({ code: 'SIWC_TOKEN_EXCHANGE_FAILED' })
       expect((exchangeFailure as Error).message)
         .toBe('Sign in with ChatGPT authorization-code exchange failed with HTTP 400 (invalid_grant)')
@@ -219,7 +219,7 @@ describe('Sign in with ChatGPT OAuth', () => {
       authorizationNonce = missingScopeAuthorization.searchParams.get('nonce') ?? ''
       expect(await completeCallback(missingScopeAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
       const scopeFailure = await missingScopeLogin
-      expect(scopeFailure).toBeInstanceOf(AuthorizationError)
+      expect(scopeFailure).toBeInstanceOf(HarnessError)
       expect(scopeFailure).toMatchObject({ code: 'SIWC_SCOPE_NOT_GRANTED' })
       expect((scopeFailure as Error).message)
         .toBe('Sign in with ChatGPT did not grant chatgpt.tokens.use.direct; granted scopes: openid, profile, email')
@@ -234,7 +234,7 @@ describe('Sign in with ChatGPT OAuth', () => {
         await completeCallback(invalidAuthorization)
         const code = invalidExpiration === undefined ? 'ERR_JWT_CLAIM_VALIDATION_FAILED' : 'ERR_JWT_EXPIRED'
         const identityFailure = await invalidLogin
-        expect(identityFailure).toBeInstanceOf(AuthorizationError)
+        expect(identityFailure).toBeInstanceOf(HarnessError)
         expect(identityFailure).toMatchObject({ code: 'SIWC_ID_TOKEN_INVALID' })
         expect((identityFailure as Error).message).toBe(`Sign in with ChatGPT ID token verification failed: ${code} (exp)`)
       }

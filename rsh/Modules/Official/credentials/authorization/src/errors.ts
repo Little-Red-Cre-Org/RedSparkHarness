@@ -14,6 +14,17 @@ export class AuthorizationError extends HarnessError {
 }
 
 /**
+ * Whether a flow failure's message is a curated diagnostic that may reach the
+ * settled frame: an `AuthorizationError`, or a `HarnessError` coded `SIWC_*`
+ * (thrown by `llm-pi-ai`, which cannot import this package at runtime).
+ * @param error - the flow failure.
+ * @returns true when its message may be shown and logged by code.
+ */
+export function isSafeDiagnostic(error: unknown): error is HarnessError {
+  return error instanceof AuthorizationError || (error instanceof HarnessError && error.code.startsWith('SIWC_'))
+}
+
+/**
  * The rejection an interaction `prompt()` uses to say the
  * human declined — dismissed the question, chose not to answer — rather than
  * that the surface broke. An attempt whose flow fails after a prompt was
