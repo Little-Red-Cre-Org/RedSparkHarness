@@ -63,3 +63,6 @@ jobs:
       - name: Package publication rules
         if: runner.os == 'Linux'
         run: pnpm run check:ci:package-publication
+      - name: Package dependency rules
+        if: runner.os == 'Linux'
+        run: pnpm run verify-package-dependencies
