@@ -1,5 +1,6 @@
 /** Native Session facts panel and its independent conversation-header action. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativeConversationSnapshot } from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-locale/native'
@@ -42,7 +43,7 @@ function SessionDetails({ useConversation, useLayoutInfo, close, t }: {
   }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <h2>{t('details')}</h2>
-      <button type="button" onClick={close} aria-label={t('close')}>×</button>
+      <Button variant="ghost" size="sm" onClick={close} aria-label={t('close')}>×</Button>
     </header>
     {snapshot.header === undefined ? <p>{t('noSession')}</p> : <dl>
       <dt>{t('sessionId')}</dt><dd style={{ overflowWrap: 'anywhere' }}>{snapshot.header.id}</dd>
@@ -59,8 +60,8 @@ function DetailsAction({ useLayoutInfo, toggle, t }: {
   t: NativeRightbarTranslate
 }) {
   const visible = useLayoutInfo(value => value.rightbarShown)
-  return <button type="button" aria-label={t('details')} aria-pressed={visible}
-    onClick={toggle}>{t('details')}</button>
+  return <Button variant="outline" size="sm" aria-label={t('details')} aria-pressed={visible}
+    onClick={toggle}>{t('details')}</Button>
 }
 
 /** Optional details-only right surface over the selected Native Session. */

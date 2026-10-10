@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
@@ -111,8 +112,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     onAuthorized={() => { void refreshModelControls() }} />
   return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
     <h1>{t('title')}</h1>
-    <nav aria-label={t('sessions')}>
-      <button type="button" onClick={() => { setShowSettings(true) }}>{t('settings')}</button>
+    <nav aria-label={t('sessions')} style={{ display: 'flex', gap: 8 }}>
+      <Button variant="outline" size="sm" onClick={() => { setShowSettings(true) }}>{t('settings')}</Button>
       {renderSlot('native.conversation.actions', {})}
     </nav>
     <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
