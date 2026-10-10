@@ -38,6 +38,8 @@ kind: "package-reference"
 
 授权方法会列出安全的流程信息、开始尝试、从授权 Fetch 路由接收可重放且不含机密的帧，并使用当前尝试标识提交回答、拒绝或取消。
 
+账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。账户响应不包含凭据值。
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {

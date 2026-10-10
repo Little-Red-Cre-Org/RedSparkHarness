@@ -38,6 +38,8 @@ The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`,
 
 Authorization methods list safe flow metadata, begin an attempt, stream replayable secret-free frames from the authorization Fetch route, and answer, decline or cancel by the current attempt identity.
 
+Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. Account responses contain no credential values.
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {

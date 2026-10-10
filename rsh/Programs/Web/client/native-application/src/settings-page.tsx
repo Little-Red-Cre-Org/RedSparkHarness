@@ -1,17 +1,21 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { NativeAccountSummary } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type { AuthorizationFrame, AuthorizationSettlement } from '@deepseek-ai/dsh-authorization/types'
 import type { ConversationLocaleKey } from './locales.ts'
+import { AccountCard } from './account-card.tsx'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
+/** Settings, credential, authorization and account operations selected from the Native Session client. */
 export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
-  | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'>
+  | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
+  | 'accountsList' | 'accountsUsage' | 'accountsSignOut'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -293,6 +297,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
   const [authorizationEntries, setAuthorizationEntries] = useState<readonly NativeAuthorizationEntry[]>([])
+  const [accounts, setAccounts] = useState<readonly NativeAccountSummary[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -300,12 +305,29 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const [error, setError] = useState<string>()
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
+  const [accountsError, setAccountsError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [refreshClick, setRefreshClick] = useState(0)
+  const [accountRefreshClick, setAccountRefreshClick] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
+  const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
+
+  const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
+    const request = ++accountRefreshes.current
+    const latest = () => request === accountRefreshes.current
+    setAccountsError(undefined)
+    try {
+      const summaries = await actions.accountsList(signal)
+      if (latest() && !signal?.aborted) setAccounts(summaries.filter(account => account.provider === 'openai-codex'))
+    } catch (cause: unknown) {
+      if (latest() && !signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      if (latest() && !signal?.aborted) setAccountRefreshClick(count => count + 1)
+    }
+  }, [actions])
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
     const request = ++refreshes.current
@@ -316,16 +338,17 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     setCredentialError(undefined)
     setAuthorizationError(undefined)
     try {
-      const description = await actions.settingsDescribe(signal)
-      try {
-        const entries = await actions.authorizationList(signal)
-        if (latest()) setAuthorizationEntries(entries)
-      } catch (cause: unknown) {
-        if (latest()) {
-          setAuthorizationEntries([])
-          setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
-        }
+      const entries = await actions.authorizationList(signal)
+      if (latest()) setAuthorizationEntries(entries)
+    } catch (cause: unknown) {
+      if (latest()) {
+        setAuthorizationEntries([])
+        setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
       }
+    }
+    await refreshAccounts(signal)
+    try {
+      const description = await actions.settingsDescribe(signal)
       const rows = description.namespaces
       if (latest()) {
         const reset = resetDrafts.current
@@ -359,7 +382,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       }
       return false
     } finally { if (latest()) setLoading(false) }
-  }, [actions, t])
+  }, [actions, refreshAccounts, t])
 
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
@@ -367,6 +390,12 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
     return refreshed
   }, [onAuthorized, refresh])
+
+  const signOutAccount = useCallback(async (key: string): Promise<void> => {
+    await actions.accountsSignOut(key)
+    await refresh(true)
+    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
+  }, [actions, onAuthorized, refresh])
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -474,10 +503,20 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
         })}
       </div>}
     </section>)}
-    {authorizationEntries.length === 0 && authorizationError === undefined ? null : <section aria-label={t('accounts')}>
+    {accounts.length === 0 && authorizationEntries.length === 0 && authorizationError === undefined && accountsError === undefined ? null : <section aria-label={t('accounts')}>
       <h2>{t('accounts')}</h2>
       {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
-      {authorizationEntries.map(entry => <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
+      {accountsError === undefined ? null : <p role="alert">{t('accountListError')}: {accountsError}</p>}
+      {accounts.map((account) => {
+        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
+        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
+          signOutAvailable={entry?.configured ?? account.status === 'ready'}
+          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
+            onSettled={authorizationSettled} refreshClick={refreshClick} />} />
+      })}
+      {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
+        key={entry.key} entry={entry} actions={actions} t={t}
         onSettled={authorizationSettled} refreshClick={refreshClick} />)}
     </section>}
   </main>

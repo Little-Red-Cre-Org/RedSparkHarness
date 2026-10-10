@@ -52,6 +52,7 @@
     "lib/native.js",
     "lib/controller.js",
     "lib/native-*.js",
+    "lib/account-card.module.css",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

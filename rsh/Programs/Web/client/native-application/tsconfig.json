@@ -49,6 +49,9 @@
     },
     {
       "path": "../ui-tool"
+    },
+    {
+      "path": "../ui-primitives"
     }
   ]
 }
