@@ -7,7 +7,7 @@ import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsD
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeAccountSummary, NativeAccountUsage, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 
@@ -18,6 +18,7 @@ const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512
 const emptyAccountActions = {
   accountsList: async () => [],
   accountsUsage: async () => ({ status: 'unsupported' as const }),
+  accountsBalance: async () => ({ status: 'unsupported' as const }),
   accountsSignOut: async () => undefined,
 }
 function renderSettingsPage(props: {
@@ -45,6 +46,7 @@ const readyUsage: Extract<NativeAccountUsage, { status: 'ready' }> = {
 function accountPageActions(
   accountsUsage: NativeSettingsActions['accountsUsage'],
   accountsList = vi.fn(async () => [chatGptAccount]),
+  accountsBalance: NativeSettingsActions['accountsBalance'] = emptyAccountActions.accountsBalance,
 ) {
   return {
     ...emptyAccountActions,
@@ -57,6 +59,7 @@ function accountPageActions(
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     accountsList,
     accountsUsage,
+    accountsBalance,
   } as unknown as NativeSettingsActions
 }
 
@@ -136,15 +139,51 @@ it('does not reuse ready usage when account identity emails are null', async () 
   expect(screen.queryByText('Plan: Account A plan')).toBeNull()
 })
 
-it('renders only the ChatGPT account card when DeepSeek accounts are listed', async () => {
-  const deepSeek: NativeAccountSummary = { ...chatGptAccount, key: 'deepseek-account/default', provider: 'deepseek-account' }
+it('renders DeepSeek identity, wallet balance and bonus balance', async () => {
+  const deepSeek: NativeAccountSummary = {
+    key: 'deepseek-account/default', provider: 'deepseek-account', status: 'ready', plan: null,
+    identity: { email: null, contact: 'user@example.com', name: 'DeepSeek User', avatarUrl: null },
+  }
+  const readyBalance: Extract<NativeAccountBalance, { status: 'ready' }> = {
+    status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }, { currency: 'USD', balance: '0.40' }],
+    bonusWallets: [{ currency: 'CNY', balance: '3.00' }],
+  }
   const accountsUsage = vi.fn(async () => readyUsage)
+  const accountsBalance = vi.fn(async () => readyBalance)
   renderSettingsPage({
-    actions: accountPageActions(accountsUsage, vi.fn(async () => [deepSeek, chatGptAccount])), t: key => en[key], onBack: () => undefined })
+    actions: accountPageActions(accountsUsage, vi.fn(async () => [deepSeek, chatGptAccount]), accountsBalance),
+    t: key => en[key], onBack: () => undefined })
 
+  expect(await screen.findByRole('heading', { name: en.deepSeekAccount })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: en.chatGptAccount })).toBeTruthy()
   expect(await screen.findByText('Plan: Plus')).toBeTruthy()
-  expect(screen.getAllByRole('heading', { name: en.chatGptAccount })).toHaveLength(1)
-  expect(accountsUsage).not.toHaveBeenCalledWith(deepSeek.key, expect.anything())
+  expect(screen.getByText('DeepSeek User')).toBeTruthy()
+  expect(screen.getByText('user@example.com')).toBeTruthy()
+  expect(screen.getByText('¥12.30')).toBeTruthy()
+  expect(screen.getByText('$0.40')).toBeTruthy()
+  expect(screen.getByText('¥3.00')).toBeTruthy()
+  expect(accountsBalance).toHaveBeenCalledWith(deepSeek.key, expect.anything())
+  expect(accountsUsage).toHaveBeenCalledWith(chatGptAccount.key, expect.anything())
+})
+
+it('keeps ready DeepSeek balances and shows a stale hint after refresh failure', async () => {
+  const deepSeek: NativeAccountSummary = {
+    key: 'deepseek-account/default', provider: 'deepseek-account', status: 'ready', plan: null,
+    identity: { email: null, contact: 'user@example.com', name: 'DeepSeek User', avatarUrl: null },
+  }
+  const accountsBalance = vi.fn()
+    .mockResolvedValueOnce({ status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }], bonusWallets: [] })
+    .mockResolvedValueOnce({ status: 'failed' })
+  renderSettingsPage({
+    actions: accountPageActions(vi.fn(async () => readyUsage), vi.fn(async () => [deepSeek]), accountsBalance),
+    t: key => en[key], onBack: () => undefined })
+
+  expect(await screen.findByText('¥12.30')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
+
+  expect(await screen.findByText(en.balanceStale)).toBeTruthy()
+  expect(screen.getByText('¥12.30')).toBeTruthy()
+  expect(accountsBalance).toHaveBeenCalledTimes(2)
 })
 
 it('refreshes model controls after signing out', async () => {

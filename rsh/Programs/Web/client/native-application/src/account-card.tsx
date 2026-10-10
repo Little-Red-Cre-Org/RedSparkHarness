@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativeAccountSummary, NativeAccountUsage, NativeQuota, NativeQuotaWindow } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeQuota, NativeQuotaWindow } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { NativeSettingsActions } from './settings-page.tsx'
 import css from './account-card.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type ReadyUsage = Extract<NativeAccountUsage, { status: 'ready' }>
-type CachedUsage = { accountKey: string; identityEmail: string | null; value: ReadyUsage }
+type ReadyBalance = Extract<NativeAccountBalance, { status: 'ready' }>
+type CachedAccountData = { accountKey: string; identity: string | null; value: ReadyUsage | ReadyBalance }
 
 function windowLength(seconds: number | null, t: Translate): string | undefined {
   if (seconds === null) return undefined
@@ -44,12 +45,12 @@ function Quotas({ quotas, t }: { quotas: readonly NativeQuota[]; t: Translate })
   </div>
 }
 
-/** Render one ChatGPT account summary and its last ready subscription usage.
+/** Render one native account summary and its last ready provider data.
  * @param props.account - Host-projected account identity and status.
  * @param props.actions - Native account operations.
  * @param props.authorization - Existing authorization row for this credential key, when available.
  * @param props.refreshClick - changes after account summaries are reloaded.
- * @param props.onRefreshAccounts - reload account summaries and every card's usage.
+ * @param props.onRefreshAccounts - reload account summaries and every card's provider data.
  * @param props.onSignOut - sign out this account and reload authorization state.
  * @param props.signOutAvailable - whether the Host reports a configured account credential.
  * @param props.t - localized copy.
@@ -65,24 +66,30 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
   signOutAvailable: boolean
   t: Translate
 }) {
-  const [usage, setUsage] = useState<CachedUsage>()
+  const [data, setData] = useState<CachedAccountData>()
   const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'stale'>('loading')
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
+  const identity = account.provider === 'deepseek-account'
+    ? account.identity.contact ?? account.identity.name : account.identity.email
 
   useEffect(() => {
     const lifetime = new AbortController()
-    setUsage(current => current?.accountKey === account.key && account.identity.email !== null
-      && current.identityEmail === account.identity.email ? current : undefined)
+    setData(current => current?.accountKey === account.key && identity !== null && current.identity === identity ? current : undefined)
     setStatus(current => current === 'ready' || current === 'stale' ? current : 'loading')
-    void actions.accountsUsage(account.key, lifetime.signal).then((result) => {
+    const read = account.provider === 'deepseek-account'
+      ? actions.accountsBalance(account.key, lifetime.signal) : actions.accountsUsage(account.key, lifetime.signal)
+    void read.then((result) => {
       if (lifetime.signal.aborted) return
       if (result.status === 'ready') {
-        setUsage({ accountKey: account.key, identityEmail: account.identity.email, value: result })
+        setData({ accountKey: account.key, identity, value: result })
         setStatus('ready')
       } else if (result.status === 'signed-out') {
-        setUsage(undefined)
+        setData(undefined)
         setStatus('signed-out')
+      } else if (result.status === 'unsupported' && account.provider === 'deepseek-account') {
+        setData(undefined)
+        setStatus('unavailable')
       } else {
         setStatus(current => current === 'ready' || current === 'stale' ? 'stale' : 'unavailable')
       }
@@ -92,7 +99,7 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
       }
     })
     return () => { lifetime.abort() }
-  }, [actions, account.key, account.identity.email, account.status, refreshClick])
+  }, [actions, account.key, account.provider, account.status, identity, refreshClick])
 
   const refresh = async (): Promise<void> => {
     setError(false)
@@ -107,9 +114,13 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
     finally { setSigningOut(false) }
   }
 
-  // The effect drops a null-email cache before each read, so it only shows that read's result.
-  const currentUsage = usage?.accountKey === account.key && usage.identityEmail === account.identity.email ? usage.value : undefined
-  const currentStatus = currentUsage === undefined && status === 'stale' ? 'unavailable' : status
+  // The effect drops a null-identity cache before each read, so it only shows that read's result.
+  const currentData = data?.accountKey === account.key && data.identity === identity ? data.value : undefined
+  const currentUsage = account.provider === 'openai-codex' && currentData !== undefined && 'quotas' in currentData
+    ? currentData : undefined
+  const currentBalance = account.provider === 'deepseek-account' && currentData !== undefined && 'wallets' in currentData
+    ? currentData : undefined
+  const currentStatus = currentData === undefined && status === 'stale' ? 'unavailable' : status
   const email = currentUsage?.email ?? account.identity.email
   const plan = currentUsage?.plan ?? account.plan
   return <article className={css.card}>
@@ -119,9 +130,14 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
           <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.2 0-7.5 2.1-7.5 4.75V21h15v-2.25C19.5 16.1 16.2 14 12 14Z" fill="currentColor" />
         </svg> : <img className={css.avatar} src={account.identity.avatarUrl} referrerPolicy="no-referrer" alt="" />}
         <div>
-          <h3>{t('chatGptAccount')}</h3>
-          {email === null ? null : <p>{email}</p>}
-          {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
+          <h3>{account.provider === 'deepseek-account' ? t('deepSeekAccount') : t('chatGptAccount')}</h3>
+          {account.provider === 'deepseek-account' ? <>
+            <p>{account.identity.name ?? t('signedIn')}</p>
+            {account.identity.contact === null ? null : <p>{account.identity.contact}</p>}
+          </> : <>
+            {email === null ? null : <p>{email}</p>}
+            {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
+          </>}
         </div>
       </div>
       <div className={css.actions}>
@@ -131,15 +147,36 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
         </Button> : null}
       </div>
     </header>
-    {currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
-      ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
-      : <>
-        {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
-        <Quotas quotas={currentUsage.quotas} t={t} />
-        {currentUsage.credits === null ? null : <p className={css.credits}>
-          <strong>{t('credits')}</strong> {currentUsage.credits.unlimited ? t('unlimited') : currentUsage.credits.balance ?? '—'}
-        </p>}
-      </>}
+    {account.provider === 'deepseek-account'
+      ? currentBalance === undefined
+        ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'signed-out' ? t('accountSignedOut')
+          : currentStatus === 'unavailable' ? t('balanceUnavailable') : t('loadingBalance')}</p>
+        : <>
+          {currentStatus === 'stale' ? <p role="status">{t('balanceStale')}</p> : null}
+          {currentBalance.wallets.length > 0 || currentBalance.bonusWallets.length > 0 ? <div className={css.balances}>
+            {currentBalance.wallets.length > 0 ? <div className={css.balanceRow}>
+              <span>{t('balance')}</span>
+              <span className={css.balanceAmounts}>{currentBalance.wallets.map(wallet => <span key={wallet.currency}>
+                {wallet.currency === 'CNY' ? '¥' : '$'}{wallet.balance}
+              </span>)}</span>
+            </div> : null}
+            {currentBalance.bonusWallets.length > 0 ? <div className={css.balanceRow}>
+              <span>{t('bonusBalance')}</span>
+              <span className={css.balanceAmounts}>{currentBalance.bonusWallets.map(wallet => <span key={wallet.currency}>
+                {wallet.currency === 'CNY' ? '¥' : '$'}{wallet.balance}
+              </span>)}</span>
+            </div> : null}
+          </div> : null}
+        </>
+      : currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
+        ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
+        : <>
+          {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
+          <Quotas quotas={currentUsage.quotas} t={t} />
+          {currentUsage.credits === null ? null : <p className={css.credits}>
+            <strong>{t('credits')}</strong> {currentUsage.credits.unlimited ? t('unlimited') : currentUsage.credits.balance ?? '—'}
+          </p>}
+        </>}
     {error ? <p role="alert">{t('accountError')}</p> : null}
     {authorization === undefined ? null : <div className={css.authorization}>{authorization}</div>}
   </article>
