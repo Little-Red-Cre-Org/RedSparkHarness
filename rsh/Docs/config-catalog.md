@@ -3607,6 +3607,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-compat-settings-adapters` ([`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts))
 - `@deepseek-ai/dsh-compat-settings-definition` ([`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts))
 - `@deepseek-ai/dsh-compat-tool-fs` ([`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts))
+- `@deepseek-ai/dsh-deepseek-account` ([`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts))
 - `@deepseek-ai/dsh-deque` ([`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts))
 - `@deepseek-ai/dsh-errors` ([`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts))
 - `@deepseek-ai/dsh-experimental-agent-team-profile` ([`rsh/Modules/Community/experimental/agent-team-profile/src/index.ts`](../Modules/Community/experimental/agent-team-profile/src/index.ts))

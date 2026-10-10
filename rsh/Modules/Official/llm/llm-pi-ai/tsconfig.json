@@ -39,6 +39,9 @@
       "path": "../../../../Modules/Official/credentials/authorization"
     },
     {
+      "path": "../../../../Modules/Official/credentials/deepseek-account"
+    },
+    {
       "path": "../../../../Modules/Official/settings/settings"
     },
     {

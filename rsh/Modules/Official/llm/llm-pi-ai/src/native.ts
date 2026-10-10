@@ -1,6 +1,7 @@
 /** Native pi-ai Provider using the shared catalog, profiles, auth and HTTP adapter. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-authorization/native'
+import type {} from '@deepseek-ai/dsh-deepseek-account/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
 import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
 import { credentialKey, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
@@ -17,11 +18,12 @@ import { authContextFrom, credentialStoreFrom } from './auth-core.ts'
 import { createPiAiFlows } from './login-core.ts'
 
 const CODEX_ACCOUNT_KEY = credentialKey('llm-pi-ai', 'openai-codex')
+const DEEPSEEK_ACCOUNT_KEY = credentialKey('deepseek-account', 'default')
 
 /** Publish the pi-ai adapter with the current native settings profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-llm-pi-ai', targets: ['host'],
-  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings', 'authorization'], provides: ['model', 'modelDirectory', 'accounts'],
+  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings', 'authorization', 'deepseekAccount'], provides: ['model', 'modelDirectory', 'accounts'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) {
       throw new Error('llm-pi-ai: native configuration must be an object with providers')
@@ -38,6 +40,7 @@ export const plugin: NativePlugin = {
       const fs = context.optional('fs')
       const settings = context.optional('settings')
       const authorization = context.optional('authorization')
+      const deepseekAccount = context.optional('deepseekAccount')
       const auth = { credentials: credentialStoreFrom(credentials), authContext: authContextFrom(credentials, environment) }
       if (authorization !== undefined) {
         for (const flow of createPiAiFlows(auth)) context.effect(authorization.registerFlow(flow))
@@ -66,14 +69,14 @@ export const plugin: NativePlugin = {
         },
       })
       context.own(() => { adapter.dispose() })
-      context.provide('accounts', new NativeAccountsProvider(credentials, adapter, context.signal))
+      context.provide('accounts', new NativeAccountsProvider(credentials, adapter, context.signal, deepseekAccount))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
       context.own(() => directory.dispose())
       context.on('credentials/record-updated', async (key) => {
         if (credentialKeyScope(key) === 'llm-pi-ai') adapter.invalidate()
-        if (key === CODEX_ACCOUNT_KEY) {
+        if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) {
           await context.events.parallel(context.scope, 'accounts/changed', key)
         }
       })

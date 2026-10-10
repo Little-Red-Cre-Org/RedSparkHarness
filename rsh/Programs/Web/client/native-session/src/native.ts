@@ -117,9 +117,14 @@ export interface NativeAuthorizationEntry {
 /** Safe account summary returned by the selected Host. */
 export interface NativeAccountSummary {
   readonly key: string
-  readonly provider: 'openai-codex'
+  readonly provider: 'openai-codex' | 'deepseek-account'
   readonly status: 'signed-out' | 'ready' | 'unavailable'
-  readonly identity: { readonly email: string | null; readonly name: string | null; readonly avatarUrl: null }
+  readonly identity: {
+    readonly email: string | null
+    readonly contact: string | null
+    readonly name: string | null
+    readonly avatarUrl: string | null
+  }
   readonly plan: string | null
 }
 
@@ -150,10 +155,16 @@ export type NativeAccountUsage =
   | { readonly status: 'failed'; readonly reason: string }
   | { readonly status: 'unsupported' }
 
-/** Account balance status. */
-export interface NativeAccountBalance {
-  readonly status: 'unsupported'
+/** Account wallet balance, retained as a decimal string. */
+export interface NativeAccountWallet {
+  readonly currency: 'CNY' | 'USD'
+  readonly balance: string
 }
+
+/** Account balance or the account operation's status. */
+export type NativeAccountBalance =
+  | { readonly status: 'ready'; readonly wallets: readonly NativeAccountWallet[]; readonly bonusWallets: readonly NativeAccountWallet[] }
+  | { readonly status: 'signed-out' | 'failed' | 'unsupported' }
 
 /** Structured rejection from one native Host RPC endpoint. */
 export class NativeSessionRpcError extends Error {
@@ -422,8 +433,10 @@ const authorizationEntrySchema = z.strictObject({
   configured: z.boolean(), writable: z.boolean(), attemptId: z.string().optional(),
 })
 const accountSummarySchema = z.strictObject({
-  key: z.string(), provider: z.literal('openai-codex'), status: z.enum(['signed-out', 'ready', 'unavailable']),
-  identity: z.strictObject({ email: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.null() }),
+  key: z.string(), provider: z.enum(['openai-codex', 'deepseek-account']), status: z.enum(['signed-out', 'ready', 'unavailable']),
+  identity: z.strictObject({
+    email: z.string().nullable(), contact: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.string().nullable(),
+  }),
   plan: z.string().nullable(),
 })
 const quotaWindowSchema = z.strictObject({
@@ -439,7 +452,13 @@ const accountUsageSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed'), reason: z.string() }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
-const accountBalanceSchema = z.strictObject({ status: z.literal('unsupported') })
+const accountWalletSchema = z.strictObject({ currency: z.enum(['CNY', 'USD']), balance: z.string() })
+const accountBalanceSchema = z.discriminatedUnion('status', [
+  z.strictObject({ status: z.literal('ready'), wallets: z.array(accountWalletSchema), bonusWallets: z.array(accountWalletSchema) }),
+  z.strictObject({ status: z.literal('signed-out') }),
+  z.strictObject({ status: z.literal('failed') }),
+  z.strictObject({ status: z.literal('unsupported') }),
+])
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
     message: z.string(), url: z.string().optional(), code: z.string().optional(),
