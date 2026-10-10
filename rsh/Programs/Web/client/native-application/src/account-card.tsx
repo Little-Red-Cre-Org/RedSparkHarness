@@ -8,6 +8,7 @@ import css from './account-card.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type ReadyUsage = Extract<NativeAccountUsage, { status: 'ready' }>
+type CachedUsage = { identityEmail: string | null; value: ReadyUsage }
 
 function windowLength(seconds: number | null, t: Translate): string | undefined {
   if (seconds === null) return undefined
@@ -64,18 +65,19 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
   signOutAvailable: boolean
   t: Translate
 }) {
-  const [usage, setUsage] = useState<ReadyUsage>()
+  const [usage, setUsage] = useState<CachedUsage>()
   const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'stale'>('loading')
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     const lifetime = new AbortController()
+    setUsage(current => current?.identityEmail === account.identity.email ? current : undefined)
     setStatus(current => current === 'ready' || current === 'stale' ? current : 'loading')
     void actions.accountsUsage(account.key, lifetime.signal).then((result) => {
       if (lifetime.signal.aborted) return
       if (result.status === 'ready') {
-        setUsage(result)
+        setUsage({ identityEmail: account.identity.email, value: result })
         setStatus('ready')
       } else if (result.status === 'signed-out') {
         setUsage(undefined)
@@ -89,7 +91,7 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
       }
     })
     return () => { lifetime.abort() }
-  }, [actions, account.key, refreshClick])
+  }, [actions, account.key, account.identity.email, account.status, refreshClick])
 
   const refresh = async (): Promise<void> => {
     setError(false)
@@ -104,8 +106,10 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
     finally { setSigningOut(false) }
   }
 
-  const email = usage?.email ?? account.identity.email
-  const plan = usage?.plan ?? account.plan
+  const currentUsage = usage?.identityEmail === account.identity.email ? usage.value : undefined
+  const currentStatus = currentUsage === undefined && status === 'stale' ? 'unavailable' : status
+  const email = currentUsage?.email ?? account.identity.email
+  const plan = currentUsage?.plan ?? account.plan
   return <article className={css.card}>
     <header className={css.header}>
       <div className={css.identity}>
@@ -119,19 +123,19 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
         </div>
       </div>
       <div className={css.actions}>
-        <Button variant="outline" size="sm" disabled={status === 'loading'} onClick={() => { void refresh() }}>{t('refreshAccount')}</Button>
+        <Button variant="outline" size="sm" disabled={currentStatus === 'loading'} onClick={() => { void refresh() }}>{t('refreshAccount')}</Button>
         {signOutAvailable ? <Button variant="outline" size="sm" disabled={signingOut} onClick={() => { void signOut() }}>
           {signingOut ? t('signingOut') : t('signOut')}
         </Button> : null}
       </div>
     </header>
-    {status === 'signed-out' ? <p>{t('signedOut')}</p> : usage === undefined
-      ? <p role={status === 'unavailable' ? 'status' : undefined}>{status === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
+    {currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
+      ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
       : <>
-        {status === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
-        <Quotas quotas={usage.quotas} t={t} />
-        {usage.credits === null ? null : <p className={css.credits}>
-          <strong>{t('credits')}</strong> {usage.credits.unlimited ? t('unlimited') : usage.credits.balance ?? '—'}
+        {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
+        <Quotas quotas={currentUsage.quotas} t={t} />
+        {currentUsage.credits === null ? null : <p className={css.credits}>
+          <strong>{t('credits')}</strong> {currentUsage.credits.unlimited ? t('unlimited') : currentUsage.credits.balance ?? '—'}
         </p>}
       </>}
     {error ? <p role="alert">{t('accountError')}</p> : null}

@@ -98,6 +98,29 @@ it('keeps ready usage and shows a stale hint after refresh failure', async () =>
   expect(accountsList).toHaveBeenCalledTimes(2)
 })
 
+it('clears ready usage when the signed-in account changes', async () => {
+  const accountA = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'a@example.com' } }
+  const accountB = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'b@example.com' } }
+  const accountsUsage = vi.fn()
+    .mockResolvedValueOnce({ ...readyUsage, email: 'a@example.com', plan: 'Account A plan' })
+    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
+  const accountsList = vi.fn()
+    .mockResolvedValueOnce([accountA])
+    .mockResolvedValueOnce([accountB])
+  renderSettingsPage({ actions: accountPageActions(accountsUsage, accountsList), t: key => en[key], onBack: () => undefined })
+
+  expect(await screen.findByText('a@example.com')).toBeTruthy()
+  expect(screen.getByText('Plan: Account A plan')).toBeTruthy()
+  expect(screen.getByText('Remaining 65%')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
+
+  expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
+  expect(screen.getByText('b@example.com')).toBeTruthy()
+  expect(screen.queryByText('a@example.com')).toBeNull()
+  expect(screen.queryByText('Plan: Account A plan')).toBeNull()
+  expect(screen.queryByText('Remaining 65%')).toBeNull()
+})
+
 it('writes changed user fields without replacing a parent that contains a hidden secret', () => {
   expect(() => nativeSettingsDiff(
     { providers: { alpha: { label: 'old' } } },

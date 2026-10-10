@@ -2,9 +2,9 @@
   display: grid;
   gap: 16px;
   padding: 16px;
-  border: 1px solid var(--dsw-alias-border-secondary, #d9d9d9);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
-  background: var(--dsw-alias-surface-primary, #fff);
+  background: var(--dsw-alias-bg-layer-2);
 }
 
 .header,
@@ -33,7 +33,7 @@
 
 .identity p {
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-text-secondary, #666);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .avatar {
@@ -41,7 +41,7 @@
   height: 40px;
   flex: none;
   border-radius: 50%;
-  color: var(--dsw-alias-text-secondary, #666);
+  color: var(--dsw-alias-label-secondary);
   object-fit: cover;
 }
 
@@ -68,15 +68,15 @@
 
 .quotaWindow progress {
   width: 100%;
-  accent-color: var(--dsw-alias-control-primary, #1688ff);
+  accent-color: var(--dsw-alias-brand-primary);
 }
 
 .quotaWindow p,
 .credits {
-  color: var(--dsw-alias-text-secondary, #666);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .authorization {
-  border-top: 1px solid var(--dsw-alias-border-secondary, #d9d9d9);
+  border-top: 1px solid var(--dsw-alias-border-l2);
   padding-top: 12px;
 }

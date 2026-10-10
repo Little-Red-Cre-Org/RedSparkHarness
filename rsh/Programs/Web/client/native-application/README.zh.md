@@ -55,7 +55,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 <a id="dev-note"></a>
 ## 开发备注
 
-生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)，ChatGPT 账户卡行为见[账户卡决策](../../../../../.agents/notes/implemented/feature/2026-10-10-native-web-chatgpt-account-card.zh.md)。
+生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
