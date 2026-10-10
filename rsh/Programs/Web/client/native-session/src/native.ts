@@ -452,7 +452,8 @@ const authorizationFrameSchema = z.discriminatedUnion('type', [
     })) }),
   ]) }),
   z.strictObject({ type: z.literal('prompt-closed'), promptId: z.string() }),
-  z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']), code: z.string().optional() }),
+  z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']),
+    code: z.string().optional(), message: z.string().optional() }),
 ])
 
 function header(value: unknown): SessionHeader {

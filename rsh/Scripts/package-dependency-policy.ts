@@ -128,6 +128,7 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
   '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
   '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
+  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives'],
   '@deepseek-ai/dsh-client-ui-sidebar': [
     '@deepseek-ai/dsh-client-store',
     '@deepseek-ai/dsh-client-ui-primitives',

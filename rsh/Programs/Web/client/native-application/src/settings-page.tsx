@@ -265,6 +265,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
     </p> : null)}
     {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
       : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
+    {settled.settlement === 'failed' && settled.message !== undefined ? <> {settled.message}</> : null}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
     {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}

@@ -23,7 +23,7 @@ kind: "package-library"
 <a id="use-errors"></a>
 ## 使用错误
 
-扩展 `HarnessError` 时提供稳定的机器可读错误码和可选的标准 `cause`。按错误码路由失败；`errorChain` 仅为诊断渲染消息、嵌套原因和聚合成员，并能处理循环原因和抛异常的访问器。`isHarnessError` 检查构造函数身份，因此普通对象与其他 realm 的错误不满足条件。
+扩展 `HarnessError` 时提供稳定的机器可读错误码和可选的标准 `cause`。按错误码路由失败；`errorChain` 仅为诊断渲染消息、嵌套原因和聚合成员，不会重复追加已包含在包装消息中的原因。它能处理循环原因和抛异常的访问器。`isHarnessError` 检查构造函数身份，因此普通对象与其他 realm 的错误不满足条件。
 
 不发布 invariant 配套入口：错误是普通值，没有独立维护的服务状态。
 

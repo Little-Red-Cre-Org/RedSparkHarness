@@ -96,7 +96,7 @@ pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程�
 
 ### 解析模型目录
 
-`openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug 与显示名，随后会把该 slug 发送到公开 Responses endpoint。没有已保存的 SIWC grant 时，此路由不会展示 pi-ai 的静态 Codex 目录。目录未给出的上下文限制、输出上限、价格与 reasoning 控件保持未声明，不从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
+`openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug 与显示名，随后会把该 slug 发送到公开 Responses endpoint。登录诊断会显示 HTTP 状态与 OAuth error code、已授予的 scope 名称、无效凭据字段名，或 jose 验证 code 与 claim；不会显示 error description 或 token 值。没有已保存的 SIWC grant 时，此路由不会展示 pi-ai 的静态 Codex 目录。目录未给出的上下文限制、输出上限、价格与 reasoning 控件保持未声明，不从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
 
 协议决策与验证边界见 [SIWC 提供方 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-codex-siwc-provider.zh.md)。真实账户登录、实时目录刷新与用户推理仍需凭据验证。
 

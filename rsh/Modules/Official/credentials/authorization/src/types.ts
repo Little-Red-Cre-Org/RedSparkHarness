@@ -166,19 +166,21 @@ export type AuthorizationPromptView = {
 }
 
 /**
- * One step of an attempt's conversation, in order. JSON-safe and free of
- * secrets: prompts never echo answers, and a failure carries only its code.
+ * One step of an attempt's conversation, in order. Prompts never echo answers.
+ * A failure carries a code and may include a curated `AuthorizationError` or
+ * `SIWC_*` `HarnessError` message.
  *
  * - `notice`: progress, or what the human must do next.
  * - `prompt`: a question waiting for `answer()` or `decline()` with its `promptId`.
  * - `prompt-closed`: that prompt no longer accepts an answer (answered,
  *   declined, or withdrawn by the flow racing it against a callback).
  * - `settled`: the last frame; the attempt has fully drained and released its key.
- *   `code` is present only for `failed`: an `AuthorizationError` code, or
- *   `FLOW_FAILED` for any other flow error.
+ *   `code` is present only for `failed`: a safe diagnostic code, or
+ *   `FLOW_FAILED` for any other flow error. `message` is included only for an
+ *   `AuthorizationError` or a `SIWC_*` `HarnessError`; others are not exposed.
  */
 export type AuthorizationFrame =
   | { type: 'notice'; notice: AuthorizationNotice }
   | { type: 'prompt'; promptId: AuthorizationPromptId; prompt: AuthorizationPromptView }
   | { type: 'prompt-closed'; promptId: AuthorizationPromptId }
-  | { type: 'settled'; settlement: AuthorizationSettlement; code?: string }
+  | { type: 'settled'; settlement: AuthorizationSettlement; code?: string; message?: string }

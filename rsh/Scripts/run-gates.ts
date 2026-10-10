@@ -324,6 +324,7 @@ function packagePublicationGates(): Gate[] {
   return [
     pnpmScript('constraints', 'constraints'),
     pnpmScript('native-dependencies', 'verify-native-dependencies'),
+    pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
     pnpmScript('package-invariants', 'verify-package-invariants', { label: 'package invariants' }),
   ]
 }

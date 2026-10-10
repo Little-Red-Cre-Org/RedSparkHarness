@@ -14,7 +14,7 @@
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeContext, NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type { CredentialKey, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import { AuthorizationDeclinedError, AuthorizationError } from './errors.ts'
+import { AuthorizationDeclinedError, AuthorizationError, isSafeDiagnostic } from './errors.ts'
 import type {
   AuthorizationAttemptId, AuthorizationEntry, AuthorizationFlow, AuthorizationFrame, AuthorizationOutcome,
   AuthorizationPrompt, AuthorizationPromptId, AuthorizationPromptView, AuthorizationSettlement,
@@ -419,8 +419,13 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
     state.detachRequest?.()
     if (this.running.get(state.key) === state) this.running.delete(state.key)
     if (settlement === 'failed') {
-      const code = failure instanceof AuthorizationError ? failure.code : 'FLOW_FAILED'
-      this.push(state, { type: 'settled', settlement, code })
+      if (isSafeDiagnostic(failure)) {
+        this.push(state, { type: 'settled', settlement, code: failure.code, message: failure.message })
+        console.warn('authorization: flow failed', state.key, failure.code)
+      } else {
+        this.push(state, { type: 'settled', settlement, code: 'FLOW_FAILED' })
+        console.warn('authorization: flow failed', state.key, 'FLOW_FAILED')
+      }
     } else this.push(state, { type: 'settled', settlement })
 
     try {
