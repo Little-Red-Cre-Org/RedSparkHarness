@@ -166,8 +166,9 @@ export type AuthorizationPromptView = {
 }
 
 /**
- * One step of an attempt's conversation, in order. JSON-safe and free of
- * secrets: prompts never echo answers, and a failure carries only its code.
+ * One step of an attempt's conversation, in order. Prompts never echo answers.
+ * A failure carries a code and may include a curated `AuthorizationError`
+ * message.
  *
  * - `notice`: progress, or what the human must do next.
  * - `prompt`: a question waiting for `answer()` or `decline()` with its `promptId`.
@@ -175,8 +176,8 @@ export type AuthorizationPromptView = {
  *   declined, or withdrawn by the flow racing it against a callback).
  * - `settled`: the last frame; the attempt has fully drained and released its key.
  *   `code` is present only for `failed`: an `AuthorizationError` code, or
- *   `FLOW_FAILED` for any other flow error. `message` carries the failure
- *   diagnostic and must not contain credential values.
+ *   `FLOW_FAILED` for any other flow error. `message` is included only for an
+ *   `AuthorizationError`; other flow error messages are not exposed.
  */
 export type AuthorizationFrame =
   | { type: 'notice'; notice: AuthorizationNotice }

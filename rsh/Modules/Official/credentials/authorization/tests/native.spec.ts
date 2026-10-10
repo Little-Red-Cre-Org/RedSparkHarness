@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { credentialKey, type CredentialKey, type CredentialRecord, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type NativeAuthorization } from '../src/native.ts'
@@ -6,6 +6,29 @@ import type { AuthorizationFrame } from '../src/types.ts'
 
 const KEY = credentialKey('llm-pi-ai', 'openai-codex')
 const OTHER = credentialKey('llm-pi-ai', 'anthropic')
+
+it('does not expose an unexpected flow error message', async () => {
+  const state = harness()
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  try {
+    state.authorization.registerFlow({
+      key: KEY,
+      label: 'Codex',
+      methods: [{ id: 'oauth', label: 'Sign in' }],
+      async run() { throw new Error('{"device_code":"secret-device-code","user_code":"ABCD"}') },
+    })
+    const attempt = state.authorization.begin({ key: KEY })
+    const outcome = attempt.outcome.catch((error: unknown) => error)
+    const frames: AuthorizationFrame[] = []
+    for await (const frame of attempt.frames()) frames.push(frame)
+    expect(await outcome).toBeInstanceOf(Error)
+    expect(frames.at(-1)).toEqual({ type: 'settled', settlement: 'failed', code: 'FLOW_FAILED' })
+    expect(warning.mock.calls.flat().some(value => String(value).includes('secret-device-code'))).toBe(false)
+  } finally {
+    warning.mockRestore()
+    await state.provider.dispose()
+  }
+})
 
 /** Build the Provider directly with an in-memory credentials service. */
 function harness(beforeCommit?: () => Promise<void>): {

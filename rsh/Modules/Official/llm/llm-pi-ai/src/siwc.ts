@@ -3,6 +3,7 @@
 import { createServer } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
+import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import type { JSONWebKeySet } from 'jose'
 import type { CredentialStore, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
@@ -232,8 +233,12 @@ async function tokenResponse(response: Response, operation: string): Promise<Tok
     const errorCode = body !== null && typeof body === 'object' && !Array.isArray(body)
       ? (body as { error?: unknown }).error
       : undefined
-    throw new Error(`Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`
-      + (typeof errorCode === 'string' ? ` (${errorCode})` : ''))
+    const message = `Sign in with ChatGPT ${operation} failed with HTTP ${response.status}`
+      + (typeof errorCode === 'string' && /^[a-z_]{1,64}$/.test(errorCode) ? ` (${errorCode})` : '')
+    if (operation === 'authorization-code exchange') {
+      throw new AuthorizationError(message, 'SIWC_TOKEN_EXCHANGE_FAILED')
+    }
+    throw new Error(message)
   }
   if (body === undefined || body === null || Array.isArray(body) || typeof body !== 'object') {
     throw new Error(`Sign in with ChatGPT ${operation} returned an invalid token response`)
@@ -278,8 +283,11 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
     }))
   } catch (error: unknown) {
     const joseError = error as Error & { code?: string; claim?: string }
-    throw new Error(`Sign in with ChatGPT ID token verification failed: ${joseError.code ?? joseError.name}`
-      + (joseError.claim === undefined ? '' : ` (${joseError.claim})`))
+    throw new AuthorizationError(
+      `Sign in with ChatGPT ID token verification failed: ${joseError.code ?? joseError.name}`
+        + (joseError.claim === undefined ? '' : ` (${joseError.claim})`),
+      'SIWC_ID_TOKEN_INVALID',
+    )
   }
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('Sign in with ChatGPT ID token has no subject')
@@ -388,7 +396,10 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         }
         const scopes = scopesFrom(tokens.scope)
         if (!scopes.includes(REQUIRED_SCOPE)) {
-          throw new Error(`Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}; granted scopes: ${scopes.join(', ') || 'none'}`)
+          throw new AuthorizationError(
+            `Sign in with ChatGPT did not grant ${REQUIRED_SCOPE}; granted scopes: ${scopes.filter(scope => SCOPES.split(' ').includes(scope)).join(', ') || 'none'}`,
+            'SIWC_SCOPE_NOT_GRANTED',
+          )
         }
         const identity = await verifiedIdentity(idToken, issuedClientId, nonce, interaction.signal)
         if (previous !== undefined && identity.subject !== previous.subject) {

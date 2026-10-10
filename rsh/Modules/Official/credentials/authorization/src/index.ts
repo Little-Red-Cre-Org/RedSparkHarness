@@ -237,8 +237,10 @@ export class AuthorizationService extends Service {
       // next attempt is not refused by the one that just finished.
       this.settle(key, settlement)
       if (settlement === 'failed') {
-        const message = failure instanceof Error ? failure.message : String(failure)
-        console.warn('authorization: flow failed', key, message)
+        const diagnostic = failure instanceof AuthorizationError
+          ? failure.code
+          : failure instanceof Error ? failure.name : 'UnknownError'
+        console.warn('authorization: flow failed', key, diagnostic)
       }
     }
   }

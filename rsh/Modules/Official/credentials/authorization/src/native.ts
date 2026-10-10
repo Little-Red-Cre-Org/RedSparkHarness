@@ -419,10 +419,13 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
     state.detachRequest?.()
     if (this.running.get(state.key) === state) this.running.delete(state.key)
     if (settlement === 'failed') {
-      const code = failure instanceof AuthorizationError ? failure.code : 'FLOW_FAILED'
-      const message = failure instanceof Error ? failure.message : String(failure)
-      this.push(state, { type: 'settled', settlement, code, message })
-      console.warn('authorization: flow failed', state.key, message)
+      if (failure instanceof AuthorizationError) {
+        this.push(state, { type: 'settled', settlement, code: failure.code, message: failure.message })
+        console.warn('authorization: flow failed', state.key, failure.code)
+      } else {
+        this.push(state, { type: 'settled', settlement, code: 'FLOW_FAILED' })
+        console.warn('authorization: flow failed', state.key, failure instanceof Error ? failure.name : 'UnknownError')
+      }
     } else this.push(state, { type: 'settled', settlement })
 
     try {

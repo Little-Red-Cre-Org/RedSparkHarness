@@ -3,6 +3,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { describe, expect, it, vi } from 'vitest'
 import { ModelsError } from '@earendil-works/pi-ai'
 import type { Credential, CredentialStore, ProviderAuthInteraction } from '@earendil-works/pi-ai'
+import { AuthorizationError } from '@deepseek-ai/dsh-authorization/src/errors.ts'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
 import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
 
@@ -199,11 +200,13 @@ describe('Sign in with ChatGPT OAuth', () => {
       tokenError = { error: 'invalid_grant', error_description: 'private diagnostic text' }
       const failedAuthorizationReady = nextAuthorization()
       const failedLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+        .then(() => undefined, (error: unknown) => error)
       const failedAuthorization = await failedAuthorizationReady
       authorizationNonce = failedAuthorization.searchParams.get('nonce') ?? ''
       expect(await completeCallback(failedAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
-      const exchangeFailure: unknown = await failedLogin.then(() => undefined, (error: unknown) => error)
-      expect(exchangeFailure).toBeInstanceOf(Error)
+      const exchangeFailure = await failedLogin
+      expect(exchangeFailure).toBeInstanceOf(AuthorizationError)
+      expect(exchangeFailure).toMatchObject({ code: 'SIWC_TOKEN_EXCHANGE_FAILED' })
       expect((exchangeFailure as Error).message)
         .toBe('Sign in with ChatGPT authorization-code exchange failed with HTTP 400 (invalid_grant)')
 
@@ -211,21 +214,29 @@ describe('Sign in with ChatGPT OAuth', () => {
       grantScopes = 'openid profile email'
       const missingScopeAuthorizationReady = nextAuthorization()
       const missingScopeLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+        .then(() => undefined, (error: unknown) => error)
       const missingScopeAuthorization = await missingScopeAuthorizationReady
       authorizationNonce = missingScopeAuthorization.searchParams.get('nonce') ?? ''
       expect(await completeCallback(missingScopeAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
-      await expect(missingScopeLogin).rejects.toThrow(
-        'Sign in with ChatGPT did not grant chatgpt.tokens.use.direct; granted scopes: openid, profile, email')
+      const scopeFailure = await missingScopeLogin
+      expect(scopeFailure).toBeInstanceOf(AuthorizationError)
+      expect(scopeFailure).toMatchObject({ code: 'SIWC_SCOPE_NOT_GRANTED' })
+      expect((scopeFailure as Error).message)
+        .toBe('Sign in with ChatGPT did not grant chatgpt.tokens.use.direct; granted scopes: openid, profile, email')
       grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
       for (const invalidExpiration of [undefined, Math.floor(Date.now() / 1000) - 60]) {
         expiration = invalidExpiration
         const invalidAuthorizationReady = nextAuthorization()
         const invalidLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })
+          .then(() => undefined, (error: unknown) => error)
         const invalidAuthorization = await invalidAuthorizationReady
         authorizationNonce = invalidAuthorization.searchParams.get('nonce') ?? ''
         await completeCallback(invalidAuthorization)
         const code = invalidExpiration === undefined ? 'ERR_JWT_CLAIM_VALIDATION_FAILED' : 'ERR_JWT_EXPIRED'
-        await expect(invalidLogin).rejects.toThrow(`Sign in with ChatGPT ID token verification failed: ${code} (exp)`)
+        const identityFailure = await invalidLogin
+        expect(identityFailure).toBeInstanceOf(AuthorizationError)
+        expect(identityFailure).toMatchObject({ code: 'SIWC_ID_TOKEN_INVALID' })
+        expect((identityFailure as Error).message).toBe(`Sign in with ChatGPT ID token verification failed: ${code} (exp)`)
       }
     } finally {
       fetch.mockRestore()
