@@ -1,6 +1,7 @@
 /** Native navigation surface over the existing Session and layout owners. */
 import { useState } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type {
@@ -18,6 +19,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
 import type { SidebarPanelMetadata, SidebarRootInjected } from './client/contract/slots.ts'
 import { SidebarRoot } from './client/SidebarRoot.tsx'
+import css from './client/SidebarRoot.module.css'
 import { en as sidebarEn, zh as sidebarZh, type SidebarKey } from './client/locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -91,15 +93,15 @@ function SessionBrowser({ wide, useConversation, displayTitle, selectSession, re
           <label style={{ display: 'block' }}>{t('titleInput')}
             <input aria-label={t('titleInput')} value={titleDraft} onChange={(event) => { setTitleDraft(event.target.value) }} />
           </label>
-          <button type="submit" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</button>
-          <button type="button" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>{t('cancelTitle')}</button>
+          <Button type="submit" variant="primary" size="sm" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</Button>
+          <Button variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>{t('cancelTitle')}</Button>
         </form> : <div style={{ display: 'flex', gap: 4 }}>
-          {actions?.rename === true ? <button type="button" disabled={snapshot.state !== 'ready'} onClick={() => {
+          {actions?.rename === true ? <Button variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => {
             setTitleDraft(session.titleProjection.status === 'resolved' ? session.titleProjection.title : label)
             setEditingId(id)
-          }}>{t('renameTitle')}</button> : null}
-          {actions?.refresh === true ? <button type="button" disabled={snapshot.state !== 'ready'}
-            onClick={() => { void refreshTitle(id) }}>{t('refreshTitle')}</button> : null}
+          }}>{t('renameTitle')}</Button> : null}
+          {actions?.refresh === true ? <Button variant="ghost" size="sm" disabled={snapshot.state !== 'ready'}
+            onClick={() => { void refreshTitle(id) }}>{t('refreshTitle')}</Button> : null}
         </div>}
       </div>
     })}
@@ -119,20 +121,14 @@ function NativeSidebarActions({ wide, useLocale, useTheme, setLocale, toggleThem
   const target = language === 'zh' ? 'en' : 'zh'
   const themeLabel = t(appearance.active.colorScheme === 'dark' ? 'themeDark' : 'themeLight')
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-    <button type="button" aria-label={t('language')} title={t(language === 'zh' ? 'languageTargetEn' : 'languageTargetZh')}
-      onClick={() => { setLocale(target) }} style={actionStyle}>
+    <button type="button" className={css.panelRow} aria-label={t('language')} title={t(language === 'zh' ? 'languageTargetEn' : 'languageTargetZh')}
+      onClick={() => { setLocale(target) }}>
       {wide ? `${t('language')}: ${target === 'zh' ? '中文' : 'English'}` : target.toUpperCase()}
     </button>
-    <button type="button" aria-label={t('theme')} title={t('theme')} onClick={toggleTheme} style={actionStyle}>
+    <button type="button" className={css.panelRow} aria-label={t('theme')} title={t('theme')} onClick={toggleTheme}>
       {wide ? `${t('theme')}: ${themeLabel}` : appearance.active.colorScheme === 'dark' ? '☾' : '☼'}
     </button>
   </div>
-}
-
-const actionStyle = {
-  width: '100%', minHeight: 32, padding: '6px 10px', border: 0, borderRadius: 8,
-  color: 'var(--dsw-alias-label-secondary)', background: 'transparent', textAlign: 'left' as const,
-  cursor: 'pointer',
 }
 
 /** Native SidebarRoot and its optional Session browser are installed independently from AppFrame. */

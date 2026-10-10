@@ -27,6 +27,9 @@
       "path": "../native-session"
     },
     {
+      "path": "../ui-primitives"
+    },
+    {
       "path": "../ui-renderer"
     },
     {
