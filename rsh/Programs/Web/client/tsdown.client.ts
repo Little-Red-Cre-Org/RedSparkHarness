@@ -264,8 +264,31 @@ interface AssetEmitter {
   }): string
 }
 
-function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js'), pluginName = STATIC_LINKED_PLUGIN): UserConfig {
+/** Contract 4. Keep a relative `.css` import verbatim and emit the sheet beside the
+ * JavaScript, so the shell's CSS Modules pipeline sees a real stylesheet.
+ * @returns a rolldown plugin owning one build's emitted sheet names.
+ */
+export function cssAssetPlugin() {
   const emitted = new Set<string>()
+  return {
+    name: 'dsh-css-asset',
+    async resolveId(this: AssetEmitter, source: string, importer: string | undefined) {
+      if (!source.endsWith('.css') || importer === undefined) return null
+      const { file, fileName } = stylesheetAsset(source, importer)
+      if (!emitted.has(fileName)) {
+        emitted.add(fileName)
+        // originalFileName also puts the physical sheet in the watch graph.
+        this.emitFile({ type: 'asset', fileName, source: await readFile(file), originalFileName: file })
+      }
+      // Every emitted chunk sits at the lib/ root, so the src-relative name
+      // is what resolves from there. Rolldown keeps relative externals as
+      // written instead of re-normalizing them.
+      return { id: `./${fileName}`, external: true }
+    },
+  }
+}
+
+function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js'), pluginName = STATIC_LINKED_PLUGIN): UserConfig {
   return {
     name: id,
     entry: { [outputName]: entry },
@@ -314,24 +337,7 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
         const { code } = transform({ filename: fileId, code: source, minify: true })
         return `export default ${JSON.stringify(code.toString())};`
       },
-    }, {
-      // Contract 4. The import survives verbatim and the sheet lands beside the
-      // JavaScript, so the shell's CSS Modules pipeline sees a real stylesheet.
-      name: 'dsh-css-asset',
-      async resolveId(this: AssetEmitter, source: string, importer: string | undefined) {
-        if (!source.endsWith('.css') || importer === undefined) return null
-        const { file, fileName } = stylesheetAsset(source, importer)
-        if (!emitted.has(fileName)) {
-          emitted.add(fileName)
-          // originalFileName also puts the physical sheet in the watch graph.
-          this.emitFile({ type: 'asset', fileName, source: await readFile(file), originalFileName: file })
-        }
-        // Every emitted chunk sits at the lib/ root, so the src-relative name
-        // is what resolves from there. Rolldown keeps relative externals as
-        // written instead of re-normalizing them.
-        return { id: `./${fileName}`, external: true }
-      },
-    }],
+    }, cssAssetPlugin()],
   }
 }
 
