@@ -125,3 +125,34 @@ describe('native account usage', () => {
     }
   })
 })
+
+describe('NativeAccountsProvider DeepSeek delegation', () => {
+  it('appends the profile and delegates wallet reads and sign-out', async () => {
+    const deepseekKey = credentialKey('deepseek-account', 'default')
+    const deepseekAccount = {
+      key: deepseekKey,
+      profile: vi.fn(async () => ({ status: 'ready' as const, value: {
+        id: 'user-id', name: 'Ada', contact: 'ada@example.com', avatarUrl: 'https://img.example/avatar.png',
+      } })),
+      balance: vi.fn(async () => ({ status: 'ready' as const,
+        value: [{ currency: 'CNY' as const, balance: '12.30' }], bonusWallets: [] })),
+      signOut: vi.fn(async () => undefined),
+    }
+    const credentials = { readRecord: async () => undefined } as unknown as NativeCredentials
+    const adapter = { getProviderAuth: async () => undefined }
+    const accounts = new NativeAccountsProvider(credentials, adapter, new AbortController().signal, deepseekAccount)
+
+    await expect(accounts.list()).resolves.toMatchObject([
+      { provider: 'openai-codex' },
+      { key: deepseekKey, provider: 'deepseek-account', status: 'ready', identity: {
+        email: null, contact: 'ada@example.com', name: 'Ada', avatarUrl: 'https://img.example/avatar.png',
+      } },
+    ])
+    await expect(accounts.balance(deepseekKey)).resolves.toEqual({
+      status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }], bonusWallets: [],
+    })
+    await accounts.signOut(deepseekKey)
+    expect(deepseekAccount.balance).toHaveBeenCalledOnce()
+    expect(deepseekAccount.signOut).toHaveBeenCalledOnce()
+  })
+})

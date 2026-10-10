@@ -36,6 +36,7 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
+    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
@@ -57,6 +58,7 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
+    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
@@ -83,7 +85,8 @@
         "attachments",
         "fs",
         "settings",
-        "authorization"
+        "authorization",
+        "deepseekAccount"
       ],
       "provides": [
         "model",
@@ -97,6 +100,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-authorization": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-deepseek-account": {
       "optional": true
     },
     "@deepseek-ai/dsh-compat-settings-definition": {

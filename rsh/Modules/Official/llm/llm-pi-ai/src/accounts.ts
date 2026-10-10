@@ -1,7 +1,8 @@
-/** Native account and usage operations for the OpenAI Codex subscription route. */
+/** Native account and usage operations for supported provider accounts. */
 
 import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialKey, NativeCredentials, CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
+import type { DeepSeekAccount } from '@deepseek-ai/dsh-deepseek-account/native'
 import type { PiAiAdapter } from './adapter.ts'
 import { isSiwcCredential } from './siwc.ts'
 
@@ -22,9 +23,9 @@ export type AccountKey = CredentialKey
 /** Safe identity and plan summary for one account. */
 export type AccountSummary = {
   key: AccountKey
-  provider: 'openai-codex'
+  provider: 'openai-codex' | 'deepseek-account'
   status: 'signed-out' | 'ready' | 'unavailable'
-  identity: { email: string | null; name: string | null; avatarUrl: null }
+  identity: { email: string | null; contact: string | null; name: string | null; avatarUrl: string | null }
   plan: string | null
 }
 
@@ -40,13 +41,15 @@ export type AccountUsage =
   | { status: 'signed-out' }
   | { status: 'failed'; reason: string }
 
-/** The DeepSeek account endpoint is not available in this composition. */
-export type AccountBalance = { status: 'unsupported' }
+/** Wallet balances, or the account operation's status. */
+export type AccountBalance =
+  | { status: 'ready'; wallets: readonly { currency: 'CNY' | 'USD'; balance: string }[]; bonusWallets: readonly { currency: 'CNY' | 'USD'; balance: string }[] }
+  | { status: 'signed-out' | 'failed' | 'unsupported' }
 
 /** Native account operations for the installed subscription provider. */
 export interface NativeAccounts {
   /** @param signal - caller cancellation.
-   * @returns the single OpenAI Codex account and its safe credential status.
+   * @returns OpenAI Codex and any installed DeepSeek account with safe identity data.
    */
   list(signal?: AbortSignal): Promise<AccountSummary[]>
   /** @param key - account credential record address.
@@ -56,17 +59,18 @@ export interface NativeAccounts {
   usage(key: AccountKey, signal?: AbortSignal): Promise<AccountUsage>
   /** @param key - account credential record address.
    * @param signal - caller cancellation.
-   * @returns the unsupported status because no DeepSeek account endpoint is installed.
+   * @returns DeepSeek wallets for its account key, or unsupported when that provider is absent.
    */
   balance(key: AccountKey, signal?: AbortSignal): Promise<AccountBalance>
   /** @param key - account credential record address to remove.
    * @param signal - caller cancellation while the record deletion is queued.
-   * @returns after the record is removed; the SIWC registration record is separate.
+   * @returns after the record is removed; DeepSeek Platform logout runs in the background.
    */
   signOut(key: AccountKey, signal?: AbortSignal): Promise<void>
 }
 
 const CODEX_KEY = credentialKey('llm-pi-ai', 'openai-codex')
+const DEEPSEEK_ACCOUNT_KEY = credentialKey('deepseek-account', 'default')
 const CODEX_PROVIDER = 'openai-codex'
 const ACCOUNT_ID_CLAIM = 'https://api.openai.com/auth'
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -169,11 +173,13 @@ export class NativeAccountsProvider implements NativeAccounts {
    * @param credentials - records owned by this adapter family.
    * @param adapter - pi-ai auth resolver, including its refresh handling.
    * @param lifetime - cancellation for the Host installation.
+   * @param deepseekAccount - optional Platform profile and balance provider.
    */
   constructor(
     private readonly credentials: NativeCredentials,
     private readonly adapter: Pick<PiAiAdapter, 'getProviderAuth'>,
     private readonly lifetime: AbortSignal,
+    private readonly deepseekAccount?: DeepSeekAccount,
   ) {}
 
   /** @param signal - caller cancellation.
@@ -186,15 +192,35 @@ export class NativeAccountsProvider implements NativeAccounts {
     catch (error: unknown) { throw cancelled(error) }
     if (signal?.aborted) throw cancelled(signal.reason)
     if (record === undefined) {
-      return [{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'signed-out',
-        identity: { email: null, name: null, avatarUrl: null }, plan: null }]
+      return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'signed-out',
+        identity: { email: null, contact: null, name: null, avatarUrl: null }, plan: null }], signal)
     }
     if (record.kind === 'grant' && isSiwcCredential(record.payload)) {
-      return [{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'ready',
-        identity: { email: record.payload.email ?? null, name: null, avatarUrl: null }, plan: null }]
+      return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'ready',
+        identity: { email: record.payload.email ?? null, contact: record.payload.email ?? null, name: null, avatarUrl: null },
+        plan: null }], signal)
     }
-    return [{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'unavailable',
-      identity: { email: null, name: null, avatarUrl: null }, plan: null }]
+    return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'unavailable',
+      identity: { email: null, contact: null, name: null, avatarUrl: null }, plan: null }], signal)
+  }
+
+  private async deepseekSummary(accounts: AccountSummary[], signal?: AbortSignal): Promise<AccountSummary[]> {
+    if (this.deepseekAccount === undefined) return accounts
+    if (signal?.aborted) throw cancelled(signal.reason)
+    const profile = await this.deepseekAccount.profile(signal)
+    if (signal?.aborted) throw cancelled(signal.reason)
+    if (profile === null) {
+      accounts.push({ key: this.deepseekAccount.key, provider: 'deepseek-account', status: 'signed-out',
+        identity: { email: null, contact: null, name: null, avatarUrl: null }, plan: null })
+    } else if (profile.status === 'ready') {
+      accounts.push({ key: this.deepseekAccount.key, provider: 'deepseek-account', status: 'ready',
+        identity: { email: null, contact: profile.value.contact, name: profile.value.name, avatarUrl: profile.value.avatarUrl },
+        plan: null })
+    } else {
+      accounts.push({ key: this.deepseekAccount.key, provider: 'deepseek-account', status: 'unavailable',
+        identity: { email: null, contact: null, name: null, avatarUrl: null }, plan: null })
+    }
+    return accounts
   }
 
   /** @param key - account credential record address.
@@ -232,10 +258,14 @@ export class NativeAccountsProvider implements NativeAccounts {
    * @param signal - caller cancellation.
    * @returns the unsupported status because no DeepSeek account endpoint is installed.
    */
-  balance(_key: AccountKey, signal?: AbortSignal): Promise<AccountBalance> {
-    return signal?.aborted
-      ? Promise.reject(cancelled(signal.reason))
-      : Promise.resolve({ status: 'unsupported' })
+  async balance(key: AccountKey, signal?: AbortSignal): Promise<AccountBalance> {
+    if (signal?.aborted) throw cancelled(signal.reason)
+    if (key !== DEEPSEEK_ACCOUNT_KEY || this.deepseekAccount === undefined) return { status: 'unsupported' }
+    const result = await this.deepseekAccount.balance(signal)
+    if (signal?.aborted) throw cancelled(signal.reason)
+    if (result === null) return { status: 'signed-out' }
+    if (result.status === 'failed') return { status: 'failed' }
+    return { status: 'ready', wallets: result.value, bonusWallets: result.bonusWallets }
   }
 
   /** @param key - account credential record address to remove.
@@ -243,6 +273,10 @@ export class NativeAccountsProvider implements NativeAccounts {
    * @returns after the record is removed; the SIWC registration record is separate.
    */
   async signOut(key: AccountKey, signal?: AbortSignal): Promise<void> {
+    if (key === DEEPSEEK_ACCOUNT_KEY && this.deepseekAccount !== undefined) {
+      await this.deepseekAccount.signOut(signal)
+      return
+    }
     try {
       await this.credentials.deleteRecord(key, { signal: operationSignal(this.lifetime, signal) })
     } catch (error: unknown) {
