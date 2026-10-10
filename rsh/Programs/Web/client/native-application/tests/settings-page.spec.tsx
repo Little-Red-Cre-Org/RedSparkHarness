@@ -129,12 +129,21 @@ it('does not reuse ready usage when account identity emails are null', async () 
   const accountsList = vi.fn(async () => [account])
   renderSettingsPage({ actions: accountPageActions(accountsUsage, accountsList), t: key => en[key], onBack: () => undefined })
 
-  const refreshButton = await screen.findByRole('button', { name: en.refreshAccount }) as HTMLButtonElement
-  await waitFor(() => { expect(refreshButton.disabled).toBe(false) })
-  fireEvent.click(refreshButton)
+  expect(await screen.findByText('Plan: Account A plan')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
 
   expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
   expect(screen.queryByText('Plan: Account A plan')).toBeNull()
+})
+
+it('refreshes model controls after signing out', async () => {
+  const onAuthorized = vi.fn()
+  renderSettingsPage({
+    actions: accountPageActions(vi.fn(async () => readyUsage)), t: key => en[key], onBack: () => undefined, onAuthorized })
+
+  fireEvent.click(await screen.findByRole('button', { name: en.signOut }))
+
+  await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
 })
 
 it('keeps the newest account list when older refreshes finish last', async () => {

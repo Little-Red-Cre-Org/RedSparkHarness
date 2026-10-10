@@ -394,7 +394,8 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   const signOutAccount = useCallback(async (key: string): Promise<void> => {
     await actions.accountsSignOut(key)
     await refresh(true)
-  }, [actions, refresh])
+    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
+  }, [actions, onAuthorized, refresh])
 
   useEffect(() => {
     const lifetime = new AbortController()

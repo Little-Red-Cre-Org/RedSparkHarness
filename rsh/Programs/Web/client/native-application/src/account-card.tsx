@@ -8,7 +8,7 @@ import css from './account-card.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type ReadyUsage = Extract<NativeAccountUsage, { status: 'ready' }>
-type CachedUsage = { accountKey: string; identityEmail: string; value: ReadyUsage }
+type CachedUsage = { accountKey: string; identityEmail: string | null; value: ReadyUsage }
 
 function windowLength(seconds: number | null, t: Translate): string | undefined {
   if (seconds === null) return undefined
@@ -78,11 +78,6 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
     void actions.accountsUsage(account.key, lifetime.signal).then((result) => {
       if (lifetime.signal.aborted) return
       if (result.status === 'ready') {
-        if (account.identity.email === null) {
-          setUsage(undefined)
-          setStatus('unavailable')
-          return
-        }
         setUsage({ accountKey: account.key, identityEmail: account.identity.email, value: result })
         setStatus('ready')
       } else if (result.status === 'signed-out') {
@@ -112,8 +107,8 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
     finally { setSigningOut(false) }
   }
 
-  const currentUsage = usage?.accountKey === account.key && account.identity.email !== null
-    && usage.identityEmail === account.identity.email ? usage.value : undefined
+  // The effect drops a null-email cache before each read, so it only shows that read's result.
+  const currentUsage = usage?.accountKey === account.key && usage.identityEmail === account.identity.email ? usage.value : undefined
   const currentStatus = currentUsage === undefined && status === 'stale' ? 'unavailable' : status
   const email = currentUsage?.email ?? account.identity.email
   const plan = currentUsage?.plan ?? account.plan
