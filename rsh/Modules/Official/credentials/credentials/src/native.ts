@@ -73,9 +73,16 @@ export interface NativeCredentials {
   /**
    * Remove one record under the Provider's write queue.
    * @param key - record address.
-   * @param options - `signal` is checked inside the queue before the removal commits.
+   * @param options - `signal` is checked inside the queue before the removal commits;
+   *   `when` decides against the record as it stands inside the queue, so a later write is never removed.
    */
-  deleteRecord(key: CredentialKey, options?: NativeCredentialWriteOptions): Promise<void>
+  deleteRecord(key: CredentialKey, options?: NativeCredentialDeleteOptions): Promise<void>
+}
+
+/** Cancellation and an optional in-queue condition for one record removal. */
+export interface NativeCredentialDeleteOptions extends NativeCredentialWriteOptions {
+  /** Remove only when this returns true for the current record. */
+  readonly when?: (current: CredentialRecord) => boolean
 }
 
 /** Cancellation for one queued record write. */
