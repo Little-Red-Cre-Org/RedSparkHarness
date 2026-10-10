@@ -34,7 +34,7 @@ const settingsDescription = (
 
 const chatGptAccount: NativeAccountSummary = {
   key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
-  identity: { email: 'account@example.com', name: null, avatarUrl: null }, plan: null,
+  identity: { email: 'account@example.com', contact: null, name: null, avatarUrl: null }, plan: null,
 }
 const readyUsage: Extract<NativeAccountUsage, { status: 'ready' }> = {
   status: 'ready', email: null, plan: 'Plus',
@@ -134,6 +134,17 @@ it('does not reuse ready usage when account identity emails are null', async () 
 
   expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
   expect(screen.queryByText('Plan: Account A plan')).toBeNull()
+})
+
+it('renders only the ChatGPT account card when DeepSeek accounts are listed', async () => {
+  const deepSeek: NativeAccountSummary = { ...chatGptAccount, key: 'deepseek-account/default', provider: 'deepseek-account' }
+  const accountsUsage = vi.fn(async () => readyUsage)
+  renderSettingsPage({
+    actions: accountPageActions(accountsUsage, vi.fn(async () => [deepSeek, chatGptAccount])), t: key => en[key], onBack: () => undefined })
+
+  expect(await screen.findByText('Plan: Plus')).toBeTruthy()
+  expect(screen.getAllByRole('heading', { name: en.chatGptAccount })).toHaveLength(1)
+  expect(accountsUsage).not.toHaveBeenCalledWith(deepSeek.key, expect.anything())
 })
 
 it('refreshes model controls after signing out', async () => {

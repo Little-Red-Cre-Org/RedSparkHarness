@@ -321,7 +321,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     setAccountsError(undefined)
     try {
       const summaries = await actions.accountsList(signal)
-      if (latest() && !signal?.aborted) setAccounts(summaries)
+      if (latest() && !signal?.aborted) setAccounts(summaries.filter(account => account.provider === 'openai-codex'))
     } catch (cause: unknown) {
       if (latest() && !signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
     } finally {
