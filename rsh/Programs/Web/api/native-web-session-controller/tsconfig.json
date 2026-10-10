@@ -18,6 +18,9 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
+      "path": "../../../../Modules/Official/llm/llm-pi-ai"
+    },
+    {
       "path": "../../client/connection/tsconfig.host.json"
     },
     {

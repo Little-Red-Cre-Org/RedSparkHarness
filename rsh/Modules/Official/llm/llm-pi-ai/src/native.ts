@@ -3,21 +3,25 @@ import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-authorization/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
 import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
-import { credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from './adapter.ts'
+import { NativeAccountsProvider } from './accounts.ts'
+export type { AccountBalance, AccountKey, AccountSummary, AccountUsage, NativeAccounts, Quota, QuotaWindow } from './accounts.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import { authContextFrom, credentialStoreFrom } from './auth-core.ts'
 import { createPiAiFlows } from './login-core.ts'
 
+const CODEX_ACCOUNT_KEY = credentialKey('llm-pi-ai', 'openai-codex')
+
 /** Publish the pi-ai adapter with the current native settings profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-llm-pi-ai', targets: ['host'],
-  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings', 'authorization'], provides: ['model', 'modelDirectory'],
+  requires: ['credentials', 'launchEnvironment'], optional: ['attachments', 'fs', 'settings', 'authorization'], provides: ['model', 'modelDirectory', 'accounts'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) {
       throw new Error('llm-pi-ai: native configuration must be an object with providers')
@@ -62,12 +66,16 @@ export const plugin: NativePlugin = {
         },
       })
       context.own(() => { adapter.dispose() })
+      context.provide('accounts', new NativeAccountsProvider(credentials, adapter, context.signal))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
       context.own(() => directory.dispose())
-      context.on('credentials/record-updated', (key) => {
+      context.on('credentials/record-updated', async (key) => {
         if (credentialKeyScope(key) === 'llm-pi-ai') adapter.invalidate()
+        if (key === CODEX_ACCOUNT_KEY) {
+          await context.events.parallel(context.scope, 'accounts/changed', key)
+        }
       })
       context.provide('modelDirectory', directory)
       context.provide('model', model)

@@ -57,6 +57,7 @@
         "settings",
         "credentials",
         "authorization",
+        "accounts",
         "sessionTitles",
         "commands"
       ],
@@ -83,6 +84,7 @@
     "@deepseek-ai/dsh-session-title": "workspace:^",
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-settings-definition": "workspace:^",
     "zod": "^4.4.3",
