@@ -54,8 +54,7 @@ The authorization flow owns a loopback callback and commits its validated grant 
 | [`src/native.ts`](src/native.ts) | Native service, record ownership, and browser authorization lifecycle |
 | [`src/protocol.ts`](src/protocol.ts) | Bounded Platform requests and fixed browser destinations |
 | [`src/details.ts`](src/details.ts) | Profile and wallet parsing |
-
-**Runtime invariant:** No `./invariant` companion is published. Grant matching and response parsing stay within the Provider's request path and expose no independently observed mutable relationship.
+| — | No runtime invariant companion is published; grant matching and response parsing stay within the Provider's request path and expose no independently observed mutable relationship. |
 
 </details>
 

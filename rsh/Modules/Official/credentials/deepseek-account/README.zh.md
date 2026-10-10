@@ -54,8 +54,7 @@ Provider 将 grant 保存在 `deepseek-account/default`，并将设备 id 保存
 | [`src/native.ts`](src/native.ts) | 原生服务、记录所有权和浏览器授权生命周期 |
 | [`src/protocol.ts`](src/protocol.ts) | 有界 Platform 请求和固定浏览器目标 |
 | [`src/details.ts`](src/details.ts) | 资料与钱包解析 |
-
-**运行时不变量：** 不发布 `./invariant` companion。grant 匹配与响应解析都在 Provider 请求流程中完成，不存在需要独立观察的可变关系。
+| — | 不发布运行时不变量 companion；grant 匹配与响应解析都在 Provider 请求流程中完成，不存在需要独立观察的可变关系。 |
 
 </details>
 
