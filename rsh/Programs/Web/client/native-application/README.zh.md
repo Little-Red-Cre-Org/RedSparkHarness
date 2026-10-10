@@ -32,7 +32,7 @@ kind: "package-reference"
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取选定 Host 发布的 schema 与经过校验的请求预算，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。凭据引用按 Host 公布的上限分批读取并聚合；超过 `maxSettingsOperations` 的修改会在发送前拒绝，以保持每次 revision 检查写入的原子性。可新增、删除或替换不含机密值的对象项；隐藏机密值下方的可见修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组按现有索引修改，不支持的数组结构修改会报错。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
-Accounts 区域在允许的授权流程旁显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits；用量刷新失败时会保留上次成功读取的值并提示可能过期。退出登录和授权完成后都会重新读取账户及授权流程。页面复用匹配的授权行，不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
+Accounts 区域在允许的授权流程旁显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits；只有账户 key 与非空邮箱仍匹配时，用量刷新失败才会保留上次成功读取的值并提示可能过期，否则页面会提示用量不可用。退出登录和授权完成后都会重新读取账户及授权流程。页面复用匹配的授权行，不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 

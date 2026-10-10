@@ -312,17 +312,20 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
+  const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
 
   const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
+    const request = ++accountRefreshes.current
+    const latest = () => request === accountRefreshes.current
     setAccountsError(undefined)
     try {
       const summaries = await actions.accountsList(signal)
-      if (!signal?.aborted) setAccounts(summaries)
+      if (latest() && !signal?.aborted) setAccounts(summaries)
     } catch (cause: unknown) {
-      if (!signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
+      if (latest() && !signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
     } finally {
-      if (!signal?.aborted) setAccountRefreshClick(count => count + 1)
+      if (latest() && !signal?.aborted) setAccountRefreshClick(count => count + 1)
     }
   }, [actions])
 

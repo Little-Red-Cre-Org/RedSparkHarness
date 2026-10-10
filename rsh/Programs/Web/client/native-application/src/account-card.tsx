@@ -8,7 +8,7 @@ import css from './account-card.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type ReadyUsage = Extract<NativeAccountUsage, { status: 'ready' }>
-type CachedUsage = { identityEmail: string | null; value: ReadyUsage }
+type CachedUsage = { accountKey: string; identityEmail: string; value: ReadyUsage }
 
 function windowLength(seconds: number | null, t: Translate): string | undefined {
   if (seconds === null) return undefined
@@ -72,12 +72,18 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
 
   useEffect(() => {
     const lifetime = new AbortController()
-    setUsage(current => current?.identityEmail === account.identity.email ? current : undefined)
+    setUsage(current => current?.accountKey === account.key && account.identity.email !== null
+      && current.identityEmail === account.identity.email ? current : undefined)
     setStatus(current => current === 'ready' || current === 'stale' ? current : 'loading')
     void actions.accountsUsage(account.key, lifetime.signal).then((result) => {
       if (lifetime.signal.aborted) return
       if (result.status === 'ready') {
-        setUsage({ identityEmail: account.identity.email, value: result })
+        if (account.identity.email === null) {
+          setUsage(undefined)
+          setStatus('unavailable')
+          return
+        }
+        setUsage({ accountKey: account.key, identityEmail: account.identity.email, value: result })
         setStatus('ready')
       } else if (result.status === 'signed-out') {
         setUsage(undefined)
@@ -106,7 +112,8 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
     finally { setSigningOut(false) }
   }
 
-  const currentUsage = usage?.identityEmail === account.identity.email ? usage.value : undefined
+  const currentUsage = usage?.accountKey === account.key && account.identity.email !== null
+    && usage.identityEmail === account.identity.email ? usage.value : undefined
   const currentStatus = currentUsage === undefined && status === 'stale' ? 'unavailable' : status
   const email = currentUsage?.email ?? account.identity.email
   const plan = currentUsage?.plan ?? account.plan

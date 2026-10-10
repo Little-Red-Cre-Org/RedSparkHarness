@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsDescriptor,
@@ -119,6 +119,52 @@ it('clears ready usage when the signed-in account changes', async () => {
   expect(screen.queryByText('a@example.com')).toBeNull()
   expect(screen.queryByText('Plan: Account A plan')).toBeNull()
   expect(screen.queryByText('Remaining 65%')).toBeNull()
+})
+
+it('does not reuse ready usage when account identity emails are null', async () => {
+  const account = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: null } }
+  const accountsUsage = vi.fn()
+    .mockResolvedValueOnce({ ...readyUsage, plan: 'Account A plan' })
+    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
+  const accountsList = vi.fn(async () => [account])
+  renderSettingsPage({ actions: accountPageActions(accountsUsage, accountsList), t: key => en[key], onBack: () => undefined })
+
+  const refreshButton = await screen.findByRole('button', { name: en.refreshAccount }) as HTMLButtonElement
+  await waitFor(() => { expect(refreshButton.disabled).toBe(false) })
+  fireEvent.click(refreshButton)
+
+  expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
+  expect(screen.queryByText('Plan: Account A plan')).toBeNull()
+})
+
+it('keeps the newest account list when older refreshes finish last', async () => {
+  const accountA = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'a@example.com' } }
+  const accountB = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'b@example.com' } }
+  let resolveOlder!: (accounts: readonly NativeAccountSummary[]) => void
+  let resolveNewer!: (accounts: readonly NativeAccountSummary[]) => void
+  const older = new Promise<readonly NativeAccountSummary[]>((resolve) => { resolveOlder = resolve })
+  const newer = new Promise<readonly NativeAccountSummary[]>((resolve) => { resolveNewer = resolve })
+  const accountsList = vi.fn()
+    .mockResolvedValueOnce([chatGptAccount])
+    .mockReturnValueOnce(older)
+    .mockReturnValueOnce(newer)
+  const actions = accountPageActions(vi.fn(async () => readyUsage), accountsList)
+  renderSettingsPage({ actions, t: key => en[key], onBack: () => undefined })
+
+  const refreshButton = await screen.findByRole('button', { name: en.refreshAccount }) as HTMLButtonElement
+  await waitFor(() => { expect(refreshButton.disabled).toBe(false) })
+  fireEvent.click(refreshButton)
+  fireEvent.click(refreshButton)
+  resolveNewer([accountB])
+  expect(await screen.findByText('b@example.com')).toBeTruthy()
+
+  await act(async () => {
+    resolveOlder([accountA])
+    await older
+  })
+
+  expect(screen.getByText('b@example.com')).toBeTruthy()
+  expect(screen.queryByText('a@example.com')).toBeNull()
 })
 
 it('writes changed user fields without replacing a parent that contains a hidden secret', () => {
