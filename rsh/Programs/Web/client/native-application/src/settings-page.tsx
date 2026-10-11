@@ -10,6 +10,7 @@ import { ModelsSettingsStyles } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConversationLocaleKey } from './locales.ts'
 import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
+import { AgentPresetsSection } from './agent-presets-section.tsx'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
@@ -20,7 +21,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
   | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
-  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents'>
+  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'agentPresetsList'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -528,6 +529,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
       {subscriptionContent}
     </ModelsSettingsPage>
   </div>
+  if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
   if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   return <div>
     <h2>{t('settingsGeneral')}</h2>

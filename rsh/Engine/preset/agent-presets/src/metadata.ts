@@ -46,6 +46,32 @@ function text(value: unknown): string | undefined {
 }
 
 /**
+ * Parse preset display metadata with the same permissive rules used by the legacy reader.
+ * @param raw - contents of a preset metadata file.
+ * @returns display text, or empty metadata for an invalid document.
+ */
+export function parsePresetMetadata(raw: string): PresetMetadata {
+  let parsed: unknown
+  try {
+    parsed = yaml.load(raw)
+  } catch {
+    return {}
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {}
+  const record = parsed as Record<string, unknown>
+  const name = text(record.name)
+  const description = text(record.description)
+  const order = typeof record.order === 'number' && Number.isFinite(record.order)
+    ? record.order
+    : undefined
+  return {
+    ...name === undefined ? {} : { name },
+    ...description === undefined ? {} : { description },
+    ...order === undefined ? {} : { order },
+  }
+}
+
+/**
  * Read one preset directory's display metadata.
  *
  * Absent, unparsable, and wrongly-shaped files are all the same answer —
@@ -62,26 +88,7 @@ export async function readPresetMetadata(directory: string): Promise<PresetMetad
     // including every one authored by duplicating another, carry none.
     return {}
   }
-  let parsed: unknown
-  try {
-    parsed = yaml.load(raw)
-  } catch {
-    // Malformed display text is not worth failing discovery over; the picker
-    // falls back to the id, and the composition still mounts.
-    return {}
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {}
-  const record = parsed as Record<string, unknown>
-  const name = text(record.name)
-  const description = text(record.description)
-  const order = typeof record.order === 'number' && Number.isFinite(record.order)
-    ? record.order
-    : undefined
-  return {
-    ...name === undefined ? {} : { name },
-    ...description === undefined ? {} : { description },
-    ...order === undefined ? {} : { order },
-  }
+  return parsePresetMetadata(raw)
 }
 
 /**
