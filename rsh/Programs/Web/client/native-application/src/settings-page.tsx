@@ -283,14 +283,14 @@ function pretty(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
 }
 
-/** Registered schema-backed Settings with revision-safe JSON edits and schema-discovered credential refs.
- * @param props - selected native client, localized copy, the route back to the Session page, and an optional authorized callback.
- * @returns the native Settings and write-only credential page.
+/** Registered schema-backed Settings, credentials, authorization and account content.
+ * @param props - selected section, native actions, localized copy and an optional authorized callback.
+ * @returns the content for the selected Settings navigation entry.
  */
-export function SettingsPage({ actions, t, onBack, onAuthorized }: {
+export function SettingsPage({ actions, t, section, onAuthorized }: {
   actions: NativeSettingsActions
   t: Translate
-  onBack: () => void
+  section: string
   onAuthorized?: () => void
 }) {
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
@@ -403,6 +403,17 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     return () => { lifetime.abort() }
   }, [refresh])
 
+  // Rows lose their local attempt on unmount; re-read the list when Models reappears so an in-flight login resumes.
+  const shownSection = useRef(section)
+  useEffect(() => {
+    if (shownSection.current === section) return
+    shownSection.current = section
+    if (section !== 'models') return
+    const lifetime = new AbortController()
+    actions.authorizationList(lifetime.signal).then((entries) => { setAuthorizationEntries(entries) }, () => {})
+    return () => { lifetime.abort() }
+  }, [actions, section])
+
   const save = async (row: NativeSettingsDescriptor): Promise<void> => {
     setSaving(row.namespace)
     setError(undefined)
@@ -455,69 +466,75 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     } finally { setSaving(undefined) }
   }
 
-  return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
-    <button type="button" onClick={onBack}>{t('backToSessions')}</button>
-    <h1>{t('settings')}</h1>
-    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
+  const refreshButton = <button type="button" disabled={loading}
+    onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
+
+  if (section !== 'general' && section !== 'models') return <p>{t('settingsComingSoon')}</p>
+  return <div>
+    <h2>{t(section === 'general' ? 'settingsGeneral' : 'settingsModels')}</h2>
+    {refreshButton}
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
-    {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
-    {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
     {notice === undefined ? null : <p role="status">{notice}</p>}
-    {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
-    {namespaces.map(row => <section key={row.namespace} aria-label={row.namespace}>
-      <h2>{row.namespace}</h2>
-      <p>{t(row.applies === 'live' ? 'appliesLive' : 'appliesRestart')} · {t('revision')}: {row.revision}</p>
-      <details><summary>{t('settingsSchema')}</summary>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(row.schema, null, 2)}</pre>
-      </details>
-      <label>{t('userOverrides')}
-        <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
-          value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
-          onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
-          style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
-      </label>
-      <button type="button" disabled={saving !== undefined || loading}
-        onClick={() => { void save(row) }}>{saving === row.namespace ? t('savingSettings') : t('saveSettings')}</button>
-      {row.credentialRefs.length === 0 ? null : <div>
-        <h3>{t('credentials')}</h3>
-        {row.credentialRefs.map((ref) => {
-          const info = credentials[ref]
-          return <form key={ref} aria-label={`${t('credential')} ${ref}`} onSubmit={(event) => {
-            event.preventDefault()
-            const value = credentialDrafts[ref] ?? ''
-            if (value.length > 0) void writeCredential(ref, value)
-          }}>
-            <p><code>{ref}</code> · {info?.configured === true ? t('configured') : t('notConfigured')}
-              {info?.source === undefined ? null : ` · ${info.source}`}</p>
-            <label>{t('credentialValue')}
-              <input type="password" autoComplete="new-password" aria-label={`${t('credentialValue')} ${ref}`}
-                value={credentialDrafts[ref] ?? ''} disabled={saving !== undefined || info?.writable === false}
-                onChange={(event) => { setCredentialDrafts(current => ({ ...current, [ref]: event.target.value })) }} />
-            </label>
-            <button type="submit" disabled={saving !== undefined || info?.writable === false || (credentialDrafts[ref] ?? '').length === 0}>
-              {saving === ref ? t('savingCredential') : t('saveCredential')}
-            </button>
-            {info?.configured === true && info.writable ? <button type="button" disabled={saving !== undefined}
-              onClick={() => { void removeCredential(ref) }}>{t('removeCredential')}</button> : null}
-          </form>
-        })}
-      </div>}
-    </section>)}
-    {accounts.length === 0 && authorizationEntries.length === 0 && authorizationError === undefined && accountsError === undefined ? null : <section aria-label={t('accounts')}>
-      <h2>{t('accounts')}</h2>
+    {section === 'general' ? <>
+      {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
+      {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
+      {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
+      {namespaces.map(row => <section key={row.namespace} aria-label={row.namespace}>
+        <h3>{row.namespace}</h3>
+        <p>{t(row.applies === 'live' ? 'appliesLive' : 'appliesRestart')} · {t('revision')}: {row.revision}</p>
+        <details><summary>{t('settingsSchema')}</summary>
+          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(row.schema, null, 2)}</pre>
+        </details>
+        <label>{t('userOverrides')}
+          <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
+            value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
+            onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
+            style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
+        </label>
+        <button type="button" disabled={saving !== undefined || loading}
+          onClick={() => { void save(row) }}>{saving === row.namespace ? t('savingSettings') : t('saveSettings')}</button>
+        {row.credentialRefs.length === 0 ? null : <div>
+          <h4>{t('credentials')}</h4>
+          {row.credentialRefs.map((ref) => {
+            const info = credentials[ref]
+            return <form key={ref} aria-label={`${t('credential')} ${ref}`} onSubmit={(event) => {
+              event.preventDefault()
+              const value = credentialDrafts[ref] ?? ''
+              if (value.length > 0) void writeCredential(ref, value)
+            }}>
+              <p><code>{ref}</code> · {info?.configured === true ? t('configured') : t('notConfigured')}
+                {info?.source === undefined ? null : ` · ${info.source}`}</p>
+              <label>{t('credentialValue')}
+                <input type="password" autoComplete="new-password" aria-label={`${t('credentialValue')} ${ref}`}
+                  value={credentialDrafts[ref] ?? ''} disabled={saving !== undefined || info?.writable === false}
+                  onChange={(event) => { setCredentialDrafts(current => ({ ...current, [ref]: event.target.value })) }} />
+              </label>
+              <button type="submit" disabled={saving !== undefined || info?.writable === false || (credentialDrafts[ref] ?? '').length === 0}>
+                {saving === ref ? t('savingCredential') : t('saveCredential')}
+              </button>
+              {info?.configured === true && info.writable ? <button type="button" disabled={saving !== undefined}
+                onClick={() => { void removeCredential(ref) }}>{t('removeCredential')}</button> : null}
+            </form>
+          })}
+        </div>}
+      </section>)}
+    </> : <>
       {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
       {accountsError === undefined ? null : <p role="alert">{t('accountListError')}: {accountsError}</p>}
-      {accounts.map((account) => {
-        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
-        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
-          signOutAvailable={entry?.configured ?? account.status === 'ready'}
-          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
-            onSettled={authorizationSettled} refreshClick={refreshClick} />} />
-      })}
-      {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
-        key={entry.key} entry={entry} actions={actions} t={t}
-        onSettled={authorizationSettled} refreshClick={refreshClick} />)}
-    </section>}
-  </main>
+      {accounts.length === 0 && authorizationEntries.length === 0 && authorizationError === undefined && accountsError === undefined ? null : <section aria-label={t('accounts')}>
+        <h3>{t('accounts')}</h3>
+        {accounts.map((account) => {
+          const entry = authorizationEntries.find(candidate => candidate.key === account.key)
+          return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+            onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
+            signOutAvailable={entry?.configured ?? account.status === 'ready'}
+            authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
+              onSettled={authorizationSettled} refreshClick={refreshClick} />} />
+        })}
+        {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
+          key={entry.key} entry={entry} actions={actions} t={t}
+          onSettled={authorizationSettled} refreshClick={refreshClick} />)}
+      </section>}
+    </>}
+  </div>
 }

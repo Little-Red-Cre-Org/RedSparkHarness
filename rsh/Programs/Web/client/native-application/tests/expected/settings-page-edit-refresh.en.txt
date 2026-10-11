@@ -1,10 +1,9 @@
 {
   "headings": [
-    "Settings",
+    "General",
     "llm-pi-ai"
   ],
   "buttons": [
-    "Back to Sessions",
     "Refresh settings",
     "Save settings"
   ],
