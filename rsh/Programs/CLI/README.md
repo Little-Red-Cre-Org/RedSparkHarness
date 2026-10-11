@@ -56,7 +56,7 @@ The CLI's native launcher depends on the native runtime directly. Cordis, profil
 
 Explicit shipped native profiles include the native Session execution Provider, which supplies the selected execution registry and active Session owners. The CLI resolver declares this Provider as a direct dependency; legacy profile selection remains unchanged.
 
-Host profiles capture inherited, invoking-directory and Harness-home environment layers before plugin imports. The same checked loader serves compatibility boot; every root scope owns the real launch snapshot Provider. Client-only profiles do not install it.
+Host profiles capture inherited, invoking-directory and Harness-home environment layers before plugin imports. The same checked loader serves compatibility boot; every root scope owns the real launch snapshot Provider. Each Host root scope also gets a `pluginInventory` Provider that lists the running Host's installation states; a reload keeps reading the retained Host. Client-only profiles install neither.
 
 The tree composes over an empty root:
 - each bundle's patch in `dsh.profile.bundles` order
