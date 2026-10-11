@@ -50,6 +50,8 @@ export class NativeWorkspaceRoutes {
   private readonly pending = new Map<WorkspaceId, Set<Promise<Readonly<NativeRootRoute>>>>()
   private readonly pendingPaths = new Map<string, Promise<Readonly<NativeRootRoute>>>()
   private readonly pendingCanonicalPaths = new Map<string, Promise<Readonly<NativeRootRoute>>>()
+  private readonly releasing = new Set<NativeRootRouteId>()
+  private readonly releases = new Set<Promise<void>>()
   private readonly controller = new AbortController()
   private closing: Promise<void> | undefined
 
@@ -60,7 +62,7 @@ export class NativeWorkspaceRoutes {
    * @param fs - selected filesystem used to verify that its execution path matches the registered directory.
    * @param policy - existing scoped confinement configuration; selection never changes it.
    * @param lifetime - Program shutdown cancellation.
-   * @param busy - exact Program Agent, writer and admission ownership test before route release.
+   * @param busy - whether Agent, writer or admission ownership prevents route release.
    */
   constructor(private readonly base: Readonly<NativeRootRoute>,
     private readonly configuration: NativeWorkspaceRouteConfiguration | undefined,
@@ -76,6 +78,7 @@ export class NativeWorkspaceRoutes {
    */
   resolve(id: NativeRootRouteId): Readonly<NativeRootRoute> {
     this.assertOpen()
+    if (this.releasing.has(id)) throw new Error('Workspace route is busy')
     const route = id === this.base.id ? this.base : this.selected.get(id)
     if (route === undefined) throw new Error('native-headless: unknown root route')
     return route
@@ -96,6 +99,8 @@ export class NativeWorkspaceRoutes {
     this.assertOpen()
     if (baseRoute !== this.base.id) throw new Error('workspace selection requires the configured base route')
     if (this.configuration === undefined || this.registry === undefined) throw new Error('Workspace route selection is disabled')
+    const routeId = brandString<NativeRootRouteId>(JSON.stringify([this.base.id, workspaceId]))
+    if (this.releasing.has(routeId)) throw new Error('Workspace route is busy')
     const signal = AbortSignal.any([caller, this.lifetime, this.controller.signal])
     signal.throwIfAborted()
     const operation = this.admit(workspaceId, this.configuration, this.registry, signal)
@@ -206,15 +211,29 @@ export class NativeWorkspaceRoutes {
     signal.throwIfAborted()
   }
 
-  /** Withdraw an idle dynamic route; active or pending exact ownership is refused.
+  /** Retire quiescent route-owned Sessions before withdrawing a dynamic route.
+   * Resolution is blocked during cleanup; failure keeps the route selected.
    * @param id - selected dynamic route identity; the base route cannot be released.
+   * @param retire - cleanup for idle Sessions that have no live Program ownership.
    */
-  release(id: NativeRootRouteId): void {
+  release(id: NativeRootRouteId, retire: (route: Readonly<NativeRootRoute>) => Promise<void>): Promise<void> {
     this.assertOpen()
     const route = this.selected.get(id)
     if (route === undefined || route.workspaceId === undefined) throw new Error('unknown dynamic Workspace route')
-    if (this.busy(id) || this.pending.has(route.workspaceId)) throw new Error('Workspace route is busy')
-    this.selected.delete(id)
+    const workspaceId = route.workspaceId
+    if (this.releasing.has(id) || this.busy(id) || this.pending.has(workspaceId)) throw new Error('Workspace route is busy')
+    this.releasing.add(id)
+    const release = (async () => {
+      try {
+        await retire(route)
+        if (this.busy(id) || this.pending.has(workspaceId)) throw new Error('Workspace route is busy')
+        this.selected.delete(id)
+      } finally { this.releasing.delete(id) }
+    })()
+    this.releases.add(release)
+    const settled = (): void => { this.releases.delete(release) }
+    void release.then(settled, settled)
+    return release
   }
 
   /** Close admission, cancel and drain actual directory selections, then withdraw all advertisements.
@@ -225,6 +244,7 @@ export class NativeWorkspaceRoutes {
     return this.closing ??= Promise.allSettled([
       ...[...this.pending.values()].flatMap(tasks => [...tasks]),
       ...this.pendingPaths.values(),
+      ...this.releases,
     ])
       .then(() => { this.selected.clear() })
   }

@@ -108,9 +108,10 @@ export interface NativeRootExecutionOperations {
   createWorkspaceRoute?(request: { readonly baseRoute: NativeRootRouteId; readonly path: string },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
-   * Withdraw a dynamic route after its exact Agent, writer and pending admissions have released.
+   * Retire idle unowned root Agents before withdrawing the dynamic route. Active ownership and pending admissions block release;
+   * durable Session data remains. Cleanup failure rejects and keeps the route selected.
    * @param id - branded dynamic route identity; the configured base route cannot be withdrawn.
-   * @param signal - caller cancellation checked before withdrawal.
+   * @param signal - caller cancellation before cleanup is accepted; accepted cleanup drains.
    */
   releaseWorkspace(id: NativeRootRouteId, signal: AbortSignal): Promise<void>
   /**
