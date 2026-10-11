@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The `native-web` profile uses this Client page to create or resume Sessions, inspect durable history and send messages through the Host. Legacy and Native views share Cordis-free transcript, composer, Markdown, welcome and mascot presentation from `ui-primitives`; the Native page keeps its own Session data layer and renders root Tool results and failures from Session records. Nested dispatch remains available in raw history. Model and reasoning choices come from the Host model directory, while stale selections and transport or history failures remain visible. Published declarations require the listed package dependencies, and the profile must select the runtime contributions, renderer and `client-native-session` Host operations.
+The `native-web` profile uses this Client page to create or resume Sessions, inspect durable history and send messages through the Host. Legacy and Native views share Cordis-free transcript, composer, Markdown, welcome and mascot presentation from `ui-primitives`; the Native page keeps its own Session data layer and renders root Tool results and failures from Session records. Nested dispatch remains available in raw history. Model and reasoning choices come from the Host model directory; stale selections and transport/history failures remain visible. Published declarations require the listed package dependencies, and the profile must select the runtime contributions, renderer and `client-native-session` Host operations.
 
 ## Table of Contents
 

@@ -1,5 +1,5 @@
 ---
-description: "Shared React UI atoms for the dsh web client: controls, chat transcript and composer presentation, icons, Markdown and math rendering, and agent output cards (zero Cordis)."
+description: "Shared Cordis-free React components for the dsh web client: controls, workspace rows, directory browsing, chat transcript and composer presentation, icons, Markdown, and agent-output cards."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build web-client controls, chat presentation, and agent output with shared React UI. It includes standard controls, chat transcript and composer layouts, the mascot presentation, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
+Use `dsh-client-ui-primitives` to build web-client controls, sidebar rows, directory pickers, chat presentation, and agent output with shared React UI. It includes standard controls, a callback-driven directory browser, chat transcript and composer layouts, the mascot, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. Renderers drop raw HTML, restrict links, and parse ANSI escapes in untrusted model output. Nothing imports Cordis; callers supply localized labels and data callbacks, and colors use `--dsw-*` design tokens.
 
 ## Table of Contents
 
@@ -45,6 +45,7 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `StateDot` | Status mark: `done`, `warning`, `ongoing`, `error`, or `idle`. `aria-hidden`, so the render site owns the name. |
 | `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
+| `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
 | `ChatTranscript`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatContextMessage`, `ChatTurnActivity` | Shared transcript rhythm, user bubble, assistant Markdown frame, collapsed context row, and running-turn label for legacy and Native chat views. |
 | `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
@@ -85,7 +86,7 @@ The Models settings editors receive localized copy, schema operations and Host c
 
 ### Localizing copy
 
-The atoms cannot read the application locale, so every piece of user-facing copy arrives through required label props. `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's label interface.
+The components cannot read the application locale, so every piece of user-facing copy arrives through required label props or a translation callback. `DirectoryBrowser` takes its translation callback with the directory-browser key set; `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's copy interface.
 
 -----
 
@@ -95,7 +96,7 @@ The atoms cannot read the application locale, so every piece of user-facing copy
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The package enforces one separation: presentational React atoms with zero Cordis and zero slot knowledge, styled only through `--dsw-*` tokens, while every feature-specific concern (locale, session data, composition) stays in the composing plugin.
+The package owns Cordis-free React components styled through `--dsw-*` tokens. Feature owners provide directory listings, mutations, localized copy, and session data; the directory browser owns only its navigation and display state.
 
 ### Source map
 
@@ -107,6 +108,7 @@ The package enforces one separation: presentational React atoms with zero Cordis
 | [`src/ReadBlock.tsx`](src/ReadBlock.tsx) / [`src/DiffBlock.tsx`](src/DiffBlock.tsx) | Read and diff cards |
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | Search and web-retrieval cards |
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
+| [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
 | [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
 | [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
