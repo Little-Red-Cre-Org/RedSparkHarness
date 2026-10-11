@@ -68,8 +68,25 @@ export interface NativeSettingsDescriptor {
   readonly revision: number
 }
 
+/** One Host installation and its lifecycle state; configuration and failure messages stay on the Host. */
+export interface NativePluginInventoryEntry {
+  readonly id: string
+  readonly name: string
+  readonly scope: string
+  readonly state: 'planned' | 'activating' | 'ready' | 'draining' | 'failed' | 'disposed'
+  /** Which lifecycle step failed, when the installation failed. */
+  readonly failure?: 'activation' | 'cleanup'
+}
+
+/** Installations of the running Host in dependency order. */
+export interface NativePluginInventory {
+  readonly entries: readonly NativePluginInventoryEntry[]
+}
+
 /** Settings views and the Host-validated request budgets used by the Client. */
 export interface NativeSettingsDescription {
+  /** Whether the Host has a local settings document `settingsOpenDocument` can open. */
+  readonly hasDocument: boolean
   /** Registered, redacted Settings namespaces. */
   readonly namespaces: readonly NativeSettingsDescriptor[]
   /** Per-request limits enforced by the selected Host. */
@@ -224,6 +241,24 @@ export interface NativeSessionClient {
    * @returns the registered views and validated limits for bounded reads and atomic writes.
    */
   settingsDescribe(signal?: AbortSignal): Promise<NativeSettingsDescription>
+  /**
+   * Read the running Host's plugin installations for the Plugins page.
+   * @param signal - caller cancellation.
+   * @returns installation names, scopes and lifecycle states.
+   */
+  pluginInventoryList(signal?: AbortSignal): Promise<NativePluginInventory>
+  /**
+   * Read every routable model for model pickers outside a Session.
+   * @param signal - caller cancellation.
+   * @returns the Host catalog, or null when no model directory is installed.
+   */
+  modelCatalog(signal?: AbortSignal): Promise<NativeModelControls['catalog']>
+  /**
+   * Open the Host's local settings document in its text editor.
+   * @param signal - caller cancellation.
+   * @returns confirmation once the editor command was accepted.
+   */
+  settingsOpenDocument(signal?: AbortSignal): Promise<{ readonly opened: true }>
   /** Apply Settings path edits against the revision the page displayed.
    * @param namespace - registered Settings namespace.
    * @param ops - path-addressed user-layer edits.
@@ -468,12 +503,12 @@ function settingsDescriptor(value: unknown): NativeSettingsDescriptor {
 function settingsDescription(value: unknown): NativeSettingsDescription {
   const data = fields(value)
   const limits = fields(data.limits)
-  if (!Array.isArray(data.namespaces)
+  if (!Array.isArray(data.namespaces) || typeof data.hasDocument !== 'boolean'
     || typeof limits.maxCredentialRefsPerRead !== 'number' || !Number.isSafeInteger(limits.maxCredentialRefsPerRead) || limits.maxCredentialRefsPerRead < 1
     || typeof limits.maxSettingsOperations !== 'number' || !Number.isSafeInteger(limits.maxSettingsOperations) || limits.maxSettingsOperations < 1) {
     throw new TypeError('invalid native Settings description')
   }
-  return { namespaces: data.namespaces.map(settingsDescriptor), limits: {
+  return { hasDocument: data.hasDocument, namespaces: data.namespaces.map(settingsDescriptor), limits: {
     maxCredentialRefsPerRead: limits.maxCredentialRefsPerRead,
     maxSettingsOperations: limits.maxSettingsOperations,
   } }
@@ -563,6 +598,12 @@ function header(value: unknown): SessionHeader {
   return data as unknown as SessionHeader
 }
 
+const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
+  id: z.string(), name: z.string(), scope: z.string(),
+  state: z.enum(['planned', 'activating', 'ready', 'draining', 'failed', 'disposed']),
+  failure: z.enum(['activation', 'cleanup']).optional(),
+})) }) as unknown as z.ZodType<NativePluginInventory>
+
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
@@ -580,6 +621,11 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return settingsDescription(value)
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
+  if (endpoint === 'plugins/inventory') return pluginInventorySchema.parse(value)
+  if (endpoint === 'settings/open-document') {
+    if (fields(value).opened !== true) throw new TypeError('invalid native settings document open reply')
+    return { opened: true }
+  }
   if (endpoint === 'credentials/describe') {
     const data = fields(value)
     return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
@@ -822,6 +868,14 @@ export function createNativeSessionClient(
   }
   return {
     settingsDescribe: signal => call('settings/describe', {}, signal),
+    async settingsOpenDocument(signal) {
+      await call('settings/open-document', {}, signal)
+      return { opened: true }
+    },
+    pluginInventoryList: signal => call('plugins/inventory', {}, signal),
+    async modelCatalog(signal) {
+      return (await call<NativeModelControls>('session/model-controls', {}, signal)).catalog
+    },
     settingsMutate: (namespace, ops, expectedRevision, signal) =>
       call('settings/mutate', { ns: namespace, ops, expectedRevision }, signal),
     modelsListProviders: signal => call('models/providers', {}, signal),
