@@ -390,8 +390,12 @@ export class PiAiAdapter extends LlmAdapter {
     const closing = [...this.nativeTransports].map(transport => transport.close())
     this.lifetime.abort()
     this.disposeResult = Promise.allSettled(closing).then((results) => {
-      const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : [])
-      if (failures.length > 0) throw new AggregateError(failures, 'llm-pi-ai failed to close Native Responses transports')
+      for (const result of results) {
+        if (result.status !== 'rejected') continue
+        const failure: unknown = result.reason
+        if (failure instanceof Error) throw failure
+        throw new Error('llm-pi-ai failed to close a Native Responses transport')
+      }
     })
     return this.disposeResult
   }
@@ -592,8 +596,8 @@ export class PiAiAdapter extends LlmAdapter {
             }
             return { accessToken: auth.auth.apiKey, identity: codexIdentityOf(credential) }
           },
-          onTransport: transport => { this.nativeTransports.add(transport) },
-          onClose: transport => { this.nativeTransports.delete(transport) },
+          onTransport: (transport) => { this.nativeTransports.add(transport) },
+          onClose: (transport) => { this.nativeTransports.delete(transport) },
         })
         : undefined
       return {

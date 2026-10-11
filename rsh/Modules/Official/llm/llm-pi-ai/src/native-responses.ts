@@ -88,8 +88,11 @@ function awaitWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
     const onAbort = (): void => { cleanup(); reject(aborted(signal)) }
     signal.addEventListener('abort', onAbort, { once: true })
     void promise.then(
-      value => { cleanup(); resolve(value) },
-      error => { cleanup(); reject(error) },
+      (value) => { cleanup(); resolve(value) },
+      (error: unknown) => {
+        cleanup()
+        reject(error instanceof Error ? error : new Error('OpenAI Codex Native Responses auth resolution failed'))
+      },
     )
   })
 }
@@ -187,7 +190,6 @@ function createTransport(
         }
         const projected = { ...body, store: false }
         const serialized = JSON.stringify(projected)
-        if (serialized === undefined) throw new LlmError('OpenAI Codex Responses request is not JSON serializable', 'INVALID_REQUEST')
         projectedJson = serialized
         return projected
       })
@@ -247,11 +249,15 @@ function createTransport(
       const reason = new LlmError('OpenAI Codex Native Responses transport is closed', 'ABORTED')
       closeResult = (async () => {
         operation.abort(reason)
-        let closeError: unknown
+        let closeError: Error | undefined
         try {
           await responseBody?.cancel(reason)
         } catch (error: unknown) {
-          if (error !== reason) closeError = error
+          if (error !== reason) {
+            closeError = error instanceof Error
+              ? error
+              : new Error('OpenAI Codex Native Responses response-body cancellation failed')
+          }
         }
         const remaining = [...active, ...credentialWork]
         await Promise.allSettled(remaining)

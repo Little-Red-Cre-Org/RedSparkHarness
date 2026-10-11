@@ -2,9 +2,9 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Credential } from '@earendil-works/pi-ai'
+import { attributionHeaders } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from '../src/adapter.ts'
 import { resolveProfiles } from '../src/config.ts'
-import type { PiAiProviderProfile } from '../src/config.ts'
 import { memoryAuth } from './auth-double.ts'
 
 const MODEL = 'gpt-6.1-sol'
@@ -50,12 +50,15 @@ function siwcCredential(accountId: string, overrides: Partial<Credential> = {}):
     extAgentHostId: 'fixture-host',
     scopes: SCOPES,
     ...overrides,
-  } as Credential
+  }
 }
 
 async function localServer(): Promise<LocalServer> {
   const requests: RecordedRequest[] = []
-  let local!: LocalServer
+  const handlers: Pick<LocalServer, 'responses' | 'token'> = {
+    responses: (_request, response) => response.writeHead(200).end(),
+    token: (_request, response) => response.writeHead(500).end(),
+  }
   let closeResult: Promise<void> | undefined
   const server = createServer((incoming, outgoing) => {
     const chunks: Buffer[] = []
@@ -72,9 +75,9 @@ async function localServer(): Promise<LocalServer> {
         outgoing.writeHead(200, { 'content-type': 'application/json' })
           .end(JSON.stringify({ models: [{ slug: MODEL, display_name: 'GPT 6.1 Sol', visibility: 'list' }] }))
       } else if (request.path === '/token') {
-        void local.token(request, outgoing)
+        void handlers.token(request, outgoing)
       } else if (request.path === '/responses') {
-        void local.responses(request, outgoing)
+        void handlers.responses(request, outgoing)
       } else {
         outgoing.writeHead(404).end()
       }
@@ -86,16 +89,18 @@ async function localServer(): Promise<LocalServer> {
   })
   const address = server.address()
   if (address === null || typeof address === 'string') throw new Error('local HTTP server has no TCP address')
-  local = {
+  const local: LocalServer = {
     url: `http://127.0.0.1:${address.port}`,
     requests,
-    responses: (_request, response) => response.writeHead(200).end(),
-    token: (_request, response) => response.writeHead(500).end(),
+    get responses() { return handlers.responses },
+    set responses(handler) { handlers.responses = handler },
+    get token() { return handlers.token },
+    set token(handler) { handlers.token = handler },
     close: () => {
       if (closeResult !== undefined) return closeResult
       server.closeAllConnections()
       closeResult = new Promise<void>((resolve, reject) => {
-        server.close(error => { if (error === undefined) resolve(); else reject(error) })
+        server.close((error) => { if (error === undefined) resolve(); else reject(error) })
       })
       return closeResult
     },
@@ -183,6 +188,7 @@ describe('Native Codex Responses transport', () => {
       authorization: `Bearer ${accessToken('account-two')}`,
       'chatgpt-account-id': 'account-two',
       originator: 'pi',
+      'user-agent': attributionHeaders()['user-agent'],
       'x-generation': 'two',
     })
     expect(server.requests.find(request => request.path === '/responses')?.body).toBe(JSON.stringify({ ...requestBody(), store: false }))
@@ -203,7 +209,7 @@ describe('Native Codex Responses transport', () => {
         api: 'openai-responses',
         baseURL: 'http://127.0.0.1:1/v1',
         models: [{ id: 'local-model' }],
-      } as PiAiProviderProfile,
+      },
     })
     const adapter = adapterWith(auth, () => profiles)
     const prepared = await adapter.prepareCall('openai-codex', MODEL)
@@ -261,11 +267,11 @@ describe('Native Codex Responses transport', () => {
     const capture = prepared.nativeResponses
     expect(capture).toBeDefined()
     if (capture === undefined) throw new Error('Codex preparation omitted its Native Responses capture')
-    const refreshStarted = Promise.withResolvers<void>()
-    const refreshReleased = Promise.withResolvers<void>()
+    const refreshStarted = Promise.withResolvers<undefined>()
+    const refreshReleased = Promise.withResolvers<undefined>()
     let refreshSignal: AbortSignal | undefined
     server.token = async (_request, response) => {
-      refreshStarted.resolve()
+      refreshStarted.resolve(undefined)
       await refreshReleased.promise
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
         access_token: accessToken('account-one'),
@@ -290,18 +296,18 @@ describe('Native Codex Responses transport', () => {
     await expect(pendingForward).rejects.toMatchObject({ code: 'ABORTED' })
     expect(refreshSignal?.aborted).toBe(false)
     expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one' })
-    refreshReleased.resolve()
+    refreshReleased.resolve(undefined)
     await closing
     expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(0)
 
-    const bodyStarted = Promise.withResolvers<void>()
-    const upstreamClosed = Promise.withResolvers<void>()
+    const bodyStarted = Promise.withResolvers<undefined>()
+    const upstreamClosed = Promise.withResolvers<undefined>()
     server.responses = (_request, response) => {
       response.writeHead(200, { 'content-type': 'text/event-stream' })
       response.write('data: pending\n\n')
-      bodyStarted.resolve()
-      response.on('close', () => { upstreamClosed.resolve() })
+      bodyStarted.resolve(undefined)
+      response.on('close', () => { upstreamClosed.resolve(undefined) })
     }
     const streamTransport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
     const streamBody = await streamTransport.projectRequest(requestBody(), new AbortController().signal)
