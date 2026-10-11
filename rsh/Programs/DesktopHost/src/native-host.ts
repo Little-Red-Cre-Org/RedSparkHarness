@@ -2,7 +2,9 @@
 import { realpathSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
-import { loadNativeProfile, readNativeProfile, profileDirectoryReloadMode } from '@deepseek-ai/dsh/native-profile'
+import {
+  expandNativeProfilePresets, loadNativeProfile, readNativeProfile, profileDirectoryReloadMode,
+} from '@deepseek-ai/dsh/native-profile'
 import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection/native-host'
 import { createNativeDesktopAssetHandler, prepareNativeClientBundle } from '@deepseek-ai/dsh-native-web-assets'
 import type {} from '@deepseek-ai/dsh-native-web-session-controller'
@@ -22,9 +24,12 @@ export async function createNativeDesktopRuntime(
   allowLinkedPackages: boolean,
 ): Promise<DesktopHostRuntime> {
   if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('dsh desktop: native profiles require configReload startup')
-  const profile = readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
   const anchors = [createRequire(join(runtimeDir, 'package.json')), createRequire(join(projectDir, 'package.json'))]
+  const profile = await expandNativeProfilePresets(
+    readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] }), anchors,
+  )
   for (const row of profile.installations) {
+    if (row.disabled === true) continue
     for (const anchor of anchors) {
       let manifestPath: string
       try {

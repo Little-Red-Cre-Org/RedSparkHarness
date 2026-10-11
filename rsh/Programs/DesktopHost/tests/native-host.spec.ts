@@ -6,9 +6,16 @@ import { runDesktopHost } from '../src/index.ts'
 
 const roots: { root: string; links: string[] }[] = []
 
-async function fixture(linked: readonly string[] = [], profileProvider?: 'application' | 'hostConnection'): Promise<{
+type CarrierService = 'application' | 'hostConnection'
+
+async function fixture(linked: readonly string[] = [], options: {
+  profileProvider?: CarrierService
+  disabledProfileProvider?: boolean
+  presetProvider?: CarrierService
+} = {}): Promise<{
   project: string
   runtime: string
+  home: string
   enteredPath: string
   abortedPath: string
   disposedPath: string
@@ -18,6 +25,7 @@ async function fixture(linked: readonly string[] = [], profileProvider?: 'applic
   roots.push({ root, links })
   const project = join(root, 'project')
   const runtime = join(root, 'runtime')
+  const home = join(root, 'home')
   const enteredPath = join(root, 'request-entered')
   const abortedPath = join(root, 'request-aborted')
   const disposedPath = join(root, 'host-disposed')
@@ -43,20 +51,26 @@ async function fixture(linked: readonly string[] = [], profileProvider?: 'applic
     private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' } },
   }))
+  const installations = [
+    { id: 'credentials', plugin: '@fixture/dsh-credentials', scope: 'root' },
+    { id: 'host', plugin: '@fixture/dsh-host', scope: 'root' },
+    ...(options.profileProvider === undefined ? [] : [{
+      id: 'profile-provider', plugin: '@fixture/dsh-profile-provider', scope: 'root',
+      ...(options.disabledProfileProvider === true ? { disabled: true } : {}),
+    }]),
+    ...(options.presetProvider === undefined ? [] : [{ id: 'presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' }]),
+  ]
   await writeFile(join(project, 'rsh.profile.json'), JSON.stringify({
     formatVersion: 1,
     scopes: [{ id: 'root' }],
-    installations: [
-      { id: 'credentials', plugin: '@fixture/dsh-credentials', scope: 'root' },
-      { id: 'host', plugin: '@fixture/dsh-host', scope: 'root' },
-    ],
+    installations,
   }))
   await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
     formatVersion: 1,
     installations: [{ id: 'client', plugin: '@fixture/dsh-client' }],
   }))
 
-  const hostProvides = ['nativeWebSession', ...(profileProvider === undefined ? [] : [profileProvider])]
+  const hostProvides = ['nativeWebSession']
   const packages = [
     {
       name: '@fixture/dsh-credentials',
@@ -81,6 +95,38 @@ async function fixture(linked: readonly string[] = [], profileProvider?: 'applic
       source: 'export const plugin = { apiVersion: 1, name: "@fixture/dsh-client", targets: ["client"], requires: [], provides: ["clientRenderer"], resolve: () => () => {} };\n',
     },
   ]
+  if (options.profileProvider !== undefined) {
+    packages.push({
+      name: '@fixture/dsh-profile-provider',
+      manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [options.profileProvider] },
+      source: `export const plugin = { apiVersion: 1, name: "@fixture/dsh-profile-provider", targets: ["host"], requires: [], provides: [${JSON.stringify(options.profileProvider)}], resolve: () => context => context.provide(${JSON.stringify(options.profileProvider)}, {}) };\n`,
+    })
+  }
+  if (options.presetProvider !== undefined) {
+    packages.push(
+      {
+        name: '@deepseek-ai/dsh-agent-presets',
+        manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [] },
+        source: 'export const plugin = { apiVersion: 1, name: "@deepseek-ai/dsh-agent-presets", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
+      },
+      {
+        name: '@deepseek-ai/dsh-agent-preset-standing',
+        manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [] },
+        source: 'export const plugin = { apiVersion: 1, name: "@deepseek-ai/dsh-agent-preset-standing", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
+      },
+      {
+        name: '@fixture/dsh-preset-provider',
+        manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [options.presetProvider] },
+        source: `export const plugin = { apiVersion: 1, name: "@fixture/dsh-preset-provider", targets: ["host"], requires: [], provides: [${JSON.stringify(options.presetProvider)}], resolve: () => context => context.provide(${JSON.stringify(options.presetProvider)}, {}) };\n`,
+      },
+    )
+    const preset = join(home, '.agent-presets', 'desktop-carrier')
+    await mkdir(preset, { recursive: true })
+    await writeFile(join(preset, 'agent.native.json'), JSON.stringify({
+      formatVersion: 1,
+      installations: [{ id: 'provider', plugin: '@fixture/dsh-preset-provider' }],
+    }))
+  }
   for (const row of packages) {
     const source = join(linked.includes(row.name) ? join(workspace, 'packages') : join(project, 'node_modules'), ...row.name.split('/'))
     await mkdir(source, { recursive: true })
@@ -98,7 +144,7 @@ async function fixture(linked: readonly string[] = [], profileProvider?: 'applic
       links.push(link)
     }
   }
-  return { project, runtime, enteredPath, abortedPath, disposedPath }
+  return { project, runtime, home, enteredPath, abortedPath, disposedPath }
 }
 
 function decode(frames: readonly Buffer[]): { type: number; streamId: number; payload: Buffer }[] {
@@ -114,6 +160,7 @@ function command(streamId: number, url: string) {
 }
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   await Promise.all(roots.splice(0).map(async ({ root, links }) => {
     await Promise.all(links.map(link => unlink(link)))
     await rm(root, { recursive: true, force: true })
@@ -121,10 +168,28 @@ afterEach(async () => {
 })
 
 it.each(['hostConnection', 'application'] as const)('rejects a profile provider of %s before resolving carrier conflicts', async (service) => {
-  const { project, runtime } = await fixture([], service)
+  const { project, runtime } = await fixture([], { profileProvider: service })
   await expect(runDesktopHost(runtime, project, async () => {})).rejects.toMatchObject({
     message: 'dsh desktop: native profile cannot select another application or Connection carrier',
   })
+})
+
+it.each(['hostConnection', 'application'] as const)('ignores a disabled profile provider of %s', async (service) => {
+  const { project, runtime } = await fixture([], { profileProvider: service, disabledProfileProvider: true })
+  const host = await runDesktopHost(runtime, project, async () => {})
+  await host.dispose()
+})
+
+it.each(['hostConnection', 'application'] as const)('rejects preset-provided %s before installation planning', async (service) => {
+  const { project, runtime, home } = await fixture([], { presetProvider: service })
+  vi.stubEnv('DSH_HOME', home)
+  try {
+    await expect(runDesktopHost(runtime, project, async () => {})).rejects.toMatchObject({
+      message: 'dsh desktop: native profile cannot select another application or Connection carrier',
+    })
+  } finally {
+    vi.unstubAllEnvs()
+  }
 })
 
 it('streams the API route and native index as start, data, and end frames', async () => {
