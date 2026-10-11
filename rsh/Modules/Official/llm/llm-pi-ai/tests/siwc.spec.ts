@@ -73,7 +73,7 @@ describe('Sign in with ChatGPT OAuth', () => {
     const issuedClientId = 'issued-test-client-id'
     const access = 'synthetic-access-token'
     const refresh = 'synthetic-account-refresh-token'
-    let refreshedAccess = 'synthetic-refreshed-access-token'
+    const refreshedAccess = 'synthetic-refreshed-access-token'
     let grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
     let tokenError: { error?: unknown; error_description?: unknown } | undefined
     let expiration: number | undefined = Math.floor(Date.now() / 1000) + 3600
