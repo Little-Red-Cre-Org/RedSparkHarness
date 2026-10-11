@@ -586,7 +586,10 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return settingsDescription(value)
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
-  if (endpoint === 'settings/open-document' && fields(value).opened !== true) throw new TypeError('invalid native settings document open reply')
+  if (endpoint === 'settings/open-document') {
+    if (fields(value).opened !== true) throw new TypeError('invalid native settings document open reply')
+    return { opened: true }
+  }
   if (endpoint === 'credentials/describe') {
     const data = fields(value)
     return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
