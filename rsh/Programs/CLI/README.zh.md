@@ -44,7 +44,7 @@ dsh --help                          # the launcher's own help
 
 profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。`patchReload: live` 监视 profile 与 home 级 patch 文件，`startup` 则只应用一次。
 
-`./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。
+`./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析、preset 展开与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。
 
 选择内置 `native-*` profile 会在首次使用时创建原生 profile 文件；已有 profile 保留其配置。
 

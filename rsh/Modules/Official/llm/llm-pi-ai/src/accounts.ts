@@ -4,6 +4,7 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialKey, NativeCredentials, CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import type { DeepSeekAccount } from '@deepseek-ai/dsh-deepseek-account/native'
 import { isSiwcCredential } from './siwc.ts'
+import { CodexUsageStore } from './rate-limits.ts'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices { accounts: NativeAccounts }
@@ -53,7 +54,7 @@ export interface NativeAccounts {
   list(signal?: AbortSignal): Promise<AccountSummary[]>
   /** @param key - account credential record address.
    * @param signal - caller cancellation.
-   * @returns safe subscription usage; SIWC grants return `failed` with reason `USAGE_UNSUPPORTED`.
+   * @returns observed subscription usage; SIWC grants return `failed` with reason `USAGE_PENDING` until a model call reports limits.
    */
   usage(key: AccountKey, signal?: AbortSignal): Promise<AccountUsage>
   /** @param key - account credential record address.
@@ -98,11 +99,13 @@ export class NativeAccountsProvider implements NativeAccounts {
    * @param credentials - records owned by this adapter family.
    * @param lifetime - cancellation for the Host installation.
    * @param deepseekAccount - optional Platform profile and balance provider.
+   * @param codexUsage - process-local snapshots observed from Codex Responses calls.
    */
   constructor(
     private readonly credentials: NativeCredentials,
     private readonly lifetime: AbortSignal,
     private readonly deepseekAccount?: DeepSeekAccount,
+    private readonly codexUsage = new CodexUsageStore(),
   ) {}
 
   /** @param signal - caller cancellation.
@@ -120,7 +123,12 @@ export class NativeAccountsProvider implements NativeAccounts {
     }
     if (record.kind === 'grant' && isSiwcCredential(record.payload)) {
       return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'ready',
-        identity: { email: record.payload.email ?? null, contact: record.payload.email ?? null, name: null, avatarUrl: null },
+        identity: {
+          email: record.payload.email ?? null,
+          contact: record.payload.email ?? null,
+          name: record.payload.name ?? null,
+          avatarUrl: record.payload.picture ?? null,
+        },
         plan: null }], signal)
     }
     return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'unavailable',
@@ -148,7 +156,7 @@ export class NativeAccountsProvider implements NativeAccounts {
 
   /** @param key - account credential record address.
    * @param signal - caller cancellation.
-   * @returns safe subscription usage; SIWC grants return `failed` with reason `USAGE_UNSUPPORTED`.
+   * @returns observed subscription usage; SIWC grants return `failed` with reason `USAGE_PENDING` until a model call reports limits.
    */
   async usage(key: AccountKey, signal?: AbortSignal): Promise<AccountUsage> {
     try {
@@ -160,7 +168,15 @@ export class NativeAccountsProvider implements NativeAccounts {
       if (key !== CODEX_KEY || record.kind !== 'grant' || !isSiwcCredential(record.payload)) {
         return failedUsage('UNSUPPORTED_ACCOUNT')
       }
-      return failedUsage('USAGE_UNSUPPORTED')
+      const snapshot = this.codexUsage.get({ issuer: record.payload.issuer, subject: record.payload.subject })
+      if (snapshot === undefined) return { status: 'failed', reason: 'USAGE_PENDING' }
+      return {
+        status: 'ready',
+        email: record.payload.email ?? null,
+        plan: snapshot.plan,
+        quotas: [...snapshot.quotas],
+        credits: snapshot.credits,
+      }
     } catch (error: unknown) {
       return failedUsage(failureReason(error))
     }

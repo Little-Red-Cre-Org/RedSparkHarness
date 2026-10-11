@@ -154,8 +154,6 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
-  // The native picker client subpath is independently imported by native Hosts.
-  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js'],
   '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
   '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
@@ -263,11 +261,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-session': [
-    'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js',
-    'lib/workspaces.js', 'lib/shared-*.js',
-  ],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/account-card.module.css', 'lib/NativeSidebarSettings.module.css', 'lib/attachments.module.css'],
+  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/workspaces.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/*.css'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],

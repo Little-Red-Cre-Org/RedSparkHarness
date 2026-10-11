@@ -2,26 +2,65 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
 import { NativeAccountsProvider } from '../src/accounts.ts'
+import { CodexUsageStore } from '../src/rate-limits.ts'
 
 const CODEX_KEY = credentialKey('llm-pi-ai', 'openai-codex')
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('native account usage', () => {
-  it('returns unsupported for SIWC without requesting usage and logs only the reason', async () => {
+  it('returns pending until a snapshot exists and keeps snapshots isolated by grant identity', async () => {
+    const grant = (subject: string, email: string) => ({
+      type: 'oauth', siwc: 'chatgpt-plan', clientId: 'client', issuer: 'https://auth.openai.com', subject,
+      email, idToken: 'id-token', extAgentHostId: 'agent', scopes: ['chatgpt.tokens.use.direct'],
+      access: 'access', refresh: 'refresh', expires: 0,
+    })
+    let currentGrant = grant('subject-a', 'a@example.com')
     const credentials = {
-      readRecord: vi.fn(async () => ({ kind: 'grant' as const, payload: {
-        type: 'oauth', siwc: 'chatgpt-plan', clientId: '', issuer: 'https://auth.openai.com', subject: '',
-        idToken: '', extAgentHostId: '', scopes: [], access: '', refresh: '', expires: 0,
-      } })),
+      readRecord: vi.fn(async () => ({ kind: 'grant' as const, payload: currentGrant })),
+    } as unknown as NativeCredentials
+    const usage = new CodexUsageStore()
+    const accounts = new NativeAccountsProvider(credentials, new AbortController().signal, undefined, usage)
+    const snapshot = (usedPercent: number) => ({
+      quotas: [{ name: 'codex', primary: { usedPercent, windowSeconds: 3600, resetsAt: 1_700_000_000 }, secondary: null }],
+      credits: null,
+    })
+    const accountA = { issuer: 'https://auth.openai.com', subject: 'subject-a' }
+    const accountB = { issuer: 'https://auth.openai.com', subject: 'subject-b' }
+
+    await expect(accounts.usage(CODEX_KEY)).resolves.toEqual({ status: 'failed', reason: 'USAGE_PENDING' })
+    usage.observe(accountA, snapshot(35), true)
+    usage.observe(accountB, snapshot(90), true)
+    await expect(accounts.usage(CODEX_KEY)).resolves.toEqual({
+      status: 'ready', email: 'a@example.com', plan: null, ...snapshot(35),
+    })
+
+    currentGrant = grant('subject-b', 'b@example.com')
+    await expect(accounts.usage(CODEX_KEY)).resolves.toEqual({
+      status: 'ready', email: 'b@example.com', plan: null, ...snapshot(90),
+    })
+  })
+})
+
+describe('native SIWC account identity', () => {
+  it.each([
+    ['with a picture', 'https://img.example/avatar.png', 'https://img.example/avatar.png'],
+    ['without a picture', undefined, null],
+  ] as const)('lists the saved avatar %s', async (_case, picture, avatarUrl) => {
+    const credential = {
+      type: 'oauth', siwc: 'chatgpt-plan', clientId: 'client', issuer: 'https://auth.openai.com',
+      subject: 'subject', name: 'Ada', ...(picture === undefined ? {} : { picture }),
+      idToken: 'id-token', extAgentHostId: 'agent', scopes: ['chatgpt.tokens.use.direct'],
+      access: 'access', refresh: 'refresh', expires: 0,
+    }
+    const credentials = {
+      readRecord: async () => ({ kind: 'grant' as const, payload: credential }),
     } as unknown as NativeCredentials
     const accounts = new NativeAccountsProvider(credentials, new AbortController().signal)
-    const request = vi.fn()
-    const log = vi.spyOn(console, 'info').mockImplementation(() => undefined)
-    vi.stubGlobal('fetch', request)
 
-    await expect(accounts.usage(CODEX_KEY)).resolves.toEqual({ status: 'failed', reason: 'USAGE_UNSUPPORTED' })
-    expect(request).not.toHaveBeenCalled()
-    expect(log).toHaveBeenCalledExactlyOnceWith('USAGE_UNSUPPORTED')
+    await expect(accounts.list()).resolves.toMatchObject([{
+      provider: 'openai-codex', status: 'ready',
+      identity: { name: 'Ada', avatarUrl },
+    }])
   })
 })
 

@@ -12,7 +12,7 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
 import { WorkspaceId as workspaceId, workspaceDomainState, workspaceRecord } from '@deepseek-ai/dsh-workspace/native'
 import type { Workspace, WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
 import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
-import type { NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceFrame } from '@deepseek-ai/dsh-client-native-session/workspaces-types'
+import type { NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceFrame } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain/native'
 import { z } from 'zod'
 

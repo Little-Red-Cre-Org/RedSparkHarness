@@ -42,9 +42,6 @@
     "./workspaces": {
       "types": "./lib/types/workspaces.d.ts",
       "default": "./lib/workspaces.js"
-    },
-    "./workspaces-types": {
-      "types": "./lib/types/workspaces-types.d.ts"
     }
   },
   "dsh": {
