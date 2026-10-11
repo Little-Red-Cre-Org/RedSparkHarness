@@ -623,7 +623,8 @@ export class NativeWebSessionService {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
       }
-      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
+      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human'
+        || endpoint === 'session/mode-controls' || endpoint === 'session/permission-controls' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
         const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
@@ -653,34 +654,35 @@ export class NativeWebSessionService {
         }
         if (endpoint === 'session/mode-controls') {
           const id = sessionId(fields.sessionId)
-          const route = await this.routeForSession(id, accepted)
-          return await this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, operationSignal) => {
-            const events = await owner.readEvents({ signal: operationSignal })
-            const facts = foldNativeAgentPresetFacts(owner.session.header, events)
-            const presets = this.selections.presets?.list() ?? []
-            const planMode = this.selections.planMode
-            const planState = planMode?.state(owner)
-            return {
-              current: facts.preset,
-              options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
-                ...description === undefined ? {} : { description } })),
-              revision: facts.revision,
-              locked: facts.locked,
-              canSelect: presets.length > 0 && !facts.locked,
-              planMode: { available: planMode !== undefined, ...(planState === undefined
-                ? { active: false }
-                : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
-            }
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
           }, accepted)
+          const facts = foldNativeAgentPresetFacts(history.header, history.events)
+          const presets = this.selections.presets?.list() ?? []
+          const planMode = this.selections.planMode
+          const planState = planMode?.state(id, history.events)
+          return {
+            current: facts.preset,
+            options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+              ...description === undefined ? {} : { description } })),
+            revision: facts.revision,
+            locked: facts.locked,
+            canSelect: presets.length > 0 && !facts.locked,
+            planMode: { available: planMode !== undefined, ...(planState === undefined
+              ? { active: false }
+              : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
+          }
         }
         if (endpoint === 'session/permission-controls') {
           const id = sessionId(fields.sessionId)
-          const route = await this.routeForSession(id, accepted)
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          }, accepted)
           const permissions = this.selections.permissionPresets
           if (permissions === undefined) return { available: false, currentValue: null, options: [] }
-          const controls = await this.executor.executeSessionOperation({ id, resume: true, route },
-            (owner, operationSignal) => permissions.controls(owner, operationSignal), accepted)
-          return { available: true, ...controls }
+          return { available: true, ...await permissions.controls(history.events, accepted) }
         }
         if (endpoint === 'session/select-plan-mode') {
           const id = sessionId(fields.sessionId)

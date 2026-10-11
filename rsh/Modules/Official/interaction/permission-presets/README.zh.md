@@ -27,7 +27,7 @@ kind: "package-reference"
 
 当部署希望向用户提供一个 Permissions 选择器、而非分离的沙箱与审批控件时，选择此服务。它捆绑旋钮；执行与审批各自保留自己的取值，因此以后移除本包，最后一次取值依然生效。
 
-Native 宿主可以显式装配 `@deepseek-ai/dsh-permission-presets/native`。它的 `permissionPresets` 能力为确切且可写的 root owner 读取当前匹配的预设或推导出的 `custom` 值及可用选项，解析已配置的预设，并通过 Program writer 应用其中一项、等待持久化刷新完成。此入口不提供 Cordis 设置命名空间、`/permission` 命令或客户端投影；记录的策略值由沙箱与审批 Provider 强制执行。
+Native 宿主可以显式装配 `@deepseek-ai/dsh-permission-presets/native`。它的 `permissionPresets` 能力从 Session 事件与部署默认值读取当前匹配的预设或推导出的 `custom` 值及可用选项，无需 Session owner；它还会解析已配置的预设，并通过 Program writer 应用其中一项、等待持久化刷新完成。此入口不提供 Cordis 设置命名空间、`/permission` 命令或客户端投影；记录的策略值由沙箱与审批 Provider 强制执行。
 
 ### 配置预设
 

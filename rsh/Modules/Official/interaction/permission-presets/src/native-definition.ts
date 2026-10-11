@@ -1,6 +1,7 @@
 /** Native permission-preset contract over the Program-owned Session writer. */
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import type { PresetSpec } from './presets.ts'
 import type {} from './types.ts'
 
@@ -30,8 +31,11 @@ export interface NativePermissionPresetControls {
 
 /** Program-owned validation and durable application of a configured preset. */
 export interface NativePermissionPresetOperations {
-  /** @param owner - exact writable root Session. @param signal - read cancellation. @returns effective policy and configured choices. */
-  controls(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativePermissionPresetControls>
+  /** @param events - complete current Session event log.
+   * @param signal - read cancellation.
+   * @returns effective policy and configured choices.
+   */
+  controls(events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls>
   /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
   resolve(name: string): Readonly<NativePermissionPresetSpec>
   /**

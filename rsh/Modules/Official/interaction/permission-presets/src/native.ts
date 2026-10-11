@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { sessionApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-sandbox/native-types'
 import type {} from './native-definition.ts'
@@ -46,11 +47,12 @@ export const plugin: NativePlugin = {
           throw new Error('permission-presets: exact writable root owner is unavailable')
         }
       }
-      const currentValue = (owner: NativeActiveSessionOwner, events: Awaited<ReturnType<NativeActiveSessionOwner['readEvents']>>): string => {
+      const currentValue = (events: readonly SessionEvent[]): string => {
         const sandbox = events.findLast(event => event.type === 'sandbox/mode')
         const sandboxMode = sandbox?.type === 'sandbox/mode'
-          ? sandbox.data.mode : sandboxPolicy.resolve({ session: owner.session }).mode
-        const approvalPolicy = sessionApprovalPolicy(owner.session) ?? approval.policy
+          ? sandbox.data.mode : sandboxPolicy.defaultMode
+        const approvalEvent = events.findLast(event => event.type === 'approval/policy')
+        const approvalPolicy = approvalEvent?.type === 'approval/policy' ? approvalEvent.data.policy : approval.policy
         const matches = (spec: NativePermissionPresetSpec): boolean =>
           spec.sandbox === sandboxMode && spec.approval === approvalPolicy
         const selected = events.findLast(event => event.type === 'permission/preset')
@@ -59,11 +61,9 @@ export const plugin: NativePlugin = {
         return name !== undefined && spec !== undefined && matches(spec)
           ? name : Object.entries(presets).find(([, spec]) => matches(spec))?.[0] ?? CUSTOM_PRESET
       }
-      const controls = async (owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativePermissionPresetControls> => {
-        assertOwner(owner, signal)
-        const events = await owner.readEvents({ signal })
-        assertOwner(owner, signal)
-        const selectedValue = currentValue(owner, events)
+      const controls = async (events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls> => {
+        signal.throwIfAborted()
+        const selectedValue = currentValue(events)
         return { currentValue: selectedValue, options: [
           ...Object.entries(presets).map(([value, spec]) => ({ value, name: spec.name ?? value,
             ...spec.description === undefined ? {} : { description: spec.description } })),
