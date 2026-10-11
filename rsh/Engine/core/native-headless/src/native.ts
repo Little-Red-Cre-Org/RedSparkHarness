@@ -132,6 +132,14 @@ interface ResolvedConfig extends Config {
   builtinTools: boolean
 }
 
+interface NativeHeadlessAuthority {
+  /** Workspace registry taking precedence over the context's. */
+  readonly workspaceRegistry?: WorkspaceRegistryRuntime
+  readonly execution?: NativeSessionExecutionOperations
+  readonly active: NativeActiveSessionOperations
+  readonly defaultModelSelection?: () => Pick<LlmCallConfig, 'provider' | 'model' | 'reasoningEffort'> | undefined
+}
+
 interface ActiveOwnerRegistration {
   readonly owner: NativeProgramActiveSession
   readonly release: () => Promise<void>
@@ -336,6 +344,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly sessionExecution?: NativeSessionExecutionOperations,
     private readonly activeSessionRegistry?: NativeActiveSessionOperations,
     private readonly modelSelection?: NativeModelSelectionOperations,
+    private readonly defaultModelSelection?: () => Pick<LlmCallConfig, 'provider' | 'model' | 'reasoningEffort'> | undefined,
     private readonly agentPresets?: NativeAgentPresetOperations,
     workspaceRegistry?: WorkspaceRegistryRuntime,
     private readonly executionScope: NativeScope = context.scope,
@@ -738,7 +747,9 @@ export class NativeHeadlessApplication implements NativeApplication {
       let message = request.message
       if (request.prepareMessage !== undefined) {
         if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: input preparation requires the active root owner')
-        const selected = (await this.modelSelection?.state(activeOwner, signal))?.next ?? config
+        const selection = await this.modelSelection?.state(activeOwner, signal)
+        const selected = selection?.revision === null || selection === undefined
+          ? this.rootDefaults(config) : selection.next ?? this.rootDefaults(config)
         signal.throwIfAborted()
         message = await request.prepareMessage({ provider: selected.provider, model: selected.model }, signal)
         signal.throwIfAborted()
@@ -751,12 +762,13 @@ export class NativeHeadlessApplication implements NativeApplication {
       let reason: import('@deepseek-ai/dsh-session/native').TurnEndReason = { kind: 'completed' }
       try {
         const prepare = async () => {
+          const defaults = invocation === 'root' ? this.rootDefaults(config) : config
           let selection: Awaited<ReturnType<NativeModelSelectionOperations['capture']>> | undefined
           if (invocation === 'root' && this.modelSelection !== undefined) {
             if (activeOwner === undefined) throw new Error('native-headless: model selection requires the active Session Provider')
-            selection = await this.modelSelection.capture(activeOwner, config, signal)
+            selection = await this.modelSelection.capture(activeOwner, defaults, signal)
           }
-          const preparedStep = await this.modelExecution.prepareStep(selection?.requestedConfig ?? config, signal)
+          const preparedStep = await this.modelExecution.prepareStep(selection?.requestedConfig ?? defaults, signal)
           signal.throwIfAborted()
           return { selection, preparedStep }
         }
@@ -1679,6 +1691,11 @@ export class NativeHeadlessApplication implements NativeApplication {
     return { ...this.config, ...owned.route.configuration }
   }
 
+  private rootDefaults(config: Readonly<Config>): Readonly<Config> {
+    const selection = this.defaultModelSelection?.()
+    return selection === undefined ? config : { ...config, ...selection }
+  }
+
   private withRootExecution<T>(request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route'>, signal: AbortSignal,
     task: (execution: NativeAgentExecution) => Promise<T>, forkSeed?: NativeRootForkSeed): Promise<T> {
     this.assertSessionNotRetiring(request.id)
@@ -2121,18 +2138,15 @@ export class NativeHeadlessApplication implements NativeApplication {
  * @param config - validated Program configuration.
  * @param executionScope - selected descendant scope for Agent contributions.
  * @param authority - explicit service selection. When supplied, its active and execution values are used as-is;
- * an omitted execution value does not fall back to context. A supplied Workspace registry also takes precedence;
- * without one, the registry is read from context.
+ * an omitted execution value does not fall back to context. Its optional default-model callback supplies a live
+ * root fallback before Session selection capture. Without this object, optional services are read from context.
+ * A supplied Workspace registry takes precedence; without one, the registry is read from context.
  * @returns the executor registered for disposal with the installation.
  * @throws if `executionScope` does not belong to the installation tree.
  */
 export function createNativeHeadlessApplication(context: NativeContext, config: Config,
   executionScope: NativeScope = context.scope,
-  authority?: {
-    readonly execution?: NativeSessionExecutionOperations
-    readonly active: NativeActiveSessionOperations
-    readonly workspaceRegistry?: WorkspaceRegistryRuntime
-  },
+  authority?: NativeHeadlessAuthority,
 ): NativeHeadlessApplication {
   if (!context.scope.contains(executionScope)) throw new Error('native-headless: execution scope belongs to another installation tree')
   const application = new NativeHeadlessApplication(
@@ -2141,8 +2155,8 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     context.optional('codeRuntime'), context.optional('timeContext'),
     authority === undefined ? context.optional('sessionExecution') : authority.execution,
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
-    context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'),
-    executionScope, context.optional('agentInstructions'),
+    authority?.defaultModelSelection,
+    context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
   )
   context.own(() => application.dispose())
   return application

@@ -55,6 +55,8 @@ Program 从选定的持久化集合列出 continuation 候选。它将路径限�
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
 
+显式传给 `createNativeHeadlessApplication` 的 authority 可提供实时 `defaultModelSelection` 回调。对于没有持久化 `model/selection` 事件的 root step，回调中的 provider 和 model 会替换 Program 默认值；Session 历史仍具有权威性，委派调用继续使用显式配置。
+
 根调用的 `prepareMessage` 优先于 `message`。准备过程在既有执行所有者内运行，位于有效下一模型选择之后、inbox 准入之前。它返回带身份的输入，不暴露 Session 写入者；拒绝或取消不会准入用户输入。
 
 根任务取消时，即使初始轮次失败或等待结算的信号已被取消，也会关闭并等待已有驻留 epoch 清理完成。执行失败与 epoch 清理失败会一并报告，保留原执行错误。
