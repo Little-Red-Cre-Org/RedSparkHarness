@@ -499,7 +499,7 @@ export class NativeWebSessionService {
       const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
+        const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
           : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
             : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
               : endpoint === 'session/rename-title' ? ['sessionId', 'title']
