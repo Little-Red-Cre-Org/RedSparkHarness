@@ -99,6 +99,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     accountsList: vi.fn(), accountsUsage: vi.fn(), accountsBalance: vi.fn(), accountsSignOut: vi.fn(),
     modelsListProviders: vi.fn(async () => []), modelsListConfigurableProviders: vi.fn(async () => []),
     modelsDiscover: vi.fn(async () => []), settingsEvents: async function* () {},
+    agentPresetsList: vi.fn(async () => ({ default: null, presets: [] })),
     credentialsSet: vi.fn(),
     credentialsUnset: vi.fn(),
     list: vi.fn(async () => rows),

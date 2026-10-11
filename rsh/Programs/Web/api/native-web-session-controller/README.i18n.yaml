@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Programs/Web/api/native-web-session-controller/README.md
-README.md: bd6d8ba2187d56b5260e384092b978d57b1ac579
-README.zh.md: b232733f5044011d6c55215c0b66f718f6c2f4ca
+README.md: 77a02adc48c6d501acbebc86142104d0c9134c59
+README.zh.md: 717a094b1b1438fc9fef61245354f4082bbed1f2
