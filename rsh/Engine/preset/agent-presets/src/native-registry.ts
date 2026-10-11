@@ -4,6 +4,7 @@ import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgentPresetOperations, NativeAgentPresetLease, NativePresetComposition,
   NativePresetGeneration, NativeResolvedAgentPreset } from './native-definition.ts'
 import type { NativeAgentPresetFacts } from './selection.ts'
+import type { NativePresetFolderSummary } from './native-storage.ts'
 
 interface Standing {
   readonly preset: NativeResolvedAgentPreset
@@ -22,8 +23,13 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   private stopped = false
   private disposal: Promise<void> | undefined
 
-  /** @param defaultPreset - fresh creation default. @param scope - shared Core Provider ancestry of every standing composition. */
-  constructor(private readonly defaultPreset: string, private readonly scope: NativeScope) {}
+  /**
+   * @param defaultPreset - fresh creation default.
+   * @param scope - shared Core Provider ancestry of every standing composition.
+   * @param folders - CLI-discovered preset folders.
+   */
+  constructor(private readonly defaultPreset: string, private readonly scope: NativeScope,
+    private readonly folders: readonly NativePresetFolderSummary[] = []) {}
 
   /** @inheritdoc */
   register(composition: NativePresetComposition): () => Promise<void> {
@@ -56,6 +62,12 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   list(): readonly NativeResolvedAgentPreset[] {
     this.assertAvailable()
     return [...this.standings.values()].map(standing => standing.preset)
+  }
+
+  /** @inheritdoc */
+  catalog(): { readonly default: string; readonly folders: readonly NativePresetFolderSummary[] } {
+    this.assertAvailable()
+    return { default: this.defaultPreset, folders: this.folders }
   }
 
   /** @inheritdoc */

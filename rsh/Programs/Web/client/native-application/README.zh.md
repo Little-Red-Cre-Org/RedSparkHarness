@@ -34,13 +34,13 @@ kind: "package-reference"
 
 在「订阅模型」区域中，每个 Host 授权条目都有独立的一行，显示连接状态和登录操作；匹配的账户卡片显示在该行内。没有匹配授权条目的账户卡片仍显示在此区域。账户卡片显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits，以及 DeepSeek 身份和钱包余额；只有账户 key 与非空提供方身份仍匹配时，刷新失败才会保留已就绪数据并提示可能陈旧（ChatGPT 使用邮箱，DeepSeek 使用联系方式或姓名）。没有身份的成功读取结果只显示本次读取，不可用的余额不会显示为零。退出登录和授权完成后都会重新读取账户及授权流程。页面不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
-点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置包含已注册设置项与凭据编辑器。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。任务中心、插件与 Agent 预设目前显示本地化迁移占位文案。
+点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置包含已注册设置项与凭据编辑器。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。任务中心和插件显示本地化迁移占位文案。Agent 预设显示 Host 提供的只读名单、默认项以及需要迁移和无效状态。
 
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
-native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
+native-web 首次使用清单选择此应用、renderer、Connection、Session Consumer 及六个可选 shell 安装器：locale、theme、Session 呈现、layout、左侧 sidebar 和右侧详情 sidebar。其 Host profile 还选择 Session 标题投影与首条 prompt Provider；旧默认组合保持不变。
 
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。侧边栏按 `header.cwd` 将 Session 分组用于展示，并按当前可用的创建时间排序；Native 列表未提供活动时间和状态事实，因此不显示这些字段。在 Host 能力就绪前，Workspace 创建、搜索、排序、目录选择和定时任务浏览保持禁用。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
+可选 Native 壳通过已声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 和 theme。Session 行读取选定 Host 的持久化标题投影；回退/Provider 生成、重命名和刷新通过该 Host 现有的 Session 与 RootExecution 权限追加标题事实。Client 复用当前 Native Session controller 和 layout store，不会创建第二个 Session store。sidebar 按 `header.cwd` 对 Session 分组，作为仅供 Client 显示的投影，并按可用创建时间排序；Native 列表不提供活动时间和状态事实，因此不显示这些字段。Workspace 浏览器及其列表、创建、搜索、移动和删除操作目前不可用；排序、目录选择和定时任务浏览也会在相应 Host 能力就绪前保持禁用。Settings 固定在 sidebar 底部，与紧凑 locale 和 theme 控件并列。
 
 <a id="invariants"></a>
 
@@ -57,7 +57,7 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 <a id="dev-note"></a>
 ## 开发备注
 
-生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)；提供方编辑与订阅行见[原生 Models 决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.zh.md)。
+生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)；提供方编辑与订阅行见[原生 Models 决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.zh.md)；只读 Agent 预设名单见[原生 Web Agent 预设名单决策](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验

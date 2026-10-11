@@ -7,7 +7,7 @@ import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsD
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 
@@ -93,6 +93,30 @@ it('renders ChatGPT plan and remaining quota', async () => {
   expect(await screen.findByText('Plan: Plus')).toBeTruthy()
   expect(screen.getByText('Remaining 65%')).toBeTruthy()
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
+})
+
+it('renders the read-only Agent preset roster and status badges', async () => {
+  const roster: NativeAgentPresetList = {
+    default: 'standard',
+    presets: [
+      { id: 'standard', name: 'Standard', description: 'General purpose', source: 'profile', status: 'ready' },
+      { id: 'legacy', name: 'Legacy', description: 'Older composition', source: 'user', status: 'needs-migration' },
+      { id: 'damaged', name: 'Damaged', source: 'user', status: 'invalid', problem: 'Composition file is invalid.' },
+    ],
+  }
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    agentPresetsList: vi.fn(async () => roster),
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
+
+  expect(await screen.findByRole('heading', { name: en.settingsAgentPresets })).toBeTruthy()
+  expect(screen.getByText('General purpose')).toBeTruthy()
+  expect(screen.getByText(en.agentPresetsDefault)).toBeTruthy()
+  expect(screen.getByText(en.agentPresetsNeedsMigration)).toBeTruthy()
+  expect(screen.getByText(en.agentPresetsBroken)).toBeTruthy()
+  expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
+  expect(screen.queryAllByRole('button')).toHaveLength(0)
 })
 
 it('shows when the ChatGPT sign-in method does not provide usage', async () => {
@@ -540,8 +564,8 @@ it('refresh mid-login then resume and finish', async () => {
     const input = await screen.findByLabelText('Authorization code')
     fireEvent.change(input, { target: { value: 'secret-answer' } })
     fireEvent.click(screen.getByRole('button', { name: en.authorizationAnswer }))
-    expect(await screen.findByText(en.authorizationAuthorized)).toBeTruthy()
     await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
+    expect(screen.queryByText(en.authorizationAuthorized)).toBeNull()
     await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
     expect(screen.queryByRole('link', { name: 'https://auth.example/device' })).toBeNull()
     expect(answer).toBe('secret-answer')

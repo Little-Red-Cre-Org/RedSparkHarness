@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
+import type { NativePresetFolderSummary } from '@deepseek-ai/dsh-agent-presets/native'
 import {
   NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry,
   type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePlugin,
@@ -92,6 +93,72 @@ function sdkChildProviderRoutes(profile: NativeProfileConfig): NativeProfileConf
   installations[childIndex] = { ...child, config: { ...childConfig, providers } }
   return { ...profile, installations }
 }
+
+async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: string,
+  anchors: readonly ReturnType<typeof createRequire>[]): Promise<NativeProfileConfig> {
+  const presetsInstallation = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-agent-presets' && row.disabled !== true)
+  if (presetsInstallation === undefined) return profile
+  const { nativePresetRoots, scanNativePresetFolders } = await import('@deepseek-ai/dsh-agent-presets/native')
+  const registeredPresetIds = new Set(profile.installations.flatMap((row) => {
+    if (row.plugin !== '@deepseek-ai/dsh-agent-preset-standing'
+      || typeof row.config !== 'object' || row.config === null || Array.isArray(row.config)) return []
+    const id = (row.config as Record<string, unknown>).id
+    return typeof id === 'string' ? [id] : []
+  }))
+  const folders = scanNativePresetFolders(nativePresetRoots(home)).map((folder) => {
+    if (folder.status !== 'ready' || registeredPresetIds.has(folder.id)) return folder
+    const missing = folder.installations?.find(row => row.disabled !== true && !anchors.some((anchor) => {
+      try {
+        anchor.resolve(`${row.plugin}/package.json`)
+        return true
+      } catch {
+        return false
+      }
+    }))
+    return missing === undefined ? folder : {
+      ...folder, status: 'invalid' as const, problem: `plugin ${missing.plugin} is not installed`,
+    }
+  })
+  const summaries: NativePresetFolderSummary[] = folders.map(({ id, name, description, trust, status, problem }) => ({
+    id, name, trust, status,
+    ...description === undefined ? {} : { description },
+    ...problem === undefined ? {} : { problem },
+  }))
+  const scopes = [...profile.scopes]
+  const scopeIds = new Set(scopes.map(scope => scope.id))
+  const installations = [...profile.installations]
+  const installationIds = new Set(installations.map(row => row.id))
+  for (const folder of folders) {
+    if (folder.status !== 'ready' || registeredPresetIds.has(folder.id)) continue
+    const scope = `preset:${folder.id}`
+    if (scopeIds.has(scope)) {
+      throw new Error(`dsh: profile already declares scope ${scope} but does not register preset ${folder.id}`)
+    }
+    for (const row of folder.installations ?? []) {
+      const id = `${scope}/${row.id}`
+      if (installationIds.has(id)) {
+        throw new Error(`dsh: preset ${folder.id} install id ${id} collides with an existing profile installation`)
+      }
+      installationIds.add(id)
+    }
+    if (installationIds.has(scope)) {
+      throw new Error(`dsh: preset ${folder.id} install id ${scope} collides with an existing profile installation`)
+    }
+    installationIds.add(scope)
+    scopeIds.add(scope)
+    scopes.push({ id: scope, parent: presetsInstallation.scope })
+    for (const row of folder.installations ?? []) {
+      installations.push({ ...row, id: `${scope}/${row.id}`, scope })
+    }
+    installations.push({ id: scope, plugin: '@deepseek-ai/dsh-agent-preset-standing', scope,
+      config: { id: folder.id, name: folder.name,
+        ...folder.description === undefined ? {} : { description: folder.description } } })
+  }
+  installations[installations.indexOf(presetsInstallation)] = {
+    ...presetsInstallation, config: { ...(presetsInstallation.config as Record<string, unknown>), folders: summaries },
+  }
+  return { ...profile, scopes, installations }
+}
 /** Read the same strict composition used by native boot, without importing plugin code. */
 export function readNativeProfile(options: {
   profile: string
@@ -136,11 +203,12 @@ export async function loadNativeProfile(options: {
   const home = options.home ?? resolveDshHome()
   const environment = options.target === 'host' ? loadLayeredEnv('dsh') : undefined
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
-  const profile = readNativeProfile({
+  let profile = readNativeProfile({
     profile: options.profile, patchFiles: options.patchFiles, home,
     ...(options.profileDir === undefined ? {} : { profileDir }),
   })
   const anchors = [createRequire(options.installAnchor), createRequire(join(profileDir, 'package.json'))]
+  profile = await nativeAgentPresetFolders(profile, home, anchors)
   const selected: SelectedPackage[] = []
   const roots = options.containedRoots?.map(root => realpathSync(root))
   for (const row of profile.installations) {

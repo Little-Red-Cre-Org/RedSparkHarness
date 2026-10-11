@@ -17,6 +17,16 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     })
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
+    const nativeWebRows = new Map(profile.installations.map(row => [row.id, row]))
+    expect(nativeWebRows.get('storage-hub')?.plugin).toBe('@deepseek-ai/dsh-storage')
+    expect(nativeWebRows.get('storage-json')).toMatchObject({ config: { root: join(home, 'storages') } })
+    expect(nativeWebRows.get('storage-domain')).toMatchObject({ config: { backend: 'json' } })
+    expect(nativeWebRows.get('workspace')).toEqual({
+      id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: 'root',
+    })
+    expect(nativeWebRows.get('session-controller')).toMatchObject({
+      config: { workspaceRoutes: { maxRoutes: 64, allowedRoots: [process.cwd()] } },
+    })
     expect(profile.installations.find(row => row.id === 'session-title')).toEqual({
       id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
       config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 },

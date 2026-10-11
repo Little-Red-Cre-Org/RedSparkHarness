@@ -122,4 +122,4 @@ The reading is appended after existing history and does not change the reusable 
 - Native model Providers and broader capability adapters live in separate packages.
 - This composition imports the Cordis-free `./native` Session and persistence entries and creates no Cordis Context. Their packages retain Cordis adapters for compatibility, with Cordis as an optional peer dependency.
 
-Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly.
+Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly; a Program that requires Workspace routes also passes its Workspace registry.
