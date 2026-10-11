@@ -54,7 +54,7 @@ One-shot teardown attempts writer closure even when an active-owner observer rej
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
 
-An explicit `createNativeHeadlessApplication` authority can supply a live `defaultModelSelection` callback. Its provider and model replace the Program defaults for root steps without a durable `model/selection` event; Session history remains authoritative, and delegated invocations keep their explicit configuration.
+An explicit `createNativeHeadlessApplication` authority can supply a live `defaultModelSelection` callback for root routes. With `modelSelection` selected, a durable `model/selection` event wins; otherwise the latest Session request header supplies the provider/model route, and the callback supplies that route only when history has none. Prior resolved request controls do not become explicit model-selection controls; other controls follow the current request and prepared Provider defaults. Delegated invocations keep their explicit configuration. See [model selection](../../llm/native-model-selection/README.md) for its precedence.
 
 Root `prepareMessage` takes priority over `message`. Preparation runs under the existing execution owner after effective next-model selection and before inbox admission. It returns identified input without access to the Session writer; rejection or cancellation admits no user input.
 
