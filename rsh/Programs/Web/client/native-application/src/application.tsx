@@ -53,6 +53,8 @@ function Message({ event, t, sessionId, loadImage, markdownLabels }: {
   if (message === null || message.role === 'system' || event.type === 'tool/result') return null
   const content = message.content.filter(block => block.type !== 'tool-call')
   if (content.length === 0) return null
+  if (event.type === 'user/message' && event.data.source.kind === 'plugin'
+    && event.data.source.plugin === 'native-time-context') return null
   if (message.role === 'user') {
     if (event.type === 'user/message' && event.data.source.kind !== 'user') {
       const source = contextSourceDetails(event.data.source)
