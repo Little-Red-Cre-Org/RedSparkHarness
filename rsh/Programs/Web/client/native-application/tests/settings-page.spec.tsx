@@ -95,6 +95,15 @@ it('renders ChatGPT plan and remaining quota', async () => {
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
 })
 
+it('shows when the ChatGPT sign-in method does not provide usage', async () => {
+  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_UNSUPPORTED' as const }))
+  renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
+
+  const notice = await screen.findByRole('status')
+  expect(notice.textContent).toBe(en.usageUnsupported)
+  expect(screen.queryByText(en.accountUnavailable)).toBeNull()
+})
+
 it('renders a subscription account inside its authorization row', async () => {
   const entry = {
     key: chatGptAccount.key, label: 'ChatGPT subscription (Sign in with ChatGPT)',
