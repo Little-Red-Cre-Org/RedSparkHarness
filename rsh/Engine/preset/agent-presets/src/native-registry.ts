@@ -67,7 +67,12 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   /** @inheritdoc */
   list(): readonly NativeResolvedAgentPreset[] {
     this.assertAvailable()
-    return [...this.standings.values()].map(standing => standing.preset)
+    const managedIds = new Set(this.folders.map(folder => folder.id))
+    const presentIds = this.roots.length === 0 ? managedIds
+      : new Set(scanNativePresetFolders(this.roots).map(folder => folder.id))
+    return [...this.standings.values()]
+      .filter(({ preset }) => !managedIds.has(preset.id) || presentIds.has(preset.id))
+      .map(standing => standing.preset)
   }
 
   /** @inheritdoc */
@@ -104,7 +109,7 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
         ...content === undefined ? {} : { content },
         ...problem === undefined ? {} : { problem } }
     }
-    if (standing === undefined) {
+    if (standing === undefined || !this.list().some(preset => preset.id === id)) {
       const available = [...new Set([...this.list().map(preset => preset.id), ...this.catalog().folders.map(preset => preset.id)])]
       throw new NativeAgentPresetError('agent-preset/not-found',
         `agent-presets: preset ${JSON.stringify(id)} not found (available: ${available.join(', ') || 'none'})`,
@@ -147,7 +152,9 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
     const id = request.preset ?? request.facts.preset ?? (request.fresh ? this.defaultPreset : null)
     if (id === null) return null
     const standing = this.standings.get(id)
-    if (standing === undefined) throw new Error(`agent-presets: standing preset ${id} is unavailable`)
+    if (standing === undefined || request.fresh && !this.list().some(preset => preset.id === id)) {
+      throw new Error(`agent-presets: standing preset ${id} is unavailable`)
+    }
     return standing.preset
   }
 

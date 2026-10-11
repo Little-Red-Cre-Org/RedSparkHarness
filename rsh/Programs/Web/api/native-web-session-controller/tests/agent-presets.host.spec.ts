@@ -16,10 +16,13 @@ it('reads, copies and deletes native preset folders and publishes each roster up
   const userRoot = join(home, '.agent-presets')
   const source = join(systemRoot, 'standard')
   const unavailable = join(systemRoot, 'unavailable')
+  const legacy = join(userRoot, 'legacy')
   const content = '{"formatVersion":1,"installations":[]}'
   const signal = new AbortController().signal
-  const registry = new NativeAgentPresetRegistry('standard', new NativeScope(), [
+  const scope = new NativeScope()
+  const registry = new NativeAgentPresetRegistry('standard', scope, [
     { id: 'unavailable', name: 'Unavailable', trust: 'system', status: 'invalid', problem: 'Plugin is missing.' },
+    { id: 'legacy', name: 'Legacy', trust: 'user', status: 'ready' },
   ], [
     { path: systemRoot, trust: 'system' }, { path: userRoot, trust: 'user' },
   ])
@@ -42,6 +45,9 @@ it('reads, copies and deletes native preset folders and publishes each roster up
     await writeFile(join(source, 'preset.yml'), 'name: Standard\ndescription: Source description.\norder: 1\n')
     await mkdir(unavailable, { recursive: true })
     await writeFile(join(unavailable, 'agent.native.json'), content)
+    await mkdir(legacy, { recursive: true })
+    await writeFile(join(legacy, 'agent.native.json'), content)
+    registry.register({ id: 'legacy', name: 'Legacy', scope })
     const response = await settingsEvents.stream(new Request('http://localhost/api/native-session/settings-events', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     }))
@@ -64,10 +70,13 @@ it('reads, copies and deletes native preset folders and publishes each roster up
     expect(await service.handle('agent-presets/delete', { id: 'standard' }, signal)).toMatchObject({
       ok: false, error: { code: 'agent-preset/read-only' },
     })
-    expect(await service.handle('agent-presets/delete', { id: 'mine' }, signal))
+    expect(await service.handle('agent-presets/delete', { id: 'legacy' }, signal))
       .toEqual({ ok: true, value: { updated: true } })
     expect(new TextDecoder().decode((await reader.read()).value)).toBe('data: {"type":"agent-presets/updated"}\n\n')
-    expect(registry.catalog().folders.map(folder => folder.id)).toEqual(['standard', 'unavailable'])
+    expect(await service.handle('agent-presets/read', { id: 'legacy' }, signal))
+      .toMatchObject({ ok: false, error: { code: 'agent-preset/not-found' } })
+    expect(registry.list().map(preset => preset.id)).not.toContain('legacy')
+    expect(registry.catalog().folders.map(folder => folder.id)).toEqual(['standard', 'mine', 'unavailable'])
   } finally {
     await reader?.cancel()
     await settingsEvents.close()

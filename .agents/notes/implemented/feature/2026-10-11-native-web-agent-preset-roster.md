@@ -20,7 +20,7 @@ The native Host owns preset folders, while the native Web Settings page needs en
 
 ## Consequences
 
-The Host remains the authority for the roster and filesystem. Copy never replaces a destination and preserves the source description while using the optional new display name. Delete and folder opening refuse system presets. A copied folder appears in the live roster, while its composition is not installed into the running profile until the Host reloads its profile.
+The Host remains the authority for the roster and filesystem. Copy never replaces a destination and preserves the source description while using the optional new display name. Delete and folder opening refuse system presets. Deleting a startup-loaded folder removes it from fresh roster reads and preset resolution while Sessions already using its mounted generation continue; the plugin scope remains until profile reload. A copied folder appears in the live roster, while its composition is not installed into the running profile until the Host reloads its profile.
 
 ## Verification
 
