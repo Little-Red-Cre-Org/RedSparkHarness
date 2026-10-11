@@ -403,6 +403,17 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
     return () => { lifetime.abort() }
   }, [refresh])
 
+  // Rows lose their local attempt on unmount; re-read the list when Models reappears so an in-flight login resumes.
+  const shownSection = useRef(section)
+  useEffect(() => {
+    if (shownSection.current === section) return
+    shownSection.current = section
+    if (section !== 'models') return
+    const lifetime = new AbortController()
+    actions.authorizationList(lifetime.signal).then((entries) => { setAuthorizationEntries(entries) }, () => {})
+    return () => { lifetime.abort() }
+  }, [actions, section])
+
   const save = async (row: NativeSettingsDescriptor): Promise<void> => {
     setSaving(row.namespace)
     setError(undefined)
