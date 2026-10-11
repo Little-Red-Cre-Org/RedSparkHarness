@@ -734,7 +734,8 @@ export const plugin: NativePlugin = {
         ? undefined : { authorization: selectedAuthorization, credentials: selectedCredentials }
       const authorization = new NativeWebAuthorization(providers, config.authorizationKeys.map(parseCredentialKey), context.signal)
       const accounts = new NativeWebAccounts(context.optional('accounts'), config.authorizationKeys.map(parseCredentialKey))
-      const modelEndpoints = new NativeWebModels(context.optional('modelDirectory'), context.optional('modelSettings'))
+      const modelEndpoints = new NativeWebModels(context.optional('modelDirectory'), context.optional('modelSettings'), context.signal)
+      context.own(() => modelEndpoints.close())
       const settingsEvents = new NativeWebSettingsEvents(context)
       context.own(() => settingsEvents.close())
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
