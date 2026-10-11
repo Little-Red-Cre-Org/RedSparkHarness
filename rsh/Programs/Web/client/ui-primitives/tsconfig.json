@@ -9,5 +9,10 @@
   ],
   "exclude": [
     "**/*.legacy.*"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/util/workspace-path"
+    }
   ]
 }

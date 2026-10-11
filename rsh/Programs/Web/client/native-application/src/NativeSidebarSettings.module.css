@@ -1,0 +1,80 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settingsButton,
+.iconButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.settingsButton {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  font: inherit;
+  line-height: 22px;
+  text-align: left;
+}
+
+.settingsButton span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settingsButton:hover,
+.iconButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.appearanceActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.iconButton {
+  width: 28px;
+  border-radius: 50%;
+  corner-shape: round;
+}
+
+.collapsed {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.collapsed .settingsButton {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.collapsed .appearanceActions {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.collapsed .iconButton {
+  width: 36px;
+  height: 36px;
+  color: var(--dsw-alias-label-primary);
+}
