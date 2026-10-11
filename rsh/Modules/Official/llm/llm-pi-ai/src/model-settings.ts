@@ -7,6 +7,13 @@ export interface NativeModelSettings {
   /** @returns detached configurable-provider entries and their current diagnostics. */
   configurableProviders(): readonly LlmConfigurableProvider[]
   /**
+   * Select the first signed-in account model when no provider API key is configured.
+   * @param signal - Host cancellation.
+   * @returns the first advertised account route and model, or undefined when an API key is present or no account model is available.
+   * @throws when a signed-in account model catalog cannot be read.
+   */
+  firstAvailableAccountModel(signal: AbortSignal): Promise<{ readonly provider: string; readonly model: string } | undefined>
+  /**
    * Discover candidate models without storing the draft or its API key.
    * @param settingsNs - Settings namespace that owns the discovery implementation.
    * @param request - endpoint, provider, protocol and one-request API key.

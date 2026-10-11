@@ -4,11 +4,12 @@ import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
 import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import type {} from '@deepseek-ai/dsh-llm-pi-ai/native'
+import type {} from '@deepseek-ai/dsh-authorization/native'
 import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
 import { foldSessionTitle } from '@deepseek-ai/dsh-session-title/native'
 import type { NativeSessionTitles } from '@deepseek-ai/dsh-session-title/native'
@@ -20,6 +21,7 @@ import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-sessio
 import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
@@ -39,7 +41,7 @@ import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credent
 import type {} from '@deepseek-ai/dsh-credentials/native'
 import { openNativeTextFile } from '@deepseek-ai/dsh-native-command'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
-import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
+import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
@@ -49,6 +51,8 @@ import { NativeWebSettingsEvents } from './settings-events.ts'
 import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
+const CODEX_ACCOUNT_KEY = parseCredentialKey('llm-pi-ai/openai-codex')
+const DEEPSEEK_ACCOUNT_KEY = parseCredentialKey('deepseek-account/default')
 
 interface NativeAgentPresetListRow {
   readonly id: string
@@ -131,7 +135,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
-  'models/providers', 'models/configurable-providers', 'models/discover',
+  'models/providers', 'models/configurable-providers', 'models/discover', 'plugins/inventory',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
 const modelSelectionInput = z.strictObject({
@@ -152,6 +156,7 @@ const sessionTitleReadConcurrency = 4
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
   readonly directory?: NativeModelDirectory | undefined
+  readonly defaultModel?: (() => ModelSelection | undefined) | undefined
   readonly models?: {
     readonly selection: NativeModelSelectionOperations
     readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
@@ -163,6 +168,29 @@ export interface NativeWebSelectionProviders {
   readonly titles?: NativeSessionTitles | undefined
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
+}
+
+interface NativeDefaultModelSettings {
+  readonly provider?: string
+  readonly model?: string
+}
+
+function resolveDefaultModelSettings(value: NativeSettingsSection): NativeDefaultModelSettings {
+  for (const key of Object.keys(value)) {
+    if (!['provider', 'model'].includes(key)) throw new TypeError(`agent-default-model: unknown field "${key}"`)
+  }
+  const { provider, model } = value
+  if (provider === undefined && model === undefined) return {}
+  if (typeof provider !== 'string' || provider.length === 0 || typeof model !== 'string' || model.length === 0) {
+    throw new TypeError('agent-default-model: provider and model must be nonempty strings')
+  }
+  return { provider, model }
+}
+
+function defaultModelSelection(settings: NativeSettingsScope<NativeDefaultModelSettings> | undefined): Pick<ModelSelection, 'provider' | 'model'> | undefined {
+  const value = settings?.get()
+  if (value?.provider === undefined || value.model === undefined) return undefined
+  return { provider: value.provider, model: value.model }
 }
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
@@ -464,15 +492,18 @@ export class NativeWebSessionService {
                     : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
         if (endpoint === 'agent-presets/list') return this.agentPresetsList()
-        if (endpoint === 'session/model-controls') return {
-          catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog({
+        if (endpoint === 'session/model-controls') {
+          const defaultSelection = this.selections.defaultModel?.() ?? {
             provider: this.config.provider, model: this.config.model,
             ...this.config.reasoningEffort === undefined ? {} : { reasoningEffort: this.config.reasoningEffort },
-          }, accepted),
-          canSelectModel: this.selections.models !== undefined,
-          images: this.selections.directory === undefined ? undefined : this.selections.attachments?.imageLimits,
-          presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
-            ...description === undefined ? {} : { description } })) ?? [],
+          }
+          return {
+            catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog(defaultSelection, accepted),
+            canSelectModel: this.selections.models !== undefined,
+            images: this.selections.directory === undefined ? undefined : this.selections.attachments?.imageLimits,
+            presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
+              ...description === undefined ? {} : { description } })) ?? [],
+          }
         }
         if (endpoint === 'session/list') return this.listSessions(accepted)
         if (endpoint === 'session/create') {
@@ -751,11 +782,24 @@ export class NativeWebSessionService {
   }
 }
 
+/** Project Host installation states for the Plugins page without configuration or failure messages. */
+function pluginInventory(inventory: NativePluginInventory | undefined, payload: unknown): ConnectionRpcResult<unknown> {
+  try {
+    if (Object.keys(object(payload)).length !== 0) throw new TypeError('plugins/inventory takes no fields')
+    const entries = (inventory?.list() ?? []).map(({ id, name, scope, state, failure }) => ({
+      id, name, scope, state, ...failure === undefined ? {} : { failure },
+    }))
+    return { ok: true, value: { entries } }
+  } catch {
+    return { ok: false, error: { code: 'native/plugin-inventory', message: 'Plugin inventory request failed.', details: {} } }
+  }
+}
+
 /** Native Host Session installer; the Web Host remains the selected application. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -764,10 +808,18 @@ export const plugin: NativePlugin = {
         maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human,
         maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations,
         authorizationKeys: _authorizationKeys, ...turn } = config
+      const settings = context.optional('settings')
+      const defaultSettings = settings?.register<'agent-default-model', NativeDefaultModelSettings>(
+        'agent-default-model', {}, resolveDefaultModelSettings,
+      )
+      if (defaultSettings !== undefined) context.own(() => { defaultSettings.dispose() })
+      const readDefaultModel = () => defaultModelSelection(defaultSettings)
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
+        defaultModelSelection: readDefaultModel,
       })
       const models = context.optional('modelSelection')
+      const modelSettings = context.optional('modelSettings')
       const selectedAuthorization = context.optional('authorization')
       const selectedCredentials = context.optional('credentials')
       const providers = selectedAuthorization === undefined || selectedCredentials === undefined
@@ -778,8 +830,26 @@ export const plugin: NativePlugin = {
       context.own(() => modelEndpoints.close())
       const settingsEvents = new NativeWebSettingsEvents(context)
       context.own(() => settingsEvents.close())
+      let defaultModelInitialization: Promise<void> | undefined
+      const initializeDefaultModel = (): Promise<void> => {
+        if (defaultSettings === undefined || modelSettings === undefined) return Promise.resolve()
+        if (defaultModelInitialization !== undefined) return defaultModelInitialization
+        const operation = (async () => {
+          if (readDefaultModel() !== undefined) return
+          const selection = await modelSettings.firstAvailableAccountModel(context.signal)
+          if (selection === undefined || readDefaultModel() !== undefined) return
+          await defaultSettings.replace(selection, defaultSettings.revision)
+        })()
+        defaultModelInitialization = operation.finally(() => { defaultModelInitialization = undefined })
+        return defaultModelInitialization
+      }
+      context.on('authorization/settled', async (key, settlement) => {
+        if (settlement !== 'authorized' || key !== CODEX_ACCOUNT_KEY && key !== DEEPSEEK_ACCOUNT_KEY) return
+        await initializeDefaultModel()
+      })
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
-        { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
+        { directory: context.optional('modelDirectory'), defaultModel: readDefaultModel,
+          presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
@@ -789,7 +859,9 @@ export const plugin: NativePlugin = {
         (endpoint, payload, signal) => endpoint.startsWith('authorization/')
           ? authorization.handle(endpoint, payload)
           : endpoint.startsWith('accounts/') ? accounts.handle(endpoint, payload, signal)
-            : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal) : service.handle(endpoint, payload, signal)))
+            : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal)
+              : endpoint === 'plugins/inventory' ? Promise.resolve(pluginInventory(context.optional('pluginInventory'), payload))
+                : service.handle(endpoint, payload, signal)))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',

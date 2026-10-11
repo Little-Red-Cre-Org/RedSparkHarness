@@ -29,7 +29,7 @@ kind: "package-library"
 
 `resolveInstallation(requests, target)` 在解析配置前检查版本、目标、Provider 冲突、缺失依赖和依赖环。插件的 `resolve(config)` 验证配置而不获取资源，并返回激活函数。Consumer 仅读取已声明的服务，选择自身作用域或祖先中最近的 Provider；独立根隔离 realm。只有激活成功且声明的全部服务存在后，Provider 才可见。
 
-Service Definition 包在 `@deepseek-ai/dsh-native-runtime` 包根入口扩展 `NativeServices`，事件 Definition 包扩展 `NativeEvents`。Host 和事件总线使用相同的合并后声明。
+Service Definition 包在 `@deepseek-ai/dsh-native-runtime` 包根入口扩展 `NativeServices`，事件 Definition 包扩展 `NativeEvents`。Host 和事件总线使用相同的合并后声明。包根还声明 `pluginInventory`（`NativePluginInventory.list()` 返回 `InstallationDiagnostic[]`），由启动器提供。
 
 `NativeHost` 在调用每次激活前建立所有权。插件通过 `context.own()` 立即登记资源清理，通过 `context.effect()` 登记贡献，通过 `context.on()` 订阅。effect 的 disposer 必须同步关闭接收，并返回已接收回调全部结束后的完成信号。所有者取消时，全部 effect 先开始排空，再释放任何资源，包括注册后才获取的资源。停止时中止所属信号、关闭事件接收、等待回调和启动结束，并先释放 Consumer、再释放 Provider。资源清理按获取顺序的逆序执行，尝试所有 disposer，并报告聚合失败。插件必须配合取消，并在释放期间等待自身在途工作。清理不会撤销已完成的外部写入。
 

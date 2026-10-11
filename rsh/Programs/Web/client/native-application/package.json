@@ -38,7 +38,8 @@
       "requires": [
         "clientNativeSession",
         "clientSlots",
-        "clientLocale"
+        "clientLocale",
+        "clientNativeTheme"
       ],
       "optional": [],
       "provides": [
@@ -57,6 +58,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-client-ui-attachment": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },

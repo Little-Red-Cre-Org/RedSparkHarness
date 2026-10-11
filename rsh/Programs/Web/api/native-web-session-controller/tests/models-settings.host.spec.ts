@@ -16,6 +16,7 @@ it('dispatches model directory and discovery RPCs with safe failure results', as
   const discover = vi.fn(async () => discovered)
   const modelSettings: NativeModelSettings = {
     configurableProviders: () => configurable,
+    async firstAvailableAccountModel() { return undefined },
     discover,
   }
   const directory = { providers: () => providers } as unknown as NativeModelDirectory

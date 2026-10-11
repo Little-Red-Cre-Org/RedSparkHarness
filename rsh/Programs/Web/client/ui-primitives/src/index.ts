@@ -49,6 +49,13 @@ export { writeClipboard } from './clipboard.ts'
 export { relativeTime } from './relative-time.ts'
 export { rankByName } from './rank-by-name.ts'
 export type { RelativeTime, RelativeTimeUnit } from './relative-time.ts'
+export { ProjectRowItem, SearchResultItem, SessionNodeItem } from './workspace-rows/Rows.tsx'
+export type {
+  SessionPendingInteractionStatus, SessionRowNode, SessionSearchRow, WorkspaceGroupRow,
+  WorkspaceRowKey, WorkspaceRowTranslate,
+} from './workspace-rows/types.ts'
+export { WorkspaceSectionEmpty, WorkspaceSectionHeader } from './workspace-rows/WorkspaceSection.tsx'
+export { workspaceLabel } from './workspace-rows/workspace-label.ts'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'

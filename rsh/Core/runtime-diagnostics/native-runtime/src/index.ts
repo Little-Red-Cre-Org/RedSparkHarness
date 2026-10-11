@@ -3,12 +3,20 @@
  * @module @deepseek-ai/dsh-native-runtime
  */
 
-import type { NativeApplication } from './host.ts'
+import type { InstallationDiagnostic, NativeApplication } from './host.ts'
 
 /** Extend from service Definition packages at the native-runtime package root. */
 export interface NativeServices {
   /** The one application selected by a launched profile. */
   application: NativeApplication
+  /** Installation states of the running Host, provided by the profile loader. */
+  pluginInventory: NativePluginInventory
+}
+
+/** Read-only view of the running Host's installations. */
+export interface NativePluginInventory {
+  /** @returns detached installation states in dependency order. */
+  list(): readonly InstallationDiagnostic[]
 }
 
 /** Extend from event Definition packages at the native-runtime package root. */

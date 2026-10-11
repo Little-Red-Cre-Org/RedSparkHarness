@@ -56,7 +56,7 @@ CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、�
 
 显式选择的内置原生 profile 包含原生 Session 执行 Provider，提供选定的执行注册表与活动 Session 所有者。CLI 解析器将该 Provider 声明为直接依赖；旧 profile 的选择保持不变。
 
-Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目录环境层。兼容启动共用同一验证加载器；每个根作用域拥有真实启动快照 Provider。仅 Client 的配置不安装它。
+Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目录环境层。兼容启动共用同一验证加载器；每个根作用域拥有真实启动快照 Provider。每个 Host 根作用域还会获得 `pluginInventory` Provider，列出运行中 Host 的安装状态；重载后仍读取被保留的 Host。仅 Client 的配置两者都不安装。
 
 配置树以空根为起点，依次叠加以下配置层：
 - `dsh.profile.bundles` 中各组合包的 patch

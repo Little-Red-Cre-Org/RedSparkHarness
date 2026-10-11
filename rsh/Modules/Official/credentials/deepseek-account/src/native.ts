@@ -24,6 +24,11 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 /** Native DeepSeek profile, balance, and sign-out operations. */
 export interface DeepSeekAccount {
   readonly key: CredentialKey
+  /** @param destination - inference URL that would receive the grant.
+   * @param signal - request cancellation.
+   * @returns the stored grant only for the configured inference origin.
+   */
+  resolveToken(destination: string, signal?: AbortSignal): Promise<string | undefined>
   /** @param signal - caller cancellation.
    * @returns the current profile, a failed query, or null if signed out or the grant changes mid-request.
    */
@@ -60,18 +65,25 @@ interface LoopbackCallback {
 }
 
 /** Validate the only accepted native configuration field. */
-function resolveConfig(input: unknown): { origin: string } {
-  if (input === undefined) return { origin: 'https://platform.deepseek.com' }
+function resolveConfig(input: unknown): { origin: string; inferenceOrigin: string } {
+  if (input === undefined) return { origin: 'https://platform.deepseek.com', inferenceOrigin: 'https://api.deepseek.com' }
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     throw new TypeError('deepseek-account: native configuration must be an object')
   }
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (key !== 'platformOrigin') throw new TypeError(`deepseek-account: unknown native configuration field ${JSON.stringify(key)}`)
+    if (key !== 'platformOrigin' && key !== 'inferenceOrigin') throw new TypeError(`deepseek-account: unknown native configuration field ${JSON.stringify(key)}`)
   }
-  const value = fields['platformOrigin']
-  if (value !== undefined && typeof value !== 'string') throw new TypeError('deepseek-account: platformOrigin must be a string')
-  return { origin: platformOrigin(value ?? 'https://platform.deepseek.com', false) }
+  const originValue = fields['platformOrigin']
+  const inferenceValue = fields['inferenceOrigin']
+  if (originValue !== undefined && typeof originValue !== 'string') throw new TypeError('deepseek-account: platformOrigin must be a string')
+  if (inferenceValue !== undefined && typeof inferenceValue !== 'string') throw new TypeError('deepseek-account: inferenceOrigin must be a string')
+  const inference = new URL(inferenceValue ?? 'https://api.deepseek.com')
+  if (!['http:', 'https:'].includes(inference.protocol) || inference.username || inference.password
+    || inference.pathname !== '/' || inference.search || inference.hash) {
+    throw new Error('deepseek-account: inferenceOrigin must be an HTTP(S) origin without credentials, path, query or fragment')
+  }
+  return { origin: platformOrigin(originValue ?? 'https://platform.deepseek.com', false), inferenceOrigin: inference.origin }
 }
 
 /** Build the Platform client identity used by account and authorization requests. */
@@ -289,7 +301,7 @@ async function runSignIn(
 }
 
 function accountService(
-  credentials: NativeCredentials, origin: string, lifetime: AbortSignal,
+  credentials: NativeCredentials, origin: string, inferenceOrigin: string, lifetime: AbortSignal,
   authorization: NativeAuthorization | undefined, pending: Set<Promise<void>>,
 ): DeepSeekAccount {
   async function detail(field: 'profile', caller?: AbortSignal): Promise<AccountProfileResult | null>
@@ -321,6 +333,20 @@ function accountService(
   }
   return {
     key: KEY,
+    async resolveToken(destination, signal) {
+      const operation = operationSignal(lifetime, signal)
+      operation.throwIfAborted()
+      const target = new URL(destination)
+      if (target.origin !== inferenceOrigin || target.username || target.password) return undefined
+      const stored = grantFrom(await credentials.readRecord(KEY), origin)
+      operation.throwIfAborted()
+      if (stored === undefined || stored.token.startsWith('dsh_mock_')) return undefined
+      const issuer = new URL(stored.issuer)
+      if (inferenceOrigin === 'https://api.deepseek.com') {
+        if (['localhost', '127.0.0.1', '[::1]'].includes(issuer.hostname)) return undefined
+      } else if (issuer.origin !== origin) return undefined
+      return stored.token
+    },
     profile: signal => detail('profile', signal),
     balance: signal => detail('balance', signal),
     async signOut(signal) {
@@ -361,7 +387,7 @@ export const plugin: NativePlugin = {
         }
         context.effect(authorization.registerFlow(flow))
       }
-      context.provide('deepseekAccount', accountService(credentials, config.origin, context.signal, authorization, pending))
+      context.provide('deepseekAccount', accountService(credentials, config.origin, config.inferenceOrigin, context.signal, authorization, pending))
     }
   },
 }

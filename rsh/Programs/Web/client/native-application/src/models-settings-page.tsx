@@ -158,10 +158,12 @@ function asNamespace(descriptor: NativeSettingsDescriptor): ModelSettingsNamespa
   }
 }
 
-/** Render provider editors and the native authorization/account area below them. */
-export function ModelsSettingsPage({ actions, t, children }: {
+/** Render API provider editors followed by the native Subscription models section. */
+export function ModelsSettingsPage({ actions, t, children, reloadKey = 0 }: {
   actions: ModelsActions
   t: Translate
+  /** Changes after an account sign-in or sign-out so the provider list is read again. */
+  reloadKey?: number
   children?: ReactNode
 }): ReactNode {
   const [snapshot, setSnapshot] = useState<ModelsSnapshot>({
@@ -234,7 +236,7 @@ export function ModelsSettingsPage({ actions, t, children }: {
       }
     })()
     return () => { lifetime.abort() }
-  }, [actions, refresh])
+  }, [actions, refresh, reloadKey])
 
   const operations = useMemo<ModelSettingsOperations>(() => ({
     async describeCredential(ref) {

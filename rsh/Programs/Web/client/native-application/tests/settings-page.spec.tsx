@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsDescriptor,
@@ -117,6 +117,33 @@ it('renders the read-only Agent preset roster and status badges', async () => {
   expect(screen.getByText(en.agentPresetsBroken)).toBeTruthy()
   expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
   expect(screen.queryAllByRole('button')).toHaveLength(0)
+})
+
+it('shows when the ChatGPT sign-in method does not provide usage', async () => {
+  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_UNSUPPORTED' as const }))
+  renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
+
+  const notice = await screen.findByRole('status')
+  expect(notice.textContent).toBe(en.usageUnsupported)
+  expect(screen.queryByText(en.accountUnavailable)).toBeNull()
+})
+
+it('renders a subscription account inside its authorization row', async () => {
+  const entry = {
+    key: chatGptAccount.key, label: 'ChatGPT subscription (Sign in with ChatGPT)',
+    methods: [{ id: 'oauth', label: 'OAuth' }], configured: true, writable: true,
+  }
+  const actions = {
+    ...accountPageActions(vi.fn(async () => readyUsage)),
+    authorizationList: vi.fn(async () => [entry]),
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
+
+  const row = await screen.findByRole('group', { name: entry.label })
+  expect(within(row).getByText(en.authorizationConnected)).toBeTruthy()
+  expect(within(row).getByRole('button', { name: en.authorizationReconnect })).toBeTruthy()
+  expect(within(row).getByRole('heading', { name: en.chatGptAccount })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Accounts' })).toBeNull()
 })
 
 it('keeps ready usage and shows a stale hint after refresh failure', async () => {
@@ -540,6 +567,7 @@ it('refresh mid-login then resume and finish', async () => {
     expect(await screen.findByText(en.authorizationAuthorized)).toBeTruthy()
     await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
     await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
+    expect(screen.queryByRole('link', { name: 'https://auth.example/device' })).toBeNull()
     expect(answer).toBe('secret-answer')
     expect(cancel).not.toHaveBeenCalled()
   } finally { await authorization.dispose() }

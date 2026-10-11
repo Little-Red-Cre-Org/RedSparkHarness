@@ -32,6 +32,8 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 仅流式发送 Settings 文档、凭据引用及模型适配器失效通知，不携带值；取消请求会关闭流。
 
+安装 Settings 与 modelSettings 后，此 Host 会持有 `agent-default-model`。账户授权以 `authorized` 结算后，只有在没有已保存默认值且没有通过 profile 引用、提供方原生认证或已存提供方 key 配置的非账户提供方 API key 时，才会保存第一个已登录账户模型。没有持久化模型选择的 root Session 会读取已保存的 provider/model；Session 选择仍具有权威性。Settings 写入会发布 `settings/document-updated`，账户路由变更后 pi-ai 会发布 `llm/adapters-updated`。
+
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
 可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
@@ -42,7 +44,7 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。执行器在展示或回答前捕获精确应用所有者；仅 Session 标识相同不会准入其他 Program 的请求。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。
 
-可选 Settings 与 Credentials Provider 复用同一经过身份验证的 `/api` Connection 载体。`settings/describe` 返回 `{ hasDocument, namespaces, limits }`；`settings/open-document` 在 Host 文本编辑器中打开 Provider 的本地设置文档，没有文档时以 `native/settings` 失败。namespace 为只包含 owner 显式发布 presentation 元数据的活动 namespace，剥离机密值并省略所有 schema 默认值，同时公布经过校验的请求预算。注册时拒绝藏在不支持 schema 节点后的机密字段。`settings/mutate` 按所显示 revision 应用可见路径修改，拒绝机密路径、超过 maxSettingsOperations 的修改以及过期写入；超限修改在 Provider 写入前整体拒绝。Provider 异常文本会替换为通用 Settings 或 Credentials 错误；revision 冲突只保留 namespace 与预期／当前 revision。凭据引用来自这些已注册 schema；`credentials/describe` 只返回 configured/source/writable 事实并执行 maxCredentialRefsPerRead 上限，set 与 unset 只返回确认，不会回读值。
+可选 Settings 与 Credentials Provider 复用同一经过身份验证的 `/api` Connection 载体。`plugins/inventory` 从可选 `pluginInventory` 服务返回 `{ entries }`（安装 id、名称、作用域、状态、失败阶段），失败时为 `native/plugin-inventory`。`settings/describe` 返回 `{ hasDocument, namespaces, limits }`；`settings/open-document` 在 Host 文本编辑器中打开 Provider 的本地设置文档，没有文档时以 `native/settings` 失败。namespace 为只包含 owner 显式发布 presentation 元数据的活动 namespace，剥离机密值并省略所有 schema 默认值，同时公布经过校验的请求预算。注册时拒绝藏在不支持 schema 节点后的机密字段。`settings/mutate` 按所显示 revision 应用可见路径修改，拒绝机密路径、超过 maxSettingsOperations 的修改以及过期写入；超限修改在 Provider 写入前整体拒绝。Provider 异常文本会替换为通用 Settings 或 Credentials 错误；revision 冲突只保留 namespace 与预期／当前 revision。凭据引用来自这些已注册 schema；`credentials/describe` 只返回 configured/source/writable 事实并执行 maxCredentialRefsPerRead 上限，set 与 unset 只返回确认，不会回读值。
 
 将 `authorizationKeys` 设为页面可授权的凭据 key；允许列表默认为空。Host 通过 `/api` 提供 `authorization/list`、`authorization/begin`、`authorization/answer`、`authorization/decline` 和 `authorization/cancel`，并通过 POST `/api/native-session/authorization` 提供可重放的帧。回答、拒绝和取消请求必须包含当前 `attemptId`；帧不携带机密，断开连接只取消订阅，显式点击取消才会终止尝试。
 

@@ -124,6 +124,7 @@ describe('pi-ai login flows', () => {
     const writeSignals: (AbortSignal | undefined)[] = []
     const credentials = {
       resolve: async () => undefined,
+      describeRecord: async () => ({ configured: false, writable: true }),
       readRecord: async () => undefined,
       listRecords: async () => [],
       modifyRecord: async (_key: string, mutate: (record: undefined) => Promise<unknown>, options?: { signal?: AbortSignal }) => {
@@ -143,6 +144,7 @@ describe('pi-ai login flows', () => {
     const signal = new AbortController().signal
     const context = {
       signal,
+      events: { parallel: async () => {} },
       require: (name: string) => name === 'credentials'
         ? credentials
         : createLaunchEnvironmentSnapshot([{ source: 'process', values: {} }]),
