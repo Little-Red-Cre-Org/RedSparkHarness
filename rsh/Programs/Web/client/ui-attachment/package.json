@@ -65,6 +65,11 @@
     "lib/**/*.css",
     "lib/types/**/*.d.ts"
   ],
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
