@@ -98,6 +98,7 @@ export class NativeWebWorkspaceService {
    * @param persistence - selected Session history authority.
    * @param active - exact live Session ownership authority.
    * @param maxHistoryEvents - limit for blank Session reuse checks.
+   * @param maxFollowers - maximum concurrent Workspace follow requests.
    */
   constructor(
     private readonly context: Pick<NativeContext, 'on' | 'signal'>,
@@ -107,6 +108,7 @@ export class NativeWebWorkspaceService {
     private readonly active: NativeActiveSessionOperations,
     private readonly baseRouteId: NativeRootRouteId,
     private readonly maxHistoryEvents: number,
+    private readonly maxFollowers: number,
   ) {
     const initial = registry.list()
     this.knownIds = new Set(initial.map(value => String(value.id)))
@@ -138,7 +140,7 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/create') {
         const request = createRequest.parse(payload)
-        return { ok: true, value: await this.enqueue(async () => {
+        return { ok: true, value: await this.enqueue(signal, async () => {
           const existing = await this.registry.resolveByPath(request.path)
           if (existing !== undefined) return { workspace: workspaceView(existing), created: false }
           const created = await this.registry.create(request.path)
@@ -147,7 +149,7 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/rename') {
         const request = renameRequest.parse(payload)
-        return { ok: true, value: await this.enqueue(async () => {
+        return { ok: true, value: await this.enqueue(signal, async () => {
           const id = workspaceId(request.workspaceId)
           const workspace = this.requireWorkspace(id)
           if (this.registry.list().some(candidate => candidate.id !== id && candidate.title === request.title)) {
@@ -159,8 +161,17 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/delete') {
         const request = deleteRequest.parse(payload)
-        return { ok: true, value: await this.enqueue(async () => {
-          if (!await this.registry.delete(workspaceId(request.workspaceId))) throw new Error('Workspace was not found')
+        return { ok: true, value: await this.enqueue(signal, async () => {
+          const workspace = this.requireWorkspace(workspaceId(request.workspaceId))
+          const route = this.executor.rootExecution.workspaceRoutes().find(candidate => candidate.workspaceId === workspace.id)
+          if (route !== undefined) {
+            for (const owner of this.active.owners()) {
+              if (owner.invocation !== 'root' || this.executor.rootExecution.capture(owner).id !== route.id) continue
+              await this.executor.rootExecution.releaseIdle({ route: route.id, id: owner.session.id, expectedOwner: owner }, signal)
+            }
+            await this.executor.rootExecution.releaseWorkspace(route.id, signal)
+          }
+          if (!await this.registry.delete(workspace.id)) throw new Error('Workspace was not found')
           return { deleted: true }
         }) }
       }
@@ -193,7 +204,7 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/connect') {
         const request = connectRequest.parse(payload)
-        return { ok: true, value: await this.enqueue(() => this.connectWorkspace(workspaceId(request.workspaceId), signal)) }
+        return { ok: true, value: await this.enqueue(signal, () => this.connectWorkspace(workspaceId(request.workspaceId), signal)) }
       }
       throw new Error('Unsupported Workspace request')
     } catch {
@@ -209,8 +220,10 @@ export class NativeWebWorkspaceService {
     try { empty.parse(await request.json()) } catch {
       return Response.json({ ok: false, error: { code: 'native/workspaces', message: 'Workspace request failed.', details: {} } }, { status: 400 })
     }
-    const queue = new WorkspaceEventQueue()
     const signal = AbortSignal.any([request.signal, this.context.signal])
+    signal.throwIfAborted()
+    if (this.followers.size >= this.maxFollowers) return new Response('native Workspace follow: capacity reached', { status: 429 })
+    const queue = new WorkspaceEventQueue()
     const stop = (): void => {
       queue.close()
       this.followers.delete(queue)
@@ -317,8 +330,12 @@ export class NativeWebWorkspaceService {
     return workspace
   }
 
-  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
-    const result = this.operationTail.then(operation)
+  private enqueue<T>(signal: AbortSignal, operation: () => Promise<T>): Promise<T> {
+    signal.throwIfAborted()
+    const result = this.operationTail.then(() => {
+      signal.throwIfAborted()
+      return operation()
+    })
     this.operationTail = result.then(() => undefined, () => undefined)
     return result
   }
