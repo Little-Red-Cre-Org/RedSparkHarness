@@ -371,7 +371,6 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
       if (latest()) setAuthorizationEntries(entries)
     } catch (cause: unknown) {
       if (latest()) {
-        setAuthorizationEntries([])
         setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
       }
     }
