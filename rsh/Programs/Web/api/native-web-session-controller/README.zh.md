@@ -30,7 +30,9 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
-可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 仅流式发送 Settings 文档、凭据引用及模型适配器失效通知，不携带值；取消请求会关闭流。
+`agent-presets/read` 返回一个目录的来源、状态、元数据与原始 `agent.native.json` 文本；profile 独有的组合没有文件内容。`agent-presets/copy` 将已就绪目录复制到 `<DSH_HOME>/.agent-presets`；`agent-presets/delete` 只删除用户目录。`agent-presets/can-open-directory` 报告 Host 打开器是否可用；`agent-presets/open-directory` 打开用户目录，或返回 Host 本地路径。找不到、格式无效和只读拒绝分别保留 `agent-preset/*` 错误码；其他管理失败使用 `native/agent-presets`，打开器失败使用 `native/agent-presets-directory`。文件操作完成后，Host 会在设置事件流发布 `agent-presets/updated`。
+
+可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 流式发送 Settings 文档、凭据引用、模型适配器与 Agent 预设失效通知，不携带值；取消请求会关闭流。
 
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 

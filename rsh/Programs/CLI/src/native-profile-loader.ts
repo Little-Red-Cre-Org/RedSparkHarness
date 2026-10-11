@@ -97,13 +97,14 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
   const presetsInstallation = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-agent-presets' && row.disabled !== true)
   if (presetsInstallation === undefined) return profile
   const { nativePresetRoots, scanNativePresetFolders } = await import('@deepseek-ai/dsh-agent-presets/native')
+  const roots = nativePresetRoots(home)
   const registeredPresetIds = new Set(profile.installations.flatMap((row) => {
     if (row.plugin !== '@deepseek-ai/dsh-agent-preset-standing'
       || typeof row.config !== 'object' || row.config === null || Array.isArray(row.config)) return []
     const id = (row.config as Record<string, unknown>).id
     return typeof id === 'string' ? [id] : []
   }))
-  const folders = scanNativePresetFolders(nativePresetRoots(home)).map((folder) => {
+  const folders = scanNativePresetFolders(roots).map((folder) => {
     if (folder.status !== 'ready' || registeredPresetIds.has(folder.id)) return folder
     const missing = folder.installations?.find(row => row.disabled !== true && !anchors.some((anchor) => {
       try {
@@ -139,7 +140,9 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
         ...folder.description === undefined ? {} : { description: folder.description } } })
   }
   installations[installations.indexOf(presetsInstallation)] = {
-    ...presetsInstallation, config: { ...(presetsInstallation.config as Record<string, unknown>), folders: summaries },
+    ...presetsInstallation, config: {
+      ...(presetsInstallation.config as Record<string, unknown>), folders: summaries, managementRoots: roots,
+    },
   }
   return { ...profile, scopes, installations }
 }

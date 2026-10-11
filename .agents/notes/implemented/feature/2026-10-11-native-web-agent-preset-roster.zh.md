@@ -1,4 +1,4 @@
-# Agent Note: 原生 Web 只读展示 Agent 预设名单
+# Agent Note: 原生 Web 管理原生 Agent 预设目录
 
 Status: implemented
 
@@ -6,25 +6,25 @@ Status: implemented
 
 ## 问题
 
-原生 Host 可以返回 Agent 预设名单，但原生 Web Settings 页面没有展示该名单。
+原生 Host 拥有预设目录，而原生 Web Settings 页面需要足够的详情和文件操作来帮助用户管理这些目录。
 
 ## 决策
 
-`native-application` 从选定的 `client-native-session` Consumer 传入 `agentPresetsList`，并渲染本地只读名单。页面显示每个预设的名称和可选描述，标记 Host 默认项，并标注 `needs-migration` 与 `invalid` 状态。无效项还显示 Host 提供的 `problem`。该视图不写入预设或 Session 状态，也不导入旧版预设运行时。
+`native-application` 使用选定的 `client-native-session` Consumer 列出预设、读取目录元数据和原生组合文本、将就绪目录复制到 Host 用户目录、删除用户目录，并打开或显示用户目录路径。页面显示预设来源与状态；仅存在于 profile 的组合会显示元数据，不提供目录内容。复制和删除通过现有 Settings 事件流发布 `agent-presets/updated`，页面收到后重新读取名单。原生代码拥有文件操作，且不导入旧版预设运行时。
 
 ## 考虑过的替代方案
 
-**保留占位文案。** 这样 Native Web 仍无法查看已有 Host 名单。
+**保留只读名单。** 这样只能查看预设名称，仍无法使用现有的复制、删除、详情和目录位置操作。
 
-**导入旧版 `ui-agent-preset` 运行时。** 其 Settings 控件使用原有注册与管理操作，原生只读视图不拥有这些能力。
+**导入旧版 `ui-agent-preset` 运行时。** 其 Settings 控件依赖旧版注册和 Cordis remotes；原生 Host API 直接拥有这些操作。
 
 ## 后果
 
-Native Web 可以查看 Host 返回的预设名称、描述、默认项和状态。Client 呈现 Host 响应，不修改预设或 Session 状态。名单仍由 Host 负责，原生视图只读投影。
+名单和文件系统仍由 Host 拥有。复制不会替换已有目录，并保留来源描述、采用可选的新显示名称。删除和打开目录都会拒绝 system 预设。复制的目录会出现在实时名单中，但 Host 重新加载 profile 前，不会把其组合安装到当前运行进程。
 
 ## 验证
 
-一个 Native Application 渲染测试覆盖默认标记、描述、迁移提示、无效标记和无效原因。
+一个 Host 测试覆盖读取、复制、只读拒绝、删除和更新事件。一个 Native Application 测试覆盖详情、复制、显示路径、事件刷新和删除。
 
 ## 相关内容
 

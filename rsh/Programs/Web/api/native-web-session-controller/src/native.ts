@@ -22,6 +22,7 @@ import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
+import { NativeAgentPresetError } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
@@ -37,7 +38,7 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
-import { openNativeTextFile } from '@deepseek-ai/dsh-native-command'
+import { canOpenNativePath, openNativePath, openNativeTextFile } from '@deepseek-ai/dsh-native-command'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
@@ -58,6 +59,10 @@ interface NativeAgentPresetListRow {
   readonly status: 'ready' | 'needs-migration' | 'invalid'
   readonly problem?: string
 }
+
+const nativeAgentPresetEmpty = z.strictObject({})
+const nativeAgentPresetId = z.strictObject({ id: z.string() })
+const nativeAgentPresetCopy = z.strictObject({ from: z.string(), id: z.string(), name: z.string().optional() })
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
@@ -131,6 +136,8 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
+  'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
+  'agent-presets/can-open-directory', 'agent-presets/open-directory',
   'models/providers', 'models/configurable-providers', 'models/discover',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
@@ -196,7 +203,8 @@ export class NativeWebSessionService {
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
     private readonly config: Config, private readonly lifetime: AbortSignal,
-    private readonly selections: NativeWebSelectionProviders = {}) {
+    private readonly selections: NativeWebSelectionProviders = {},
+    private readonly notifyAgentPresetsUpdated: () => void = () => {}) {
     this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests)
     this.requests = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.controls = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
@@ -442,6 +450,9 @@ export class NativeWebSessionService {
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      if (endpoint.startsWith('agent-presets/')) {
+        return { ok: true, value: await this.controls.run(signal, accepted => this.agentPresets(endpoint, payload, accepted)) }
+      }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
       }
@@ -455,7 +466,7 @@ export class NativeWebSessionService {
       const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
+        const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
           : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
             : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
               : endpoint === 'session/rename-title' ? ['sessionId', 'title']
@@ -463,7 +474,6 @@ export class NativeWebSessionService {
                   : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
                     : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
-        if (endpoint === 'agent-presets/list') return this.agentPresetsList()
         if (endpoint === 'session/model-controls') return {
           catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog({
             provider: this.config.provider, model: this.config.model,
@@ -551,8 +561,15 @@ export class NativeWebSessionService {
         throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
-      if (endpoint === 'agent-presets/list') {
-        return { ok: false, error: { code: 'native/agent-presets', message: 'Agent preset request failed.', details: {} } }
+      if (endpoint.startsWith('agent-presets/')) {
+        if (error instanceof NativeAgentPresetError) {
+          return { ok: false, error: { code: error.code, message: error.message, details: error.details } }
+        }
+        return { ok: false, error: {
+          code: endpoint === 'agent-presets/open-directory' ? 'native/agent-presets-directory' : 'native/agent-presets',
+          message: endpoint === 'agent-presets/open-directory' ? 'Could not open Agent preset folder.' : 'Agent preset request failed.',
+          details: {},
+        } }
       }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         const settingsRequest = endpoint.startsWith('settings/')
@@ -592,6 +609,48 @@ export class NativeWebSessionService {
         ...folder.problem === undefined ? {} : { problem: folder.problem } })
     }
     return { default: catalog.default, presets }
+  }
+
+  private async agentPresets(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
+    if (endpoint === 'agent-presets/list') {
+      nativeAgentPresetEmpty.parse(payload)
+      return this.agentPresetsList()
+    }
+    if (endpoint === 'agent-presets/can-open-directory') {
+      nativeAgentPresetEmpty.parse(payload)
+      return canOpenNativePath()
+    }
+    if (endpoint === 'agent-presets/read') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      return await this.agentPresetService(id).read(id)
+    }
+    if (endpoint === 'agent-presets/copy') {
+      const { from, id, name } = nativeAgentPresetCopy.parse(payload)
+      await this.agentPresetService(from).copy(from, id, name)
+      this.notifyAgentPresetsUpdated()
+      return { updated: true }
+    }
+    if (endpoint === 'agent-presets/delete') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      await this.agentPresetService(id).delete(id)
+      this.notifyAgentPresetsUpdated()
+      return { updated: true }
+    }
+    if (endpoint === 'agent-presets/open-directory') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      const path = this.agentPresetService(id).directory(id)
+      if (!canOpenNativePath()) return { opened: false, path }
+      await openNativePath(path, signal)
+      return { opened: true }
+    }
+    throw new Error('agent-presets: unsupported endpoint')
+  }
+
+  private agentPresetService(id: string): NativeAgentPresetOperations {
+    const service = this.selections.presets
+    if (service === undefined) throw new NativeAgentPresetError('agent-preset/not-found',
+      'this deployment composes no agent presets', { agentPreset: id, available: [] })
+    return service
   }
 
   private async listSessions(signal: AbortSignal): Promise<NativeSessionListItem[]> {
@@ -782,7 +841,8 @@ export const plugin: NativePlugin = {
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
-          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
+          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },
+        () => { settingsEvents.agentPresetsUpdated() })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),

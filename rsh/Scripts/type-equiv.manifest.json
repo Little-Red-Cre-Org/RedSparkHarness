@@ -1843,6 +1843,16 @@
     },
     {
       "doc": "rsh/Programs/Web/client/native-session/README.md",
+      "symbol": "NativeAgentPresetDocument",
+      "source": "rsh/Programs/Web/client/native-session/src/native.ts"
+    },
+    {
+      "doc": "rsh/Programs/Web/client/native-session/README.md",
+      "symbol": "NativeSettingsEvent",
+      "source": "rsh/Programs/Web/client/native-session/src/native.ts"
+    },
+    {
+      "doc": "rsh/Programs/Web/client/native-session/README.md",
       "symbol": "NativeSettingsDescription",
       "source": "rsh/Programs/Web/client/native-session/src/native.ts"
     },

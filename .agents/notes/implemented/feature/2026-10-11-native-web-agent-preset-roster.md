@@ -1,4 +1,4 @@
-# Agent Note: Native Web reads the Agent preset roster
+# Agent Note: Native Web manages native Agent preset folders
 
 Status: implemented
 
@@ -6,25 +6,25 @@ English | [中文](2026-10-11-native-web-agent-preset-roster.zh.md)
 
 ## Problem
 
-The native Host can return the Agent preset roster, but the native Web Settings page did not expose it.
+The native Host owns preset folders, while the native Web Settings page needs enough detail and file operations to help users work with them.
 
 ## Decision
 
-`native-application` passes `agentPresetsList` from the selected `client-native-session` Consumer and renders a local read-only list. It shows each preset's name and optional description, marks the Host default, and labels `needs-migration` and `invalid` entries. Invalid rows also show the Host's `problem`. The view writes no preset or Session state and imports no legacy preset runtime.
+`native-application` uses the selected `client-native-session` Consumer to list presets, read folder metadata and raw native composition text, copy ready folders into the Host user directory, delete user folders, and open or reveal user folder paths. It shows preset source and status; profile-only compositions have metadata but no folder content. Copy and delete publish `agent-presets/updated` through the existing settings event stream, and the view reloads the roster on that event. Native code owns the file operations and imports no legacy preset runtime.
 
 ## Alternatives considered
 
-**Keep the placeholder.** That would leave the existing Host roster inaccessible through Native Web.
+**Keep the read-only roster.** That would expose preset names but leave users without the existing copy, delete, detail, and folder-location operations.
 
-**Import the legacy `ui-agent-preset` runtime.** Its Settings controls use legacy registrations and management actions, which the native read-only view does not own.
+**Import the legacy `ui-agent-preset` runtime.** Its Settings controls depend on legacy registrations and Cordis remotes; native Host APIs own these operations directly.
 
 ## Consequences
 
-Native Web can inspect the Host's preset names, descriptions, default and status. The Client renders the Host response without changing preset or Session state. The Host remains the roster authority, and the native view remains a read-only projection.
+The Host remains the authority for the roster and filesystem. Copy never replaces a destination and preserves the source description while using the optional new display name. Delete and folder opening refuse system presets. A copied folder appears in the live roster, while its composition is not installed into the running profile until the Host reloads its profile.
 
 ## Verification
 
-One Native Application render test covers the default marker, descriptions, migration-needed and invalid badges, and the invalid reason.
+One Host test covers reading, copying, read-only refusal, deletion, and update events. One Native Application test covers details, copy, path reveal, event-driven reload, and deletion.
 
 ## Related
 
