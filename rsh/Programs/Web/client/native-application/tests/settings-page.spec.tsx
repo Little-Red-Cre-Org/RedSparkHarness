@@ -119,12 +119,12 @@ it('renders the read-only Agent preset roster and status badges', async () => {
   expect(screen.queryAllByRole('button')).toHaveLength(0)
 })
 
-it('shows when the ChatGPT sign-in method does not provide usage', async () => {
-  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_UNSUPPORTED' as const }))
+it('shows that ChatGPT usage appears after the first model call', async () => {
+  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_PENDING' as const }))
   renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
 
   const notice = await screen.findByRole('status')
-  expect(notice.textContent).toBe(en.usageUnsupported)
+  expect(notice.textContent).toBe(en.usagePending)
   expect(screen.queryByText(en.accountUnavailable)).toBeNull()
 })
 
