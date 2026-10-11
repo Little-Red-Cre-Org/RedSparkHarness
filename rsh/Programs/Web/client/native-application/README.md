@@ -19,7 +19,6 @@ The `native-web` profile uses this Client page to create or resume Sessions, ins
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 
-<a id="reference"></a>
 ## Reference
 
 The page lists stored Sessions, creates blank Sessions, selects durable history and sends human text with explicit resume. Cancellation keeps the page busy until the Host reply confirms settlement and history has refreshed. Installation disposal cancels outstanding calls and awaits their settlement before releasing the view controller. The controller holds presentation state, not a second Session writer, Agent registry or connection loop.
@@ -42,7 +41,6 @@ The native-web first-use roster selects this application, renderer, Connection, 
 
 The optional Native shell composes the shared frame, left Session navigation, right Session details, locale and theme through their declared Client capabilities. Session rows read the selected Host's durable title projection; fallback/provider generation, rename and refresh append title facts through that Host's existing Session and RootExecution authority. The Client reuses its current Native Session controller and layout stores, with no second Session store. The sidebar groups Sessions by `header.cwd` as a client-only display projection, orders them by available creation time, and omits activity times and status facts that the Native list does not provide. Workspace browsing and its list, create, search, move, and delete actions are unavailable; ordering, directory picking, and schedule browsing also remain disabled until their Host capabilities are available. Settings stays pinned in the sidebar foot beside compact locale and theme controls.
 
-<a id="invariants"></a>
 
 Pending tool approvals offer allow-once and reject actions. Question cards preserve headings, detail, choices, multiple selection and custom text. Submission failures retain the request; cancellation disables input and keeps execution busy until Host settlement. Reload restores durable decision and tool-result facts, not obsolete pending presentations.
 
@@ -54,12 +52,10 @@ The task-list panel reads canonical todo/write snapshots, including accepted liv
 
 No invariant companion is published because the view reads the selected Host Consumer and owns no independent execution observations.
 
-<a id="dev-note"></a>
 ## Dev Note
 
 Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md); provider editing and subscription rows are described in the [native Models decision](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.md); Agent preset details and folder operations are described in the [native Web Agent preset management decision](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.md).
 
-<a id="model-experience"></a>
 ## Model Experience
 
 ### Human conversation
