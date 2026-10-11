@@ -9180,6 +9180,9 @@ importers:
       '@deepseek-ai/dsh-credentials-local':
         specifier: workspace:^
         version: link:../../Modules/Official/credentials/credentials-local
+      '@deepseek-ai/dsh-deepseek-account':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/deepseek-account
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-local
@@ -9536,6 +9539,9 @@ importers:
       '@deepseek-ai/dsh-app-boot':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/boot/app-boot
+      '@deepseek-ai/dsh-authorization':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/authorization
       '@deepseek-ai/dsh-base':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/base
