@@ -166,7 +166,8 @@ export function shippedNativeProfileComposition(
         id: 'session-controller',
         plugin: '@deepseek-ai/dsh-native-web-session-controller',
         scope: ROOT,
-        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32, maxPendingHumanRequests: 32 },
+        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32, maxPendingHumanRequests: 32,
+          authorizationKeys: ['llm-pi-ai/openai-codex', 'deepseek-account/default'] },
       }] : []),
       ...(profile === 'native-tui' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-tui' ? [
@@ -280,7 +281,11 @@ export function shippedNativeProfileComposition(
       { id: 'settings', plugin: '@deepseek-ai/dsh-settings-file', scope: ROOT,
         config: { dshHome: home } },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
-        config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' } } } },
+        config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
+      ...(profile === 'native-web' ? [
+        { id: 'authorization', plugin: '@deepseek-ai/dsh-authorization', scope: ROOT },
+        { id: 'deepseek-account', plugin: '@deepseek-ai/dsh-deepseek-account', scope: ROOT },
+      ] : []),
     ],
   }
 }
