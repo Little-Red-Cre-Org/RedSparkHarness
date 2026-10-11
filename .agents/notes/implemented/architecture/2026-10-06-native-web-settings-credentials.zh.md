@@ -22,7 +22,7 @@ Host 将 `maxCredentialRefsPerRead` 和 `maxSettingsOperations` 校验为正安�
 
 ## 支持范围
 
-该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。UI 不编辑隐藏的 `role('secret')` 字段，不创建授权 grant，不完成不透明 grant 记录编辑，也不复刻旧版插件设置页。浏览器授权登录属于独立工作。
+该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。通用编辑器不编辑隐藏的 `role('secret')` 字段、不创建授权 grant，也不完成不透明 grant 记录编辑。Native Models 页面另通过共享编辑器呈现 API 提供方设置（[决策](2026-10-11-native-models-settings-page.zh.md)）；提供方专属的引导弹窗仍属于 legacy 插件。浏览器授权登录属于独立工作。
 
 ## 考虑过的替代方案
 
