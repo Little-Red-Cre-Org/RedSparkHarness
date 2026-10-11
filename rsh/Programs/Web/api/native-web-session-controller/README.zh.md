@@ -26,7 +26,7 @@ kind: "package-reference"
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
-`session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。历史无法读取的行仍会显示，标题标记为不可用；`updatedAt` 回退为 `header.createdAt`，`blank` 和 `completed` 为 false，运行状态及 Host 管理的字段仍会投影。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
+`session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。历史无法读取的行仍会显示，标题标记为不可用；`updatedAt` 回退为 `header.createdAt`，`blank` 和 `completed` 为 false，运行状态及 Host 管理的字段仍会投影。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`maxFollowBufferBytes` 限制非空基线和每条 upsert 帧的编码字节数：基线超限时先发送空基线，再逐 Session 发送 upsert；单条 upsert 超限时跳过。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
 
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
@@ -38,7 +38,7 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
-可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
+可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 

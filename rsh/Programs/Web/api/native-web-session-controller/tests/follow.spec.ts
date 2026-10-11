@@ -18,7 +18,7 @@ it('sends a list baseline, coalesced updates and removal before releasing its fo
   }
   let present = true
   const release = vi.fn()
-  const feed = new NativeSessionListFeed(release)
+  const feed = new NativeSessionListFeed(1000, release)
   const reader = feed.response(new AbortController().signal, async () => [item], async () => present ? item : undefined)
     .body!.getReader()
   const readFrame = async (): Promise<string> => {
@@ -34,6 +34,39 @@ it('sends a list baseline, coalesced updates and removal before releasing its fo
   present = false
   feed.push(sessionId)
   expect(await readFrame()).toContain('"type":"remove"')
+  await reader.cancel()
+  expect(release).toHaveBeenCalledOnce()
+})
+
+it('splits oversized list baselines and skips oversized upserts', async () => {
+  const makeItem = (id: string, title?: string): NativeSessionListItem => ({
+    header: { id: SessionId(id), version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false },
+    titleProjection: title === undefined ? { status: 'absent' } : { status: 'resolved', title },
+    updatedAt: 1, blank: true, running: false, completed: false,
+    runningSubagentCount: 0, hasActiveSchedule: false,
+  })
+  const first = makeItem('list-small-a')
+  const second = makeItem('list-small-b')
+  const oversized = makeItem('list-large', 'x'.repeat(1000))
+  const encoder = new TextEncoder()
+  const frameBytes = (frame: unknown): number => encoder.encode(`data: ${JSON.stringify(frame)}\n\n`).byteLength
+  const release = vi.fn()
+  const feed = new NativeSessionListFeed(frameBytes({ type: 'upsert', item: first }), release)
+  const items = new Map([[first.header.id, first], [second.header.id, second], [oversized.header.id, oversized]])
+  const reader = feed.response(new AbortController().signal, async () => [first, oversized, second],
+    async id => items.get(id)).body!.getReader()
+  const readFrame = async (): Promise<Record<string, unknown>> => {
+    const result = await reader.read()
+    if (result.done) throw new Error('list stream ended before its frame')
+    return JSON.parse(new TextDecoder().decode(result.value).slice(6)) as Record<string, unknown>
+  }
+
+  expect(await readFrame()).toEqual({ type: 'baseline', items: [] })
+  expect(await readFrame()).toEqual({ type: 'upsert', item: first })
+  expect(await readFrame()).toEqual({ type: 'upsert', item: second })
+  feed.push(oversized.header.id)
+  feed.push(second.header.id)
+  expect(await readFrame()).toEqual({ type: 'upsert', item: second })
   await reader.cancel()
   expect(release).toHaveBeenCalledOnce()
 })

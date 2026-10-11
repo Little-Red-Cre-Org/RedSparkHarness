@@ -214,7 +214,9 @@ export interface NativeWebSelectionProviders {
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: Pick<WorkspaceRegistryRuntime, 'list' | 'archivedSessionIds' | 'archiveSession'> | undefined
-  readonly taskScheduler?: Pick<NativeTaskSchedulerOperations, 'list'> | undefined
+  readonly taskScheduler?: (Pick<NativeTaskSchedulerOperations, 'list'> & {
+    readonly accepts?: (owner: NativeActiveSessionOwner) => boolean
+  }) | undefined
   readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
 }
 
@@ -447,7 +449,9 @@ export class NativeWebSessionService {
     }
     const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
     signal.throwIfAborted()
-    if (this.followers >= this.config.maxFollowers) return new Response('native Session follow: capacity reached', { status: 429 })
+    if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
+      return new Response('native Session follow: capacity reached', { status: 429 })
+    }
     turn.following = true
     this.followers++
     return turn.feed.response(signal, () => { this.followers-- })
@@ -464,7 +468,7 @@ export class NativeWebSessionService {
     if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
       return new Response('native Session list follow: capacity reached', { status: 429 })
     }
-    const feed = new NativeSessionListFeed(() => { this.listFeeds.delete(feed) })
+    const feed = new NativeSessionListFeed(this.config.maxFollowBufferBytes, () => { this.listFeeds.delete(feed) })
     const stop = (): void => { feed.close() }
     this.listFeeds.set(feed, stop)
     return feed.response(signal,
@@ -783,13 +787,16 @@ export class NativeWebSessionService {
     }
     const title = history === undefined ? undefined : foldSessionTitle(history.events)
     const turn = history === undefined ? undefined : latestTurnState(history.events)
-    const execution = owner === undefined ? undefined : this.selections.executionFor?.(owner.agent)
+    const currentOwner = this.active.owners().find(candidate => candidate.session.id === id)
+    const execution = currentOwner === undefined ? undefined : this.selections.executionFor?.(currentOwner.agent)
     const running = execution?.status === 'running' || this.turns.get(id)?.settled === false
       || this.selections.executionFor === undefined && (turn?.running ?? false)
-    const rootOwner = owner?.invocation === 'root' ? owner : undefined
+    const rootOwner = currentOwner?.invocation === 'root' ? currentOwner : undefined
     const pendingKind = rootOwner === undefined ? undefined : this.human.pendingKind(rootOwner.agent)
-    const hasActiveSchedule = rootOwner !== undefined && this.selections.taskScheduler !== undefined
-      && this.selections.taskScheduler.list(rootOwner).some(task => task.state === 'active')
+    const scheduler = this.selections.taskScheduler
+    const hasActiveSchedule = rootOwner !== undefined && scheduler !== undefined
+      && (scheduler.accepts?.(rootOwner) ?? rootOwner.rootOrigin !== 'scheduled')
+      && scheduler.list(rootOwner).some(task => task.state === 'active')
     const canManageTitle = !this.turns.has(id) && this.canManageTitle(id)
     const workspaceId = context.workspaceBySession.get(id)
     return {
