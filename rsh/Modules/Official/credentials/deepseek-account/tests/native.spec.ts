@@ -61,6 +61,7 @@ describe('Platform account details', () => {
     { normal: '-3E-4', normalExpected: '-0.0003', bonus: '12.50', bonusExpected: '12.50' },
     { normal: '1E+3', normalExpected: '1000', bonus: '-0', bonusExpected: '0' },
     { normal: '+001.25e+2', normalExpected: '125', bonus: '0.000', bonusExpected: '0' },
+    { normal: '1E-3', normalExpected: '0.001', bonus: '1.5E+2', bonusExpected: '150' },
   ])('normalizes normal and bonus wallet balances', async ({ normal, normalExpected, bonus, bonusExpected }) => {
     vi.stubGlobal('fetch', vi.fn(async () => platformReply({
       normal_wallets: [{ currency: 'CNY', balance: normal }],
