@@ -631,3 +631,30 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 3`)).toBeTruthy()
   expect(editor.value).toBe(edited)
 })
+it('resumes an in-flight login after leaving and returning to Models', async () => {
+  const key = credentialKey('llm-pi-ai', 'openai-codex')
+  let attemptId: string | undefined
+  const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
+    configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
+  const actions = {
+    settingsDescribe: vi.fn(async () => settingsDescription([])),
+    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
+    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
+    authorizationBegin: vi.fn(async () => { attemptId = 'a1'; return { attemptId } }),
+    authorizationFrames: vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
+      yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
+    }),
+    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
+  } as unknown as NativeSettingsActions
+  const stable = { ...emptyAccountActions, ...actions }
+  const t = (localeKey: keyof typeof en) => en[localeKey]
+  const page = render(<SettingsPage actions={stable} t={t} section="models" />)
+  fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+  expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
+  page.rerender(<SettingsPage actions={stable} t={t} section="general" />)
+  page.rerender(<SettingsPage actions={stable} t={t} section="models" />)
+  expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: en.signIn })).toBeNull()
+  page.unmount()
+})
