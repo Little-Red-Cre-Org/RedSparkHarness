@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
-  NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
+  NativeScheduleClient, NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -62,9 +62,14 @@ const sessionProvider = (
   name: 'test-native-session-provider',
   targets: ['client'],
   requires: [],
-  provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
+  provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve: () => (context) => {
+    const schedules: NativeScheduleClient = {
+      list: async () => [],
+      follow: async function* () { yield { type: 'baseline', jobs: [] } },
+    }
     context.provide('clientNativeSession', client)
+    context.provide('clientNativeSchedule', schedules)
     context.provide('clientNativeWorkspace', workspace)
     context.provide('clientNativeDirectoryPicker', directoryPicker)
     context.own(() => client.close())
@@ -290,6 +295,11 @@ it('installs modular Native navigation, Session selection, details, locale and t
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))
+    expect(await screen.findByRole('heading', { name: 'Scheduled tasks' })).toBeTruthy()
+    expect(screen.getByText('No scheduled tasks.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to conversation' }))
 
     fireEvent.click(within(alphaRow).getByRole('button', { name: 'Session actions for Alpha' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
