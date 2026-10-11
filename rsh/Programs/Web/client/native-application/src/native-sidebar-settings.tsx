@@ -7,7 +7,7 @@ import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session
 import type { NativeLocaleService } from '@deepseek-ai/dsh-client-locale/native'
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/src/client/contract/slots.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
 import css from './NativeSidebarSettings.module.css'
