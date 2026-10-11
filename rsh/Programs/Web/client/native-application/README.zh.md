@@ -78,6 +78,8 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 ## 已知限制与后续工作
 
+<a id="known-limitations-and-deferred-work"></a>
+
 持久化事件在执行期间更新转录。临时助手输出独立显示，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。

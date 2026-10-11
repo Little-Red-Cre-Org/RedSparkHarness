@@ -78,6 +78,8 @@ The Host owns resumed context and its existing prefix. Model and composition cha
 
 ## Known Limitations and Deferred Work
 
+<a id="known-limitations-and-deferred-work"></a>
+
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
