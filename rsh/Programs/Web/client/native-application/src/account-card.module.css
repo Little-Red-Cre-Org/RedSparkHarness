@@ -57,6 +57,27 @@
   gap: 14px;
 }
 
+.balances {
+  display: grid;
+  gap: 10px;
+}
+
+.balanceRow,
+.balanceAmounts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.balanceRow {
+  justify-content: space-between;
+}
+
+.balanceRow > span:first-child,
+.balanceAmounts {
+  color: var(--dsw-alias-label-secondary);
+}
+
 .quotaWindow {
   display: grid;
   gap: 6px;

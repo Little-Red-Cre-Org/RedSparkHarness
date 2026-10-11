@@ -18,7 +18,10 @@ function credentialStore(initial: readonly (readonly [string, CredentialRecord])
       if (next !== undefined) records.set(key, next)
       return records.get(key)
     },
-    async deleteRecord(key: string) { records.delete(key) },
+    async deleteRecord(key: string, options?: { when?: (current: CredentialRecord) => boolean }) {
+      const current = records.get(key)
+      if (current !== undefined && options?.when?.(current) !== false) records.delete(key)
+    },
   }
   return { records, credentials: credentials as unknown as NativeCredentials }
 }

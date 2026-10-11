@@ -107,16 +107,8 @@ function sameGrant(record: CredentialRecord | undefined, token: string, origin: 
 async function deleteGrant(
   credentials: NativeCredentials, token: string, origin: string, signal?: AbortSignal,
 ): Promise<void> {
-  let removal: Promise<void> | undefined
-  const options = signal === undefined ? undefined : { signal }
-  await credentials.modifyRecord(KEY, (current) => {
-    if (sameGrant(current, token, origin)) {
-      // The FIFO write queue runs this delete after mutate and before later writes.
-      removal = credentials.deleteRecord(KEY, options)
-    }
-    return Promise.resolve(undefined)
-  }, options)
-  await removal
+  const when = (current: CredentialRecord): boolean => sameGrant(current, token, origin)
+  await credentials.deleteRecord(KEY, signal === undefined ? { when } : { signal, when })
 }
 
 /** Create a loopback callback that accepts one state-matched authorization code. */

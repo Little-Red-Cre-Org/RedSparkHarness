@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { canonicalizeWatchPath } from '@deepseek-ai/dsh-home-paths'
 import type { LaunchEnvironmentEntry, LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
+import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
 import { assertJsonValue, assertOwnerOnly, assertStorableApiKey, DOCUMENT_LOCK_WAIT_MS, DOCUMENT_VERSION, isENOENT, parseCredentialsDocument, renderFlatLayoutMigration, renderRecord, renderRef, resolveSpec, sameJsonValue, type Config, type ResolvedSpec } from './document.ts'
 
 /** Host resources and notifications supplied by the selected application runtime. */
@@ -209,7 +209,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     })
   }
 
-  async deleteRecord(key: CredentialKey, options?: NativeCredentialWriteOptions): Promise<void> {
+  async deleteRecord(key: CredentialKey, options?: NativeCredentialDeleteOptions): Promise<void> {
     if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot delete "${key}"`)
     await this.enqueue(async () => {
       options?.signal?.throwIfAborted()
@@ -219,7 +219,8 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
       await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
       await withFileLock(this.spec.filename, async () => {
         await this.reconcileFromDisk()
-        if (!this.records.has(key)) return
+        const current = this.records.get(key)
+        if (current === undefined || options?.when?.(current) === false) return
         options?.signal?.throwIfAborted()
         const nextText = renderRecord(this.text, key, undefined)
         await writeFileAtomic(this.spec.filename, nextText, { mode: 0o600, dirMode: 0o700 })
