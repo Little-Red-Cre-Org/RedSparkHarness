@@ -12,6 +12,7 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
   | { readonly type: 'accounts/changed'; readonly key: string }
 
 function subject(event: NativeSettingsEvent): string {
@@ -75,6 +76,11 @@ export class NativeWebSettingsEvents {
       context.on('llm/adapters-updated', () => { this.publish({ type: 'llm/adapters-updated' }) }),
       context.on('accounts/changed', (key) => { this.publish({ type: 'accounts/changed', key }) }),
     ]
+  }
+
+  /** Notify Settings pages after a Host preset folder is copied or deleted. */
+  agentPresetsUpdated(): void {
+    this.publish({ type: 'agent-presets/updated' })
   }
 
   /**

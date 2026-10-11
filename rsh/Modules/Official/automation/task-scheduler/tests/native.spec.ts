@@ -47,6 +47,39 @@ function toolText(result: Awaited<ReturnType<typeof invokeTaskTool>>): string {
   if (block?.type !== 'text') throw new Error('task_schedule did not return its canonical text result')
   return block.text
 }
+
+it('projects committed schedule metadata and notifies read-only observers', async () => {
+  const state = await fixture([])
+  const signal = new AbortController().signal
+  const report = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const throwing = vi.fn(() => { throw new Error('schedule observer failed') })
+  const changed = vi.fn()
+  const unsubscribeThrowing = state.schedules.onSchedulesChanged(throwing)
+  const unsubscribe = state.schedules.onSchedulesChanged(changed)
+  try {
+    await state.app.executeSessionOperation({ id: SessionId('schedule-view-owner'), resume: false }, async (owner) => {
+      const at = new Date(Date.now() + 8 * 60 * 60 * 1000 + 60_000).toISOString().replace(/Z$/u, '+08:00')
+      const task = state.schedules.create(owner, { title: 'Later', prompt: 'Private task prompt.', at, everySeconds: 3600 }, signal)
+      const [job] = state.schedules.listSchedules()
+      expect(job).toEqual({ id: task.id, sessionId: owner.session.id, title: 'Later', state: 'active',
+        schedule: `${at}; every 3600s`, timeZone: 'UTC+08:00', nextRunAt: Date.parse(at) })
+      expect(JSON.stringify(job)).not.toContain('Private task prompt.')
+      expect(throwing).toHaveBeenCalledOnce()
+      expect(changed).toHaveBeenCalledOnce()
+      expect(report).toHaveBeenCalledWith('native-task-scheduler: Error: schedule observer failed')
+      await state.schedules.change(owner, task.id, 'paused', signal)
+      expect(state.schedules.listSchedules()[0]?.state).toBe('paused')
+      expect(throwing).toHaveBeenCalledTimes(2)
+      expect(changed).toHaveBeenCalledTimes(2)
+    }, signal)
+  } finally {
+    unsubscribe()
+    unsubscribeThrowing()
+    report.mockRestore()
+    await state.close()
+  }
+})
+
 async function syntheticOwner(state: Awaited<ReturnType<typeof fixture>>, id: string, parent: NativeScope | undefined,
   invocation: 'root' | 'delegated') {
   const session = SessionId(id)

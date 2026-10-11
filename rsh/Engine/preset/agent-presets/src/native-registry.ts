@@ -5,6 +5,11 @@ import type { NativeAgentPresetOperations, NativeAgentPresetLease, NativePresetC
   NativePresetGeneration, NativeResolvedAgentPreset } from './native-definition.ts'
 import type { NativeAgentPresetFacts } from './selection.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
+import { copyNativePreset, deleteNativePreset, nativePresetDirectory, nativePresetFolder,
+  NativeAgentPresetError, readNativePresetComposition, scanNativePresetFolders } from './native-storage.ts'
+import type { PresetRoot } from './preset.ts'
+import { PRESET_ID } from './preset.ts'
+import type { NativeAgentPresetDocument } from './native-definition.ts'
 
 interface Standing {
   readonly preset: NativeResolvedAgentPreset
@@ -29,7 +34,8 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
    * @param folders - CLI-discovered preset folders.
    */
   constructor(private readonly defaultPreset: string, private readonly scope: NativeScope,
-    private readonly folders: readonly NativePresetFolderSummary[] = []) {}
+    private readonly folders: readonly NativePresetFolderSummary[] = [],
+    private readonly roots: readonly PresetRoot[] = []) {}
 
   /** @inheritdoc */
   register(composition: NativePresetComposition): () => Promise<void> {
@@ -61,13 +67,78 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   /** @inheritdoc */
   list(): readonly NativeResolvedAgentPreset[] {
     this.assertAvailable()
-    return [...this.standings.values()].map(standing => standing.preset)
+    const managedIds = new Set(this.folders.map(folder => folder.id))
+    const presentIds = this.roots.length === 0 ? managedIds
+      : new Set(scanNativePresetFolders(this.roots).map(folder => folder.id))
+    return [...this.standings.values()]
+      .filter(({ preset }) => !managedIds.has(preset.id) || presentIds.has(preset.id))
+      .map(standing => standing.preset)
   }
 
   /** @inheritdoc */
   catalog(): { readonly default: string; readonly folders: readonly NativePresetFolderSummary[] } {
     this.assertAvailable()
-    return { default: this.defaultPreset, folders: this.folders }
+    const invalid = new Map(this.folders.filter(folder => folder.status === 'invalid')
+      .map(folder => [folder.id, folder.problem]))
+    const folders = this.roots.length === 0 ? this.folders : scanNativePresetFolders(this.roots).map(
+      ({ id, name, description, trust, status, problem }) => {
+        const previousProblem = invalid.get(id)
+        const unavailable = status === 'ready' && previousProblem !== undefined
+        return { id, name, trust, status: unavailable ? 'invalid' as const : status,
+          ...description === undefined ? {} : { description },
+          ...unavailable ? { problem: previousProblem } : problem === undefined ? {} : { problem } }
+      })
+    return { default: this.defaultPreset, folders }
+  }
+
+  /** @inheritdoc */
+  async read(id: string): Promise<NativeAgentPresetDocument> {
+    this.assertAvailable()
+    if (!PRESET_ID.test(id)) throw new NativeAgentPresetError('agent-preset/invalid',
+      `agent-presets: preset id ${JSON.stringify(id)} must match ${String(PRESET_ID)} — the id is a directory name`,
+      { agentPreset: id, reason: 'invalid preset id' })
+    const folder = nativePresetFolder(this.roots, id)
+    const standing = this.standings.get(id)?.preset
+    if (folder !== undefined) {
+      const content = await readNativePresetComposition(folder)
+      const summary = this.catalog().folders.find(candidate => candidate.id === id)
+      const status = summary?.status ?? folder.status
+      const problem = summary?.problem ?? folder.problem
+      return { id, source: folder.trust, status, name: folder.name,
+        ...folder.description === undefined ? {} : { description: folder.description },
+        ...content === undefined ? {} : { content },
+        ...problem === undefined ? {} : { problem } }
+    }
+    if (standing === undefined || !this.list().some(preset => preset.id === id)) {
+      const available = [...new Set([...this.list().map(preset => preset.id), ...this.catalog().folders.map(preset => preset.id)])]
+      throw new NativeAgentPresetError('agent-preset/not-found',
+        `agent-presets: preset ${JSON.stringify(id)} not found (available: ${available.join(', ') || 'none'})`,
+        { agentPreset: id, available })
+    }
+    return { id, source: 'profile', status: 'ready', name: standing.name,
+      ...standing.description === undefined ? {} : { description: standing.description } }
+  }
+
+  /** @inheritdoc */
+  async copy(from: string, id: string, name?: string): Promise<void> {
+    this.assertAvailable()
+    if (PRESET_ID.test(id) && this.standings.has(id)) {
+      const reason = `preset ${JSON.stringify(id)} already exists — a copy never overwrites; choose another id`
+      throw new NativeAgentPresetError('agent-preset/invalid', `agent-presets: ${reason}`, { agentPreset: id, reason })
+    }
+    await copyNativePreset(this.roots, from, id, name)
+  }
+
+  /** @inheritdoc */
+  async delete(id: string): Promise<void> {
+    this.assertAvailable()
+    await deleteNativePreset(this.roots, id)
+  }
+
+  /** @inheritdoc */
+  directory(id: string): string {
+    this.assertAvailable()
+    return nativePresetDirectory(this.roots, id)
   }
 
   /** @inheritdoc */
@@ -81,7 +152,11 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
     const id = request.preset ?? request.facts.preset ?? (request.fresh ? this.defaultPreset : null)
     if (id === null) return null
     const standing = this.standings.get(id)
-    if (standing === undefined) throw new Error(`agent-presets: standing preset ${id} is unavailable`)
+    // Explicit picks and fresh defaults must match the live roster; restored Sessions keep their standing.
+    if (standing === undefined
+      || (request.preset !== undefined || request.fresh) && !this.list().some(preset => preset.id === id)) {
+      throw new Error(`agent-presets: standing preset ${id} is unavailable`)
+    }
     return standing.preset
   }
 

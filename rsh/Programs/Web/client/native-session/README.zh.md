@@ -36,17 +36,51 @@ kind: "package-reference"
 
 `agentPresetsList(signal?)` 调用 `agent-presets/list` 并校验 Host 返回的 `{ default, presets }`。它同时包含 profile 独有的常驻组合和扫描到的原生目录；目录提供信任级别时，`source` 为 `system` 或 `user`，否则为 `profile`。Host 未安装 Registry 时返回 `default: null` 和空列表。
 
+`agentPresetRead(id, signal?)` 返回 preset 来源、状态、元数据与原生组装文件文本；profile 独有的行没有文件内容。`agentPresetCopy(from, id, name?, signal?)` 将文件 preset 复制到 Host 用户目录；`agentPresetDelete(id, signal?)` 只删除用户 preset。`agentPresetsCanOpenDirectory(signal?)` 报告 Host 打开器是否可用；`agentPresetOpenDirectory(id, signal?)` 打开用户目录，或返回 Host 本地路径。这五个方法都通过 `NativeSessionRpcError` 保留 Host 拒绝码。
+
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。
 
 同一 Consumer 通过选定的 `/api` 载体提供 `settingsDescribe`、带 revision 检查的 `settingsMutate`、`credentialsDescribe`、`credentialsSet` 与 `credentialsUnset`。当 `settingsDescribe` 报告 `hasDocument` 时，`settingsOpenDocument` 会打开 Host 的本地设置文档。`pluginInventoryList` 为插件页读取 Host 安装列表，`modelCatalog` 经 `session/model-controls` 返回 Host 模型目录（或 null）。`settingsDescribe` 返回已发布的 namespace descriptor 和所选 Host 提供的请求预算。Settings 页面依照 `maxCredentialRefsPerRead` 分批读取并聚合凭据结果；超过 `maxSettingsOperations` 的修改会在发送前拒绝，因为一次 revision 检查写入必须保持原子性。Host 将这些经过校验的限制默认为 64 个凭据引用和 512 个操作。凭据读取只返回是否存在、来源与可写性事实，凭据写入返回确认且不回显值。`NativeSessionRpcError` 保留 Host 错误码与冲突详情以便处理过期写入。
 
-`modelsListProviders`、`modelsListConfigurableProviders` 与 `modelsDiscover` 会读取 Host 的活动路由、可配置 Provider 诊断及草稿发现结果。`NativeModelDiscoveryRequest.apiKey` 只随单次发现请求发送；Host 失败会以 `NativeSessionRpcError` 拒绝。`settingsEvents(signal)` 流式接收不含值的 `settings/document-updated`、`credentials/reference-updated` 、`llm/adapters-updated` 与 `accounts/changed` 通知；取消信号会正常结束迭代。
+`modelsListProviders`、`modelsListConfigurableProviders` 与 `modelsDiscover` 会读取 Host 的活动路由、可配置 Provider 诊断及草稿发现结果。`NativeModelDiscoveryRequest.apiKey` 只随单次发现请求发送；Host 失败会以 `NativeSessionRpcError` 拒绝。`settingsEvents(signal)` 流式接收不含值的 `settings/document-updated`、`credentials/reference-updated`、`llm/adapters-updated`、`agent-presets/updated` 与 `accounts/changed` 通知；取消信号会正常结束迭代。
+
+```ts type-equiv
+/** Native preset metadata and optional raw composition file returned by the Host. */
+interface NativeAgentPresetDocument {
+  /** Preset id. */
+  readonly id: string
+  /** Profile-only, shipped or user-authored source. */
+  readonly source: 'profile' | 'system' | 'user'
+  /** Composition file status. */
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  /** Display name. */
+  readonly name: string
+  /** Optional display description. */
+  readonly description?: string
+  /** Raw `agent.native.json` text when the folder has a composition file. */
+  readonly content?: string
+  /** Short reason when the folder cannot be installed. */
+  readonly problem?: string
+}
+```
+
+```ts type-equiv
+/** Notification-only event that tells Settings pages which view to reread. */
+type NativeSettingsEvent =
+  | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
+  | { readonly type: 'credentials/reference-updated'; readonly ref: string }
+  | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
+  | { readonly type: 'accounts/changed'; readonly key: string }
+```
 
 授权方法会列出安全的流程信息、开始尝试、从授权 Fetch 路由接收可重放且不含机密的帧，并使用当前尝试标识提交回答、拒绝或取消。
 
 账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。OpenAI Codex 在模型调用报告额度前返回 `USAGE_PENDING`，之后返回 grant 邮箱、可空套餐、额度窗口和可选额度余额；快照仅保存在 Host 内存中，并按已存 grant 的 issuer 与 subject 隔离。账户响应不包含凭据值。
 
-同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。Host 集成从 `workspaces` 子路径导入可序列化的 Workspace 与目录类型。
+同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。Host 集成从 `workspaces` 子路径导入可序列化的 Workspace 与目录类型。
+
+`clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */

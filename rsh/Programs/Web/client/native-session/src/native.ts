@@ -40,6 +40,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Read-only Native schedule catalog selected by the browser composition. */
+    clientNativeSchedule: NativeScheduleClient
     /** Native Workspace RPC Consumer selected by the browser composition. */
     clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
     /** Native directory chooser and browser selected by the browser composition. */
@@ -51,10 +53,28 @@ import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
 import type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
 export type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
+export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
+}
+
+/** Read-only browser access to persisted scheduled work. */
+export interface NativeScheduleClient {
+  /**
+   * List active, paused, and failed scheduled plans.
+   * @param signal - caller cancellation.
+   * @returns safe plan metadata without prompts or captured execution configuration.
+   */
+  list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Follow one complete baseline and subsequent schedule changes.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns baseline, upsert, and remove frames from the Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -128,6 +148,24 @@ export interface NativeAgentPresetList {
     /** Short reason when a folder cannot be installed. */
     readonly problem?: string
   }[]
+}
+
+/** Native preset metadata and optional raw composition file returned by the Host. */
+export interface NativeAgentPresetDocument {
+  /** Preset id. */
+  readonly id: string
+  /** Profile-only, shipped or user-authored source. */
+  readonly source: 'profile' | 'system' | 'user'
+  /** Composition file status. */
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  /** Display name. */
+  readonly name: string
+  /** Optional display description. */
+  readonly description?: string
+  /** Raw `agent.native.json` text when the folder has a composition file. */
+  readonly content?: string
+  /** Short reason when the folder cannot be installed. */
+  readonly problem?: string
 }
 
 /** One path-addressed Settings edit. */
@@ -214,6 +252,7 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
   | { readonly type: 'accounts/changed'; readonly key: string }
 
 /** Provider-reported quota window, with reset time in Unix seconds. */
@@ -261,6 +300,41 @@ export interface NativeSessionClient {
    * @returns current preset catalog; empty with a null default when no Registry is installed.
    */
   agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
+  /** Read one preset's metadata and raw native composition file.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns Host-owned preset details; profile-only compositions have no file content.
+   */
+  agentPresetRead(id: string, signal?: AbortSignal): Promise<NativeAgentPresetDocument>
+  /** Copy one file-backed preset into the Host's user preset directory.
+   * @param from - source preset id.
+   * @param id - new directory id.
+   * @param name - optional display name.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host writes the copy.
+   */
+  agentPresetCopy(
+    from: string, id: string, name?: string, signal?: AbortSignal,
+  ): Promise<void>
+  /** Delete one user-authored preset.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host removes its directory.
+   */
+  agentPresetDelete(id: string, signal?: AbortSignal): Promise<void>
+  /** Report whether the Host can open a preset folder in its file manager.
+   * @param signal - caller cancellation.
+   * @returns Host-local opener availability.
+   */
+  agentPresetsCanOpenDirectory(signal?: AbortSignal): Promise<boolean>
+  /** Open one user preset folder or return its Host-local path.
+   * @param id - user preset id.
+   * @param signal - caller cancellation.
+   * @returns whether the Host opened the folder, or its path for display.
+   */
+  agentPresetOpenDirectory(
+    id: string, signal?: AbortSignal,
+  ): Promise<{ readonly opened: true } | { readonly opened: false; readonly path: string }>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
@@ -603,6 +677,17 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed') }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
+const scheduledJobSchema = z.strictObject({
+  id: z.string().min(1), sessionId: z.string().min(1), title: z.string(),
+  state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
+  nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+  lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+})
+const scheduleFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
+  z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
+  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
+])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
 const nativeAgentPresetListSchema = z.strictObject({
   default: z.string().nullable(),
@@ -611,6 +696,11 @@ const nativeAgentPresetListSchema = z.strictObject({
     source: z.enum(['profile', 'system', 'user']),
     status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
   })),
+})
+const nativeAgentPresetDocumentSchema = z.strictObject({
+  id: z.string().min(1), source: z.enum(['profile', 'system', 'user']),
+  status: z.enum(['ready', 'needs-migration', 'invalid']), name: z.string(),
+  description: z.string().optional(), content: z.string().optional(), problem: z.string().optional(),
 })
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
@@ -626,6 +716,7 @@ const settingsEventSchema = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
   z.strictObject({ type: z.literal('llm/adapters-updated') }),
+  z.strictObject({ type: z.literal('agent-presets/updated') }),
   z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
 ])
 const listItemSchema = z.strictObject({
@@ -663,6 +754,22 @@ const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']),
     code: z.string().optional(), message: z.string().optional() }),
 ])
+
+function scheduleJob(value: unknown): NativeScheduledJob {
+  const job = scheduledJobSchema.parse(value)
+  const { nextRunAt, lastRunAt, ...metadata } = job
+  return { ...metadata, sessionId: job.sessionId as SessionId,
+    ...(nextRunAt === undefined ? {} : { nextRunAt }), ...(lastRunAt === undefined ? {} : { lastRunAt }) }
+}
+
+function scheduleFrame(value: unknown): NativeScheduleFrame {
+  const frame = scheduleFrameSchema.parse(value)
+  switch (frame.type) {
+    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
+    case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
+    case 'remove': return frame
+  }
+}
 
 function header(value: unknown): SessionHeader {
   const data = fields(value)
@@ -706,6 +813,21 @@ const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
 
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
+  if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
+  if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
+    if (fields(value).updated !== true) throw new TypeError('invalid native Agent preset write acknowledgement')
+    return undefined
+  }
+  if (endpoint === 'agent-presets/can-open-directory') {
+    if (typeof value !== 'boolean') throw new TypeError('invalid native Agent preset directory capability')
+    return value
+  }
+  if (endpoint === 'agent-presets/open-directory') {
+    const data = fields(value)
+    if (data.opened === true) return { opened: true }
+    if (data.opened === false && typeof data.path === 'string') return { opened: false, path: data.path }
+    throw new TypeError('invalid native Agent preset directory response')
+  }
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
     return value.map(item => llmProviderSchema.parse(item))
@@ -965,6 +1087,13 @@ export function createNativeSessionClient(
   }
   return {
     agentPresetsList: signal => call('agent-presets/list', {}, signal),
+    agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
+    async agentPresetCopy(from, id, name, signal) {
+      await call('agent-presets/copy', { from, id, ...(name === undefined ? {} : { name }) }, signal)
+    },
+    async agentPresetDelete(id, signal) { await call('agent-presets/delete', { id }, signal) },
+    agentPresetsCanOpenDirectory: signal => call('agent-presets/can-open-directory', {}, signal),
+    agentPresetOpenDirectory: (id, signal) => call('agent-presets/open-directory', { id }, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
     async settingsOpenDocument(signal) {
       await call('settings/open-document', {}, signal)
@@ -1105,19 +1234,52 @@ export function createNativeSessionClient(
   }
 }
 
+function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeScheduleClient {
+  return {
+    async list(signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'schedules/list', {}, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
+      return result.value.map(scheduleJob)
+    },
+    async *follow(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native schedule Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'schedules/follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native schedules follow: invalid response HTTP ${response.status}`)
+        }
+        const events = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of events) yield scheduleFrame(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native schedules follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
-      const clients = createNativeWorkspaceClients(context.require('clientConnection').rpc, config.maxFollowBufferChars, context.signal)
+      const rpc = context.require('clientConnection').rpc
+      const client = createNativeSessionClient(rpc, config, context.signal)
+      const schedules = createNativeScheduleClient(rpc, config, context.signal)
+      const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
       context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeSchedule', schedules)
       context.provide('clientNativeWorkspace', clients.workspace)
       context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }

@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-`host/` 组提供 Web GUI 的普通 HTTP 服务器、服务已构建 Web 壳的 SPA dist 服务器、带原生／浏览／自适应组合包的工作区目录选择 seam、open-in-app 的应用探测与启动路由，以及只读的插件清单投影。这八个包都是产品包；浏览器传输位于 [`client/`](../client/README.zh.md)，组合应用是 [`rsh/Programs/CLI`](../../CLI/README.zh.md)，它启动 [`dsh-base` 组合包](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) 来提供 `rsh/Programs/Web/application/` 下的 Web 应用。选择器后端可在共享 seam 后互相替换。
+`host/` 组提供 Web GUI 的普通 HTTP 服务器、服务已构建 Web 壳的 SPA dist 服务器、带原生／浏览／自适应组合包的工作区目录选择 seam、open-in-app 的应用探测与启动路由、只读插件清单投影，以及只读 Native 计划投影。这九个包都是产品包；浏览器传输位于 [`client/`](../client/README.zh.md)，组合应用是 [`rsh/Programs/CLI`](../../CLI/README.zh.md)，它启动 [`dsh-base` 组合包](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) 来提供 `rsh/Programs/Web/application/` 下的 Web 应用。选择器后端可在共享 seam 后互相替换。
 
 ## 目录
 
@@ -22,7 +22,7 @@ kind: "package-group"
 <a id="packages"></a>
 ## 包
 
-八个包分别承担 Host 角色；各包的 README 拥有自己的约定与配置。
+九个包分别承担 Host 角色；各包的 README 拥有自己的约定与配置。
 
 | 包 | 职责 | ctx 键 |
 |---|---|---|
@@ -34,6 +34,7 @@ kind: "package-group"
 | [`directory-picker-auto/`](directory-picker-auto/README.zh.md) | 在启动时挂载匹配后端的宿主自适应选择器 | 挂载一个后端 |
 | [`open-in-app/`](open-in-app/README.zh.md) | 在已安装应用中打开 workspace 目录的应用探测、图标与启动路由 | 消费 `ctx.webServer` |
 | [`plugin-inventory/`](plugin-inventory/README.zh.md) | 当前 Loader 条目的只读投影 | Remote `pluginInventory/list` |
+| [`native-schedule-controller/`](native-schedule-controller/README.zh.md) | 经过身份验证的 Native 计划只读清单与跟随端点 | 消费 `hostConnection` 与 `taskScheduler` |
 
 -----
 

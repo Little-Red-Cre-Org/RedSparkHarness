@@ -87,6 +87,7 @@
     "@deepseek-ai/dsh-web-frontend": "workspace:^",
     "@deepseek-ai/dsh-native-web-host": "workspace:^",
     "@deepseek-ai/dsh-native-web-session-controller": "workspace:^",
+    "@deepseek-ai/dsh-native-schedule-controller": "workspace:^",
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",

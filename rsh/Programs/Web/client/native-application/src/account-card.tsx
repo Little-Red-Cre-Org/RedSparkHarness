@@ -70,6 +70,7 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
   const identity = account.provider === 'deepseek-account'
     ? account.identity.contact : account.identity.email
 
+  // Settings and Models remount this read; after a chat turn, USAGE_PENDING clears on the next open (the Host has no push).
   useEffect(() => {
     const lifetime = new AbortController()
     setData(current => current?.accountKey === account.key && identity !== null && current.identity === identity ? current : undefined)
@@ -135,6 +136,7 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
             {account.identity.name !== null ? <p>{account.identity.name}</p> : account.status === 'ready' ? <p>{t('signedIn')}</p> : null}
             {account.identity.contact === null ? null : <p>{account.identity.contact}</p>}
           </> : <>
+            {account.identity.name === null ? null : <p>{account.identity.name}</p>}
             {email === null ? null : <p>{email}</p>}
             {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
           </>}

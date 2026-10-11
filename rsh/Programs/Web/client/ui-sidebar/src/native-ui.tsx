@@ -457,6 +457,7 @@ function NativeSessionBrowser({
                   else next.add(group.key)
                   return next
                 })
+                if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
               }} onCreate={workspaceId === undefined ? undefined : () => {
                 setCollapsedGroups((current) => {
                   const next = new Set(current)

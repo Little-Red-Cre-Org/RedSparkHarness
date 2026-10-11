@@ -1,13 +1,27 @@
 /** Synchronous file discovery for native agent-preset installations. */
 import { readFileSync, readdirSync } from 'node:fs'
+import { chmod, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { parsePresetMetadata, METADATA_FILE, type PresetMetadata } from './metadata.ts'
+import { parsePresetMetadata, renderPresetMetadata, METADATA_FILE, type PresetMetadata } from './metadata.ts'
 import { PRESET_ID, type PresetRoot } from './preset.ts'
 
 /** File containing a native preset's ordered plugin installations. */
 export const NATIVE_COMPOSITION_FILE = 'agent.native.json'
+
+/** Stable native preset refusal codes shared with the Host RPC. */
+export type NativeAgentPresetErrorCode = 'agent-preset/not-found' | 'agent-preset/invalid' | 'agent-preset/read-only'
+
+/** A native preset operation refused by its roster or authoring policy. */
+export class NativeAgentPresetError extends Error {
+  /** @param code - stable Host refusal code. @param details - safe preset identity and reason. */
+  constructor(readonly code: NativeAgentPresetErrorCode, message: string,
+    readonly details: { readonly agentPreset: string; readonly available?: readonly string[]; readonly reason?: string }) {
+    super(message)
+    this.name = 'NativeAgentPresetError'
+  }
+}
 
 /** One plugin installation declared by a native preset folder. */
 export interface NativePresetInstallation {
@@ -148,4 +162,135 @@ export function scanNativePresetFolders(roots: readonly PresetRoot[]): NativePre
     const rightOrder = right.order ?? Number.POSITIVE_INFINITY
     return leftOrder === rightOrder ? left.id.localeCompare(right.id) : leftOrder - rightOrder
   })
+}
+
+function invalidId(id: string): NativeAgentPresetError {
+  const reason = `preset id ${JSON.stringify(id)} must match ${String(PRESET_ID)} — the id is a directory name`
+  return new NativeAgentPresetError('agent-preset/invalid', `agent-presets: ${reason}`, { agentPreset: id, reason })
+}
+
+function presetNotFound(id: string, roots: readonly PresetRoot[]): NativeAgentPresetError {
+  const available = scanNativePresetFolders(roots).map(folder => folder.id)
+  return new NativeAgentPresetError('agent-preset/not-found',
+    `agent-presets: preset ${JSON.stringify(id)} not found (available: ${available.join(', ') || 'none'})`,
+    { agentPreset: id, available })
+}
+
+function presetReadOnly(id: string, reason: string): NativeAgentPresetError {
+  return new NativeAgentPresetError('agent-preset/read-only',
+    `agent-presets: preset ${JSON.stringify(id)} cannot be written: ${reason}`, { agentPreset: id, reason })
+}
+
+function presetExists(id: string): NativeAgentPresetError {
+  const reason = `preset ${JSON.stringify(id)} already exists — a copy never overwrites; choose another id`
+  return new NativeAgentPresetError('agent-preset/invalid', `agent-presets: ${reason}`, { agentPreset: id, reason })
+}
+
+function resolveFolder(roots: readonly PresetRoot[], id: string): NativePresetFolder {
+  if (!PRESET_ID.test(id)) throw invalidId(id)
+  const folder = scanNativePresetFolders(roots).find(candidate => candidate.id === id)
+  if (folder === undefined) throw presetNotFound(id, roots)
+  return folder
+}
+
+/**
+ * Return file-backed folder details, or undefined for a profile-only composition.
+ * @param roots - Host-owned preset roots in precedence order.
+ * @param id - preset directory id.
+ * @returns the matching file-backed folder, if one exists.
+ */
+export function nativePresetFolder(roots: readonly PresetRoot[], id: string): NativePresetFolder | undefined {
+  if (!PRESET_ID.test(id)) throw invalidId(id)
+  return scanNativePresetFolders(roots).find(candidate => candidate.id === id)
+}
+
+/**
+ * Read the raw native composition file without parsing or activating it.
+ * @param folder - discovered preset folder.
+ * @returns file contents, or undefined when the folder needs migration.
+ */
+export async function readNativePresetComposition(folder: NativePresetFolder): Promise<string | undefined> {
+  if (folder.status === 'needs-migration') return undefined
+  return await readFile(join(folder.directory, NATIVE_COMPOSITION_FILE), 'utf8')
+}
+
+async function tightenModes(directory: string): Promise<void> {
+  await chmod(directory, 0o700)
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const target = join(directory, entry.name)
+    if (entry.isDirectory()) await tightenModes(target)
+    else await chmod(target, ((await stat(target)).mode & 0o100) === 0 ? 0o600 : 0o700)
+  }
+}
+
+/**
+ * Copy one complete preset folder into the first user root without replacing an existing directory.
+ * @param roots - Host-owned preset roots in precedence order.
+ * @param from - existing file-backed source id.
+ * @param id - new directory id.
+ * @param name - optional display name for the copy.
+ * @returns completion after the folder and metadata are written.
+ */
+export async function copyNativePreset(
+  roots: readonly PresetRoot[], from: string, id: string, name?: string,
+): Promise<void> {
+  const source = resolveFolder(roots, from)
+  if (source.status !== 'ready') {
+    const reason = `preset ${JSON.stringify(from)} is not ready to copy`
+    throw new NativeAgentPresetError('agent-preset/invalid', `agent-presets: ${reason}`, { agentPreset: from, reason })
+  }
+  if (!PRESET_ID.test(id)) throw invalidId(id)
+  const userRoot = roots.find(root => root.trust === 'user')
+  if (userRoot === undefined) throw presetReadOnly(id, 'this deployment configures no user preset directory')
+  if (scanNativePresetFolders(roots).some(folder => folder.id === id)) throw presetExists(id)
+  const destination = join(userRoot.path, id)
+  await mkdir(userRoot.path, { recursive: true, mode: 0o700 })
+  try {
+    await mkdir(destination, { mode: 0o700 })
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw presetExists(id)
+    throw error
+  }
+  try {
+    for (const entry of await readdir(source.directory)) {
+      await cp(join(source.directory, entry), join(destination, entry), {
+        recursive: true, dereference: true, force: false, errorOnExist: true,
+      })
+    }
+    await tightenModes(destination)
+    const rendered = renderPresetMetadata({
+      ...name === undefined ? {} : { name },
+      ...source.description === undefined ? {} : { description: source.description },
+    })
+    const metadataPath = join(destination, METADATA_FILE)
+    if (rendered === undefined) await rm(metadataPath, { force: true })
+    else await writeFile(metadataPath, rendered, { encoding: 'utf8', mode: 0o600 })
+  } catch (error: unknown) {
+    await rm(destination, { recursive: true, force: true })
+    throw error
+  }
+}
+
+/**
+ * Delete a user preset folder; system folders remain read-only.
+ * @param roots - Host-owned preset roots in precedence order.
+ * @param id - preset directory id.
+ * @returns completion after the folder is removed.
+ */
+export async function deleteNativePreset(roots: readonly PresetRoot[], id: string): Promise<void> {
+  const folder = resolveFolder(roots, id)
+  if (folder.trust !== 'user') throw presetReadOnly(id, 'it ships with the deployment')
+  await rm(folder.directory, { recursive: true, force: true })
+}
+
+/**
+ * Resolve a user preset directory for opening or revealing on the Host.
+ * @param roots - Host-owned preset roots in precedence order.
+ * @param id - preset directory id.
+ * @returns the Host-local folder path.
+ */
+export function nativePresetDirectory(roots: readonly PresetRoot[], id: string): string {
+  const folder = resolveFolder(roots, id)
+  if (folder.trust !== 'user') throw presetReadOnly(id, 'it ships with the deployment')
+  return folder.directory
 }
