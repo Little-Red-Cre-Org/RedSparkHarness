@@ -9183,6 +9183,9 @@ importers:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-fs-observation-policy':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/fs-observation-policy
       '@deepseek-ai/dsh-fs-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-sandbox
@@ -9306,6 +9309,12 @@ importers:
       '@deepseek-ai/dsh-session-reference':
         specifier: workspace:^
         version: link:../../Engine/context/session-reference
+      '@deepseek-ai/dsh-settings-file':
+        specifier: workspace:^
+        version: link:../../Modules/Official/settings/settings-file
+      '@deepseek-ai/dsh-shell-env':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/shell-env
       '@deepseek-ai/dsh-spill-local':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill-local
@@ -9400,9 +9409,6 @@ importers:
       '@deepseek-ai/dsh-experimental-tool-agent-team':
         specifier: workspace:^
         version: link:../../Modules/Community/experimental/tool-agent-team
-      '@deepseek-ai/dsh-fs-observation-policy':
-        specifier: workspace:^
-        version: link:../../Modules/Official/fs/fs-observation-policy
       '@deepseek-ai/dsh-host-frontend-static':
         specifier: workspace:^
         version: link:../Web/host/frontend-static
@@ -9442,12 +9448,6 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../Modules/Official/settings/settings
-      '@deepseek-ai/dsh-settings-file':
-        specifier: workspace:^
-        version: link:../../Modules/Official/settings/settings-file
-      '@deepseek-ai/dsh-shell-env':
-        specifier: workspace:^
-        version: link:../../Modules/Official/shell/shell-env
       '@deepseek-ai/dsh-subagent':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent
