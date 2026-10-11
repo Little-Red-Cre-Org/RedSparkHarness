@@ -59,14 +59,14 @@ import type { Context } from '@deepseek-ai/cordis'
 import { credentialKeyScope } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type { AdapterRegistrationHandle, DirectoryRegistrationHandle, LlmConfigurableProvider } from '@deepseek-ai/dsh-llm'
+import type { AdapterRegistrationHandle, DirectoryRegistrationHandle } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from './adapter.ts'
 import { authContextFrom, credentialStoreFrom } from './auth.ts'
-import { catalogProviderIds } from './catalog.ts'
+import { configurableProviderEntries } from './configurable-providers.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { discoverModels } from './discovery.ts'
@@ -110,37 +110,6 @@ function registrationFacts(profiles: ReadonlyMap<string, ResolvedPiAiProviderPro
       retryPolicy: profile.retryPolicy,
     }))
     .sort((left, right) => left.provider.localeCompare(right.provider))
-}
-
-/**
- * The configurable-provider directory: every installed catalog route, plus
- * every route the current profiles declare. A hand-declared route has no
- * catalog entry, so without this union it would have no settings address and
- * configuration surfaces could neither show nor edit it.
- * @param profiles - the currently resolved provider profiles.
- * @returns the directory entries in catalog order, declared routes last.
- */
-function directoryEntries(
-  profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>,
-): LlmConfigurableProvider[] {
-  const catalog = new Set(catalogProviderIds())
-  const entries = new Map<string, LlmConfigurableProvider>()
-  const declare = (provider: string, displayName: string, error?: string): void => {
-    entries.set(provider, {
-      provider,
-      displayName,
-      settingsNs: NS,
-      settingsPath: ['providers', provider],
-      // Membership of the installed catalog, not of the settings document:
-      // narrowing a shipped provider's models stores a profile too, and that
-      // route is still one pi-ai knows.
-      declared: !catalog.has(provider),
-      ...error === undefined ? {} : { error },
-    })
-  }
-  for (const provider of catalog) declare(provider, provider)
-  for (const [provider, profile] of profiles) declare(provider, profile.displayName, profile.catalogError)
-  return [...entries.values()]
 }
 
 /** Register one generic pi-ai adapter for all configured provider routes. */
@@ -230,7 +199,7 @@ export function apply(ctx: Context, config: Config): void {
   let directory: DirectoryRegistrationHandle | undefined
   let directoryFacts: unknown
   const ensureDirectory = (): void => {
-    const entries = directoryEntries(profiles())
+    const entries = configurableProviderEntries(profiles())
     if (deepEqualJson(entries, directoryFacts)) return
     // Atomic replace, never dispose-then-register: a route another adapter
     // family already declares (a profile keyed `deepseek-official`) would

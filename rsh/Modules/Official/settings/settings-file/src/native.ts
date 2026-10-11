@@ -7,6 +7,7 @@ import { patchNode } from './yaml-patch.ts'
 import { watch as watchFile } from 'chokidar'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
+import type {} from '@deepseek-ai/dsh-settings-definition/native'
 
 interface NativeConfig {
   path?: string
@@ -84,6 +85,10 @@ export const plugin: NativePlugin = {
             return next
           })
         },
+      }, (namespace, revision) => {
+        void context.events.parallel(context.scope, 'settings/document-updated', namespace, revision).catch(() => {
+          console.warn('settings-file: document update listener failed')
+        })
       })
       context.own(() => settings.dispose())
       await settings.start()

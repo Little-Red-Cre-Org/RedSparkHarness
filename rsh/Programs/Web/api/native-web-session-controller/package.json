@@ -49,6 +49,7 @@
         "timeContext",
         "modelSelection",
         "modelDirectory",
+        "modelSettings",
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions",
