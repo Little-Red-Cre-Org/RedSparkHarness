@@ -33,7 +33,7 @@ Configuration requires positive integers maxLiveTextChars and maxLiveEvents and 
 
 The Accounts section shows Host-projected ChatGPT plan, quota windows and credits, plus DeepSeek identity and wallet balances beside the allowlisted account flow; a failed refresh keeps ready data with a stale hint only while the account key and non-null provider identity still match (email for ChatGPT, contact or name for DeepSeek). A successful read without an identity appears for that read only, and unavailable balances never appear as zero. Sign-out and completed authorization reload account and flow data. The page reuses the matching authorization row and does not handle grants directly. Leaving or refreshing the page unsubscribes from frames, while only explicit Cancel stops an attempt.
 
-The Settings button opens a centered modal with General, Task Center, Models, Plugins and Agent presets navigation. General contains the registered Settings and credential editor; Models contains authorization and account cards. Task Center, Plugins and Agent presets currently show a localized migration placeholder.
+The Settings button opens a centered modal with General, Task Center, Models, Plugins and Agent presets navigation. General contains the registered Settings and credential editor. Models joins the Host provider directory, settings and credential status for API model editors, and keeps authorization and account cards under Subscription models. Task Center, Plugins and Agent presets currently show a localized migration placeholder.
 
 React, Session, native model selection, agent preset selection, todo Client values and the native Session error class use the application's shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer. `native-runtime` remains a production dependency because published declarations reference it. `client-native-session` is a peer and development dependency because the page imports `NativeSessionRpcError` at runtime and must share its constructor with the selected Consumer.
 
@@ -77,5 +77,5 @@ Durable events update the transcript during execution. Temporary assistant outpu
 
 - The shipped native-web template has model selection but no standing preset compositions; custom profiles may install them.
 - Nested Tool-call hierarchies and additional model chunk presentations remain separate work.
-- The current prompt path supports image attachments; broader attachment/resource management, Workspace list/create/search/move/delete, opaque credential grant editing and the complete legacy plugin Settings page remain separate native Client work.
+- The current prompt path supports image attachments; broader attachment/resource management, Workspace list/create/search/move/delete, opaque credential grant editing, plugin Settings pages beyond API Models and the Models onboarding dialogs remain separate native Client work.
 - A Settings owner must explicitly publish its schema metadata; this page does not edit hidden `role('secret')` values or create authorization grants.

@@ -91,6 +91,7 @@
       "provides": [
         "model",
         "modelDirectory",
+        "modelSettings",
         "accounts"
       ]
     }

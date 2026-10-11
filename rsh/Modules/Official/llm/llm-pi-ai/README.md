@@ -152,6 +152,8 @@ The adapter is built on immutable snapshots and per-operation resolution. Each o
 | [`src/siwc.ts`](src/siwc.ts) | App-owned Sign in with ChatGPT OAuth registration, callback, verification, and refresh |
 | [`src/config.ts`](src/config.ts) | Profile schema, resolution, and serviceability checks |
 | [`src/catalog.ts`](src/catalog.ts) | Installed-catalog integration and drift gates |
+| [`src/configurable-providers.ts`](src/configurable-providers.ts) | Shared configurable directory projection for Cordis and Native Providers |
+| [`src/native.ts`](src/native.ts) | Native model, model-directory and model-settings Providers |
 | [`src/provider.ts`](src/provider.ts) | The supported-protocol table and provider construction |
 | [`src/context.ts`](src/context.ts) | Harness-to-pi-ai context conversion, image handling, replay restore |
 | [`src/stream.ts`](src/stream.ts) | pi-ai event conversion into harness `StreamChunk` values |
@@ -188,7 +190,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 <a id="model-experience"></a>
 
-The native `modelDirectory` uses this installation’s exact adapter and configured routes. Catalog failures are isolated per Provider, and an unadvertised model can still resolve through its actual route. Removal drains accepted lookups before releasing the adapter.
+The native `modelDirectory` uses this installation’s exact adapter and configured routes. Catalog failures are isolated per Provider, and an unadvertised model can still resolve through its actual route. `modelSettings.configurableProviders()` shares the Cordis directory projection, and `discover()` uses the same endpoint discovery path while keeping a supplied `apiKey` in the current call only. Profile or `llm-pi-ai` credential-record changes emit `llm/adapters-updated`. Removal drains accepted lookups before releasing the adapter.
 
 ## Model Experience
 

@@ -43,6 +43,8 @@ import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import { NativeWebAccounts, NativeWebAuthorization } from './authorization.ts'
+import { NativeWebModels } from './models.ts'
+import { NativeWebSettingsEvents } from './settings-events.ts'
 import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -118,6 +120,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate',
+  'models/providers', 'models/configurable-providers', 'models/discover',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
 const modelSelectionInput = z.strictObject({
@@ -702,7 +705,7 @@ export class NativeWebSessionService {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -721,6 +724,10 @@ export const plugin: NativePlugin = {
         ? undefined : { authorization: selectedAuthorization, credentials: selectedCredentials }
       const authorization = new NativeWebAuthorization(providers, config.authorizationKeys.map(parseCredentialKey), context.signal)
       const accounts = new NativeWebAccounts(context.optional('accounts'), config.authorizationKeys.map(parseCredentialKey))
+      const modelEndpoints = new NativeWebModels(context.optional('modelDirectory'), context.optional('modelSettings'), context.signal)
+      context.own(() => modelEndpoints.close())
+      const settingsEvents = new NativeWebSettingsEvents(context)
+      context.own(() => settingsEvents.close())
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
@@ -731,13 +738,16 @@ export const plugin: NativePlugin = {
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
         (endpoint, payload, signal) => endpoint.startsWith('authorization/')
           ? authorization.handle(endpoint, payload)
-          : endpoint.startsWith('accounts/') ? accounts.handle(endpoint, payload, signal) : service.handle(endpoint, payload, signal)))
+          : endpoint.startsWith('accounts/') ? accounts.handle(endpoint, payload, signal)
+            : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal) : service.handle(endpoint, payload, signal)))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.image(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/authorization', methods: ['POST'], requestBody: 'buffered',
         fetch: request => authorization.frames(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/settings-events', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => settingsEvents.stream(request) }))
       context.provide('nativeWebSession', service)
       context.provide('rootExecution', executor.rootExecution)
     }

@@ -21,13 +21,24 @@ const emptyAccountActions = {
   accountsBalance: async () => ({ status: 'unsupported' as const }),
   accountsSignOut: async () => undefined,
 }
+const emptyModelActions = {
+  modelsListProviders: async () => [],
+  modelsListConfigurableProviders: async () => [],
+  modelsDiscover: async () => [],
+  settingsEvents: async function* (signal: AbortSignal) {
+    await new Promise<void>((resolve) => {
+      if (signal.aborted) resolve()
+      else signal.addEventListener('abort', () => { resolve() }, { once: true })
+    })
+  },
+}
 function renderSettingsPage(props: {
   actions: NativeSettingsActions
   t: (key: keyof typeof en) => string
   section?: string
   onAuthorized?: () => void
 }) {
-  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...props.actions }}
+  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...emptyModelActions, ...props.actions }}
     section={props.section ?? 'general'} />)
 }
 const settingsDescription = (
@@ -488,7 +499,7 @@ it('refresh mid-login then resume and finish', async () => {
 
   try {
     const firstPage = renderSettingsPage(props)
-    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
     expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
     expect(await screen.findByText('ABCD-1234')).toBeTruthy()
     await screen.findByLabelText('Authorization code')
@@ -541,7 +552,7 @@ it.each([
   const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], section: 'models', onAuthorized })
 
   if (attemptId === undefined) {
-    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
     expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
     expect(screen.queryByRole('button', { name: en.cancelSignIn })).toBeNull()
   } else {
@@ -636,14 +647,14 @@ it('resumes an in-flight login after leaving and returning to Models', async () 
     }),
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
   } as unknown as NativeSettingsActions
-  const stable = { ...emptyAccountActions, ...actions }
+  const stable = { ...emptyAccountActions, ...emptyModelActions, ...actions }
   const t = (localeKey: keyof typeof en) => en[localeKey]
   const page = render(<SettingsPage actions={stable} t={t} section="models" />)
-  fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+  fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
   page.rerender(<SettingsPage actions={stable} t={t} section="general" />)
   page.rerender(<SettingsPage actions={stable} t={t} section="models" />)
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: en.signIn })).toBeNull()
+  expect(screen.queryByRole('button', { name: en.authorizationLoginAdd })).toBeNull()
   page.unmount()
 })
