@@ -283,7 +283,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
         </form>
       })}
     </>}
-    {frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
+    {attemptId === undefined || settled !== undefined ? null : frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
       <span>{frame.notice.message}</span>
       {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
       {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
@@ -337,6 +337,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const [accountsError, setAccountsError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [refreshClick, setRefreshClick] = useState(0)
+  const [modelsReload, setModelsReload] = useState(0)
   const [accountRefreshClick, setAccountRefreshClick] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
@@ -415,6 +416,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
     const refreshed = await refresh(true)
+    setModelsReload(current => current + 1)
     try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
     return refreshed
   }, [onAuthorized, refresh])
@@ -422,6 +424,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const signOutAccount = useCallback(async (key: string): Promise<void> => {
     await actions.accountsSignOut(key)
     await refresh(true)
+    setModelsReload(current => current + 1)
     try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
   }, [actions, onAuthorized, refresh])
 
@@ -521,7 +524,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   </>
 
   if (section === 'models') return <div>
-    <ModelsSettingsPage actions={actions} t={t}>
+    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload}>
       {subscriptionContent}
     </ModelsSettingsPage>
   </div>
