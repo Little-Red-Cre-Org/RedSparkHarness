@@ -4,7 +4,7 @@
  * time->ellipsis, action buttons) are CSS-only. Row menus contain only the
  * actions supplied by the caller; hover cards close while a menu is open.
  */
-import { useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import { Button } from '../Button.tsx'
 import { HoverCard } from '../HoverCard.tsx'
@@ -98,10 +98,18 @@ function rowHalf(e: { clientY: number; currentTarget: HTMLElement }): 'before' |
   return e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
 }
 
+/** Activate a focused tree row while leaving nested controls to their own keys. */
+function activateRowOnKeyDown(event: KeyboardEvent<HTMLDivElement>, action: () => void): void {
+  if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+  event.preventDefault()
+  action()
+}
+
 /**
  * Project (workspace) header row: folder + title;
  * hover reveals the chevron and create button, and dwelling on a real
  * Workspace shows its hover card (the ungrouped bucket has none).
+ * Enter and Space toggle a focused row; nested controls keep their own actions.
  * `containsCurrent` arrives on the node (derivation fact, no renderer scan).
  * @param props.group - derived group node.
  * @param props.onToggle - expand/collapse the group.
@@ -140,8 +148,10 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
     <div
       className={clsx(css.projectRow, menuOpen && css.menuOpen)}
       role="treeitem"
+      tabIndex={0}
       aria-expanded={row.expanded}
       onClick={onToggle}
+      onKeyDown={(event) => { activateRowOnKeyDown(event, onToggle) }}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
         ? undefined
@@ -372,6 +382,7 @@ export function SearchResultItem<Id extends string>({ result, currentId, onOpen,
 /**
  * One top-level 34px session row: status dot (pending user interaction outranks
  * own or descendant activity), title, relative time, and the row actions menu.
+ * Enter and Space open a focused row; nested controls keep their own actions.
  * @param props.node - derived session node.
  * @param props.currentId - selected session id (row highlight).
  * @param props.now - epoch ms for relative-time formatting.
@@ -451,8 +462,10 @@ export function SessionNodeItem<Id extends string>({
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
+      tabIndex={0}
       aria-selected={selected}
       onClick={() => { onOpen(node.id) }}
+      onKeyDown={(event) => { activateRowOnKeyDown(event, () => { onOpen(node.id) }) }}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
         ? undefined
