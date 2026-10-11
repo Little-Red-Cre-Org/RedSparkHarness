@@ -101,7 +101,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
     presets: [
       { id: 'standard', name: 'Standard', description: 'General purpose', source: 'system', status: 'ready' },
       { id: 'legacy', name: 'Legacy', description: 'Older composition', source: 'user', status: 'ready' },
-      { id: 'migrating', name: 'Migrating', description: 'Needs migration', source: 'user', status: 'needs-migration' },
+      { id: 'migrating', name: 'Migrating', description: 'Older folder format', source: 'user', status: 'needs-migration' },
       { id: 'damaged', name: 'Damaged', source: 'user', status: 'invalid', problem: 'Composition file is invalid.' },
     ],
   }
