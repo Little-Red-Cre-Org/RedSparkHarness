@@ -17,6 +17,8 @@ export interface NativeSettingsStorage {
    * @returns the committed raw document.
    */
   persist(update: (document: NativeSettingsSection) => NativeSettingsSection): Promise<NativeSettingsSection>
+  /** Local document a user may open in a text editor; absent when storage has no such file. */
+  readonly documentPath?: string
 }
 
 /** One redacted registration exposed to a Native settings page. */
@@ -113,6 +115,8 @@ export interface NativeSettingsService {
   ): NativeSettingsScope<T>
   /** Describe registrations exposed to Native configuration surfaces. @returns redacted descriptors. */
   describe(): NativeSettingsDescriptor[]
+  /** Local settings document the Host may open for editing; absent when storage has none. */
+  readonly documentPath?: string | undefined
   /**
    * Apply ordered path edits to a namespace's raw user section.
    * @param namespace - namespace to edit.
