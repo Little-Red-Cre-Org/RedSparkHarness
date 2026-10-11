@@ -48,6 +48,8 @@ Account methods list safe Host-projected identities, read provider usage and sig
 
 The same Cordis-free installation provides `clientNativeWorkspace` and `clientNativeDirectoryPicker`. Workspace methods expose `list()` as `{ workspaces, archivedSessionIds }`, `follow(signal)` as a baseline followed by upsert/remove/order/archive frames, and create, rename, registration-only delete, reorder, session reorder, archive, case-insensitive title/path search and `connectWorkspace`. Connection reuses an unarchived member Session with a matching Workspace `cwd` that has not started a turn (or recorded a scheduler notice), otherwise it creates and attaches a blank Session. Directory methods expose the Host OS chooser, one-level `{ path, entries, crumbs }` browsing and single-child directory creation. Host integrations import these serializable Workspace and directory types from the `workspaces` entry.
 
+The `clientNativeSchedule` service exposes `list()` and `follow(signal)` for active, paused, and failed task rows. Its complete baseline and later upsert/remove frames contain schedule metadata without prompts or execution configuration; Host failures retain the `native/schedules` code.
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {
