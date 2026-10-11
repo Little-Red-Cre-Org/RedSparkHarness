@@ -40,7 +40,7 @@ React、Session、原生模型选择、Agent 预设、todo Client 值及原生 S
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。可见 Workspace 上下文来自 Session header 的 `cwd` 投影；完整 Workspace 浏览器以及 Workspace 列表、创建、搜索、移动和删除操作仍属于 P4 Workspace/Resource slice。
+可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。侧边栏按 `header.cwd` 将 Session 分组用于展示，并按当前可用的创建时间排序；Native 列表未提供活动时间和状态事实，因此不显示这些字段。在 Host 能力就绪前，Workspace 创建、搜索、排序、目录选择和定时任务浏览保持禁用。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
 
 <a id="invariants"></a>
 

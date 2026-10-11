@@ -12735,6 +12735,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@deepseek-ai/dsh-util-workspace-path':
+        specifier: workspace:^
+        version: link:../../../../Core/util/workspace-path
       '@types/mdast':
         specifier: ^4.0.4
         version: 4.0.4

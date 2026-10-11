@@ -30,6 +30,7 @@ describe('NativeAccountsProvider DeepSeek delegation', () => {
     const deepseekKey = credentialKey('deepseek-account', 'default')
     const deepseekAccount = {
       key: deepseekKey,
+      resolveToken: vi.fn(async () => undefined),
       profile: vi.fn(async () => ({ status: 'ready' as const, value: {
         id: 'user-id', name: 'Ada', contact: 'ada@example.com', avatarUrl: 'https://img.example/avatar.png',
       } })),

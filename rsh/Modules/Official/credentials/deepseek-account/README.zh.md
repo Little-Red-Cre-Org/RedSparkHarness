@@ -29,15 +29,16 @@ kind: "package-reference"
 
 ### 配置 Platform origin
 
-原生插件输入接受一个可选字段：
+原生插件输入接受两个可选字段：
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `platformOrigin` | `https://platform.deepseek.com` | Platform 登录、资料、余额和退出请求所用的 HTTPS origin |
+| `inferenceOrigin` | `https://api.deepseek.com` | 允许接收账户推理 token 的确切 HTTP(S) origin |
 
 ### 账户记录
 
-Provider 将 grant 保存在 `deepseek-account/default`，并将设备 id 保存在 `deepseek-account/device`。只有 issuer 与 `platformOrigin` 相符时，grant 才可使用；格式错误或 issuer 不匹配的 grant 会显示为已退出。
+Provider 将 grant 保存在 `deepseek-account/default`，并将设备 id 保存在 `deepseek-account/device`。只有 issuer 与 `platformOrigin` 相符时，grant 才可使用；格式错误或 issuer 不匹配的 grant 会显示为已退出。LLM Provider 可通过 `resolveToken(destination)` 请求推理 URL 使用的 token。只有目标 origin 与 `inferenceOrigin` 相符，且 grant issuer 对该 origin 有效时，账户 Provider 才会返回 token。
 
 -----
 

@@ -84,9 +84,9 @@ it('installs modular Native navigation, Session selection, details, locale and t
 
   const activity = { updatedAt: 0, blank: false, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false }
   let rows: NativeSessionListItem[] = [
-    { header: makeHeader('session-alpha', 'C:\\Work\\Alpha'), titleProjection: { status: 'resolved', title: 'Alpha' },
+    { header: makeHeader('session-alpha', 'C:\\Work\\Shared'), titleProjection: { status: 'resolved', title: 'Alpha' },
       titleActions: { rename: true, refresh: true }, ...activity },
-    { header: makeHeader('session-beta', 'C:\\Work\\Beta'), titleProjection: { status: 'resolved', title: 'Beta' },
+    { header: makeHeader('session-beta', 'C:\\Work\\Shared'), titleProjection: { status: 'resolved', title: 'Beta' },
       titleActions: { rename: true, refresh: true }, ...activity },
   ]
   const close = vi.fn(async () => undefined)
@@ -142,40 +142,44 @@ it('installs modular Native navigation, Session selection, details, locale and t
   const originalLanguage = document.documentElement.lang
   try {
     await host.start()
-    await screen.findByRole('button', { name: 'Alpha' })
+    const workspace = await screen.findByRole('treeitem', { name: 'Shared' })
+    const workspaceRows = within(workspace.parentElement!)
+    const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    expect(workspaceRows.getByRole('treeitem', { name: /Beta/ })).toBeTruthy()
     expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(7)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alpha' }))
+    fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
 
-    const alphaRow = screen.getByRole('button', { name: 'Alpha' }).parentElement!
-    fireEvent.click(within(alphaRow).getByRole('button', { name: 'Rename' }))
+    fireEvent.click(within(alphaRow).getByRole('button', { name: 'Session actions for Alpha' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Session title' }), { target: { value: 'Renamed Alpha' } })
-    fireEvent.click(within(alphaRow).getByRole('button', { name: 'Save' }))
-    await screen.findByRole('button', { name: 'Renamed Alpha' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByRole('treeitem', { name: /Renamed Alpha/ })
     expect(clientMock.renameTitle).toHaveBeenCalledWith('session-alpha', 'Renamed Alpha', expect.any(AbortSignal))
-    const renamedRow = screen.getByRole('button', { name: 'Renamed Alpha' }).parentElement!
-    fireEvent.click(within(renamedRow).getByRole('button', { name: 'Refresh title' }))
-    await screen.findByRole('button', { name: 'Refreshed Alpha' })
+    const renamedRow = screen.getByRole('treeitem', { name: /Renamed Alpha/ })
+    fireEvent.click(within(renamedRow).getByRole('button', { name: 'Session actions for Renamed Alpha' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Refresh title' }))
+    await screen.findByRole('treeitem', { name: /Refreshed Alpha/ })
     expect(clientMock.refreshTitle).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
 
     fireEvent.click(screen.getByRole('button', { name: 'Session details' }))
     expect(screen.getByRole('complementary', { name: 'Session details' })).toBeTruthy()
-    expect(screen.getByText('C:\\Work\\Alpha')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Beta' }))
-    await screen.findByText('C:\\Work\\Beta')
+    expect(screen.getByText('C:\\Work\\Shared')).toBeTruthy()
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await screen.findByText('C:\\Work\\Shared')
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
 
     const createButton = screen.getByText('New Session').closest('button')
     expect(createButton).not.toBeNull()
     fireEvent.click(createButton!)
-    await screen.findByRole('button', { name: 'session-created' })
+    await screen.findByRole('treeitem', { name: /session-created/ })
     expect(await screen.findAllByText('session-created')).toHaveLength(2)
     expect(clientMock.create).toHaveBeenCalledOnce()
     expect(clientMock.history).toHaveBeenLastCalledWith('session-created', expect.any(AbortSignal))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Language' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Switch language' }))
     expect(document.documentElement.lang).toBe('zh-CN')
     expect(screen.getByRole('button', { name: '会话详情' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '切换主题' }))

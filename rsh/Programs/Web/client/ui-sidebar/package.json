@@ -52,8 +52,7 @@
         "clientNativeLayout",
         "clientNativeConversation",
         "clientNativeSessionPresentation",
-        "clientLocale",
-        "clientNativeTheme"
+        "clientLocale"
       ],
       "optional": [],
       "provides": []
