@@ -221,7 +221,6 @@ export interface NativeWebSelectionProviders {
 interface NativeSessionListContext {
   readonly owners: readonly NativeActiveSessionOwner[]
   readonly ownerBySession: ReadonlyMap<SessionId, NativeActiveSessionOwner>
-  readonly running: ReadonlySet<SessionId>
   readonly runningSubagentCount: ReadonlyMap<SessionId, number>
   readonly workspaceBySession: ReadonlyMap<SessionId, WorkspaceId>
   readonly archived: ReadonlySet<SessionId>
@@ -428,7 +427,8 @@ export class NativeWebSessionService {
     const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
-    void done.then(() => { turn.settled = true }, (error: unknown) => { turn.settled = true; refused(error) })
+    const markSettled = (): void => { turn.settled = true; this.publishListChange(id) }
+    void done.then(markSettled, (error: unknown) => { markSettled(); refused(error) })
     try { await acknowledgement } catch (error: unknown) { this.turns.delete(id); throw error }
     return { admissionId }
   }
@@ -748,12 +748,10 @@ export class NativeWebSessionService {
   private listProjectionContext(): NativeSessionListContext {
     const owners = this.active.owners()
     const ownerBySession = new Map(owners.map(owner => [owner.session.id, owner]))
-    const running = new Set<SessionId>()
     const runningSubagentCount = new Map<SessionId, number>()
     for (const owner of owners) {
       const active = this.selections.executionFor?.(owner.agent).status === 'running'
       if (!active) continue
-      running.add(owner.session.id)
       const parent = owner.session.header.parentSession
       if (parent !== undefined) runningSubagentCount.set(parent, (runningSubagentCount.get(parent) ?? 0) + 1)
     }
@@ -762,7 +760,7 @@ export class NativeWebSessionService {
       for (const id of workspace.sessionIds) workspaceBySession.set(id, workspace.id)
     }
     return {
-      owners, ownerBySession, running, runningSubagentCount, workspaceBySession,
+      owners, ownerBySession, runningSubagentCount, workspaceBySession,
       archived: new Set(this.selections.workspaceRegistry?.archivedSessionIds ?? []),
     }
   }
@@ -770,16 +768,24 @@ export class NativeWebSessionService {
   private async projectSession(id: SessionId, context: NativeSessionListContext,
     signal: AbortSignal): Promise<NativeSessionListItem | undefined> {
     if (context.archived.has(id)) return undefined
-    if (!context.ownerBySession.has(id) && await this.persistence.stat(id, { signal }) === undefined) return undefined
-    const history = await readNativeSessionHistory(id, {
-      active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
-      label: 'native web Session list', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
-    }, signal)
-    const title = foldSessionTitle(history.events)
-    const turn = latestTurnState(history.events)
     const owner = context.ownerBySession.get(id)
-    const running = context.running.has(id) || this.turns.get(id)?.settled === false
-      || this.selections.executionFor === undefined && turn.running
+    const header = owner?.session.header ?? (await this.persistence.stat(id, { signal }))?.header
+    if (header === undefined) return undefined
+    let history: Awaited<ReturnType<typeof readNativeSessionHistory>> | undefined
+    try {
+      history = await readNativeSessionHistory(id, {
+        active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+        label: 'native web Session list', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
+      }, signal)
+    } catch {
+      if (signal.aborted) signal.throwIfAborted()
+      // An unreadable history affects this row's projections, not the rest of the list.
+    }
+    const title = history === undefined ? undefined : foldSessionTitle(history.events)
+    const turn = history === undefined ? undefined : latestTurnState(history.events)
+    const execution = owner === undefined ? undefined : this.selections.executionFor?.(owner.agent)
+    const running = execution?.status === 'running' || this.turns.get(id)?.settled === false
+      || this.selections.executionFor === undefined && (turn?.running ?? false)
     const rootOwner = owner?.invocation === 'root' ? owner : undefined
     const pendingKind = rootOwner === undefined ? undefined : this.human.pendingKind(rootOwner.agent)
     const hasActiveSchedule = rootOwner !== undefined && this.selections.taskScheduler !== undefined
@@ -787,12 +793,13 @@ export class NativeWebSessionService {
     const canManageTitle = !this.turns.has(id) && this.canManageTitle(id)
     const workspaceId = context.workspaceBySession.get(id)
     return {
-      header: history.header,
-      titleProjection: title === undefined ? { status: 'absent' } : { status: 'resolved', title: title.title },
+      header: history?.header ?? header,
+      titleProjection: history === undefined ? { status: 'unavailable' }
+        : title === undefined ? { status: 'absent' } : { status: 'resolved', title: title.title },
       titleActions: { rename: canManageTitle, refresh: canManageTitle },
-      updatedAt: history.events.reduce((latest, event) => Math.max(latest, event.time), history.header.createdAt),
-      blank: !history.events.some(startsSessionConversation), running,
-      completed: !running && turn.completed,
+      updatedAt: history?.events.reduce((latest, event) => Math.max(latest, event.time), history.header.createdAt) ?? header.createdAt,
+      blank: history === undefined ? false : !history.events.some(startsSessionConversation), running,
+      completed: !running && (turn?.completed ?? false),
       runningSubagentCount: context.runningSubagentCount.get(id) ?? 0,
       ...(pendingKind === undefined ? {} : { pendingInteraction: { kind: pendingKind } }),
       ...(workspaceId === undefined ? {} : { workspaceId }),

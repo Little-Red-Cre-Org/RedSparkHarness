@@ -39,7 +39,7 @@ import { createNativeHeadlessApplication, type NativeHeadlessApplication } from 
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
 import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
-import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
+import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
@@ -52,6 +52,33 @@ import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
 import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
+
+it('closes a list follower aborted while its consumer is paused at yield', async () => {
+  const rpc = {
+    call: async () => ({ ok: true as const, value: {} }),
+    response: async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"baseline","items":[]}\n\n'))
+      },
+    }), { headers: { 'content-type': 'text/event-stream' } }),
+  } satisfies ClientConnectionRpc
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
+  const abort = new AbortController()
+  const iterator = client.follow(abort.signal)[Symbol.asyncIterator]()
+  let closed = false
+  let closing: Promise<void> | undefined
+  try {
+    await expect(iterator.next()).resolves.toMatchObject({ done: false, value: { type: 'baseline', items: [] } })
+    abort.abort()
+    closing = client.close().then(() => { closed = true })
+    await vi.waitFor(() => { expect(closed).toBe(true) }, { interval: 10, timeout: 1000 })
+    await closing
+  } finally {
+    await iterator.return?.()
+    await closing
+    await client.close()
+  }
+})
 
 it('includes nested AggregateError messages in native Session failures', async () => {
   const failure = new AggregateError([
