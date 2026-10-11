@@ -1,5 +1,5 @@
 /** Provider configuration entries shared by the Cordis and Native adapters. */
-import type { LlmConfigurableProvider } from '@deepseek-ai/dsh-llm/types'
+import type { LlmConfigurableProvider } from '@deepseek-ai/dsh-llm/native'
 import { catalogProviderIds } from './catalog.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 
