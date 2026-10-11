@@ -8,6 +8,8 @@ import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
+import type { NativeModelSettings } from '@deepseek-ai/dsh-llm-pi-ai/native'
 import { plugin as sandboxPolicy } from '../../../../../Modules/Official/sandbox/native-sandbox-policy/src/native.ts'
 import { plugin as sandboxedFilesystem } from '../../../../../Modules/Official/fs/fs-sandbox/src/native.ts'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -87,10 +89,12 @@ it('allows only configured keys and keeps a disconnected authorization attempt r
 it('starts the controller in a profile that installs authorization and credentials', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'rsh-web-authorization-'))
   const scope = new NativeScope()
+  let settingsDocument: Record<string, unknown> = {}
+  const updatedNamespaces: string[] = []
   const services: NativePlugin = {
     apiVersion: 1, name: 'authorization-fixture', targets: ['host'], requires: [],
-    provides: ['model', 'hostConnection', 'credentials', 'authorization'],
-    resolve: () => (context) => {
+    provides: ['model', 'hostConnection', 'credentials', 'authorization', 'settings', 'modelSettings'],
+    resolve: () => async (context) => {
       context.provide('model', { async *stream() {} })
       context.provide('hostConnection', {
         rpc: { handle: () => () => Promise.resolve(), intercept: () => () => Promise.resolve() },
@@ -98,6 +102,16 @@ it('starts the controller in a profile that installs authorization and credentia
       } as unknown as HostConnectionHandle)
       context.provide('credentials', {} as NativeCredentials)
       context.provide('authorization', new NativeAuthorizationProvider(scope, {} as NativeCredentials, { events: new RuntimeEvents() }))
+      const settings = new NativeSettings({
+        load: async () => settingsDocument,
+        persist: async (update) => { settingsDocument = update(settingsDocument); return settingsDocument },
+      }, (namespace) => { updatedNamespaces.push(namespace) })
+      await settings.start()
+      context.own(() => settings.dispose())
+      context.provide('settings', settings)
+      context.provide('modelSettings', {
+        async firstAvailableAccountModel() { return { provider: 'openai-codex', model: 'fixture-account-model' } },
+      } as unknown as NativeModelSettings)
     },
   }
   const host = new NativeHost(resolveInstallation([
@@ -116,6 +130,10 @@ it('starts the controller in a profile that installs authorization and credentia
   try {
     await host.start()
     expect(host.diagnostics().find(entry => entry.name === plugin.name)?.state).toBe('ready')
+    expect(settingsDocument['agent-default-model']).toBeUndefined()
+    await host.events.parallel(scope, 'authorization/settled', credentialKey('llm-pi-ai', 'openai-codex'), 'authorized')
+    expect(settingsDocument['agent-default-model']).toEqual({ provider: 'openai-codex', model: 'fixture-account-model' })
+    expect(updatedNamespaces).toContain('agent-default-model')
   } finally {
     await host.stop()
     await rm(cwd, { recursive: true, force: true })

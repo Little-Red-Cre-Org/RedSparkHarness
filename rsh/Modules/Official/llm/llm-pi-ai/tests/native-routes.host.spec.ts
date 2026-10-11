@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
+import type { CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type { NativeModelSettings } from '../src/model-settings.ts'
+import { plugin as piAi } from '../src/native.ts'
+import { plugin as deepseekAccount } from '../../../credentials/deepseek-account/src/native.ts'
+
+const CODEX_KEY = credentialKey('llm-pi-ai', 'openai-codex')
+const DEEPSEEK_KEY = credentialKey('deepseek-account', 'default')
+const cases = [
+  { provider: 'openai-codex', key: CODEX_KEY, account: false },
+  { provider: 'deepseek-account', key: DEEPSEEK_KEY, account: true },
+] as const
+
+describe('native account model routes', () => {
+  it.each(cases)('adds $provider after its credential is available', async ({ provider, key, account }) => {
+    const records = new Map<string, CredentialRecord>()
+    let apiKeyConfigured = false
+    let directory: NativeModelDirectory | undefined
+    let modelSettings: NativeModelSettings | undefined
+    const credentials = {
+      async resolve() { return apiKeyConfigured ? { value: 'fixture-api-key', source: 'store' } : undefined },
+      async describe() { return { configured: false, writable: false } },
+      async readRecord(recordKey: string) { return records.get(recordKey) },
+      async describeRecord(recordKey: string) {
+        const record = records.get(recordKey)
+        return record === undefined
+          ? { configured: false, writable: true }
+          : { configured: true, kind: record.kind, writable: true }
+      },
+      async listRecords() { return [] },
+      async modifyRecord() { return undefined },
+      async deleteRecord() {},
+      async set() {},
+      async unset() {},
+    } as unknown as NativeCredentials
+    const services: NativePlugin = {
+      apiVersion: 1, name: 'native-route-fixtures', targets: ['host'], requires: [],
+      provides: ['credentials', 'launchEnvironment'],
+      resolve: () => (context) => {
+        context.provide('credentials', credentials)
+        context.provide('launchEnvironment', createLaunchEnvironmentSnapshot([]))
+      },
+    }
+    const observer: NativePlugin = {
+      apiVersion: 1, name: 'native-route-observer', targets: ['host'],
+      requires: ['modelDirectory', 'modelSettings'], provides: [],
+      resolve: () => (context) => {
+        directory = context.require('modelDirectory')
+        modelSettings = context.require('modelSettings')
+      },
+    }
+    const scope = new NativeScope()
+    const host = new NativeHost(resolveInstallation([
+      { plugin: services, scope, config: undefined },
+      ...(account ? [{ plugin: deepseekAccount, scope, config: undefined }] : []),
+      { plugin: piAi, scope, config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' } } } },
+      { plugin: observer, scope, config: undefined },
+    ], 'host'))
+
+    try {
+      await host.start()
+      expect(directory?.providers().map(row => row.id)).not.toContain(provider)
+      records.set(key, account
+        ? { kind: 'grant', payload: { version: 1, token: 'fixture-account-value', issuer: 'https://platform.deepseek.com' } }
+        : { kind: 'grant', payload: {} })
+      await host.events.parallel(scope, 'credentials/record-updated', key)
+      expect(directory?.providers().map(row => row.id)).toContain(provider)
+      expect(modelSettings?.configurableProviders().map(row => row.provider)).toContain(provider)
+      if (account) {
+        const catalog = await directory?.catalog({ provider, model: 'deepseek-flash' }, new AbortController().signal)
+        expect(catalog?.groups.find(group => group.id === provider)?.models.map(model => model.id)).toEqual([
+          'deepseek-flash', 'deepseek-v4-pro',
+        ])
+        expect(await modelSettings?.firstAvailableAccountModel(new AbortController().signal)).toEqual({ provider, model: 'deepseek-flash' })
+        apiKeyConfigured = true
+        expect(await modelSettings?.firstAvailableAccountModel(new AbortController().signal)).toBeUndefined()
+      }
+    } finally {
+      await host.stop()
+    }
+  })
+})
