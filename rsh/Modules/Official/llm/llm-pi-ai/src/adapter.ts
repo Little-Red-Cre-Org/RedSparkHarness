@@ -643,11 +643,11 @@ export class PiAiAdapter extends LlmAdapter {
           signal: watchdog.signal,
           onPayload: siwcResponsesPayload,
           ...codexIdentity === undefined ? {} : {
-            onResponse: response => {
+            onResponse: (response) => {
               const observation = parseCodexRateLimitHeaders(response.headers)
               if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, true)
             },
-            onProviderStreamEvent: data => {
+            onProviderStreamEvent: (data) => {
               const observation = parseCodexRateLimitEvent(data)
               if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, false)
             },

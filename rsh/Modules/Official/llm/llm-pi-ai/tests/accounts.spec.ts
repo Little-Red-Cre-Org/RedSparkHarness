@@ -41,6 +41,29 @@ describe('native account usage', () => {
   })
 })
 
+describe('native SIWC account identity', () => {
+  it.each([
+    ['with a picture', 'https://img.example/avatar.png', 'https://img.example/avatar.png'],
+    ['without a picture', undefined, null],
+  ] as const)('lists the saved avatar %s', async (_case, picture, avatarUrl) => {
+    const credential = {
+      type: 'oauth', siwc: 'chatgpt-plan', clientId: 'client', issuer: 'https://auth.openai.com',
+      subject: 'subject', name: 'Ada', ...(picture === undefined ? {} : { picture }),
+      idToken: 'id-token', extAgentHostId: 'agent', scopes: ['chatgpt.tokens.use.direct'],
+      access: 'access', refresh: 'refresh', expires: 0,
+    }
+    const credentials = {
+      readRecord: async () => ({ kind: 'grant' as const, payload: credential }),
+    } as unknown as NativeCredentials
+    const accounts = new NativeAccountsProvider(credentials, new AbortController().signal)
+
+    await expect(accounts.list()).resolves.toMatchObject([{
+      provider: 'openai-codex', status: 'ready',
+      identity: { name: 'Ada', avatarUrl },
+    }])
+  })
+})
+
 describe('NativeAccountsProvider DeepSeek delegation', () => {
   it('appends the profile and delegates wallet reads and sign-out', async () => {
     const deepseekKey = credentialKey('deepseek-account', 'default')

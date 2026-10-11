@@ -96,7 +96,10 @@ export function parseCodexRateLimitHeaders(
   const limitIds = new Set(['codex'])
   for (const name of headers.keys()) {
     const match = /^x-(codex(?:-[a-z0-9_-]+)?)-(?:primary|secondary)-used-percent$/.exec(name)
-    if (match !== null) limitIds.add(match[1]!)
+    if (match !== null) {
+      const limitId = match[1]
+      if (limitId !== undefined) limitIds.add(limitId)
+    }
   }
 
   const quotas: Quota[] = []

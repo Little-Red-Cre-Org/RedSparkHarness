@@ -123,7 +123,12 @@ export class NativeAccountsProvider implements NativeAccounts {
     }
     if (record.kind === 'grant' && isSiwcCredential(record.payload)) {
       return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'ready',
-        identity: { email: record.payload.email ?? null, contact: record.payload.email ?? null, name: null, avatarUrl: null },
+        identity: {
+          email: record.payload.email ?? null,
+          contact: record.payload.email ?? null,
+          name: record.payload.name ?? null,
+          avatarUrl: record.payload.picture ?? null,
+        },
         plan: null }], signal)
     }
     return this.deepseekSummary([{ key: CODEX_KEY, provider: CODEX_PROVIDER, status: 'unavailable',
