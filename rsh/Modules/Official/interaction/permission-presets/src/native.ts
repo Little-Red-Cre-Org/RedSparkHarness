@@ -4,8 +4,6 @@ import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@d
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { sessionApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-sandbox/native-types'
 import type {} from './native-definition.ts'
 import type { NativePermissionPresetControls, NativePermissionPresetOperations, NativePermissionPresetSpec } from './native-definition.ts'
@@ -39,8 +37,8 @@ export const plugin: NativePlugin = {
     return (context) => {
       const active = context.require('activeSessions') as Pick<NativeActiveSessionOperations, 'owner'>
       const agents = context.require('agents') as Pick<NativeAgentRegistry, 'get'>
-      const sandboxPolicy = context.require('sandboxPolicy') as NativeSandboxPolicy
-      const approval = context.require('approval') as NativeApprovalServiceDefinition
+      const sandboxPolicy = context.require('sandboxPolicy')
+      const approval = context.require('approval')
       const assertOwner = (owner: NativeActiveSessionOwner, signal: AbortSignal): void => {
         signal.throwIfAborted()
         if (owner.invocation !== 'root' || !owner.writerAvailable || agents.get(owner.agent.id) !== owner.agent

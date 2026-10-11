@@ -16,6 +16,8 @@ Mode 读取通过确切 root Session owner 和完整事件日志折叠所选 pre
 
 权限读取和写入通过确切 root owner 调用 [permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations`。Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
 
+随附的 `native-web` 模板会安装 plan-mode 和 permission Provider，以及 `standard` 和 `minimal` 常驻 agent preset。profile 可以省略这些可选 Provider，并返回文档说明的不可用响应；模板不会重写用户已有的 profile 文件。
+
 Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode Provider 时返回 `available: false`；缺少 permission Provider 时返回无当前选项且选项列表为空的不可用值。缺少 preset Registry 时仍可读取当前 mode 事实，但不公布可选 preset。修改失败使用既有 Native Session RPC 错误封装。
 
 Native application 会在 composer 中渲染这些 Host 读取结果。模式和权限控件使用共享 select primitive；Plan 切换按钮显示已提交和待应用状态。Controller 在切换 Session 和轮次结算后刷新两项会话控件，并在每次修改后（包括失败时）刷新受影响的控件。详见 [native application](../../../../rsh/Programs/Web/client/native-application/README.zh.md)。
@@ -30,8 +32,10 @@ Native application 会在 composer 中渲染这些 Host 读取结果。模式和
 
 ## Consequences
 
-Native Client 与 application 会呈现这些 Host 权威值，而不拥有第二份设置或 Session 缓存。模式选择器使用 Host 已安装选项及其持久化修订号，并在首轮后保持锁定。Plan mode 显示已提交和待应用状态，包括排队到下一次被接受 step 的修改。只有 permission Provider 可用时才显示权限选项，且这些选项不会替代待处理人工审批。随附的 native-web profile 不安装可选的 plan-mode 和 permission Provider；添加这些 Provider 的 profile 会在 composer 中显示其选项。
+选定的 Native Client 可以读取所有 composer 控件，而不拥有第二份设置或 Session 缓存。Agent preset 变更仍仅适用于空白 Session。Plan-mode 选择保留已记录状态与待应用状态的区别。权限策略变更保持持久化，并独立于待处理人工审批。随附的 native-web 配置通过同一 Client API 提供 mode 和 permission 选项；其他 profile 可以省略这些可选 Provider。
 
 ## Verification
 
-经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。Native application 测试检查模式修订号、plan-mode 响应和权限修改。这些检查使用真实 Provider 和 Session executor，而非平行存储。
+从 CLI 全新启动 `native-web` 后，可通过经过身份验证的 `/api` RPC 读取两种控制项：mode 选项为 `standard` 和 `minimal`，plan mode 可用且未激活；permission 选项为 `workspace-write` 和 `danger-full-access`，当前选中 `workspace-write`。
+
+经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。该场景使用真实 Provider 和 Session executor，而非平行存储。Native application 测试检查 mode 修订、plan-mode 结果和权限修改。
