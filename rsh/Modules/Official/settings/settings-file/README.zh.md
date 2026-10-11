@@ -48,7 +48,7 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
-原生 Host 入口通过 `@deepseek-ai/dsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。
+原生 Host 入口通过 `@deepseek-ai/dsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。每个已注册用户分节变化时都会携带递增后的 revision 发出 `settings/document-updated`，即使解析值保持相等。
 
 ### 编辑文档
 

@@ -128,6 +128,44 @@ export interface NativeAccountSummary {
   readonly plan: string | null
 }
 
+/** Provider route advertised by the selected Native model adapter. */
+export interface NativeLlmProviderInfo {
+  readonly id: string
+  readonly name: string
+}
+
+/** Configurable provider entry and optional diagnostic from the selected adapter. */
+export interface NativeConfigurableModelProvider {
+  readonly provider: string
+  readonly displayName: string
+  readonly settingsNs: string
+  readonly settingsPath: readonly string[]
+  readonly declared?: boolean
+  readonly error?: string
+}
+
+/** One draft endpoint interrogation; apiKey is used only for this request. */
+export interface NativeModelDiscoveryRequest {
+  readonly provider?: string
+  readonly baseURL?: string
+  readonly api?: string
+  readonly apiKey?: string
+}
+
+/** Candidate model metadata returned by endpoint discovery. */
+export interface NativeDiscoveredModel {
+  readonly id: string
+  readonly name?: string
+  readonly contextWindow?: number
+  readonly maxTokens?: number
+}
+
+/** Notification-only event that tells Settings pages which view to reread. */
+export type NativeSettingsEvent =
+  | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
+  | { readonly type: 'credentials/reference-updated'; readonly ref: string }
+  | { readonly type: 'llm/adapters-updated' }
+
 /** Provider-reported quota window, with reset time in Unix seconds. */
 export interface NativeQuotaWindow {
   readonly usedPercent: number
@@ -195,6 +233,30 @@ export interface NativeSessionClient {
   settingsMutate(
     namespace: string, ops: readonly NativeSettingsPathOp[], expectedRevision: number, signal?: AbortSignal,
   ): Promise<NativeSettingsDescriptor>
+  /** List live provider routes from the selected Host model directory.
+   * @param signal - caller cancellation.
+   * @returns provider ids and display names; empty when the Host has no model directory.
+   */
+  modelsListProviders(signal?: AbortSignal): Promise<readonly NativeLlmProviderInfo[]>
+  /** List configurable provider routes and catalog diagnostics from the selected Host.
+   * @param signal - caller cancellation.
+   * @returns configurable provider entries; empty when the Host has no model settings provider.
+   */
+  modelsListConfigurableProviders(signal?: AbortSignal): Promise<readonly NativeConfigurableModelProvider[]>
+  /** Discover candidate models from the current Settings draft.
+   * @param settingsNs - Settings namespace that owns discovery.
+   * @param request - endpoint and optional one-request API key.
+   * @param signal - caller cancellation.
+   * @returns deduplicated candidate metadata projected for the Settings page.
+   */
+  modelsDiscover(
+    settingsNs: string, request: NativeModelDiscoveryRequest, signal?: AbortSignal,
+  ): Promise<readonly NativeDiscoveredModel[]>
+  /** Watch Settings, credential-reference and model-adapter invalidations.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns notification frames without Settings or credential values.
+   */
+  settingsEvents(signal: AbortSignal): AsyncIterable<NativeSettingsEvent>
   /** Describe credential refs declared by the active Settings schemas.
    * @param refs - schema-discovered reference names.
    * @param signal - caller cancellation.
@@ -459,6 +521,22 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed') }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
+const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
+const configurableModelProviderSchema = z.strictObject({
+  provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
+  declared: z.boolean().optional(), error: z.string().optional(),
+})
+const discoveredModelSchema = z.strictObject({
+  id: z.string().min(1), name: z.string().optional(), contextWindow: z.number().optional(), maxTokens: z.number().optional(),
+})
+const settingsEventSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    type: z.literal('settings/document-updated'), namespace: z.string(),
+    revision: z.number().int().nonnegative().refine(Number.isSafeInteger),
+  }),
+  z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
+  z.strictObject({ type: z.literal('llm/adapters-updated') }),
+])
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
     message: z.string(), url: z.string().optional(), code: z.string().optional(),
@@ -484,6 +562,18 @@ function header(value: unknown): SessionHeader {
 }
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'models/providers') {
+    if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
+    return value.map(item => llmProviderSchema.parse(item))
+  }
+  if (endpoint === 'models/configurable-providers') {
+    if (!Array.isArray(value)) throw new TypeError('native configurable model provider list must be an array')
+    return value.map(item => configurableModelProviderSchema.parse(item))
+  }
+  if (endpoint === 'models/discover') {
+    if (!Array.isArray(value)) throw new TypeError('native discovered model list must be an array')
+    return value.map(item => discoveredModelSchema.parse(item))
+  }
   if (endpoint === 'settings/describe') {
     return settingsDescription(value)
   }
@@ -732,6 +822,9 @@ export function createNativeSessionClient(
     settingsDescribe: signal => call('settings/describe', {}, signal),
     settingsMutate: (namespace, ops, expectedRevision, signal) =>
       call('settings/mutate', { ns: namespace, ops, expectedRevision }, signal),
+    modelsListProviders: signal => call('models/providers', {}, signal),
+    modelsListConfigurableProviders: signal => call('models/configurable-providers', {}, signal),
+    modelsDiscover: (settingsNs, request, signal) => call('models/discover', { settingsNs, request }, signal),
     credentialsDescribe: (refs, signal) => call('credentials/describe', { refs }, signal),
     async credentialsSet(ref, value, signal) { await call('credentials/set', { ref, value }, signal) },
     async credentialsUnset(ref, signal) { await call('credentials/unset', { ref }, signal) },
@@ -752,6 +845,23 @@ export function createNativeSessionClient(
       const frames = response.body.pipeThrough(new TextDecoderStream())
         .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
       for await (const { data } of frames) yield authorizationFrameSchema.parse(JSON.parse(data)) as AuthorizationFrame
+    },
+    async *settingsEvents(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'native-session/settings-events', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native settings events: invalid response HTTP ${response.status}`)
+        }
+        const frames = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of frames) yield settingsEventSchema.parse(JSON.parse(data))
+      } catch (error: unknown) {
+        if (accepted.aborted) return
+        throw error
+      }
     },
     async authorizationAnswer(key, attemptId, promptId, value, signal) {
       await call('authorization/answer', { key, attemptId, promptId, value }, signal)
