@@ -62,12 +62,15 @@ import type {
   StreamChunk,
 } from '@deepseek-ai/dsh-llm/native'
 import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
 import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
-import { createSiwcOAuth, isSiwcCredential } from './siwc.ts'
+import { createSiwcOAuth, isSiwcCredential, siwcChatGptAccountId } from './siwc.ts'
+import { createNativeCodexResponsesCapture } from './native-responses.ts'
+import type { CodexAccountIdentity } from './native-responses.ts'
 import { toStreamChunks } from './stream.ts'
 
 /** One resolution's frozen view: the profiles and the collection built from them. */
@@ -78,6 +81,8 @@ interface PiAiSnapshot {
   models: Models
   /** In-flight Codex catalog refreshes keyed by provider; concurrent callers share one. */
   refreshes: Map<string, Promise<void>>
+  /** Identity captured atomically with this snapshot's account catalog. */
+  codexIdentity: { value: CodexAccountIdentity | undefined; error?: unknown }
 }
 
 /** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
@@ -286,7 +291,11 @@ function asCodexRouteEvents(events: AssistantMessageEventStream): AssistantMessa
 }
 
 /** Account-scoped SIWC catalog over the public OpenAI Responses API. */
-function codexSubscriptionProvider(base: Provider, credentials: CredentialStore): Provider {
+function codexSubscriptionProvider(
+  base: Provider,
+  credentials: CredentialStore,
+  catalogIdentity: { value: CodexAccountIdentity | undefined; error?: unknown },
+): Provider {
   const openai = catalogProvider('openai')
   if (openai === undefined) throw new Error('llm-pi-ai: installed pi-ai catalog has no OpenAI Responses provider')
 
@@ -304,6 +313,13 @@ function codexSubscriptionProvider(base: Provider, credentials: CredentialStore)
         || !context.credential.scopes.includes('chatgpt.tokens.use.direct')) {
         throw new Error('OpenAI Codex model refresh requires the selected ChatGPT account OAuth sign-in')
       }
+      let identity: CodexAccountIdentity | undefined
+      let identityError: unknown
+      try {
+        identity = codexIdentityOf(context.credential)
+      } catch (error: unknown) {
+        identityError = error
+      }
       const entries = await fetchCodexModels(context.credential.access, context.signal)
       const models = entries
         .map(({ id, name }): Model<Api> => ({
@@ -319,12 +335,29 @@ function codexSubscriptionProvider(base: Provider, credentials: CredentialStore)
           contextWindow: 0,
           maxTokens: 0,
         }))
-      await context.publish({ update: () => { currentModels = models } })
+      await context.publish({ update: () => {
+        currentModels = models
+        catalogIdentity.value = identity
+        catalogIdentity.error = identityError
+      } })
     },
     stream: (model, context, options) =>
       asCodexRouteEvents(openai.stream(asChatGptPlanModel(model), asOpenAiContext(context), options)),
     streamSimple: (model, context, options) =>
       asCodexRouteEvents(openai.streamSimple(asChatGptPlanModel(model), asOpenAiContext(context), options)),
+  }
+}
+
+function codexIdentityOf(credential: unknown): CodexAccountIdentity {
+  if (!isSiwcCredential(credential) || !credential.scopes.includes('chatgpt.tokens.use.direct')) {
+    throw new LlmError('OpenAI Codex requires an active Sign in with ChatGPT account', 'INVALID_CREDENTIAL')
+  }
+  return {
+    issuer: credential.issuer,
+    subject: credential.subject,
+    clientId: credential.clientId,
+    extAgentHostId: credential.extAgentHostId,
+    accountId: siwcChatGptAccountId(credential.access),
   }
 }
 
@@ -337,6 +370,9 @@ export class PiAiAdapter extends LlmAdapter {
   private snapshot: PiAiSnapshot | undefined
   /** Cancels shared catalog refreshes of every snapshot when the adapter is disposed. */
   private readonly lifetime = new AbortController()
+  /** Native transports stay tracked until their operation close has drained. */
+  private readonly nativeTransports = new Set<NativeResponsesTransport>()
+  private disposeResult: Promise<void> | undefined
 
   constructor(private readonly config: PiAiAdapterOptions) {
     super()
@@ -347,10 +383,17 @@ export class PiAiAdapter extends LlmAdapter {
     this.snapshot = undefined
   }
 
-  /** Cancel catalog refreshes still in flight and discard the provider collection. */
-  dispose(): void {
-    this.lifetime.abort()
+  /** Cancel catalog work, close Native transports, and wait for accepted work to drain. */
+  dispose(): Promise<void> {
+    if (this.disposeResult !== undefined) return this.disposeResult
     this.snapshot = undefined
+    const closing = [...this.nativeTransports].map(transport => transport.close())
+    this.lifetime.abort()
+    this.disposeResult = Promise.allSettled(closing).then((results) => {
+      const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : [])
+      if (failures.length > 0) throw new AggregateError(failures, 'llm-pi-ai failed to close Native Responses transports')
+    })
+    return this.disposeResult
   }
 
   /**
@@ -363,14 +406,15 @@ export class PiAiAdapter extends LlmAdapter {
     const profiles = this.config.profiles()
     if (this.snapshot?.profiles === profiles) return this.snapshot
     const models: MutableModels = createModels(this.config.auth)
+    const codexIdentity: { value: CodexAccountIdentity | undefined; error?: unknown } = { value: undefined }
     for (const profile of profiles.values()) {
       if (profile.piProvider !== undefined) {
         models.setProvider(profile.provider === CODEX_SUBSCRIPTION_ROUTE
-          ? codexSubscriptionProvider(profile.piProvider, this.config.auth.credentials)
+          ? codexSubscriptionProvider(profile.piProvider, this.config.auth.credentials, codexIdentity)
           : profile.piProvider)
       }
     }
-    this.snapshot = { profiles, models, refreshes: new Map() }
+    this.snapshot = { profiles, models, refreshes: new Map(), codexIdentity }
     return this.snapshot
   }
 
@@ -518,11 +562,44 @@ export class PiAiAdapter extends LlmAdapter {
   override prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
     const snapshot = this.current()
     return Promise.resolve().then(async () => {
+      this.lifetime.signal.throwIfAborted()
       this.profileOf(snapshot, provider)
       await this.ensureCodexCatalog(snapshot, provider, signal)
+      const modelInfo = this.modelInfo(snapshot, provider, model)
+      const profile = this.profileOf(snapshot, provider)
+      const nativeResponses = provider === CODEX_SUBSCRIPTION_ROUTE
+        ? createNativeCodexResponsesCapture({
+          route: { provider, model },
+          inputModalities: modelInfo.inputModalities,
+          identity: snapshot.codexIdentity.value,
+          ...snapshot.codexIdentity.error === undefined ? {} : { identityError: snapshot.codexIdentity.error },
+          headers: requestHeaders(profile.headers),
+          timeoutMs: profile.timeoutMs,
+          streamIdleTimeoutMs: profile.streamIdleTimeoutMs,
+          lifetimeSignal: this.lifetime.signal,
+          readIdentity: async () => {
+            const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
+            return credential === undefined ? undefined : codexIdentityOf(credential)
+          },
+          resolveAuth: async () => {
+            const auth = await snapshot.models.getAuth(CODEX_SUBSCRIPTION_ROUTE)
+            if (auth?.auth.apiKey === undefined) {
+              throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
+            }
+            const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
+            if (credential === undefined) {
+              throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
+            }
+            return { accessToken: auth.auth.apiKey, identity: codexIdentityOf(credential) }
+          },
+          onTransport: transport => { this.nativeTransports.add(transport) },
+          onClose: transport => { this.nativeTransports.delete(transport) },
+        })
+        : undefined
       return {
-        model: this.modelInfo(snapshot, provider, model),
+        model: modelInfo,
         stream: options => this.streamWithSnapshot(options, snapshot),
+        ...nativeResponses === undefined ? {} : { nativeResponses },
       }
     })
   }
