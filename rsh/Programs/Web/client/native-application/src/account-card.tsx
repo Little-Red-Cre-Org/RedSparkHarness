@@ -64,12 +64,13 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
   t: Translate
 }) {
   const [data, setData] = useState<CachedAccountData>()
-  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'usage-unsupported' | 'stale'>('loading')
+  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'usage-pending' | 'stale'>('loading')
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
   const identity = account.provider === 'deepseek-account'
     ? account.identity.contact : account.identity.email
 
+  // Settings and Models remount this read; after a chat turn, USAGE_PENDING clears on the next open (the Host has no push).
   useEffect(() => {
     const lifetime = new AbortController()
     setData(current => current?.accountKey === account.key && identity !== null && current.identity === identity ? current : undefined)
@@ -81,9 +82,9 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
       if (result.status === 'ready') {
         setData({ accountKey: account.key, identity, value: result })
         setStatus('ready')
-      } else if (account.provider === 'openai-codex' && result.status === 'failed' && 'reason' in result && result.reason === 'USAGE_UNSUPPORTED') {
+      } else if (account.provider === 'openai-codex' && result.status === 'failed' && 'reason' in result && result.reason === 'USAGE_PENDING') {
         setData(undefined)
-        setStatus('usage-unsupported')
+        setStatus('usage-pending')
       } else if (result.status === 'signed-out') {
         setData(undefined)
         setStatus('signed-out')
@@ -135,6 +136,7 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
             {account.identity.name !== null ? <p>{account.identity.name}</p> : account.status === 'ready' ? <p>{t('signedIn')}</p> : null}
             {account.identity.contact === null ? null : <p>{account.identity.contact}</p>}
           </> : <>
+            {account.identity.name === null ? null : <p>{account.identity.name}</p>}
             {email === null ? null : <p>{email}</p>}
             {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
           </>}
@@ -169,8 +171,8 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
           </div> : null}
         </>
       : currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
-        ? <p role={currentStatus === 'unavailable' || currentStatus === 'usage-unsupported' ? 'status' : undefined}>
-          {currentStatus === 'usage-unsupported' ? t('usageUnsupported') : currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}
+        ? <p role={currentStatus === 'unavailable' || currentStatus === 'usage-pending' ? 'status' : undefined}>
+          {currentStatus === 'usage-pending' ? t('usagePending') : currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}
         </p>
         : <>
           {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}

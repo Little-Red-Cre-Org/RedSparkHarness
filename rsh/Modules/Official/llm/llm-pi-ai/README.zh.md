@@ -98,6 +98,8 @@ pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程�
 
 `openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug 与显示名，随后会把该 slug 发送到公开 Responses endpoint。登录诊断会显示 HTTP 状态与 OAuth error code、已授予的 scope 名称、无效凭据字段名，或 jose 验证 code 与 claim；不会显示 error description 或 token 值。没有已保存的 SIWC grant 时，此路由不会展示 pi-ai 的静态 Codex 目录。目录未给出的上下文限制、输出上限、价格与 reasoning 控件保持未声明，不从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
 
+SIWC 当前会签发 `name` 和 `email` 声明，但不会签发 `picture` 声明。只有未来的 ID token 提供有效的 HTTP(S) `picture` URL 时，Host 才会显示头像。
+
 协议决策与验证边界见 [SIWC 提供方 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-codex-siwc-provider.zh.md)。真实账户登录、实时目录刷新与用户推理仍需凭据验证。
 
 profile 的 `models` 列表会替换而非扩展路由的已安装目录；每个条目从同 id 已安装模型取未设置字段的默认值，因此把路由收窄到两个模型、修正一个容量或添加比已安装目录更新的模型都是一行编辑。`modelOverrides` 无需该代价即可重塑个别已安装目录模型——修正一个模型，保留其余三十七个——当它与 `models` 列表并存、位于手工声明路由上、或点名目录未描述的模型时会被拒绝，因为静默不变的模型会成为别人日后寻找的拼写错误。
@@ -128,7 +130,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
-`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。已提交的 SIWC grant 会通过账户目录激活 `openai-codex`；已提交的 `deepseek-account/default` grant 会激活 `deepseek-account` 路由，并提供账户路由配置中的 `deepseek-flash` 与 `deepseek-v4-pro` 模型。两条路由都会出现在模型目录和可配置提供方列表中。`openai-codex` SIWC grant 无法查询 ChatGPT 账户用量，因此 `accounts.usage()` 返回 `USAGE_UNSUPPORTED`。`native` Host 选择初始模型时，如果账户目录请求失败，authorization service 会记录该 listener failure。DeepSeek 账户 token 由账户凭据所有者按已配置的推理 origin 解析；首个可用账户模型选择也会通过同一所有者检查当前 profile URL。路由会通过 `x-dsh-auth-token` 和 Anthropic 传输要求的 Bearer `Authorization` 请求头发送 token。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。任一受支持账户的凭据记录更新都会触发 `accounts/changed`。`llm-pi-ai` 凭据更新会使适配器失效，后续目录查询会读取新 grant。Host 启动期间，读取账户可用性时已送达的账户凭据更新会在发布模型服务前重新调和；设置值也会在安装不重放的监听器前重新读取。native composition base 在安装期间固定；已安装的 settings Provider 会实时应用已验证的 profile 编辑；Cordis 入口会逐请求解析 settings。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
+`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。已提交的 SIWC grant 会通过账户目录激活 `openai-codex`；已提交的 `deepseek-account/default` grant 会激活 `deepseek-account` 路由，并提供账户路由配置中的 `deepseek-flash` 与 `deepseek-v4-pro` 模型。两条路由都会出现在模型目录和可配置提供方列表中。成功的 `openai-codex` Responses 调用会检查用量标头和 `codex.rate_limits` 事件；Host 会按 grant 的 issuer 与 subject 在内存中保存快照。首次观察到快照前，`accounts.usage()` 返回 `USAGE_PENDING`；之后返回 grant 邮箱、额度窗口、可选额度余额以及事件报告的套餐。Host 重启后不会保留这些快照。`native` Host 选择初始模型时，如果账户目录请求失败，authorization service 会记录该 listener failure。DeepSeek 账户 token 由账户凭据所有者按已配置的推理 origin 解析；首个可用账户模型选择也会通过同一所有者检查当前 profile URL。路由会通过 `x-dsh-auth-token` 和 Anthropic 传输要求的 Bearer `Authorization` 请求头发送 token。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。任一受支持账户的凭据记录更新都会触发 `accounts/changed`。`llm-pi-ai` 凭据更新会使适配器失效，后续目录查询会读取新 grant。Host 启动期间，读取账户可用性时已送达的账户凭据更新会在发布模型服务前重新调和；设置值也会在安装不重放的监听器前重新读取。native composition base 在安装期间固定；已安装的 settings Provider 会实时应用已验证的 profile 编辑；Cordis 入口会逐请求解析 settings。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -157,6 +159,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 | [`src/provider.ts`](src/provider.ts) | 受支持协议表与提供方构建 |
 | [`src/context.ts`](src/context.ts) | Harness 到 pi-ai 的上下文转换、图片处理、回放恢复 |
 | [`src/stream.ts`](src/stream.ts) | 把 pi-ai 事件转换为 harness `StreamChunk` 值 |
+| [`src/rate-limits.ts`](src/rate-limits.ts) | 解析并保存观察到的 Codex 订阅用量 |
 | [`src/replay.ts`](src/replay.ts) | 带版本的 `ReplayEnvelope` 存储与校验 |
 | [`src/discovery.ts`](src/discovery.ts) | 面向配置界面的端点询问 |
 

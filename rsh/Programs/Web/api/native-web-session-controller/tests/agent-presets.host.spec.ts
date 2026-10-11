@@ -35,7 +35,8 @@ it('reads, copies and deletes native preset folders and publishes each roster up
     maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1 })
   const service = new NativeWebSessionService(
     { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations,
+    {} as NativeSessionPersistenceOperations,
+    { owners: () => [], onAttached: () => async () => {}, onDetached: () => async () => {} } as unknown as NativeActiveSessionOperations,
     config, signal, { presets: registry }, () => { settingsEvents.agentPresetsUpdated() },
   )
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined

@@ -38,6 +38,14 @@
     "./human": {
       "types": "./lib/types/human.d.ts",
       "default": "./lib/human.js"
+    },
+    "./schedule-types": {
+      "types": "./lib/types/schedule-types.d.ts",
+      "default": "./lib/schedule-types.js"
+    },
+    "./workspaces": {
+      "types": "./lib/types/workspaces.d.ts",
+      "default": "./lib/workspaces.js"
     }
   },
   "dsh": {
@@ -52,7 +60,10 @@
       ],
       "optional": [],
       "provides": [
-        "clientNativeSession"
+        "clientNativeSession",
+        "clientNativeSchedule",
+        "clientNativeWorkspace",
+        "clientNativeDirectoryPicker"
       ]
     }
   },
@@ -63,6 +74,8 @@
     "lib/follow-types.js",
     "lib/model-controls.js",
     "lib/human.js",
+    "lib/workspaces.js",
+    "lib/schedule-types.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -85,6 +98,7 @@
     "@deepseek-ai/dsh-session": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
   }
 }

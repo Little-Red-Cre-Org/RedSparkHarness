@@ -28,6 +28,8 @@ kind: "package-reference"
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
+`list()` 返回按 `updatedAt` 降序排列的列表项，包含空白、运行、完成、待交互、直接子项数量、已确认工作区及定时任务字段。`follow(signal)` 通过经过身份验证的 Fetch 载体先发送完整基线，再发送合并后的 upsert 与 remove 帧。即使 Consumer 暂停在已产出的帧上，中止 `signal` 也会结束跟随并释放 `close()`。`search(query, cursor?, signal?)` 返回有界的标题或当前消息匹配、可选片段及续页 cursor；`archive(sessionId, signal?)` 通过 Host Workspace 注册表归档 Session。
+
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
@@ -74,7 +76,11 @@ type NativeSettingsEvent =
 
 授权方法会列出安全的流程信息、开始尝试、从授权 Fetch 路由接收可重放且不含机密的帧，并使用当前尝试标识提交回答、拒绝或取消。
 
-账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。账户响应不包含凭据值。
+账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。OpenAI Codex 在模型调用报告额度前返回 `USAGE_PENDING`，之后返回 grant 邮箱、可空套餐、额度窗口和可选额度余额；快照仅保存在 Host 内存中，并按已存 grant 的 issuer 与 subject 隔离。账户响应不包含凭据值。
+
+同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、删除、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。
+
+`clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
@@ -136,3 +142,4 @@ interface NativeSettingsDescription {
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI、文件及音频上传不由该包提供。
+- Host 只能为已附加的 root owner 查询活动定时任务；冷态 Session 行的 `hasActiveSchedule` 为 `false`，因为 scheduler 清单按 owner 限定。

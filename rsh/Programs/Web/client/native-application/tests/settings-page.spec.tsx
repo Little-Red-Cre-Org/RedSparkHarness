@@ -95,6 +95,18 @@ it('renders ChatGPT plan and remaining quota', async () => {
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
 })
 
+it('renders the ChatGPT identity name before the email', async () => {
+  const account = { ...chatGptAccount, identity: { ...chatGptAccount.identity, name: 'Ada Lovelace' } }
+  renderSettingsPage({
+    actions: accountPageActions(vi.fn(async () => readyUsage), vi.fn(async () => [account])),
+    t: key => en[key], section: 'models',
+  })
+
+  const name = await screen.findByText('Ada Lovelace')
+  const email = screen.getByText('account@example.com')
+  expect(name.nextElementSibling).toBe(email)
+})
+
 it('reads, copies, opens and deletes native Agent presets through Host actions', async () => {
   let roster: NativeAgentPresetList = {
     default: 'standard',
@@ -218,13 +230,28 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
   expect(screen.queryByText('{"formatVersion":1,"installations":[{"id":"stale"}]}')).toBeNull()
 })
 
-it('shows when the ChatGPT sign-in method does not provide usage', async () => {
-  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_UNSUPPORTED' as const }))
+it('shows that ChatGPT usage appears after the first model call', async () => {
+  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_PENDING' as const }))
   renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
 
   const notice = await screen.findByRole('status')
-  expect(notice.textContent).toBe(en.usageUnsupported)
+  expect(notice.textContent).toBe(en.usagePending)
   expect(screen.queryByText(en.accountUnavailable)).toBeNull()
+})
+
+it('re-reads pending ChatGPT usage after the Settings page remounts', async () => {
+  const accountsUsage = vi.fn()
+    .mockResolvedValueOnce({ status: 'failed' as const, reason: 'USAGE_PENDING' as const })
+    .mockResolvedValueOnce(readyUsage)
+  const actions = accountPageActions(accountsUsage)
+  const firstPage = renderSettingsPage({ actions, t: key => en[key], section: 'models' })
+
+  expect(await screen.findByText(en.usagePending)).toBeTruthy()
+  firstPage.unmount()
+  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
+
+  expect(await screen.findByRole('progressbar')).toBeTruthy()
+  expect(accountsUsage).toHaveBeenCalledTimes(2)
 })
 
 it('renders a subscription account inside its authorization row', async () => {

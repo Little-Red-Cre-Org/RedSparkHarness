@@ -162,6 +162,18 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
   }
   return { ...profile, scopes, installations }
 }
+
+/**
+ * Expand unregistered native preset folders before planning their installations.
+ * @param profile - validated native profile composition.
+ * @param anchors - package resolvers used to check preset installations.
+ * @param home - Harness home containing user presets; defaults to the configured home.
+ * @returns the profile with ready preset installations and folder summaries.
+ */
+export function expandNativeProfilePresets(profile: NativeProfileConfig,
+  anchors: readonly ReturnType<typeof createRequire>[], home = resolveDshHome()): Promise<NativeProfileConfig> {
+  return nativeAgentPresetFolders(profile, home, anchors)
+}
 /** Read the same strict composition used by native boot, without importing plugin code. */
 export function readNativeProfile(options: {
   profile: string
@@ -211,7 +223,7 @@ export async function loadNativeProfile(options: {
     ...(options.profileDir === undefined ? {} : { profileDir }),
   })
   const anchors = [createRequire(options.installAnchor), createRequire(join(profileDir, 'package.json'))]
-  profile = await nativeAgentPresetFolders(profile, home, anchors)
+  profile = await expandNativeProfilePresets(profile, anchors, home)
   const selected: SelectedPackage[] = []
   const roots = options.containedRoots?.map(root => realpathSync(root))
   for (const row of profile.installations) {

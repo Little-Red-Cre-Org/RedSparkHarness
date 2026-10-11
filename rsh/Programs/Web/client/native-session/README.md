@@ -28,6 +28,8 @@ Select after client-connection in the native profile and configure a positive in
 
 The `./list-types` export contains the neutral Host/Client wire row for stored Sessions. Its title projection stays beside the unchanged Session header and distinguishes resolved, absent and unavailable reads; the Host supplies it from durable title events.
 
+`list()` returns these rows ordered by `updatedAt` descending, including blank, running, completed, pending-interaction, direct-child count, confirmed workspace and schedule fields. `follow(signal)` yields a complete baseline followed by coalesced upsert and removal frames over the authenticated Fetch carrier. Aborting `signal` ends the follow and releases `close()` even while the consumer is paused at a yielded frame. `search(query, cursor?, signal?)` returns bounded title or current-message matches with optional snippets and a continuation cursor; `archive(sessionId, signal?)` archives through the Host Workspace registry.
+
 `executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
 
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
@@ -74,7 +76,11 @@ type NativeSettingsEvent =
 
 Authorization methods list safe flow metadata, begin an attempt, stream replayable secret-free frames from the authorization Fetch route, and answer, decline or cancel by the current attempt identity.
 
-Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. Account responses contain no credential values.
+Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. OpenAI Codex returns `USAGE_PENDING` until a model call reports limits, then returns the grant email, nullable plan, quota windows and optional credits; these snapshots exist only in Host memory and are isolated by the saved grant issuer and subject. Account responses contain no credential values.
+
+The same Cordis-free installation provides `clientNativeWorkspace` and `clientNativeDirectoryPicker`. Workspace methods expose `list()` as `{ workspaces, archivedSessionIds }`, `follow(signal)` as a baseline followed by upsert/remove/order/archive frames, and create, rename, delete, reorder, session reorder, archive, case-insensitive title/path search and `connectWorkspace`. Delete releases the Workspace's idle runtime route while retaining its directory and Session logs. Connection reuses an unarchived member Session with a matching Workspace `cwd` that has not started a turn (or recorded a scheduler notice), otherwise it creates and attaches a blank Session. Directory methods expose the Host OS chooser, one-level `{ path, entries, crumbs }` browsing and single-child directory creation.
+
+The `clientNativeSchedule` service exposes `list()` and `follow(signal)` for active, paused, and failed task rows. Its complete baseline and later upsert/remove frames contain schedule metadata without prompts or execution configuration; Host failures retain the `native/schedules` code.
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
@@ -136,3 +142,4 @@ This package does not alter the history prefix; a new user message extends the r
 <a id="known-limitations-and-deferred-work"></a>
 
 - Full product UI, file and audio uploads are not provided by this package.
+- The Host can report active schedules only for an attached root owner; cold Session rows report `hasActiveSchedule: false` because the scheduler list is owner-scoped.

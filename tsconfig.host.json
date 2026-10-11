@@ -9,6 +9,7 @@
   },
   "include": [
     "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
+    "rsh/Programs/Web/host/native-schedule-controller/tests/native.host.spec.ts",
     "rsh/Programs/Web/application/tests/native-conversation.e2e.ts",
     "rsh/Programs/Web/application/tests/scaffold.ts",
     "rsh/Programs/Web/application/tests/scaffold-generation.spec.ts",
@@ -430,6 +431,7 @@
     { "path": "./rsh/Programs/Web/client/native-session" },
     { "path": "./rsh/Programs/Web/api/native-web-session-controller" },
     { "path": "./rsh/Programs/Web/host/native-web-host" },
+    { "path": "./rsh/Programs/Web/host/native-schedule-controller" },
     { "path": "./rsh/Programs/Web/host/open-in-app" },
     { "path": "./rsh/Programs/Web/host/plugin-inventory" },
     { "path": "./rsh/Modules/Official/llm/plugin-package-inventory-deepseek" },

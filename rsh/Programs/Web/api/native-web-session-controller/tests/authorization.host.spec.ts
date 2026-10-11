@@ -6,6 +6,10 @@ import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/na
 import type { NativeAccounts } from '@deepseek-ai/dsh-llm-pi-ai/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
+import { plugin as workspaceRegistry } from '@deepseek-ai/dsh-workspace/native'
+import { plugin as storageHub } from '@deepseek-ai/dsh-storage/native'
+import { plugin as storageJson } from '@deepseek-ai/dsh-storage-json/native'
+import { plugin as storageDomain } from '@deepseek-ai/dsh-storage-domain/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
@@ -128,6 +132,10 @@ it.each([
     { plugin: sandboxPolicy, scope, config: { mode: 'danger-full-access', workspaceRoot: cwd } },
     { plugin: sandboxedFilesystem, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(cwd, 'sessions'), compression: 'none' } },
+    { plugin: storageHub, scope, config: undefined },
+    { plugin: storageJson, scope, config: { root: join(cwd, 'domains') } },
+    { plugin: storageDomain, scope, config: { backend: 'json' } },
+    { plugin: workspaceRegistry, scope, config: undefined },
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
       maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1,
