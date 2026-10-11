@@ -43,8 +43,10 @@ import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/nativ
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
@@ -794,6 +796,45 @@ it('creates, resumes and cancels one durable Session through the real browser RP
         expect(activeSessionsService?.owners().some(candidate => candidate.session.id === readonlyId)).toBe(false)
       })
 
+      const clients = createNativeWorkspaceClients(rpc, 1000000)
+      const workspacePath = join(cwd, 'native-workspace')
+      await mkdir(workspacePath)
+      const directoryListing = await clients.directoryPicker.list(cwd)
+      expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
+      expect(await clients.directoryPicker.createDirectory(workspacePath, 'child')).toBe(join(workspacePath, 'child'))
+      const frames = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
+      try {
+        expect((await frames.next()).value).toMatchObject({ type: 'baseline' })
+        const createdWorkspace = await clients.workspace.create({ path: workspacePath })
+        expect(createdWorkspace.created).toBe(true)
+        expect((await frames.next()).value).toMatchObject({ type: 'upsert', workspace: { workspaceId: createdWorkspace.workspace.workspaceId } })
+        expect((await frames.next()).value).toMatchObject({ type: 'order' })
+        expect(await clients.workspace.search('NATIVE-WORKSPACE')).toEqual([createdWorkspace.workspace.workspaceId])
+        const connected = await clients.workspace.connectWorkspace(createdWorkspace.workspace.workspaceId)
+        expect((await clients.workspace.connectWorkspace(createdWorkspace.workspace.workspaceId)).sessionId).toBe(connected.sessionId)
+        expect((await clients.workspace.list()).workspaces.find(
+          row => row.workspaceId === createdWorkspace.workspace.workspaceId,
+        )?.sessionIds)
+          .toContain(connected.sessionId)
+        const workspaceRoute = rootExecutionService?.workspaceRoutes().find(
+          route => route.workspaceId === createdWorkspace.workspace.workspaceId,
+        )
+        if (workspaceRoute === undefined || rootExecutionService === undefined || activeSessionsService === undefined) {
+          throw new Error('missing Native Workspace route or execution authority')
+        }
+        const blankOwner = activeSessionsService.owners().find(owner => owner.session.id === connected.sessionId)
+        if (blankOwner !== undefined) await rootExecutionService.releaseIdle({
+          route: workspaceRoute.id, id: connected.sessionId, expectedOwner: blankOwner,
+        }, new AbortController().signal)
+        await rootExecutionService.releaseWorkspace(workspaceRoute.id, new AbortController().signal)
+        await clients.workspace.delete(createdWorkspace.workspace.workspaceId)
+        expect(await persistence?.stat(connected.sessionId)).toBeDefined()
+        expect(await clients.workspace.search('native-workspace')).toEqual([])
+      } finally {
+        await frames.return?.()
+        await clients.workspace.close()
+      }
+
       webhookMode = 'shutdown'
       const drainingResponse = await signedRequest(payload, 'native-shutdown-admission')
       expect(drainingResponse.status).toBe(202)
@@ -832,6 +873,54 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseCleanup()
     await (hostStop ?? host.stop())
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('lists native preset folders with standing compositions and returns an empty catalog without the service', async () => {
+  const scope = new NativeScope()
+  const presets = {
+    catalog: () => ({ default: 'standard', folders: [
+      { id: 'standard', name: 'Standard folder', trust: 'system', status: 'ready' },
+      { id: 'user-ready', name: 'User ready', trust: 'user', status: 'ready' },
+      { id: 'legacy', name: 'Legacy', trust: 'user', status: 'needs-migration' },
+      { id: 'broken', name: 'Broken', trust: 'system', status: 'invalid', problem: 'invalid file' },
+    ] }),
+    list: () => [
+      { id: 'standard', name: 'Standard', scope },
+      { id: 'profile-only', name: 'Profile only', scope },
+    ],
+  } as unknown as NativeAgentPresetOperations
+  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
+    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1 })
+  const signal = new AbortController().signal
+  const service = new NativeWebSessionService(
+    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal, { presets },
+  )
+  const emptyService = new NativeWebSessionService(
+    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal,
+  )
+  try {
+    expect(await service.handle('agent-presets/list', {}, signal)).toEqual({ ok: true, value: {
+      default: 'standard', presets: [
+        { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
+        { id: 'profile-only', name: 'Profile only', source: 'profile', status: 'ready' },
+        { id: 'user-ready', name: 'User ready', source: 'user', status: 'ready' },
+        { id: 'legacy', name: 'Legacy', source: 'user', status: 'needs-migration' },
+        { id: 'broken', name: 'Broken', source: 'system', status: 'invalid', problem: 'invalid file' },
+      ],
+    } })
+    expect(await service.handle('agent-presets/list', { extra: true }, signal)).toMatchObject({
+      ok: false, error: { code: 'native/agent-presets' },
+    })
+    expect(await emptyService.handle('agent-presets/list', {}, signal)).toEqual({
+      ok: true, value: { default: null, presets: [] },
+    })
+  } finally {
+    await service.close()
+    await emptyService.close()
   }
 })
 
@@ -928,6 +1017,10 @@ it('removes the Native Web controller after cancelling and draining retained tit
     { plugin: sandboxPolicy, scope, config: { mode: 'danger-full-access', workspaceRoot: cwd } },
     { plugin: sandboxedFilesystem, scope, config: { cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
+    { plugin: storageHub, scope, config: undefined },
+    { plugin: storageJson, scope, config: { root: join(directory, 'domains') } },
+    { plugin: storageDomain, scope, config: { backend: 'json' } },
+    { plugin: workspaceRegistry, scope, config: undefined },
     { plugin: sessionTitles, scope, config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
     { plugin: titleProvider, scope, config: undefined },
     { plugin: carrier, scope, config: undefined },

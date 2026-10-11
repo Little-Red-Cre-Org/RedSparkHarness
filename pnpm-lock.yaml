@@ -9372,6 +9372,9 @@ importers:
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../Modules/Official/workspace/workspace
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -9719,9 +9722,6 @@ importers:
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../../Engine/workflow/workflow-worker-thread
-      '@deepseek-ai/dsh-workspace':
-        specifier: workspace:^
-        version: link:../../Modules/Official/workspace/workspace
       '@deepseek-ai/schemastery':
         specifier: link:../../Core/vendor/schemastery
         version: link:../../Core/vendor/schemastery
@@ -10600,6 +10600,9 @@ importers:
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-host-directory-picker-native':
+        specifier: workspace:^
+        version: link:../../host/directory-picker-native
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -10648,6 +10651,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/workspace/workspace
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11456,6 +11465,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
 
   rsh/Programs/Web/client/resources:
     devDependencies:

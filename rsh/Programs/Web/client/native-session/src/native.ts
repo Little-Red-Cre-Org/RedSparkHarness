@@ -15,6 +15,13 @@ import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
+import { createNativeWorkspaceClients } from './workspaces.ts'
+import { NativeSessionRpcError } from './rpc-error.ts'
+export { NativeSessionRpcError } from './rpc-error.ts'
+export type {
+  NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
+  NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+} from './workspaces.ts'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -33,6 +40,10 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Native Workspace RPC Consumer selected by the browser composition. */
+    clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
+    /** Native directory chooser and browser selected by the browser composition. */
+    clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
   }
 }
 
@@ -96,6 +107,27 @@ export interface NativeSettingsDescription {
     /** Maximum operations accepted by one atomic Settings mutation. */
     readonly maxSettingsOperations: number
   }
+}
+
+/** File-backed and profile-installed preset choices advertised by the Host. */
+export interface NativeAgentPresetList {
+  /** Fresh-session default, or null when no preset Registry is installed. */
+  readonly default: string | null
+  /** Ready standing choices and file folders that need attention or installation. */
+  readonly presets: readonly {
+    /** Preset id. */
+    readonly id: string
+    /** Display name. */
+    readonly name: string
+    /** Optional display description. */
+    readonly description?: string
+    /** Folder trust, or `profile` for a profile-only composition. */
+    readonly source: 'profile' | 'system' | 'user'
+    /** Native folder or standing composition status. */
+    readonly status: 'ready' | 'needs-migration' | 'invalid'
+    /** Short reason when a folder cannot be installed. */
+    readonly problem?: string
+  }[]
 }
 
 /** One path-addressed Settings edit. */
@@ -222,20 +254,13 @@ export type NativeAccountBalance =
   | { readonly status: 'ready'; readonly wallets: readonly NativeAccountWallet[]; readonly bonusWallets: readonly NativeAccountWallet[] }
   | { readonly status: 'signed-out' | 'failed' | 'unsupported' }
 
-/** Structured rejection from one native Host RPC endpoint. */
-export class NativeSessionRpcError extends Error {
-  /** @param code - stable native RPC failure code.
-   * @param message - Host refusal message.
-   * @param details - safe, endpoint-specific failure facts.
-   */
-  constructor(readonly code: string, message: string, readonly details: object) {
-    super(message)
-    this.name = 'NativeSessionRpcError'
-  }
-}
-
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** List native preset folders and installed standing compositions.
+   * @param signal - caller cancellation.
+   * @returns current preset catalog; empty with a null default when no Registry is installed.
+   */
+  agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
@@ -558,6 +583,14 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('unsupported') }),
 ])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
+const nativeAgentPresetListSchema = z.strictObject({
+  default: z.string().nullable(),
+  presets: z.array(z.strictObject({
+    id: z.string().min(1), name: z.string(), description: z.string().optional(),
+    source: z.enum(['profile', 'system', 'user']),
+    status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
+  })),
+})
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
   declared: z.boolean().optional(), error: z.string().optional(),
@@ -605,6 +638,7 @@ const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
 })) }) as unknown as z.ZodType<NativePluginInventory>
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
     return value.map(item => llmProviderSchema.parse(item))
@@ -867,6 +901,7 @@ export function createNativeSessionClient(
     }
   }
   return {
+    agentPresetsList: signal => call('agent-presets/list', {}, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
     async settingsOpenDocument(signal) {
       await call('settings/open-document', {}, signal)
@@ -979,14 +1014,18 @@ export function createNativeSessionClient(
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
       const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
+      const clients = createNativeWorkspaceClients(context.require('clientConnection').rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
+      context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeWorkspace', clients.workspace)
+      context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }
   },
 }
