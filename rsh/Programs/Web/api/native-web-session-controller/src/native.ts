@@ -701,7 +701,7 @@ export class NativeWebSessionService {
   }
 }
 
-/** Native Host Session installer; the Web Host remains the selected application. */
+/** Project Host installation states for the Plugins page without configuration or failure messages. */
 function pluginInventory(inventory: NativePluginInventory | undefined, payload: unknown): ConnectionRpcResult<unknown> {
   try {
     if (Object.keys(object(payload)).length !== 0) throw new TypeError('plugins/inventory takes no fields')
@@ -714,6 +714,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
   }
 }
 
+/** Native Host Session installer; the Web Host remains the selected application. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
