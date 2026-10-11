@@ -148,6 +148,11 @@ function searchSnippet(events: readonly SessionEvent[], query: string): string |
   return undefined
 }
 
+function errorMessage(error: unknown): string {
+  if (!(error instanceof AggregateError)) return error instanceof Error ? error.message : String(error)
+  return `${error.message}: ${error.errors.map(errorMessage).join('; ')}`
+}
+
 /** Resolve Program settings and resource limits before installing routes.
  * @param input - profile configuration.
  * @returns validated native Session configuration.
@@ -709,7 +714,7 @@ export class NativeWebSessionService {
       if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
         return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: errorMessage(error), details: {} } }
     }
   }
 
