@@ -1,5 +1,5 @@
 ---
-description: "dsh Web 客户端共享的 React UI 原子组件：控件、图标、Markdown 与数学公式渲染，以及终端/读取/差异/搜索/网页输出卡片（零 Cordis）。"
+description: "dsh Web 客户端共享的零 Cordis React 组件：控件、Workspace 行、目录浏览、图标、Markdown 与 agent 输出卡片。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件并渲染 agent 输出。它提供标准控件、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。这些渲染器会丢弃原始 HTML、限制链接并解析 ANSI 转义序列，以处理不受信任的模型输出。组件不 import Cordis 运行时；调用方提供本地化 label，主题相关颜色使用 `--dsw-*` 设计 token。
+使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件、浏览 Workspace 与 Session、选择目录并渲染 agent 输出。它提供标准控件、共享侧边栏行、由回调驱动的目录浏览器、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。这些渲染器会丢弃原始 HTML、限制链接并解析 ANSI 转义序列，以处理不受信任的模型输出。组件不 import Cordis 运行时；调用方提供本地化文案与数据回调，主题相关颜色使用 `--dsw-*` 设计 token。
 
 ## 目录
 
@@ -45,6 +45,7 @@ kind: "package-library"
 | `StateDot` | 状态标记：`done`、`warning`、`ongoing`、`error` 或 `idle`。它是 `aria-hidden` 的，名称由渲染点提供。 |
 | `ProjectRowItem`、`SessionNodeItem`、`SearchResultItem` | 通过 props 提供数据的 Workspace 与 Session 行，由 legacy 和 native 侧边栏组合共享。Project 和 Session 树行可聚焦；Enter 和 Space 会触发行操作。`SessionNodeItem.allowRemove` 可在 owner 仅支持归档时隐藏 legacy 确认操作。 |
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
+| `DirectoryBrowser` | 由回调驱动的 Miller 分栏目录选择器，支持路径导航、创建文件夹、显示隐藏条目，并由 owner 提供本地化文案。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
 | `DisclosureRow` | 24px 紧凑折叠行，标题与内容左右排列。 |
 | `Modal` | 页面遮罩之上的居中对话框。 |
@@ -82,7 +83,7 @@ Models 设置编辑器通过 props 接收本地化文案、schema 操作和 Host
 
 ### 本地化文案
 
-这些原子组件无法读取应用 locale，因此每段面向用户的文案都必须通过 label prop 提供。`HoverCard`、`TerminalBlock`、`JsonTree`、`CodeBlock`、`MarkdownText`、`JsonBlock`、`ConnectionIndicator`、`Modal`、`SettingsPanel`、`DiffBlock`、`ReadBlock`、`SearchBlock` 与 `WebBlock` 接收完整的本地化 label。本包不拥有语言回退；遗漏会导致类型检查失败，各功能会把带类型的 `t` 席位映射到 primitive 的 label 接口。
+这些组件无法读取应用 locale，因此每段面向用户的文案都必须通过 label prop 或翻译回调提供。`DirectoryBrowser` 的翻译回调使用目录浏览器的键集合；`HoverCard`、`TerminalBlock`、`JsonTree`、`CodeBlock`、`MarkdownText`、`JsonBlock`、`ConnectionIndicator`、`Modal`、`SettingsPanel`、`DiffBlock`、`ReadBlock`、`SearchBlock` 与 `WebBlock` 接收完整的本地化 label。本包不拥有语言回退；遗漏会导致类型检查失败，各功能会把带类型的 `t` 席位映射到 primitive 的文案接口。
 
 -----
 
@@ -92,7 +93,7 @@ Models 设置编辑器通过 props 接收本地化文案、schema 操作和 Host
 <details>
 <summary>实现细节——点击展开</summary>
 
-本包只做一件事：提供零 cordis、零 slot 知识、仅经 `--dsw-*` token 设置样式的纯 React 原子组件，而所有功能专属的关注点（locale、会话数据、组合）都留在拼装它们的插件中。
+本包提供经 `--dsw-*` token 设置样式的零 Cordis React 组件。功能 owner 提供目录列表、变更操作、本地化文案与 Session 数据；目录浏览器只持有自己的导航与展示状态。
 
 ### 源码地图
 
@@ -104,6 +105,7 @@ Models 设置编辑器通过 props 接收本地化文案、schema 操作和 Host
 | [`src/ReadBlock.tsx`](src/ReadBlock.tsx) / [`src/DiffBlock.tsx`](src/DiffBlock.tsx) | 读取与差异卡片 |
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | 搜索与网页检索卡片 |
 | [`src/icons/`](src/icons/) | `ic_ds_*` 字形组件与品牌标记 |
+| [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | 供 browse 与 Native Workspace 流程共享的目录导航对话框 |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free Settings 导航与对话框 |
 | [`src/models-settings/`](src/models-settings/) | 通过 props 提供的提供方表单、模型编辑器及其共享样式表 |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | 48 个细分代码文件类别的内嵌内层 SVG markup |
