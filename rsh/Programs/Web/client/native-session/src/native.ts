@@ -167,6 +167,7 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'accounts/changed'; readonly key: string }
 
 /** Provider-reported quota window, with reset time in Unix seconds. */
 export interface NativeQuotaWindow {
@@ -544,6 +545,7 @@ const settingsEventSchema = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
   z.strictObject({ type: z.literal('llm/adapters-updated') }),
+  z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
 ])
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
