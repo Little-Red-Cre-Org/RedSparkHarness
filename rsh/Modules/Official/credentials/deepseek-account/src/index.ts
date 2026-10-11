@@ -6,7 +6,7 @@ export interface AccountProfile {
   readonly avatarUrl: string | null
 }
 
-/** Platform wallet balance retained as a decimal string. */
+/** Platform wallet balance normalized to plain decimal notation without rounding. */
 export interface AccountWallet {
   readonly currency: 'CNY' | 'USD'
   readonly balance: string

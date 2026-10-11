@@ -40,6 +40,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
   ],
   '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
+  '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
   '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
   '@deepseek-ai/dsh-client-ui-session': [
     '@deepseek-ai/dsh-client-native-session',
@@ -128,7 +129,8 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
   '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
   '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives'],
+  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment'],
+  '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
   '@deepseek-ai/dsh-client-ui-sidebar': [
     '@deepseek-ai/dsh-client-store',
     '@deepseek-ai/dsh-client-ui-primitives',
@@ -171,6 +173,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 /** Client runtime peers whose values must resolve to the shared application instances. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-tool': ['react'],
+  '@deepseek-ai/dsh-client-ui-attachment': ['react'],
   '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
   '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-native-application': [
@@ -214,7 +217,12 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
-  '@deepseek-ai/dsh-client-ui-primitives': ['CodeBlock','DiffBlock','DisclosureRow','IconApiOutline14','IconBrowseOutline16','IconCodeOutline16','IconEditOutline16','IconInspectOutline12','IconSearchOutline16','IconSparkle16','ReadBlock','SearchBlock','StateDot','TerminalBlock','WebBlock','diffTotals'],
+  '@deepseek-ai/dsh-client-ui-primitives': [
+    'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
+    'IconChevronLeftOutline14', 'IconChevronRightOutline14', 'IconCloseFill14', 'IconCloseOutline16',
+    'IconCodeOutline16', 'IconEditOutline16', 'IconInspectOutline12', 'IconSearchOutline16', 'IconSparkle16',
+    'ReadBlock', 'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension', 'fileSizeText',
+  ],
   '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
   '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
   '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],

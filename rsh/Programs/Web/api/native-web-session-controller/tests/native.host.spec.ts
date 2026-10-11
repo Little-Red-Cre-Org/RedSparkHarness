@@ -352,7 +352,12 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('credentials', service)
     },
   }
+  const inventory: NativePlugin = {
+    apiVersion: 1, name: 'test-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
+    resolve: () => (context) => { context.provide('pluginInventory', { list: () => host.diagnostics() }) },
+  }
   const host = new NativeHost(resolveInstallation([
+    { plugin: inventory, scope, config: undefined },
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1,
@@ -415,6 +420,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
     const settingsDescription = await client.settingsDescribe()
+    expect((await client.pluginInventoryList()).entries).toContainEqual(expect.objectContaining({ name: plugin.name, state: 'ready' }))
     expect(await rpc.call('/api', 'settings/open-document', {}, new AbortController().signal)).toMatchObject({
       ok: false, error: { code: 'native/settings', message: 'Settings request failed.' },
     })

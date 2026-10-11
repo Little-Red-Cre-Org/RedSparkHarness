@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、将导航折叠为 56px 轨道、浏览 Workspace 与 Session，以及打开 Settings。它会将 Settings 入口固定在底部，并在隐藏空闲滚动条时避免浏览器行发生位移。New Session 优先使用显式选择的 Workspace，其次使用当前 Session 所属的 Workspace，再其次使用最近活跃的 Workspace；如果都不存在，则打开空白的 New Session 页面。部署可以替换品牌标记或名称，同时保留导航控件和轨道几何。
+dsh Web 客户端的侧边栏显示当前构建、启动会话、将导航折叠为 56px 轨道、浏览 Workspace 与 Session，以及打开 Settings。它会将 Settings 入口固定在底部，并在隐藏空闲滚动条时避免浏览器行发生位移。New Session 优先使用显式选择的 Workspace，其次使用当前 Session 所属的 Workspace，再其次使用最近活跃的 Workspace；如果都不存在，则打开空白的 New Session 页面。部署可以替换品牌标记或名称，同时保留导航控件和轨道几何。native-web profile 使用相同的外壳承载原生 Session 行与紧凑外观控件。
 
 ## 目录
 
@@ -26,6 +26,8 @@ dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、将
 ## 使用本包
 
 侧边栏是导航外壳：用户看到品牌、启动新会话、折叠轨道并到达 Settings。功能插件填充它的席位——ui-workspace 填充 `sidebar.workspaces`，ui-settings 在 `sidebar.settings` 注册触发行与设置面板。
+
+在 native-web profile 中，原生应用使用 Host 提供的 Session 列表和 Settings 面板填充这些席位。工作区分区按 `cwd` 将 Session 分组用于展示；在原生 Host 提供相应能力前，Workspace 创建、搜索、排序控件和定时任务仍保持禁用。
 
 ### 品牌与 New Session
 
@@ -92,6 +94,7 @@ dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、将
 
 - **Session 状态点渲染由 ui-workspace 持有**：本外壳没有可用的 done/error 通知数据源。
 - **Workspace 浏览行为由组合持有**：分组、排序、搜索与行状态都属于 ui-workspace，不属于此外壳。
+- **原生 Workspace 数据尚不可用**：原生路径分组不是 Workspace 身份；在 Host 提供对应能力前，工作区控件与定时任务保持禁用。
 - **「New task completed」未读标记是本地查看状态**：完成时间 > 上次查看时间这一事实永远不会到达宿主。
 
 <a id="dev-note"></a>

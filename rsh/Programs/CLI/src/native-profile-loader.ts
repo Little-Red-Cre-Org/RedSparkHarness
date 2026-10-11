@@ -30,6 +30,8 @@ export interface LoadedNativeProfile {
 }
 
 interface LoadedProfileState {
+  /** Running Host read by the plugin inventory; reloads keep the first Host. */
+  readonly inventory: { host: NativeHost | undefined }
   readonly scopes: ReadonlyMap<string, NativeScope>
   readonly captureRequest: InstallationRequest | undefined
   readonly onApplication: ((application: NativeApplication) => void) | undefined
@@ -279,6 +281,25 @@ export async function loadNativeProfile(options: {
     auxiliaryRequests.set(key, request)
     planned.push(request)
   }
+  const inventory = previousState?.inventory ?? { host: undefined as NativeHost | undefined }
+  if (options.target === 'host') for (const row of profile.scopes) {
+    if (row.parent !== undefined) continue
+    const scope = scopes.get(row.id)
+    if (scope === undefined) throw new Error(`native profile lost scope ${row.id}`)
+    const key = `plugin-inventory:${row.id}`
+    const prior = previousState?.auxiliaryRequests.get(key)
+    const request = prior !== undefined && prior.scope === scope ? prior : {
+      plugin: {
+        apiVersion: 1, name: 'dsh-native-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
+        resolve: () => (context) => {
+          context.provide('pluginInventory', { list: () => inventory.host?.diagnostics() ?? [] })
+        },
+      } satisfies NativePlugin,
+      scope, config: undefined,
+    }
+    auxiliaryRequests.set(key, request)
+    planned.push(request)
+  }
   let captureRequest: InstallationRequest | undefined
   if (options.onApplication !== undefined) {
     const applications = planned.filter(request => request.plugin.provides.includes('application'))
@@ -296,8 +317,9 @@ export async function loadNativeProfile(options: {
   }
   const plan = resolveInstallation(planned, options.target)
   const loaded: LoadedNativeProfile = { host: new NativeHost(plan), profile, requests }
+  inventory.host ??= loaded.host
   loadedProfileStates.set(loaded, {
-    scopes, captureRequest, onApplication: options.onApplication, auxiliaryRequests, plan,
+    inventory, scopes, captureRequest, onApplication: options.onApplication, auxiliaryRequests, plan,
   })
   return loaded
 }

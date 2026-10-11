@@ -1,5 +1,6 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { NativeAccountSummary } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
@@ -117,13 +118,14 @@ export function nativeSettingsDiff(
   return operations
 }
 
-function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick }: {
+function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick, children }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
   onSettled: () => Promise<boolean>
   onRefresh: () => void
   refreshClick: number
+  children?: ReactNode
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
   const [frames, setFrames] = useState<AuthorizationFrame[]>([])
@@ -233,7 +235,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
   }
 
   const settled = [...frames].reverse().find(frame => frame.type === 'settled')
-  return <div role="group" aria-label={entry.label}>
+  return <div className={styles['authorizationGroup']} role="group" aria-label={entry.label}>
     <div className={styles['authorizationRow']}>
       <span className={styles['authorizationIdentity']}>
         <span className={styles['rowName']}>{entry.label}</span>
@@ -284,7 +286,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
         </form>
       })}
     </>}
-    {frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
+    {attemptId === undefined || settled !== undefined ? null : frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
       <span>{frame.notice.message}</span>
       {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
       {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
@@ -300,6 +302,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
       <button type="button" className={styles['secondaryButton']} onClick={onRefresh}>{t('refreshSettings')}</button>
     </> : null}
     {error === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {error}</p>}
+    {children}
   </div>
 }
 
@@ -337,6 +340,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const [accountsError, setAccountsError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [refreshClick, setRefreshClick] = useState(0)
+  const [modelsReload, setModelsReload] = useState(0)
   const [accountRefreshClick, setAccountRefreshClick] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
@@ -371,7 +375,6 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
       if (latest()) setAuthorizationEntries(entries)
     } catch (cause: unknown) {
       if (latest()) {
-        setAuthorizationEntries([])
         setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
       }
     }
@@ -416,6 +419,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
     const refreshed = await refresh(true)
+    setModelsReload(current => current + 1)
     try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
     return refreshed
   }, [onAuthorized, refresh])
@@ -423,6 +427,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const signOutAccount = useCallback(async (key: string): Promise<void> => {
     await actions.accountsSignOut(key)
     await refresh(true)
+    setModelsReload(current => current + 1)
     try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
   }, [actions, onAuthorized, refresh])
 
@@ -508,24 +513,21 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const subscriptionContent = <>
     {authorizationError === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {authorizationError}</p>}
     {accountsError === undefined ? null : <p className={styles['error']} role="alert">{t('accountListError')}: {accountsError}</p>}
-    {accounts.length === 0 ? null : <section aria-label={t('accounts')}>
-      <h3>{t('accounts')}</h3>
-      {accounts.map((account) => {
-        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
-        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
-          signOutAvailable={entry?.configured ?? account.status === 'ready'}
-          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
-            onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />} />
-      })}
-    </section>}
-    {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
-      key={entry.key} entry={entry} actions={actions} t={t}
-      onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />)}
+    {authorizationEntries.map((entry) => {
+      const account = accounts.find(candidate => candidate.key === entry.key)
+      return <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
+        onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick}>
+        {account === undefined ? null : <AccountCard account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={entry.configured} />}
+      </AuthorizationRow>
+    })}
+    {accounts.filter(account => !authorizationEntries.some(entry => entry.key === account.key)).map(account => <AccountCard
+      key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+      onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={account.status === 'ready'} />)}
   </>
 
   if (section === 'models') return <div>
-    <ModelsSettingsPage actions={actions} t={t}>
+    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload}>
       {subscriptionContent}
     </ModelsSettingsPage>
   </div>

@@ -1,24 +1,25 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
-import { Button, SettingsPanel } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
+import { NativeComposerAttachments, NativeMessageImage } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
 import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
-import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
+import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
 
 type Translate = TranslateNS<'nativeApplication'>
 
@@ -31,35 +32,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Frame-owned central panel, keyed by a matching sidebar panel id. */
     main: { kind: 'keyed'; scope: 'root' }
   }
-}
-
-function Image({ image, sessionId, loadImage, t }: {
-  image: NativeSessionImage
-  sessionId: SessionId
-  loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
-  t: Translate
-}) {
-  const [src, setSrc] = useState<string>()
-  const [error, setError] = useState<string>()
-  useEffect(() => {
-    const lifetime = new AbortController()
-    let url: string | undefined
-    setSrc(undefined)
-    setError(undefined)
-    void loadImage(sessionId, image, lifetime.signal).then((blob) => {
-      if (lifetime.signal.aborted) return
-      url = URL.createObjectURL(blob)
-      setSrc(url)
-    }, (error: unknown) => {
-      if (!lifetime.signal.aborted) setError(error instanceof Error ? error.message : String(error))
-    })
-    return () => { lifetime.abort(); if (url !== undefined) URL.revokeObjectURL(url) }
-  }, [loadImage, sessionId, image])
-  return <figure>{src === undefined ? null : <img src={src} alt={image.name ?? t('image')} width={image.width} height={image.height}
-    style={{ maxWidth: '100%', height: 'auto' }} />}
-  <figcaption>{image.name ?? t('image')}</figcaption>
-  {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
-  </figure>
 }
 
 function Message({ event, t, sessionId, loadImage }: {
@@ -76,7 +48,7 @@ function Message({ event, t, sessionId, loadImage }: {
   return <article data-event-seq={event.seq}>
     <strong>{t(role)}</strong>
     {content.map((block, index) => block.type === 'image'
-      ? <Image key={index} image={block.attachment} sessionId={sessionId} loadImage={loadImage} t={t} />
+      ? <NativeMessageImage key={index} image={block.attachment} sessionId={sessionId} loadImage={loadImage} t={t} />
       : <pre key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
         {block.type === 'text' ? block.text : JSON.stringify(block, null, 2)}
       </pre>)}
@@ -84,7 +56,7 @@ function Message({ event, t, sessionId, loadImage }: {
 }
 
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-  refreshModelControls, settingsActions, t, renderSlot }: {
+  refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
@@ -94,7 +66,6 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   selectModel: NativeConversationController['selectModel']
   selectPreset: NativeConversationController['selectPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
-  settingsActions: NativeSettingsActions
   t: Translate
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
 }) {
@@ -104,16 +75,12 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
-  const [uploadKey, setUploadKey] = useState(0)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsSection, setSettingsSection] = useState('general')
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
   return <>
     <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
       <h1>{t('title')}</h1>
       <nav aria-label={t('sessions')} style={{ display: 'flex', gap: 8 }}>
-        <Button variant="outline" size="sm" onClick={() => { setSettingsSection('general'); setShowSettings(true) }}>{t('settings')}</Button>
         {renderSlot('native.conversation.actions', {})}
       </nav>
       <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
@@ -148,45 +115,27 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
           event.preventDefault()
           if (!ready || draft.trim().length === 0) return
           void send(draft, files).then((success) => {
-            if (success) { setDraft(''); setFiles([]); setUploadKey(key => key + 1) }
+            if (success) { setDraft(''); setFiles([]) }
           })
         }}>
           <label>{t('prompt')}<textarea aria-label={t('prompt')} value={draft} disabled={!ready}
             onChange={(event) => { setDraft(event.target.value) }} rows={4} style={{ display: 'block', width: '100%' }} /></label>
-          {snapshot.modelControls?.images === undefined ? null : <label>{t('images')}
-            <input key={uploadKey} type="file" multiple accept={snapshot.modelControls.images.mediaTypes.join(',')} aria-label={t('images')}
-              disabled={!ready} onChange={(event) => { setFiles(Array.from(event.target.files ?? [])) }} />
-          </label>}
+          {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
+            files={files} onChange={setFiles} limits={snapshot.modelControls.images} disabled={!ready} t={t}
+          />}
           <button type="submit" disabled={!ready || draft.trim().length === 0}>{t('send')}</button>
           <button type="button" disabled={!sending || snapshot.state === 'cancelling'} onClick={cancel}>{t('cancel')}</button>
         </form>
         <p>{t('settled')}</p>
       </>}
     </main>
-    {showSettings ? <SettingsPanel
-      title={t('settings')}
-      closeLabel={t('settingsClose')}
-      rows={[
-        { id: 'general', label: t('settingsGeneral') },
-        { id: 'jobs', label: t('settingsJobs') },
-        { id: 'models', label: t('settingsModels') },
-        { id: 'plugins', label: t('settingsPlugins') },
-        { id: 'agent-presets', label: t('settingsAgentPresets') },
-      ]}
-      activeId={settingsSection}
-      onSelect={setSettingsSection}
-      onClose={() => { setShowSettings(false) }}
-    >
-      <SettingsPage actions={settingsActions} t={t} section={settingsSection}
-        onAuthorized={() => { void refreshModelControls() }} />
-    </SettingsPanel> : null}
   </>
 }
 
 /** Minimal native application selected by the explicit native-web profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-application', targets: ['client'],
-  requires: ['clientNativeSession', 'clientSlots', 'clientLocale'], provides: ['clientApplication', 'clientNativeConversation'],
+  requires: ['clientNativeSession', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
       || Object.keys(input).some(key => !['locale', 'maxLiveTextChars', 'maxLiveEvents'].includes(key)))) throw new TypeError('native conversation: invalid configuration')
@@ -200,11 +149,31 @@ export const plugin: NativePlugin = {
       const client = context.require('clientNativeSession')
       const slots = context.require('clientSlots')
       const clientLocale = context.require('clientLocale')
+      const clientTheme = context.require('clientNativeTheme')
       context.own(clientLocale.register('nativeApplication', { en, zh }))
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
+      const refreshModelControls = controller.refreshModelControls.bind(controller)
+      const settingsActions = {
+        ...createNativeSettingsActions(client),
+        agentPresetRead: client.agentPresetRead.bind(client),
+        agentPresetCopy: client.agentPresetCopy.bind(client),
+        agentPresetDelete: client.agentPresetDelete.bind(client),
+        agentPresetsCanOpenDirectory: client.agentPresetsCanOpenDirectory.bind(client),
+        agentPresetOpenDirectory: client.agentPresetOpenDirectory.bind(client),
+      }
       context.provide('clientNativeConversation', controller)
       context.own(() => controller.close())
+      context.own(slots.inject('sidebar.settings', () => slots.register({
+        name: 'sidebar.settings', locale: 'nativeApplication',
+        inject: () => ({
+          hooks: { locale: clientLocale, theme: clientTheme },
+          settingsActions,
+          refreshModelControls,
+          setLocale: clientLocale.setLocale.bind(clientLocale),
+          toggleTheme: clientTheme.toggle.bind(clientTheme),
+        }),
+      }, NativeSidebarSettings)))
       context.own(slots.inject('main', () => slots.register({
         name: 'main', key: 'conversation', locale: 'nativeApplication',
         children: { 'native.conversation.actions': { kind: 'list', scope: 'root' } },
@@ -219,35 +188,10 @@ export const plugin: NativePlugin = {
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
           selectPreset: controller.selectPreset.bind(controller),
-          refreshModelControls: controller.refreshModelControls.bind(controller),
-          settingsActions: {
-            settingsDescribe: client.settingsDescribe.bind(client), settingsMutate: client.settingsMutate.bind(client),
-            credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
-            credentialsUnset: client.credentialsUnset.bind(client),
-            authorizationList: client.authorizationList.bind(client),
-            authorizationBegin: client.authorizationBegin.bind(client),
-            authorizationFrames: client.authorizationFrames.bind(client),
-            authorizationAnswer: client.authorizationAnswer.bind(client),
-            authorizationDecline: client.authorizationDecline.bind(client),
-            authorizationCancel: client.authorizationCancel.bind(client),
-            accountsList: client.accountsList.bind(client),
-            accountsUsage: client.accountsUsage.bind(client),
-            accountsBalance: client.accountsBalance.bind(client),
-            accountsSignOut: client.accountsSignOut.bind(client),
-            modelsListProviders: client.modelsListProviders.bind(client),
-            modelsListConfigurableProviders: client.modelsListConfigurableProviders.bind(client),
-            modelsDiscover: client.modelsDiscover.bind(client),
-            settingsEvents: client.settingsEvents.bind(client),
-            agentPresetsList: client.agentPresetsList.bind(client),
-            agentPresetRead: client.agentPresetRead.bind(client),
-            agentPresetCopy: client.agentPresetCopy.bind(client),
-            agentPresetDelete: client.agentPresetDelete.bind(client),
-            agentPresetsCanOpenDirectory: client.agentPresetsCanOpenDirectory.bind(client),
-            agentPresetOpenDirectory: client.agentPresetOpenDirectory.bind(client),
-          },
+          refreshModelControls,
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-        refreshModelControls, settingsActions, t, renderSlot }: {
+        refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
@@ -257,12 +201,11 @@ export const plugin: NativePlugin = {
         selectModel: NativeConversationController['selectModel']
         selectPreset: NativeConversationController['selectPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
-        settingsActions: NativeSettingsActions
         t: Translate
         renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
-        refreshModelControls={refreshModelControls} settingsActions={settingsActions} t={t} renderSlot={renderSlot} />)))
+        refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => slots.renderSlot('root', {}) })
       void controller.load()
     }

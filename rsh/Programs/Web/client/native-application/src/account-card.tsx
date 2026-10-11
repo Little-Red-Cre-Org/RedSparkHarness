@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeQuota, NativeQuotaWindow } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
@@ -48,7 +47,6 @@ function Quotas({ quotas, t }: { quotas: readonly NativeQuota[]; t: Translate })
 /** Render one native account summary and its last ready provider data.
  * @param props.account - Host-projected account identity and status.
  * @param props.actions - Native account operations.
- * @param props.authorization - Existing authorization row for this credential key, when available.
  * @param props.refreshClick - changes after account summaries are reloaded.
  * @param props.onRefreshAccounts - reload account summaries and every card's provider data.
  * @param props.onSignOut - sign out this account and reload authorization state.
@@ -56,10 +54,9 @@ function Quotas({ quotas, t }: { quotas: readonly NativeQuota[]; t: Translate })
  * @param props.t - localized copy.
  * @returns the account card.
  */
-export function AccountCard({ account, actions, authorization, refreshClick, onRefreshAccounts, onSignOut, signOutAvailable, t }: {
+export function AccountCard({ account, actions, refreshClick, onRefreshAccounts, onSignOut, signOutAvailable, t }: {
   account: NativeAccountSummary
   actions: NativeSettingsActions
-  authorization?: ReactNode
   refreshClick: number
   onRefreshAccounts: () => Promise<void>
   onSignOut: (key: string) => Promise<void>
@@ -67,7 +64,7 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
   t: Translate
 }) {
   const [data, setData] = useState<CachedAccountData>()
-  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'stale'>('loading')
+  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'usage-unsupported' | 'stale'>('loading')
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
   const identity = account.provider === 'deepseek-account'
@@ -84,6 +81,9 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
       if (result.status === 'ready') {
         setData({ accountKey: account.key, identity, value: result })
         setStatus('ready')
+      } else if (account.provider === 'openai-codex' && result.status === 'failed' && 'reason' in result && result.reason === 'USAGE_UNSUPPORTED') {
+        setData(undefined)
+        setStatus('usage-unsupported')
       } else if (result.status === 'signed-out') {
         setData(undefined)
         setStatus('signed-out')
@@ -169,7 +169,9 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
           </div> : null}
         </>
       : currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
-        ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
+        ? <p role={currentStatus === 'unavailable' || currentStatus === 'usage-unsupported' ? 'status' : undefined}>
+          {currentStatus === 'usage-unsupported' ? t('usageUnsupported') : currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}
+        </p>
         : <>
           {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
           <Quotas quotas={currentUsage.quotas} t={t} />
@@ -178,6 +180,5 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
           </p>}
         </>}
     {error ? <p role="alert">{t('accountError')}</p> : null}
-    {authorization === undefined ? null : <div className={css.authorization}>{authorization}</div>}
   </article>
 }
