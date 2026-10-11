@@ -54,7 +54,9 @@ export interface NativeResponsesGenerationCapture {
    * @returns a generation-bound transport that must be closed after the operation.
    * Partial resources must be released if cancellation or failure prevents returning a transport.
    */
-  capture(request: { readonly route: NativeResponsesRoute; readonly maxTokens?: number }, signal: AbortSignal): Promise<NativeResponsesTransport>
+  capture(
+    request: { readonly route: NativeResponsesRoute, readonly maxTokens?: number }, signal: AbortSignal,
+  ): Promise<NativeResponsesTransport>
 }
 
 /** One prepared Engine model generation that can capture an independent child operation. */
@@ -66,7 +68,7 @@ export interface NativeResponsesPreparedGeneration {
    * @param signal - parent and child operation cancellation.
    * @returns an independent transport and the prepared generation bound to that child route.
    */
-  capture(request: { readonly route: NativeResponsesRoute; readonly maxTokens?: number;
+  capture(request: { readonly route: NativeResponsesRoute, readonly maxTokens?: number,
     readonly reasoningEffort?: ReasoningEffortId }, signal: AbortSignal): Promise<NativeResponsesOperationCapture>
 }
 
