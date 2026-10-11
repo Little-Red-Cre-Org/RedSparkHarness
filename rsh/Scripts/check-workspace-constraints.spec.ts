@@ -351,7 +351,7 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-settings', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js']],
+    ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/account-card.module.css', 'lib/agent-presets-section.module.css']],
     ['@deepseek-ai/dsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
