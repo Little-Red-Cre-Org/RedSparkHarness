@@ -35,9 +35,11 @@ async function entry(parent: string, item: Dirent): Promise<NativeDirectoryEntry
   if (item.isDirectory()) return { name: item.name, path, kind: 'directory' }
   if (item.isFile()) return { name: item.name, path, kind: 'file' }
   if (!item.isSymbolicLink()) return undefined
-  const target = await stat(path)
-  if (target.isDirectory()) return { name: item.name, path, kind: 'directory' }
-  if (target.isFile()) return { name: item.name, path, kind: 'file' }
+  try {
+    const target = await stat(path)
+    if (target.isDirectory()) return { name: item.name, path, kind: 'directory' }
+    if (target.isFile()) return { name: item.name, path, kind: 'file' }
+  } catch { return undefined }
   return undefined
 }
 

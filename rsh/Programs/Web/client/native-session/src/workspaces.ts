@@ -199,6 +199,12 @@ export function createNativeWorkspaceClients(
       const following = accepted(signal)
       const completion = Promise.withResolvers<void>()
       pendingFollows.add(completion.promise)
+      const finish = (): void => {
+        completion.resolve()
+        pendingFollows.delete(completion.promise)
+      }
+      following.addEventListener('abort', finish, { once: true })
+      if (following.aborted) finish()
       try {
         const response = await responseOperation('/api', 'workspaces/follow', {}, following)
         if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
@@ -217,8 +223,8 @@ export function createNativeWorkspaceClients(
       } catch (error: unknown) {
         if (!following.aborted) throw error
       } finally {
-        completion.resolve()
-        pendingFollows.delete(completion.promise)
+        following.removeEventListener('abort', finish)
+        finish()
       }
     },
     async create(input, signal) {
