@@ -10,7 +10,7 @@ Native Web workspace registrations, dynamic Program routes, queued mutations, an
 
 ## Decision
 
-Queued Workspace operations check caller cancellation before joining the queue and again when they start. Delete retires each active root owner captured on the Workspace route, releases that route, then removes the registration. A busy route prevents deletion from removing the registration. Directories and durable Session logs remain.
+Queued Workspace operations check caller cancellation before joining the queue and again when they start. Delete retires each active root owner captured on the Workspace route; route release also drains idle unowned Agent executions before removing the registration. A busy route prevents deletion from removing the registration. Directories and durable Session logs remain.
 
 Workspace follows use the configured `maxFollowers` capacity and return HTTP 429 when full. Client follow completion resolves on abort even when its async generator is parked at `yield`; its abort listener is removed when the generator completes.
 
@@ -22,7 +22,8 @@ Title management remains available for a persisted Workspace Session with no sel
 - **Wait for the async generator's `finally` during Client close.** Rejected because a consumer parked at a yielded frame cannot enter `finally` until it resumes or returns the iterator.
 - **Fail the full directory listing when one link cannot be stated.** Rejected because an unusable entry should not hide valid siblings.
 - **Keep title actions disabled until a Workspace route already exists.** Rejected because the handlers can select the registered Workspace route themselves.
+- **Add a separate idle-Agent retirement operation for Workspace deletion.** Rejected because route release already owns the complete idle Session set and can drain its unowned executions without another public API.
 
 ## Consequences
 
-Workspace deletion now reclaims idle runtime ownership as part of the queued operation; active work still blocks route withdrawal and leaves the registration available for a later retry. Workspace and Session follow streams each enforce the configured follower limit. Cold title actions can be offered before route selection, and unusable symlinks disappear from listings without suppressing other entries.
+Workspace deletion reclaims idle runtime ownership as part of the queued operation; route release drains idle unowned Agent executions, while active work still blocks withdrawal and leaves the registration available for a later retry. Workspace and Session follow streams each enforce the configured follower limit. Cold title actions can be offered before route selection, and unusable symlinks disappear from listings without suppressing other entries.

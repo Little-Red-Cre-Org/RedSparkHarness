@@ -352,7 +352,8 @@ export class NativeHeadlessApplication implements NativeApplication {
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
-      id => [...this.executions.values()].some(owned => owned.route.id === id)
+      id => [...this.executions.entries()].some(([sessionId, owned]) => owned.route.id === id
+        && !this.canReleaseIdleExecution(sessionId, owned))
         || [...this.routeAdmissions.values()].some(admitted => admitted.id === id)
         || [...this.storageMutations.values()].some(mutation => mutation.route.id === id))
     const resolveRoute: NativeRootExecutionOperations['resolve'] = (id) => {
@@ -391,9 +392,19 @@ export class NativeHeadlessApplication implements NativeApplication {
           return this.workspaceRoutes.createWorkspace(request.baseRoute, request.path, signal)
         },
       },
-      releaseWorkspace: (id, signal) => Promise.resolve().then(() => {
+      releaseWorkspace: async (id, signal) => {
         signal.throwIfAborted()
-        this.workspaceRoutes.release(id)
+        await this.workspaceRoutes.release(id, async (route) => {
+          const idle = [...this.executions.entries()].filter(([, owned]) => owned.route === route)
+          for (const [sessionId] of idle) this.retiringSessions.set(sessionId, route.id)
+          const results = await Promise.allSettled(idle.map(async ([sessionId, owned]) => {
+            try { await owned.unregister() } finally {
+              if (this.executions.get(sessionId) !== owned) this.retiringSessions.delete(sessionId)
+            }
+          }))
+          const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason as unknown] : [])
+          if (failures.length > 0) throw new AggregateError(failures, 'native-headless: Workspace execution cleanup failed')
+        })
         for (const [sessionId, retirement] of this.idleRetirements) {
           if (retirement.route.id === id) {
             this.idleRetirements.delete(sessionId)
@@ -402,7 +413,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         for (const [sessionId, route] of this.retiringSessions) {
           if (route === id) this.retiringSessions.delete(sessionId)
         }
-      }),
+      },
       capture: (owner: NativeActiveSessionOwner) => captureRoot(owner).route,
       cancel: (owner: NativeActiveSessionOwner) => captureRoot(owner).unregister(),
       releaseIdle: (request, signal) => {
@@ -1161,7 +1172,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (operationStarted || selectedExecution === undefined) throw error
       const owned = this.executions.get(request.id)
       if (owned?.execution !== selectedExecution || owned.route.id !== request.route
-        || !this.canReleaseFreshFailure(request.id, owned)) throw error
+      || !this.canReleaseIdleExecution(request.id, owned)) throw error
       this.retiringSessions.set(request.id, owned.route.id)
       try {
         await owned.unregister()
@@ -1173,7 +1184,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     })
   }
 
-  private canReleaseFreshFailure(id: SessionId, owned: {
+  private canReleaseIdleExecution(id: SessionId, owned: {
     readonly execution: NativeAgentExecution
     readonly route: Readonly<NativeRootRoute>
   }): boolean {
@@ -1525,6 +1536,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     const existing = this.executions.get(id)?.route ?? this.routeAdmissions.get(id)
     if (existing !== undefined) {
       if (explicit !== undefined && explicit !== existing.id) throw new Error('native-headless: Session is bound to another root route')
+      this.workspaceRoutes.resolve(existing.id)
       return existing
     }
     return this.workspaceRoutes.resolve(explicit === undefined ? resolveRootRoute(this.config).id : explicit)
