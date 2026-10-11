@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, SettingsPanel } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
@@ -106,63 +106,81 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const [files, setFiles] = useState<readonly File[]>([])
   const [uploadKey, setUploadKey] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsSection, setSettingsSection] = useState('general')
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
-  if (showSettings) return <SettingsPage actions={settingsActions} t={t} onBack={() => { setShowSettings(false) }}
-    onAuthorized={() => { void refreshModelControls() }} />
-  return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
-    <h1>{t('title')}</h1>
-    <nav aria-label={t('sessions')} style={{ display: 'flex', gap: 8 }}>
-      <Button variant="outline" size="sm" onClick={() => { setShowSettings(true) }}>{t('settings')}</Button>
-      {renderSlot('native.conversation.actions', {})}
-    </nav>
-    <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
-    {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
-    {selected === undefined ? <p>{t('empty')}</p> : <>
-      <ModelControls snapshot={snapshot} selectModel={selectModel} selectPreset={selectPreset}
-        refreshModelControls={refreshModelControls} t={t} />
-      {todos === null ? null : <aside aria-label={t('todos')}>
-        <h2>{t('todos')}</h2>
-        <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
-          <span>{t(todo.status)}</span>: {todo.content}
-        </li>)}</ul>
-      </aside>}
-      <section aria-label={t('facts')}>
-        {snapshot.events.map((event) => {
-          const card = toolCards.get(event.seq)
-          return card === undefined
-            ? <Message key={event.seq} event={event} t={t} sessionId={selected} loadImage={loadImage} />
-            : <ToolCard key={event.seq} block={card} locale={activeLocale} cwd={snapshot.header?.cwd} />
-        })}
-      </section>
-      <details><summary>{t('facts')}</summary>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
-      </details>
-      {snapshot.liveText === undefined ? null : <article aria-label={t('live')}><strong>{t('assistant')}</strong>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
-        {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
-      </article>}
-      {snapshot.human === undefined ? null : <HumanInteraction key={snapshot.human.id} answerHuman={answerHuman} prompt={snapshot.human}
-        disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} />}
-      <form onSubmit={(event) => {
-        event.preventDefault()
-        if (!ready || draft.trim().length === 0) return
-        void send(draft, files).then((success) => {
-          if (success) { setDraft(''); setFiles([]); setUploadKey(key => key + 1) }
-        })
-      }}>
-        <label>{t('prompt')}<textarea aria-label={t('prompt')} value={draft} disabled={!ready}
-          onChange={(event) => { setDraft(event.target.value) }} rows={4} style={{ display: 'block', width: '100%' }} /></label>
-        {snapshot.modelControls?.images === undefined ? null : <label>{t('images')}
-          <input key={uploadKey} type="file" multiple accept={snapshot.modelControls.images.mediaTypes.join(',')} aria-label={t('images')}
-            disabled={!ready} onChange={(event) => { setFiles(Array.from(event.target.files ?? [])) }} />
-        </label>}
-        <button type="submit" disabled={!ready || draft.trim().length === 0}>{t('send')}</button>
-        <button type="button" disabled={!sending || snapshot.state === 'cancelling'} onClick={cancel}>{t('cancel')}</button>
-      </form>
-      <p>{t('settled')}</p>
-    </>}
-  </main>
+  return <>
+    <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
+      <h1>{t('title')}</h1>
+      <nav aria-label={t('sessions')} style={{ display: 'flex', gap: 8 }}>
+        <Button variant="outline" size="sm" onClick={() => { setSettingsSection('general'); setShowSettings(true) }}>{t('settings')}</Button>
+        {renderSlot('native.conversation.actions', {})}
+      </nav>
+      <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
+      {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
+      {selected === undefined ? <p>{t('empty')}</p> : <>
+        <ModelControls snapshot={snapshot} selectModel={selectModel} selectPreset={selectPreset}
+          refreshModelControls={refreshModelControls} t={t} />
+        {todos === null ? null : <aside aria-label={t('todos')}>
+          <h2>{t('todos')}</h2>
+          <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
+            <span>{t(todo.status)}</span>: {todo.content}
+          </li>)}</ul>
+        </aside>}
+        <section aria-label={t('facts')}>
+          {snapshot.events.map((event) => {
+            const card = toolCards.get(event.seq)
+            return card === undefined
+              ? <Message key={event.seq} event={event} t={t} sessionId={selected} loadImage={loadImage} />
+              : <ToolCard key={event.seq} block={card} locale={activeLocale} cwd={snapshot.header?.cwd} />
+          })}
+        </section>
+        <details><summary>{t('facts')}</summary>
+          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
+        </details>
+        {snapshot.liveText === undefined ? null : <article aria-label={t('live')}><strong>{t('assistant')}</strong>
+          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
+          {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
+        </article>}
+        {snapshot.human === undefined ? null : <HumanInteraction key={snapshot.human.id} answerHuman={answerHuman} prompt={snapshot.human}
+          disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} />}
+        <form onSubmit={(event) => {
+          event.preventDefault()
+          if (!ready || draft.trim().length === 0) return
+          void send(draft, files).then((success) => {
+            if (success) { setDraft(''); setFiles([]); setUploadKey(key => key + 1) }
+          })
+        }}>
+          <label>{t('prompt')}<textarea aria-label={t('prompt')} value={draft} disabled={!ready}
+            onChange={(event) => { setDraft(event.target.value) }} rows={4} style={{ display: 'block', width: '100%' }} /></label>
+          {snapshot.modelControls?.images === undefined ? null : <label>{t('images')}
+            <input key={uploadKey} type="file" multiple accept={snapshot.modelControls.images.mediaTypes.join(',')} aria-label={t('images')}
+              disabled={!ready} onChange={(event) => { setFiles(Array.from(event.target.files ?? [])) }} />
+          </label>}
+          <button type="submit" disabled={!ready || draft.trim().length === 0}>{t('send')}</button>
+          <button type="button" disabled={!sending || snapshot.state === 'cancelling'} onClick={cancel}>{t('cancel')}</button>
+        </form>
+        <p>{t('settled')}</p>
+      </>}
+    </main>
+    {showSettings ? <SettingsPanel
+      title={t('settings')}
+      closeLabel={t('settingsClose')}
+      rows={[
+        { id: 'general', label: t('settingsGeneral') },
+        { id: 'jobs', label: t('settingsJobs') },
+        { id: 'models', label: t('settingsModels') },
+        { id: 'plugins', label: t('settingsPlugins') },
+        { id: 'agent-presets', label: t('settingsAgentPresets') },
+      ]}
+      activeId={settingsSection}
+      onSelect={setSettingsSection}
+      onClose={() => { setShowSettings(false) }}
+    >
+      <SettingsPage actions={settingsActions} t={t} section={settingsSection}
+        onAuthorized={() => { void refreshModelControls() }} />
+    </SettingsPanel> : null}
+  </>
 }
 
 /** Minimal native application selected by the explicit native-web profile. */

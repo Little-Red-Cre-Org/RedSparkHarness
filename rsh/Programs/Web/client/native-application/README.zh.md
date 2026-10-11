@@ -34,6 +34,8 @@ kind: "package-reference"
 
 Accounts 区域在允许的授权流程旁显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits；只有账户 key 与非空邮箱仍匹配时，用量刷新失败才会保留上次成功读取的值并提示可能过期，否则页面会提示用量不可用。退出登录和授权完成后都会重新读取账户及授权流程。页面复用匹配的授权行，不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
+点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置包含已注册设置项与凭据编辑器；模型页包含授权流程和账户卡片。任务中心、插件与 Agent 预设目前显示本地化迁移占位文案。
+
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
