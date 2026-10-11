@@ -72,6 +72,11 @@ export class NativeSettings implements NativeSettingsService {
     private readonly onDocumentUpdated?: (namespace: string, revision: number) => void,
   ) {}
 
+  /** @returns the storage's local document path, when it has one. */
+  get documentPath(): string | undefined {
+    return this.storage.documentPath
+  }
+
   /** Load the complete document before any consumer registers. */
   async start(): Promise<void> {
     if (this.started || this.closed) throw new Error('settings service cannot start twice')

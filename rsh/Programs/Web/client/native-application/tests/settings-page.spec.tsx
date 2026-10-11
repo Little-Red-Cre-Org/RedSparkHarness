@@ -31,7 +31,7 @@ function renderSettingsPage(props: {
 }
 const settingsDescription = (
   namespaces: readonly (NativeSettingsDescriptor | ServiceNativeSettingsDescriptor)[], limits = defaultLimits,
-) => ({ namespaces, limits })
+) => ({ hasDocument: false, namespaces, limits })
 
 const chatGptAccount: NativeAccountSummary = {
   key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
