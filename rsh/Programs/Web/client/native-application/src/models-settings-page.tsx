@@ -261,9 +261,9 @@ export function ModelsSettingsPage({ actions, t, children }: {
           : { kind: 'refused', message: errorText(error) }
       }
     },
-    async discoverModels(settingsNs, request: ModelDiscoveryRequest) {
+    async discoverModels(settingsNs, request: ModelDiscoveryRequest, signal?: AbortSignal) {
       try {
-        return { kind: 'found', models: await actions.modelsDiscover(settingsNs, request) }
+        return { kind: 'found', models: await actions.modelsDiscover(settingsNs, request, signal) }
       } catch (error: unknown) {
         return { kind: 'refused', message: errorText(error) }
       }
@@ -365,7 +365,8 @@ export function ModelsSettingsPage({ actions, t, children }: {
           if (needsSetup(row, anyUsable) && !dismissedSetup.has(row.entry.provider)) {
             return <li key={row.entry.provider} className={styles['setupCard']}>
               {entryError}
-              <ProviderEditor provider={target.provider} displayName={target.displayName} namespace={namespace}
+              <ProviderEditor provider={target.provider} displayName={target.displayName} declared={target.declared === true}
+                namespace={namespace}
                 schema={modelSettingsSchema} settingsPath={target.settingsPath} operations={operations} t={t}
                 readOnly={false} onClose={(changed) => { closeSetup(changed, target) }} />
             </li>
@@ -374,7 +375,7 @@ export function ModelsSettingsPage({ actions, t, children }: {
           if (open) {
             return <li key={row.entry.provider} className={styles['setupCard']}>
               {entryError}
-              <ProviderEditor provider={target.provider} displayName={target.displayName}
+              <ProviderEditor provider={target.provider} displayName={target.displayName} declared={target.declared === true}
                 namespace={namespace} schema={modelSettingsSchema} settingsPath={target.settingsPath}
                 operations={operations} t={t} readOnly={false}
                 onClose={(changed) => { closeEditor(changed, target) }} />

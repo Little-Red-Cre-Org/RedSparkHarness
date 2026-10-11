@@ -67,7 +67,7 @@ export interface ModelSettingsOperations {
   storeCredential(ref: string, value: string): Promise<string | undefined>
   removeCredential(ref: string): Promise<string | undefined>
   writeSettings(ns: string, ops: ModelSettingsPathOp[], expectedRevision: number | undefined): Promise<ModelSettingsWriteOutcome>
-  discoverModels(settingsNs: string, request: ModelDiscoveryRequest): Promise<ModelDiscoveryOutcome>
+  discoverModels(settingsNs: string, request: ModelDiscoveryRequest, signal?: AbortSignal): Promise<ModelDiscoveryOutcome>
 }
 
 /** Schema operations used by provider cards without exposing a schema service. */

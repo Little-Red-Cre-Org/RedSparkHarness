@@ -118,8 +118,12 @@ it('sends endpoint discovery through modelsDiscover without storing the entered 
   await waitFor(() => {
     expect(actions.modelsDiscover).toHaveBeenCalledWith('llm-pi-ai', {
       provider: 'openai', baseURL: 'https://proxy.example/v1', api: 'openai-completions', apiKey: 'probe-only-key',
-    })
+    }, expect.any(AbortSignal))
   })
+  const signal = vi.mocked(actions.modelsDiscover).mock.calls[0]?.[2] as AbortSignal
+  expect(signal.aborted).toBe(false)
+  cleanup()
+  expect(signal.aborted).toBe(true)
   expect(actions.credentialsSet).not.toHaveBeenCalled()
   expect(actions.settingsMutate).not.toHaveBeenCalled()
 })

@@ -14,7 +14,7 @@
  * rows the user can still fill in by hand.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from '../Button.tsx'
 import { Modal } from '../Modal.tsx'
@@ -89,7 +89,7 @@ export interface ModelListEditorProps<TCopy extends string = ModelEditorCopyKey>
 }
 
 interface ModelListDiscoveryOperations {
-  discoverModels(settingsNs: string, request: ModelDiscoveryRequest): Promise<ModelDiscoveryOutcome>
+  discoverModels(settingsNs: string, request: ModelDiscoveryRequest, signal: AbortSignal): Promise<ModelDiscoveryOutcome>
 }
 
 /** Disclosure chevron; rotates to point down while its row is open. */
@@ -231,6 +231,10 @@ export function ModelListEditor<TCopy extends string = ModelEditorCopyKey>(props
     }))
   }
 
+  // Closing the editor (unmount) cancels an in-flight discovery.
+  const [discovery] = useState(() => new AbortController())
+  useEffect(() => () => { discovery.abort() }, [discovery])
+
   const fetchModels = async (): Promise<void> => {
     setBusy(true)
     setFailure(undefined)
@@ -240,7 +244,7 @@ export function ModelListEditor<TCopy extends string = ModelEditorCopyKey>(props
         ...probe.baseURL === undefined || probe.baseURL.length === 0 ? {} : { baseURL: probe.baseURL },
         ...probe.api === undefined ? {} : { api: probe.api },
         ...probe.apiKey === undefined ? {} : { apiKey: probe.apiKey },
-      })
+      }, discovery.signal)
       if (answer.kind === 'refused') {
         setFailure(answer.message)
         return
