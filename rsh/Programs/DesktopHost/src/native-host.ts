@@ -1,5 +1,6 @@
 /** Cordis-free native composition over Electron's existing private Fetch carrier. */
-import { realpathSync } from 'node:fs'
+import { realpathSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { loadNativeProfile, readNativeProfile, profileDirectoryReloadMode } from '@deepseek-ai/dsh/native-profile'
 import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -22,6 +23,24 @@ export async function createNativeDesktopRuntime(
 ): Promise<DesktopHostRuntime> {
   if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('dsh desktop: native profiles require configReload startup')
   const profile = readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
+  const anchors = [createRequire(join(runtimeDir, 'package.json')), createRequire(join(projectDir, 'package.json'))]
+  for (const row of profile.installations) {
+    for (const anchor of anchors) {
+      let manifestPath: string
+      try {
+        manifestPath = anchor.resolve(`${row.plugin}/package.json`)
+      } catch {
+        continue
+      }
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+        dsh?: { native?: { provides?: readonly string[] } }
+      }
+      if (manifest.dsh?.native?.provides?.some(service => service === 'application' || service === 'hostConnection')) {
+        throw new Error('dsh desktop: native profile cannot select another application or Connection carrier')
+      }
+      break
+    }
+  }
   const root = profile.scopes.find(scope => scope.parent === undefined)
   if (root === undefined) throw new Error('dsh desktop: native profile has no root scope')
   const bundleRuntimeDir = allowLinkedPackages
@@ -57,9 +76,6 @@ export async function createNativeDesktopRuntime(
     ...(allowLinkedPackages ? {} : { containedRoots: [projectDir, runtimeDir] }),
     carrier: { plugin: carrier, scope: root.id },
   })
-  if ([...loaded.requests.values()].some(request => request.plugin.provides.some(service => service === 'application' || service === 'hostConnection'))) {
-    throw new Error('dsh desktop: native profile cannot select another application or Connection carrier')
-  }
   const controllers = [...loaded.requests.values()].filter(request => request.plugin.provides.includes('nativeWebSession'))
   if (controllers.length !== 1) throw new Error('dsh desktop: native profile must select exactly one native Session controller')
   await loaded.host.start()

@@ -6,7 +6,7 @@ import { runDesktopHost } from '../src/index.ts'
 
 const roots: { root: string; links: string[] }[] = []
 
-async function fixture(linked: readonly string[] = []): Promise<{
+async function fixture(linked: readonly string[] = [], profileProvider?: 'application' | 'hostConnection'): Promise<{
   project: string
   runtime: string
   enteredPath: string
@@ -56,6 +56,7 @@ async function fixture(linked: readonly string[] = []): Promise<{
     installations: [{ id: 'client', plugin: '@fixture/dsh-client' }],
   }))
 
+  const hostProvides = ['nativeWebSession', ...(profileProvider === undefined ? [] : [profileProvider])]
   const packages = [
     {
       name: '@fixture/dsh-credentials',
@@ -64,13 +65,13 @@ async function fixture(linked: readonly string[] = []): Promise<{
     },
     {
       name: '@fixture/dsh-host',
-      manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection'], provides: ['nativeWebSession'] },
+      manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection'], provides: hostProvides },
       source: [
         'import { writeFileSync } from "node:fs";',
         `const enteredPath = ${JSON.stringify(enteredPath)};`,
         `const abortedPath = ${JSON.stringify(abortedPath)};`,
         `const disposedPath = ${JSON.stringify(disposedPath)};`,
-        'export const plugin = { apiVersion: 1, name: "@fixture/dsh-host", targets: ["host"], requires: ["hostConnection"], provides: ["nativeWebSession"], resolve: () => context => { const dispose = context.require("hostConnection").fetch.register({ path: "/api/test", methods: ["GET"], requestBody: "buffered", fetch: request => { if (!new URL(request.url).searchParams.has("wait")) return Promise.resolve(new Response("api fixture")); writeFileSync(enteredPath, "entered"); return new Promise(resolve => request.signal.addEventListener("abort", () => { writeFileSync(abortedPath, "aborted"); resolve(new Response("aborted", { status: 499 })) }, { once: true })) } }); context.own(async () => { await dispose(); writeFileSync(disposedPath, "disposed") }); context.provide("nativeWebSession", {}) } };',
+        `export const plugin = { apiVersion: 1, name: "@fixture/dsh-host", targets: ["host"], requires: ["hostConnection"], provides: ${JSON.stringify(hostProvides)}, resolve: () => context => { const dispose = context.require("hostConnection").fetch.register({ path: "/api/test", methods: ["GET"], requestBody: "buffered", fetch: request => { if (!new URL(request.url).searchParams.has("wait")) return Promise.resolve(new Response("api fixture")); writeFileSync(enteredPath, "entered"); return new Promise(resolve => request.signal.addEventListener("abort", () => { writeFileSync(abortedPath, "aborted"); resolve(new Response("aborted", { status: 499 })) }, { once: true })) } }); context.own(async () => { await dispose(); writeFileSync(disposedPath, "disposed") }); context.provide("nativeWebSession", {}) } };`,
         '',
       ].join('\n'),
     },
@@ -117,6 +118,13 @@ afterEach(async () => {
     await Promise.all(links.map(link => unlink(link)))
     await rm(root, { recursive: true, force: true })
   }))
+})
+
+it.each(['hostConnection', 'application'] as const)('rejects a profile provider of %s before resolving carrier conflicts', async (service) => {
+  const { project, runtime } = await fixture([], service)
+  await expect(runDesktopHost(runtime, project, async () => {})).rejects.toMatchObject({
+    message: 'dsh desktop: native profile cannot select another application or Connection carrier',
+  })
 })
 
 it('streams the API route and native index as start, data, and end frames', async () => {
