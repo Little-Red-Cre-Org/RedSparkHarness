@@ -238,6 +238,7 @@ export const plugin: NativePlugin = {
             modelsListConfigurableProviders: client.modelsListConfigurableProviders.bind(client),
             modelsDiscover: client.modelsDiscover.bind(client),
             settingsEvents: client.settingsEvents.bind(client),
+            agentPresetsList: client.agentPresetsList.bind(client),
           },
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
