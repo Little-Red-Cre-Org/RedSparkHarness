@@ -308,7 +308,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
-  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces']],
+  ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],
   ['rsh/Programs/CLI', ['./native-profile']],
@@ -418,5 +419,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/session/session-projection/types', ['host', 'client']],
   ['rsh/Engine/session/session-title-llm/native', ['host']],
   ['rsh/Programs/Web/client/native-session/list-types', ['host', 'client']],
+  ['rsh/Programs/Web/client/native-session/workspaces', ['host', 'client']],
+  ['rsh/Programs/Web/host/directory-picker-native/native-picker', ['host']],
   ['rsh/Programs/Web/client/ui-theme/theme-contract', ['client']],
 ])

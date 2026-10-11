@@ -31,8 +31,8 @@
   },
   "files": [
     "lib/index.js",
-    "lib/native-picker.js",
     "lib/worker.cjs",
+    "lib/native-picker.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -43,6 +43,11 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
