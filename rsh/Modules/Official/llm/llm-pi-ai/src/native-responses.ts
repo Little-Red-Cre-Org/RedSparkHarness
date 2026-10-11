@@ -228,6 +228,7 @@ function createTransport(
             method: 'POST',
             headers,
             body: finalJson,
+            redirect: 'manual',
             signal: requestSignal,
           })
           if (response.body !== null) {

@@ -381,6 +381,8 @@ export class PiAiAdapter extends LlmAdapter {
   private readonly lifetime = new AbortController()
   /** Native transports stay tracked until their operation close has drained. */
   private readonly nativeTransports = new Set<NativeResponsesTransport>()
+  /** Auth resolutions may own refreshes that must finish before adapter disposal. */
+  private readonly credentialResolutions = new Set<Promise<AuthResult | undefined>>()
   private disposeResult: Promise<void> | undefined
 
   constructor(private readonly config: PiAiAdapterOptions) {
@@ -392,21 +394,41 @@ export class PiAiAdapter extends LlmAdapter {
     this.snapshot = undefined
   }
 
-  /** Cancel catalog work, close Native transports, and wait for accepted work to drain. */
+  /** Cancel catalog work and drain credential resolutions and Native transports. */
   dispose(): Promise<void> {
     if (this.disposeResult !== undefined) return this.disposeResult
     this.snapshot = undefined
     const closing = [...this.nativeTransports].map(transport => transport.close())
     this.lifetime.abort()
-    this.disposeResult = Promise.allSettled(closing).then((results) => {
-      for (const result of results) {
-        if (result.status !== 'rejected') continue
-        const failure: unknown = result.reason
-        if (failure instanceof Error) throw failure
-        throw new Error('llm-pi-ai failed to close a Native Responses transport')
-      }
-    })
+    const credentialWork = [...this.credentialResolutions]
+    this.disposeResult = Promise.all([
+      Promise.allSettled(credentialWork),
+      Promise.allSettled(closing).then((results) => {
+        for (const result of results) {
+          if (result.status !== 'rejected') continue
+          const failure: unknown = result.reason
+          if (failure instanceof Error) throw failure
+          throw new Error('llm-pi-ai failed to close a Native Responses transport')
+        }
+      }),
+    ]).then(() => undefined)
     return this.disposeResult
+  }
+
+  /** Track pi-ai auth work so disposal drains shared refreshes without aborting them. */
+  private resolveProviderAuth(
+    snapshot: PiAiSnapshot,
+    provider: string,
+    signal?: AbortSignal,
+  ): Promise<AuthResult | undefined> {
+    this.lifetime.signal.throwIfAborted()
+    const work = snapshot.models.getAuth(provider, signal === undefined ? undefined : { signal })
+    this.credentialResolutions.add(work)
+    void work.then(
+      () => { this.credentialResolutions.delete(work) },
+      () => { this.credentialResolutions.delete(work) },
+    )
+    return work
   }
 
   /**
@@ -459,7 +481,7 @@ export class PiAiAdapter extends LlmAdapter {
     provider: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    const auth = await snapshot.models.getAuth(provider, signal === undefined ? undefined : { signal })
+    const auth = await this.resolveProviderAuth(snapshot, provider, signal)
     signal?.throwIfAborted()
     if (auth?.auth.apiKey === undefined || auth.auth.apiKey.length === 0) {
       throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
@@ -532,7 +554,7 @@ export class PiAiAdapter extends LlmAdapter {
   getProviderAuth(provider: string, signal?: AbortSignal): Promise<AuthResult | undefined> {
     const snapshot = this.current()
     this.profileOf(snapshot, provider)
-    return snapshot.models.getAuth(provider, signal === undefined ? undefined : { signal })
+    return this.resolveProviderAuth(snapshot, provider, signal)
   }
 
   override resolveModel(
@@ -596,7 +618,7 @@ export class PiAiAdapter extends LlmAdapter {
             return credential === undefined ? undefined : codexIdentityOf(credential)
           },
           resolveAuth: async () => {
-            const auth = await snapshot.models.getAuth(CODEX_SUBSCRIPTION_ROUTE)
+            const auth = await this.resolveProviderAuth(snapshot, CODEX_SUBSCRIPTION_ROUTE)
             if (auth?.auth.apiKey === undefined) {
               throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
             }

@@ -253,8 +253,62 @@ describe('Native Codex Responses transport', () => {
     expect(emptyResponse.status).toBe(204)
     expect(emptyResponse.body).toBeNull()
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(3)
+
+    server.responses = (_request, outgoing) => {
+      outgoing.writeHead(307, { location: '/redirected' }).end('redirect')
+    }
+    const redirectBody = await transport.projectRequest(requestBody(), new AbortController().signal)
+    const redirectResponse = await transport.forward(redirectBody, new AbortController().signal)
+    expect(redirectResponse.status).toBe(307)
+    expect(server.requests.filter(request => request.path === '/redirected')).toHaveLength(0)
+    await new Response(redirectResponse.body).text()
+
     await transport.close()
     await adapter.dispose()
+    await server.close()
+  })
+
+  it('waits for a credential refresh started by prepareCall before disposing', async () => {
+    const server = await localServer()
+    routeFetchThrough(server)
+    const auth = memoryAuth({ 'openai-codex': siwcCredential('account-one', { expires: 0 }) })
+    const adapter = adapterWith(auth, () => resolveProfiles({ 'openai-codex': {} }))
+    const refreshStarted = Promise.withResolvers<undefined>()
+    const refreshReleased = Promise.withResolvers<undefined>()
+    let refreshSignal: AbortSignal | null | undefined
+    server.token = async (_request, response) => {
+      refreshStarted.resolve(undefined)
+      await refreshReleased.promise
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
+        access_token: accessToken('account-one'),
+        refresh_token: 'refresh-account-one-rotated',
+        expires_in: 3600,
+      }))
+    }
+    const routedFetch = globalThis.fetch.bind(globalThis)
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? new URL(input.url) : new URL(input.toString())
+      if (url.origin === 'https://auth.openai.com' && url.pathname === '/api/accounts/oauth/token') {
+        refreshSignal = init?.signal
+      }
+      return routedFetch(input, init)
+    })
+    const preparing = adapter.prepareCall('openai-codex', MODEL).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    await refreshStarted.promise
+
+    let disposed = false
+    const disposing = adapter.dispose().then(() => { disposed = true })
+    await Promise.resolve()
+    expect(disposed).toBe(false)
+    expect(refreshSignal?.aborted).toBe(false)
+
+    refreshReleased.resolve(undefined)
+    await disposing
+    expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
+    await expect(preparing).resolves.toMatchObject({ code: 'ABORTED' })
     await server.close()
   })
 
