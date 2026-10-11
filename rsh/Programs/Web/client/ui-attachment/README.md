@@ -59,7 +59,7 @@ The plugin waits for `conversation.input.attachments`, `conversation.message.ima
 | [`src/MessageImage.tsx`](src/MessageImage.tsx) | Single image sizing, load/retry, click-to-open; local submission-echo previews render their object URL directly |
 | [`src/ImageLightbox.tsx`](src/ImageLightbox.tsx) | Document-level modal preview over the shared mask |
 | [`src/DropOverlay.tsx`](src/DropOverlay.tsx) | Pointer-inert drag invitation portal |
-| [`src/native.tsx`](src/native.tsx) | Cordis-free static exports for Native Client consumers |
+| [`src/native.ts`](src/native.ts) | Cordis-free static exports for Native Client consumers |
 
 </details>
 

@@ -59,7 +59,7 @@ Chat 中的一条用户消息把文件与图片放在同一个靠右、可换行
 | [`src/MessageImage.tsx`](src/MessageImage.tsx) | 单图尺寸、加载／重试、点击打开；本地提交回显预览直接显示其 object URL |
 | [`src/ImageLightbox.tsx`](src/ImageLightbox.tsx) | 铺在共享遮罩上的文档级模态预览 |
 | [`src/DropOverlay.tsx`](src/DropOverlay.tsx) | 不接收指针事件的拖放提示 portal |
-| [`src/native.tsx`](src/native.tsx) | 面向 Native Client 消费者的 Cordis-free 静态导出 |
+| [`src/native.ts`](src/native.ts) | 面向 Native Client 消费者的 Cordis-free 静态导出 |
 
 </details>
 
