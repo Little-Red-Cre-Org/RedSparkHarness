@@ -293,6 +293,41 @@
   white-space: nowrap;
 }
 
+/* Scheduled tasks occupy the optional action row above New Session. */
+.scheduleAction {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  margin: 0 2px 8px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.scheduleAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.collapsed .scheduleAction {
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 0 12px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
 .collapsed .newSessionLabel {
   max-width: 0;
 }
@@ -377,6 +412,66 @@
   margin-right: calc(-1 * var(--dsh-sidebar-inline-padding));
   padding-left: 4px;
   overflow: hidden;
+}
+
+.workspaceBrowser {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-right: var(--dsh-sidebar-inline-padding);
+}
+
+.workspaceList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.workspaceGroup + .workspaceGroup {
+  margin-top: 4px;
+}
+
+.workspaceHeaderButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  corner-shape: round;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.workspaceHeaderButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sessionRename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 6px;
+  padding: 8px;
+}
+
+.sessionRename label {
+  flex: 1 1 100%;
+  min-width: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.sessionRename input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .collapsed .regionArea {

@@ -29,15 +29,16 @@ Select this package in a native Host composition with `credentials`; include `au
 
 ### Configure the Platform origin
 
-The native plugin input accepts one optional field:
+The native plugin input accepts two optional fields:
 
 | Field | Default | Meaning |
 |---|---|---|
 | `platformOrigin` | `https://platform.deepseek.com` | HTTPS origin for Platform sign-in, profile, balance, and logout requests |
+| `inferenceOrigin` | `https://api.deepseek.com` | Exact HTTP(S) origin allowed to receive account inference tokens |
 
 ### Account records
 
-The Provider stores its grant at `deepseek-account/default` and its device id at `deepseek-account/device`. A grant is usable only when its issuer matches `platformOrigin`; a malformed or mismatched grant appears signed out.
+The Provider stores its grant at `deepseek-account/default` and its device id at `deepseek-account/device`. A grant is usable only when its issuer matches `platformOrigin`; a malformed or mismatched grant appears signed out. The LLM Provider can request the token for an inference URL through `resolveToken(destination)`. The account Provider returns it only when the destination origin matches `inferenceOrigin` and the grant issuer is allowed for that origin.
 
 -----
 
