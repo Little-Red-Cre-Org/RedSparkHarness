@@ -118,6 +118,47 @@ it('registers ready user native preset folders under child scopes and lists thei
   } finally { await rm(home, { recursive: true, force: true }) }
 })
 
+it.each(['preset:operator/tools', 'preset:operator'])('rejects native preset install id %s when it collides with the profile', async (collisionId) => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const directory = join(home, '.agent-presets', 'operator')
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, 'test-native-tools', [], [])
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(directory, 'preset.yml'), 'name: Operator\n')
+    await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [
+      { id: 'tools', plugin: 'test-native-tools' },
+    ] }))
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1, scopes: [{ id: 'root' }], installations: [
+        { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' },
+        { id: collisionId, plugin: 'test-native-tools', scope: 'root' },
+      ],
+    }))
+
+    await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home }))
+      .rejects.toThrow(`dsh: preset operator install id ${collisionId} collides with an existing profile installation`)
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
+
+it('rejects a preset folder whose scope is declared without registering that preset', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const directory = join(home, '.agent-presets', 'operator')
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(directory, 'preset.yml'), 'name: Operator\n')
+    await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [] }))
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1, scopes: [{ id: 'root' }, { id: 'preset:operator', parent: 'root' }],
+      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' }],
+    }))
+
+    await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home }))
+      .rejects.toThrow('dsh: profile already declares scope preset:operator but does not register preset operator')
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
+
 it('rejects every static manifest before importing any selected plugin', async () => {
   const { home, profileDir, installAnchor } = await fixture()
   const marker = join(home, 'premature-import.txt')

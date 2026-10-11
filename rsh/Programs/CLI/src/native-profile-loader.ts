@@ -126,10 +126,24 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
   const scopes = [...profile.scopes]
   const scopeIds = new Set(scopes.map(scope => scope.id))
   const installations = [...profile.installations]
+  const installationIds = new Set(installations.map(row => row.id))
   for (const folder of folders) {
     if (folder.status !== 'ready' || registeredPresetIds.has(folder.id)) continue
     const scope = `preset:${folder.id}`
-    if (scopeIds.has(scope)) continue
+    if (scopeIds.has(scope)) {
+      throw new Error(`dsh: profile already declares scope ${scope} but does not register preset ${folder.id}`)
+    }
+    for (const row of folder.installations ?? []) {
+      const id = `${scope}/${row.id}`
+      if (installationIds.has(id)) {
+        throw new Error(`dsh: preset ${folder.id} install id ${id} collides with an existing profile installation`)
+      }
+      installationIds.add(id)
+    }
+    if (installationIds.has(scope)) {
+      throw new Error(`dsh: preset ${folder.id} install id ${scope} collides with an existing profile installation`)
+    }
+    installationIds.add(scope)
     scopeIds.add(scope)
     scopes.push({ id: scope, parent: presetsInstallation.scope })
     for (const row of folder.installations ?? []) {
