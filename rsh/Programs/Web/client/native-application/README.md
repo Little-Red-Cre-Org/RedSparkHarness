@@ -76,7 +76,6 @@ Submitted text adds ordinary user-message tokens. This application contributes n
 
 The Host owns resumed context and its existing prefix. Model and composition changes follow their owning Providers' recorded resolution and context rules.
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.

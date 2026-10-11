@@ -76,7 +76,6 @@ native-web 首次使用清单选择此应用、renderer、Connection、Session C
 
 Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其所属 Provider 的记录解析及上下文规则。
 
-<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
 持久化事件在执行期间更新转录。临时助手输出独立显示，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
