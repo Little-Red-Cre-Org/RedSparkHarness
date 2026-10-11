@@ -22,6 +22,30 @@ const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.toke
 const HOST_AGENT_NAME = 'RedSpark Harness'
 const OAUTH_REQUEST_TIMEOUT_MS = 30_000
 const CALLBACK_TIMEOUT_MS = 10 * 60_000
+const SIWC_TOOL_NAMESPACE = 'harness'
+
+/** Normalize a Responses request for the SIWC endpoint. */
+export function siwcResponsesPayload<T>(payload: T): T {
+  const body = payload as unknown as {
+    input?: { role?: string; type?: string; namespace?: string }[]
+    tools?: unknown
+  }
+  if (body.input !== undefined) {
+    for (const item of body.input) {
+      if (item.role === 'system') item.role = 'developer'
+      if (item.type === 'function_call' || item.type === 'custom_tool_call') item.namespace = SIWC_TOOL_NAMESPACE
+    }
+  }
+  if (body.tools !== undefined) {
+    body.tools = [{
+      type: 'namespace',
+      name: SIWC_TOOL_NAMESPACE,
+      description: 'Tools the harness exposes to the model.',
+      tools: body.tools,
+    }]
+  }
+  return payload
+}
 
 const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] = [
   ['type', value => value === 'oauth'],

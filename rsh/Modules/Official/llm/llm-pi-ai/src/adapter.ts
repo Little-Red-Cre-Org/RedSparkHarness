@@ -67,7 +67,7 @@ import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
 import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
-import { createSiwcOAuth, isSiwcCredential } from './siwc.ts'
+import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from './siwc.ts'
 import { createNativeCodexResponsesCapture } from './native-responses.ts'
 import type {
   CodexAccountIdentity,
@@ -241,30 +241,6 @@ function requestHeaders(headers: Readonly<Record<string, string>> | undefined): 
 
 const CODEX_SUBSCRIPTION_ROUTE = 'openai-codex'
 const OPENAI_RESPONSES_BASE_URL = 'https://api.openai.com/v1'
-const SIWC_TOOL_NAMESPACE = 'harness'
-
-/** SIWC rejects system-role items and top-level function tools. */
-function siwcResponsesPayload(payload: unknown): unknown {
-  const body = payload as {
-    input?: { role?: string; type?: string; namespace?: string }[]
-    tools?: unknown
-  }
-  if (body.input !== undefined) {
-    for (const item of body.input) {
-      if (item.role === 'system') item.role = 'developer'
-      if (item.type === 'function_call' || item.type === 'custom_tool_call') item.namespace = SIWC_TOOL_NAMESPACE
-    }
-  }
-  if (body.tools !== undefined) {
-    body.tools = [{
-      type: 'namespace',
-      name: SIWC_TOOL_NAMESPACE,
-      description: 'Tools the harness exposes to the model.',
-      tools: body.tools,
-    }]
-  }
-  return body
-}
 
 /** pi-ai requires numeric rates; the Harness does not publish these internal placeholders. */
 const NO_MODEL_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }

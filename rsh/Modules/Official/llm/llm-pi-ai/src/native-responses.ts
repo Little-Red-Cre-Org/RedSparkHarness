@@ -1,6 +1,7 @@
 /** Raw Responses transport for one SIWC-bound Native Codex operation. */
 
 import { attributionHeaders, LlmError } from '@deepseek-ai/dsh-llm/native'
+import { siwcResponsesPayload } from './siwc.ts'
 
 // Package-private copies mirror Core's responses-transport.ts interface and are replaced by the Core import once published.
 /** Immutable JSON accepted by the captured provider's complete Responses request projector. */
@@ -27,7 +28,8 @@ export interface NativeResponsesTransport {
   /** Whether this captured provider generation enforces `max_output_tokens` on inference. */
   readonly outputTokenLimit: 'supported' | 'unsupported'
   /**
-   * Project the complete request using this generation's model and image policy before admission.
+   * Project the complete request for this generation's model, image policy, and SIWC endpoint.
+   * The returned body does not share JSON objects with the input, which remains unchanged.
    * @param body - complete Responses JSON before provider-specific projection.
    * @param signal - product operation cancellation.
    * @returns final JSON body to log and forward unchanged.
@@ -241,7 +243,7 @@ function createTransport(
             : `OpenAI Codex model "${options.route.model}" does not support image input`
           throw new LlmError(reason, 'UNSUPPORTED_CONTENT')
         }
-        const projected = { ...body, store: false }
+        const projected = { ...siwcResponsesPayload(structuredClone(body)), store: false }
         const serialized = JSON.stringify(projected)
         projectedJson = serialized
         return projected

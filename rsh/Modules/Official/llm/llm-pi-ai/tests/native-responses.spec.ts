@@ -185,7 +185,16 @@ describe('Native Codex Responses transport', () => {
       'user-agent': attributionHeaders()['user-agent'],
       'x-generation': 'two',
     })
-    expect(server.requests.find(request => request.path === '/responses')?.body).toBe(JSON.stringify({ ...requestBody(), store: false }))
+    expect(server.requests.find(request => request.path === '/responses')?.body).toBe(JSON.stringify({
+      ...requestBody(),
+      tools: [{
+        type: 'namespace',
+        name: 'harness',
+        description: 'Tools the harness exposes to the model.',
+        tools: requestBody().tools,
+      }],
+      store: false,
+    }))
     await newTransport.close()
     await adapter.dispose()
     await server.close()
@@ -212,9 +221,35 @@ describe('Native Codex Responses transport', () => {
     if (capture === undefined) throw new Error('Codex preparation omitted its Native Responses capture')
     const transport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
     expect(transport.outputTokenLimit).toBe('unsupported')
-    const body = requestBody()
+    const tools: NativeResponsesJsonValue = [{ type: 'function', name: 'lookup', parameters: { type: 'object', properties: {} } }]
+    const body: Readonly<Record<string, NativeResponsesJsonValue>> = {
+      ...requestBody(),
+      input: [
+        { role: 'system', content: [{ type: 'input_text', text: 'Use the system message.' }] },
+        { role: 'user', content: [{ type: 'input_text', text: 'Keep the complete request.' }] },
+        { type: 'function_call', call_id: 'call-1', name: 'lookup', arguments: '{}' },
+        { type: 'custom_tool_call', call_id: 'call-2', name: 'custom', input: 'run' },
+      ],
+      tools,
+    }
+    const originalBody = structuredClone(body)
+    const expectedProjected: NativeResponsesJsonValue = {
+      ...originalBody,
+      input: [
+        { role: 'developer', content: [{ type: 'input_text', text: 'Use the system message.' }] },
+        { role: 'user', content: [{ type: 'input_text', text: 'Keep the complete request.' }] },
+        { type: 'function_call', call_id: 'call-1', name: 'lookup', arguments: '{}', namespace: 'harness' },
+        { type: 'custom_tool_call', call_id: 'call-2', name: 'custom', input: 'run', namespace: 'harness' },
+      ],
+      tools: [{
+        type: 'namespace',
+        name: 'harness',
+        description: 'Tools the harness exposes to the model.',
+        tools,
+      }],
+      store: false,
+    }
     const projected = await transport.projectRequest(body, new AbortController().signal)
-    expect(projected).toEqual({ ...body, store: false })
     expect(await adapter.prepareCall('local', 'local-model')).not.toHaveProperty('nativeResponses')
     const imageTransport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
     await expect(imageTransport.projectRequest({
@@ -232,6 +267,16 @@ describe('Native Codex Responses transport', () => {
     expect(response.contentType).toBe('text/event-stream; charset=utf-8')
     expect(Buffer.from(await new Response(response.body).arrayBuffer())).toEqual(sse)
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(1)
+    const forwardedRequest = server.requests.find(request => request.path === '/responses')!
+    expect({
+      projected,
+      forwardedBody: JSON.parse(forwardedRequest.body) as NativeResponsesJsonValue,
+      callerBody: body,
+    }).toEqual({
+      projected: expectedProjected,
+      forwardedBody: expectedProjected,
+      callerBody: originalBody,
+    })
     expect(server.requests.find(request => request.path === '/responses')?.headers).toMatchObject({
       authorization: `Bearer ${accessToken('account-one')}`,
       'user-agent': attributionHeaders()['user-agent'],

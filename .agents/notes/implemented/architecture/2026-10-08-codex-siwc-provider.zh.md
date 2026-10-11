@@ -32,4 +32,4 @@ ID-token 验证将 `jose` 作为直接运行时依赖。代码审查范围是 `l
 
 原生 Provider 把同一组不依赖 Cordis 的 flow 注册到可选的原生 `authorization` 服务，flow 的凭据写入携带本次尝试的 signal。token、refresh、JWKS 与目录请求各有 30 秒期限，浏览器回调最多等待 10 分钟；JWKS 通过该 signal 拉取，而不是经由 `createRemoteJWKSet`。`llm-pi-ai` 的凭据记录一经提交，适配器就丢弃缓存的 provider collection，下一次列表会用新的 grant 加载账户目录。
 
-`prepareCall()` 只会为 SIWC `openai-codex` 路由公开 `nativeResponses`，Engine Consumer 尚未接线。其传输报告 `outputTokenLimit: 'unsupported'`，并因没有基于附件的投影而拒绝图片输入。提供方会保留 Core 传输类型的包内副本，直到 Core 发布对应导入。
+`prepareCall()` 只会为 SIWC `openai-codex` 路由公开 `nativeResponses`，Engine Consumer 尚未接线。其 `projectRequest()` 会在深拷贝上应用与 `stream()` 相同的 SIWC 规范化，将 system 输入映射为 developer，并将工具及重放的 function/custom-tool 调用放入 `harness` 命名空间；`forward()` 会原样发送投影后的 JSON。该传输报告 `outputTokenLimit: 'unsupported'`，并因没有基于附件的投影而拒绝图片输入。提供方会保留 Core 传输类型的包内副本，直到 Core 发布对应导入。
