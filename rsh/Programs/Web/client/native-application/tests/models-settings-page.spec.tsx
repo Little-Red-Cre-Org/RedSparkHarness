@@ -103,7 +103,7 @@ it('sends endpoint discovery through modelsDiscover without storing the entered 
       provider: 'openai', displayName: 'OpenAI', settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'openai'],
     }]),
     settingsDescribe: vi.fn(async () => ({
-      namespaces: [openAiSettings], limits: { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 },
+      hasDocument: false, namespaces: [openAiSettings], limits: { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 },
     })),
     credentialsDescribe: vi.fn(async () => ({ OPENAI_API_KEY: { configured: true, writable: true } })),
   })

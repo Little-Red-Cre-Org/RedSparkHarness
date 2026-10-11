@@ -67,6 +67,7 @@ export const plugin: NativePlugin = {
       const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
       let closed = false
       const settings = new NativeSettings({
+        documentPath: filename,
         load: () => readDocument(filename, format),
         persist: async (update) => {
           await mkdir(dirname(filename), { recursive: true, mode: 0o700 })

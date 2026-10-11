@@ -34,7 +34,7 @@ kind: "package-reference"
 
 可选提示观察者通过选定 Connection 的 Fetch 响应跟随已接受的持久化事件及临时助手文本。维护中的 eventsource-parser 处理 SSE 分帧。事件解码复用共享 Session 解析器；缺少结算终止帧、帧格式错误或观察者失败都会取消确切准入，并等待 Host 排空后拒绝。调用方取消会解除跟随，仍等待持久化结算。没有 response 支持的自定义 RPC 载体在准入前拒绝带观察者的提示。
 
-同一 Consumer 通过选定的 `/api` 载体提供 `settingsDescribe`、带 revision 检查的 `settingsMutate`、`credentialsDescribe`、`credentialsSet` 与 `credentialsUnset`。`pluginInventoryList` 为插件页读取 Host 安装列表，`modelCatalog` 经 `session/model-controls` 返回 Host 模型目录（或 null）。`settingsDescribe` 返回已发布的 namespace descriptor 和所选 Host 提供的请求预算。Settings 页面依照 `maxCredentialRefsPerRead` 分批读取并聚合凭据结果；超过 `maxSettingsOperations` 的修改会在发送前拒绝，因为一次 revision 检查写入必须保持原子性。Host 将这些经过校验的限制默认为 64 个凭据引用和 512 个操作。凭据读取只返回是否存在、来源与可写性事实，凭据写入返回确认且不回显值。`NativeSessionRpcError` 保留 Host 错误码与冲突详情以便处理过期写入。
+同一 Consumer 通过选定的 `/api` 载体提供 `settingsDescribe`、带 revision 检查的 `settingsMutate`、`credentialsDescribe`、`credentialsSet` 与 `credentialsUnset`。当 `settingsDescribe` 报告 `hasDocument` 时，`settingsOpenDocument` 会打开 Host 的本地设置文档。`pluginInventoryList` 为插件页读取 Host 安装列表，`modelCatalog` 经 `session/model-controls` 返回 Host 模型目录（或 null）。`settingsDescribe` 返回已发布的 namespace descriptor 和所选 Host 提供的请求预算。Settings 页面依照 `maxCredentialRefsPerRead` 分批读取并聚合凭据结果；超过 `maxSettingsOperations` 的修改会在发送前拒绝，因为一次 revision 检查写入必须保持原子性。Host 将这些经过校验的限制默认为 64 个凭据引用和 512 个操作。凭据读取只返回是否存在、来源与可写性事实，凭据写入返回确认且不回显值。`NativeSessionRpcError` 保留 Host 错误码与冲突详情以便处理过期写入。
 
 `modelsListProviders`、`modelsListConfigurableProviders` 与 `modelsDiscover` 会读取 Host 的活动路由、可配置 Provider 诊断及草稿发现结果。`NativeModelDiscoveryRequest.apiKey` 只随单次发现请求发送；Host 失败会以 `NativeSessionRpcError` 拒绝。`settingsEvents(signal)` 流式接收不含值的 `settings/document-updated`、`credentials/reference-updated` 、`llm/adapters-updated` 与 `accounts/changed` 通知；取消信号会正常结束迭代。
 
@@ -45,6 +45,8 @@ kind: "package-reference"
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {
+  /** Whether the Host has a local settings document `settingsOpenDocument` can open. */
+  readonly hasDocument: boolean
   /** Registered, redacted Settings namespaces. */
   readonly namespaces: readonly NativeSettingsDescriptor[]
   /** Per-request limits enforced by the selected Host. */

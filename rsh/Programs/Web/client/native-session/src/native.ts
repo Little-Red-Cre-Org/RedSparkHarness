@@ -85,6 +85,8 @@ export interface NativePluginInventory {
 
 /** Settings views and the Host-validated request budgets used by the Client. */
 export interface NativeSettingsDescription {
+  /** Whether the Host has a local settings document `settingsOpenDocument` can open. */
+  readonly hasDocument: boolean
   /** Registered, redacted Settings namespaces. */
   readonly namespaces: readonly NativeSettingsDescriptor[]
   /** Per-request limits enforced by the selected Host. */
@@ -251,6 +253,12 @@ export interface NativeSessionClient {
    * @returns the Host catalog, or null when no model directory is installed.
    */
   modelCatalog(signal?: AbortSignal): Promise<NativeModelControls['catalog']>
+  /**
+   * Open the Host's local settings document in its text editor.
+   * @param signal - caller cancellation.
+   * @returns confirmation once the editor command was accepted.
+   */
+  settingsOpenDocument(signal?: AbortSignal): Promise<{ readonly opened: true }>
   /** Apply Settings path edits against the revision the page displayed.
    * @param namespace - registered Settings namespace.
    * @param ops - path-addressed user-layer edits.
@@ -495,12 +503,12 @@ function settingsDescriptor(value: unknown): NativeSettingsDescriptor {
 function settingsDescription(value: unknown): NativeSettingsDescription {
   const data = fields(value)
   const limits = fields(data.limits)
-  if (!Array.isArray(data.namespaces)
+  if (!Array.isArray(data.namespaces) || typeof data.hasDocument !== 'boolean'
     || typeof limits.maxCredentialRefsPerRead !== 'number' || !Number.isSafeInteger(limits.maxCredentialRefsPerRead) || limits.maxCredentialRefsPerRead < 1
     || typeof limits.maxSettingsOperations !== 'number' || !Number.isSafeInteger(limits.maxSettingsOperations) || limits.maxSettingsOperations < 1) {
     throw new TypeError('invalid native Settings description')
   }
-  return { namespaces: data.namespaces.map(settingsDescriptor), limits: {
+  return { hasDocument: data.hasDocument, namespaces: data.namespaces.map(settingsDescriptor), limits: {
     maxCredentialRefsPerRead: limits.maxCredentialRefsPerRead,
     maxSettingsOperations: limits.maxSettingsOperations,
   } }
@@ -614,6 +622,10 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
   if (endpoint === 'plugins/inventory') return pluginInventorySchema.parse(value)
+  if (endpoint === 'settings/open-document') {
+    if (fields(value).opened !== true) throw new TypeError('invalid native settings document open reply')
+    return { opened: true }
+  }
   if (endpoint === 'credentials/describe') {
     const data = fields(value)
     return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
@@ -856,6 +868,10 @@ export function createNativeSessionClient(
   }
   return {
     settingsDescribe: signal => call('settings/describe', {}, signal),
+    async settingsOpenDocument(signal) {
+      await call('settings/open-document', {}, signal)
+      return { opened: true }
+    },
     pluginInventoryList: signal => call('plugins/inventory', {}, signal),
     async modelCatalog(signal) {
       return (await call<NativeModelControls>('session/model-controls', {}, signal)).catalog
