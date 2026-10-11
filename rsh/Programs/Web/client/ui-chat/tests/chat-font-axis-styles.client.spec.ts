@@ -34,7 +34,7 @@ describe('chat flow font-size axis', () => {
       'font-size: var(--dsh-content-font-size-secondary, 13px)',
       'line-height: calc(24px + var(--dsh-content-font-delta, 0px))',
     ]))
-    const context = read('ContextInjectionRow.module.css')
+    const context = read('../../../../ui-primitives/src/chat/ChatContextMessage.module.css')
     for (const selector of ['.source', '.summary']) {
       expect(declarationsFrom(context, selector)).toEqual(expect.arrayContaining([
         'font-size: var(--dsh-content-font-size-secondary, 13px)',
@@ -82,7 +82,7 @@ describe('chat flow font-size axis', () => {
       .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
     expect(declarationsFrom(read('MessageItem.module.css'), '.compactionBody'))
       .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
-    expect(declarationsFrom(read('ContextInjectionRow.module.css'), '.body'))
+    expect(declarationsFrom(read('../../../../ui-primitives/src/chat/ChatContextMessage.module.css'), '.body'))
       .toEqual(expect.arrayContaining([`margin: 4px 0 0 ${indent}`]))
   })
 

@@ -1,5 +1,5 @@
 ---
-description: "Shared Cordis-free React components for the dsh web client: controls, workspace rows, directory browsing, icons, Markdown, and agent-output cards."
+description: "Shared Cordis-free React components for the dsh web client: controls, workspace rows, directory browsing, chat transcript and composer presentation, icons, Markdown, and agent-output cards."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build web-client controls, browse Workspaces and Sessions, choose directories, and render agent output with shared React UI. It includes standard controls, shared sidebar rows, a callback-driven directory browser, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels and data callbacks, and theme-facing colors use `--dsw-*` design tokens.
+Use `dsh-client-ui-primitives` to build web-client controls, sidebar rows, directory pickers, chat presentation, and agent output with shared React UI. It includes standard controls, a callback-driven directory browser, chat transcript and composer layouts, the mascot, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. Renderers drop raw HTML, restrict links, and parse ANSI escapes in untrusted model output. Nothing imports Cordis; callers supply localized labels and data callbacks, and colors use `--dsw-*` design tokens.
 
 ## Table of Contents
 
@@ -47,6 +47,9 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
+| `ChatTranscript`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatContextMessage`, `ChatTurnActivity` | Shared transcript rhythm, user bubble, assistant Markdown frame, collapsed context row, and running-turn label for legacy and Native chat views. |
+| `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
+| `ChatMascotHero` | Cordis-free mascot sprite, speech and animation presentation for welcome and floating chat placements. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |
 | `Modal` | Centered dialog over a page mask. |
 | `SettingsPanel` | Centered 1080×700 Settings dialog with localized navigation, close button, and page content. |
@@ -107,6 +110,7 @@ The package owns Cordis-free React components styled through `--dsw-*` tokens. F
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
 | [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
+| [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
 | [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | Embedded inner SVG markup for the 48 detailed code-file categories |
 | [`src/code-file-icon-artwork.manifest.json`](src/code-file-icon-artwork.manifest.json) | Design-export digests, included categories, and intentionally excluded artwork |

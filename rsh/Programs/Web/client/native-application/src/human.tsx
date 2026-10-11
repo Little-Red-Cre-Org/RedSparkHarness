@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { NativeWebHumanPrompt } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeConversationController } from './controller.ts'
 import type { ConversationLocaleKey } from './locales.ts'
+import css from './human.module.css'
 
 /** Render one exact pending approval or question batch.
  * @param props - observed presentation, answer callback, submission state and locale.
@@ -16,12 +17,12 @@ export function HumanInteraction({ answerHuman, prompt, disabled, t }: {
 }) {
   const [choices, setChoices] = useState<Record<string, readonly string[]>>({})
   const [custom, setCustom] = useState<Record<string, string>>({})
-  if (prompt.kind === 'approval') return <section aria-label={t('approval')}>
+  if (prompt.kind === 'approval') return <section className={css.card} aria-label={t('approval')}>
     <h2>{t('approval')}</h2><p>{prompt.toolName}</p>{prompt.reason === undefined ? null : <p>{prompt.reason}</p>}
-    <button disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-once' }) }}>{t('allow')}</button>
-    <button disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'rejected' }) }}>{t('deny')}</button>
+    <button className={css.button} disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-once' }) }}>{t('allow')}</button>
+    <button className={css.button} disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'rejected' }) }}>{t('deny')}</button>
   </section>
-  return <form aria-label={t('questions')} onSubmit={(event) => {
+  return <form className={css.card} aria-label={t('questions')} onSubmit={(event) => {
     event.preventDefault()
     if (disabled) return
     void answerHuman(prompt, { kind: 'questions', answer: { answers: prompt.questions.map(question => ({
@@ -30,11 +31,11 @@ export function HumanInteraction({ answerHuman, prompt, disabled, t }: {
     })) } })
   }}>
     <h2>{t('questions')}</h2>
-    {prompt.questions.map(question => <fieldset key={question.id} disabled={disabled}>
+    {prompt.questions.map(question => <fieldset className={css.fieldset} key={question.id} disabled={disabled}>
       <legend>{question.header ?? question.question}</legend>
       {question.header === undefined ? null : <p>{question.question}</p>}
-      {question.detail === undefined ? null : <pre style={{ whiteSpace: 'pre-wrap' }}>{question.detail}</pre>}
-      {(question.options ?? []).map(option => <label key={option.label} style={{ display: 'block' }}>
+      {question.detail === undefined ? null : <pre className={css.detail}>{question.detail}</pre>}
+      {(question.options ?? []).map(option => <label className={css.option} key={option.label}>
         <input type={question.multiSelect ? 'checkbox' : 'radio'} name={question.id}
           checked={(choices[question.id] ?? []).includes(option.label)} onChange={(event) => {
             setChoices({ ...choices, [question.id]: question.multiSelect
@@ -45,11 +46,11 @@ export function HumanInteraction({ answerHuman, prompt, disabled, t }: {
             if (!question.multiSelect) setCustom({ ...custom, [question.id]: '' })
           }} />{option.label}{option.description === undefined ? null : <span> — {option.description}</span>}
       </label>)}
-      <label>{t('other')}<textarea aria-label={t('other')} value={custom[question.id] ?? ''} onChange={(event) => {
+      <label className={css.other}>{t('other')}<textarea aria-label={t('other')} value={custom[question.id] ?? ''} onChange={(event) => {
         setCustom({ ...custom, [question.id]: event.target.value })
         if (!question.multiSelect) setChoices({ ...choices, [question.id]: [] })
       }} /></label>
     </fieldset>)}
-    <button type="submit" disabled={disabled}>{t('answer')}</button>
+    <button className={css.button} type="submit" disabled={disabled}>{t('answer')}</button>
   </form>
 }
