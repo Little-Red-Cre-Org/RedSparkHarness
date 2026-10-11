@@ -534,6 +534,7 @@ it('refresh mid-login then resume and finish', async () => {
     expect(await screen.findByText(en.authorizationAuthorized)).toBeTruthy()
     await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
     await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
+    expect(screen.queryByRole('link', { name: 'https://auth.example/device' })).toBeNull()
     expect(answer).toBe('secret-answer')
     expect(cancel).not.toHaveBeenCalled()
   } finally { await authorization.dispose() }

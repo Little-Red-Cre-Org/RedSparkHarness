@@ -54,6 +54,9 @@
       "path": "../ui-tool"
     },
     {
+      "path": "../ui-attachment"
+    },
+    {
       "path": "../ui-primitives"
     }
   ]
