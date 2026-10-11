@@ -391,6 +391,7 @@ export function SearchResultItem<Id extends string>({ result, currentId, onOpen,
  * @param props.onRefresh - regenerate a Session title.
  * @param props.onFork - fork a session at its last completed turn.
  * @param props.onArchive - archive a session by id.
+ * @param props.allowRemove - whether to show the separate legacy remove confirmation.
  * @param props.onReveal - scroll this row into view after search navigation, then acknowledge it.
  * @param props.drag - optional draggable-row wiring.
  * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
@@ -398,7 +399,8 @@ export function SearchResultItem<Id extends string>({ result, currentId, onOpen,
  * @returns the session row.
  */
 export function SessionNodeItem<Id extends string>({
-  node, currentId, now, onOpen, onRename, onRefresh, refreshTitleLabel, onFork, onArchive, onReveal, drag, flat = false, t,
+  node, currentId, now, onOpen, onRename, onRefresh, refreshTitleLabel, onFork, onArchive, onReveal, drag,
+  flat = false, allowRemove = true, t,
 }: {
   node: SessionRowNode<Id>
   currentId: Id | undefined
@@ -420,6 +422,8 @@ export function SessionNodeItem<Id extends string>({
   drag?: RowDragProps | undefined
   /** The row is rendered without a parent Workspace header. */
   flat?: boolean | undefined
+  /** Whether the archive callback also supports the legacy confirmation action. */
+  allowRemove?: boolean | undefined
   t: RowTranslate
 }) {
   const row = node
@@ -449,7 +453,7 @@ export function SessionNodeItem<Id extends string>({
     ...(onFork === undefined ? [] : [{ id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> }]),
     ...(onArchive === undefined ? [] : [
       { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
-      { id: 'remove', label: t('menu.removeSession'), icon: <IconTrashOutline16 />, danger: true },
+      ...(allowRemove ? [{ id: 'remove', label: t('menu.removeSession'), icon: <IconTrashOutline16 />, danger: true }] : []),
     ]),
   ]
   // Figma session cell: pad 8, status slot 16, then a 4px title gap.
@@ -523,7 +527,7 @@ export function SessionNodeItem<Id extends string>({
                   setRemoveError(error instanceof Error ? error.message : String(error)); setRemoveOpen(true)
                 })
               }
-              if (id === 'remove' && onArchive !== undefined) { setRemoveError(null); setRemoveOpen(true) }
+              if (id === 'remove' && allowRemove && onArchive !== undefined) { setRemoveError(null); setRemoveOpen(true) }
             }}
             portal
             closeOnPointerLeave
@@ -551,7 +555,7 @@ export function SessionNodeItem<Id extends string>({
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}
     />
-    <Modal open={removeOpen} title={t('menu.removeSession')} closeLabel={t('close')}
+    <Modal open={removeOpen && allowRemove} title={t('menu.removeSession')} closeLabel={t('close')}
       onClose={() => { if (!removing) setRemoveOpen(false) }}
       description={t('delete.sessionNote', { name: title })}
       footer={<>
