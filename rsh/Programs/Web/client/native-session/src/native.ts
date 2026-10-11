@@ -68,6 +68,21 @@ export interface NativeSettingsDescriptor {
   readonly revision: number
 }
 
+/** One Host installation and its lifecycle state; configuration and failure messages stay on the Host. */
+export interface NativePluginInventoryEntry {
+  readonly id: string
+  readonly name: string
+  readonly scope: string
+  readonly state: 'planned' | 'activating' | 'ready' | 'draining' | 'failed' | 'disposed'
+  /** Which lifecycle step failed, when the installation failed. */
+  readonly failure?: 'activation' | 'cleanup'
+}
+
+/** Installations of the running Host in dependency order. */
+export interface NativePluginInventory {
+  readonly entries: readonly NativePluginInventoryEntry[]
+}
+
 /** Settings views and the Host-validated request budgets used by the Client. */
 export interface NativeSettingsDescription {
   /** Registered, redacted Settings namespaces. */
@@ -223,6 +238,18 @@ export interface NativeSessionClient {
    * @returns the registered views and validated limits for bounded reads and atomic writes.
    */
   settingsDescribe(signal?: AbortSignal): Promise<NativeSettingsDescription>
+  /**
+   * Read the running Host's plugin installations for the Plugins page.
+   * @param signal - caller cancellation.
+   * @returns installation names, scopes and lifecycle states.
+   */
+  pluginInventoryList(signal?: AbortSignal): Promise<NativePluginInventory>
+  /**
+   * Read every routable model for model pickers outside a Session.
+   * @param signal - caller cancellation.
+   * @returns the Host catalog, or null when no model directory is installed.
+   */
+  modelCatalog(signal?: AbortSignal): Promise<NativeModelControls['catalog']>
   /** Apply Settings path edits against the revision the page displayed.
    * @param namespace - registered Settings namespace.
    * @param ops - path-addressed user-layer edits.
@@ -561,6 +588,12 @@ function header(value: unknown): SessionHeader {
   return data as unknown as SessionHeader
 }
 
+const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
+  id: z.string(), name: z.string(), scope: z.string(),
+  state: z.enum(['planned', 'activating', 'ready', 'draining', 'failed', 'disposed']),
+  failure: z.enum(['activation', 'cleanup']).optional(),
+})) }) as unknown as z.ZodType<NativePluginInventory>
+
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
@@ -578,6 +611,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return settingsDescription(value)
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
+  if (endpoint === 'plugins/inventory') return pluginInventorySchema.parse(value)
   if (endpoint === 'credentials/describe') {
     const data = fields(value)
     return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
@@ -820,6 +854,10 @@ export function createNativeSessionClient(
   }
   return {
     settingsDescribe: signal => call('settings/describe', {}, signal),
+    pluginInventoryList: signal => call('plugins/inventory', {}, signal),
+    async modelCatalog(signal) {
+      return (await call<NativeModelControls>('session/model-controls', {}, signal)).catalog
+    },
     settingsMutate: (namespace, ops, expectedRevision, signal) =>
       call('settings/mutate', { ns: namespace, ops, expectedRevision }, signal),
     modelsListProviders: signal => call('models/providers', {}, signal),

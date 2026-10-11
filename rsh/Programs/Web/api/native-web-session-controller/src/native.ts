@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
 import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
@@ -120,7 +120,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate',
-  'models/providers', 'models/configurable-providers', 'models/discover',
+  'models/providers', 'models/configurable-providers', 'models/discover', 'plugins/inventory',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
 const modelSelectionInput = z.strictObject({
@@ -702,10 +702,22 @@ export class NativeWebSessionService {
 }
 
 /** Native Host Session installer; the Web Host remains the selected application. */
+function pluginInventory(inventory: NativePluginInventory | undefined, payload: unknown): ConnectionRpcResult<unknown> {
+  try {
+    if (Object.keys(object(payload)).length !== 0) throw new TypeError('plugins/inventory takes no fields')
+    const entries = (inventory?.list() ?? []).map(({ id, name, scope, state, failure }) => ({
+      id, name, scope, state, ...failure === undefined ? {} : { failure },
+    }))
+    return { ok: true, value: { entries } }
+  } catch {
+    return { ok: false, error: { code: 'native/plugin-inventory', message: 'Plugin inventory request failed.', details: {} } }
+  }
+}
+
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -738,7 +750,9 @@ export const plugin: NativePlugin = {
         (endpoint, payload, signal) => endpoint.startsWith('authorization/')
           ? authorization.handle(endpoint, payload)
           : endpoint.startsWith('accounts/') ? accounts.handle(endpoint, payload, signal)
-            : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal) : service.handle(endpoint, payload, signal)))
+            : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal)
+              : endpoint === 'plugins/inventory' ? Promise.resolve(pluginInventory(context.optional('pluginInventory'), payload))
+                : service.handle(endpoint, payload, signal)))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
