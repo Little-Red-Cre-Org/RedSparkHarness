@@ -417,15 +417,29 @@
 .workspaceBrowser {
   flex: 1;
   min-height: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   padding-right: var(--dsh-sidebar-inline-padding);
+}
+
+.workspaceBrowser::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: var(--dsh-sidebar-inline-padding);
+  bottom: 0;
+  height: 24px;
+  background: linear-gradient(to bottom, transparent, var(--dsw-specific-sidebar-fill));
+  pointer-events: none;
 }
 
 .workspaceList {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 16px;
   scrollbar-gutter: stable;
 }
 
@@ -444,8 +458,13 @@
   border: none;
   border-radius: 50%;
   corner-shape: round;
+  cursor: pointer;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
+}
+
+.workspaceHeaderButton:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .workspaceHeaderButton:disabled {
