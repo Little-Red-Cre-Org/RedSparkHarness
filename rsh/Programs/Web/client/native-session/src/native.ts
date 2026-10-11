@@ -109,6 +109,27 @@ export interface NativeSettingsDescription {
   }
 }
 
+/** File-backed and profile-installed preset choices advertised by the Host. */
+export interface NativeAgentPresetList {
+  /** Fresh-session default, or null when no preset Registry is installed. */
+  readonly default: string | null
+  /** Ready standing choices and file folders that need attention or installation. */
+  readonly presets: readonly {
+    /** Preset id. */
+    readonly id: string
+    /** Display name. */
+    readonly name: string
+    /** Optional display description. */
+    readonly description?: string
+    /** Folder trust, or `profile` for a profile-only composition. */
+    readonly source: 'profile' | 'system' | 'user'
+    /** Native folder or standing composition status. */
+    readonly status: 'ready' | 'needs-migration' | 'invalid'
+    /** Short reason when a folder cannot be installed. */
+    readonly problem?: string
+  }[]
+}
+
 /** One path-addressed Settings edit. */
 export type NativeSettingsPathOp =
   /** Set one JSON value at the path. */
@@ -235,6 +256,11 @@ export type NativeAccountBalance =
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** List native preset folders and installed standing compositions.
+   * @param signal - caller cancellation.
+   * @returns current preset catalog; empty with a null default when no Registry is installed.
+   */
+  agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
@@ -557,6 +583,14 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('unsupported') }),
 ])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
+const nativeAgentPresetListSchema = z.strictObject({
+  default: z.string().nullable(),
+  presets: z.array(z.strictObject({
+    id: z.string().min(1), name: z.string(), description: z.string().optional(),
+    source: z.enum(['profile', 'system', 'user']),
+    status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
+  })),
+})
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
   declared: z.boolean().optional(), error: z.string().optional(),
@@ -604,6 +638,7 @@ const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
 })) }) as unknown as z.ZodType<NativePluginInventory>
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
     return value.map(item => llmProviderSchema.parse(item))
@@ -866,6 +901,7 @@ export function createNativeSessionClient(
     }
   }
   return {
+    agentPresetsList: signal => call('agent-presets/list', {}, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
     async settingsOpenDocument(signal) {
       await call('settings/open-document', {}, signal)

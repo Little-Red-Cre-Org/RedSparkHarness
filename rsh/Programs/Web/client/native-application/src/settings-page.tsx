@@ -10,6 +10,7 @@ import { ModelsSettingsStyles } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConversationLocaleKey } from './locales.ts'
 import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
+import { AgentPresetsSection } from './agent-presets-section.tsx'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
@@ -20,7 +21,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
   | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
-  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents'>
+  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'agentPresetsList'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -288,8 +289,8 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
       {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
       {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
     </div> : null)}
-    {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
-      : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
+    {settled?.type !== 'settled' || settled.settlement === 'authorized' ? null : <p role="status">{t(settled.settlement === 'cancelled'
+      ? 'authorizationCancelled' : 'authorizationFailed')}
     {settled.settlement === 'failed' && settled.message !== undefined ? <> {settled.message}</> : null}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
@@ -528,6 +529,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
       {subscriptionContent}
     </ModelsSettingsPage>
   </div>
+  if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
   if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   return <div>
     <h2>{t('settingsGeneral')}</h2>

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMPOSITION_FILE, discoverPresets, scanRoot } from '@deepseek-ai/dsh-agent-presets'
+import { NATIVE_COMPOSITION_FILE, scanNativePresetFolders } from '../src/native-storage.ts'
 
 const fsHarness = vi.hoisted(() => ({
   nextReadError: undefined as NodeJS.ErrnoException | undefined,
@@ -164,6 +165,31 @@ describe('preset discovery', () => {
     const found = await scanRoot({ path: '~/.dsh-agent-presets-absent', trust: 'user' }, HARNESS)
 
     expect(found).toEqual([])
+  })
+})
+
+describe('native preset discovery', () => {
+  it('scans ready, legacy-only and invalid native preset folders synchronously', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-native-presets-'))
+    roots.push(root)
+    for (const id of ['ready', 'legacy-only', 'bad-json']) await mkdir(join(root, id))
+    await writeFile(join(root, 'ready', 'preset.yml'), 'name: Ready preset\norder: 1\n')
+    await writeFile(join(root, 'ready', NATIVE_COMPOSITION_FILE), JSON.stringify({
+      formatVersion: 1,
+      installations: [{ id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', config: {} }],
+    }))
+    await writeFile(join(root, 'legacy-only', COMPOSITION_FILE), '[]\n')
+    await writeFile(join(root, 'bad-json', NATIVE_COMPOSITION_FILE), '{bad json with private content')
+
+    const found = scanNativePresetFolders([{ path: root, trust: 'user' }])
+
+    expect(found.map(folder => folder.id)).toEqual(['ready', 'bad-json', 'legacy-only'])
+    expect(found[0]).toMatchObject({ id: 'ready', name: 'Ready preset', trust: 'user', status: 'ready',
+      installations: [{ id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', config: {} }] })
+    expect(found.find(folder => folder.id === 'legacy-only')?.status).toBe('needs-migration')
+    expect(found.find(folder => folder.id === 'bad-json')).toMatchObject({ status: 'invalid',
+      problem: 'agent.native.json is not valid JSON' })
+    expect(JSON.stringify(found)).not.toContain('private content')
   })
 })
 
