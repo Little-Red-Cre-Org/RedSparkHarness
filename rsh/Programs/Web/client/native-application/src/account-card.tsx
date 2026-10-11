@@ -18,13 +18,6 @@ function windowLength(seconds: number | null, t: Translate): string | undefined 
   return `${Math.ceil(seconds / 86400)}${t('days')}`
 }
 
-/** Display a Platform decimal string; exponent forms such as `0E-16` become plain amounts. */
-export function formatBalance(value: string): string {
-  if (!/e/i.test(value)) return value
-  const amount = Number(value)
-  return Number.isFinite(amount) ? amount.toFixed(2) : value
-}
-
 function resetTime(seconds: number): string {
   return new Intl.DateTimeFormat(undefined, { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     .format(new Date(seconds * 1000))
@@ -164,13 +157,13 @@ export function AccountCard({ account, actions, authorization, refreshClick, onR
             {currentBalance.wallets.length > 0 ? <div className={css.balanceRow}>
               <span>{t('balance')}</span>
               <span className={css.balanceAmounts}>{currentBalance.wallets.map(wallet => <span key={wallet.currency}>
-                {wallet.currency === 'CNY' ? '¥' : '$'}{formatBalance(wallet.balance)}
+                {wallet.currency === 'CNY' ? '¥' : '$'}{wallet.balance}
               </span>)}</span>
             </div> : null}
             {currentBalance.bonusWallets.length > 0 ? <div className={css.balanceRow}>
               <span>{t('bonusBalance')}</span>
               <span className={css.balanceAmounts}>{currentBalance.bonusWallets.map(wallet => <span key={wallet.currency}>
-                {wallet.currency === 'CNY' ? '¥' : '$'}{formatBalance(wallet.balance)}
+                {wallet.currency === 'CNY' ? '¥' : '$'}{wallet.balance}
               </span>)}</span>
             </div> : null}
           </div> : null}
