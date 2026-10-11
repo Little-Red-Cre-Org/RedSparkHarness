@@ -25,7 +25,7 @@ kind: "package-reference"
 
 存在文件策略时必须使用执行沙箱约束的代码运行时，除非当前 Session 解析出的模式为 `danger-full-access`。`process-sandbox` 运行时要求显式策略，并在执行前从同一个 Session 解析有效工作区；Session 没有匹配工作区时会在进入 Provider 前拒绝。当前 Session 受限时会拒绝其他运行时。本模块不会替换 Provider 或扩大其资源限制与执行隔离策略。
 
-此工具注册为值贡献。注册表先校验传输结果，再呈现其文本，并为程序消费者保留独立的标准结果；格式错误的运行时结果以 INVALID_TOOL_OUTPUT 拒绝。每次运行前，Consumer 查询 Agent 可见的标准工具 schema，将其函数安装到 `tools`，排除 `run_code`。每个 binding 使用原生有序调度，返回工具标准值。工具失败在程序中以带有 `toolName` 的 `ToolCallError` 拒绝。可见的仅呈现贡献会在进入运行时前使 SDK 查询失败。Consumer 在每种 Provider 结果后关闭并排空调度，包括异常；Session 写入失败会使外层调用拒绝。
+此工具注册为值贡献。注册表先校验传输结果，再呈现其文本，并为程序消费者保留独立的标准结果；格式错误的运行时结果以 INVALID_TOOL_OUTPUT 拒绝。普通运行在进入运行时前查询 Agent 可见的标准工具 schema，并将其函数安装到 `tools`，排除 `run_code`；外部操作的声明和 binding 都使用其精确捕获的程序 schema 快照。每个 binding 使用原生有序调度，返回工具标准值。工具失败在程序中以带有 `toolName` 的 `ToolCallError` 拒绝。可见的仅呈现贡献会在进入运行时前使 SDK 查询失败。Consumer 在每种 Provider 结果后关闭并排空调度，包括异常；Session 写入失败会使外层调用拒绝。
 
 组合会在外层工具结果后转发成功嵌套调用的图片呈现及显式有来源上下文。这些输入不进入标准程序值。Provider 报告的程序错误保留已积累上下文，但抑制终结标记；成功的外层结果在调度排空后转发嵌套终结意图。
 

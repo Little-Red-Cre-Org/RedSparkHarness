@@ -27,7 +27,7 @@ The root export and descriptor and assistant-output leaves require no runtime in
 <a id="ownership"></a>
 ## Ownership
 
-Descriptors record child mode, selected provider and label. The output fold consumes accepted Session events and retains actual final or partial assistant content. It creates no Session, writer or execution.
+Descriptors record child mode, selected provider and label. Writers emit V4; readers accept the explicit V3 and V4 schemas and reject unknown versions or fields. V4 continuable descriptors can preserve a Native logical-parent context with its route, workspace, recursion and resource ceilings, and direct, builtin and program grants. The output fold consumes accepted Session events and retains actual final or partial assistant content. It creates no Session, writer or execution.
 
 Providers extend `SubagentStopReasonMap` through declaration merging on this package root, and `SubagentStopReason` derives from that map. The Cordis-backed `dsh-subagent` Service Definition re-exports both types.
 

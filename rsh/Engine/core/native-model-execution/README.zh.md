@@ -40,6 +40,8 @@ kind: "package-reference"
 
 `./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
 
+`captureResponsesOperation(step, route, maxTokens, signal, reasoningEffort)` 从确切的预备步骤捕获一条 transport 和嵌套代际能力。路由匹配时复用该步骤；路由变化时用 child controls 为所选模型只预备一次。返回的能力始终绑定该代际，并为每个嵌套操作捕获独立 transport。
+
 ## 模型体验
 
 ### 助手流
@@ -60,4 +62,5 @@ kind: "package-reference"
 ## 已知限制和后续工作
 
 - 调用方仍拥有 turn 与 step 的顺序。原生 SDK 与 Web Consumer 尚待迁移。
+- 预备的 adapter call 可以携带来自同一 Provider 代际的 `nativeResponses`。`captureResponses()` 要求路由与预备 handle 匹配；`captureResponsesOperation()` 会先为变化的路由只预备一次，再从该路由的确切 handle 捕获。缺少能力，或所选代际无法执行父级 `maxTokens` 上限时，capture 会拒绝。已交付的 adapter Provider 尚未提供此能力，因此可信 Provider 传输实现完成前，Native external Responses 请求会在 child 启动前失败。
 - 仓库过渡期间，本包 manifest 及 Session、LLM 依赖仍保留 Cordis。

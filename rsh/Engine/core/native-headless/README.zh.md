@@ -41,21 +41,27 @@ kind: "package-reference"
 
 writer 刷新后会通知已接纳事件观察者；若某个观察者抛出异常，系统会报告异常，但不会使持久化失败，也不会阻止后续观察者接收事件。
 
-已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。每个工具结果记录后（包括固定工具与失败结果），应用会向注册表的结算策略请求上下文，并把它们追加在工具自身的消息之前。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。
+已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。每个工具结果记录后（包括固定工具与失败结果），应用会向注册表的结算策略请求上下文，并把它们追加在工具自身的消息之前。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。PTC 子调用开始后，即使取消已开始，Headless 仍会持久化其 `tool/ptc-dispatch` 结算；PTC 启动、新工作及其他事件写入仍要求 signal 处于活动状态。
 
 已校验的 `builtinTools` 布尔值默认为 `true`。设为 `false` 会移除固定文件 schema 和内置 `{program}` 代码工具，并且仅调度注册表贡献。可选 PTC profile 显式选择该值，使注册表拥有的 `run_code` 成为唯一传输工具。Prompt 段在呈现文本进入持久化 system message 前接收精确的请求 Agent scope。
+
+委派子级分别保留直接调用、内置工具和程序工具名称授权。Headless 仅在某个内置工具名称仍属于子级内置授权且子级解析后的 `builtinTools` 已启用时，才公开并派发它；仅属于注册表的同名贡献仍走注册表路径。捕获的外部工具使用分离的 schema 与程序快照。broker 持久接受工具结果及 settlement 后，Headless 通过捕获的附件 Provider 读取结果引用的图片字节；dispose 会等待已接纳的工具主体和图片读取完成。
+
+只读模式下，普通模型请求仍可使用符合条件的注册表工具，并受注册表及其执行策略约束。委派的直接工具名称仍仅限 `read_file`，程序绑定继续使用独立授权。
 
 一次性执行清理会在活动 owner 观察者拒绝后仍尝试关闭 writer，同时保留执行与清理失败。Agent 接纳在发布生命周期通知前拥有借用的 preset lease，通知失败或取消会释放 lease。驻留子级将选定 preset 持久化到创建 header，并在模块准备前校验恢复事实。
 
 `sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。模型和指令准备等异步操作完成后，Program 执行 admission 提交检查，随后同步移除确切的已选 inbox 输入并追加 step 与模型可见输入事件；仅取消失效输入，其他待处理消息仍留在队列中。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
 
-Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，穿过普通 Session 父节点，并在检查 subagent 末端前核验每条直接父子关系及 subagent 委派深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
+Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，保留每条物理父子关系，并要求遍历中的委派深度递增。每次检查都会返回直接物理父节点的深度；subagent consumer 在打开或发送给子任务前核验持久化的逻辑深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 
 `rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork 及可选可恢复删除。确切活动 root owner 还提供由 Program 绑定的 turn 中断操作，详见[Session 执行所有权](../native-session-execution/README.zh.md#execution-ownership)。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
 
 显式传给 `createNativeHeadlessApplication` 的 authority 可为 root 路由提供实时 `defaultModelSelection` 回调。选择了 `modelSelection` 后，持久化的 `model/selection` 事件优先；否则最近的 Session request header 提供 Provider/模型路由，仅当历史中没有路由时才使用该回调。旧 header 的解析后请求参数不会变成显式 model-selection 控件；其他参数遵循当前请求与 prepared Provider 默认值。委派调用继续使用显式配置。详见[模型选择](../../llm/native-model-selection/README.zh.md)中的优先级。
+
+Headless 为 external Responses capture 绑定当前已准入的模型步骤。请求的 provider 和 model 相同则复用该已预备的 Provider 代际；路由变更则只使用选定的 provider、model、reasoning effort 和父级 `maxTokens` 上限预备一次。嵌套捕获会收到外层外部操作选定的确切代际，不会读取之后活动的模型步骤。
 
 根调用的 `prepareMessage` 优先于 `message`。准备过程在既有执行所有者内运行，位于有效下一模型选择之后、inbox 准入之前。它返回带身份的输入，不暴露 Session 写入者；拒绝或取消不会准入用户输入。
 

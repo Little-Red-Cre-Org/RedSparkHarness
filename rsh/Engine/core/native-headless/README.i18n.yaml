@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Engine/core/native-headless/README.md
-README.md: 081f55de55562a7af5aa23dfe8ad031045cfefe1
-README.zh.md: f0adfcd298bca63987cf83b175e93dfd4fd34b92
+README.md: d3c18660816f32f4f315000c9520ae61feb0ca9f
+README.zh.md: 63aa7ed2d8de8b4220e6d5ab94727c916361df00

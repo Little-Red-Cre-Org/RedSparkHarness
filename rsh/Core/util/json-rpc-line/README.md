@@ -35,6 +35,8 @@ transport.close()
 
 Wire error responses reject with `JsonRpcResponseError`, which retains the numeric code and optional data. See [`src/index.ts`](src/index.ts) for request cancellation, notification, flush, and handler behavior.
 
+An optional `onRequestResultWritten()` observer runs only after a successful incoming result-frame write callback. A synchronous or callback-reported write failure, or an observer throw, reaches the captured owner's error callback once; it must not throw. Closing or replacing the observer suppresses late callbacks. Request-handler failures keep their `-32603` error response.
+
 -----
 
 <a id="understand-the-implementation"></a>

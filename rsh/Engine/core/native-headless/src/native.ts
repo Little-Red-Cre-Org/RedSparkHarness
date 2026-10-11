@@ -9,7 +9,8 @@ import { foldNativeAgentPresetFacts, type NativeAgentPresetSelectionRequest, typ
 import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionExecutionOperations,
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
-  NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest } from '@deepseek-ai/dsh-native-session-execution'
+  NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest,
+  NativeResponsesPreparedGeneration } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import { NativeContinuationSession } from './continuation-session.ts'
@@ -23,6 +24,8 @@ import type { StreamChunk, MessageId, LlmCallConfig } from '@deepseek-ai/dsh-llm
 import { isAbsolute, resolve } from 'node:path'
 import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
+import type {} from '@deepseek-ai/dsh-attachment/native'
+import type { AttachmentOperations, ImageAttachmentRef, StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
 import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -30,8 +33,11 @@ import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-time-context/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import type { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
-import type { NativeToolApproval, NativeToolApprovalRequest, NativeToolExecution, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativeModelExecution, NativePreparedModelStep } from '@deepseek-ai/dsh-native-model-execution'
+import type { NativeResponsesRoute } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations, NativeToolApproval,
+  NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
+  NativeToolRegistry, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
@@ -84,7 +90,7 @@ export interface NativeTurnRequest {
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -270,6 +276,26 @@ function parseArgs(args: readonly string[]): { prompt: string; resume?: ReturnTy
   return { prompt: args.join(' ') }
 }
 
+function imageReferences(...contents: readonly (readonly ContentBlock[])[]): readonly ImageAttachmentRef[] {
+  const references = new Map<string, ImageAttachmentRef>()
+  const visit = (blocks: readonly ContentBlock[]): void => {
+    for (const block of blocks) {
+      switch (block.type) {
+        case 'image':
+          references.set(block.attachment.attachmentId, block.attachment)
+          break
+        case 'tool-result':
+          visit(block.content)
+          break
+        default:
+          break
+      }
+    }
+  }
+  for (const content of contents) visit(content)
+  return [...references.values()]
+}
+
 /** Failure used only to project a closed approval outcome into one tool result. */
 class NativeApprovalRejection extends Error {
   constructor(readonly outcome: Exclude<NativeApprovalOutcome, 'allowed-once'>, toolName: string) {
@@ -347,6 +373,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     workspaceRegistry?: WorkspaceRegistryRuntime,
     private readonly executionScope: NativeScope = context.scope,
     private readonly agentInstructions?: NativeAgentInstructions,
+    private readonly attachments?: AttachmentOperations,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -457,9 +484,14 @@ export class NativeHeadlessApplication implements NativeApplication {
       }, scope, parent),
       run: (request, owner, agent, initial, ready, signal) => {
         const { initialize, ...turnRequest } = request
+        const resolvedTurnConfig: ResolvedConfig = { ...config, ...request.config }
+        const turnConfig: ResolvedConfig = request.delegationContext === undefined ? resolvedTurnConfig : {
+          ...resolvedTurnConfig, allowedTools: request.delegationContext.toolNames,
+          builtinTools: resolvedTurnConfig.builtinTools && request.delegationContext.builtinToolNames.length > 0,
+        }
         return this.runTurn({ ...turnRequest, resume: !initial,
           ...initial && initialize !== undefined ? { initialize } : {}, onReady: () => { ready() } },
-        request.id, agent, signal, { ...config, ...request.config }, undefined, owner, 'delegated')
+        request.id, agent, signal, turnConfig, undefined, owner, 'delegated')
       },
       maintenance: (request, owner, agent, operation, signal) => {
         const live = this.activeOwners.get(owner)?.owner
@@ -468,8 +500,13 @@ export class NativeHeadlessApplication implements NativeApplication {
           const maintenanceSignal = AbortSignal.any([admitted, signal])
           maintenanceSignal.throwIfAborted()
           let result: { value: Awaited<ReturnType<typeof operation>> } | undefined
+          const resolvedTurnConfig: ResolvedConfig = { ...config, ...request.config }
+          const turnConfig: ResolvedConfig = request.delegationContext === undefined ? resolvedTurnConfig : {
+            ...resolvedTurnConfig, allowedTools: request.delegationContext.toolNames,
+            builtinTools: resolvedTurnConfig.builtinTools && request.delegationContext.builtinToolNames.length > 0,
+          }
           await this.runTurn({ ...request, resume: true }, request.id, agent, maintenanceSignal,
-            this.executionConfig(agent), undefined, owner, 'delegated', false, async (active, activeSignal) => {
+            turnConfig, undefined, owner, 'delegated', false, async (active, activeSignal) => {
               result = { value: await operation(active, activeSignal) }
             })
           if (result === undefined) throw new Error('native-headless: delegated maintenance did not run')
@@ -535,7 +572,7 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   /** Execute one turn after its native Agent lifecycle is visible. */
   private async runTurn(
-    request: NativeTurnRequest & Pick<NativeSessionDelegation, 'initialize' | 'onReady'>,
+    request: NativeTurnRequest & Pick<NativeSessionDelegation, 'initialize' | 'onReady' | 'delegationContext'>,
     id: ReturnType<typeof SessionId>,
     agent: NativeAgent,
     signal: AbortSignal,
@@ -581,6 +618,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let releaseObservation: (() => void) | undefined
     let seedResident = false
     let activeOwner: NativeProgramActiveSession | undefined
+    let activePreparedStep: NativePreparedModelStep | undefined
     let turnOwnership: { release?: () => void } | undefined
     let acceptedPreset: string | null = null
     let closersToAppend: SessionEvent[] = []
@@ -650,32 +688,33 @@ export class NativeHeadlessApplication implements NativeApplication {
         }
       }
       this.activeSessions.set(id, session)
-      const allowed = (name: string): boolean => config.allowedTools === undefined || config.allowedTools.includes(name)
-      const modelTools = this.tools?.modelSchemas(agent.scope).map(schema => schema.name).filter(allowed) ?? []
-      const builtinTools = config.builtinTools
-        ? ['read_file', 'write_file', ...(this.codeRuntime === undefined ? [] : ['run_code'])].filter(allowed)
+      const allowed = (name: string): boolean => (config.allowedTools === undefined || config.allowedTools.includes(name))
+        && (request.delegationContext === undefined || request.delegationContext.toolNames.includes(name))
+      const builtinSchemas = config.builtinTools
+        ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
+          .filter(schema => allowed(schema.name)
+            && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
         : []
+      const modelSchemas = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name))
+      const modelTools = modelSchemas.map(schema => schema.name)
+      const programToolNames = this.tools === undefined || this.tools.modelMode === 'native'
+        || !modelTools.includes('run_code') ? []
+        : this.tools.sdkSchemas(agent.scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name)
+          .filter(name => allowed(name)
+            && (request.delegationContext === undefined || request.delegationContext.programToolNames.includes(name)))
+      const builtinTools = builtinSchemas.map(schema => schema.name)
       const resolvedSandbox = this.sandboxPolicy?.resolve({ session })
       const toolNames = [...new Set([...builtinTools, ...modelTools])]
+      const delegationToolNames = resolvedSandbox?.mode === 'read-only'
+        ? toolNames.filter(name => name === 'read_file') : toolNames
       if (resolvedSandbox?.mode === 'read-only') {
-        const readOnlyTools = toolNames.filter(name => name === 'read_file')
-        toolNames.splice(0, toolNames.length, ...readOnlyTools)
+        const readOnlyModelTools = new Set(['read_file', ...modelTools])
+        toolNames.splice(0, toolNames.length, ...toolNames.filter(name => readOnlyModelTools.has(name)))
       }
+      const schemas = [...builtinSchemas, ...modelSchemas]
+        .filter(schema => toolNames.includes(schema.name)).map(schema => structuredClone(schema))
       const builtinToolNames = resolvedSandbox?.mode === 'read-only'
         ? builtinTools.filter(name => name === 'read_file') : [...builtinTools]
-      releaseExecution = this.sessionExecution?.register({ agent, session, config,
-        delegationAuthority: {
-          toolNames: Object.freeze(toolNames),
-          builtinToolNames: Object.freeze(builtinToolNames),
-          ...(resolvedSandbox === undefined ? {} : { sandboxPolicy: {
-            mode: resolvedSandbox.mode, workspaceRoot: resolvedSandbox.workspaceRoot,
-            sessionId: session.id,
-          } }),
-          approvalRequired: this.approval !== undefined,
-        },
-        continuations: this.continuationRuntime.forParent(agent, session),
-        delegate: (child, childSignal) => this.executeDelegatedTurn({ ...child, parent: session }, childSignal),
-      })
       const record = (event: SessionEvent): void => {
         this.timeContext?.record(session, event)
       }
@@ -715,12 +754,248 @@ export class NativeHeadlessApplication implements NativeApplication {
       const rootEpoch = this.rootEpochs.get(id)
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
       activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config, rootOrigin)
-      const schemas = [
-        ...(config.builtinTools ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
-          .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)) : []),
-        ...(this.tools?.modelSchemas(agent.scope) ?? [])
-          .filter(schema => config.allowedTools === undefined || config.allowedTools.includes(schema.name)),
-      ].map(schema => structuredClone(schema))
+      const requestApproval = async (requested: NativeToolApprovalRequest): Promise<NativeApprovalOutcome> => {
+        if (requested.agent !== agent || requested.session !== session) {
+          throw new Error('native-headless: approval invocation belongs to a different Agent or Session')
+        }
+        const service = this.approval
+        if (service === undefined) throw new Error('native-headless: no approval authority')
+        const approvalId = NativeApprovalRequestId(randomUUID())
+        const sessionPolicy = sessionApprovalPolicy(session)
+        track(session.append('native-approval/asked', {
+          id: approvalId, toolName: requested.toolName, callId: requested.callId,
+          ...requested.reason === undefined ? {} : { reason: requested.reason },
+        }))
+        await persist()
+        await writer.flush()
+        const approvalSignal = AbortSignal.any([signal, requested.signal])
+        const decision = invocation === 'delegated'
+          ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
+          : await service.request({
+            id: approvalId, agent, ...sessionPolicy === undefined ? {} : { sessionPolicy },
+            toolName: requested.toolName, callId: requested.callId,
+            ...requested.reason === undefined ? {} : { reason: requested.reason },
+            signal: approvalSignal,
+          })
+        track(session.append('native-approval/decided', decision))
+        await persist()
+        await writer.flush()
+        approvalSignal.throwIfAborted()
+        return decision.outcome
+      }
+      const approvalAuthority = this.approval === undefined ? undefined : {
+        request: requestApproval,
+        authorize: async (requested: NativeToolApprovalRequest): Promise<void> => {
+          const outcome = await requestApproval(requested)
+          if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, requested.toolName)
+        },
+      }
+      const captureExternalTools = async (
+        delegation: NativeToolDelegationContext, captureSignal: AbortSignal,
+        responsesGeneration?: NativeResponsesPreparedGeneration,
+      ): Promise<NativeExternalToolOperations> => {
+        captureSignal.throwIfAborted()
+        const parentTools = new Set(delegationToolNames)
+        const parentBuiltins = new Set(builtinToolNames)
+        const parentPrograms = new Set(programToolNames)
+        if (delegation.cwd !== session.header.cwd
+          || delegation.maxSteps > config.maxSteps
+          || config.maxTokens !== undefined && (delegation.maxTokens === undefined || delegation.maxTokens > config.maxTokens)
+          || request.delegationContext !== undefined && delegation.maxDepth > request.delegationContext.maxDepth
+          || delegation.toolNames.some(name => !parentTools.has(name))
+          || delegation.builtinToolNames.some(name => !parentBuiltins.has(name) || !delegation.toolNames.includes(name))
+          || delegation.programToolNames.some(name => !parentPrograms.has(name))) {
+          throw new Error('native-headless: external tools exceed the active Session authority')
+        }
+        const builtinCatalog = new Map([...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
+          .map(schema => [schema.name, schema] as const))
+        const builtinSchemas = delegation.builtinToolNames.map((name) => {
+          const schema = builtinCatalog.get(name)
+          if (schema === undefined) throw new Error(`native-headless: builtin tool ${name} is unavailable`)
+          return structuredClone(schema)
+        })
+        const registryNames = delegation.toolNames.filter(name => !delegation.builtinToolNames.includes(name))
+        const snapshots: NativeToolExecutionSnapshot[] = []
+        const pendingCalls = new Set<Promise<NativeExternalToolInvocation>>()
+        const pendingImageReads = new Set<Promise<readonly StoredImageAttachment[]>>()
+        const closing = new AbortController()
+        let modelSnapshot: NativeToolExecutionSnapshot | undefined
+        let programSnapshot: NativeToolExecutionSnapshot | undefined
+        let closed = false
+        let disposal: Promise<void> | undefined
+        const dispose = (): Promise<void> => {
+          if (disposal !== undefined) return disposal
+          closed = true
+          closing.abort(new Error('native-headless: external tool capture is closing'))
+          const calls = [...pendingCalls]
+          const imageReads = [...pendingImageReads]
+          const resources = snapshots.map(snapshot => Promise.resolve().then(() => snapshot.dispose()))
+          disposal = Promise.allSettled([...resources, ...calls, ...imageReads]).then((outcomes) => {
+            const failures = outcomes.slice(0, resources.length)
+              .flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason as unknown] : [])
+            if (failures.length === 1) throw failures[0]
+            if (failures.length > 1) throw new AggregateError(failures, 'native-headless: external tool snapshots failed to close')
+          })
+          return disposal
+        }
+        try {
+          if (registryNames.length > 0) {
+            if (this.tools === undefined) throw new Error('native-headless: external Registry tools are unavailable')
+            modelSnapshot = this.tools.captureModelSnapshot(registryNames, agent.scope)
+            snapshots.push(modelSnapshot)
+            if (modelSnapshot.schemas.length !== registryNames.length) {
+              throw new Error('native-headless: an external Registry tool is no longer registered')
+            }
+          }
+          if (delegation.programToolNames.length > 0) {
+            if (this.tools === undefined || this.tools.modelMode === 'native') {
+              throw new Error('native-headless: external program bindings are unavailable')
+            }
+            programSnapshot = this.tools.captureProgramSnapshot(delegation.programToolNames, agent.scope)
+            snapshots.push(programSnapshot)
+            if (programSnapshot.programSchemas?.length !== delegation.programToolNames.length) {
+              throw new Error('native-headless: an external program binding is no longer registered')
+            }
+          }
+          const programSchemas = programSnapshot?.programSchemas ?? []
+          const promptSections = await this.promptSections?.render(agent.scope, {
+            allowedTools: delegation.toolNames, programSchemas,
+          }) ?? ''
+          captureSignal.throwIfAborted()
+          const promptText = promptSections === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${promptSections}`
+          const capturedRoot = await this.fs.resolve(delegation.cwd, { signal: captureSignal })
+          if (!this.fs.contains(root, capturedRoot) || (await this.fs.stat(capturedRoot, captureSignal))?.type !== 'directory') {
+            throw new FsError('external tool workspace is outside the active Session', 'FS_SANDBOX_DENIED')
+          }
+          const allowedBuiltins = new Set(delegation.builtinToolNames)
+          return {
+            schemas: Object.freeze([...builtinSchemas, ...(modelSnapshot?.schemas ?? [])]),
+            programSchemas,
+            promptText,
+            execute: async (call: NativeExternalToolCall, toolSignal: AbortSignal) => {
+              if (closed) throw new Error('native-headless: external tool capture is closed')
+              const effectiveSignal = AbortSignal.any([captureSignal, toolSignal, closing.signal])
+              effectiveSignal.throwIfAborted()
+              const operation = (async (): Promise<NativeExternalToolInvocation> => {
+                let execution: NativeToolExecution | undefined
+                let result: NativeToolResult
+                const block: ToolCallBlock = { type: 'tool-call', id: call.callId, name: call.name, arguments: JSON.stringify(call.arguments) }
+                try {
+                  if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                    if (call.name === 'write_file' && this.approval !== undefined) {
+                      const outcome = await requestApproval({ agent, session, callId: call.callId, toolName: call.name,
+                        reason: 'Writing a file changes the selected workspace.', signal: effectiveSignal })
+                      if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                    }
+                    const text = await this.execute(block, capturedRoot, agent, session, effectiveSignal,
+                      delegation.cwd, config.workspaceWriteRoot)
+                    result = { content: [{ type: 'text', text }], isError: false }
+                  } else if (allowedBuiltins.has(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
+                    const outcome = await this.executeCode(block, session, effectiveSignal)
+                    result = { content: [{ type: 'text', text: outcome.text }], isError: outcome.error !== undefined,
+                      ...outcome.error === undefined ? {} : { error: outcome.error } }
+                  } else {
+                    if (modelSnapshot === undefined) throw new HarnessError(`unknown external tool ${call.name}`, 'TOOL_DENIED')
+                    execution = {
+                      agent, callId: call.callId, name: call.name, arguments: call.arguments, session,
+                      signal: effectiveSignal,
+                      ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
+                      delegationContext: delegation,
+                      ...responsesGeneration === undefined ? {} : { responsesGeneration },
+                      appendEvent: async (type, data, ...opts) => {
+                        // A started PTC dispatch still owes its durable terminal fact after parent cancellation.
+                        if (type !== 'tool/ptc-dispatch') effectiveSignal.throwIfAborted()
+                        const event = session.append(type, data, ...opts)
+                        track(event as SessionEvent)
+                        await persist()
+                        return event
+                      },
+                      ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
+                    }
+                    const prepared = await modelSnapshot.execute(execution)
+                    execution = prepared.call
+                    result = prepared.result
+                  }
+                } catch (error: unknown) {
+                  effectiveSignal.throwIfAborted()
+                  result = { content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+                    isError: true, error: { name: error instanceof Error ? error.name : 'Error', code: error instanceof FsError
+                      ? error.code : error instanceof NativeApprovalRejection ? `APPROVAL_${error.outcome.toUpperCase()}`
+                        : error instanceof HarnessError ? error.code : 'UNKNOWN' } }
+                }
+                effectiveSignal.throwIfAborted()
+                let accepted: { readonly settlementContexts: readonly UserMessage[]; readonly concludesTurn: boolean } | undefined
+                let imageRead: Promise<readonly StoredImageAttachment[]> | undefined
+                return { result, acceptRecordedResult: () => {
+                  if (accepted !== undefined) throw new Error('native-headless: external tool result was already accepted')
+                  if (execution !== undefined) this.tools?.acceptResult(execution, result)
+                  const settlementContexts = this.tools?.settlementContexts({ agent, session, callId: call.callId,
+                    name: call.name, arguments: execution?.arguments ?? call.arguments, result }) ?? []
+                  const concludesTurn = !result.isError && result.concludesTurn === true
+                  accepted = { settlementContexts, concludesTurn }
+                  return accepted
+                }, readAcceptedImages: () => {
+                  if (accepted === undefined) throw new Error('native-headless: external tool result must be accepted before reading images')
+                  if (closed) throw new Error('native-headless: external tool capture is closed')
+                  effectiveSignal.throwIfAborted()
+                  if (imageRead !== undefined) return imageRead
+                  const contexts = [...(result.additionalContexts ?? []), ...accepted.settlementContexts]
+                  const references = imageReferences(result.content, ...contexts.map(message => message.content))
+                  if (references.length === 0) return Promise.resolve([])
+                  const attachments = this.attachments
+                  if (attachments === undefined) {
+                    throw new Error('native-headless: image attachments are referenced but the attachments service is unavailable')
+                  }
+                  const reads = references.map(ref => Promise.resolve().then(() => attachments.readImage(ref, effectiveSignal)))
+                  const operation = Promise.allSettled(reads).then((outcomes) => {
+                    effectiveSignal.throwIfAborted()
+                    if (closed) throw new Error('native-headless: external tool capture is closed')
+                    const failed = outcomes.find(outcome => outcome.status === 'rejected')
+                    if (failed?.status === 'rejected') throw failed.reason
+                    const images = outcomes.map((outcome) => {
+                      if (outcome.status === 'rejected') throw outcome.reason
+                      return outcome.value
+                    })
+                    return Object.freeze(images.map(({ ref, data }) => Object.freeze({ ref: structuredClone(ref), data: data.slice() })))
+                  })
+                  imageRead = operation
+                  pendingImageReads.add(operation)
+                  void operation.then(() => pendingImageReads.delete(operation), () => pendingImageReads.delete(operation))
+                  return operation
+                } }
+              })()
+              pendingCalls.add(operation)
+              void operation.then(() => pendingCalls.delete(operation), () => pendingCalls.delete(operation))
+              return operation
+            },
+            dispose,
+          }
+        } catch (error: unknown) {
+          try { await dispose() }
+          catch (cleanup: unknown) { throw new AggregateError([error, cleanup], 'native-headless: external tool capture failed to close') }
+          throw error
+        }
+      }
+      releaseExecution = this.sessionExecution?.register({ agent, session, config,
+        delegationAuthority: {
+          toolNames: Object.freeze(delegationToolNames), programToolNames: Object.freeze(programToolNames),
+          builtinToolNames: Object.freeze(builtinToolNames),
+          ...(resolvedSandbox === undefined ? {} : { sandboxPolicy: {
+            mode: resolvedSandbox.mode, workspaceRoot: resolvedSandbox.workspaceRoot, sessionId: session.id,
+          } }),
+          approvalRequired: this.approval !== undefined,
+        },
+        captureExternalTools,
+        captureExternalResponses: async (route: NativeResponsesRoute, maxTokens: number | undefined,
+          reasoningEffort: ReasoningEffortId | undefined, captureSignal: AbortSignal) => {
+          captureSignal.throwIfAborted()
+          const parentStep = activePreparedStep
+          if (parentStep === undefined) throw new Error('native-headless: Responses capture requires an admitted model step')
+          return this.modelExecution.captureResponsesOperation(parentStep, route, maxTokens, captureSignal, reasoningEffort)
+        },
+        continuations: this.continuationRuntime.forParent(agent, session),
+        delegate: (child, childSignal) => this.executeDelegatedTurn({ ...child, parent: session }, childSignal),
+      })
       if (new Set(schemas.map(schema => schema.name)).size !== schemas.length) {
         throw new Error('native-headless: duplicate tool schema')
       }
@@ -807,6 +1082,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           const admitted = step === 1 ? initialInputs : await admit(step)
           if (admitted === undefined) break
           const { inputs, selection, preparedStep, commitChecks } = admitted
+          activePreparedStep = preparedStep
           const stepConfig = preparedStep.config
           const instructionContexts = await this.agentInstructions?.prepare(session, inputs, signal)
           signal.throwIfAborted()
@@ -898,48 +1174,19 @@ export class NativeHeadlessApplication implements NativeApplication {
             let additionalContexts: readonly UserMessage[] = []
             let execution: NativeToolExecution | undefined
             try {
-              if (config.allowedTools !== undefined && !config.allowedTools.includes(call.name)) {
-                throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's allowedTools`, 'TOOL_DENIED')
-              }
-              const requestApproval = async (requested: NativeToolApprovalRequest): Promise<NativeApprovalOutcome> => {
-                if (requested.agent !== agent || requested.session !== session) {
-                  throw new Error('native-headless: approval invocation belongs to a different Agent or Session')
-                }
-                const service = this.approval
-                if (service === undefined) throw new Error('native-headless: no approval authority')
-                const approvalId = NativeApprovalRequestId(randomUUID())
-                const sessionPolicy = sessionApprovalPolicy(session)
-                track(session.append('native-approval/asked', {
-                  id: approvalId, toolName: requested.toolName, callId: requested.callId,
-                  ...requested.reason === undefined ? {} : { reason: requested.reason },
-                }))
-                await persist()
-                await writer.flush()
-                const approvalSignal = AbortSignal.any([signal, requested.signal])
-                const decision = invocation === 'delegated'
-                  ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
-                  : await service.request({
-                    id: approvalId, agent, ...sessionPolicy === undefined ? {} : { sessionPolicy },
-                    toolName: requested.toolName, callId: requested.callId,
-                    ...requested.reason === undefined ? {} : { reason: requested.reason },
-                    signal: approvalSignal,
-                  })
-                track(session.append('native-approval/decided', decision))
-                await persist()
-                await writer.flush()
-                approvalSignal.throwIfAborted()
-                return decision.outcome
+              if (!toolNames.includes(call.name)) {
+                throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's tool authority`, 'TOOL_DENIED')
               }
               const authorize = async (requested: NativeToolApproval): Promise<void> => {
                 const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal, ...requested })
                 if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
               }
-              if (config.builtinTools && (call.name === 'read_file' || call.name === 'write_file')) {
+              if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
                 if (call.name === 'write_file' && this.approval !== undefined) {
                   await authorize({ reason: 'Writing a file changes the selected workspace.' })
                 }
                 content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
-              } else if (config.builtinTools && call.name === 'run_code' && this.codeRuntime !== undefined) {
+              } else if (builtinToolNames.includes(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
                 const outcome = await this.executeCode(call, session, signal)
                 content = [{ type: 'text', text: outcome.text }]
                 if (outcome.error !== undefined) {
@@ -950,20 +1197,15 @@ export class NativeHeadlessApplication implements NativeApplication {
                 if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
                 execution = {
                   agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                  ...(request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext }),
                   appendEvent: async (type, data, ...opts) => {
-                    signal.throwIfAborted()
+                    if (type !== 'tool/ptc-dispatch') signal.throwIfAborted()
                     const event = session.append(type, data, ...opts)
                     track(event as SessionEvent)
                     await persist()
                     return event
                   },
-                  ...this.approval === undefined ? {} : { approvalAuthority: {
-                    request: requestApproval,
-                    authorize: async (requested: NativeToolApprovalRequest): Promise<void> => {
-                      const outcome = await requestApproval(requested)
-                      if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, requested.toolName)
-                    },
-                  } },
+                  ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
                 }
                 const result = await this.tools.executeModelCall(execution)
                 content = [...result.content]
@@ -1410,10 +1652,32 @@ export class NativeHeadlessApplication implements NativeApplication {
     if (request.config.cwd !== request.parent.header.cwd || request.config.cwd !== this.executionConfigFor(request.parent.id).cwd) {
       throw new Error('native-headless: delegated workspace differs from the parent configuration')
     }
-    const delegationDepth = (request.parent.header.delegationDepth ?? 0) + 1
+    const inherited = request.delegationContext
+    const delegationDepth = (inherited?.depth ?? request.parent.header.delegationDepth ?? 0) + 1
     if (!Number.isSafeInteger(delegationDepth)) throw new RangeError('native-headless: child delegation depth exceeds the safe-integer range')
     if (delegationDepth > request.maxDepth) throw new RangeError('native-headless: child delegation depth exceeds maxDepth')
-    const config = { ...this.config, ...request.config }
+    if (inherited !== undefined && (inherited.cwd !== request.parent.header.cwd || request.maxDepth > inherited.maxDepth
+      || request.config.maxSteps > inherited.maxSteps
+      || inherited.maxTokens !== undefined
+        && (request.config.maxTokens === undefined || request.config.maxTokens > inherited.maxTokens))) {
+      throw new Error('native-headless: delegated route or budgets exceed inherited authority')
+    }
+    const allowedTools = inherited === undefined ? request.config.allowedTools
+      : inherited.toolNames.filter(name => request.config.allowedTools === undefined || request.config.allowedTools.includes(name))
+    const resolvedConfig: ResolvedConfig = { ...this.config, ...request.config }
+    const config: ResolvedConfig = { ...resolvedConfig,
+      ...(inherited === undefined ? {} : {
+        allowedTools,
+        builtinTools: resolvedConfig.builtinTools && inherited.builtinToolNames.some(name => allowedTools?.includes(name)),
+      }) }
+    const delegationContext = inherited === undefined ? undefined : Object.freeze({
+      ...inherited, depth: delegationDepth, maxDepth: request.maxDepth, cwd: config.cwd,
+      provider: config.provider, model: config.model,
+      ...config.reasoningEffort === undefined ? {} : { reasoningEffort: config.reasoningEffort },
+      toolNames: Object.freeze([...(allowedTools ?? [])]),
+      builtinToolNames: Object.freeze(inherited.builtinToolNames.filter(name => allowedTools?.includes(name))),
+      programToolNames: Object.freeze([...inherited.programToolNames]),
+    })
     const scope = new NativeScope(parent.scope)
     const composition = new ResourceOwner()
     let operationFailure: { error: unknown } | undefined
@@ -1425,8 +1689,9 @@ export class NativeHeadlessApplication implements NativeApplication {
         return execution.run(async (composed) => {
           await request.prepare?.({ agent: execution.agent, own: dispose => composition.own(dispose) })
           composed.throwIfAborted()
-          return this.runTurn({ ...request, resume: false }, request.id, execution.agent,
-            composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated')
+          return this.runTurn({ ...request, resume: false,
+            ...(delegationContext === undefined ? {} : { delegationContext }) }, request.id, execution.agent,
+          composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated')
         }, signal)
       }, scope, parent)
     } catch (error: unknown) {
@@ -2153,6 +2418,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
     authority?.defaultModelSelection,
     context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
+    context.optional('attachments'),
   )
   context.own(() => application.dispose())
   return application
@@ -2162,7 +2428,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)

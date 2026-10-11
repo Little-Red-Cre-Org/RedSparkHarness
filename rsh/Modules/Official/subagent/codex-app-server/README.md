@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run a one-shot text delegation in a fresh Codex app-server thread and return its selected final answer or a safe failure diagnostic. The runner uses pinned @openai/codex@0.162.1 while keeping Codex settings and authentication product-owned. Native requests stop before process startup because this adapter does not yet enforce parent tool authority or the inherited positive maxSteps ceiling.
+Run a one-shot text delegation in a fresh Codex app-server thread and return its selected final answer or a safe failure diagnostic. The runner uses pinned @openai/codex@0.162.1 while keeping Codex settings and authentication product-owned. Native requests require the Engine to capture a Responses transport from the exact selected prepared model generation. Shipped Providers do not yet supply it, so admission fails before child connection; parent `maxTokens` also requires that generation to enforce the final projected output cap.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Run a one-shot text delegation in a fresh Codex app-server thread and return its
 | Route | Current status | Evidence boundary |
 |---|---|---|
 | DSH Cordis Codex compatibility runner | Executable one-shot text route through the Official product runner | After fixing sandboxMode propagation, the two affected real-product permission cases were rerun: the explicit bypass marker write passed; the never plus configured workspace-write case confirmed that config.toml contains workspace-write but skipped after the nested product tool returned blocked by policy. The write and inheritance remain unverified. The earlier three-file 64-pass/1-skip result predates this fixture correction and is superseded for inheritance attribution. |
-| Native Codex external driver | No Native request can execute; every request is refused before `childConnection.connect()` because this adapter does not enforce exact parent authority and the positive `maxSteps` ceiling. Deployment `permissionMode`, including full access, cannot override refusal. | The existing `native-admission.spec.ts` regression confirms pre-connect refusal under bypass-configured permissions. This establishes the refusal contract only. |
+| Native Codex external driver | The Engine must capture a Responses transport from the exact selected prepared model generation. Shipped Providers do not yet supply it, so admission fails before child connection; parent `maxTokens` also requires that generation to enforce the final projected output cap. | Engine capture rejects a missing `PreparedAdapterCall.nativeResponses`; the driver checks the captured route and output-cap capability. |
 | Native in-process spawn provider | The shipped Native profile template selects the in-process `spawn` provider except for `native-sdk-dsh-child`, which selects `dsh-sdk`; this Codex driver replaces neither route. | Native child execution is owned by [native-subagent](../../../../Engine/subagent/native-subagent/README.md). The `native-admission.spec.ts` case above covers only this package's pre-connect refusal. |
 
 <a id="use-this-package"></a>
@@ -35,36 +35,52 @@ Run a one-shot text delegation in a fresh Codex app-server thread and return its
 
 Mount the module in a Native Host composition that provides `childConnection`. The selected Native Subagent provider names the instance; this module registers that name as its external child driver.
 
+The Host composition must provide `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-native-subagent` as required peers at compatible versions in the same Host dependency graph.
+
 ```yaml
 - name: '@deepseek-ai/dsh-codex-app-server'
   config:
     name: codex
     permissionMode: never
     env: {}
+    limits:
+      requestBytes: 1048576
+      responseBytes: 4194304
+      jsonDepth: 64
+      sseEvents: 10000
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
 | `name` | `codex` | Non-empty Native external-driver name |
-| `model` | Unset (Codex settings if used) | Optional Native model default; every Native request currently rejects before product startup, so this value is unused |
-| `permissionMode` | `never` | Legacy compatibility-run approval and sandbox policy; Native requests currently stop before thread startup |
-| `env` | `{}` | Explicit child environment over Core's credential-scrubbed parent environment |
+| `model` | Unset | Unsupported; the captured Native route selects the model, and setting this field rejects configuration |
+| `permissionMode` | `never` | Native accepts only omitted or `never`; other modes reject configuration |
+| `env` | `{}` | Native accepts only an empty map; the isolated launcher owns the scrubbed child environment |
+| `limits` | Required | Positive safe-integer ceilings for `requestBytes`, `responseBytes`, `jsonDepth` and `sseEvents` |
 | `disposeGraceMs` | `3000` | Grace period used by Core to release the managed child range |
 
-The Cordis compatibility runner accepts only text prompt blocks and starts a fresh ephemeral Codex thread. Its model comes from the provider's deployment `config.model` (or Codex settings when unset); each request supplies no model override or `reasoningEffort`. Direct callers of the Official `startCodexProductRun` API may provide those optional fields. The Native driver has no executable request and rejects before product startup, so its declared route-model metadata does not establish model precedence for a running request. Permission modes map to `thread/start` fields: `never` sets `approvalPolicy: never`; `approve-for-me` sets `approvalPolicy: on-request`, `approvalsReviewer: auto_review`, and `sandbox: workspace-write`; `dangerously-bypass-approvals-and-sandbox` sets `approvalPolicy: never` and `sandbox: danger-full-access`. The Native driver rejects before using these deployment settings for a delegated request.
+The Cordis compatibility runner accepts only text prompt blocks and starts a fresh ephemeral Codex thread. Its model comes from the provider's deployment `config.model` (or Codex settings when unset); each request supplies no model override or `reasoningEffort`. Direct callers of the Official `startCodexProductRun` API may provide those optional fields. The Native route takes its provider, model and reasoning effort from the resolved Engine request. Engine admission captures Responses projection and forwarding from the matching prepared model generation; when the parent supplies `maxTokens`, the captured generation must enforce a hard output cap and the final projected `max_output_tokens` must fit that limit. When the Engine selects a reasoning effort, the final projected `reasoning.effort` must preserve it. Missing transport or cap support fails before child startup. The Codex permission policy is fixed to `never` on this Native route.
 
 Codex settings and credentials remain product-owned. The app-server command resolves from the pinned package manifest and never uses a host `codex` executable found on `PATH`.
+
+Callers choose Core's child environment mode explicitly: the Cordis bridge uses `scrub-overlay`, while the isolated Native launcher uses `replace` with a private environment and `SystemRoot` on Windows.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
 `src/native.ts` validates configuration, requires Core's `childConnection`, and registers the one `NativeExternalSubagentDriver`. It declares model and reasoning-effort route support and reports persona, tool filtering, structured output, and approval relay as unsupported. `src/run.ts` owns the product run and its protocol decisions. `src/wire.ts` implements the JSON-RPC framing on Core's shared transport.
 
-An accepted compatibility run starts a managed child range, initializes the app-server, creates an ephemeral thread, submits one turn, and settles from that thread's terminal notification. The Native driver rejects before this process path because the pinned product cannot enforce the parent-owned authority and execution ceilings. Process failure, cancellation, and disposal remain attached to the same Core child connection; unloading the module drains its active runs.
+An accepted compatibility run starts a managed child range, initializes the app-server, creates an ephemeral thread, submits one turn, and settles from that thread's terminal notification. A Native run requires the captured Engine Responses transport before this product process path; no shipped Provider currently supplies the required prepared-generation capability, so Native admission fails before connecting. Process failure, cancellation, and disposal remain attached to the same Core child connection; unloading the module drains its active runs.
+
+The Native product runner builds Codex and Responses function definitions from the captured direct Engine schemas. It exposes a completed model response only after the Engine records it, matches each app-server call's thread, turn, call ID, name, namespace, and JSON arguments to its one-use grant, and executes the call through the captured Engine operation. Tool results return text and verified image data URLs; result-owned and accepted settlement contexts are appended once to the next durably recorded request. A concluding result closes later model admission and interrupts its exact Codex turn after every accepted tool reply is written, preserving the Engine result when the turn reports `interrupted`. A request arriving before Codex reports that interruption receives a local 403 without replacing the successful conclusion with a fatal model error.
+
+The isolated Native product runner requires captured `projectRequest` and `forward` callbacks to apply the selected provider's policy and use its credentials. It records and forwards the same projected body; this package does not resolve provider credentials or implement those callbacks. The transport must come from the Engine-selected prepared model generation. A parent output-token ceiling is accepted only when that generation enforces the cap and the final projected body includes a valid `max_output_tokens` no greater than the ceiling. The Engine propagates a process-local generation capability bound to the outer operation's exact prepared model handle, so a same-route nested request captures its own transport from that generation without looking up a later adapter. This does not enable provider overrides, which the Native Codex driver rejects. Native execution still requires the real captured Provider transport and SDK event projections; shipped Providers do not yet supply the transport, so Native admission fails before child connection.
+
+Disposal drains accepted Engine executions and the Core-managed child range, closes the local gateway, and removes the private Codex home. It allows one Node filesystem retry for retryable removal errors after the same resolved `disposeGraceMs`; persistent removal errors still reject disposal.
 
 No runtime invariant companion is published because the package has no separate package-owned observations that can drift; Core owns the child range and the Official runner owns the app-server lifecycle.
 
-The wire contract follows the stable upstream [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) and [`TurnStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json). The latter declares optional `effort`, `parentTurnId`, and `rootTurnId`. This adapter has no Codex turn IDs, so it leaves both ancestry fields unset; an RSH Session ID is not a Codex turn ID. These fields do not enforce the parent tool grants or execution ceilings required by Native requests.
+The wire contract follows the stable upstream [`ThreadStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) and [`TurnStartParams` schema](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json). The latter declares optional `effort`, `parentTurnId`, and `rootTurnId`. This detached task has no parent or root Codex turn identifiers, so both ancestry fields remain unset; the adapter binds the active turn from `turn/start` for dynamic-call checks and conclusions. An RSH Session ID is not a Codex turn ID.
 
 <a id="further-exploration"></a>
 ## Further Exploration
@@ -94,8 +110,8 @@ Independent of the parent model request. Reuse depends on Codex's own model, ins
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Native authority and execution ceilings** — this adapter does not yet enforce Native tool grants or `maxSteps`/`maxTokens`. It rejects every external request before connecting until it can enforce those parent-owned constraints; deployment permission settings cannot replace them.
-- **Text input only** — image and other non-text blocks are rejected before process startup.
+- **Native product admission** — the isolated product runner enforces captured tool grants, but shipped model Providers do not yet expose the prepared-generation Responses transport. Provider transport and SDK integration remain required before requests can run; Native configuration cannot select another model, inject child environment variables, or relax the fixed permission policy.
+- **Text task input** — the initial task accepts text only. Accepted Engine tool results may contain verified images, which the captured image service resolves before the gateway builds data URLs.
 - **No inherited conversation** — each run creates a new ephemeral thread and has no resume or pooling path.
 - **No optional Native request capabilities** — persona, tool filtering, structured output, and parent approval relay are unsupported and rejected.
 - **No human approval channel** — the configured unattended policy answers known app-server requests without asking the parent; unknown requests fail closed.

@@ -13,6 +13,7 @@ const CLIENT_FACE_EXCLUDE: readonly string[] = [
 
 /** Explicit Host packages whose published dependency edges need manual classification. */
 const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
+  '@deepseek-ai/dsh-codex-app-server',
   '@deepseek-ai/dsh-llm',
   '@deepseek-ai/dsh-permission-presets',
   '@deepseek-ai/dsh-session',
@@ -21,6 +22,13 @@ const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
 
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
+  '@deepseek-ai/dsh-codex-app-server': [
+    '@deepseek-ai/dsh-llm',
+    '@deepseek-ai/dsh-native-model-execution',
+    '@deepseek-ai/dsh-native-runtime',
+    '@deepseek-ai/dsh-native-subagent',
+    '@deepseek-ai/dsh-native-tools',
+  ],
   '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
   '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
   '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
@@ -209,7 +217,9 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
   '@deepseek-ai/dsh-commands/brand': ['CommandDefinitionId'],
   '@deepseek-ai/dsh-llm': ['boundContextSummary', 'errorChain'],
   '@deepseek-ai/dsh-llm/native': ['boundContextSummary'],
+  '@deepseek-ai/dsh-json-rpc-line': ['JsonRpcLineTransport'],
   '@deepseek-ai/dsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
+  '@deepseek-ai/dsh-subprocess/native': ['disposeChildConnection'],
   '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
   '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
   '@deepseek-ai/schemastery': ['default'],
@@ -229,7 +239,8 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
   '@deepseek-ai/dsh-llm': ['createUserMessage'],
-  '@deepseek-ai/dsh-llm/native': ['createUserMessage', 'ReasoningEffortId'],
+  '@deepseek-ai/dsh-llm/native': ['createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText'],
+  '@deepseek-ai/dsh-native-subagent/native': ['serializeNativeExternalJson'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
   '@deepseek-ai/dsh-session': ['SessionId'],
   '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],

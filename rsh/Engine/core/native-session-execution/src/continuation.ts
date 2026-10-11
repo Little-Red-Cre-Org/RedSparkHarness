@@ -15,7 +15,12 @@ export interface NativeContinuationObservation {
 
 /** One catalog candidate read; independent writer cleanup failures still reject the operation. */
 export type NativeContinuationInspection =
-  | { readonly kind: 'child'; readonly observation: NativeContinuationObservation }
+  | {
+    readonly kind: 'child'
+    readonly observation: NativeContinuationObservation
+    /** Delegation depth of the endpoint's exact direct parent in the inspected lineage. */
+    readonly parentDepth: number
+  }
   | { readonly kind: 'diagnostic'; readonly id: SessionId; readonly reason: 'corrupt' | 'unsupported' | 'unavailable' }
 
 /** Read-only catalog position; listing grants no message delivery or interruption permission. */

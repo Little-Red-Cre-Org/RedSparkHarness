@@ -662,6 +662,7 @@
       "@deepseek-ai/dsh-native-model-execution/adapter-directory": ["./rsh/Engine/core/native-model-execution/src/adapter-directory.ts"],
       "@deepseek-ai/dsh-native-model-execution/model-directory": ["./rsh/Engine/core/native-model-execution/src/model-directory.ts"],
       "@deepseek-ai/dsh-native-model-execution/model-selection": ["./rsh/Engine/core/native-model-execution/src/model-selection.ts"],
+      "@deepseek-ai/dsh-native-model-execution/responses-transport": ["./rsh/Engine/core/native-model-execution/src/responses-transport.ts"],
       "@deepseek-ai/dsh-native-model-selection/native": ["./rsh/Engine/llm/native-model-selection/src/native.ts"],
       "@deepseek-ai/dsh-native-model-selection/types": ["./rsh/Engine/llm/native-model-selection/src/types.ts"],
       "@deepseek-ai/dsh-native-session-execution/active-session-protocol": ["./rsh/Engine/core/native-session-execution/src/active-session-protocol.ts"],

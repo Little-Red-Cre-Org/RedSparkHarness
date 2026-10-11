@@ -35,6 +35,8 @@ transport.close()
 
 协议错误响应会以 `JsonRpcResponseError` 拒绝请求，并保留数字错误码及可选数据。请求取消、通知、flush 和处理器行为见 [`src/index.ts`](src/index.ts)。
 
+可选的 `onRequestResultWritten()` 观察器只会在传入结果帧的写入回调成功后运行。结果写入同步抛错、写入回调报告失败或观察器抛错时，会向捕获的所有者错误回调报告一次；该回调不得抛错。关闭或替换观察器会抑制迟到回调。请求处理器失败仍返回 `-32603` 错误响应。
+
 -----
 
 <a id="understand-the-implementation"></a>

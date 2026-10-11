@@ -5,7 +5,8 @@ import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agen
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { NativeToolRegistry, type NativeToolExecution, type NativeToolContribution, type NativeValueToolContribution } from '../src/index.ts'
+import { NativeToolRegistry, type NativeToolExecution, type NativeToolContribution, type NativeToolResult,
+  type NativeValueToolContribution } from '../src/index.ts'
 import { plugin as toolsPlugin } from '../src/native.ts'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
@@ -73,6 +74,59 @@ it('captures the output schema and detaches canonical values before rendering', 
     await expect(registry.execute(call)).rejects.toThrow('result policy did not delegate')
     await invalid()
   } finally { await post(); await dispose(); await release() }
+})
+
+it('rejects a captured model schema after its exact registration is replaced', async () => {
+  const scope = new NativeScope()
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const { call, release } = execution(agents, scope)
+  const replacementExecute = vi.fn(async (): Promise<NativeToolResult> => ({ content: [], isError: false }))
+  const removeOriginal = registry.register(contribution(async () => ({ content: [], isError: false })))
+  const snapshot = registry.captureModelSnapshot(['held'], scope)
+  expect(snapshot.schemas.map(schema => schema.name)).toEqual(['held'])
+  await removeOriginal()
+  const installReplacement = registry.register(contribution(replacementExecute))
+  try {
+    await expect(snapshot.execute(call)).rejects.toMatchObject({ code: 'TOOL_DENIED' })
+    expect(replacementExecute).not.toHaveBeenCalled()
+  } finally {
+    await snapshot.dispose()
+    await installReplacement()
+    await release()
+  }
+})
+
+it('captures PTC business bindings without promoting them to direct model calls', async () => {
+  const scope = new NativeScope()
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope, 'ptc')
+  const { call, release } = execution(agents, scope, 'business')
+  const removeRunCode = registry.registerValueTool({
+    schema: { name: 'run_code', description: 'Run code.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'done' },
+  })
+  const executeBusiness = vi.fn(async () => 'business-result')
+  const removeBusiness = registry.registerValueTool({
+    schema: { name: 'business', description: 'Business tool.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    execute: executeBusiness,
+  })
+  const snapshot = registry.captureProgramSnapshot(['business'], scope)
+  try {
+    expect(registry.modelSchemas(scope).map(schema => schema.name)).toEqual(['run_code'])
+    expect(snapshot.programSchemas?.map(schema => schema.name)).toEqual(['business'])
+    const admitted = await snapshot.prepare(call)
+    expect(await admitted.execute()).toEqual({ content: [], isError: false, value: 'business-result' })
+    registry.acceptResult(admitted.call, { content: [], isError: false, value: 'business-result' })
+    expect(executeBusiness).toHaveBeenCalledOnce()
+  } finally {
+    await snapshot.dispose()
+    await removeBusiness()
+    await removeRunCode()
+    await release()
+  }
 })
 
 it('drains a replaced contribution before resources acquired after registration are released', async () => {
