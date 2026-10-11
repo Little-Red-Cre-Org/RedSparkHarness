@@ -136,6 +136,7 @@ function createTransport(
   const active = new Set<Promise<unknown>>()
   const credentialWork = new Set<Promise<unknown>>()
   let closed = false
+  let projectRequested = false
   let forwarded = false
   let projectedJson: string | undefined
   let responseBody: TrackedResponseBody | undefined
@@ -159,9 +160,10 @@ function createTransport(
     outputTokenLimit: 'unsupported',
     projectRequest(body, signal): Promise<NativeResponsesJsonValue> {
       assertOpen(signal)
-      if (projectedJson !== undefined) {
+      if (projectRequested) {
         return Promise.reject(new LlmError('OpenAI Codex Native Responses request was already projected', 'INVALID_REQUEST'))
       }
+      projectRequested = true
       const work = Promise.resolve().then(() => {
         assertOpen(signal)
         if (!isRecord(body)
@@ -244,13 +246,13 @@ function createTransport(
       closed = true
       const reason = new LlmError('OpenAI Codex Native Responses transport is closed', 'ABORTED')
       closeResult = (async () => {
+        operation.abort(reason)
         let closeError: unknown
         try {
           await responseBody?.cancel(reason)
         } catch (error: unknown) {
-          closeError = error
+          if (error !== reason) closeError = error
         }
-        operation.abort(reason)
         const remaining = [...active, ...credentialWork]
         await Promise.allSettled(remaining)
         options.onClose(transport)

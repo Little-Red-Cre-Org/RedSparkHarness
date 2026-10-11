@@ -1,6 +1,5 @@
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { once } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Credential } from '@earendil-works/pi-ai'
 import { PiAiAdapter } from '../src/adapter.ts'

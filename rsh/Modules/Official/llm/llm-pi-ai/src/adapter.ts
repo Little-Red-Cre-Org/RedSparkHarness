@@ -570,7 +570,7 @@ export class PiAiAdapter extends LlmAdapter {
       const nativeResponses = provider === CODEX_SUBSCRIPTION_ROUTE
         ? createNativeCodexResponsesCapture({
           route: { provider, model },
-          inputModalities: modelInfo.inputModalities,
+          inputModalities: modelInfo.inputModalities ?? ['text'],
           identity: snapshot.codexIdentity.value,
           ...snapshot.codexIdentity.error === undefined ? {} : { identityError: snapshot.codexIdentity.error },
           headers: requestHeaders(profile.headers),
