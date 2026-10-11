@@ -32,6 +32,8 @@ Selected Model Providers can expose `resolveModel` for exact route metadata; an 
 
 The `./model-directory` Definition and `NativeAdapterModelDirectory` expose advisory catalogs from the same selected adapter, without a default store. `prepareStep` binds resolved controls and dispatch to one Provider generation. Consumers persist that exact configuration before `execute`; a foreign prepared identity or different dispatch controls reject. The pure `./model-selection` leaf owns durable selection vocabulary and its history projection.
 
+The types-only `./responses-transport` export declares the optional Provider capability used by Native Responses consumers.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.
