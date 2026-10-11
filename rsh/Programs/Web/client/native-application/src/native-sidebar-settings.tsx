@@ -14,9 +14,10 @@ import css from './NativeSidebarSettings.module.css'
 
 /** Bind Settings page operations to the selected Native Session Consumer.
  * @param client - selected Native Session service.
- * @returns the Settings page's bound operation face.
+ * @returns the shared Settings actions bound to the client.
  */
-export function createNativeSettingsActions(client: NativeSessionClient): NativeSettingsActions {
+export function createNativeSettingsActions(client: NativeSessionClient): Omit<NativeSettingsActions,
+  'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete' | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'> {
   return {
     settingsDescribe: client.settingsDescribe.bind(client), settingsMutate: client.settingsMutate.bind(client),
     credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
