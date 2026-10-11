@@ -12,7 +12,7 @@ Cordis Models 页面和 native Settings 窗口都需要相同的 API 提供方�
 
 `ui-primitives` 拥有仅通过 props 驱动的提供方卡片、模型编辑器、页脚和样式表。Legacy Models 插件与 native 应用分别向这些组件提供自己的设置操作、schema 操作和本地化文案。
 
-Native Models 页面合并 `modelsListProviders`、`modelsListConfigurableProviders`、已脱敏的 Settings 描述和凭据描述。它通过带 revision 的 `settingsMutate` 写入提供方修改，通过凭据操作保存 API 密钥，通过 `modelsDiscover` 执行发现，并在 Settings、凭据引用和适配器事件到达时重新读取。原生授权与账户卡片仍位于 API 提供方下方的「订阅模型」区域。共享的 [SettingsPanel](2026-10-11-shared-settings-panel.zh.md) 继续拥有窗口外框。
+Native Models 页面合并 `modelsListProviders`、`modelsListConfigurableProviders`、已脱敏的 Settings 描述和凭据描述。它通过带 revision 的 `settingsMutate` 写入提供方修改，通过凭据操作保存 API 密钥，通过 `modelsDiscover` 执行发现，并在 Settings、凭据引用和适配器事件到达时重新读取。「订阅模型」区域为每个 Host 条目呈现一个授权行，并将匹配的账户卡片放在该行内；没有匹配流程的账户摘要仍显示在该区域。切回 Models 时会重新读取授权条目，以恢复进行中的登录。共享的 [SettingsPanel](2026-10-11-shared-settings-panel.zh.md) 继续拥有窗口外框。
 
 ## Alternatives considered
 

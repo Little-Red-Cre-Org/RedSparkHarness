@@ -158,7 +158,7 @@ function asNamespace(descriptor: NativeSettingsDescriptor): ModelSettingsNamespa
   }
 }
 
-/** Render provider editors and the native authorization/account area below them. */
+/** Render API provider editors followed by the native Subscription models section. */
 export function ModelsSettingsPage({ actions, t, children }: {
   actions: ModelsActions
   t: Translate

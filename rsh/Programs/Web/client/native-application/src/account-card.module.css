@@ -97,8 +97,3 @@
 .credits {
   color: var(--dsw-alias-label-secondary);
 }
-
-.authorization {
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
-  padding-top: 12px;
-}
