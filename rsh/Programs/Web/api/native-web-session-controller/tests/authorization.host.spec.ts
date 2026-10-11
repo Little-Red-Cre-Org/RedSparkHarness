@@ -8,6 +8,8 @@ import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
+import type { NativeModelSettings } from '@deepseek-ai/dsh-llm-pi-ai/native'
 import { plugin as sandboxPolicy } from '../../../../../Modules/Official/sandbox/native-sandbox-policy/src/native.ts'
 import { plugin as sandboxedFilesystem } from '../../../../../Modules/Official/fs/fs-sandbox/src/native.ts'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -84,13 +86,23 @@ it('allows only configured keys and keeps a disconnected authorization attempt r
   } finally { await authorization.dispose() }
 })
 
-it('starts the controller in a profile that installs authorization and credentials', async () => {
+it.each([
+  { name: 'no default', defaultSelection: undefined, expected: { provider: 'openai-codex', model: 'fixture-account-model' } },
+  { name: 'Program default', defaultSelection: { provider: 'program-provider', model: 'program-model' },
+    expected: { provider: 'program-provider', model: 'program-model' } },
+])('starts the controller without replacing a $name', async ({ defaultSelection, expected }) => {
   const cwd = await mkdtemp(join(tmpdir(), 'rsh-web-authorization-'))
   const scope = new NativeScope()
+  let settingsDocument: Record<string, unknown> = defaultSelection === undefined ? {} : { 'agent-default-model': defaultSelection }
+  const updatedNamespaces: string[] = []
+  const firstAvailableAccountModel = vi.fn(async () => ({ provider: 'openai-codex', model: 'fixture-account-model' }))
+  const modelSettings = {
+    firstAvailableAccountModel,
+  } as unknown as NativeModelSettings
   const services: NativePlugin = {
     apiVersion: 1, name: 'authorization-fixture', targets: ['host'], requires: [],
-    provides: ['model', 'hostConnection', 'credentials', 'authorization'],
-    resolve: () => (context) => {
+    provides: ['model', 'hostConnection', 'credentials', 'authorization', 'settings', 'modelSettings'],
+    resolve: () => async (context) => {
       context.provide('model', { async *stream() {} })
       context.provide('hostConnection', {
         rpc: { handle: () => () => Promise.resolve(), intercept: () => () => Promise.resolve() },
@@ -98,6 +110,14 @@ it('starts the controller in a profile that installs authorization and credentia
       } as unknown as HostConnectionHandle)
       context.provide('credentials', {} as NativeCredentials)
       context.provide('authorization', new NativeAuthorizationProvider(scope, {} as NativeCredentials, { events: new RuntimeEvents() }))
+      const settings = new NativeSettings({
+        load: async () => settingsDocument,
+        persist: async (update) => { settingsDocument = update(settingsDocument); return settingsDocument },
+      }, (namespace) => { updatedNamespaces.push(namespace) })
+      await settings.start()
+      context.own(() => settings.dispose())
+      context.provide('settings', settings)
+      context.provide('modelSettings', modelSettings)
     },
   }
   const host = new NativeHost(resolveInstallation([
@@ -116,6 +136,11 @@ it('starts the controller in a profile that installs authorization and credentia
   try {
     await host.start()
     expect(host.diagnostics().find(entry => entry.name === plugin.name)?.state).toBe('ready')
+    expect(settingsDocument['agent-default-model']).toEqual(defaultSelection)
+    await host.events.parallel(scope, 'authorization/settled', credentialKey('llm-pi-ai', 'openai-codex'), 'authorized')
+    expect(settingsDocument['agent-default-model']).toEqual(expected)
+    expect(firstAvailableAccountModel).toHaveBeenCalledTimes(defaultSelection === undefined ? 1 : 0)
+    expect(updatedNamespaces.includes('agent-default-model')).toBe(defaultSelection === undefined)
   } finally {
     await host.stop()
     await rm(cwd, { recursive: true, force: true })
