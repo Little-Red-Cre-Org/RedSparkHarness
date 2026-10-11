@@ -18,6 +18,8 @@ Permission reads and writes use `NativePermissionPresetOperations` in [permissio
 
 The Host keeps plan-mode and permission Providers optional. A missing plan-mode Provider returns `available: false`; a missing permission Provider returns an unavailable value with no current choice or options. A missing preset Registry leaves the current mode facts readable but advertises no selectable presets. Mutation failures use the existing Native Session RPC error envelope.
 
+The Native application renders these Host reads in the composer. Its mode and permission controls use the shared select primitive; the Plan toggle shows committed and pending state. The controller refreshes both session controls on Session selection and turn settlement, then refreshes the affected control after a mutation, including failure. See the [native application](../../../../rsh/Programs/Web/client/native-application/README.md).
+
 ## Alternatives considered
 
 **Add another composer settings store.** This would duplicate the durable Session authorities and make restored Sessions disagree with the Host-owned preset, plan-mode and permission event folds.
@@ -28,8 +30,8 @@ The Host keeps plan-mode and permission Providers optional. A missing plan-mode 
 
 ## Consequences
 
-The selected Native Client can read every composer control without owning a second settings or Session cache. Agent preset changes remain limited to blank Sessions. Plan-mode choices preserve the logged-versus-pending distinction. Permission policy changes remain durable and independent from pending human approvals. The native-web profile does not gain these optional Providers or any UI in this change; profiles that compose them expose their choices through the same Client API.
+The Native Client and application render these Host-owned values without a second settings or Session cache. The mode selector uses Host-installed choices and their durable revision, and remains locked after the first turn. Plan mode exposes committed and pending state, including changes queued for the next accepted step. Permission choices appear only when the permission Provider is available and do not replace pending human approvals. The shipped native-web profile leaves optional plan-mode and permission Providers uninstalled; profiles that add them expose those choices in the composer.
 
 ## Verification
 
-The authenticated Native Web host scenario checks current and available modes, changes plan mode through both committed states, reads and changes permission presets, and changes an agent preset through the existing revision-checked route. It verifies the real providers and Session executor rather than a parallel store.
+The authenticated Native Web host scenario checks current and available modes, changes plan mode through both committed states, reads and changes permission presets, and changes an agent preset through the existing revision-checked route. The Native application test checks the mode revision, plan-mode result and permission mutation. These checks exercise the real providers and Session executor rather than a parallel store.

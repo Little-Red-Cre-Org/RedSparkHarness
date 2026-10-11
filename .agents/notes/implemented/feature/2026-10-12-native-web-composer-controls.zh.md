@@ -18,6 +18,8 @@ Mode 读取通过确切 root Session owner 和完整事件日志折叠所选 pre
 
 Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode Provider 时返回 `available: false`；缺少 permission Provider 时返回无当前选项且选项列表为空的不可用值。缺少 preset Registry 时仍可读取当前 mode 事实，但不公布可选 preset。修改失败使用既有 Native Session RPC 错误封装。
 
+Native application 会在 composer 中渲染这些 Host 读取结果。模式和权限控件使用共享 select primitive；Plan 切换按钮显示已提交和待应用状态。Controller 在切换 Session 和轮次结算后刷新两项会话控件，并在每次修改后（包括失败时）刷新受影响的控件。详见 [native application](../../../../rsh/Programs/Web/client/native-application/README.zh.md)。
+
 ## Alternatives considered
 
 **新增 composer 设置存储。** 这会重复持久化 Session 的权威状态，并导致恢复后的 Session 与 Host 持有的 preset、plan-mode 和权限事件折叠结果不一致。
@@ -28,8 +30,8 @@ Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode
 
 ## Consequences
 
-选定的 Native Client 可以读取所有 composer 控件，而不拥有第二份设置或 Session 缓存。Agent preset 变更仍仅适用于空白 Session。Plan-mode 选择保留已记录状态与待应用状态的区别。权限策略变更保持持久化，并独立于待处理人工审批。本次变更不会在 native-web profile 中新增这些可选 Provider，也不改 UI；组合这些 Provider 的 profile 会通过同一 Client API 提供其选项。
+Native Client 与 application 会呈现这些 Host 权威值，而不拥有第二份设置或 Session 缓存。模式选择器使用 Host 已安装选项及其持久化修订号，并在首轮后保持锁定。Plan mode 显示已提交和待应用状态，包括排队到下一次被接受 step 的修改。只有 permission Provider 可用时才显示权限选项，且这些选项不会替代待处理人工审批。随附的 native-web profile 不安装可选的 plan-mode 和 permission Provider；添加这些 Provider 的 profile 会在 composer 中显示其选项。
 
 ## Verification
 
-经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。该场景使用真实 Provider 和 Session executor，而非平行存储。
+经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。Native application 测试检查模式修订号、plan-mode 响应和权限修改。这些检查使用真实 Provider 和 Session executor，而非平行存储。

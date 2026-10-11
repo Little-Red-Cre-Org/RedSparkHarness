@@ -30,7 +30,7 @@ kind: "package-reference"
 
 转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。持久化用户文本使用共享右对齐气泡；除 `native-time-context` 提供的上下文外，非用户上下文使用折叠来源行，Native 转录不显示该上下文。助手文本使用共享 Markdown renderer，临时助手文本使用其流式模式。读者位于末尾时，视图会跟随新事件和实时文本；向上滚动后暂停跟随，直至读者回到末尾。现有 Native 根级 Tool 和图片 renderer 保持原样。传输和历史错误会显示；发送失败时保留草稿。
 
-Composer 使用共享卡片、工具栏、发送/停止操作以及模型、推理、预设选择器。空会话上下文行显示所选 Session 的工作区标签或禁用占位符；不可用的「模式」选择器保持禁用。切换工作区仍由侧边栏处理。Native 页面未添加命令补全、计划模式控件、排队/引导操作或轮次导航。
+Composer 使用共享卡片、工具栏、发送/停止操作以及模型、推理、模式和权限选择器。模式选择器使用 Host 已安装选项；Host 不允许选择或首轮锁定后会禁用。可选 Plan 切换按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后会刷新这两个控件，修改失败时也会重新读取显示值。空白 Session 上下文行显示所选 Session 的工作区标签或禁用占位符。切换工作区仍由侧边栏处理。Native 页面未添加命令补全、排队/引导操作或轮次导航。
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取选定 Host 发布的 schema 与经过校验的请求预算，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。凭据引用按 Host 公布的上限分批读取并聚合；超过 `maxSettingsOperations` 的修改会在发送前拒绝，以保持每次 revision 检查写入的原子性。可新增、删除或替换不含机密值的对象项；隐藏机密值下方的可见修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组按现有索引修改，不支持的数组结构修改会报错。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
@@ -84,7 +84,7 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
-- 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
+- 随附 native-web 模板没有常驻预设组合、plan-mode Provider 或 permission-preset Provider；自定义 profile 可以添加。没有可选预设时模式选择器保持禁用；只有 Host 提供相应能力时才显示 Plan 和权限控件。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
 - 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
 - 侧边栏尚未提供 Workspace 排序或移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑、API 模型以外的 plugin Settings 页面以及 Models 引导弹窗仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。
