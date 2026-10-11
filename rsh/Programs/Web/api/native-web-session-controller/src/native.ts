@@ -899,6 +899,9 @@ export class NativeWebSessionService {
     const roots = this.executor.rootExecution
     const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
     const workspace = this.workspaceForSession(id)
+    const owners = this.active.owners().filter(owner => owner.session.id === id)
+    if (owners.some(owner => owner.invocation === 'delegated')) return false
+    if (owner === undefined && workspace !== undefined && route === undefined) return true
     try {
       const selectedRoute = route
         ?? (owner === undefined ? workspace === undefined
@@ -907,8 +910,6 @@ export class NativeWebSessionService {
           : roots.capture(owner).id)
       if (selectedRoute === undefined) return false
       roots.resolve(selectedRoute)
-      const owners = this.active.owners().filter(owner => owner.session.id === id)
-      if (owners.some(owner => owner.invocation === 'delegated')) return false
       const root = owners.find(candidate => candidate.invocation === 'root')
       return root === undefined || root.writerAvailable && roots.capture(root).id === selectedRoute
     } catch {
@@ -1087,7 +1088,7 @@ export const plugin: NativePlugin = {
       context.own(() => settingsEvents.close())
       const workspaceService = new NativeWebWorkspaceService(context, workspaceRegistry, executor,
         context.require('sessionPersistence'), context.require('activeSessions'),
-        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), config.maxHistoryEvents)
+        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), config.maxHistoryEvents, config.maxFollowers)
       context.own(() => workspaceService.close())
       const directoryService = new NativeWebDirectoryService(context.signal)
       let defaultModelInitialization: Promise<void> | undefined

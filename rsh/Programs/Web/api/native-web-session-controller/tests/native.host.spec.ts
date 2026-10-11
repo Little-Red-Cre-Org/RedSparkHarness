@@ -1,6 +1,6 @@
 /** Native browser Session lifecycle through the authenticated HTTP Connection carrier. */
 import { createHmac } from 'node:crypto'
-import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, readFile, symlink } from 'node:fs/promises'
 import { plugin as attachmentStorage } from '@deepseek-ai/dsh-attachment-local/native'
 import { plugin as githubWebhook } from '@deepseek-ai/dsh-webhook-github/src/native.ts'
 import { plugin as webhook } from '../../../../../Modules/Official/webhook/webhook/src/native.ts'
@@ -903,10 +903,19 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       await mkdir(workspacePath)
       const directoryListing = await clients.directoryPicker.list(cwd)
       expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
+      if (process.platform !== 'win32') {
+        const danglingPath = join(cwd, 'dangling-workspace-link')
+        await symlink(join(cwd, 'missing-target'), danglingPath)
+        expect((await clients.directoryPicker.list(cwd)).entries.map(entry => entry.name)).not.toContain('dangling-workspace-link')
+      }
       expect(await clients.directoryPicker.createDirectory(workspacePath, 'child')).toBe(join(workspacePath, 'child'))
       const frames = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
+      const secondFrames = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
       try {
         expect((await frames.next()).value).toMatchObject({ type: 'baseline' })
+        expect((await secondFrames.next()).value).toMatchObject({ type: 'baseline' })
+        const refused = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
+        await expect(refused.next()).rejects.toThrow('invalid response HTTP 429')
         const createdWorkspace = await clients.workspace.create({ path: workspacePath })
         expect(createdWorkspace.created).toBe(true)
         expect((await frames.next()).value).toMatchObject({ type: 'upsert', workspace: { workspaceId: createdWorkspace.workspace.workspaceId } })
@@ -918,11 +927,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
           row => row.workspaceId === createdWorkspace.workspace.workspaceId,
         )?.sessionIds)
           .toContain(connected.sessionId)
+        if (rootExecutionService === undefined) throw new Error('missing Native root execution authority')
         await clients.workspace.delete(createdWorkspace.workspace.workspaceId)
+        expect(rootExecutionService.workspaceRoutes()).toEqual([])
         expect(await persistence?.stat(connected.sessionId)).toBeDefined()
         expect(await clients.workspace.search('native-workspace')).toEqual([])
       } finally {
         await frames.return?.()
+        await secondFrames.return?.()
         await clients.workspace.close()
       }
 
