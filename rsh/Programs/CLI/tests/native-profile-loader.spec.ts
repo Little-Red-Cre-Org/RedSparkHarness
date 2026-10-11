@@ -23,12 +23,25 @@ async function fixture() {
 
 async function packageEntry(profileDir: string, name: string, marker: string, valid = true): Promise<void> {
   const dir = join(profileDir, 'node_modules', name)
-  await mkdir(dir)
+  await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'package.json'), JSON.stringify({
     name, type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: valid ? './native' : './missing', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
   await writeFile(join(dir, 'native.mjs'), `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'loaded'); export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'], requires: [], provides: ['fs'], resolve: () => context => context.provide('fs', { read: () => 1 }) }\n`)
+}
+
+async function emptyNativePackage(
+  profileDir: string, name: string, requires: readonly string[], provides: readonly string[],
+): Promise<void> {
+  const dir = join(profileDir, 'node_modules', name)
+  await mkdir(dir, { recursive: true })
+  await writeFile(join(dir, 'package.json'), JSON.stringify({
+    name, type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires, optional: [], provides } },
+  }))
+  await writeFile(join(dir, 'native.mjs'), `export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'],
+    requires: ${JSON.stringify(requires)}, provides: ${JSON.stringify(provides)}, resolve: () => () => {} }\n`)
 }
 
 it('inherits the selected pi-ai provider catalog into the opt-in SDK child profile', async () => {
@@ -66,6 +79,40 @@ it('loads a named package export through a native profile and owns its lifecycle
     expect(loaded.host.diagnostics()[0]?.state).toBe('ready')
     await loaded.host.stop()
     expect(loaded.host.diagnostics()[0]?.state).toBe('disposed')
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
+
+it('registers ready user native preset folders under child scopes and lists their summaries', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const directory = join(home, '.agent-presets', 'operator')
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, 'test-native-tools', [], [])
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-preset-standing', ['agentPresets'], [])
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(directory, 'preset.yml'), 'name: Operator\ndescription: User tools.\n')
+    await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [
+      { id: 'tools', plugin: 'test-native-tools', config: { enabled: true } },
+    ] }))
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1, scopes: [{ id: 'root' }],
+      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'operator' } }],
+    }))
+
+    const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
+
+    expect(loaded.profile.scopes).toContainEqual({ id: 'preset:operator', parent: 'root' })
+    expect(loaded.profile.installations).toContainEqual({ id: 'preset:operator/tools', plugin: 'test-native-tools',
+      config: { enabled: true }, scope: 'preset:operator' })
+    expect(loaded.profile.installations).toContainEqual({ id: 'preset:operator', plugin: '@deepseek-ai/dsh-agent-preset-standing',
+      scope: 'preset:operator', config: { id: 'operator', name: 'Operator', description: 'User tools.' } })
+    expect(loaded.requests.has('preset:operator')).toBe(true)
+    const presetConfig = loaded.profile.installations.find(row => row.id === 'agent-presets')?.config as {
+      readonly default: string
+      readonly folders: readonly unknown[]
+    }
+    expect(presetConfig.default).toBe('operator')
+    expect(presetConfig.folders).toContainEqual(expect.objectContaining({ id: 'operator', trust: 'user', status: 'ready' }))
   } finally { await rm(home, { recursive: true, force: true }) }
 })
 

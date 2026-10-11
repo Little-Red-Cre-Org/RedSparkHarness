@@ -45,13 +45,14 @@ import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-nati
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
-import { plugin, resolveNativeWebSessionConfig, type NativeWebSessionService } from '../src/native.ts'
+import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
@@ -803,6 +804,54 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseCleanup()
     await (hostStop ?? host.stop())
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('lists native preset folders with standing compositions and returns an empty catalog without the service', async () => {
+  const scope = new NativeScope()
+  const presets = {
+    catalog: () => ({ default: 'standard', folders: [
+      { id: 'standard', name: 'Standard folder', trust: 'system', status: 'ready' },
+      { id: 'user-ready', name: 'User ready', trust: 'user', status: 'ready' },
+      { id: 'legacy', name: 'Legacy', trust: 'user', status: 'needs-migration' },
+      { id: 'broken', name: 'Broken', trust: 'system', status: 'invalid', problem: 'invalid file' },
+    ] }),
+    list: () => [
+      { id: 'standard', name: 'Standard', scope },
+      { id: 'profile-only', name: 'Profile only', scope },
+    ],
+  } as unknown as NativeAgentPresetOperations
+  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
+    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1 })
+  const signal = new AbortController().signal
+  const service = new NativeWebSessionService(
+    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal, { presets },
+  )
+  const emptyService = new NativeWebSessionService(
+    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal,
+  )
+  try {
+    expect(await service.handle('agent-presets/list', {}, signal)).toEqual({ ok: true, value: {
+      default: 'standard', presets: [
+        { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
+        { id: 'profile-only', name: 'Profile only', source: 'profile', status: 'ready' },
+        { id: 'user-ready', name: 'User ready', source: 'user', status: 'ready' },
+        { id: 'legacy', name: 'Legacy', source: 'user', status: 'needs-migration' },
+        { id: 'broken', name: 'Broken', source: 'system', status: 'invalid', problem: 'invalid file' },
+      ],
+    } })
+    expect(await service.handle('agent-presets/list', { extra: true }, signal)).toMatchObject({
+      ok: false, error: { code: 'native/agent-presets' },
+    })
+    expect(await emptyService.handle('agent-presets/list', {}, signal)).toEqual({
+      ok: true, value: { default: null, presets: [] },
+    })
+  } finally {
+    await service.close()
+    await emptyService.close()
   }
 })
 

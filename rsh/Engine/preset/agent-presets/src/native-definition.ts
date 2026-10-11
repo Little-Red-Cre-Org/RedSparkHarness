@@ -2,6 +2,7 @@
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgentPresetFacts } from './selection.ts'
+import type { NativePresetFolderSummary } from './native-storage.ts'
 
 /** Opaque runtime installation generation; not a durable historical revision. */
 export type NativePresetGeneration = Branded<'NativePresetGeneration'>
@@ -34,6 +35,8 @@ export interface NativeAgentPresetLease extends NativeResolvedAgentPreset {
 export interface NativeAgentPresetOperations {
   /** @param composition - exact profile scope. @returns close-admission, cancellation and lease drain. */
   register(composition: NativePresetComposition): () => Promise<void>
+  /** @returns the fresh-session default and profile-loader folder summaries. */
+  catalog(): { readonly default: string; readonly folders: readonly NativePresetFolderSummary[] }
   /** @returns current advertised standing compositions without acquiring Agent leases. */
   list(): readonly NativeResolvedAgentPreset[]
   /**

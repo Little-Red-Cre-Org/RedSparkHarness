@@ -50,6 +50,15 @@ import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-sessi
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
+interface NativeAgentPresetListRow {
+  readonly id: string
+  readonly name: string
+  readonly description?: string
+  readonly source: 'profile' | 'system' | 'user'
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  readonly problem?: string
+}
+
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Browser Session requests and their owned cancellation. */
@@ -121,6 +130,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'agent-presets/list',
   'models/providers', 'models/configurable-providers', 'models/discover',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
@@ -445,7 +455,7 @@ export class NativeWebSessionService {
       const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
+        const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
           : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
             : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
               : endpoint === 'session/rename-title' ? ['sessionId', 'title']
@@ -453,6 +463,7 @@ export class NativeWebSessionService {
                   : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
                     : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
+        if (endpoint === 'agent-presets/list') return this.agentPresetsList()
         if (endpoint === 'session/model-controls') return {
           catalog: this.selections.directory === undefined ? null : await this.selections.directory.catalog({
             provider: this.config.provider, model: this.config.model,
@@ -540,6 +551,9 @@ export class NativeWebSessionService {
         throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
+      if (endpoint === 'agent-presets/list') {
+        return { ok: false, error: { code: 'native/agent-presets', message: 'Agent preset request failed.', details: {} } }
+      }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         const settingsRequest = endpoint.startsWith('settings/')
         const conflict = settingsRequest ? settingsConflictDetails(error) : undefined
@@ -552,6 +566,32 @@ export class NativeWebSessionService {
       }
       return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
     }
+  }
+
+  private agentPresetsList(): {
+    readonly default: string | null
+    readonly presets: readonly NativeAgentPresetListRow[]
+  } {
+    const service = this.selections.presets
+    if (service === undefined) return { default: null, presets: [] }
+    const catalog = service.catalog()
+    const standing = service.list()
+    const folders = new Map(catalog.folders.map(folder => [folder.id, folder]))
+    const registered = new Set(standing.map(preset => preset.id))
+    const presets: NativeAgentPresetListRow[] = standing.map((preset) => {
+      const folder = folders.get(preset.id)
+      return { id: preset.id, name: preset.name,
+        ...preset.description === undefined ? {} : { description: preset.description },
+        source: folder?.trust ?? 'profile', status: 'ready' as const }
+    })
+    for (const folder of catalog.folders) {
+      if (registered.has(folder.id)) continue
+      presets.push({ id: folder.id, name: folder.name,
+        ...folder.description === undefined ? {} : { description: folder.description },
+        source: folder.trust, status: folder.status,
+        ...folder.problem === undefined ? {} : { problem: folder.problem } })
+    }
+    return { default: catalog.default, presets }
   }
 
   private async listSessions(signal: AbortSignal): Promise<NativeSessionListItem[]> {
