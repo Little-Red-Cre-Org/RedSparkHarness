@@ -5,7 +5,7 @@ import { ModelsError } from '@earendil-works/pi-ai'
 import type { Credential, CredentialStore, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
-import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
+import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from '../src/siwc.ts'
 
 function memoryCredentials(): CredentialStore {
   const values = new Map<string, Credential>()
@@ -29,6 +29,20 @@ function memoryCredentials(): CredentialStore {
 }
 
 describe('Sign in with ChatGPT OAuth', () => {
+  it('preserves existing Responses tool and call namespaces', () => {
+    const payload = {
+      input: [{ type: 'function_call', call_id: 'call-1', name: 'lookup', arguments: '{}', namespace: 'functions' }],
+      tools: [{
+        type: 'namespace',
+        name: 'functions',
+        tools: [{ type: 'function', name: 'lookup', parameters: { type: 'object' } }],
+      }],
+    }
+    const expected = structuredClone(payload)
+
+    expect(siwcResponsesPayload(payload)).toEqual(expected)
+  })
+
   it.each(['timeout', 'cancel'] as const)('closes the callback listener after %s', async (cause) => {
     const controller = new AbortController()
     const timeoutController = new AbortController()
@@ -71,8 +85,9 @@ describe('Sign in with ChatGPT OAuth', () => {
     const kid = 'siwc-test-signing-key'
     const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256', use: 'sig' }
     const issuedClientId = 'issued-test-client-id'
-    const access = 'synthetic-account-access-token'
+    const access = 'synthetic-access-token'
     const refresh = 'synthetic-account-refresh-token'
+    const refreshedAccess = 'synthetic-refreshed-access-token'
     let grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
     let tokenError: { error?: unknown; error_description?: unknown } | undefined
     let expiration: number | undefined = Math.floor(Date.now() / 1000) + 3600
@@ -117,7 +132,7 @@ describe('Sign in with ChatGPT OAuth', () => {
         expect(form.get('refresh_token')).toBe(refresh)
         expect(form.has('scope')).toBe(false)
         return new Response(JSON.stringify({
-          access_token: 'synthetic-rotated-access-token',
+          access_token: refreshedAccess,
           refresh_token: 'synthetic-rotated-refresh-token',
           expires_in: 3600,
         }), { headers: { 'content-type': 'application/json' } })
@@ -196,7 +211,7 @@ describe('Sign in with ChatGPT OAuth', () => {
       expect(errorChain(modelsError)).toBe(`OAuth auth derivation failed for openai-codex: ${missingScopeMessage}`)
       const rotated = await oauth.refresh(credential, new AbortController().signal)
       expect(rotated).toMatchObject({
-        access: 'synthetic-rotated-access-token',
+        access: refreshedAccess,
         refresh: 'synthetic-rotated-refresh-token',
         subject: 'synthetic-account-subject',
       })

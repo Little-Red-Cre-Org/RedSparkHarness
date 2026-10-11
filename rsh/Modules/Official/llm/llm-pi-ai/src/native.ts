@@ -159,7 +159,7 @@ export const plugin: NativePlugin = {
           return { authorization: `Bearer ${token}`, 'x-dsh-auth-token': token }
         },
       })
-      context.own(() => { adapter.dispose() })
+      context.own(() => adapter.dispose())
       context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount, codexUsage))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
