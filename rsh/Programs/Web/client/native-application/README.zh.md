@@ -34,7 +34,7 @@ kind: "package-reference"
 
 Accounts 区域在允许的授权流程旁显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits，以及 DeepSeek 身份和钱包余额；只有账户 key 与非空提供方身份仍匹配时，刷新失败才会保留已就绪数据并提示可能陈旧（ChatGPT 使用邮箱，DeepSeek 使用联系方式或姓名）。没有身份的成功读取结果只显示本次读取，不可用的余额不会显示为零。退出登录和授权完成后都会重新读取账户及授权流程。页面复用匹配的授权行，不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
-点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置包含已注册设置项与凭据编辑器；模型页包含授权流程和账户卡片。任务中心、插件与 Agent 预设目前显示本地化迁移占位文案。
+点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置包含已注册设置项与凭据编辑器。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。任务中心、插件与 Agent 预设目前显示本地化迁移占位文案。
 
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
@@ -83,5 +83,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
-- 当前 prompt 路径支持图片附件；更广泛的附件/资源管理、Workspace 列表/创建/搜索/移动/删除、不透明凭据 grant 编辑及完整旧版插件 Settings 页面仍属于独立的原生 Client 工作。
+- 当前 prompt 路径支持图片附件；更广泛的附件/资源管理、Workspace 列表/创建/搜索/移动/删除、不透明凭据 grant 编辑、API 模型以外的 plugin Settings 页面以及 Models 引导弹窗仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。
