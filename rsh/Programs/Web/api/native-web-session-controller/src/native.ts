@@ -23,9 +23,7 @@ import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
 import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
-import type { NativeTaskSchedulerOperations } from '@deepseek-ai/dsh-task-scheduler/native'
 import type {} from '@deepseek-ai/dsh-workspace/native'
-import type {} from '@deepseek-ai/dsh-task-scheduler/native'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
 import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
@@ -219,7 +217,6 @@ export interface NativeWebSelectionProviders {
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: Pick<WorkspaceRegistryRuntime, 'list' | 'archivedSessionIds' | 'archiveSession'> | undefined
-  readonly taskScheduler?: Pick<NativeTaskSchedulerOperations, 'list'> | undefined
   readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
 }
 
@@ -792,8 +789,6 @@ export class NativeWebSessionService {
       || this.selections.executionFor === undefined && turn.running
     const rootOwner = owner?.invocation === 'root' ? owner : undefined
     const pendingKind = rootOwner === undefined ? undefined : this.human.pendingKind(rootOwner.agent)
-    const hasActiveSchedule = rootOwner !== undefined && this.selections.taskScheduler !== undefined
-      && this.selections.taskScheduler.list(rootOwner).some(task => task.state === 'active')
     const canManageTitle = !this.turns.has(id) && this.canManageTitle(id)
     const workspaceId = context.workspaceBySession.get(id)
     return {
@@ -806,7 +801,7 @@ export class NativeWebSessionService {
       runningSubagentCount: context.runningSubagentCount.get(id) ?? 0,
       ...(pendingKind === undefined ? {} : { pendingInteraction: { kind: pendingKind } }),
       ...(workspaceId === undefined ? {} : { workspaceId }),
-      hasActiveSchedule,
+      hasActiveSchedule: false,
     }
   }
 
@@ -1008,7 +1003,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'taskScheduler', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -1067,7 +1062,7 @@ export const plugin: NativePlugin = {
           presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
-          workspaceRegistry, taskScheduler: context.optional('taskScheduler'),
+          workspaceRegistry,
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))

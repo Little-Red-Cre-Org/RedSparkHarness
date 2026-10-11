@@ -89,4 +89,4 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI、文件及音频上传不由该包提供。
-- `hasActiveSchedule` 只能为已附加的 root owner 查询，因为 `taskScheduler.list` 要求该 owner；即使已安装 scheduler，冷态 Session 行也返回 `false`。
+- 控制器对所有 Session 行均返回 `hasActiveSchedule: false`。控制器提供 `rootExecution`，而 `taskScheduler` 要求该服务；若控制器依赖 scheduler 会形成加载循环。

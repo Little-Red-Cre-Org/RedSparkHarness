@@ -93,9 +93,6 @@
       "path": "../../../../Modules/Official/workspace/workspace/tsconfig.host.json"
     },
     {
-      "path": "../../../../Modules/Official/automation/task-scheduler"
-    },
-    {
       "path": "../../../../Modules/Official/webhook/webhook"
     },
     {

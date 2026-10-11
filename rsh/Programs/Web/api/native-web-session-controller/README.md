@@ -89,4 +89,4 @@ This package does not alter the history prefix; a new user message extends the r
 <a id="known-limitations-and-deferred-work"></a>
 
 - Full product UI, file and audio uploads are not provided by this package.
-- `hasActiveSchedule` is available only for an attached root owner because `taskScheduler.list` requires that owner; cold Session rows report `false` even when the scheduler is installed.
+- The controller reports `hasActiveSchedule: false` for every Session row. It provides `rootExecution`, which `taskScheduler` requires, so the controller cannot depend on the scheduler without creating a load cycle.
