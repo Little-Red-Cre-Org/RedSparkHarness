@@ -748,8 +748,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (request.prepareMessage !== undefined) {
         if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: input preparation requires the active root owner')
         const selection = await this.modelSelection?.state(activeOwner, signal)
-        const selected = selection?.revision === null || selection === undefined
-          ? this.rootDefaults(config) : selection.next ?? this.rootDefaults(config)
+        const selected = selection?.next ?? this.rootDefaults(config)
         signal.throwIfAborted()
         message = await request.prepareMessage({ provider: selected.provider, model: selected.model }, signal)
         signal.throwIfAborted()

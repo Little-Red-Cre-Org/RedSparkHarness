@@ -9180,9 +9180,15 @@ importers:
       '@deepseek-ai/dsh-credentials-local':
         specifier: workspace:^
         version: link:../../Modules/Official/credentials/credentials-local
+      '@deepseek-ai/dsh-deepseek-account':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/deepseek-account
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-local
+      '@deepseek-ai/dsh-fs-observation-policy':
+        specifier: workspace:^
+        version: link:../../Modules/Official/fs/fs-observation-policy
       '@deepseek-ai/dsh-fs-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/fs-sandbox
@@ -9306,6 +9312,12 @@ importers:
       '@deepseek-ai/dsh-session-reference':
         specifier: workspace:^
         version: link:../../Engine/context/session-reference
+      '@deepseek-ai/dsh-settings-file':
+        specifier: workspace:^
+        version: link:../../Modules/Official/settings/settings-file
+      '@deepseek-ai/dsh-shell-env':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/shell-env
       '@deepseek-ai/dsh-spill-local':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill-local
@@ -9403,9 +9415,6 @@ importers:
       '@deepseek-ai/dsh-experimental-tool-agent-team':
         specifier: workspace:^
         version: link:../../Modules/Community/experimental/tool-agent-team
-      '@deepseek-ai/dsh-fs-observation-policy':
-        specifier: workspace:^
-        version: link:../../Modules/Official/fs/fs-observation-policy
       '@deepseek-ai/dsh-host-frontend-static':
         specifier: workspace:^
         version: link:../Web/host/frontend-static
@@ -9445,12 +9454,6 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../Modules/Official/settings/settings
-      '@deepseek-ai/dsh-settings-file':
-        specifier: workspace:^
-        version: link:../../Modules/Official/settings/settings-file
-      '@deepseek-ai/dsh-shell-env':
-        specifier: workspace:^
-        version: link:../../Modules/Official/shell/shell-env
       '@deepseek-ai/dsh-subagent':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent
@@ -9539,6 +9542,9 @@ importers:
       '@deepseek-ai/dsh-app-boot':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/boot/app-boot
+      '@deepseek-ai/dsh-authorization':
+        specifier: workspace:^
+        version: link:../../Modules/Official/credentials/authorization
       '@deepseek-ai/dsh-base':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/base
@@ -11449,9 +11455,6 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-      '@deepseek-ai/dsh-workspace-definition':
-        specifier: workspace:^
-        version: link:../../../../Engine/workspace/workspace-definition
       eventsource-parser:
         specifier: ^3.1.0
         version: 3.1.0
@@ -11462,6 +11465,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
 
   rsh/Programs/Web/client/resources:
     devDependencies:

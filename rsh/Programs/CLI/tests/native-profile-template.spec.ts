@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { expect, it } from 'vitest'
-import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
+import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
@@ -335,4 +335,19 @@ it('installs plan mode beside the native TUI command registry', () => {
   expect(ids).toContain('user-questions')
   expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
     .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
+})
+
+it('declares every shipped template plugin as a CLI runtime dependency', async () => {
+  const cli = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+    dependencies: Record<string, string>
+    optionalDependencies: Record<string, string>
+  }
+  const runtime = { ...cli.dependencies, ...cli.optionalDependencies }
+  for (const name of SHIPPED_NATIVE_PROFILES) {
+    for (const platform of ['linux', 'win32'] as const) {
+      for (const row of shippedNativeProfileComposition('/tmp/rsh-deps', name, platform).installations) {
+        expect(runtime, `${name}/${platform}`).toHaveProperty([row.plugin])
+      }
+    }
+  }
 })
