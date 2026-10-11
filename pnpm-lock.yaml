@@ -10645,9 +10645,15 @@ importers:
       '@deepseek-ai/dsh-settings-definition':
         specifier: workspace:^
         version: link:../../../../Core/settings/settings-definition
+      '@deepseek-ai/dsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/automation/task-scheduler
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/workspace/workspace
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11456,6 +11462,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
 
   rsh/Programs/Web/client/resources:
     devDependencies:

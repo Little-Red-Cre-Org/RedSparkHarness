@@ -82,11 +82,12 @@ it('installs modular Native navigation, Session selection, details, locale and t
   const media = mediaMock as unknown as MediaQueryList
   vi.stubGlobal('matchMedia', vi.fn(() => media))
 
+  const activity = { updatedAt: 0, blank: false, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false }
   let rows: NativeSessionListItem[] = [
     { header: makeHeader('session-alpha', 'C:\\Work\\Shared'), titleProjection: { status: 'resolved', title: 'Alpha' },
-      titleActions: { rename: true, refresh: true } },
+      titleActions: { rename: true, refresh: true }, ...activity },
     { header: makeHeader('session-beta', 'C:\\Work\\Shared'), titleProjection: { status: 'resolved', title: 'Beta' },
-      titleActions: { rename: true, refresh: true } },
+      titleActions: { rename: true, refresh: true }, ...activity },
   ]
   const close = vi.fn(async () => undefined)
   const clientMock = {
@@ -110,7 +111,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     }),
     create: vi.fn(async () => {
       const header = makeHeader('session-created')
-      rows = [...rows, { header, titleProjection: { status: 'absent' }, titleActions: { rename: true, refresh: true } }]
+      rows = [...rows, { header, titleProjection: { status: 'absent' }, titleActions: { rename: true, refresh: true }, ...activity, blank: true }]
       return { sessionId: header.id }
     }),
     renameTitle: vi.fn(async (id: SessionId, title: string) => {

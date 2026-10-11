@@ -28,6 +28,8 @@ Select after client-connection in the native profile and configure a positive in
 
 The `./list-types` export contains the neutral Host/Client wire row for stored Sessions. Its title projection stays beside the unchanged Session header and distinguishes resolved, absent and unavailable reads; the Host supplies it from durable title events.
 
+`list()` returns these rows ordered by `updatedAt` descending, including blank, running, completed, pending-interaction, direct-child count, confirmed workspace and schedule fields. `follow(signal)` yields a complete baseline followed by coalesced upsert and removal frames over the authenticated Fetch carrier. `search(query, cursor?, signal?)` returns bounded title or current-message matches with optional snippets and a continuation cursor; `archive(sessionId, signal?)` archives through the Host Workspace registry.
+
 `executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
 
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
@@ -102,3 +104,4 @@ This package does not alter the history prefix; a new user message extends the r
 <a id="known-limitations-and-deferred-work"></a>
 
 - Full product UI, file and audio uploads are not provided by this package.
+- The Host can report active schedules only for an attached root owner; cold Session rows report `hasActiveSchedule: false` because the scheduler list is owner-scoped.

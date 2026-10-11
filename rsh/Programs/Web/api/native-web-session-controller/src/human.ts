@@ -21,8 +21,22 @@ interface Pending {
 export class NativeWebHumanInteraction {
   private readonly pending = new Map<NativeWebHumanId, Pending>()
   private closed = false
-  /** @param capacity - maximum unanswered presentations across admitted Web turns. */
-  constructor(private readonly capacity: number) {}
+  /**
+   * @param capacity - maximum unanswered presentations across admitted Web turns.
+   * @param changed - notify the Session list when one pending presentation changes.
+   */
+  constructor(private readonly capacity: number, private readonly changed: (agent: NativeAgent) => void) {}
+
+  /** @param agent - exact root Agent whose pending presentation is projected.
+   * @returns a redacted interaction kind, when the Agent awaits the user.
+   */
+  pendingKind(agent: NativeAgent): 'approval' | 'plan-review' | 'question' | undefined {
+    const prompt = [...this.pending.values()].find(entry => entry.agent === agent)?.prompt
+    if (prompt?.kind === 'approval') return 'approval'
+    if (prompt?.kind === 'questions') return prompt.questions.some(question => question.intent?.kind === 'plan-review')
+      ? 'plan-review' : 'question'
+    return undefined
+  }
 
   private ask(agent: NativeAgent, prompt: NativeWebHumanPrompt,
     signal: AbortSignal, feed: NativeSessionFeed, parseAnswer: (value: unknown) => unknown): Promise<unknown> {
@@ -33,6 +47,7 @@ export class NativeWebHumanInteraction {
       this.pending.delete(prompt.id)
       signal.removeEventListener('abort', abort)
       feed.push({ type: 'human-removed', id: prompt.id })
+      this.changed(agent)
       const next = [...this.pending.values()].find(entry => entry.feed === feed)
       if (next !== undefined && !this.closed) feed.push({ type: 'human', prompt: next.prompt })
     }
@@ -42,6 +57,7 @@ export class NativeWebHumanInteraction {
       reject: (error) => { remove(); outcome.reject(error) } }
     this.pending.set(prompt.id, entry)
     signal.addEventListener('abort', abort, { once: true })
+    this.changed(agent)
     if ([...this.pending.values()].find(entry => entry.feed === feed) === entry) feed.push({ type: 'human', prompt })
     return outcome.promise
   }

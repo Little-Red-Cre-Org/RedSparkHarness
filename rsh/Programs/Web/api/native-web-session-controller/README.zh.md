@@ -26,6 +26,8 @@ kind: "package-reference"
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
+`session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
+
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
@@ -83,3 +85,4 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI、文件及音频上传不由该包提供。
+- `hasActiveSchedule` 只能为已附加的 root owner 查询，因为 `taskScheduler.list` 要求该 owner；即使已安装 scheduler，冷态 Session 行也返回 `false`。

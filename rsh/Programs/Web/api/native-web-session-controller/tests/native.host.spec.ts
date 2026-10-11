@@ -498,8 +498,18 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const sessions = await client.list()
     expect(sessions.map(session => session.header.id)).toEqual([sessionId])
     expect(sessions[0]?.titleProjection).toEqual({ status: 'absent' })
+    expect(sessions[0]).toMatchObject({ blank: true, running: false, completed: false,
+      runningSubagentCount: 0, hasActiveSchedule: false })
+    expect(sessions[0]!.updatedAt).toBeGreaterThanOrEqual(sessions[0]!.header.createdAt)
+    const listAbort = new AbortController()
+    const listFollowing = client.follow(listAbort.signal)[Symbol.asyncIterator]()
+    await expect(listFollowing.next()).resolves.toMatchObject({ value: { type: 'baseline', items: [{ header: { id: sessionId } }] } })
+    const nextListFrame = listFollowing.next()
     expect((await client.modelControls()).catalog?.groups[0]?.models[0]?.id).toBe('chosen')
     await conversation.selectPreset('alternate')
+    await expect(nextListFrame).resolves.toMatchObject({ value: { type: 'upsert', item: { header: { id: sessionId }, blank: true } } })
+    listAbort.abort()
+    await listFollowing.return?.()
     await conversation.selectModel({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen' }, expectedRevision: null })).rejects.toThrow('stale selection revision')
     const selectedEvent = (await client.history(sessionId)).events.findLast(event => event.type === 'model/selection')
@@ -533,6 +543,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
+    const search = await client.search('first input')
+    expect(search.items.map(item => item.sessionId)).toEqual([sessionId])
+    expect(search.items[0]?.snippet).toContain('first input')
     expect(requests[0]).toMatchObject({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectPreset({ id: sessionId, preset: 'standard', expectedRevision: null })).rejects.toThrow()
     await conversation.select(sessionId)
@@ -644,6 +657,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       expect(settlement.ok).toBe(false)
     } finally { releaseWebRead.resolve(undefined); readSpy.mockRestore(); foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
     await conversation.close()
+    await client.archive(sessionId)
+    expect((await client.list()).some(item => item.header.id === sessionId)).toBe(false)
+    await expect(client.search('first input')).resolves.toMatchObject({ items: [] })
     await client.close()
 
     const unauthenticatedApi = await fetch(new URL('/api/native-session/follow', url), {
