@@ -161,7 +161,7 @@ it('queues and steers identified inputs through the active root inbox', async ()
       const removed = pending[target].filter(message => ids.includes(message.id))
       pending[target] = pending[target].filter(message => !ids.includes(message.id))
       acceptedRequest.onEvent?.({ type: 'agent/inbox/spliced', seq: seq++, time: seq,
-        data: { target, start: 0, removedCount: removed.length, inserted: [], outcome: 'canceled' } } as SessionEvent)
+        data: { target, start: 0, removedCount: removed.length, inserted: [], outcome: 'canceled' } } as unknown as SessionEvent)
     },
   }
   const active = {
