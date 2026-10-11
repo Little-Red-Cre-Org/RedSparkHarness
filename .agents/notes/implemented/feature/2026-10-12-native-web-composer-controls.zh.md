@@ -16,6 +16,8 @@ Mode 读取通过确切 root Session owner 和完整事件日志折叠所选 pre
 
 权限读取和写入通过确切 root owner 调用 [permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations`。Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
 
+随附的 `native-web` 模板会安装 plan-mode 和 permission Provider，以及 `standard` 和 `minimal` 常驻 agent preset。profile 可以省略这些可选 Provider，并返回文档说明的不可用响应；模板不会重写用户已有的 profile 文件。
+
 Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode Provider 时返回 `available: false`；缺少 permission Provider 时返回无当前选项且选项列表为空的不可用值。缺少 preset Registry 时仍可读取当前 mode 事实，但不公布可选 preset。修改失败使用既有 Native Session RPC 错误封装。
 
 ## Alternatives considered
@@ -28,8 +30,10 @@ Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode
 
 ## Consequences
 
-选定的 Native Client 可以读取所有 composer 控件，而不拥有第二份设置或 Session 缓存。Agent preset 变更仍仅适用于空白 Session。Plan-mode 选择保留已记录状态与待应用状态的区别。权限策略变更保持持久化，并独立于待处理人工审批。本次变更不会在 native-web profile 中新增这些可选 Provider，也不改 UI；组合这些 Provider 的 profile 会通过同一 Client API 提供其选项。
+选定的 Native Client 可以读取所有 composer 控件，而不拥有第二份设置或 Session 缓存。Agent preset 变更仍仅适用于空白 Session。Plan-mode 选择保留已记录状态与待应用状态的区别。权限策略变更保持持久化，并独立于待处理人工审批。随附的 native-web 配置通过同一 Client API 提供 mode 和 permission 选项；其他 profile 可以省略这些可选 Provider。
 
 ## Verification
+
+从 CLI 全新启动 `native-web` 后，可通过经过身份验证的 `/api` RPC 读取两种控制项：mode 选项为 `standard` 和 `minimal`，plan mode 可用且未激活；permission 选项为 `workspace-write` 和 `danger-full-access`，当前选中 `workspace-write`。
 
 经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。该场景使用真实 Provider 和 Session executor，而非平行存储。
