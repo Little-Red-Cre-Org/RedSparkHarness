@@ -1,5 +1,6 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { NativeAccountSummary } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
@@ -114,13 +115,14 @@ export function nativeSettingsDiff(
   return operations
 }
 
-function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick }: {
+function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick, children }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
   onSettled: () => Promise<boolean>
   onRefresh: () => void
   refreshClick: number
+  children?: ReactNode
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
   const [frames, setFrames] = useState<AuthorizationFrame[]>([])
@@ -230,7 +232,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
   }
 
   const settled = [...frames].reverse().find(frame => frame.type === 'settled')
-  return <div role="group" aria-label={entry.label}>
+  return <div className={styles['authorizationGroup']} role="group" aria-label={entry.label}>
     <div className={styles['authorizationRow']}>
       <span className={styles['authorizationIdentity']}>
         <span className={styles['rowName']}>{entry.label}</span>
@@ -297,6 +299,7 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
       <button type="button" className={styles['secondaryButton']} onClick={onRefresh}>{t('refreshSettings')}</button>
     </> : null}
     {error === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {error}</p>}
+    {children}
   </div>
 }
 
@@ -505,20 +508,17 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   const subscriptionContent = <>
     {authorizationError === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {authorizationError}</p>}
     {accountsError === undefined ? null : <p className={styles['error']} role="alert">{t('accountListError')}: {accountsError}</p>}
-    {accounts.length === 0 ? null : <section aria-label={t('accounts')}>
-      <h3>{t('accounts')}</h3>
-      {accounts.map((account) => {
-        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
-        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
-          signOutAvailable={entry?.configured ?? account.status === 'ready'}
-          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
-            onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />} />
-      })}
-    </section>}
-    {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
-      key={entry.key} entry={entry} actions={actions} t={t}
-      onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />)}
+    {authorizationEntries.map((entry) => {
+      const account = accounts.find(candidate => candidate.key === entry.key)
+      return <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
+        onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick}>
+        {account === undefined ? null : <AccountCard account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={entry.configured} />}
+      </AuthorizationRow>
+    })}
+    {accounts.filter(account => !authorizationEntries.some(entry => entry.key === account.key)).map(account => <AccountCard
+      key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+      onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={account.status === 'ready'} />)}
   </>
 
   if (section === 'models') return <div>
