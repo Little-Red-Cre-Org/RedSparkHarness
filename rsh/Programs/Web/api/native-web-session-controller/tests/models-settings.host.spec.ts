@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
 import type { NativeModelSettings } from '@deepseek-ai/dsh-llm-pi-ai/native'
@@ -105,6 +105,8 @@ it('streams settings, credential and adapter invalidations and closes on abort',
     expect(await readFrame()).toEqual({ type: 'credentials/reference-updated', ref: 'OPENAI_API_KEY' })
     await host.events.parallel(scope, 'llm/adapters-updated')
     expect(await readFrame()).toEqual({ type: 'llm/adapters-updated' })
+    await host.events.parallel(scope, 'accounts/changed', credentialKey('llm-pi-ai', 'openai-codex'))
+    expect(await readFrame()).toEqual({ type: 'accounts/changed', key: 'llm-pi-ai/openai-codex' })
 
     requestSignal.abort()
     expect((await reader!.read()).done).toBe(true)

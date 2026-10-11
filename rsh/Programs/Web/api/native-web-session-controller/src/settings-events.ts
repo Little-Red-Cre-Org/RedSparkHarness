@@ -12,10 +12,12 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'accounts/changed'; readonly key: string }
 
 function subject(event: NativeSettingsEvent): string {
   if (event.type === 'settings/document-updated') return `${event.type}:${event.namespace}`
   if (event.type === 'credentials/reference-updated') return `${event.type}:${event.ref}`
+  if (event.type === 'accounts/changed') return `${event.type}:${event.key}`
   return event.type
 }
 
@@ -71,6 +73,7 @@ export class NativeWebSettingsEvents {
         this.publish({ type: 'credentials/reference-updated', ref })
       }),
       context.on('llm/adapters-updated', () => { this.publish({ type: 'llm/adapters-updated' }) }),
+      context.on('accounts/changed', (key) => { this.publish({ type: 'accounts/changed', key }) }),
     ]
   }
 
