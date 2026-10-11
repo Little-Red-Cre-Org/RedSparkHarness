@@ -1,6 +1,7 @@
 /** Native pi-ai Provider using the shared catalog, profiles, auth and HTTP adapter. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeModelSettings } from './model-settings.ts'
+import type { LlmDiscoveredModel, LlmModelDiscoveryRequest } from '@deepseek-ai/dsh-llm/native'
 import type {} from '@deepseek-ai/dsh-authorization/native'
 import type {} from '@deepseek-ai/dsh-deepseek-account/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -86,51 +87,62 @@ export const plugin: NativePlugin = {
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
       context.own(() => directory.dispose())
+      const discoveries = new Set<Promise<unknown>>()
+      context.own(async () => { await Promise.allSettled(discoveries) })
       const modelSettings: NativeModelSettings = {
         configurableProviders: () => configurableProviderEntries(profiles),
-        async discover(settingsNs, request, signal) {
-          if (settingsNs !== SETTINGS_NAMESPACE) {
-            throw new LlmError(`no model discovery is registered for "${settingsNs}"`, 'NO_DISCOVERY')
-          }
-          if ((request.provider ?? '').length === 0 && (request.baseURL ?? '').length === 0) {
-            throw new LlmError('model discovery needs a provider route or a baseURL', 'INVALID_DISCOVERY')
-          }
-          const storedProfile = (provider: string | undefined): StoredModelDiscoveryProfile | undefined => {
-            if (provider === undefined) return undefined
-            const profile = profiles.get(provider)
-            if (profile === undefined) return undefined
-            return {
-              headers: profile.headers,
-              async resolveApiKey() {
-                if (profile.apiKeyEnv === undefined) return undefined
-                const hit = await credentials.resolve(profile.apiKeyEnv)
-                signal.throwIfAborted()
-                if (hit === undefined || hit.value.length === 0) {
-                  throw new LlmError(
-                    `llm-pi-ai: no credential for provider route "${provider}"; set ${profile.apiKeyEnv}`,
-                    'MISSING_CREDENTIAL',
-                  )
-                }
-                return assertUsableApiKey(hit.value, 'llm-pi-ai', profile.apiKeyEnv)
-              },
-              ...provider === 'openai-codex'
-                ? { resolveCodexAuth: (abortSignal?: AbortSignal) => adapter.getProviderAuth(provider, abortSignal) }
-                : {},
-            }
-          }
-          const discovered = await discoverModels({ ...request, signal }, () => storedProfile(request.provider))
-          const seen = new Set<string>()
-          return discovered.flatMap((model) => {
-            if (typeof model.id !== 'string' || model.id.length === 0 || seen.has(model.id)) return []
-            seen.add(model.id)
-            return [{
-              id: model.id,
-              ...model.name === undefined ? {} : { name: model.name },
-              ...model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow },
-              ...model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens },
-            }]
-          })
+        discover(settingsNs, request, callerSignal) {
+          const pending = discover(settingsNs, request, AbortSignal.any([callerSignal, context.signal]))
+          discoveries.add(pending)
+          void pending.finally(() => discoveries.delete(pending)).catch(() => undefined)
+          return pending
         },
+      }
+      async function discover(
+        settingsNs: string, request: LlmModelDiscoveryRequest, signal: AbortSignal,
+      ): Promise<readonly LlmDiscoveredModel[]> {
+        signal.throwIfAborted()
+        if (settingsNs !== SETTINGS_NAMESPACE) {
+          throw new LlmError(`no model discovery is registered for "${settingsNs}"`, 'NO_DISCOVERY')
+        }
+        if ((request.provider ?? '').length === 0 && (request.baseURL ?? '').length === 0) {
+          throw new LlmError('model discovery needs a provider route or a baseURL', 'INVALID_DISCOVERY')
+        }
+        const storedProfile = (provider: string | undefined): StoredModelDiscoveryProfile | undefined => {
+          if (provider === undefined) return undefined
+          const profile = profiles.get(provider)
+          if (profile === undefined) return undefined
+          return {
+            headers: profile.headers,
+            async resolveApiKey() {
+              if (profile.apiKeyEnv === undefined) return undefined
+              const hit = await credentials.resolve(profile.apiKeyEnv)
+              signal.throwIfAborted()
+              if (hit === undefined || hit.value.length === 0) {
+                throw new LlmError(
+                  `llm-pi-ai: no credential for provider route "${provider}"; set ${profile.apiKeyEnv}`,
+                  'MISSING_CREDENTIAL',
+                )
+              }
+              return assertUsableApiKey(hit.value, 'llm-pi-ai', profile.apiKeyEnv)
+            },
+            ...provider === 'openai-codex'
+              ? { resolveCodexAuth: (abortSignal?: AbortSignal) => adapter.getProviderAuth(provider, abortSignal) }
+              : {},
+          }
+        }
+        const discovered = await discoverModels({ ...request, signal }, () => storedProfile(request.provider))
+        const seen = new Set<string>()
+        return discovered.flatMap((model) => {
+          if (typeof model.id !== 'string' || model.id.length === 0 || seen.has(model.id)) return []
+          seen.add(model.id)
+          return [{
+            id: model.id,
+            ...model.name === undefined ? {} : { name: model.name },
+            ...model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow },
+            ...model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens },
+          }]
+        })
       }
       context.provide('modelSettings', modelSettings)
       context.on('credentials/record-updated', async (key) => {

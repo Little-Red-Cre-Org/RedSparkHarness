@@ -13,6 +13,12 @@ export type NativeSettingsEvent =
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
 
+function subject(event: NativeSettingsEvent): string {
+  if (event.type === 'settings/document-updated') return `${event.type}:${event.namespace}`
+  if (event.type === 'credentials/reference-updated') return `${event.type}:${event.ref}`
+  return event.type
+}
+
 class EventQueue implements AsyncIterator<NativeSettingsEvent> {
   private readonly values: NativeSettingsEvent[] = []
   private waiter: ((result: IteratorResult<NativeSettingsEvent>) => void) | undefined
@@ -28,8 +34,12 @@ class EventQueue implements AsyncIterator<NativeSettingsEvent> {
   push(value: NativeSettingsEvent): void {
     if (this.closed) return
     const waiter = this.waiter
-    if (waiter === undefined) this.values.push(value)
-    else {
+    if (waiter === undefined) {
+      // Coalesce by subject so a stalled reader holds at most one frame per namespace, reference or adapter set.
+      const index = this.values.findIndex(queued => subject(queued) === subject(value))
+      if (index === -1) this.values.push(value)
+      else this.values[index] = value
+    } else {
       this.waiter = undefined
       waiter({ done: false, value })
     }
