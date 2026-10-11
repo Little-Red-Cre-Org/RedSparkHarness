@@ -20,15 +20,16 @@ export type FileCardState = 'uploading' | 'ready' | 'error'
 
 /** One pending file card: type glyph, name, size or upload status, remove, retry. */
 export function FileCard({
-  name, bytes, state, progress, labels, onRemove, onRetry,
+  name, bytes, state, progress, labels, onRemove, onRetry, disabled,
 }: {
   name: string
   bytes: number
   state: FileCardState
   progress?: number
+  disabled?: boolean
   labels: FileCardLabels
   onRemove: () => void
-  onRetry: () => void
+  onRetry?: () => void
 }) {
   const extension = fileExtension(name).toUpperCase().slice(0, 8)
   const meta = state === 'uploading'
@@ -47,9 +48,9 @@ export function FileCard({
           ? <span className={css.spinner} />
           : <FileTypeIcon path={name} />}
       </span>
-      {retryable
+      {retryable && onRetry !== undefined
         ? (
-          <button type="button" className={`${css.body} ${css.retry}`} aria-label={labels.retry} onClick={onRetry}>
+          <button type="button" className={`${css.body} ${css.retry}`} aria-label={labels.retry} disabled={disabled} onClick={onRetry}>
             <span className={css.name}>{name}</span>
             <span className={`${css.meta} ${css.metaFailed}`}>{meta}</span>
           </button>
@@ -64,6 +65,7 @@ export function FileCard({
         type="button"
         className={retryable ? `${css.remove} ${css.removeFailed}` : css.remove}
         aria-label={labels.remove}
+        disabled={disabled}
         onClick={onRemove}
       >
         <IconCloseFill14 size={12} />
