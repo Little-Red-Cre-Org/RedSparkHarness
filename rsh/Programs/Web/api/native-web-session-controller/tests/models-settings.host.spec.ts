@@ -19,8 +19,8 @@ it('dispatches model directory and discovery RPCs with safe failure results', as
     discover,
   }
   const directory = { providers: () => providers } as unknown as NativeModelDirectory
-  const host = new NativeWebModels(directory, modelSettings)
   const signal = new AbortController().signal
+  const host = new NativeWebModels(directory, modelSettings, signal)
 
   expect(await host.handle('models/providers', {}, signal)).toEqual({
     ok: true, value: [{ id: 'openai', name: 'OpenAI' }],
@@ -30,14 +30,14 @@ it('dispatches model directory and discovery RPCs with safe failure results', as
     settingsNs: 'llm-pi-ai', request: { baseURL: 'https://gateway.example/v1', apiKey: 'one-request-secret' },
   }, signal)).toEqual({ ok: true, value: discovered })
   expect(discover).toHaveBeenCalledWith(
-    'llm-pi-ai', { baseURL: 'https://gateway.example/v1', apiKey: 'one-request-secret' }, signal,
+    'llm-pi-ai', { baseURL: 'https://gateway.example/v1', apiKey: 'one-request-secret' }, expect.any(AbortSignal),
   )
 
-  const unavailable = new NativeWebModels(undefined, undefined)
+  const unavailable = new NativeWebModels(undefined, undefined, signal)
   expect(await unavailable.handle('models/providers', {}, signal)).toEqual({ ok: true, value: [] })
   expect(await unavailable.handle('models/configurable-providers', {}, signal)).toEqual({ ok: true, value: [] })
   const brokenDirectory = { providers() { throw new Error('private directory details') } } as unknown as NativeModelDirectory
-  expect(await new NativeWebModels(brokenDirectory, undefined).handle('models/providers', {}, signal)).toMatchObject({
+  expect(await new NativeWebModels(brokenDirectory, undefined, signal).handle('models/providers', {}, signal)).toMatchObject({
     ok: false, error: { code: 'native/models-directory', message: 'Model directory request failed.' },
   })
   const failed = await unavailable.handle('models/discover', {
@@ -45,6 +45,18 @@ it('dispatches model directory and discovery RPCs with safe failure results', as
   }, signal)
   expect(failed).toMatchObject({ ok: false, error: { code: 'native/models-discovery', message: 'Model discovery failed.' } })
   expect(JSON.stringify(failed)).not.toContain('one-request-secret')
+
+  const lifetime = new AbortController()
+  let upstream: AbortSignal | undefined
+  const unloading = new NativeWebModels(directory, { ...modelSettings, discover: (_ns, _request, discoverySignal) => {
+    upstream = discoverySignal
+    return new Promise((_resolve, reject) => { discoverySignal.addEventListener('abort', () => { reject(new Error('aborted')) }) })
+  } }, lifetime.signal)
+  const running = unloading.handle('models/discover', { settingsNs: 'llm-pi-ai', request: { provider: 'openai' } }, signal)
+  lifetime.abort()
+  await unloading.close()
+  expect(upstream?.aborted).toBe(true)
+  expect(await running).toMatchObject({ ok: false, error: { code: 'native/models-discovery' } })
 })
 
 it('streams settings, credential and adapter invalidations and closes on abort', async () => {

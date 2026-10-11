@@ -20,11 +20,15 @@ export class NativeWebModels {
   /**
    * @param directory - selected provider directory, when installed.
    * @param settings - selected model settings provider, when installed.
+   * @param lifetime - controller lifetime; aborting it cancels admitted requests.
    */
   constructor(
     private readonly directory: NativeModelDirectory | undefined,
     private readonly settings: NativeModelSettings | undefined,
+    private readonly lifetime: AbortSignal,
   ) {}
+
+  private readonly pending = new Set<Promise<unknown>>()
 
   /** Handle one authenticated model RPC request.
    * @param endpoint - model RPC endpoint.
@@ -32,8 +36,21 @@ export class NativeWebModels {
    * @param signal - caller cancellation.
    * @returns model metadata or candidates, with generic failures that expose no draft credential or upstream body.
    */
-  async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+  handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    const result = this.run(endpoint, payload, AbortSignal.any([signal, this.lifetime]))
+    this.pending.add(result)
+    void result.finally(() => this.pending.delete(result))
+    return result
+  }
+
+  /** Wait for admitted requests after the controller lifetime aborts them. @returns completion of every admitted request. */
+  async close(): Promise<void> {
+    await Promise.allSettled(this.pending)
+  }
+
+  private async run(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      signal.throwIfAborted()
       if (endpoint === 'models/providers') {
         listRequest.parse(payload)
         return { ok: true, value: (this.directory?.providers() ?? []).map(({ id, name }) => ({ id, name })) }
