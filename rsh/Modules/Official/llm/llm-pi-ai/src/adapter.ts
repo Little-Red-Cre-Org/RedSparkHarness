@@ -37,6 +37,7 @@ import type {
   Models,
   ModelThinkingLevel,
   MutableModels,
+  OAuthCredential,
   Provider,
   RefreshModelsContext,
   SimpleStreamOptions,
@@ -74,6 +75,8 @@ import type {
   NativeResponsesGenerationCapture,
   NativeResponsesTransport,
 } from './native-responses.ts'
+import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
+import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
 import { toStreamChunks } from './stream.ts'
 
 /** One resolution's frozen view: the profiles and the collection built from them. */
@@ -111,6 +114,16 @@ export interface PiAiAdapterOptions {
   resolveRequestHeaders?: (
     provider: string, profile: ResolvedPiAiProviderProfile, signal?: AbortSignal,
   ) => Promise<Readonly<Record<string, string>> | undefined>
+  /**
+   * Record SIWC usage observations from the public Responses transport.
+   * @param identity - issuer and subject from the grant used for this request.
+   * @param observation - quota, credit and plan values read from the response.
+   * @param replaceQuotas - whether the observation contains the complete header quota set.
+   * @returns nothing; the callback retains the observation for account usage reads.
+   */
+  onCodexUsage?: (
+    identity: CodexUsageIdentity, observation: CodexUsageObservation, replaceQuotas: boolean,
+  ) => void
   /**
    * How every collection this adapter builds resolves auth the request-level
    * `apiKey` override does not cover. Required rather than optional: a
@@ -592,6 +605,35 @@ export class PiAiAdapter extends LlmAdapter {
     }
   }
 
+  /** Build a request-local collection that records the grant used by its SIWC OAuth auth. */
+  private codexUsageModels(
+    snapshot: PiAiSnapshot,
+    captureIdentity: (identity: CodexUsageIdentity) => void,
+  ): MutableModels {
+    const provider = snapshot.models.getProvider(CODEX_SUBSCRIPTION_ROUTE)
+    if (provider === undefined || provider.auth.oauth === undefined) {
+      throw new Error('llm-pi-ai: OpenAI Codex provider has no SIWC OAuth auth')
+    }
+    const oauth = provider.auth.oauth
+    const models: MutableModels = createModels(this.config.auth)
+    models.setProvider({
+      ...provider,
+      auth: {
+        ...provider.auth,
+        oauth: {
+          ...oauth,
+          async toAuth(credential: OAuthCredential) {
+            if (isSiwcCredential(credential)) {
+              captureIdentity({ issuer: credential.issuer, subject: credential.subject })
+            }
+            return oauth.toAuth(credential)
+          },
+        },
+      },
+    })
+    return models
+  }
+
   override prepareCall(
     provider: string,
     model: string,
@@ -686,6 +728,11 @@ export class PiAiAdapter extends LlmAdapter {
       ? undefined
       : await this.config.resolveApiKey(options.provider, profile)
     const providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    const onCodexUsage = options.provider === CODEX_SUBSCRIPTION_ROUTE ? this.config.onCodexUsage : undefined
+    let codexIdentity: CodexUsageIdentity | undefined
+    const streamModels = onCodexUsage === undefined
+      ? snapshot.models
+      : this.codexUsageModels(snapshot, (identity) => { codexIdentity = identity })
 
     const consumer = new AbortController()
     const upstream = options.signal === undefined
@@ -718,7 +765,7 @@ export class PiAiAdapter extends LlmAdapter {
           },
         }, onReplayDegrade)
       const events = options.provider === CODEX_SUBSCRIPTION_ROUTE
-        ? snapshot.models.stream(model as Model<'openai-responses'>, context, {
+        ? streamModels.stream(model as Model<'openai-responses'>, context, {
           ...apiKey === undefined ? {} : { apiKey },
           ...reasoning === undefined || reasoning === 'off' ? {} : { reasoningEffort: reasoning },
           ...profile.timeoutMs === undefined ? {} : { timeoutMs: profile.timeoutMs },
@@ -727,6 +774,20 @@ export class PiAiAdapter extends LlmAdapter {
           maxRetries: 0,
           signal: watchdog.signal,
           onPayload: siwcResponsesPayload,
+          ...onCodexUsage === undefined ? {} : {
+            onResponse: (response) => {
+              const observation = parseCodexRateLimitHeaders(response.headers)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, true)
+              }
+            },
+            onProviderStreamEvent: (data) => {
+              const observation = parseCodexRateLimitEvent(data)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, false)
+              }
+            },
+          },
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
           headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
         })

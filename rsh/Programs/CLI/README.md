@@ -44,7 +44,7 @@ dsh --help                          # the launcher's own help
 
 A profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). `patchReload: live` watches the profile and home-level patch files; `startup` applies them once.
 
-The `./native-profile` library export shares validated profile parsing and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
+The `./native-profile` library export shares validated profile parsing, preset expansion, and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
 
 Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
 

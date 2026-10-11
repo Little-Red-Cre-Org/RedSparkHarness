@@ -65,6 +65,8 @@ const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] =
   ['issuer', value => value === ISSUER],
   ['clientId', value => typeof value === 'string'],
   ['subject', value => typeof value === 'string'],
+  ['name', value => value === undefined || typeof value === 'string'],
+  ['picture', value => value === undefined || typeof value === 'string'],
   ['idToken', value => typeof value === 'string'],
   ['extAgentHostId', value => typeof value === 'string'],
   ['scopes', value => Array.isArray(value)],
@@ -87,6 +89,8 @@ export interface SiwcCredential extends OAuthCredential {
   readonly issuer: typeof ISSUER
   readonly subject: string
   readonly email?: string
+  readonly name?: string
+  readonly picture?: string
   readonly idToken: string
   readonly extAgentHostId: string
   readonly scopes: readonly string[]
@@ -306,6 +310,8 @@ function expiresAt(value: unknown): number {
 async function verifiedIdentity(idToken: string, clientId: string, nonce: string | undefined, signal: AbortSignal): Promise<{
   readonly subject: string
   readonly email?: string
+  readonly name?: string
+  readonly picture?: string
 }> {
   const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
   const response = await fetch(JWKS_URL, { headers: { accept: 'application/json' }, signal: requestSignal })
@@ -334,9 +340,16 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
   if (nonce !== undefined && payload.nonce !== nonce) {
     throw new Error('Sign in with ChatGPT ID token nonce did not match')
   }
+  const pictureUrl = typeof payload.picture === 'string' && URL.canParse(payload.picture)
+    ? new URL(payload.picture)
+    : undefined
   return {
     subject: payload.sub,
     ...typeof payload.email === 'string' ? { email: payload.email } : {},
+    ...typeof payload.name === 'string' ? { name: payload.name } : {},
+    ...pictureUrl !== undefined && (pictureUrl.protocol === 'http:' || pictureUrl.protocol === 'https:')
+      ? { picture: pictureUrl.href }
+      : {},
   }
 }
 
@@ -455,6 +468,8 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
           issuer: ISSUER,
           subject: identity.subject,
           ...identity.email === undefined ? {} : { email: identity.email },
+          ...identity.name === undefined ? {} : { name: identity.name },
+          ...identity.picture === undefined ? {} : { picture: identity.picture },
           idToken,
           extAgentHostId,
           scopes,

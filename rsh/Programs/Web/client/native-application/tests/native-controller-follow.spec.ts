@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionClient, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeSessionListFrame, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from '../src/controller.ts'
 import { createNativeSessionClient } from '../../native-session/src/native.ts'
 
@@ -9,6 +9,35 @@ function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((done) => { resolve = done })
   return { promise, resolve }
+}
+
+function frameQueue<T>() {
+  const frames: T[] = []
+  let deliver: ((frame: T | undefined) => void) | undefined
+  return {
+    publish(frame: T): void {
+      const next = deliver
+      deliver = undefined
+      if (next === undefined) frames.push(frame)
+      else next(frame)
+    },
+    take(signal: AbortSignal): Promise<T | undefined> {
+      const frame = frames.shift()
+      if (frame !== undefined) return Promise.resolve(frame)
+      if (signal.aborted) return Promise.resolve(undefined)
+      return new Promise((resolve) => {
+        const abort = (): void => {
+          deliver = undefined
+          resolve(undefined)
+        }
+        deliver = (next) => {
+          signal.removeEventListener('abort', abort)
+          resolve(next)
+        }
+        signal.addEventListener('abort', abort, { once: true })
+      })
+    },
+  }
 }
 
 const makeHeader = (id: string): SessionHeader => ({
@@ -23,6 +52,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const firstFollowStarted = deferred<undefined>()
   const secondFollowStarted = deferred<undefined>()
   const thirdFollowStarted = deferred<undefined>()
+  const secondTextPublished = deferred<undefined>()
   const firstSettlement = deferred<{ exitCode: number; answer: string }>()
   const secondSettlement = deferred<{ exitCode: number; answer: string }>()
   const thirdSettlement = deferred<{ exitCode: number; answer: string }>()
@@ -41,9 +71,12 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   let admissionCount = 0
   let promptCount = 0
   let rows: NativeSessionListItem[] = [
-    { header: makeHeader('session-alpha'), titleProjection: { status: 'absent' } },
-    { header: makeHeader('session-beta'), titleProjection: { status: 'absent' } },
+    { header: makeHeader('session-alpha'), titleProjection: { status: 'absent' }, updatedAt: 1,
+      blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false },
+    { header: makeHeader('session-beta'), titleProjection: { status: 'absent' }, updatedAt: 1,
+      blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false },
   ]
+  const rosterFrames = frameQueue<NativeSessionListFrame>()
   const rpc = {
     async call(_channel: string, endpoint: string, payload: unknown) {
       if (endpoint === 'session/start') return { ok: true as const, value: { admissionId: `a${++admissionCount}` } }
@@ -78,12 +111,21 @@ it('isolates delayed frames and late carrier errors while retaining title roster
       })
     },
     async list() { return rows },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline', items: rows }
+      while (true) {
+        const frame = await rosterFrames.take(signal)
+        if (frame === undefined) return
+        yield frame
+      }
+    },
     async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
     async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
   }
   const controller = new NativeConversationController(client, { maxLiveTextChars: 1_000, maxLiveEvents: 100 })
   const unsubscribe = controller.subscribe(() => {
     const snapshot = controller.getSnapshot()
+    if (snapshot.liveText === 'SECOND_TURN_TEXT') secondTextPublished.resolve(undefined)
     if (snapshot.sessions.find(row => row.header.id === 'session-alpha')?.titleProjection.status === 'resolved') {
       alphaTitlePublished.resolve(undefined)
     }
@@ -111,9 +153,11 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     await secondFollowStarted.promise
     push('a2', { type: 'text-start' })
     push('a2', { type: 'text', text: 'SECOND_TURN_TEXT' })
+    await secondTextPublished.promise
     rows = rows.map(row => row.header.id === 'session-alpha'
       ? { ...row, titleProjection: { status: 'resolved', title: 'Late alpha title' } }
       : row)
+    rosterFrames.publish({ type: 'upsert', item: rows.find(row => row.header.id === 'session-alpha')! })
     push('a1', { type: 'text-start' })
     push('a1', { type: 'text', text: 'FIRST_TURN_DELAYED_TEXT' })
     push('a1', { type: 'human', prompt: { kind: 'approval', id: 'old-human', toolName: 'old-tool' } })
@@ -137,6 +181,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     rows = rows.map(row => row.header.id === 'session-beta'
       ? { ...row, titleProjection: { status: 'resolved', title: 'Late beta title' } }
       : row)
+    rosterFrames.publish({ type: 'upsert', item: rows.find(row => row.header.id === 'session-beta')! })
     push('a2', { type: 'text-start' })
     push('a2', { type: 'text', text: 'OLD_SESSION_TEXT' })
     push('a2', { type: 'human', prompt: { kind: 'approval', id: 'old-human-2', toolName: 'old-tool' } })
