@@ -40,6 +40,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Read-only Native schedule catalog selected by the browser composition. */
+    clientNativeSchedule: NativeScheduleClient
     /** Native Workspace RPC Consumer selected by the browser composition. */
     clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
     /** Native directory chooser and browser selected by the browser composition. */
@@ -49,12 +51,30 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
-import type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
-export type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
+export type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
+export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
+}
+
+/** Read-only browser access to persisted scheduled work. */
+export interface NativeScheduleClient {
+  /**
+   * List active, paused, and failed scheduled plans.
+   * @param signal - caller cancellation.
+   * @returns safe plan metadata without prompts or captured execution configuration.
+   */
+  list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Follow one complete baseline and subsequent schedule changes.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns baseline, upsert, and remove frames from the Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -449,9 +469,30 @@ export interface NativeSessionClient {
   close(): Promise<void>
   /**
    * @param signal - caller cancellation.
-   * @returns stored Session headers.
+   * @returns Session rows ordered by latest activity.
    */
   list(signal?: AbortSignal): Promise<readonly NativeSessionListItem[]>
+  /**
+   * Follow the Host list after its complete ordered baseline.
+   * @param signal - ends this iteration without changing Session state.
+   * @returns baseline, upsert and removal frames from the selected Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeSessionListFrame>
+  /**
+   * Search Session titles and current recorded message text in bounded Host pages.
+   * @param query - non-empty literal search text.
+   * @param cursor - continuation returned by the preceding page.
+   * @param signal - caller cancellation.
+   * @returns matching Session titles and message snippets.
+   */
+  search(query: string, cursor?: string, signal?: AbortSignal): Promise<NativeSessionSearchPage>
+  /**
+   * Archive one Session through the selected Workspace registry.
+   * @param sessionId - stored Session identity.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host records the archive.
+   */
+  archive(sessionId: SessionId, signal?: AbortSignal): Promise<void>
   /** Pin a title through the selected Host Session owner. */
   renameTitle(sessionId: SessionId, title: string, signal?: AbortSignal): Promise<void>
   /** Deliberately unpin and regenerate through the selected Host provider or fallback. */
@@ -582,6 +623,17 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed') }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
+const scheduledJobSchema = z.strictObject({
+  id: z.string().min(1), sessionId: z.string().min(1), title: z.string(),
+  state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
+  nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+  lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+})
+const scheduleFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
+  z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
+  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
+])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
 const nativeAgentPresetListSchema = z.strictObject({
   default: z.string().nullable(),
@@ -607,6 +659,26 @@ const settingsEventSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('llm/adapters-updated') }),
   z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
 ])
+const listItemSchema = z.strictObject({
+  header: z.unknown(), titleProjection: z.unknown(),
+  titleActions: z.strictObject({ rename: z.boolean(), refresh: z.boolean() }).optional(),
+  updatedAt: z.number().int().nonnegative().refine(Number.isSafeInteger), blank: z.boolean(),
+  running: z.boolean(), completed: z.boolean(), runningSubagentCount: z.number().int().nonnegative().refine(Number.isSafeInteger),
+  pendingInteraction: z.strictObject({ kind: z.enum(['approval', 'plan-review', 'question']) }).optional(),
+  workspaceId: z.string().min(1).optional(), hasActiveSchedule: z.boolean(),
+})
+const listFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), items: z.array(listItemSchema) }),
+  z.strictObject({ type: z.literal('upsert'), item: listItemSchema }),
+  z.strictObject({ type: z.literal('remove'), sessionId: z.string().min(1) }),
+])
+const searchPageSchema = z.strictObject({
+  items: z.array(z.strictObject({
+    sessionId: z.string().min(1), title: z.string(), workspaceId: z.string().min(1).optional(),
+    cwd: z.string().optional(), snippet: z.string().optional(),
+  })),
+  cursor: z.string().optional(),
+})
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
     message: z.string(), url: z.string().optional(), code: z.string().optional(),
@@ -623,12 +695,54 @@ const authorizationFrameSchema = z.discriminatedUnion('type', [
     code: z.string().optional(), message: z.string().optional() }),
 ])
 
+function scheduleJob(value: unknown): NativeScheduledJob {
+  const job = scheduledJobSchema.parse(value)
+  const { nextRunAt, lastRunAt, ...metadata } = job
+  return { ...metadata, sessionId: job.sessionId as SessionId,
+    ...(nextRunAt === undefined ? {} : { nextRunAt }), ...(lastRunAt === undefined ? {} : { lastRunAt }) }
+}
+
+function scheduleFrame(value: unknown): NativeScheduleFrame {
+  const frame = scheduleFrameSchema.parse(value)
+  switch (frame.type) {
+    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
+    case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
+    case 'remove': return frame
+  }
+}
+
 function header(value: unknown): SessionHeader {
   const data = fields(value)
   if (typeof data.id !== 'string' || data.id.length === 0 || data.version !== SESSION_FORMAT_VERSION
     || typeof data.createdAt !== 'number' || !Number.isSafeInteger(data.createdAt) || data.createdAt < 0
     || typeof data.isSeeded !== 'boolean') throw new TypeError('invalid native Session header')
   return data as unknown as SessionHeader
+}
+
+function listItem(value: unknown): NativeSessionListItem {
+  const data = listItemSchema.parse(value)
+  const projection = fields(data.titleProjection)
+  const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved' && typeof projection.title === 'string'
+    && projection.title.length > 0 ? { status: 'resolved', title: projection.title }
+    : projection.status === 'absent' ? { status: 'absent' }
+      : projection.status === 'unavailable' ? { status: 'unavailable' }
+        : (() => { throw new TypeError('invalid native Session title projection') })()
+  return {
+    header: header(data.header), titleProjection,
+    ...data.titleActions === undefined ? {} : { titleActions: data.titleActions },
+    updatedAt: data.updatedAt, blank: data.blank, running: data.running, completed: data.completed,
+    runningSubagentCount: data.runningSubagentCount,
+    ...data.pendingInteraction === undefined ? {} : { pendingInteraction: data.pendingInteraction },
+    ...data.workspaceId === undefined ? {} : { workspaceId: data.workspaceId as Branded<'WorkspaceId'> },
+    hasActiveSchedule: data.hasActiveSchedule,
+  }
+}
+
+function listFrame(value: unknown): NativeSessionListFrame {
+  const frame = listFrameSchema.parse(value)
+  if (frame.type === 'baseline') return { type: 'baseline', items: frame.items.map(listItem) }
+  if (frame.type === 'upsert') return { type: 'upsert', item: listItem(frame.item) }
+  return { type: 'remove', sessionId: frame.sessionId as SessionId }
 }
 
 const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
@@ -685,24 +799,16 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
-    return value.map((item) => {
-      const data = fields(item)
-      const projection = fields(data.titleProjection)
-      const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved'
-        && typeof projection.title === 'string' && projection.title.length > 0
-        ? { status: 'resolved', title: projection.title }
-        : projection.status === 'absent'
-          ? { status: 'absent' }
-          : projection.status === 'unavailable'
-            ? { status: 'unavailable' }
-            : (() => { throw new TypeError('invalid native Session title projection') })()
-      const actions = data.titleActions === undefined ? undefined : fields(data.titleActions)
-      if (actions !== undefined && (typeof actions.rename !== 'boolean' || typeof actions.refresh !== 'boolean')) {
-        throw new Error('native session: invalid title action capabilities')
-      }
-      return { header: header(data.header), titleProjection,
-        ...(actions === undefined ? {} : { titleActions: { rename: actions.rename as boolean, refresh: actions.refresh as boolean } }) }
-    })
+    return value.map(listItem)
+  }
+  if (endpoint === 'session/search') {
+    const page = searchPageSchema.parse(value)
+    return { items: page.items.map(item => ({
+      sessionId: item.sessionId as SessionId, title: item.title,
+      ...item.workspaceId === undefined ? {} : { workspaceId: item.workspaceId as Branded<'WorkspaceId'> },
+      ...item.cwd === undefined ? {} : { cwd: item.cwd },
+      ...item.snippet === undefined ? {} : { snippet: item.snippet },
+    })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
   }
   const data = fields(value)
   switch (endpoint) {
@@ -753,6 +859,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/create':
       if (typeof data.sessionId !== 'string' || data.sessionId.length === 0) throw new TypeError('invalid native Session identity')
       break
+    case 'session/archive':
+      if (data.archived !== true) throw new TypeError('invalid native Session archive acknowledgement')
+      return undefined
     case 'session/prompt':
     case 'session/await':
       if (typeof data.exitCode !== 'number' || !Number.isSafeInteger(data.exitCode)
@@ -805,6 +914,7 @@ export function createNativeSessionClient(
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
   const pendingFollows = new Set<Promise<void>>()
+  const pendingListFollows = new Set<Promise<void>>()
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
@@ -977,8 +1087,8 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      while (pendingPrompts.size > 0 || pendingFollows.size > 0) {
-        await Promise.allSettled([...pendingPrompts, ...pendingFollows])
+      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0) {
+        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows])
       }
     },
     async answerHuman(sessionId, id, answer, signal) {
@@ -987,6 +1097,37 @@ export function createNativeSessionClient(
       await call('session/answer-human', { sessionId, admissionId, id, answer }, signal)
     },
     list: signal => call('session/list', {}, signal),
+    async *follow(signal) {
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      const following = new AbortController()
+      const accepted = AbortSignal.any([lifetime, signal, following.signal])
+      const completed = Promise.withResolvers<void>()
+      pendingListFollows.add(completed.promise)
+      const finish = (): void => {
+        following.abort()
+        completed.resolve(undefined)
+        pendingListFollows.delete(completed.promise)
+      }
+      accepted.addEventListener('abort', finish, { once: true })
+      if (accepted.aborted) finish()
+      try {
+        const response = await responseOperation('/api', 'native-session/list-follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native Session list follow: invalid response HTTP ${response.status}`)
+        }
+        const frames = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of frames) yield listFrame(JSON.parse(data))
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      } finally {
+        accepted.removeEventListener('abort', finish)
+        finish()
+      }
+    },
+    search: (query, cursor, signal) => call('session/search', { query, ...(cursor === undefined ? {} : { cursor }) }, signal),
+    async archive(sessionId, signal) { await call('session/archive', { sessionId }, signal) },
     async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
     async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
@@ -1011,19 +1152,52 @@ export function createNativeSessionClient(
   }
 }
 
+function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeScheduleClient {
+  return {
+    async list(signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'schedules/list', {}, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
+      return result.value.map(scheduleJob)
+    },
+    async *follow(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native schedule Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'schedules/follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native schedules follow: invalid response HTTP ${response.status}`)
+        }
+        const events = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of events) yield scheduleFrame(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native schedules follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
-      const clients = createNativeWorkspaceClients(context.require('clientConnection').rpc, config.maxFollowBufferChars, context.signal)
+      const rpc = context.require('clientConnection').rpc
+      const client = createNativeSessionClient(rpc, config, context.signal)
+      const schedules = createNativeScheduleClient(rpc, config, context.signal)
+      const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
       context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeSchedule', schedules)
       context.provide('clientNativeWorkspace', clients.workspace)
       context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }

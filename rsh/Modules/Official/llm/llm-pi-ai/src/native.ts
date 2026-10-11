@@ -14,6 +14,7 @@ import type { NativeSettingsScope } from '@deepseek-ai/dsh-settings-definition/n
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from './adapter.ts'
 import { NativeAccountsProvider } from './accounts.ts'
+import { CodexUsageStore } from './rate-limits.ts'
 export type { AccountBalance, AccountKey, AccountSummary, AccountUsage, NativeAccounts, Quota, QuotaWindow } from './accounts.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { PiAiProviderProfile } from './config.ts'
@@ -134,9 +135,13 @@ export const plugin: NativePlugin = {
       // Settings watches do not replay; refresh the value before subscribing.
       if (settingsSelection !== undefined) providers = settingsSelection.get().providers ?? {}
       let profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
+      const codexUsage = new CodexUsageStore()
       const adapter = new PiAiAdapter({
         profiles: () => profiles,
         auth,
+        onCodexUsage: (identity, observation, replaceQuotas) => {
+          codexUsage.observe(identity, observation, replaceQuotas)
+        },
         resolveAttachments: () => attachments,
         resolveImageAccess: (store, ref) => resolveImageAttachmentAccess(store, hostPath => fs?.processPathFromHostPath(hostPath), ref),
         async resolveApiKey(provider, profile) {
@@ -155,7 +160,7 @@ export const plugin: NativePlugin = {
         },
       })
       context.own(() => { adapter.dispose() })
-      context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount))
+      context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount, codexUsage))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)

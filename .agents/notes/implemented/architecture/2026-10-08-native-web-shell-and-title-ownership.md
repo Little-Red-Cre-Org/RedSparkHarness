@@ -6,7 +6,7 @@ English | [中文](2026-10-08-native-web-shell-and-title-ownership.zh.md)
 
 ## Problem
 
-The explicit native-web profile could render a conversation but had no independently selectable navigation shell, appearance controls or Session details surface. Reusing the legacy shell directly would also import its Cordis registration path, while copying it into the application would duplicate existing Session and layout ownership.
+The Native sidebar and conversation view share one Session owner and one layout store. Session activity and Workspace membership come from Host-owned streams, so navigation must not infer Workspace identity from cwd or create another Session controller.
 
 ## Decision
 
@@ -14,7 +14,7 @@ The native-web template selects six optional Client installers for locale, theme
 
 Session titles remain durable `session/title` facts projected from Session history. Automatic provider work starts after the idle observer has captured current input and committed any fallback. The service retains the exact ActiveSession owner for that background task, then releases it when the provider finishes or fails. Rename and refresh delegate through the caller's existing RootExecution capability; they do not create another writer or title store. Provider and maintenance work is cancelled and drained during owner detach and service disposal, so prompt settlement does not wait for the auxiliary provider while safe teardown still waits for accepted work to finish.
 
-The visible Workspace label is the selected Session header's `cwd`; this shell does not claim Workspace list, create, search, move or delete behavior. Selecting these modules remains explicit in the native-web profile. The compatibility application remains the default, and this change does not select the P5 default profile.
+The Session controller follows Host list baselines and increments, which supply activity time, run state, completion, subagent count and pending-interaction state. Host and Client share Workspace and directory DTO declarations through the type-only `workspaces-types` entry, keeping Host handlers out of the Client RPC implementation. The sidebar groups rows by the registered workspaceId, follows the Workspace registry, and uses Host order for Workspaces and manual Session order. Recent-activity ordering, Session search and archive, Workspace selection/create/rename/delete, and directory picking call the selected Host clients; cwd supplies the registered path display only. Selecting these modules remains explicit in the native-web profile. The compatibility application remains the default, and this change does not select the P5 default profile.
 
 ## Alternatives considered
 
@@ -26,4 +26,4 @@ The visible Workspace label is the selected Session header's `cwd`; this shell d
 
 ## Consequences
 
-The Native shell is assembled from optional feature modules over one slot renderer, one Session controller and one Session history. Slow providers may continue owning a Session until they settle after cancellation; teardown drains them rather than releasing an owner while its writer may still be active. Workspace CRUD, attachments and login remain outside this shell slice, and there is no legacy-default or Electron deployment claim.
+The Native shell is assembled from optional feature modules over one slot renderer, one Session controller and one Session history. Slow providers may continue owning a Session until they settle after cancellation; teardown drains them rather than releasing an owner while its writer may still be active. Workspace and Session drag-reordering gestures, additional Session search pages, the scheduled-task center, attachments and login remain outside this shell slice. There is no legacy-default or Electron deployment claim.

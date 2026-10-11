@@ -3637,6 +3637,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
 - `@deepseek-ai/dsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）
+- `@deepseek-ai/dsh-native-schedule-controller`（[`rsh/Programs/Web/host/native-schedule-controller/src/index.ts`](../Programs/Web/host/native-schedule-controller/src/index.ts)）
 - `@deepseek-ai/dsh-native-sdk-server`（[`rsh/Programs/SDK/packages/native-server/src/index.ts`](../Programs/SDK/packages/native-server/src/index.ts)）
 - `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-subagent` ([`rsh/Engine/subagent/native-subagent/src/index.ts`](../Engine/subagent/native-subagent/src/index.ts))

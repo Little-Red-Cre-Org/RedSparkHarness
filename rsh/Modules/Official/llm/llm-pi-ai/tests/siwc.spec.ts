@@ -98,6 +98,8 @@ describe('Sign in with ChatGPT OAuth', () => {
             refresh_token: refresh,
             id_token: await new SignJWT({
               nonce: authorizationNonce,
+              name: 'Ada Lovelace',
+              picture: 'https://img.example/avatar.png',
               ...expiration === undefined ? {} : { exp: expiration },
             })
               .setProtectedHeader({ alg: 'RS256', kid })
@@ -177,6 +179,7 @@ describe('Sign in with ChatGPT OAuth', () => {
       expect(credential).toMatchObject({
         type: 'oauth', access, refresh, siwc: 'chatgpt-plan', clientId: issuedClientId,
         subject: 'synthetic-account-subject', extAgentHostId: 'stable-host-id',
+        name: 'Ada Lovelace', picture: 'https://img.example/avatar.png',
       })
       expect(credential.scopes).toContain('chatgpt.tokens.use.direct')
       await expect(oauth.toAuth(credential)).resolves.toEqual({ apiKey: access })

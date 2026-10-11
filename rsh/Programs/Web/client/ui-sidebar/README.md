@@ -27,7 +27,7 @@ The dsh web client sidebar shows the active build, starts sessions, collapses na
 
 The sidebar is the navigation shell: users see the brand, start new sessions, collapse the rail, and reach Settings. Feature plugins fill its seats — ui-workspace fills `sidebar.workspaces`, ui-settings registers the trigger row and settings panel at `sidebar.settings`.
 
-In the native-web profile, the native application fills these seats with the Host-backed Session list and Settings panel. Its workspace section groups Sessions by `cwd` as a display projection; Workspace creation, search, sort controls, and scheduled tasks stay disabled until the native Host provides those capabilities.
+In the native-web profile, the native application fills these seats with a Host-backed Session roster and Settings panel. The workspace section groups rows by registered `workspaceId`, follows Session activity and Workspace changes, supports recent-activity/manual ordering, Session search and archive, and Workspace creation, selection, rename, and deletion. Scheduled tasks remain disabled because the Native Schedule capability is unavailable.
 
 ### Brand and New Session
 
@@ -92,9 +92,9 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define what the shell owns versus what its occupants own; they are current package constraints.
 
-- **Session state-dot rendering is owned by ui-workspace** — no done/error notification sources are available to this shell.
-- **Workspace browser behavior is composition-owned** — grouping, ordering, search, and row state belong to ui-workspace, not this shell.
-- **Native Workspace data is not available yet** — native path groups are not Workspace identities, and workspace controls and scheduled tasks remain disabled until their Host capabilities are available.
+- **The legacy Workspace browser remains owned by ui-workspace** — the Native sidebar composes its Host-backed rows here and shares only the presentation primitives.
+- **Native Workspace rows do not support drag reordering or moving Sessions** — the native Host exposes ordering commands, but the sidebar does not present those gestures.
+- **Native Session search shows one Host page** — additional pages and the Native Schedule task center are not presented.
 - **"New task completed" unread marking is local viewing state** — completion-time > last-seen never reaches the host.
 
 <a id="dev-note"></a>

@@ -39,6 +39,10 @@
       "types": "./lib/types/human.d.ts",
       "default": "./lib/human.js"
     },
+    "./schedule-types": {
+      "types": "./lib/types/schedule-types.d.ts",
+      "default": "./lib/schedule-types.js"
+    },
     "./workspaces": {
       "types": "./lib/types/workspaces.d.ts",
       "default": "./lib/workspaces.js"
@@ -57,6 +61,7 @@
       "optional": [],
       "provides": [
         "clientNativeSession",
+        "clientNativeSchedule",
         "clientNativeWorkspace",
         "clientNativeDirectoryPicker"
       ]
@@ -70,6 +75,7 @@
     "lib/model-controls.js",
     "lib/human.js",
     "lib/workspaces.js",
+    "lib/schedule-types.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
