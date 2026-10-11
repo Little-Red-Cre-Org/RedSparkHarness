@@ -36,17 +36,51 @@ Model controls decode the selected Host catalog and installed preset metadata. M
 
 `agentPresetsList(signal?)` calls `agent-presets/list` and validates the Host's `{ default, presets }` response. It includes profile-only standing compositions and scanned native folders; `source` is `system` or `user` when a folder supplies trust and `profile` otherwise. Without a Registry, the Host returns `default: null` and an empty list.
 
+`agentPresetRead(id, signal?)` returns the preset source, status, metadata and raw native composition text; profile-only rows have no file content. `agentPresetCopy(from, id, name?, signal?)` copies a file-backed preset into the Host user directory, and `agentPresetDelete(id, signal?)` removes only user presets. `agentPresetsCanOpenDirectory(signal?)` reports Host opener availability; `agentPresetOpenDirectory(id, signal?)` opens a user folder or returns the Host-local path. All five methods preserve the Host's refusal code through `NativeSessionRpcError`.
+
 The optional prompt observer follows accepted durable events and transient assistant text through the selected Connection Fetch response. The maintained eventsource-parser handles SSE framing. Event decoding uses the shared Session parser; missing terminal settlement, malformed frames or observer failure cancel the exact admission and await Host drain before rejection. Caller cancellation detaches following and still awaits durable settlement. A custom RPC carrier without response support rejects observed prompts before admission.
 
 The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`, `credentialsDescribe`, `credentialsSet` and `credentialsUnset` on the selected `/api` carrier. `settingsOpenDocument` opens the Host's local settings document when `settingsDescribe` reports `hasDocument`. `pluginInventoryList` reads the Host's installations for the Plugins page, and `modelCatalog` returns the Host model catalog (or null) from `session/model-controls`. `settingsDescribe` returns the published namespace descriptors with request budgets supplied by the selected Host. The Settings page uses `maxCredentialRefsPerRead` for bounded credential batches and aggregates the results; it refuses edits above `maxSettingsOperations` before sending a mutation, because one revision-checked write stays atomic. The Host defaults these validated limits to 64 refs and 512 operations. Credential reads contain only presence, source and writability facts, and credential writes return acknowledgements without echoing their values. `NativeSessionRpcError` retains the Host code and conflict details for stale-write handling.
 
-`modelsListProviders`, `modelsListConfigurableProviders` and `modelsDiscover` expose the Host's live routes, configurable-provider diagnostics and draft discovery. `NativeModelDiscoveryRequest.apiKey` is sent for one discovery request; Host failures reject with `NativeSessionRpcError`. `settingsEvents(signal)` streams `settings/document-updated`, `credentials/reference-updated` `llm/adapters-updated` and `accounts/changed` notifications without values, and abort ends iteration cleanly.
+`modelsListProviders`, `modelsListConfigurableProviders` and `modelsDiscover` expose the Host's live routes, configurable-provider diagnostics and draft discovery. `NativeModelDiscoveryRequest.apiKey` is sent for one discovery request; Host failures reject with `NativeSessionRpcError`. `settingsEvents(signal)` streams `settings/document-updated`, `credentials/reference-updated`, `llm/adapters-updated`, `agent-presets/updated` and `accounts/changed` notifications without values, and abort ends iteration cleanly.
+
+```ts type-equiv
+/** Native preset metadata and optional raw composition file returned by the Host. */
+interface NativeAgentPresetDocument {
+  /** Preset id. */
+  readonly id: string
+  /** Profile-only, shipped or user-authored source. */
+  readonly source: 'profile' | 'system' | 'user'
+  /** Composition file status. */
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  /** Display name. */
+  readonly name: string
+  /** Optional display description. */
+  readonly description?: string
+  /** Raw `agent.native.json` text when the folder has a composition file. */
+  readonly content?: string
+  /** Short reason when the folder cannot be installed. */
+  readonly problem?: string
+}
+```
+
+```ts type-equiv
+/** Notification-only event that tells Settings pages which view to reread. */
+type NativeSettingsEvent =
+  | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
+  | { readonly type: 'credentials/reference-updated'; readonly ref: string }
+  | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
+  | { readonly type: 'accounts/changed'; readonly key: string }
+```
 
 Authorization methods list safe flow metadata, begin an attempt, stream replayable secret-free frames from the authorization Fetch route, and answer, decline or cancel by the current attempt identity.
 
 Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. OpenAI Codex returns `USAGE_PENDING` until a model call reports limits, then returns the grant email, nullable plan, quota windows and optional credits; these snapshots exist only in Host memory and are isolated by the saved grant issuer and subject. Account responses contain no credential values.
 
-The same Cordis-free installation provides `clientNativeWorkspace` and `clientNativeDirectoryPicker`. Workspace methods expose `list()` as `{ workspaces, archivedSessionIds }`, `follow(signal)` as a baseline followed by upsert/remove/order/archive frames, and create, rename, registration-only delete, reorder, session reorder, archive, case-insensitive title/path search and `connectWorkspace`. Connection reuses an unarchived member Session with a matching Workspace `cwd` that has not started a turn (or recorded a scheduler notice), otherwise it creates and attaches a blank Session. Directory methods expose the Host OS chooser, one-level `{ path, entries, crumbs }` browsing and single-child directory creation. Host integrations import these serializable Workspace and directory types from the `workspaces` entry.
+The same Cordis-free installation provides `clientNativeWorkspace` and `clientNativeDirectoryPicker`. Workspace methods expose `list()` as `{ workspaces, archivedSessionIds }`, `follow(signal)` as a baseline followed by upsert/remove/order/archive frames, and create, rename, delete, reorder, session reorder, archive, case-insensitive title/path search and `connectWorkspace`. Delete releases the Workspace's idle runtime route while retaining its directory and Session logs. Connection reuses an unarchived member Session with a matching Workspace `cwd` that has not started a turn (or recorded a scheduler notice), otherwise it creates and attaches a blank Session. Directory methods expose the Host OS chooser, one-level `{ path, entries, crumbs }` browsing and single-child directory creation.
+
+The `clientNativeSchedule` service exposes `list()` and `follow(signal)` for active, paused, and failed task rows. Its complete baseline and later upsert/remove frames contain schedule metadata without prompts or execution configuration; Host failures retain the `native/schedules` code.
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */

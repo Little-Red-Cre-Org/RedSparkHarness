@@ -182,7 +182,7 @@ export function apply(ctx: Context, config: Config): void {
       )
     },
   })
-  ctx.effect(() => () => { adapter.dispose() }, 'llm-pi-ai: dispose adapter')
+  ctx.effect(() => () => adapter.dispose(), 'llm-pi-ai: dispose adapter')
   ctx.on('credentials/record-updated', (key) => {
     if (credentialKeyScope(key) === 'llm-pi-ai') adapter.invalidate()
   })

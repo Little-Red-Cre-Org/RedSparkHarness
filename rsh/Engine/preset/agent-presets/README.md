@@ -37,7 +37,7 @@ The native CLI scans the shipped preset root before `<dshHome>/.agent-presets`; 
 { "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
 ```
 
-A folder without `agent.native.json` appears as `needs-migration`; an invalid file or an enabled plugin package the profile cannot resolve appears as `invalid`. The Registry `catalog()` returns the default and folder display, trust and status summaries without directory paths or installation rows.
+A folder without `agent.native.json` appears as `needs-migration`; an invalid file or an enabled plugin package the profile cannot resolve appears as `invalid`. The Registry `catalog()` rescans its Host-owned roots and returns the default and folder display, trust and status summaries without directory paths or installation rows. `read()` returns folder metadata and the raw composition text; profile-only compositions have no file content. `copy()` copies a ready folder and its assets into the first user root, retains its description, replaces its display name, drops its sort order, and tightens copied permissions. `delete()` and `directory()` resolve only user folders; shipped folders remain read-only. The CLI supplies root paths privately to the Host Registry.
 
 Mount this package in a composition that should give each agent session its own tools, prompt sections, and skills from a preset file. Every session names a preset — explicitly or through the configured default — and is composed from it; without the package, sessions fall back to whatever the host composition mounts.
 

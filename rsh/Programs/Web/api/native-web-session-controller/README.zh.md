@@ -22,7 +22,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
+配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session 和 Workspace 流的并发跟随者数量。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
@@ -30,13 +30,17 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
-控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。`workspaces/delete` 只移除注册记录；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
+控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
 
 控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, entries, crumbs }`，create-directory 创建一个子目录。Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
-可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 仅流式发送 Settings 文档、凭据引用及模型适配器失效通知，不携带值；取消请求会关闭流。
+`agent-presets/read` 返回一个目录的来源、状态、元数据与原始 `agent.native.json` 文本；profile 独有的组合没有文件内容。`agent-presets/copy` 将已就绪目录复制到 `<DSH_HOME>/.agent-presets`；`agent-presets/delete` 只删除用户目录。`agent-presets/can-open-directory` 报告 Host 打开器是否可用；`agent-presets/open-directory` 打开用户目录，或返回 Host 本地路径。找不到、格式无效和只读拒绝分别保留 `agent-preset/*` 错误码；其他管理失败使用 `native/agent-presets`，打开器失败使用 `native/agent-presets-directory`。文件操作完成后，Host 会在设置事件流发布 `agent-presets/updated`。
+
+删除目录后，新的名单读取和新的 preset 解析不会再提供该启动时加载的 preset。已使用该组合的 Session 会继续运行；其插件作用域会保留到 Host 重新加载 profile。
+
+可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 流式发送 Settings 文档、凭据引用、模型适配器与 Agent 预设失效通知，不携带值；取消请求会关闭流。
 
 安装 Settings 与 modelSettings 后，此 Host 会持有 `agent-default-model`。账户授权以 `authorized` 结算后，只有在没有已保存默认值且没有通过 profile 引用、提供方原生认证或已存提供方 key 配置的非账户提供方 API key 时，才会保存第一个已登录账户模型。启用 modelSelection 后，只有当 root Session 历史中没有记录的模型路由时，才会使用已保存的 provider/model；持久化选择和历史请求路由优先。Settings 写入会发布 `settings/document-updated`，账户路由变更后 pi-ai 会发布 `llm/adapters-updated`。
 
