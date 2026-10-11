@@ -31,3 +31,5 @@ The route requires an app-owned SIWC login with `chatgpt.tokens.use.direct`; old
 `jose` is a direct runtime dependency for ID-token verification. The code-review boundary is the `llm-pi-ai` SIWC provider and its two adapter contracts; it does not move Agent, Session, or subagent authority.
 
 The native Provider registers the same Cordis-free flows on the optional native `authorization` service, and its credential writes carry the attempt signal. Token, refresh, JWKS and catalog requests each have a 30-second deadline, and the browser callback waits at most 10 minutes; the JWKS is fetched with that signal instead of through `createRemoteJWKSet`. A committed `llm-pi-ai` credential record drops the adapter's cached provider collection, so the next listing loads the account catalog under the new grant.
+
+`prepareCall()` exposes `nativeResponses` only for the SIWC `openai-codex` route, and the Engine consumer is not wired. Its transport reports `outputTokenLimit: 'unsupported'` and rejects image input because it has no attachment-backed projection. The provider keeps package-private copies of the Core transport types until Core publishes the import.

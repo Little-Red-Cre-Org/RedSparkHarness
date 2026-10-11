@@ -40,8 +40,6 @@ kind: "package-reference"
 
 `./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
 
-仅类型的 `./responses-transport` 导出声明供 Native Responses Consumer 使用的可选 Provider 能力。
-
 ## 模型体验
 
 ### 助手流
