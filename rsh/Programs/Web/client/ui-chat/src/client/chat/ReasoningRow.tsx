@@ -1,7 +1,7 @@
 /** Assistant reasoning disclosure, independent of Tool-call presentation. */
 import { useState } from 'react'
 import { DisclosureRow, IconThinkOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatViewSlotProps } from '../contract/slots.ts'
+import type { ChatTranslator } from '../../native-contracts.ts'
 import a11yCss from './accessibility.module.css'
 import css from './ReasoningRow.module.css'
 
@@ -25,7 +25,7 @@ function latestLine(text: string): string {
  * @param props.t - conversation locale seat for the running status.
  * @returns the reasoning disclosure.
  */
-export function ReasoningRow({ text, running, t }: { text: string; running: boolean; t: ChatViewSlotProps['t'] }) {
+export function ReasoningRow({ text, running, t }: { text: string; running: boolean; t: ChatTranslator }) {
   const [expanded, setExpanded] = useState(false)
   const summary = (running ? latestLine(text) : firstLine(text)).replaceAll('**', '')
 

@@ -27,6 +27,12 @@
       "path": "../native-session"
     },
     {
+      "path": "../ui-chat"
+    },
+    {
+      "path": "../ui-conversation"
+    },
+    {
       "path": "../ui-primitives"
     },
     {

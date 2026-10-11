@@ -1,5 +1,5 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -9,16 +9,17 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ChatMessageImagesProps, ChatRenderMessageImages } from '@deepseek-ai/dsh-client-ui-chat/native'
+import { ConversationShellView } from '@deepseek-ai/dsh-client-ui-conversation/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
 import { HumanInteraction } from './human.tsx'
-import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
+import { NativeTranscript } from './native-transcript.tsx'
 
 type Translate = TranslateNS<'nativeApplication'>
 
@@ -62,27 +63,6 @@ function Image({ image, sessionId, loadImage, t }: {
   </figure>
 }
 
-function Message({ event, t, sessionId, loadImage }: {
-  event: SessionEvent
-  t: Translate
-  sessionId: SessionId
-  loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
-}) {
-  const message = isAppendSurfaceEvent(event) ? deriveEventMessage(event) : null
-  if (message === null || message.role === 'system' || event.type === 'tool/result') return null
-  const content = message.content.filter(block => block.type !== 'tool-call')
-  if (content.length === 0) return null
-  const role = message.role === 'assistant' ? 'assistant' : 'user'
-  return <article data-event-seq={event.seq}>
-    <strong>{t(role)}</strong>
-    {content.map((block, index) => block.type === 'image'
-      ? <Image key={index} image={block.attachment} sessionId={sessionId} loadImage={loadImage} t={t} />
-      : <pre key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-        {block.type === 'text' ? block.text : JSON.stringify(block, null, 2)}
-      </pre>)}
-  </article>
-}
-
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
   refreshModelControls, settingsActions, t, renderSlot }: {
   snapshot: ConversationSnapshot
@@ -99,9 +79,14 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
 }) {
   const activeLocale = useLocale(value => value.locale)
-  const toolCards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
+  const renderMessageImages = useCallback<ChatRenderMessageImages>(({ images }: ChatMessageImagesProps) => (
+    selected === undefined ? null : images.map((source, index) => 'attachment' in source
+      ? <Image key={index} image={source.attachment} sessionId={selected} loadImage={loadImage} t={t} />
+      : <img key={index} src={source.preview.url} alt={source.preview.name ?? t('image')}
+        width={source.preview.width} height={source.preview.height} />)
+  ), [loadImage, selected, t])
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
   const [uploadKey, setUploadKey] = useState(0)
@@ -118,7 +103,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     </nav>
     <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
     {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
-    {selected === undefined ? <p>{t('empty')}</p> : <>
+    {selected === undefined ? <p>{t('empty')}</p> : <ConversationShellView>
       <ModelControls snapshot={snapshot} selectModel={selectModel} selectPreset={selectPreset}
         refreshModelControls={refreshModelControls} t={t} />
       {todos === null ? null : <aside aria-label={t('todos')}>
@@ -127,21 +112,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
           <span>{t(todo.status)}</span>: {todo.content}
         </li>)}</ul>
       </aside>}
-      <section aria-label={t('facts')}>
-        {snapshot.events.map((event) => {
-          const card = toolCards.get(event.seq)
-          return card === undefined
-            ? <Message key={event.seq} event={event} t={t} sessionId={selected} loadImage={loadImage} />
-            : <ToolCard key={event.seq} block={card} locale={activeLocale} cwd={snapshot.header?.cwd} />
-        })}
-      </section>
-      <details><summary>{t('facts')}</summary>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
-      </details>
-      {snapshot.liveText === undefined ? null : <article aria-label={t('live')}><strong>{t('assistant')}</strong>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
-        {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
-      </article>}
+      <NativeTranscript snapshot={snapshot} locale={activeLocale} renderMessageImages={renderMessageImages} t={t} />
       {snapshot.human === undefined ? null : <HumanInteraction key={snapshot.human.id} answerHuman={answerHuman} prompt={snapshot.human}
         disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} />}
       <form onSubmit={(event) => {
@@ -161,7 +132,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
         <button type="button" disabled={!sending || snapshot.state === 'cancelling'} onClick={cancel}>{t('cancel')}</button>
       </form>
       <p>{t('settled')}</p>
-    </>}
+    </ConversationShellView>}
   </main>
 }
 

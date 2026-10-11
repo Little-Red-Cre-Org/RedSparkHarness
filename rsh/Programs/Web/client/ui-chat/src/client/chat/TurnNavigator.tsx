@@ -2,17 +2,16 @@ import {
   memo, useEffect, useId, useRef, useState,
   type CSSProperties, type MouseEvent, type PointerEvent,
 } from 'react'
-import type { ChatViewSlotProps } from '../contract/slots.ts'
-import type { TurnRailItem } from './turn-rail-items.ts'
+import type { ChatTurnRailItem, ChatTranslator } from '../../native-contracts.ts'
 import css from './TurnNavigator.module.css'
 
-interface TurnNavigatorProps {
-  readonly items: readonly TurnRailItem[]
+export interface TurnNavigatorProps {
+  readonly items: readonly ChatTurnRailItem[]
   readonly activeTurn: number | null
   /** Turn whose jump is still paging history in; its mark pulses. */
   readonly busyTurn: number | null
-  readonly onNavigate: (item: TurnRailItem) => void
-  readonly t: ChatViewSlotProps['t']
+  readonly onNavigate: (item: ChatTurnRailItem) => void
+  readonly t: ChatTranslator
 }
 
 /** Fixed pitch between neighbouring marks; overflow scrolls inside the frame. */
@@ -45,11 +44,11 @@ function frameStyle(count: number, scrollTop: number): TurnFrameStyle {
 }
 
 function itemAtPointer(
-  items: readonly TurnRailItem[],
+  items: readonly ChatTurnRailItem[],
   frame: HTMLElement,
   scrollTop: number,
   clientY: number,
-): TurnRailItem | undefined {
+): ChatTurnRailItem | undefined {
   const rect = frame.getBoundingClientRect()
   const offset = clientY - rect.top + scrollTop - RAIL_INSET_PX
   const index = Math.max(0, Math.min(items.length - 1, Math.round(offset / TURN_SPACING_PX)))

@@ -128,7 +128,12 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
   '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
   '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives'],
+  '@deepseek-ai/dsh-client-native-application': [
+    '@deepseek-ai/dsh-client-ui-chat',
+    '@deepseek-ai/dsh-client-ui-conversation',
+    '@deepseek-ai/dsh-client-ui-primitives',
+    '@deepseek-ai/dsh-llm',
+  ],
   '@deepseek-ai/dsh-client-ui-sidebar': [
     '@deepseek-ai/dsh-client-store',
     '@deepseek-ai/dsh-client-ui-primitives',
@@ -214,7 +219,14 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
-  '@deepseek-ai/dsh-client-ui-primitives': ['CodeBlock','DiffBlock','DisclosureRow','IconApiOutline14','IconBrowseOutline16','IconCodeOutline16','IconEditOutline16','IconInspectOutline12','IconSearchOutline16','IconSparkle16','ReadBlock','SearchBlock','StateDot','TerminalBlock','WebBlock','diffTotals'],
+  '@deepseek-ai/dsh-client-ui-primitives': [
+    'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14',
+    'IconBrowseOutline16', 'IconCodeOutline16', 'IconDatabaseOutline16',
+    'IconEditOutline16', 'IconGaugeOutline16', 'IconInspectOutline12', 'IconSearchOutline16',
+    'IconSparkle16', 'IconThinkOutline14', 'JsonBlock', 'MarkdownText', 'ReadBlock',
+    'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension',
+    'fileSizeText', 'projectUserText', 'useAnchoredPosition', 'useDismissOnOutsidePointer',
+  ],
   '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
   '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
   '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],

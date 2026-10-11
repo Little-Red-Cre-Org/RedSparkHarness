@@ -1,42 +1,18 @@
-import { Fragment, memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
+import { JsonBlock, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
-import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
+import type { ModelRetryNode, TurnErrorNode } from '../contract/snapshot.ts'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
 import { CompactionItem } from './CompactionItem.tsx'
 import { ContextInjectionRow } from './ContextInjectionRow.tsx'
 import { MessageIconActions } from './MessageIconActions.tsx'
+import { UserMessageView as UserStyleBubble } from './native-user-message.tsx'
+import type { ChatPresentedAttachment as PresentedAttachment } from './native-user-message.tsx'
 import css from './MessageItem.module.css'
 
-type UserImage = Extract<UserMessageNode['content'][number], { type: 'image' }>
-type UserFile = Extract<UserMessageNode['content'][number], { type: 'file' }>
-type PresentedAttachment =
-  | { readonly type: 'image'; readonly image: MessageImageSource }
-  | { readonly type: 'file'; readonly file: UserFile['attachment'] }
-
-function contentParts(content: readonly unknown[]): {
-  text: string
-  attachments: PresentedAttachment[]
-  rest: unknown[]
-} {
-  const texts: string[] = []
-  const attachments: PresentedAttachment[] = []
-  const rest: unknown[] = []
-  for (const block of content) {
-    const b = block as { type?: string; text?: string; attachment?: unknown }
-    if (b.type === 'text' && typeof b.text === 'string') texts.push(b.text)
-    else if (b.type === 'image' && b.attachment !== undefined) {
-      attachments.push({ type: 'image', image: { attachment: (b as UserImage).attachment } })
-    }
-    else if (b.type === 'file' && b.attachment !== undefined) {
-      attachments.push({ type: 'file', file: (b as UserFile).attachment })
-    }
-    else rest.push(block)
-  }
-  return { text: texts.join(''), attachments, rest }
-}
+export { UserMessageView } from './native-user-message.tsx'
 
 function retrySeconds(milliseconds: number): number {
   return Math.max(1, Math.ceil(milliseconds / 1_000))
@@ -153,81 +129,6 @@ function TurnMaxTokensItem({ t }: {
   )
 }
 
-/** Right-aligned bubble shared by user and steering rows. */
-function UserStyleBubble({
-  content, renderMessageImages, actions, pending = false, echo = false, referenceLabels = [], skillNames = [],
-  previewAttachments, references, t,
-}: {
-  content: readonly unknown[]
-  renderMessageImages: ChatNodeOwnerProps['renderMessageImages']
-  /** Optional IconActions (or similar) below the bubble; receives the joined text. */
-  actions?: (text: string) => ReactNode
-  /** Whether this is the Host-authoritative pre-admission steering projection. */
-  pending?: boolean
-  /** Whether this is a local submission echo (invisible marker; the echo renders exactly like its durable replacement). */
-  echo?: boolean
-  /** Exact session mention labels associated by the adjacent recall node. */
-  referenceLabels?: readonly string[]
-  /** Skill names the step's `skill-invocation` injections loaded for this message. */
-  skillNames?: readonly string[]
-  /** Local submission-echo attachments replacing the content-derived attachment sequence. */
-  previewAttachments?: readonly PresentedAttachment[]
-  references?: Pick<ChatNodeOwnerProps, 'openFile' | 'openSkill'>
-  t: ChatViewSlotProps['t']
-}): ReactNode {
-  const { text, attachments: contentAttachments, rest } = contentParts(content)
-  const attachments = previewAttachments ?? contentAttachments
-  const compactImages = attachments.length > 1
-  const truncated = (total: number): string => t('json.truncated', { total })
-  const showBubble = text !== '' || rest.length > 0
-  return (
-    <div
-      className={css.userRow}
-      data-pending-steering={pending || undefined}
-      data-submission-echo={echo || undefined}
-    >
-      <div className={css.userStack}>
-        {attachments.length > 0 && (
-          <div className={css.attachmentRow} data-message-attachments>
-            {attachments.map((attachment, index) => attachment.type === 'image'
-              ? (
-                <Fragment key={`image:${index}`}>
-                  {renderMessageImages({
-                    images: [attachment.image],
-                    align: 'end',
-                    compact: compactImages,
-                  })}
-                </Fragment>
-              )
-              : (
-                <span key={`file:${index}`} className={css.fileCard} title={attachment.file.name}>
-                  <FileTypeIcon path={attachment.file.name} className={css.fileIcon} />
-                  <span className={css.fileContent}>
-                    <span className={css.fileName}>{attachment.file.name}</span>
-                    <span className={css.fileMeta}>
-                      {[fileExtension(attachment.file.name).toUpperCase().slice(0, 8), fileSizeText(attachment.file.bytes)]
-                        .filter(Boolean).join(' ')}
-                    </span>
-                  </span>
-                </span>
-              ))}
-          </div>
-        )}
-        {showBubble && <div className={css.bubble}>
-          {projectUserText(text, referenceLabels, skillNames, 'skill', references)}
-          {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
-        </div>}
-        {referenceLabels.length > 0 && (
-          <div className={css.referenceSummary}>
-            {t('message.referenceSummary', { labels: referenceLabels.join(t('message.referenceSeparator')) })}
-          </div>
-        )}
-      </div>
-      {actions?.(text)}
-    </div>
-  )
-}
-
 /**
  * Render one Host-authoritative pending steering item with the same visual
  * language as its eventual durable transcript node.
@@ -241,7 +142,7 @@ export function PendingSteeringBubble({ content, renderMessageImages, t }: {
 }): ReactNode {
   return (
     <UserStyleBubble
-      content={content}
+      content={content as readonly ContentBlock[]}
       renderMessageImages={renderMessageImages}
       pending
       t={t}
@@ -257,6 +158,7 @@ export function PendingSteeringBubble({ content, renderMessageImages, t }: {
   )
 }
 
+
 /**
  * Render one local transcript or steering submission echo with the same
  * visual language and surface marker as the Host occurrence that replaces
@@ -270,7 +172,7 @@ export function PendingSubmissionBubble({ submission, renderMessageImages, t }: 
   renderMessageImages: ChatNodeOwnerProps['renderMessageImages']
   t: ChatViewSlotProps['t']
 }): ReactNode {
-  const content = useMemo(
+  const content = useMemo<readonly ContentBlock[]>(
     () => (submission.text === '' ? [] : [{ type: 'text', text: submission.text }]),
     [submission.text],
   )

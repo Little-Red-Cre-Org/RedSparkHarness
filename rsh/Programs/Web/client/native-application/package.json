@@ -57,6 +57,9 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-client-ui-chat": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-conversation": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },

@@ -1,4 +1,4 @@
-import type { ChatViewSlotProps } from '../contract/slots.ts'
+import type { ChatTranslator } from '../../native-contracts.ts'
 
 /**
  * Compact token count: 517 / 12.2K / 517K / 1.2M.
@@ -6,7 +6,7 @@ import type { ChatViewSlotProps } from '../contract/slots.ts'
  * @param t - Chat locale seat.
  * @returns locale-owned compact display string.
  */
-export function formatTokens(value: number, t: ChatViewSlotProps['t']): string {
+export function formatTokens(value: number, t: ChatTranslator): string {
   const scaled = (candidate: number): string =>
     candidate >= 100 ? String(Math.round(candidate)) : String(Math.round(candidate * 10) / 10)
   if (value < 1_000) return String(value)
@@ -20,7 +20,7 @@ export function formatTokens(value: number, t: ChatViewSlotProps['t']): string {
  * @param t - Chat locale seat.
  * @returns an unrounded display string.
  */
-export function formatExactTokens(value: number, t: ChatViewSlotProps['t']): string {
+export function formatExactTokens(value: number, t: ChatTranslator): string {
   const digits = String(value)
   const groups: string[] = []
   for (let end = digits.length; end > 0; end -= 3) {

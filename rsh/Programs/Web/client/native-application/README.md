@@ -27,7 +27,7 @@ Consumers that need only the view-state controller can import `NativeConversatio
 
 Model and reasoning choices come from the Host model directory, including provider failures; the catalog is advisory, not an allow-list. The current recorded route remains visible when absent from discovery. Mutations carry the displayed durable revision, refresh history after settlement and expose stale-selection failures. Installed presets use the existing blank-root lock and epoch transition; a locked Session cannot change composition.
 
-The transcript uses the shared Session append-origin and message projection rules. Replacement copies remain model-only; raw Session records remain available in a disclosure, including tool results, permissions, interruptions and opaque ignorable facts. Transport and history failures remain visible; failed submission retains its draft.
+The transcript projects durable user and assistant messages, reasoning, images, root Tool results, loaded-turn navigation, and event-derived timings into the shared Chat views. Live assistant text stays visible until its durable message arrives. The transcript and Conversation shell use the Chat and Conversation packages' Cordis-free native entries; nested Tool dispatch and unloaded-turn paging remain separate work.
 
 Configuration requires positive integers maxLiveTextChars and maxLiveEvents and optionally accepts `locale: "en" | "zh"`; omission follows the browser's Chinese language preference, otherwise English. Product copy comes from the page's complete typed dictionary pair. The Settings page reads schemas and validated request budgets published by the selected Host, edits user overrides as JSON with revision checks, and derives write-only credential controls from `credential-ref` fields. Credential references are read in bounded batches and aggregated; edits above the advertised operation budget are refused before sending, keeping each revision-checked mutation atomic. Non-secret object entries can be added, removed, or replaced; visible edits below hidden secrets stay leaf-based, and unsafe secret-bearing structure changes are rejected. Array edits use existing indices and unsupported array-structure changes report an error. Credential values are sent only to the Host for storage and are never read back. The page adds no durable language preference or default-profile switch.
 
@@ -52,6 +52,8 @@ No invariant companion is published because the view reads the selected Host Con
 ## Dev Note
 
 Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md).
+
+The Chat transcript projection and Cordis-free views are described in the [native Chat presentation decision](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-client-chat-transcript.md).
 
 ## Model Experience
 

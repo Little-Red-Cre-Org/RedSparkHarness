@@ -1,9 +1,8 @@
 import { Fragment, memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownFileMentions, MarkdownPathImages } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatNodeOwnerProps, ChatViewSlotProps } from '../contract/slots.ts'
-import type { AssistantBlock } from '../contract/snapshot.ts'
+import type { MarkdownPathImages } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ChatAssistantBlock, ChatMarkdownMentions, ChatRenderMessageImages, ChatTranslator } from '../../native-contracts.ts'
 import { markdownLabels } from '../markdown-labels.ts'
 import { ReasoningRow } from './ReasoningRow.tsx'
 import { useSearchableHidden } from './searchable-hidden.ts'
@@ -26,20 +25,20 @@ export function localPathMediaUrl(protocol: string, origin: string, value: strin
 }
 
 export interface AssistantMarkdownProps {
-  blocks: readonly AssistantBlock[]
+  blocks: readonly ChatAssistantBlock[]
   streaming: boolean
   /** Frozen partial of an aborted turn: rendered with a stopped marker. */
   interrupted?: boolean | undefined
   /** Render consecutive image blocks through the attachment slot. */
-  renderMessageImages: ChatNodeOwnerProps['renderMessageImages']
+  renderMessageImages: ChatRenderMessageImages
   /** Hide reasoning that belongs to the Turn-level process disclosure. */
   reasoningHidden?: boolean | undefined
   /** Reveal the owning Turn-level process disclosure. */
   revealProcess?: (() => void) | undefined
   /** Resolved prose file mentions for this Assistant's closing turn. */
-  mentions?: MarkdownFileMentions | undefined
+  mentions?: ChatMarkdownMentions | undefined
   /** The owning view's locale seat, passed down as a plain prop. */
-  t: ChatViewSlotProps['t']
+  t: ChatTranslator
 }
 
 /** Reasoning block as the Think variant summary row (figma 39:28304). */

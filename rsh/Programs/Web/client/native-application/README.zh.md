@@ -28,7 +28,7 @@ kind: "package-reference"
 
 模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
-转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。传输和历史错误会显示；发送失败时保留草稿。
+转录通过共享 Chat 视图呈现持久化的用户和助手消息、推理、图片、根级 Tool 结果、已加载轮次导航及从事件计算的计时。持久化助手消息到达前会继续显示实时文本。转录与 Conversation shell 通过 Chat 和 Conversation 包的 Cordis-free native 入口装配；嵌套 Tool 分派和未加载轮次的分页仍是后续工作。
 
 配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取选定 Host 发布的 schema 与经过校验的请求预算，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。凭据引用按 Host 公布的上限分批读取并聚合；超过 `maxSettingsOperations` 的修改会在发送前拒绝，以保持每次 revision 检查写入的原子性。可新增、删除或替换不含机密值的对象项；隐藏机密值下方的可见修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组按现有索引修改，不支持的数组结构修改会报错。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
@@ -56,6 +56,8 @@ native-web 首次使用组合只选择此应用、renderer、Connection 与 Sess
 ## 开发备注
 
 生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)。
+
+Chat 转录投影与 Cordis-free 视图见[原生 Chat 展示决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-client-chat-transcript.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
