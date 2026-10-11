@@ -25,6 +25,8 @@
   border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 14px;
   background: var(--dsw-alias-bg-module-platform);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
 .header {
@@ -139,7 +141,7 @@
 .fields input {
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid var(--dsw-alias-border-l4);
+  border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
