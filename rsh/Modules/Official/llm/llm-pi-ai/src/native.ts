@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-authorization/native'
 import type {} from '@deepseek-ai/dsh-deepseek-account/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
 import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
-import { credentialKey, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey, credentialKeyId, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
@@ -109,7 +109,7 @@ export const plugin: NativePlugin = {
           const token = await deepseekAccount?.resolveToken(profile.baseURL ?? DEEPSEEK_ACCOUNT_BASE_URL, signal)
           context.signal.throwIfAborted()
           if (token === undefined) throw new LlmError('Sign in to DeepSeek to use the account provider.', 'MISSING_CREDENTIAL')
-          return { 'x-dsh-auth-token': token }
+          return { authorization: `Bearer ${token}`, 'x-dsh-auth-token': token }
         },
       })
       context.own(() => { adapter.dispose() })
@@ -123,11 +123,26 @@ export const plugin: NativePlugin = {
       const modelSettings: NativeModelSettings = {
         configurableProviders: () => configurableProviderEntries(profiles),
         async firstAvailableAccountModel(signal) {
+          const apiKeyRecords = new Set((await credentials.listRecords())
+            .filter(record => record.kind === 'api-key' && credentialKeyScope(record.key) === SETTINGS_NAMESPACE)
+            .map(record => credentialKeyId(record.key)))
           for (const profile of profiles.values()) {
-            if (profile.apiKeyEnv === undefined) continue
-            const hit = await credentials.resolve(profile.apiKeyEnv)
+            if (profile.apiKeyEnv !== undefined) {
+              if ((await credentials.describe(profile.apiKeyEnv)).configured) return undefined
+              continue
+            }
+            if (apiKeyRecords.has(profile.provider)) return undefined
+            const apiKeyAuth = profile.piProvider?.auth.apiKey
+            if (apiKeyAuth === undefined) continue
+            const check = await apiKeyAuth.check?.({ ctx: auth.authContext, signal })
             signal.throwIfAborted()
-            if (hit?.value.length) return undefined
+            if (check !== undefined) {
+              if (check.type === 'api_key') return undefined
+              continue
+            }
+            const resolved = await apiKeyAuth.resolve({ ctx: auth.authContext, signal })
+            signal.throwIfAborted()
+            if (resolved?.auth.apiKey) return undefined
           }
           const candidates = [
             ...(deepseekAccountAvailable ? [DEEPSEEK_ACCOUNT_ROUTE] : []),

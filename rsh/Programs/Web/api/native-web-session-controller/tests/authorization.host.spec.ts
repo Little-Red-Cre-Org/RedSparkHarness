@@ -86,11 +86,19 @@ it('allows only configured keys and keeps a disconnected authorization attempt r
   } finally { await authorization.dispose() }
 })
 
-it('starts the controller in a profile that installs authorization and credentials', async () => {
+it.each([
+  { name: 'no default', defaultSelection: undefined, expected: { provider: 'openai-codex', model: 'fixture-account-model' } },
+  { name: 'Program default', defaultSelection: { provider: 'program-provider', model: 'program-model' },
+    expected: { provider: 'program-provider', model: 'program-model' } },
+])('starts the controller without replacing a $name', async ({ defaultSelection, expected }) => {
   const cwd = await mkdtemp(join(tmpdir(), 'rsh-web-authorization-'))
   const scope = new NativeScope()
-  let settingsDocument: Record<string, unknown> = {}
+  let settingsDocument: Record<string, unknown> = defaultSelection === undefined ? {} : { 'agent-default-model': defaultSelection }
   const updatedNamespaces: string[] = []
+  const firstAvailableAccountModel = vi.fn(async () => ({ provider: 'openai-codex', model: 'fixture-account-model' }))
+  const modelSettings = {
+    firstAvailableAccountModel,
+  } as unknown as NativeModelSettings
   const services: NativePlugin = {
     apiVersion: 1, name: 'authorization-fixture', targets: ['host'], requires: [],
     provides: ['model', 'hostConnection', 'credentials', 'authorization', 'settings', 'modelSettings'],
@@ -109,9 +117,7 @@ it('starts the controller in a profile that installs authorization and credentia
       await settings.start()
       context.own(() => settings.dispose())
       context.provide('settings', settings)
-      context.provide('modelSettings', {
-        async firstAvailableAccountModel() { return { provider: 'openai-codex', model: 'fixture-account-model' } },
-      } as unknown as NativeModelSettings)
+      context.provide('modelSettings', modelSettings)
     },
   }
   const host = new NativeHost(resolveInstallation([
@@ -130,10 +136,11 @@ it('starts the controller in a profile that installs authorization and credentia
   try {
     await host.start()
     expect(host.diagnostics().find(entry => entry.name === plugin.name)?.state).toBe('ready')
-    expect(settingsDocument['agent-default-model']).toBeUndefined()
+    expect(settingsDocument['agent-default-model']).toEqual(defaultSelection)
     await host.events.parallel(scope, 'authorization/settled', credentialKey('llm-pi-ai', 'openai-codex'), 'authorized')
-    expect(settingsDocument['agent-default-model']).toEqual({ provider: 'openai-codex', model: 'fixture-account-model' })
-    expect(updatedNamespaces).toContain('agent-default-model')
+    expect(settingsDocument['agent-default-model']).toEqual(expected)
+    expect(firstAvailableAccountModel).toHaveBeenCalledTimes(defaultSelection === undefined ? 1 : 0)
+    expect(updatedNamespaces.includes('agent-default-model')).toBe(defaultSelection === undefined)
   } finally {
     await host.stop()
     await rm(cwd, { recursive: true, force: true })
