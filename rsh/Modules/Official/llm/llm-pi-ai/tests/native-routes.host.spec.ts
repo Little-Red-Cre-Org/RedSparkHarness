@@ -171,7 +171,8 @@ describe('native account model routes', () => {
         const requestHeaders: Headers[] = []
         let recordingInference = false
         vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-          if (String(input) === 'https://api.openai.com/v1/models') {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+          if (url === 'https://api.openai.com/v1/models') {
             return new Response(JSON.stringify({ models: [
               { slug: 'fixture-codex-model', display_name: 'Fixture Codex model', visibility: 'list' },
             ] }), { headers: { 'content-type': 'application/json' } })

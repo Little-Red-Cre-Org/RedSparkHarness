@@ -92,6 +92,7 @@ export const plugin: NativePlugin = {
         context.own(() => { selection.dispose() })
       }
       let credentialSnapshotsDirty = false
+      const credentialSnapshotsAreDirty = () => credentialSnapshotsDirty
       let credentialSnapshotsReady = false
       let codexAvailable = false
       let deepseekAccountAvailable = false
@@ -129,7 +130,7 @@ export const plugin: NativePlugin = {
         deepseekAccountAvailable = deepseekAccount !== undefined
           && await deepseekAccount.resolveToken(DEEPSEEK_ACCOUNT_BASE_URL, context.signal) !== undefined
         context.signal.throwIfAborted()
-      } while (credentialSnapshotsDirty)
+      } while (credentialSnapshotsAreDirty())
       // Settings watches do not replay; refresh the value before subscribing.
       if (settingsSelection !== undefined) providers = settingsSelection.get().providers ?? {}
       let profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
