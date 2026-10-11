@@ -30,6 +30,8 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
+可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 仅流式发送 Settings 文档、凭据引用及模型适配器失效通知，不携带值；取消请求会关闭流。
+
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
 可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。

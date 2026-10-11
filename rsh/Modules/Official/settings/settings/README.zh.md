@@ -43,7 +43,7 @@ kind: "package-reference"
 
 提供方上线后 `ctx.settings` 即出现。完整配置面由提供方 README 负责；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)列出每个受支持字段。
 
-原生 Host 使用 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md) 中不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。只有 owner 显式传入 `presentation` 元数据的注册项才会向原生配置界面公开；原生 descriptor 会剥离 schema 声明的机密值并省略所有 schema 默认值，且拒绝无法通过 `object`、`dict` 或 `array` 路径到达机密字段的 presentation schema。标记为 `credential-ref` 的 schema 字段只提供应由 Credentials 管理的引用。Cordis 兼容面使用声明专用的 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)，为 `Context.settings` 与注册选项提供类型声明。
+原生 Host 使用 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md) 中不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。只有 owner 显式传入 `presentation` 元数据的注册项才会向原生配置界面公开；原生 descriptor 会剥离 schema 声明的机密值并省略所有 schema 默认值，且拒绝无法通过 `object`、`dict` 或 `array` 路径到达机密字段的 presentation schema。标记为 `credential-ref` 的 schema 字段只提供应由 Credentials 管理的引用。文件 Provider 会在已注册原始分节变化时发出 `settings/document-updated`，即使解析值保持相等。Cordis 兼容面使用声明专用的 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)，为 `Context.settings` 与注册选项提供类型声明。
 
 ### 注册 namespace
 
