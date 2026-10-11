@@ -15,9 +15,28 @@
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   min-height: 52px;
-  padding: 8px 24px 0;
+  padding: 0 24px;
+  border-bottom: 0.5px solid var(--dsw-alias-line-regular);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.sessionTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {

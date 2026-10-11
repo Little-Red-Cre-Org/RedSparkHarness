@@ -31,8 +31,10 @@ export { ConnectionIndicator } from './ConnectionIndicator.tsx'
 export type { ConnectionIndicatorState } from './ConnectionIndicator.tsx'
 export {
   ChatAssistantMessage, ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
-  ChatTranscript, ChatTurnActivity, ChatUserMessage, ChatWelcome,
+  ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, ChatWelcome,
 } from './chat/ChatPresentation.tsx'
+export { ChatReasoningDisclosure } from './chat/ChatReasoningDisclosure.tsx'
+export { ChatMessageActionRow, ChatMessageActionMeta, ChatMessageCopyAction } from './chat/ChatMessageActions.tsx'
 export { ChatContextMessage } from './chat/ChatContextMessage.tsx'
 export type { ChatContextMessageProps } from './chat/ChatContextMessage.tsx'
 export { ChatMascotHero } from './chat/ChatMascotHero.tsx'
