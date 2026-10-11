@@ -186,6 +186,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-sidebar': ['lib/native.js', 'lib/client/SidebarRoot.module.css'],
   '@deepseek-ai/dsh-client-ui-session': ['lib/native.js'],
   '@deepseek-ai/dsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
+  '@deepseek-ai/dsh-client-ui-attachment': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],
@@ -261,7 +262,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/account-card.module.css'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/account-card.module.css', 'lib/attachments.module.css'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
