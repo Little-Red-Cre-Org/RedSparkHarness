@@ -106,6 +106,9 @@
     },
     {
       "path": "../../../../Core/util/native-command"
+    },
+    {
+      "path": "../../host/directory-picker-native"
     }
   ]
 }

@@ -44,6 +44,8 @@ kind: "package-reference"
 
 账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。账户响应不包含凭据值。
 
+同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {

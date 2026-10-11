@@ -15,6 +15,13 @@ import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
+import { createNativeWorkspaceClients } from './workspaces.ts'
+import { NativeSessionRpcError } from './rpc-error.ts'
+export { NativeSessionRpcError } from './rpc-error.ts'
+export type {
+  NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
+  NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+} from './workspaces.ts'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -33,6 +40,10 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Native Workspace RPC Consumer selected by the browser composition. */
+    clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
+    /** Native directory chooser and browser selected by the browser composition. */
+    clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
   }
 }
 
@@ -221,18 +232,6 @@ export interface NativeAccountWallet {
 export type NativeAccountBalance =
   | { readonly status: 'ready'; readonly wallets: readonly NativeAccountWallet[]; readonly bonusWallets: readonly NativeAccountWallet[] }
   | { readonly status: 'signed-out' | 'failed' | 'unsupported' }
-
-/** Structured rejection from one native Host RPC endpoint. */
-export class NativeSessionRpcError extends Error {
-  /** @param code - stable native RPC failure code.
-   * @param message - Host refusal message.
-   * @param details - safe, endpoint-specific failure facts.
-   */
-  constructor(readonly code: string, message: string, readonly details: object) {
-    super(message)
-    this.name = 'NativeSessionRpcError'
-  }
-}
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
@@ -1067,14 +1066,18 @@ export function createNativeSessionClient(
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
       const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
+      const clients = createNativeWorkspaceClients(context.require('clientConnection').rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
+      context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeWorkspace', clients.workspace)
+      context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }
   },
 }
