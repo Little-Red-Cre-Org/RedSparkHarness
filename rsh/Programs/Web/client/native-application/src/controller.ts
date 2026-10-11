@@ -90,11 +90,10 @@ export class NativeConversationController {
   }
 
   private async restore(id: SessionId): Promise<void> {
-    const [history, modeControls, permissionControls] = await Promise.all([
-      this.client.history(id, this.lifetime.signal),
-      this.client.modeControls(id, this.lifetime.signal),
-      this.client.permissionControls(id, this.lifetime.signal),
-    ])
+    // The Host rejects concurrent reads of one Session as busy, so read in sequence.
+    const history = await this.client.history(id, this.lifetime.signal)
+    const modeControls = await this.client.modeControls(id, this.lifetime.signal)
+    const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
     this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls })
   }
 
