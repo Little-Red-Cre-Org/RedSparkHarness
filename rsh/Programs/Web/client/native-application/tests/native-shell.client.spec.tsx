@@ -4,9 +4,11 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
-  NativeDirectoryPickerClient, NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
-  NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+  NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
+import type {
+  NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+} from '@deepseek-ai/dsh-client-native-session/workspaces'
 import { plugin as application } from '../src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'

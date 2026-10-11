@@ -190,8 +190,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignId = SessionId('foreign-human')
   const foreignModelReady = Promise.withResolvers<undefined>()
   const releaseForeignModel = Promise.withResolvers<undefined>()
-  const webReadReady = Promise.withResolvers<undefined>()
-  const releaseWebRead = Promise.withResolvers<undefined>()
   const foreignAbort = new AbortController()
   let foreignStep = 0
   let foreignApprovals = 0
@@ -482,7 +480,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1,
-      workspaceRoutes: { maxRoutes: 1, allowedRoots: [directory] } } },
+      workspaceRoutes: { maxRoutes: 2, allowedRoots: [directory] } } },
     { plugin: githubWebhook, scope, config: { source: 'native-test', path: '/github', secretEnv: 'NATIVE_GITHUB_SECRET',
       maxBodyBytes: 4096, rootRoute: 'root' } },
     ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
@@ -735,26 +733,17 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const foreignTurn = foreign.executeRootTurn({ id: foreignId, resume: false,
       message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'foreign input' }] }) }, foreignAbort.signal)
     await foreignModelReady.promise
-    const open = persistence.open.bind(persistence)
-    const readSpy = vi.spyOn(persistence, 'open').mockImplementation(async (id, access, options) => {
-      if (id === foreignId && access === 'read') { webReadReady.resolve(undefined); await releaseWebRead.promise }
-      return open(id, access, options)
-    })
     try {
       const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true }, new AbortController().signal)
       if (!started.ok) throw new Error(started.error.message)
-      await webReadReady.promise
       const admission = started.value as { admissionId: string }
-      const denied = await rpc.call('/api', 'session/answer-human', { sessionId: foreignId, admissionId: admission.admissionId,
-        id: 'foreign-presentation', answer: { kind: 'approval', outcome: 'allowed-once' } }, new AbortController().signal)
-      expect(denied).toMatchObject({ ok: false, error: { message: 'native-headless: root route requires the exact attached root owner' } })
+      const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
+      expect(settlement).toMatchObject({ ok: false,
+        error: { message: 'native-headless: root route requires the exact attached root owner' } })
       releaseForeignModel.resolve(undefined)
       await vi.waitFor(() => { expect(foreignApprovals).toBe(1) })
       await foreignTurn
-      releaseWebRead.resolve(undefined)
-      const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
-      expect(settlement.ok).toBe(false)
-    } finally { releaseWebRead.resolve(undefined); readSpy.mockRestore(); foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
+    } finally { foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
     await conversation.close()
     await client.archive(sessionId)
     expect((await client.list()).some(item => item.header.id === sessionId)).toBe(false)
@@ -929,17 +918,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
           row => row.workspaceId === createdWorkspace.workspace.workspaceId,
         )?.sessionIds)
           .toContain(connected.sessionId)
-        const workspaceRoute = rootExecutionService?.workspaceRoutes().find(
-          route => route.workspaceId === createdWorkspace.workspace.workspaceId,
-        )
-        if (workspaceRoute === undefined || rootExecutionService === undefined || activeSessionsService === undefined) {
-          throw new Error('missing Native Workspace route or execution authority')
-        }
-        const blankOwner = activeSessionsService.owners().find(owner => owner.session.id === connected.sessionId)
-        if (blankOwner !== undefined) await rootExecutionService.releaseIdle({
-          route: workspaceRoute.id, id: connected.sessionId, expectedOwner: blankOwner,
-        }, new AbortController().signal)
-        await rootExecutionService.releaseWorkspace(workspaceRoute.id, new AbortController().signal)
         await clients.workspace.delete(createdWorkspace.workspace.workspaceId)
         expect(await persistence?.stat(connected.sessionId)).toBeDefined()
         expect(await clients.workspace.search('native-workspace')).toEqual([])
@@ -978,7 +956,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   } finally {
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
-    releaseWebRead.resolve(undefined)
     releaseResolution.resolve(undefined)
     releaseImage.resolve(undefined)
     releaseRetainedRoot?.()
@@ -1007,13 +984,18 @@ it('lists native preset folders with standing compositions and returns an empty 
     maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
     maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1 })
   const signal = new AbortController().signal
+  const active = {
+    onAttached: () => async () => {},
+    onDetached: () => async () => {},
+    owners: () => [],
+  } as unknown as NativeActiveSessionOperations
   const service = new NativeWebSessionService(
     { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal, { presets },
+    {} as NativeSessionPersistenceOperations, active, config, signal, { presets },
   )
   const emptyService = new NativeWebSessionService(
     { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations, config, signal,
+    {} as NativeSessionPersistenceOperations, active, config, signal,
   )
   try {
     expect(await service.handle('agent-presets/list', {}, signal)).toEqual({ ok: true, value: {

@@ -10,9 +10,10 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  NativeSessionClient, NativeSessionListItem, NativeWorkspace, NativeWorkspaceBaseline,
-  NativeWorkspaceClient, NativeWorkspaceFrame,
+  NativeSessionClient, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame }
+  from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type {
   NativeConversationService, NativeConversationSnapshot, NativeSessionPresentation,
 } from '@deepseek-ai/dsh-client-ui-session/native'
