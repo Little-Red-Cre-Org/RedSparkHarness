@@ -105,6 +105,11 @@ function settingsConflictDetails(error: unknown): Record<string, unknown> | unde
   }
 }
 
+function errorMessage(error: unknown): string {
+  if (!(error instanceof AggregateError)) return error instanceof Error ? error.message : String(error)
+  return `${error.message}: ${error.errors.map(errorMessage).join('; ')}`
+}
+
 /** Resolve Program settings and resource limits before installing routes.
  * @param input - profile configuration.
  * @returns validated native Session configuration.
@@ -581,7 +586,7 @@ export class NativeWebSessionService {
           details: conflict ?? {},
         } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: error instanceof Error ? error.message : String(error), details: {} } }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: errorMessage(error), details: {} } }
     }
   }
 
