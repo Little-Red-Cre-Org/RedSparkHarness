@@ -16,8 +16,7 @@ import css from './NativeSidebarSettings.module.css'
  * @param client - selected Native Session service.
  * @returns the shared Settings actions bound to the client.
  */
-export function createNativeSettingsActions(client: NativeSessionClient): Omit<NativeSettingsActions,
-  'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete' | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'> {
+export function createNativeSettingsActions(client: NativeSessionClient): NativeSettingsActions {
   return {
     settingsDescribe: client.settingsDescribe.bind(client), settingsMutate: client.settingsMutate.bind(client),
     credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
@@ -37,6 +36,11 @@ export function createNativeSettingsActions(client: NativeSessionClient): Omit<N
     modelsDiscover: client.modelsDiscover.bind(client),
     settingsEvents: client.settingsEvents.bind(client),
     agentPresetsList: client.agentPresetsList.bind(client),
+    agentPresetRead: client.agentPresetRead.bind(client),
+    agentPresetCopy: client.agentPresetCopy.bind(client),
+    agentPresetDelete: client.agentPresetDelete.bind(client),
+    agentPresetsCanOpenDirectory: client.agentPresetsCanOpenDirectory.bind(client),
+    agentPresetOpenDirectory: client.agentPresetOpenDirectory.bind(client),
   }
 }
 

@@ -154,14 +154,7 @@ export const plugin: NativePlugin = {
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
       const refreshModelControls = controller.refreshModelControls.bind(controller)
-      const settingsActions = {
-        ...createNativeSettingsActions(client),
-        agentPresetRead: client.agentPresetRead.bind(client),
-        agentPresetCopy: client.agentPresetCopy.bind(client),
-        agentPresetDelete: client.agentPresetDelete.bind(client),
-        agentPresetsCanOpenDirectory: client.agentPresetsCanOpenDirectory.bind(client),
-        agentPresetOpenDirectory: client.agentPresetOpenDirectory.bind(client),
-      }
+      const settingsActions = createNativeSettingsActions(client)
       context.provide('clientNativeConversation', controller)
       context.own(() => controller.close())
       context.own(slots.inject('sidebar.settings', () => slots.register({
