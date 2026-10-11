@@ -1,7 +1,6 @@
-Model and preset
 Model
-Fixture / Initial
-Fixture / Chosen
+Initial
+Chosen
 Reasoning effort
 Provider default
 High

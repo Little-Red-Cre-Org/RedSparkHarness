@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。Legacy 与 Native 视图共享 `ui-primitives` 中无 Cordis 的转录、composer、Markdown、欢迎页与吉祥物展示；Native 页面继续使用自己的 Session 数据层，并依据 Session 记录呈现根级 Tool 结果与失败。嵌套分派仍可在原始历史中查看。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输或历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。Legacy 与 Native 视图共享 `ui-primitives` 中无 Cordis 的转录、composer、Markdown、欢迎页与吉祥物展示；Native 页面继续使用自己的 Session 数据层，并依据 Session 记录呈现根级 Tool 结果与失败。嵌套分派仍可在原始历史中查看。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输/历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 
