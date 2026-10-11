@@ -40,7 +40,7 @@ React、Session、原生模型选择、Agent 预设、todo Client 值及原生 S
 
 native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。侧边栏按 `header.cwd` 将 Session 分组用于展示，并按当前可用的创建时间排序；Native 列表未提供活动时间和状态事实，因此不显示这些字段。在 Host 能力就绪前，Workspace 创建、搜索、排序、目录选择和定时任务浏览保持禁用。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
+可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
 
 <a id="invariants"></a>
 
@@ -83,5 +83,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
 - 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
-- 当前 prompt 路径支持图片附件；更广泛的附件/资源管理、Workspace 列表/创建/搜索/移动/删除、不透明凭据 grant 编辑、API 模型以外的 plugin Settings 页面以及 Models 引导弹窗仍属于独立的原生 Client 工作。
+- 侧边栏尚未提供 Workspace 排序或移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑、API 模型以外的 plugin Settings 页面以及 Models 引导弹窗仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

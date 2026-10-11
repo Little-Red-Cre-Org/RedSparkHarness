@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-An operator at the host's display picks a workspace directory through a native OS chooser: `dsh-host-directory-picker-native` opens one platform directory chooser per pick and resolves the chosen absolute path (`null` on cancel). macOS drives `osascript`, Linux uses Zenity with a KDialog fallback, and Windows opens the modern `IFileOpenDialog` in a spawned child process. Only viable when the operator sits at the host's display — remote deployments compose the [browse backend](../directory-picker-browse/README.md) instead. One composition row also registers the matching browser-side interaction in the workspace flow, so it selects both sides.
+An operator at the host's display picks a workspace directory through a native OS chooser: `dsh-host-directory-picker-native` opens one platform directory chooser per pick and resolves the chosen absolute path (`null` on cancel). macOS drives `osascript`, Linux uses Zenity with a KDialog fallback, and Windows opens the modern `IFileOpenDialog` in a spawned child process. Only viable when the operator sits at the host's display — remote deployments compose the [browse backend](../directory-picker-browse/README.md) instead. Compositions register the matching browser-side workspace interaction, so both sides are selected.
 
 Native Host integrations can import `pickNativeDirectory(signal)` from `@deepseek-ai/dsh-host-directory-picker-native/native-picker` without loading the Cordis service entry.
 

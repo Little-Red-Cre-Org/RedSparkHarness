@@ -4,7 +4,7 @@ import type { Dirent } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, posix, resolve, win32 } from 'node:path'
 import { pickNativeDirectory } from '@deepseek-ai/dsh-host-directory-picker-native/native-picker'
-import type { NativeDirectoryEntry, NativeDirectoryListing } from '@deepseek-ai/dsh-client-native-session/workspaces'
+import type { NativeDirectoryEntry, NativeDirectoryListing } from '@deepseek-ai/dsh-client-native-session/workspaces-types'
 import { z } from 'zod'
 
 const empty = z.strictObject({})

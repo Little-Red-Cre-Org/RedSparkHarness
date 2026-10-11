@@ -1,5 +1,7 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
-import type { NativeSessionClient, NativeSessionFollowFrame, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
+import type {
+  NativeSessionClient, NativeSessionFollowFrame, NativeSessionListFrame, NativeSessionListItem,
+} from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
@@ -35,7 +37,6 @@ export class NativeConversationController {
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
-  private rosterRevision = 0
   private turn: AbortController | undefined
   private foregroundAdmission: { readonly sessionId: SessionId } | undefined
   private followErrorOwner: { readonly sessionId: SessionId } | undefined
@@ -89,20 +90,47 @@ export class NativeConversationController {
     this.publish({ selected: id, header: history.header, events: history.events })
   }
 
-  private async reload(id?: SessionId): Promise<void> {
-    const revision = ++this.rosterRevision
-    const sessions = await this.client.list(this.lifetime.signal)
-    if (revision !== this.rosterRevision || this.lifetime.signal.aborted) return
-    this.publish({ sessions })
-    if (id !== undefined && this.snapshot.selected === id) await this.restore(id)
+  private startRosterFollow(): Promise<void> {
+    const iterator = this.client.follow(this.lifetime.signal)[Symbol.asyncIterator]()
+    return (async () => {
+      const first = await iterator.next()
+      if (first.done || first.value.type !== 'baseline') throw new Error('native conversation: Session list follow has no baseline')
+      this.publish({ sessions: first.value.items })
+      const following = (async () => {
+        try {
+          while (true) {
+            const next = await iterator.next()
+            if (next.done) return
+            this.applyRosterFrame(next.value)
+          }
+        } catch (error: unknown) {
+          if (!this.lifetime.signal.aborted) this.publish({ error: error instanceof Error ? error.message : String(error) })
+        }
+      })()
+      this.background.add(following)
+      void following.finally(() => { this.background.delete(following) })
+    })()
   }
 
-  private refreshRoster(): void {
-    if (this.lifetime.signal.aborted) return
-    const work = this.reload().catch((error: unknown) => {
-      this.publish({ error: error instanceof Error ? error.message : String(error) })
-    }).finally(() => { this.background.delete(work) })
-    this.background.add(work)
+  private applyRosterFrame(frame: NativeSessionListFrame): void {
+    if (frame.type === 'baseline') {
+      this.publish({ sessions: frame.items })
+      return
+    }
+    const sessions = [...this.snapshot.sessions]
+    if (frame.type === 'remove') {
+      this.publish({ sessions: sessions.filter(item => item.header.id !== frame.sessionId) })
+      return
+    }
+    const index = sessions.findIndex(item => item.header.id === frame.item.header.id)
+    if (index === -1) sessions.push(frame.item)
+    else sessions[index] = frame.item
+    sessions.sort((left, right) => right.updatedAt - left.updatedAt)
+    this.publish({ sessions })
+  }
+
+  private async restoreSelected(id: SessionId): Promise<void> {
+    if (this.snapshot.selected === id) await this.restore(id)
   }
 
   /** Read the persisted index without automatically resuming a Session.
@@ -110,11 +138,9 @@ export class NativeConversationController {
    */
   load(): Promise<void> {
     return this.run(async () => {
-      const revision = ++this.rosterRevision
-      const [sessions, modelControls] = await Promise.all([
-        this.client.list(this.lifetime.signal), this.client.modelControls(this.lifetime.signal),
-      ])
-      if (revision === this.rosterRevision) this.publish({ sessions, modelControls, error: undefined })
+      const modelControls = this.client.modelControls(this.lifetime.signal)
+      await this.startRosterFollow()
+      this.publish({ modelControls: await modelControls, error: undefined })
     })
   }
 
@@ -128,7 +154,6 @@ export class NativeConversationController {
     return this.run(async () => {
       const { sessionId } = await this.client.create(this.lifetime.signal)
       await this.restore(sessionId)
-      await this.reload()
     })
   }
 
@@ -152,7 +177,7 @@ export class NativeConversationController {
     this.publish({ state: 'loading', error: undefined })
     return this.run(async () => {
       await this.client.renameTitle(id, title, this.lifetime.signal)
-      await this.reload(id)
+      await this.restoreSelected(id)
     })
   }
 
@@ -164,7 +189,7 @@ export class NativeConversationController {
     this.publish({ state: 'loading', error: undefined })
     return this.run(async () => {
       await this.client.refreshTitle(id, this.lifetime.signal)
-      await this.reload(id)
+      await this.restoreSelected(id)
     })
   }
 
@@ -288,7 +313,7 @@ export class NativeConversationController {
         this.turn = undefined
         this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
         if (!this.lifetime.signal.aborted && this.snapshot.selected === id) {
-          try { await this.reload(id) }
+          try { await this.restoreSelected(id) }
           catch (error: unknown) { if (!turnFailed) throw error }
         }
       }
@@ -297,7 +322,6 @@ export class NativeConversationController {
 
   private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId }): void {
     if (frame.type === 'title-updated') {
-      this.refreshRoster()
       return
     }
     if (this.foregroundAdmission !== admission || this.snapshot.selected !== admission.sessionId) return

@@ -43,7 +43,7 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `Pill` | Selectable capsule button for view switchers and filters; takes `active` and `onClick`. |
 | `Tag` | Read-only capsule badge; `tone` selects one of eight palettes. |
 | `StateDot` | Status mark: `done`, `warning`, `ongoing`, `error`, or `idle`. `aria-hidden`, so the render site owns the name. |
-| `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. Nested controls retain their actions. |
+| `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |
