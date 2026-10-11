@@ -394,20 +394,31 @@ export class PiAiAdapter extends LlmAdapter {
     return this.disposeResult
   }
 
-  /** Track pi-ai auth work so disposal drains shared refreshes without aborting them. */
+  /** Track pi-ai auth work so cancellation stops waiting while disposal drains shared refreshes. */
   private resolveProviderAuth(
     snapshot: PiAiSnapshot,
     provider: string,
     signal?: AbortSignal,
   ): Promise<AuthResult | undefined> {
     this.lifetime.signal.throwIfAborted()
-    const work = snapshot.models.getAuth(provider, signal === undefined ? undefined : { signal })
+    signal?.throwIfAborted()
+    const work = snapshot.models.getAuth(provider)
     this.credentialResolutions.add(work)
     void work.then(
       () => { this.credentialResolutions.delete(work) },
       () => { this.credentialResolutions.delete(work) },
     )
-    return work
+    if (signal === undefined) return work
+    return new Promise<AuthResult | undefined>((resolve, reject) => {
+      const cleanup = (): void => { signal.removeEventListener('abort', onAbort) }
+      const onAbort = (): void => { cleanup(); reject(signal.reason) }
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) onAbort()
+      void work.then(
+        (auth) => { cleanup(); resolve(auth) },
+        (error: unknown) => { cleanup(); reject(error) },
+      )
+    })
   }
 
   /**
@@ -527,7 +538,7 @@ export class PiAiAdapter extends LlmAdapter {
   /**
    * Resolve auth through the current pi-ai collection, including its OAuth refresh lock.
    * @param provider - the configured pi-ai route whose authentication is read.
-   * @param signal - optional signal forwarded to provider auth resolution.
+   * @param signal - optional signal that stops waiting without cancelling credential refresh.
    * @returns the provider auth result, or undefined when the collection has none.
    */
   getProviderAuth(provider: string, signal?: AbortSignal): Promise<AuthResult | undefined> {

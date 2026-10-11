@@ -5,7 +5,7 @@ import { ModelsError } from '@earendil-works/pi-ai'
 import type { Credential, CredentialStore, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
-import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
+import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from '../src/siwc.ts'
 
 function memoryCredentials(): CredentialStore {
   const values = new Map<string, Credential>()
@@ -29,6 +29,20 @@ function memoryCredentials(): CredentialStore {
 }
 
 describe('Sign in with ChatGPT OAuth', () => {
+  it('preserves existing Responses tool and call namespaces', () => {
+    const payload = {
+      input: [{ type: 'function_call', call_id: 'call-1', name: 'lookup', arguments: '{}', namespace: 'functions' }],
+      tools: [{
+        type: 'namespace',
+        name: 'functions',
+        tools: [{ type: 'function', name: 'lookup', parameters: { type: 'object' } }],
+      }],
+    }
+    const expected = structuredClone(payload)
+
+    expect(siwcResponsesPayload(payload)).toEqual(expected)
+  })
+
   it.each(['timeout', 'cancel'] as const)('closes the callback listener after %s', async (cause) => {
     const controller = new AbortController()
     const timeoutController = new AbortController()

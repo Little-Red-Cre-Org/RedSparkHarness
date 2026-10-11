@@ -356,6 +356,42 @@ describe('Native Codex Responses transport', () => {
     await server.close()
   })
 
+  it('waits for a caller-cancelled credential refresh to persist before disposing', async () => {
+    const auth = memoryAuth({ 'openai-codex': siwcCredential('account-one', { expires: 0 }) })
+    const adapter = adapterWith(auth, () => resolveProfiles({ 'openai-codex': {} }))
+    const refreshStarted = Promise.withResolvers<undefined>()
+    const refreshReleased = Promise.withResolvers<undefined>()
+    let refreshSignal: AbortSignal | null | undefined
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input)
+      expect(url).toBe('https://auth.openai.com/api/accounts/oauth/token')
+      refreshSignal = init?.signal
+      refreshStarted.resolve(undefined)
+      await refreshReleased.promise
+      return new Response(JSON.stringify({
+        access_token: accessToken('account-one'),
+        refresh_token: 'refresh-account-one-rotated',
+        expires_in: 3600,
+      }), { headers: { 'content-type': 'application/json' } })
+    })
+    const caller = new AbortController()
+    const resolving = adapter.getProviderAuth('openai-codex', caller.signal)
+    await refreshStarted.promise
+    caller.abort(new Error('caller cancelled auth'))
+    await expect(resolving).rejects.toThrow('caller cancelled auth')
+
+    let disposed = false
+    const disposing = adapter.dispose().then(() => { disposed = true })
+    await Promise.resolve()
+    expect(disposed).toBe(false)
+    expect(refreshSignal?.aborted).toBe(false)
+    expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one' })
+
+    refreshReleased.resolve(undefined)
+    await disposing
+    expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
+  })
+
   it('drains a shared refresh on close and cancels an unconsumed response stream', async () => {
     const server = await localServer()
     routeFetchThrough(server)
