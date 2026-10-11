@@ -33,7 +33,7 @@ Configuration requires positive integers maxLiveTextChars and maxLiveEvents and 
 
 Under Subscription models, each Host authorization entry has its own row with a connection status and sign-in action; a matching account card appears inside that row. Account cards without a matching authorization entry remain in the same section. Cards show Host-projected ChatGPT plan, quota windows and credits, plus DeepSeek identity and wallet balances; a failed refresh keeps ready data with a stale hint only while the account key and non-null provider identity still match (email for ChatGPT, contact or name for DeepSeek). A successful read without an identity appears for that read only, and unavailable balances never appear as zero. Sign-out and completed authorization reload account and flow data. The page does not handle grants directly. Leaving or refreshing the page unsubscribes from frames, while only explicit Cancel stops an attempt.
 
-The Settings button opens a centered modal with General, Task Center, Models, Plugins and Agent presets navigation. General contains the registered Settings and credential editor. Models joins the Host provider directory, settings and credential status for API model editors, and keeps authorization and account cards under Subscription models. Task Center, Plugins and Agent presets currently show a localized migration placeholder.
+The Settings button opens a centered modal with General, Task Center, Models, Plugins and Agent presets navigation. General contains the registered Settings and credential editor. Models joins the Host provider directory, settings and credential status for API model editors, and keeps authorization and account cards under Subscription models. Task Center and Plugins show localized migration placeholders. Agent presets shows each entry's source and status, reads its metadata and native composition file, copies ready folders into the Host user directory, and deletes user folders only. The Host opens a user folder when it has a desktop opener or returns the path for display; copy and delete publish invalidations that refresh the roster.
 
 React, Session, native model selection, agent preset selection, todo Client values and the native Session error class use the application's shared peer instances. Session data types remain type-only; the selected runtime capability supplies the Session Consumer. `native-runtime` remains a production dependency because published declarations reference it. `client-native-session` is a peer and development dependency because the page imports `NativeSessionRpcError` at runtime and must share its constructor with the selected Consumer.
 
@@ -53,7 +53,7 @@ No invariant companion is published because the view reads the selected Host Con
 
 ## Dev Note
 
-Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md); provider editing and subscription rows are described in the [native Models decision](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.md).
+Lifecycle ownership is described in the [conversation decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.md); realtime delivery and settlement are described in the [following decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.md); Settings and Credentials presentation is described in the [native Settings decision](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.md); provider editing and subscription rows are described in the [native Models decision](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.md); Agent preset details and folder operations are described in the [native Web Agent preset management decision](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.md).
 
 ## Model Experience
 
@@ -72,6 +72,8 @@ Submitted text adds ordinary user-message tokens. This application contributes n
 The Host owns resumed context and its existing prefix. Model and composition changes follow their owning Providers' recorded resolution and context rules.
 
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 Durable events update the transcript during execution. Temporary assistant output is shown separately until a durable assistant record or settlement replaces it. maxLiveTextChars retains only the visible tail with an explicit truncation notice; maxLiveEvents rejects excessive presentation history and cancels the turn. Reload restores durable history without temporary chunks.
 

@@ -150,6 +150,24 @@ export interface NativeAgentPresetList {
   }[]
 }
 
+/** Native preset metadata and optional raw composition file returned by the Host. */
+export interface NativeAgentPresetDocument {
+  /** Preset id. */
+  readonly id: string
+  /** Profile-only, shipped or user-authored source. */
+  readonly source: 'profile' | 'system' | 'user'
+  /** Composition file status. */
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  /** Display name. */
+  readonly name: string
+  /** Optional display description. */
+  readonly description?: string
+  /** Raw `agent.native.json` text when the folder has a composition file. */
+  readonly content?: string
+  /** Short reason when the folder cannot be installed. */
+  readonly problem?: string
+}
+
 /** One path-addressed Settings edit. */
 export type NativeSettingsPathOp =
   /** Set one JSON value at the path. */
@@ -234,6 +252,7 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
   | { readonly type: 'accounts/changed'; readonly key: string }
 
 /** Provider-reported quota window, with reset time in Unix seconds. */
@@ -281,6 +300,41 @@ export interface NativeSessionClient {
    * @returns current preset catalog; empty with a null default when no Registry is installed.
    */
   agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
+  /** Read one preset's metadata and raw native composition file.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns Host-owned preset details; profile-only compositions have no file content.
+   */
+  agentPresetRead(id: string, signal?: AbortSignal): Promise<NativeAgentPresetDocument>
+  /** Copy one file-backed preset into the Host's user preset directory.
+   * @param from - source preset id.
+   * @param id - new directory id.
+   * @param name - optional display name.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host writes the copy.
+   */
+  agentPresetCopy(
+    from: string, id: string, name?: string, signal?: AbortSignal,
+  ): Promise<void>
+  /** Delete one user-authored preset.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host removes its directory.
+   */
+  agentPresetDelete(id: string, signal?: AbortSignal): Promise<void>
+  /** Report whether the Host can open a preset folder in its file manager.
+   * @param signal - caller cancellation.
+   * @returns Host-local opener availability.
+   */
+  agentPresetsCanOpenDirectory(signal?: AbortSignal): Promise<boolean>
+  /** Open one user preset folder or return its Host-local path.
+   * @param id - user preset id.
+   * @param signal - caller cancellation.
+   * @returns whether the Host opened the folder, or its path for display.
+   */
+  agentPresetOpenDirectory(
+    id: string, signal?: AbortSignal,
+  ): Promise<{ readonly opened: true } | { readonly opened: false; readonly path: string }>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
@@ -643,6 +697,11 @@ const nativeAgentPresetListSchema = z.strictObject({
     status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
   })),
 })
+const nativeAgentPresetDocumentSchema = z.strictObject({
+  id: z.string().min(1), source: z.enum(['profile', 'system', 'user']),
+  status: z.enum(['ready', 'needs-migration', 'invalid']), name: z.string(),
+  description: z.string().optional(), content: z.string().optional(), problem: z.string().optional(),
+})
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
   declared: z.boolean().optional(), error: z.string().optional(),
@@ -657,6 +716,7 @@ const settingsEventSchema = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
   z.strictObject({ type: z.literal('llm/adapters-updated') }),
+  z.strictObject({ type: z.literal('agent-presets/updated') }),
   z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
 ])
 const listItemSchema = z.strictObject({
@@ -753,6 +813,21 @@ const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
 
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
+  if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
+  if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
+    if (fields(value).updated !== true) throw new TypeError('invalid native Agent preset write acknowledgement')
+    return undefined
+  }
+  if (endpoint === 'agent-presets/can-open-directory') {
+    if (typeof value !== 'boolean') throw new TypeError('invalid native Agent preset directory capability')
+    return value
+  }
+  if (endpoint === 'agent-presets/open-directory') {
+    const data = fields(value)
+    if (data.opened === true) return { opened: true }
+    if (data.opened === false && typeof data.path === 'string') return { opened: false, path: data.path }
+    throw new TypeError('invalid native Agent preset directory response')
+  }
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
     return value.map(item => llmProviderSchema.parse(item))
@@ -1012,6 +1087,13 @@ export function createNativeSessionClient(
   }
   return {
     agentPresetsList: signal => call('agent-presets/list', {}, signal),
+    agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
+    async agentPresetCopy(from, id, name, signal) {
+      await call('agent-presets/copy', { from, id, ...(name === undefined ? {} : { name }) }, signal)
+    },
+    async agentPresetDelete(id, signal) { await call('agent-presets/delete', { id }, signal) },
+    agentPresetsCanOpenDirectory: signal => call('agent-presets/can-open-directory', {}, signal),
+    agentPresetOpenDirectory: (id, signal) => call('agent-presets/open-directory', { id }, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
     async settingsOpenDocument(signal) {
       await call('settings/open-document', {}, signal)

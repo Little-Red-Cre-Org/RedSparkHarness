@@ -25,6 +25,8 @@
   border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 14px;
   background: var(--dsw-alias-bg-module-platform);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
 .header {
@@ -38,6 +40,19 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+}
+
+.id,
+.path code {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .badge {
@@ -70,6 +85,67 @@
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.path {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.dialog {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detail p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.compositionTitle {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.composition {
+  max-height: 50vh;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.fields {
+  display: grid;
+  gap: 12px;
+}
+
+.fields label {
+  display: grid;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.fields input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0.5px solid var(--dsw-alias-border-l4);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
 }
 
 .description {

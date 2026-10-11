@@ -37,7 +37,7 @@ kind: "package-reference"
 { "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
 ```
 
-缺少 `agent.native.json` 的目录显示为 `needs-migration`；文件无效或启用的插件包无法由 profile 解析时显示为 `invalid`。Registry 的 `catalog()` 返回默认值以及不含目录路径或安装项的目录显示信息、信任级别和状态摘要。
+缺少 `agent.native.json` 的目录显示为 `needs-migration`；文件无效或启用的插件包无法由 profile 解析时显示为 `invalid`。Registry 的 `catalog()` 会重新扫描 Host 持有的根目录，并返回默认值以及不含目录路径或安装项的目录显示信息、信任级别和状态摘要。`read()` 返回目录元数据与原始组装文件文本；profile 独有的常驻组装没有文件内容。`copy()` 会将已就绪目录及其资源复制到第一个用户根目录，保留描述、替换显示名、移除排序位置，并收紧复制后文件权限。`delete()` 与 `directory()` 只解析用户目录；随包交付的目录保持只读。CLI 会将根目录路径仅提供给 Host Registry。
 
 在需要让每个 agent 会话从 preset 文件获得自己的工具、提示词段落与 skill 的组装中挂载本包。每个会话都会命名一个 preset——显式指定或通过配置的默认值——并据此组装；没有本包时，会话只能回退到宿主组装挂载的内容。
 
