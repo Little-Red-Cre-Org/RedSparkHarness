@@ -45,8 +45,11 @@ export class NativeSessionListFeed {
   private readonly changes = new SessionListChangeQueue()
   private stop: (() => void) | undefined
 
-  /** @param release - remove this feed and release its follower slot exactly once. */
-  constructor(private readonly release: () => void) {}
+  /**
+   * @param maxBytes - maximum encoded SSE frame size, except for the empty baseline frame.
+   * @param release - remove this feed and release its follower slot exactly once.
+   */
+  constructor(private readonly maxBytes: number, private readonly release: () => void) {}
 
   /** @param sessionId - Session whose list projection changed. */
   push(sessionId: SessionId): void { this.changes.push(sessionId) }
@@ -65,8 +68,14 @@ export class NativeSessionListFeed {
    */
   response(signal: AbortSignal, baseline: () => Promise<readonly NativeSessionListItem[]>,
     project: (sessionId: SessionId) => Promise<NativeSessionListItem | undefined>): Response {
-    const state = { closed: false, sentBaseline: false }
+    const state: {
+      closed: boolean
+      sentBaseline: boolean
+      baselineItems: Iterator<NativeSessionListItem> | undefined
+    } = { closed: false, sentBaseline: false, baselineItems: undefined }
     const encoder = new TextEncoder()
+    const encode = (frame: unknown): Uint8Array => encoder.encode(`data: ${JSON.stringify(frame)}\n\n`)
+    const maxBytes = this.maxBytes
     const changes = this.changes
     const stop = (): void => {
       if (state.closed) return
@@ -86,19 +95,43 @@ export class NativeSessionListFeed {
         try {
           if (!state.sentBaseline) {
             state.sentBaseline = true
-            const frame = { type: 'baseline', items: await baseline() } as const
+            const items = await baseline()
+            const frame = { type: 'baseline', items } as const
+            const bytes = encode(frame)
+            if (bytes.byteLength <= maxBytes) {
+              if (isClosed()) controller.close()
+              else controller.enqueue(bytes)
+              return
+            }
+            state.baselineItems = items[Symbol.iterator]()
+            const emptyBaseline = encode({ type: 'baseline', items: [] })
             if (isClosed()) controller.close()
-            else controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`))
+            else controller.enqueue(emptyBaseline)
             return
           }
-          const next = await changes.next()
-          if (next.done) { stop(); controller.close(); return }
-          const item = await project(next.value)
-          const frame = item === undefined
-            ? { type: 'remove', sessionId: next.value } as const
-            : { type: 'upsert', item } as const
-          if (isClosed()) controller.close()
-          else controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`))
+          for (;;) {
+            const nextItem = state.baselineItems?.next()
+            if (nextItem !== undefined && !nextItem.done) {
+              const item = nextItem.value
+              const bytes = encode({ type: 'upsert', item })
+              if (bytes.byteLength > maxBytes) continue
+              if (isClosed()) controller.close()
+              else controller.enqueue(bytes)
+              return
+            }
+            state.baselineItems = undefined
+            const next = await changes.next()
+            if (next.done) { stop(); controller.close(); return }
+            const item = await project(next.value)
+            const frame = item === undefined
+              ? { type: 'remove', sessionId: next.value } as const
+              : { type: 'upsert', item } as const
+            const bytes = encode(frame)
+            if (item !== undefined && bytes.byteLength > maxBytes) continue
+            if (isClosed()) controller.close()
+            else controller.enqueue(bytes)
+            return
+          }
         } catch (error: unknown) {
           stop()
           controller.error(error)

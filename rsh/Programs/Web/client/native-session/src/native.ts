@@ -1057,6 +1057,13 @@ export function createNativeSessionClient(
       const accepted = AbortSignal.any([lifetime, signal, following.signal])
       const completed = Promise.withResolvers<void>()
       pendingListFollows.add(completed.promise)
+      const finish = (): void => {
+        following.abort()
+        completed.resolve(undefined)
+        pendingListFollows.delete(completed.promise)
+      }
+      accepted.addEventListener('abort', finish, { once: true })
+      if (accepted.aborted) finish()
       try {
         const response = await responseOperation('/api', 'native-session/list-follow', {}, accepted)
         if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
@@ -1068,9 +1075,8 @@ export function createNativeSessionClient(
       } catch (error: unknown) {
         if (!accepted.aborted) throw error
       } finally {
-        following.abort()
-        completed.resolve(undefined)
-        pendingListFollows.delete(completed.promise)
+        accepted.removeEventListener('abort', finish)
+        finish()
       }
     },
     search: (query, cursor, signal) => call('session/search', { query, ...(cursor === undefined ? {} : { cursor }) }, signal),

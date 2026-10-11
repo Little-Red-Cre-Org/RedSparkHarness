@@ -34,12 +34,12 @@ import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
 import { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
 import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
-import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
+import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
 import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
@@ -55,14 +55,44 @@ import { NativeConversationController } from '@deepseek-ai/dsh-client-native-app
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
 import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
+it('closes a list follower aborted while its consumer is paused at yield', async () => {
+  const rpc = {
+    call: async () => ({ ok: true as const, value: {} }),
+    response: async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"baseline","items":[]}\n\n'))
+      },
+    }), { headers: { 'content-type': 'text/event-stream' } }),
+  } satisfies ClientConnectionRpc
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
+  const abort = new AbortController()
+  const iterator = client.follow(abort.signal)[Symbol.asyncIterator]()
+  let closed = false
+  let closing: Promise<void> | undefined
+  try {
+    await expect(iterator.next()).resolves.toMatchObject({ done: false, value: { type: 'baseline', items: [] } })
+    abort.abort()
+    closing = client.close().then(() => { closed = true })
+    await vi.waitFor(() => { expect(closed).toBe(true) }, { interval: 10, timeout: 1000 })
+    await closing
+  } finally {
+    await iterator.return?.()
+    await closing
+    await client.close()
+  }
+})
+
 it('includes nested AggregateError messages in native Session failures', async () => {
   const failure = new AggregateError([
     new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
   ], 'native-headless: turn cleanup failed')
+  const active = {
+    owners: () => [], onAttached: () => async () => {}, onDetached: () => async () => {},
+  } as unknown as NativeActiveSessionOperations
   const service = new NativeWebSessionService(
     { dispose: async () => undefined } as unknown as NativeHeadlessApplication,
     { open: async () => { throw failure } } as unknown as NativeSessionPersistenceOperations,
-    { owners: () => [], onAttached: () => () => undefined, onDetached: () => () => undefined } as unknown as NativeActiveSessionOperations,
+    active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
       builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
       maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
@@ -74,6 +104,73 @@ it('includes nested AggregateError messages in native Session failures', async (
       error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
     })
   } finally {
+    await service.close()
+  }
+})
+
+it('keeps schedule state unavailable and enforces the shared follower limit', async () => {
+  const scheduledId = SessionId('scheduled-root')
+  const releasedId = SessionId('released-root')
+  const scheduledHeader = { id: scheduledId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
+  const releasedHeader = { id: releasedId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
+  const enteredRead = Promise.withResolvers<undefined>()
+  const releasedEvents = Promise.withResolvers<readonly []>()
+  const turnResult = Promise.withResolvers<{ exitCode: number }>()
+  let released = false
+  const scheduledOwner = {
+    agent: {}, session: { id: scheduledId, header: scheduledHeader }, invocation: 'root', rootOrigin: 'scheduled',
+    writerAvailable: true, inheritedEventCount: 0, readEvents: async () => [], onEvent: () => () => {},
+  } as unknown as NativeActiveSessionOwner
+  const releasedOwner = {
+    agent: {}, session: { id: releasedId, header: releasedHeader }, invocation: 'root',
+    writerAvailable: true, inheritedEventCount: 0,
+    readEvents: async () => { enteredRead.resolve(undefined); return releasedEvents.promise }, onEvent: () => () => {},
+  } as unknown as NativeActiveSessionOwner
+  const executionFor = vi.fn((agent: unknown) => {
+    if (agent === releasedOwner.agent && released) throw new Error('released Agent was queried')
+    return { status: 'running' as const }
+  })
+  const active = {
+    owners: () => released ? [scheduledOwner] : [scheduledOwner, releasedOwner],
+    owner: (_agent: unknown, session: { id: SessionId }) => session.id === scheduledId ? scheduledOwner
+      : !released && session.id === releasedId ? releasedOwner : undefined,
+    onAttached: () => async () => {}, onDetached: () => async () => {},
+  } as unknown as NativeActiveSessionOperations
+  const service = new NativeWebSessionService(
+    { dispose: async () => undefined, executeRootTurn: async () => turnResult.promise } as unknown as NativeHeadlessApplication,
+    { list: async () => [] } as unknown as NativeSessionPersistenceOperations,
+    active,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
+      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
+      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
+    new AbortController().signal,
+    { executionFor },
+  )
+  try {
+    const listing = service.handle('session/list', {}, new AbortController().signal)
+    await enteredRead.promise
+    released = true
+    releasedEvents.resolve([])
+    const result = await listing
+    expect(result).toMatchObject({ ok: true, value: [
+      { header: { id: scheduledId }, hasActiveSchedule: false },
+      { header: { id: releasedId }, running: false, hasActiveSchedule: false },
+    ] })
+    const started = await service.handle('session/start', {
+      sessionId: 'follower-limit', text: 'go', resume: true, follow: true,
+    }, new AbortController().signal)
+    if (!started.ok) throw new Error(started.error.message)
+    const admissionId = (started.value as { admissionId: string }).admissionId
+    const listAbort = new AbortController()
+    await service.followList(new Request('http://localhost', { method: 'POST', body: '{}', signal: listAbort.signal }))
+    const turnFollow = await service.follow(new Request('http://localhost', { method: 'POST',
+      body: JSON.stringify({ sessionId: 'follower-limit', admissionId }) }))
+    expect(turnFollow.status).toBe(429)
+    listAbort.abort()
+    turnResult.resolve({ exitCode: 0 })
+  } finally {
+    releasedEvents.resolve([])
+    turnResult.resolve({ exitCode: 0 })
     await service.close()
   }
 })

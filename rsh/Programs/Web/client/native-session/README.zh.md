@@ -28,7 +28,7 @@ kind: "package-reference"
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
-`list()` 返回按 `updatedAt` 降序排列的列表项，包含空白、运行、完成、待交互、直接子项数量、已确认工作区及定时任务字段。`follow(signal)` 通过经过身份验证的 Fetch 载体先发送完整基线，再发送合并后的 upsert 与 remove 帧。`search(query, cursor?, signal?)` 返回有界的标题或当前消息匹配、可选片段及续页 cursor；`archive(sessionId, signal?)` 通过 Host Workspace 注册表归档 Session。
+`list()` 返回按 `updatedAt` 降序排列的列表项，包含空白、运行、完成、待交互、直接子项数量、已确认工作区及定时任务字段。`follow(signal)` 通过经过身份验证的 Fetch 载体先发送完整基线，再发送合并后的 upsert 与 remove 帧。即使 Consumer 暂停在已产出的帧上，中止 `signal` 也会结束跟随并释放 `close()`。`search(query, cursor?, signal?)` 返回有界的标题或当前消息匹配、可选片段及续页 cursor；`archive(sessionId, signal?)` 通过 Host Workspace 注册表归档 Session。
 
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
