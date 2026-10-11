@@ -68,8 +68,11 @@ export interface NativeResponsesPreparedGeneration {
    * @param signal - parent and child operation cancellation.
    * @returns an independent transport and the prepared generation bound to that child route.
    */
-  capture(request: { readonly route: NativeResponsesRoute, readonly maxTokens?: number
-    readonly reasoningEffort?: ReasoningEffortId }, signal: AbortSignal): Promise<NativeResponsesOperationCapture>
+  capture(request: {
+    readonly route: NativeResponsesRoute
+    readonly maxTokens?: number
+    readonly reasoningEffort?: ReasoningEffortId
+  }, signal: AbortSignal): Promise<NativeResponsesOperationCapture>
 }
 
 /** Independent transport plus its exact prepared generation for nested external operations. */
