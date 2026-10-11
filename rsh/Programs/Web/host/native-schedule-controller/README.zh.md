@@ -15,9 +15,9 @@ Native Web 应用可以列出活动、暂停和失败的定时任务，并跟随
 
 - [参考](#reference)
 - [不变量](#invariants)
-- [已知限制与延期工作](#known-limitations-and-deferred-work)
 - [开发备注](#dev-note)
 - [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
 
 <a id="reference"></a>
 ## 参考
@@ -30,13 +30,10 @@ Native Web profile 会在 `task-scheduler` 之后安装本控制器。它需要 
 
 失败使用通用消息和 `native/schedules`。Client Consumer 是 [Native Session](../../client/native-session/README.zh.md) 提供的 `clientNativeSchedule`。
 
+<a id="invariants"></a>
 ## 不变量
 
 本控制器只读取调度器已提交的计划和执行记录，不维护第二份状态，因此不发布运行时不变量伴随包。
-
-## 已知限制与延期工作
-
-本控制器只读取计划；它不会创建、暂停、恢复或删除计划。
 
 <a id="dev-note"></a>
 ## 开发备注
@@ -46,14 +43,22 @@ Native Web profile 会在 `task-scheduler` 之后安装本控制器。它需要 
 <a id="model-experience"></a>
 ## 模型体验
 
-### 模型可见内容
+### 原生 Host
 
-本包不添加模型可见输入或工具。
+#### 模型看到的内容
 
-### Token 影响
+本包不会产生模型可见内容：`schedules/list` 与 `schedules/follow` 仅供浏览器调用，不添加模型可用的输入或工具。
 
-本包不发起模型请求，也不使用 Token。
+#### Token 影响
 
-### KV Cache 影响
+无。
 
-本包不会更改请求前缀。
+#### KV Cache 影响
+
+无。
+
+## 已知限制与延期工作
+
+<a id="known-limitations-and-deferred-work"></a>
+
+- 本控制器只读取计划；它不会创建、暂停、恢复或删除计划。

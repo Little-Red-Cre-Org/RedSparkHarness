@@ -15,9 +15,9 @@ The Native Web application can list active, paused, and failed scheduled work an
 
 - [Reference](#reference)
 - [Invariants](#invariants)
-- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
 - [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 
 <a id="reference"></a>
 ## Reference
@@ -30,13 +30,10 @@ The Native Web profile installs this controller after `task-scheduler`. It requi
 
 Failures use `native/schedules` with a generic message. The Client Consumer is `clientNativeSchedule` from [Native Session](../../client/native-session/README.md).
 
+<a id="invariants"></a>
 ## Invariants
 
 No runtime invariant companion is published because this controller reads the scheduler's committed plan and receipt state without maintaining a second copy.
-
-## Known Limitations and Deferred Work
-
-This controller only reads schedules; it does not create, pause, resume, or delete plans.
 
 <a id="dev-note"></a>
 ## Dev Note
@@ -46,14 +43,22 @@ The task scheduler owns persistence and schedule execution. This package owns th
 <a id="model-experience"></a>
 ## Model Experience
 
-### What the model sees
+### Native Host
 
-This package adds no model-facing input or tools.
+#### What the model sees
 
-### Token effect
+Nothing from this package: `schedules/list` and `schedules/follow` are browser-only RPCs and add no model-facing input or tools.
 
-This package adds no model request or token use.
+#### Token effect
 
-### KV Cache effect
+No model request content is created here.
 
-This package does not change the request prefix.
+#### KV Cache effect
+
+No model request content is created here.
+
+## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
+
+- This controller only reads schedules; it does not create, pause, resume, or delete plans.
