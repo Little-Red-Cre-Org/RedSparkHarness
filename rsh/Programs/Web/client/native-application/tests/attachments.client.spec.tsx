@@ -44,11 +44,6 @@ const messages: Record<string, string> = {
   attachmentRejectedImageSize: 'Image exceeds the per-image limit.',
   attachmentRejectedCount: 'Image count limit reached.',
   attachmentRejectedMessageSize: 'Images exceed the message size limit.',
-  filePending: 'Pending file {name}',
-  fileRemove: 'Remove file {name}',
-  fileUploading: 'Uploading',
-  fileUploadFailed: 'Upload failed',
-  fileRetry: 'Retry upload for {name}',
 }
 
 const translate = ((key: string, params?: Record<string, unknown>) =>

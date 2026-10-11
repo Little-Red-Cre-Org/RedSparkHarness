@@ -1,6 +1,6 @@
 /** Native conversation image loading and draft-file presentation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AttachmentRail, DropOverlay, FileCard, ImageLightbox, MessageImage } from '@deepseek-ai/dsh-client-ui-attachment/native'
+import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@deepseek-ai/dsh-client-ui-attachment/native'
 import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment/native'
 import { fileSizeText, IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
@@ -224,43 +224,28 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
             scrollLeft: t('attachmentScrollLeft'),
             scrollRight: t('attachmentScrollRight'),
           }}
-          renderItem={({ file }) => limits.mediaTypes.includes(file.type as (typeof limits.mediaTypes)[number])
-            ? <div className={css.imageItem}>
-              <button
-                type="button"
-                className={css.thumbnail}
-                title={t('imageOpenOriginal')}
-                aria-label={t('imageOpenOriginalNamed', { label: file.name || t('image') })}
-                disabled={disabled || previewUrls.get(file) === undefined}
-                onClick={() => { setPreviewFile(file) }}
-              >
-                {previewUrls.get(file) === undefined ? null
-                  : <img src={previewUrls.get(file)} alt={file.name || t('image')} />}
-              </button>
-              <button
-                type="button"
-                className={css.remove}
-                aria-label={t('imageRemove', { name: file.name || t('image') })}
-                disabled={disabled}
-                onClick={() => { removeFile(file) }}
-              >
-                <IconCloseFill14 size={12} />
-              </button>
-            </div>
-            : <FileCard
-              name={file.name || t('image')}
-              bytes={file.size}
-              state="ready"
+          renderItem={({ file }) => <div className={css.imageItem}>
+            <button
+              type="button"
+              className={css.thumbnail}
+              title={t('imageOpenOriginal')}
+              aria-label={t('imageOpenOriginalNamed', { label: file.name || t('image') })}
+              disabled={disabled || previewUrls.get(file) === undefined}
+              onClick={() => { setPreviewFile(file) }}
+            >
+              {previewUrls.get(file) === undefined ? null
+                : <img src={previewUrls.get(file)} alt={file.name || t('image')} />}
+            </button>
+            <button
+              type="button"
+              className={css.remove}
+              aria-label={t('imageRemove', { name: file.name || t('image') })}
               disabled={disabled}
-              labels={{
-                label: t('filePending', { name: file.name || t('image') }),
-                remove: t('fileRemove', { name: file.name || t('image') }),
-                uploading: t('fileUploading'),
-                failed: t('fileUploadFailed'),
-                retry: t('fileRetry', { name: file.name || t('image') }),
-              }}
-              onRemove={() => { removeFile(file) }}
-            />}
+              onClick={() => { removeFile(file) }}
+            >
+              <IconCloseFill14 size={12} />
+            </button>
+          </div>}
         />
       </div>}
       {notices.length > 0 && <ul className={css.notices} role="status" aria-live="polite">
