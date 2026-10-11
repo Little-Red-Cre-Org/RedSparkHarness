@@ -637,6 +637,12 @@ select.input {
   min-height: 36px;
 }
 
+.authorizationGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .authorizationIdentity {
   min-width: 0;
 }
