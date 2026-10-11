@@ -36,7 +36,7 @@ kind: "package-reference"
 
 同一 Consumer 通过选定的 `/api` 载体提供 `settingsDescribe`、带 revision 检查的 `settingsMutate`、`credentialsDescribe`、`credentialsSet` 与 `credentialsUnset`。`settingsDescribe` 返回已发布的 namespace descriptor 和所选 Host 提供的请求预算。Settings 页面依照 `maxCredentialRefsPerRead` 分批读取并聚合凭据结果；超过 `maxSettingsOperations` 的修改会在发送前拒绝，因为一次 revision 检查写入必须保持原子性。Host 将这些经过校验的限制默认为 64 个凭据引用和 512 个操作。凭据读取只返回是否存在、来源与可写性事实，凭据写入返回确认且不回显值。`NativeSessionRpcError` 保留 Host 错误码与冲突详情以便处理过期写入。
 
-`modelsListProviders`、`modelsListConfigurableProviders` 与 `modelsDiscover` 会读取 Host 的活动路由、可配置 Provider 诊断及草稿发现结果。`NativeModelDiscoveryRequest.apiKey` 只随单次发现请求发送；Host 失败会以 `NativeSessionRpcError` 拒绝。`settingsEvents(signal)` 流式接收不含值的 `settings/document-updated`、`credentials/reference-updated` 与 `llm/adapters-updated` 通知；取消信号会正常结束迭代。
+`modelsListProviders`、`modelsListConfigurableProviders` 与 `modelsDiscover` 会读取 Host 的活动路由、可配置 Provider 诊断及草稿发现结果。`NativeModelDiscoveryRequest.apiKey` 只随单次发现请求发送；Host 失败会以 `NativeSessionRpcError` 拒绝。`settingsEvents(signal)` 流式接收不含值的 `settings/document-updated`、`credentials/reference-updated` 、`llm/adapters-updated` 与 `accounts/changed` 通知；取消信号会正常结束迭代。
 
 授权方法会列出安全的流程信息、开始尝试、从授权 Fetch 路由接收可重放且不含机密的帧，并使用当前尝试标识提交回答、拒绝或取消。
 

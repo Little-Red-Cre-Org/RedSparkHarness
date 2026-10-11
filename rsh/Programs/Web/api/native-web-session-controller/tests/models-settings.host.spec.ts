@@ -93,6 +93,8 @@ it('streams settings, credential and adapter invalidations and closes on abort',
     expect(await readFrame()).toEqual({ type: 'credentials/reference-updated', ref: 'OPENAI_API_KEY' })
     await host.events.parallel(scope, 'llm/adapters-updated')
     expect(await readFrame()).toEqual({ type: 'llm/adapters-updated' })
+    await host.events.parallel(scope, 'accounts/changed', 'llm-pi-ai/openai-codex')
+    expect(await readFrame()).toEqual({ type: 'accounts/changed', key: 'llm-pi-ai/openai-codex' })
 
     requestSignal.abort()
     expect((await reader!.read()).done).toBe(true)
