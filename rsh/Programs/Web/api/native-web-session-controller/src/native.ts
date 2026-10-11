@@ -29,6 +29,9 @@ import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/mod
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import { NativeAgentPresetError } from '@deepseek-ai/dsh-agent-presets/native'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permission-presets/native-definition'
+import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
@@ -186,7 +189,8 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
+  'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -226,6 +230,8 @@ export interface NativeWebSelectionProviders {
     readonly selection: NativeModelSelectionOperations
     readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
   } | undefined
+  readonly planMode?: NativePlanMode | undefined
+  readonly permissionPresets?: NativePermissionPresetOperations | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
@@ -624,10 +630,12 @@ export class NativeWebSessionService {
           : endpoint === 'session/search' ? ['query', 'cursor']
             : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
               : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
-                : endpoint === 'session/rename-title' ? ['sessionId', 'title']
-                  : endpoint === 'session/refresh-title' ? ['sessionId']
-                    : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
-                      : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
+                : endpoint === 'session/select-plan-mode' ? ['sessionId', 'active']
+                  : endpoint === 'session/select-permission' ? ['sessionId', 'preset']
+                    : endpoint === 'session/rename-title' ? ['sessionId', 'title']
+                      : endpoint === 'session/refresh-title' ? ['sessionId']
+                        : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
+                          : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
         if (endpoint === 'agent-presets/list') return this.agentPresetsList()
         if (endpoint === 'session/model-controls') {
@@ -642,6 +650,56 @@ export class NativeWebSessionService {
             presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
               ...description === undefined ? {} : { description } })) ?? [],
           }
+        }
+        if (endpoint === 'session/mode-controls') {
+          const id = sessionId(fields.sessionId)
+          const route = await this.routeForSession(id, accepted)
+          return await this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, operationSignal) => {
+            const events = await owner.readEvents({ signal: operationSignal })
+            const facts = foldNativeAgentPresetFacts(owner.session.header, events)
+            const presets = this.selections.presets?.list() ?? []
+            const planMode = this.selections.planMode
+            const planState = planMode?.state(owner)
+            return {
+              current: facts.preset,
+              options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+                ...description === undefined ? {} : { description } })),
+              revision: facts.revision,
+              locked: facts.locked,
+              canSelect: presets.length > 0 && !facts.locked,
+              planMode: { available: planMode !== undefined, ...(planState === undefined
+                ? { active: false }
+                : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
+            }
+          }, accepted)
+        }
+        if (endpoint === 'session/permission-controls') {
+          const id = sessionId(fields.sessionId)
+          const route = await this.routeForSession(id, accepted)
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) return { available: false, currentValue: null, options: [] }
+          const controls = await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => permissions.controls(owner, operationSignal), accepted)
+          return { available: true, ...controls }
+        }
+        if (endpoint === 'session/select-plan-mode') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.active !== 'boolean') throw new TypeError('native web session: plan mode must be boolean')
+          const planMode = this.selections.planMode
+          if (planMode === undefined) throw new Error('native web session: plan mode is unavailable')
+          const route = await this.routeForSession(id, accepted)
+          return await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => planMode.select(owner, fields.active as boolean, operationSignal), accepted)
+        }
+        if (endpoint === 'session/select-permission') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid permission preset')
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) throw new Error('native web session: permission presets are unavailable')
+          const route = await this.routeForSession(id, accepted)
+          await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => permissions.apply(owner, fields.preset as string, operationSignal), accepted)
+          return { changed: true }
         }
         if (endpoint === 'session/list') return this.listSessions(accepted)
         if (endpoint === 'session/search') return this.searchSessions(payload, accepted)
@@ -1114,7 +1172,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -1171,6 +1229,7 @@ export const plugin: NativePlugin = {
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), defaultModel: readDefaultModel,
           presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
+          planMode: context.optional('planMode'), permissionPresets: context.optional('permissionPresets'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           workspaceRegistry,

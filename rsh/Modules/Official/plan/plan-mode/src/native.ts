@@ -59,10 +59,33 @@ export interface NativePlanModeState {
   readonly pending?: boolean
 }
 
-/** Native plan-mode capability: observe logged and pending state without selecting it. */
+/** Result of selecting plan mode through the Native Host. */
+export interface NativePlanModeSelection {
+  /** Last committed plan-mode value. */
+  readonly active: boolean
+  /** Selected value waiting for the next accepted step. */
+  readonly pending?: boolean
+  /** Outcome of this selection. */
+  readonly outcome: 'committed' | 'queued' | 'cancelled' | 'noop'
+}
+
+/** Native plan-mode capability over each attached root Session's logged and pending state. */
 export interface NativePlanMode {
   /** Read the state of every attached agent. */
   states(): readonly NativePlanModeState[]
+  /** Read one exact attached root owner's logged and pending mode.
+   * @param owner - exact active root Session owner.
+   * @returns the owner's plan mode state.
+   * @throws when the owner is not attached to this plan-mode Provider.
+   */
+  state(owner: NativeActiveSessionOwner): NativePlanModeState
+  /** Select plan mode using the same pending-step rules as `/plan`.
+   * @param owner - exact active root Session owner.
+   * @param active - requested plan-mode state.
+   * @param signal - cancellation for queued guidance and durable writes.
+   * @returns the committed or pending state and selection outcome.
+   */
+  select(owner: NativeActiveSessionOwner, active: boolean, signal: AbortSignal): Promise<NativePlanModeSelection>
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -224,11 +247,28 @@ export const plugin: NativePlugin = {
       })
       for (const owner of sessions.owners()) await attach(owner)
 
-      context.provide('planMode', {
+      const planMode: NativePlanMode = {
         states: () => [...states].map(([agent, { owner, state }]) => ({
           agent, ...selections.get(owner.session.id, view(owner, state)),
         })),
-      } satisfies NativePlanMode)
+        state(owner) {
+          const entry = states.get(owner.agent)
+          if (entry === undefined || entry.owner !== owner) throw new Error('plan-mode: exact root owner is not attached')
+          return { agent: owner.agent, ...selections.get(owner.session.id, view(owner, entry.state)) }
+        },
+        async select(owner, active, signal) {
+          const entry = states.get(owner.agent)
+          if (entry === undefined || entry.owner !== owner || !owner.writerAvailable) {
+            throw new Error('plan-mode: exact writable root owner is not attached')
+          }
+          signal.throwIfAborted()
+          const selection = selections.select(owner.session.id, view(owner, entry.state), active)
+          if (selection.outcome === 'committed') await owner.flush()
+          await reconcile(owner, entry.state, signal)
+          return { ...selections.get(owner.session.id, view(owner, entry.state)), outcome: selection.outcome }
+        },
+      }
+      context.provide('planMode', planMode)
 
       context.effect(tools.registerValueTool({
         schema: {
