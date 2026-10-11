@@ -38,7 +38,8 @@
         "modelExecution",
         "agents",
         "sessionExecution",
-        "activeSessions"
+        "activeSessions",
+        "workspaceRegistry"
       ],
       "optional": [
         "tools",
@@ -51,7 +52,6 @@
         "modelDirectory",
         "modelSettings",
         "agentPresets",
-        "workspaceRegistry",
         "agentInstructions",
         "userQuestions",
         "attachments",
@@ -100,7 +100,10 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^"
+    "@deepseek-ai/dsh-native-command": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^",
+    "@deepseek-ai/dsh-host-directory-picker-native": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

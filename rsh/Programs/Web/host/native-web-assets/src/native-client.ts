@@ -137,8 +137,12 @@ function readPackageManifest(path: string): PackageManifest {
 }
 
 function selectedEntries(profile: NativeClientProfile, projectDir: string, runtimeDir: string, installedOnly: boolean): SelectedEntry[] {
-  const roots = [realpathSync(projectDir), realpathSync(runtimeDir)]
-  const sourceWorkspace = installedOnly ? undefined : workspaceRoot(roots[1] ?? runtimeDir)
+  const runtime = realpathSync(runtimeDir)
+  // npm-style installs hoist the runtime's dependencies into the node_modules that holds the runtime itself.
+  const installModules = runtime.split(sep).lastIndexOf('node_modules')
+  const roots = [realpathSync(projectDir), runtime,
+    ...installModules === -1 ? [] : [runtime.split(sep).slice(0, installModules + 1).join(sep)]]
+  const sourceWorkspace = installedOnly ? undefined : workspaceRoot(runtime)
   return profile.installations.map((row) => {
     let packageRoot: string | undefined
     for (const root of roots) {

@@ -96,3 +96,24 @@ it('defines only public Client environment values and fixes the browser bundle t
     await rm(home, { recursive: true, force: true })
   }
 })
+
+it('accepts Client packages hoisted beside the runtime in a flattened install', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-hoisted-client-'))
+  const project = join(home, 'profile'), modules = join(home, 'prefix', 'node_modules')
+  const runtime = join(modules, '@deepseek-ai', 'dsh'), client = join(modules, 'hoisted-client')
+  try {
+    await mkdir(project)
+    await mkdir(runtime, { recursive: true })
+    await mkdir(client)
+    await writeFile(join(runtime, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh' }))
+    await writeFile(join(client, 'package.json'), JSON.stringify({
+      name: 'hoisted-client', type: 'module', exports: { './native': './native.mjs' },
+      dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
+    }))
+    await writeFile(join(client, 'native.mjs'), 'export const plugin = { apiVersion: 1, name: "hoisted-client", targets: ["client"], requires: [], provides: [], resolve: () => () => {} }\n')
+    await writeFile(join(project, 'rsh.client.json'), JSON.stringify({ formatVersion: 1, installations: [{ id: 'client', plugin: 'hoisted-client' }] }))
+    expect((await prepareNativeClientBundle(project, runtime, true))?.wire.modules).toEqual([{ id: 'client' }])
+  } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+})

@@ -54,7 +54,7 @@ One-shot teardown attempts writer closure even when an active-owner observer rej
 
 With `modelSelection` selected, root steps capture durable intent before header construction. The executor resolves actual Provider defaults and dispatch together; their controls supply the persisted header and the model request. Route changes add a persisted model-change notice; delegated invocations keep their explicit configuration.
 
-An explicit `createNativeHeadlessApplication` authority can supply a live `defaultModelSelection` callback. Its provider and model replace the Program defaults for root steps without a durable `model/selection` event; Session history remains authoritative, and delegated invocations keep their explicit configuration.
+An explicit `createNativeHeadlessApplication` authority can supply a live `defaultModelSelection` callback for root routes. With `modelSelection` selected, a durable `model/selection` event wins; otherwise the latest Session request header supplies the provider/model route, and the callback supplies that route only when history has none. Prior resolved request controls do not become explicit model-selection controls; other controls follow the current request and prepared Provider defaults. Delegated invocations keep their explicit configuration. See [model selection](../../llm/native-model-selection/README.md) for its precedence.
 
 Root `prepareMessage` takes priority over `message`. Preparation runs under the existing execution owner after effective next-model selection and before inbox admission. It returns identified input without access to the Session writer; rejection or cancellation admits no user input.
 
@@ -122,4 +122,4 @@ The reading is appended after existing history and does not change the reusable 
 - Native model Providers and broader capability adapters live in separate packages.
 - This composition imports the Cordis-free `./native` Session and persistence entries and creates no Cordis Context. Their packages retain Cordis adapters for compatibility, with Cordis as an optional peer dependency.
 
-Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly.
+Other native Programs reuse resolveNativeHeadlessConfig and createNativeHeadlessApplication without providing another application launcher. Programs with mandatory Session ownership pass the selected execution and active ownership services explicitly; a Program that requires Workspace routes also passes its Workspace registry.

@@ -10,7 +10,7 @@ Desktop 默认仍使用兼容 Host。原生 Client 的 Session RPC、follow 与 
 
 ## 决策
 
-私有 Host 在导入任一组合前，从已安装 profile 的 `package.json` 读取 `dsh.profile.runtime`；`dsh.profile.config` 指定保存组合配置的 `rsh.profile.json`。原生模式复用 CLI profile 校验与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。只有 Desktop 以显式允许链接包方式启动的工作区开发项目跳过此包含检查，并从工作区构建其 Client。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
+私有 Host 在导入任一组合前，从已安装 profile 的 `package.json` 读取 `dsh.profile.runtime`；`dsh.profile.config` 指定保存组合配置的 `rsh.profile.json`。原生模式复用 CLI profile 校验、preset 展开与安装规划，在同一作用域计划内提供 Electron 既有 Connection 传输，并仅激活一次所选 Session controller 与 Provider。所选 Client 替换根页面。包及导出的真实路径均必须位于已安装 profile 或运行时内。只有 Desktop 以显式允许链接包方式启动的工作区开发项目跳过此包含检查，并从工作区构建其 Client。规划加载器唯一允许的计算导入是已经从经校验安装清单解析出的导出入口。
 
 ## 考虑过的替代方案
 
@@ -22,4 +22,4 @@ Desktop 默认仍使用兼容 Host。原生 Client 的 Session RPC、follow 与 
 
 ## 后果
 
-原生模式要求仅启动时配置、所选 Session controller 及其 Provider，以及原生 Client 配置。Cordis patch 与竞争的传输或 application Provider 在激活前被拒绝。Electron 在发布准备期间保留已有显式原生配置，并在停止 Host 前拒绝兼容插件变更。兼容组合及默认项继续可用。Desktop 录制 Session 使用实际私有 Host 进程、已安装包、Client 资源及冷恢复；GUI 渲染与尚未支持的兼容菜单仍需独立验收。此变更不修改 Session 格式或 SDK 转录。
+原生模式要求仅启动时配置、所选 Session controller 及其 Provider，以及原生 Client 配置。Cordis patch，以及声明了竞争传输或 application Provider 的活动 profile 或已展开 preset 安装项，都会在解析安装计划前被拒绝；禁用项不参与检查。Electron 在发布准备期间保留已有显式原生配置，并在停止 Host 前拒绝兼容插件变更。兼容组合及默认项继续可用。Desktop 录制 Session 使用实际私有 Host 进程、已安装包、Client 资源及冷恢复；GUI 渲染与尚未支持的兼容菜单仍需独立验收。此变更不修改 Session 格式或 SDK 转录。

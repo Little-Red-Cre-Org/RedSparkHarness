@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { expect, it } from 'vitest'
-import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
+import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
@@ -17,6 +17,16 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     })
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
+    const nativeWebRows = new Map(profile.installations.map(row => [row.id, row]))
+    expect(nativeWebRows.get('storage-hub')?.plugin).toBe('@deepseek-ai/dsh-storage')
+    expect(nativeWebRows.get('storage-json')).toMatchObject({ config: { root: join(home, 'storages') } })
+    expect(nativeWebRows.get('storage-domain')).toMatchObject({ config: { backend: 'json' } })
+    expect(nativeWebRows.get('workspace')).toEqual({
+      id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: 'root',
+    })
+    expect(nativeWebRows.get('session-controller')).toMatchObject({
+      config: { workspaceRoutes: { maxRoutes: 64, allowedRoots: [process.cwd()] } },
+    })
     expect(profile.installations.find(row => row.id === 'session-title')).toEqual({
       id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
       config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 },
@@ -332,4 +342,19 @@ it('installs plan mode beside the native TUI command registry', () => {
   expect(ids).toContain('user-questions')
   expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
     .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
+})
+
+it('declares every shipped template plugin as a CLI runtime dependency', async () => {
+  const cli = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+    dependencies: Record<string, string>
+    optionalDependencies: Record<string, string>
+  }
+  const runtime = { ...cli.dependencies, ...cli.optionalDependencies }
+  for (const name of SHIPPED_NATIVE_PROFILES) {
+    for (const platform of ['linux', 'win32'] as const) {
+      for (const row of shippedNativeProfileComposition('/tmp/rsh-deps', name, platform).installations) {
+        expect(runtime, `${name}/${platform}`).toHaveProperty([row.plugin])
+      }
+    }
+  }
 })

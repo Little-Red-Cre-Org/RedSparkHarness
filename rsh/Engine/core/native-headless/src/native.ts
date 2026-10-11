@@ -133,6 +133,8 @@ interface ResolvedConfig extends Config {
 }
 
 interface NativeHeadlessAuthority {
+  /** Workspace registry taking precedence over the context's. */
+  readonly workspaceRegistry?: WorkspaceRegistryRuntime
   readonly execution?: NativeSessionExecutionOperations
   readonly active: NativeActiveSessionOperations
   readonly defaultModelSelection?: () => Pick<LlmCallConfig, 'provider' | 'model' | 'reasoningEffort'> | undefined
@@ -746,8 +748,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (request.prepareMessage !== undefined) {
         if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: input preparation requires the active root owner')
         const selection = await this.modelSelection?.state(activeOwner, signal)
-        const selected = selection?.revision === null || selection === undefined
-          ? this.rootDefaults(config) : selection.next ?? this.rootDefaults(config)
+        const selected = selection?.next ?? this.rootDefaults(config)
         signal.throwIfAborted()
         message = await request.prepareMessage({ provider: selected.provider, model: selected.model }, signal)
         signal.throwIfAborted()
@@ -2138,6 +2139,7 @@ export class NativeHeadlessApplication implements NativeApplication {
  * @param authority - explicit service selection. When supplied, its active and execution values are used as-is;
  * an omitted execution value does not fall back to context. Its optional default-model callback supplies a live
  * root fallback before Session selection capture. Without this object, optional services are read from context.
+ * A supplied Workspace registry takes precedence; without one, the registry is read from context.
  * @returns the executor registered for disposal with the installation.
  * @throws if `executionScope` does not belong to the installation tree.
  */
@@ -2153,7 +2155,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     authority === undefined ? context.optional('sessionExecution') : authority.execution,
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
     authority?.defaultModelSelection,
-    context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
+    context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
   )
   context.own(() => application.dispose())
   return application

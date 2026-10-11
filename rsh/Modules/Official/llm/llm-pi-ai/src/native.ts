@@ -14,6 +14,7 @@ import type { NativeSettingsScope } from '@deepseek-ai/dsh-settings-definition/n
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from './adapter.ts'
 import { NativeAccountsProvider } from './accounts.ts'
+import { CodexUsageStore } from './rate-limits.ts'
 export type { AccountBalance, AccountKey, AccountSummary, AccountUsage, NativeAccounts, Quota, QuotaWindow } from './accounts.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { PiAiProviderProfile } from './config.ts'
@@ -45,6 +46,10 @@ function profilesWithAccountRoutes(
   if (codex) routes['openai-codex'] ??= {}
   if (deepseekAccount) routes[DEEPSEEK_ACCOUNT_ROUTE] ??= DEEPSEEK_ACCOUNT_PROFILE
   return resolveProfiles(routes, 'deferred')
+}
+
+function deepseekAccountDestination(profile: Pick<PiAiProviderProfile, 'baseURL'>): string {
+  return profile.baseURL ?? DEEPSEEK_ACCOUNT_BASE_URL
 }
 
 export type { NativeModelSettings } from './model-settings.ts'
@@ -87,14 +92,56 @@ export const plugin: NativePlugin = {
         settingsSelection = selection
         context.own(() => { selection.dispose() })
       }
-      const codexRecord = await credentials.describeRecord(CODEX_ACCOUNT_KEY)
-      let codexAvailable = codexRecord.configured && codexRecord.kind === 'grant'
-      let deepseekAccountAvailable = deepseekAccount !== undefined
-        && await deepseekAccount.resolveToken(DEEPSEEK_ACCOUNT_BASE_URL) !== undefined
+      let credentialSnapshotsDirty = false
+      const credentialSnapshotsAreDirty = () => credentialSnapshotsDirty
+      let credentialSnapshotsReady = false
+      let codexAvailable = false
+      let deepseekAccountAvailable = false
+      context.on('credentials/record-updated', async (key) => {
+        if (!credentialSnapshotsReady) {
+          if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) credentialSnapshotsDirty = true
+          return
+        }
+        if (credentialKeyScope(key) === 'llm-pi-ai') {
+          if (key === CODEX_ACCOUNT_KEY) {
+            const record = await credentials.describeRecord(CODEX_ACCOUNT_KEY)
+            codexAvailable = record.configured && record.kind === 'grant'
+            profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
+          }
+          adapter.invalidate()
+          await context.events.parallel(context.scope, 'llm/adapters-updated')
+        }
+        if (key === DEEPSEEK_ACCOUNT_KEY) {
+          deepseekAccountAvailable = deepseekAccount !== undefined
+            && await deepseekAccount.resolveToken(DEEPSEEK_ACCOUNT_BASE_URL) !== undefined
+          profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
+          adapter.invalidate()
+          await context.events.parallel(context.scope, 'llm/adapters-updated')
+        }
+        if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) {
+          await context.events.parallel(context.scope, 'accounts/changed', key)
+        }
+      })
+      do {
+        context.signal.throwIfAborted()
+        // Reconcile account commits delivered while either snapshot is pending.
+        credentialSnapshotsDirty = false
+        const codexRecord = await credentials.describeRecord(CODEX_ACCOUNT_KEY)
+        codexAvailable = codexRecord.configured && codexRecord.kind === 'grant'
+        deepseekAccountAvailable = deepseekAccount !== undefined
+          && await deepseekAccount.resolveToken(DEEPSEEK_ACCOUNT_BASE_URL, context.signal) !== undefined
+        context.signal.throwIfAborted()
+      } while (credentialSnapshotsAreDirty())
+      // Settings watches do not replay; refresh the value before subscribing.
+      if (settingsSelection !== undefined) providers = settingsSelection.get().providers ?? {}
       let profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
+      const codexUsage = new CodexUsageStore()
       const adapter = new PiAiAdapter({
         profiles: () => profiles,
         auth,
+        onCodexUsage: (identity, observation, replaceQuotas) => {
+          codexUsage.observe(identity, observation, replaceQuotas)
+        },
         resolveAttachments: () => attachments,
         resolveImageAccess: (store, ref) => resolveImageAttachmentAccess(store, hostPath => fs?.processPathFromHostPath(hostPath), ref),
         async resolveApiKey(provider, profile) {
@@ -106,14 +153,14 @@ export const plugin: NativePlugin = {
         },
         async resolveRequestHeaders(provider, profile, signal) {
           if (provider !== DEEPSEEK_ACCOUNT_ROUTE) return undefined
-          const token = await deepseekAccount?.resolveToken(profile.baseURL ?? DEEPSEEK_ACCOUNT_BASE_URL, signal)
+          const token = await deepseekAccount?.resolveToken(deepseekAccountDestination(profile), signal)
           context.signal.throwIfAborted()
           if (token === undefined) throw new LlmError('Sign in to DeepSeek to use the account provider.', 'MISSING_CREDENTIAL')
           return { authorization: `Bearer ${token}`, 'x-dsh-auth-token': token }
         },
       })
       context.own(() => { adapter.dispose() })
-      context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount))
+      context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount, codexUsage))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
@@ -144,8 +191,12 @@ export const plugin: NativePlugin = {
             signal.throwIfAborted()
             if (resolved?.auth.apiKey) return undefined
           }
+          const deepseekProfile = profiles.get(DEEPSEEK_ACCOUNT_ROUTE)
+          const deepseekAvailable = deepseekProfile !== undefined && deepseekAccount !== undefined
+            && await deepseekAccount.resolveToken(deepseekAccountDestination(deepseekProfile), signal) !== undefined
+          signal.throwIfAborted()
           const candidates = [
-            ...(deepseekAccountAvailable ? [DEEPSEEK_ACCOUNT_ROUTE] : []),
+            ...(deepseekAvailable ? [DEEPSEEK_ACCOUNT_ROUTE] : []),
             ...(codexAvailable ? ['openai-codex'] : []),
           ]
           for (const provider of candidates) {
@@ -217,29 +268,9 @@ export const plugin: NativePlugin = {
         })
         context.own(unwatch)
       }
-      context.on('credentials/record-updated', async (key) => {
-        if (credentialKeyScope(key) === 'llm-pi-ai') {
-          if (key === CODEX_ACCOUNT_KEY) {
-            const record = await credentials.describeRecord(CODEX_ACCOUNT_KEY)
-            codexAvailable = record.configured && record.kind === 'grant'
-            profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
-          }
-          adapter.invalidate()
-          await context.events.parallel(context.scope, 'llm/adapters-updated')
-        }
-        if (key === DEEPSEEK_ACCOUNT_KEY) {
-          deepseekAccountAvailable = deepseekAccount !== undefined
-            && await deepseekAccount.resolveToken(DEEPSEEK_ACCOUNT_BASE_URL) !== undefined
-          profiles = profilesWithAccountRoutes(providers, codexAvailable, deepseekAccountAvailable)
-          adapter.invalidate()
-          await context.events.parallel(context.scope, 'llm/adapters-updated')
-        }
-        if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) {
-          await context.events.parallel(context.scope, 'accounts/changed', key)
-        }
-      })
       context.provide('modelDirectory', directory)
       context.provide('model', model)
+      credentialSnapshotsReady = true
     }
   },
 }

@@ -137,10 +137,9 @@ it('captures resolved builtin tool defaults and explicit route selection', async
   }
 })
 
-it('prepares root input with the effective default model after a previous request', async () => {
-  const previous = { provider: 'old-provider', model: 'old-model' }
+it('prepares root input with the effective default model for a fresh Session', async () => {
   const modelSelection: NativeModelSelectionOperations = {
-    async state() { return { lastUsed: previous, next: previous, revision: null } },
+    async state() { return { lastUsed: null, next: null, revision: null } },
     async select() { throw new Error('unused') },
     async capture(_owner, defaults) { return { config: defaults, requestedConfig: defaults } },
   }

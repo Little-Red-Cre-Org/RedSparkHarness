@@ -35,6 +35,7 @@ export function createNativeSettingsActions(client: NativeSessionClient): Native
     modelsListConfigurableProviders: client.modelsListConfigurableProviders.bind(client),
     modelsDiscover: client.modelsDiscover.bind(client),
     settingsEvents: client.settingsEvents.bind(client),
+    agentPresetsList: client.agentPresetsList.bind(client),
   }
 }
 
