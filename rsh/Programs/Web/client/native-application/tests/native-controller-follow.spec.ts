@@ -41,8 +41,10 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   let admissionCount = 0
   let promptCount = 0
   let rows: NativeSessionListItem[] = [
-    { header: makeHeader('session-alpha'), titleProjection: { status: 'absent' } },
-    { header: makeHeader('session-beta'), titleProjection: { status: 'absent' } },
+    { header: makeHeader('session-alpha'), titleProjection: { status: 'absent' }, updatedAt: 1,
+      blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false },
+    { header: makeHeader('session-beta'), titleProjection: { status: 'absent' }, updatedAt: 1,
+      blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false },
   ]
   const rpc = {
     async call(_channel: string, endpoint: string, payload: unknown) {

@@ -28,6 +28,8 @@ kind: "package-reference"
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
+`list()` 返回按 `updatedAt` 降序排列的列表项，包含空白、运行、完成、待交互、直接子项数量、已确认工作区及定时任务字段。`follow(signal)` 通过经过身份验证的 Fetch 载体先发送完整基线，再发送合并后的 upsert 与 remove 帧。`search(query, cursor?, signal?)` 返回有界的标题或当前消息匹配、可选片段及续页 cursor；`archive(sessionId, signal?)` 通过 Host Workspace 注册表归档 Session。
+
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
@@ -102,3 +104,4 @@ interface NativeSettingsDescription {
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI、文件及音频上传不由该包提供。
+- Host 只能为已附加的 root owner 查询活动定时任务；冷态 Session 行的 `hasActiveSchedule` 为 `false`，因为 scheduler 清单按 owner 限定。

@@ -10633,6 +10633,9 @@ importers:
       '@deepseek-ai/dsh-session-title':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-title
+      '@deepseek-ai/dsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/automation/task-scheduler
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -10642,6 +10645,9 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/workspace/workspace
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11440,6 +11446,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
       eventsource-parser:
         specifier: ^3.1.0
         version: 3.1.0

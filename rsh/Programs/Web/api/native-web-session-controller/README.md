@@ -26,6 +26,8 @@ Configuration includes the native headless workspace, model, prompt and budgets 
 
 The Client Consumer owns list, blank creation, history, explicit fresh/resumed prompts, cancellation and status. Prompt success follows durable settlement; exact execution cancellation returns exitCode 130 after draining. A Session accepts one pending browser turn. Busy submissions reject instead of silently entering another queue. Live history uses the exact active writer; cold history closes its read handle before responding. Installation teardown withdraws routes, cancels requests and drains the executor.
 
+`session/list` projects durable history and exact active owners, adds confirmed workspace membership and sorts by latest event time. Authenticated POST `/api/native-session/list-follow` sends `{}` then streams a baseline and coalesced upsert/remove frames. `session/search` accepts `{ query, cursor? }`, scans at most 100 headers and returns at most 20 title or current message matches per page. `session/archive` delegates to `workspaceRegistry.archiveSession` and returns `{ archived: true }`; without that registry it fails with `native/sessions`.
+
 The authenticated `session/command` endpoint accepts `{ sessionId, line }` for one complete registered slash command. It requires the selected Session to be idle, revalidates the command against its exact Program root owner, and returns the shared `CommandExecution` after maintenance settles. Request cancellation is passed into the command and the Host drains it before settlement.
 
 Optional modelDirectory advertises model metadata and provider failures; modelSelection validates and records intent through the sole Session maintenance owner. Selection requests carry an exact durable revision and reject pending turns. Retained writers reserve idle Agent maintenance before directory resolution and durable selection; cold operations retain their existing maintenance admission. Optional agentPresets advertises installed compositions; rootExecution applies blank-root selection and awaits epoch cleanup. Missing selection Providers fail explicit mutation requests rather than substituting defaults.
@@ -81,3 +83,4 @@ This package does not alter the history prefix; a new user message extends the r
 <a id="known-limitations-and-deferred-work"></a>
 
 - Full product UI, file and audio uploads are not provided by this package.
+- `hasActiveSchedule` is available only for an attached root owner because `taskScheduler.list` requires that owner; cold Session rows report `false` even when the scheduler is installed.

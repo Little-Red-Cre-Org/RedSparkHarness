@@ -52,6 +52,7 @@
         "modelSettings",
         "agentPresets",
         "workspaceRegistry",
+        "taskScheduler",
         "agentInstructions",
         "userQuestions",
         "attachments",
@@ -100,7 +101,9 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^"
+    "@deepseek-ai/dsh-native-command": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@deepseek-ai/dsh-task-scheduler": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
