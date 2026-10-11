@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Button, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconPlusOutline16, Modal, ModelsSettingsStyles } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pulls this package's SlotMap merge (the two Models child slots).
 import type {} from './slot-contract.ts'
@@ -27,7 +27,7 @@ import { ProviderEditor, type ProviderEditorProps } from './ProviderEditor.tsx'
 import { AuthorizationPanel } from './AuthorizationPanel.tsx'
 import { enableAuthorizedProvider, isSubscriptionProvider } from './authorized-provider.ts'
 import type { en } from './locales.ts'
-import styles from './ModelsSection.module.css'
+const styles = ModelsSettingsStyles
 
 /** Injected dependencies of {@link ModelsSection} (slot `inject`). */
 export interface ModelsSectionInjected {

@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-client-ui-settings-models` 是 dsh Web 客户端的 Models 设置页面：用户可以配置 API 密钥（以只写方式存入 profile 的凭据引用之下）、运行提供方自有的账号登录流程、编辑每个提供方的模型列表，并手工声明自定义 pi-ai 路由；页面以提供方行展示，一次只展开一张编辑卡片。该页面把提供方目录、设置文档与凭据描述合并为一个共享快照，因此行的状态在三个方面始终一致。它还会带首次运行的用户走两个有序弹窗——版本化内测声明，以及按条件显示的官方 DeepSeek 凭据步骤。
+`dsh-client-ui-settings-models` 让 Web 用户配置 API 密钥、提供方模型列表和自定义 pi-ai 路由，并通过提供方自有流程登录。提供方行汇总当前目录、Settings 文档与凭据状态。首次运行时，页面显示版本化声明，并在需要时要求配置官方 DeepSeek 凭据。`ui-primitives` 与 native Models 页面共享 API 表单和样式表。
 
 ## 目录
 

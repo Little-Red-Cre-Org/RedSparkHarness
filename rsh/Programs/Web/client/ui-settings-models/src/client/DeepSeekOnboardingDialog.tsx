@@ -13,11 +13,11 @@ import { isSubscriptionProvider } from './authorized-provider.ts'
 import { CustomProviderCard } from './CustomProviderCard.tsx'
 import type { ModelsOperations } from './operations.ts'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
+import { ModelsSettingsStyles as formStyles } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ProviderEditor } from './ProviderEditor.tsx'
 import type { en } from './locales.ts'
 import { OnboardingModal } from './OnboardingModal.tsx'
 import styles from './DeepSeekOnboardingDialog.module.css'
-import formStyles from './ModelsSection.module.css'
 
 /** Registration-side dependencies of {@link DeepSeekOnboardingDialog}. */
 export interface DeepSeekOnboardingInjected {
