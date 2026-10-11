@@ -24,7 +24,10 @@ const OAUTH_REQUEST_TIMEOUT_MS = 30_000
 const CALLBACK_TIMEOUT_MS = 10 * 60_000
 const SIWC_TOOL_NAMESPACE = 'harness'
 
-/** Normalize a Responses request for the SIWC endpoint. */
+/** Normalize a Responses request for the SIWC endpoint.
+ * @param payload - Responses JSON body (mutated in place and returned).
+ * @returns the same object after SIWC role/namespace normalization.
+ */
 export function siwcResponsesPayload<T>(payload: T): T {
   const body = payload as unknown as {
     input?: { role?: string; type?: string; namespace?: string }[]
