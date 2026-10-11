@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-12-native-session-queued-submissions.md
+2026-10-12-native-session-queued-submissions.md: 46b312c3777db187ecedc1d591eb7bde26c4c708
+2026-10-12-native-session-queued-submissions.zh.md: adb59c6c36b88c89d0592e97a369c5fe49058a62
