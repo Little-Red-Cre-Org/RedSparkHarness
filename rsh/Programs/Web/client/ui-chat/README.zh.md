@@ -8,7 +8,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可在浏览器中呈现已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。紧凑模式会收起已完成轮次的过程行，同时保留最终答案和有用上下文；已打包的 Assistant 连续消息保持收起。本地 transcript 和 steering 提交会立即显示，并在 Session 记录到达时原子消失；排队中的提交不会进入 Chat。文件提及提供方接收当前查看的会话 ID，因此继承历史中的链接会指向 fork 自身。Cordis-free `./native` 入口向原生 Client 组合提供仅依赖 props 的转录视图和 Chat 字典。Chat 不组装或修改模型请求。
+本包可在浏览器中呈现已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。紧凑模式会收起已完成轮次，同时保留最终答案和上下文；已打包的 Assistant 连续消息保持收起。本地 transcript 和 steering 提交会立即显示，并在 Session 记录到达时消失；排队中的提交不会进入 Chat。文件提及提供方接收当前查看的 Session ID，因此继承历史中的链接会指向 fork 自身。Cordis-free `./native` 提供仅依赖 props 的转录视图和 Chat 字典。仅使用原生入口时无需安装可选的 Cordis peer；旧版插件使用由 Cordis 支持的 Client 入口。Chat 不组装或修改模型请求。
 
 ## 目录
 

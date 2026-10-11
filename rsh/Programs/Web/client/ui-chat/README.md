@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Render recorded Session conversations in browser Chat with historical images, localized actions, and restored scroll position. Compact mode folds completed-turn process rows while preserving final answers and useful context; packed Assistant runs stay collapsed. Local transcript and steering submissions appear immediately, then disappear atomically when Session records arrive; queued submissions stay outside Chat. File-mention providers receive the viewed Session ID so inherited-history links target the fork. The Cordis-free `./native` entry exposes props-only transcript views and Chat dictionaries to native Client compositions. Chat never assembles or mutates model requests.
+Render recorded Session conversations with historical images, localized actions, and restored scroll position. Compact mode folds completed-turn rows but preserves final answers and context; packed Assistant runs stay collapsed. Local transcript and steering submissions appear immediately, then disappear when Session records arrive; queued submissions stay outside Chat. File-mention providers receive the viewed Session ID so inherited-history links target the fork. Cordis-free `./native` exposes props-only transcript views and Chat dictionaries. The Cordis peer is optional for native-only consumers; legacy plugins use the Cordis-backed Client entry. Chat never assembles or mutates model requests.
 
 ## Table of Contents
 
