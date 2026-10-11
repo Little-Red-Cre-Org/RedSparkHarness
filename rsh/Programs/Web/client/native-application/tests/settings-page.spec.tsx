@@ -21,13 +21,24 @@ const emptyAccountActions = {
   accountsBalance: async () => ({ status: 'unsupported' as const }),
   accountsSignOut: async () => undefined,
 }
+const emptyModelActions = {
+  modelsListProviders: async () => [],
+  modelsListConfigurableProviders: async () => [],
+  modelsDiscover: async () => [],
+  settingsEvents: async function* (signal: AbortSignal) {
+    await new Promise<void>((resolve) => {
+      if (signal.aborted) resolve()
+      else signal.addEventListener('abort', () => { resolve() }, { once: true })
+    })
+  },
+}
 function renderSettingsPage(props: {
   actions: NativeSettingsActions
   t: (key: keyof typeof en) => string
   section?: string
   onAuthorized?: () => void
 }) {
-  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...props.actions }}
+  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...emptyModelActions, ...props.actions }}
     section={props.section ?? 'general'} />)
 }
 const settingsDescription = (
@@ -488,7 +499,7 @@ it('refresh mid-login then resume and finish', async () => {
 
   try {
     const firstPage = renderSettingsPage(props)
-    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
     expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
     expect(await screen.findByText('ABCD-1234')).toBeTruthy()
     await screen.findByLabelText('Authorization code')
@@ -541,7 +552,7 @@ it.each([
   const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], section: 'models', onAuthorized })
 
   if (attemptId === undefined) {
-    fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
     expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
     expect(screen.queryByRole('button', { name: en.cancelSignIn })).toBeNull()
   } else {
