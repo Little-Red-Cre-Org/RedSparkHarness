@@ -4,6 +4,7 @@ import { credentialKey, type CredentialRecord, type NativeCredentials } from '@d
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { AuthorizationFlow, AuthorizationSession } from '@deepseek-ai/dsh-authorization/native'
 import { plugin, type DeepSeekAccount } from '../src/native.ts'
+import { readAccountDetail } from '../src/details.ts'
 
 const KEY = credentialKey('deepseek-account', 'default')
 const DEVICE_KEY = credentialKey('deepseek-account', 'device')
@@ -52,6 +53,27 @@ function platformReply(data: unknown, status = 200): Response {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+describe('Platform account details', () => {
+  it.each([
+    { normal: '0E-16', normalExpected: '0', bonus: '1.25e+2', bonusExpected: '125' },
+    { normal: '-3E-4', normalExpected: '-0.0003', bonus: '12.50', bonusExpected: '12.50' },
+    { normal: '1E+3', normalExpected: '1000', bonus: '-0', bonusExpected: '0' },
+    { normal: '+001.25e+2', normalExpected: '125', bonus: '0.000', bonusExpected: '0' },
+    { normal: '1E-3', normalExpected: '0.001', bonus: '1.5E+2', bonusExpected: '150' },
+  ])('normalizes normal and bonus wallet balances', async ({ normal, normalExpected, bonus, bonusExpected }) => {
+    vi.stubGlobal('fetch', vi.fn(async () => platformReply({
+      normal_wallets: [{ currency: 'CNY', balance: normal }],
+      bonus_wallets: [{ currency: 'USD', balance: bonus }],
+    })))
+
+    await expect(readAccountDetail('balance', ORIGIN, '', new AbortController().signal, {})).resolves.toEqual({
+      status: 'ready',
+      value: [{ currency: 'CNY', balance: normalExpected }],
+      bonusWallets: [{ currency: 'USD', balance: bonusExpected }],
+    })
+  })
 })
 
 describe('native DeepSeek account Provider', () => {

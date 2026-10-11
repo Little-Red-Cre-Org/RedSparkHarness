@@ -113,7 +113,7 @@ export const plugin: NativePlugin = {
         },
       })
       context.own(() => { adapter.dispose() })
-      context.provide('accounts', new NativeAccountsProvider(credentials, adapter, context.signal, deepseekAccount))
+      context.provide('accounts', new NativeAccountsProvider(credentials, context.signal, deepseekAccount))
       const model = new NativeAdapterModel(adapter, context.signal)
       context.own(() => model.close())
       const directory = new NativeAdapterModelDirectory(adapter, () => [...profiles.keys()], context.signal)
