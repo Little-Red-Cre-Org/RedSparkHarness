@@ -411,12 +411,20 @@ export class PiAiAdapter extends LlmAdapter {
     if (signal === undefined) return work
     return new Promise<AuthResult | undefined>((resolve, reject) => {
       const cleanup = (): void => { signal.removeEventListener('abort', onAbort) }
-      const onAbort = (): void => { cleanup(); reject(signal.reason) }
+      const onAbort = (): void => {
+        cleanup()
+        reject(signal.reason instanceof Error
+          ? signal.reason
+          : new Error('pi-ai auth resolution was cancelled', { cause: signal.reason }))
+      }
       signal.addEventListener('abort', onAbort, { once: true })
       if (signal.aborted) onAbort()
       void work.then(
         (auth) => { cleanup(); resolve(auth) },
-        (error: unknown) => { cleanup(); reject(error) },
+        (error: unknown) => {
+          cleanup()
+          reject(error instanceof Error ? error : new Error('pi-ai auth resolution failed', { cause: error }))
+        },
       )
     })
   }
