@@ -139,8 +139,7 @@ function createTransport(
   const active = new Set<Promise<unknown>>()
   const credentialWork = new Set<Promise<unknown>>()
   let closed = false
-  let projectRequested = false
-  let forwarded = false
+  let exchangeActive = false
   let projectedJson: string | undefined
   let responseBody: TrackedResponseBody | undefined
   let closeResult: Promise<void> | undefined
@@ -163,10 +162,10 @@ function createTransport(
     outputTokenLimit: 'unsupported',
     projectRequest(body, signal): Promise<NativeResponsesJsonValue> {
       assertOpen(signal)
-      if (projectRequested) {
-        return Promise.reject(new LlmError('OpenAI Codex Native Responses request was already projected', 'INVALID_REQUEST'))
+      if (exchangeActive) {
+        return Promise.reject(new LlmError('OpenAI Codex Native Responses request is already active', 'INVALID_REQUEST'))
       }
-      projectRequested = true
+      exchangeActive = true
       const work = Promise.resolve().then(() => {
         assertOpen(signal)
         if (!isRecord(body)
@@ -192,16 +191,20 @@ function createTransport(
         const serialized = JSON.stringify(projected)
         projectedJson = serialized
         return projected
+      }).catch((error: unknown) => {
+        exchangeActive = false
+        throw error
       })
       return track(work)
     },
     forward(body, signal) {
       assertOpen(signal)
-      if (forwarded) return Promise.reject(new LlmError('OpenAI Codex Native Responses transport forwards one request', 'INVALID_REQUEST'))
-      if (projectedJson === undefined || JSON.stringify(body) !== projectedJson) {
+      const finalJson = projectedJson
+      if (!exchangeActive || finalJson === undefined || JSON.stringify(body) !== finalJson) {
         return Promise.reject(new LlmError('OpenAI Codex Native Responses must forward its final projected request', 'INVALID_REQUEST'))
       }
-      forwarded = true
+      projectedJson = undefined
+      responseBody = undefined
       const timeout = options.timeoutMs === undefined ? undefined : AbortSignal.timeout(options.timeoutMs)
       const requestSignal = AbortSignal.any([
         signal,
@@ -210,35 +213,48 @@ function createTransport(
         ...timeout === undefined ? [] : [timeout],
       ])
       const work = (async () => {
-        requestSignal.throwIfAborted()
-        const auth = track(options.resolveAuth(), credentialWork)
-        const resolved = await awaitWithSignal(auth, requestSignal)
-        if (!sameIdentity(identity, resolved.identity)
-          || options.route.model !== transport.route.model) {
-          throw new LlmError('OpenAI Codex Sign in with ChatGPT account changed before request forwarding', 'INVALID_CREDENTIAL')
-        }
-        requestSignal.throwIfAborted()
-        const headers = new Headers(options.headers)
-        headers.set('authorization', `Bearer ${resolved.accessToken}`)
-        headers.set('chatgpt-account-id', identity.accountId)
-        headers.set('originator', 'pi')
-        headers.set('user-agent', attributionHeaders()['user-agent'] as string)
-        headers.set('openai-beta', 'responses=experimental')
-        headers.set('accept', 'text/event-stream')
-        headers.set('content-type', 'application/json')
-        const response = await fetch(CODEX_RESPONSES_URL, {
-          method: 'POST',
-          headers,
-          body: projectedJson,
-          signal: requestSignal,
-        })
-        if (response.body !== null) {
-          responseBody = trackedResponseBody(response.body, operation, requestSignal, options.streamIdleTimeoutMs)
-        }
-        return {
-          status: response.status,
-          contentType: response.headers.get('content-type'),
-          body: responseBody?.stream ?? null,
+        try {
+          requestSignal.throwIfAborted()
+          const auth = track(options.resolveAuth(), credentialWork)
+          const resolved = await awaitWithSignal(auth, requestSignal)
+          if (!sameIdentity(identity, resolved.identity)
+            || options.route.model !== transport.route.model) {
+            throw new LlmError('OpenAI Codex Sign in with ChatGPT account changed before request forwarding', 'INVALID_CREDENTIAL')
+          }
+          requestSignal.throwIfAborted()
+          const headers = new Headers(options.headers)
+          headers.set('authorization', `Bearer ${resolved.accessToken}`)
+          headers.set('chatgpt-account-id', identity.accountId)
+          headers.set('originator', 'pi')
+          headers.set('user-agent', attributionHeaders()['user-agent'] as string)
+          headers.set('openai-beta', 'responses=experimental')
+          headers.set('accept', 'text/event-stream')
+          headers.set('content-type', 'application/json')
+          const response = await fetch(CODEX_RESPONSES_URL, {
+            method: 'POST',
+            headers,
+            body: finalJson,
+            signal: requestSignal,
+          })
+          if (response.body !== null) {
+            responseBody = trackedResponseBody(
+              response.body,
+              operation,
+              requestSignal,
+              options.streamIdleTimeoutMs,
+              () => { exchangeActive = false },
+            )
+          } else {
+            exchangeActive = false
+          }
+          return {
+            status: response.status,
+            contentType: response.headers.get('content-type'),
+            body: responseBody?.stream ?? null,
+          }
+        } catch (error: unknown) {
+          exchangeActive = false
+          throw error
         }
       })()
       return track(work)
@@ -281,32 +297,47 @@ function trackedResponseBody(
   operation: AbortController,
   signal: AbortSignal,
   idleTimeoutMs: number | undefined,
+  onSettled: () => void,
 ): TrackedResponseBody {
   const reader = body.getReader()
   const reads = new Set<Promise<ReadableStreamReadResult<Uint8Array>>>()
   let settled = false
   let idleTimer: ReturnType<typeof setTimeout> | undefined
   let lockReleased = false
+  let cancellation: Promise<void> | undefined
+  let settlementNotified = false
   const releaseLock = (): void => {
     if (lockReleased) return
     reader.releaseLock()
     lockReleased = true
   }
+  const notifySettled = (): void => {
+    if (settlementNotified) return
+    settlementNotified = true
+    onSettled()
+  }
 
-  const cancel = async (reason: Error): Promise<void> => {
-    if (settled) {
-      await Promise.allSettled([...reads])
-      return
-    }
+  const cancel = (reason: Error): Promise<void> => {
+    if (cancellation !== undefined) return cancellation
+    if (settled) return Promise.allSettled([...reads]).then(() => undefined)
     settled = true
     if (idleTimer !== undefined) clearTimeout(idleTimer)
-    const cancellation = reader.cancel(reason)
-    await Promise.allSettled([...reads])
+    const completion = Promise.withResolvers<void>()
+    cancellation = completion.promise
+    let cancelWork: Promise<void>
     try {
-      await cancellation
-    } finally {
-      releaseLock()
+      cancelWork = reader.cancel(reason)
+    } catch (error: unknown) {
+      cancelWork = Promise.reject(error instanceof Error ? error : new Error('Codex response body cancellation failed'))
     }
+    void Promise.allSettled([...reads]).then(() => cancelWork).then(
+      completion.resolve,
+      completion.reject,
+    ).finally(() => {
+      releaseLock()
+      notifySettled()
+    })
+    return cancellation
   }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -327,6 +358,7 @@ function trackedResponseBody(
         if (result.done) {
           settled = true
           releaseLock()
+          if (cancellation === undefined) notifySettled()
           controller.close()
           return
         }
@@ -334,9 +366,11 @@ function trackedResponseBody(
       } catch (error: unknown) {
         settled = true
         releaseLock()
+        if (cancellation === undefined) notifySettled()
         controller.error(error)
       } finally {
         reads.delete(read)
+        if (settled && cancellation === undefined) notifySettled()
         if (idleTimer !== undefined) clearTimeout(idleTimer)
         idleTimer = undefined
         if (signal.aborted) operation.abort(aborted(signal))

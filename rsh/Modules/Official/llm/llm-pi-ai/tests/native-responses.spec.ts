@@ -245,14 +245,19 @@ describe('Native Codex Responses transport', () => {
     })
 
     server.responses = (_request, outgoing) => outgoing.writeHead(429, { 'content-type': 'application/json' }).end('{"error":"limited"}')
-    const errorTransport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
-    const errorBody = await errorTransport.projectRequest(requestBody(), new AbortController().signal)
-    const errorResponse = await errorTransport.forward(errorBody, new AbortController().signal)
+    const errorBody = await transport.projectRequest(requestBody(), new AbortController().signal)
+    const errorResponse = await transport.forward(errorBody, new AbortController().signal)
     expect(errorResponse.status).toBe(429)
     expect(errorResponse.contentType).toBe('application/json')
     await expect(new Response(errorResponse.body).text()).resolves.toBe('{"error":"limited"}')
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(2)
-    await Promise.all([transport.close(), errorTransport.close()])
+    server.responses = (_request, outgoing) => outgoing.writeHead(204).end()
+    const emptyBody = await transport.projectRequest(requestBody(), new AbortController().signal)
+    const emptyResponse = await transport.forward(emptyBody, new AbortController().signal)
+    expect(emptyResponse.status).toBe(204)
+    expect(emptyResponse.body).toBeNull()
+    expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(3)
+    await transport.close()
     await adapter.dispose()
     await server.close()
   })
@@ -291,13 +296,13 @@ describe('Native Codex Responses transport', () => {
     })
     const pendingForward = refreshTransport.forward(refreshBody, new AbortController().signal)
     await refreshStarted.promise
-    const closing = refreshTransport.close()
-    expect(refreshTransport.close()).toBe(closing)
+    const refreshClosing = refreshTransport.close()
+    expect(refreshTransport.close()).toBe(refreshClosing)
     await expect(pendingForward).rejects.toMatchObject({ code: 'ABORTED' })
     expect(refreshSignal?.aborted).toBe(false)
     expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one' })
     refreshReleased.resolve(undefined)
-    await closing
+    await refreshClosing
     expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(0)
 
@@ -309,13 +314,45 @@ describe('Native Codex Responses transport', () => {
       bodyStarted.resolve(undefined)
       response.on('close', () => { upstreamClosed.resolve(undefined) })
     }
+    const routedFetch = globalThis.fetch.bind(globalThis)
+    const cancellationStarted = Promise.withResolvers<undefined>()
+    const cancellationReleased = Promise.withResolvers<undefined>()
+    const cancellationFailure = new Error('upstream cancellation failed')
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const upstream = await routedFetch(input, init)
+      const url = input instanceof Request ? new URL(input.url) : new URL(input.toString())
+      if (url.origin !== 'https://chatgpt.com' || url.pathname !== '/backend-api/codex/responses' || upstream.body === null) {
+        return upstream
+      }
+      const reader = upstream.body.getReader()
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          const result = await reader.read()
+          if (result.done) controller.close()
+          else controller.enqueue(result.value)
+        },
+        async cancel() {
+          cancellationStarted.resolve(undefined)
+          await cancellationReleased.promise
+          throw cancellationFailure
+        },
+      })
+      return new Response(body, { status: upstream.status, headers: upstream.headers })
+    })
     const streamTransport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
     const streamBody = await streamTransport.projectRequest(requestBody(), new AbortController().signal)
     const streamingResponse = await streamTransport.forward(streamBody, new AbortController().signal)
     await bodyStarted.promise
-    await streamTransport.close()
+    const consumerCancellation = streamingResponse.body?.cancel()
+    await cancellationStarted.promise
+    let closeSettled = false
+    const closing = streamTransport.close().finally(() => { closeSettled = true })
+    await Promise.resolve()
+    expect(closeSettled).toBe(false)
+    cancellationReleased.resolve(undefined)
+    await expect(consumerCancellation).rejects.toBe(cancellationFailure)
+    await expect(closing).rejects.toBe(cancellationFailure)
     await upstreamClosed.promise
-    await streamingResponse.body?.cancel().catch(() => undefined)
     await adapter.dispose()
     await server.close()
   })

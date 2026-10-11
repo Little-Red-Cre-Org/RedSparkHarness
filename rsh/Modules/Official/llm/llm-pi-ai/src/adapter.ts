@@ -604,7 +604,11 @@ export class PiAiAdapter extends LlmAdapter {
             if (credential === undefined) {
               throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
             }
-            return { accessToken: auth.auth.apiKey, identity: codexIdentityOf(credential) }
+            if (!isSiwcCredential(credential)) {
+              throw new LlmError('OpenAI Codex Sign in with ChatGPT credential changed before request forwarding', 'INVALID_CREDENTIAL')
+            }
+            const identity = codexIdentityOf(credential)
+            return { accessToken: credential.access, identity }
           },
           onTransport: (transport) => { this.nativeTransports.add(transport) },
           onClose: (transport) => { this.nativeTransports.delete(transport) },
