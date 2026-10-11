@@ -10,6 +10,7 @@ export interface NativeModelSettings {
    * Select the first signed-in account model when no provider API key is configured.
    * @param signal - Host cancellation.
    * @returns the first advertised account route and model, or undefined when an API key is present or no account model is available.
+   * @throws when a signed-in account model catalog cannot be read.
    */
   firstAvailableAccountModel(signal: AbortSignal): Promise<{ readonly provider: string; readonly model: string } | undefined>
   /**

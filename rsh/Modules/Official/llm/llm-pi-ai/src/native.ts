@@ -149,13 +149,8 @@ export const plugin: NativePlugin = {
             ...(codexAvailable ? ['openai-codex'] : []),
           ]
           for (const provider of candidates) {
-            try {
-              const [model] = await adapter.listModels(provider, signal)
-              if (model !== undefined) return { provider, model: model.id }
-            } catch (error) {
-              if (signal.aborted) throw error
-              // A failed account catalog must not hide another signed-in account model.
-            }
+            const [model] = await adapter.listModels(provider, signal)
+            if (model !== undefined) return { provider, model: model.id }
           }
           return undefined
         },

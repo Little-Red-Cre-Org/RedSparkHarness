@@ -78,7 +78,12 @@ describe('native account model routes', () => {
       expect(directory?.providers().map(row => row.id)).not.toContain(provider)
       records.set(key, account
         ? { kind: 'grant', payload: { version: 1, token: 'fixture-account-value', issuer: 'https://platform.deepseek.com' } }
-        : { kind: 'grant', payload: {} })
+        : { kind: 'grant', payload: {
+          type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: Date.now() + 3_600_000,
+          siwc: 'chatgpt-plan', clientId: 'fixture-client', issuer: 'https://auth.openai.com',
+          subject: 'fixture-subject', idToken: 'fixture-id-token', extAgentHostId: 'fixture-agent',
+          scopes: ['chatgpt.tokens.use.direct'],
+        } })
       await host.events.parallel(scope, 'credentials/record-updated', key)
       expect(directory?.providers().map(row => row.id)).toContain(provider)
       expect(modelSettings?.configurableProviders().map(row => row.provider)).toContain(provider)
@@ -107,6 +112,17 @@ describe('native account model routes', () => {
         apiKeyConfigured = false
         apiKeyRecordConfigured = true
         expect(await modelSettings?.firstAvailableAccountModel(new AbortController().signal)).toBeUndefined()
+      } else {
+        if (modelSettings === undefined) throw new Error('native model settings fixture missing')
+        const fetch = vi.fn(async () => new Response('{}', { status: 503 }))
+        vi.stubGlobal('fetch', fetch)
+        try {
+          await expect(modelSettings.firstAvailableAccountModel(new AbortController().signal))
+            .rejects.toMatchObject({ code: 'DISCOVERY_FAILED' })
+        } finally {
+          vi.unstubAllGlobals()
+        }
+        expect(fetch).toHaveBeenCalledOnce()
       }
     } finally {
       await host.stop()
