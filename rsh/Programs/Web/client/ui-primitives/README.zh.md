@@ -1,5 +1,5 @@
 ---
-description: "dsh Web 客户端共享的 React UI 原子组件：控件、图标、Markdown 与数学公式渲染，以及终端/读取/差异/搜索/网页输出卡片（零 Cordis）。"
+description: "dsh Web 客户端共享的 React UI 原子组件：控件、聊天转录与 composer 展示、图标、Markdown 与数学公式渲染，以及 agent 输出卡片（零 Cordis）。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件并渲染 agent 输出。它提供标准控件、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。这些渲染器会丢弃原始 HTML、限制链接并解析 ANSI 转义序列，以处理不受信任的模型输出。组件不 import Cordis 运行时；调用方提供本地化 label，主题相关颜色使用 `--dsw-*` 设计 token。
+使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件、聊天展示并渲染 agent 输出。它提供标准控件、聊天转录与 composer 布局、吉祥物展示、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。这些渲染器会丢弃原始 HTML、限制链接并解析 ANSI 转义序列，以处理不受信任的模型输出。组件不 import Cordis 运行时；调用方提供本地化 label，主题相关颜色使用 `--dsw-*` 设计 token。
 
 ## 目录
 
@@ -46,6 +46,9 @@ kind: "package-library"
 | `ProjectRowItem`、`SessionNodeItem`、`SearchResultItem` | 通过 props 提供数据的 Workspace 与 Session 行，由 legacy 和 native 侧边栏组合共享。Project 和 Session 树行可聚焦；Enter 和 Space 会触发行操作。`SessionNodeItem.allowRemove` 可在 owner 仅支持归档时隐藏 legacy 确认操作。 |
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
+| `ChatTranscript`、`ChatUserMessage`、`ChatAssistantMessage`、`ChatContextMessage`、`ChatTurnActivity` | 由 legacy 与 Native 聊天视图共享的转录节奏、用户气泡、助手 Markdown 外框、折叠上下文行和运行中轮次标签。 |
+| `ChatComposerCard`、`ChatComposerToolbar`、`ChatComposerButton`、`ChatComposerSelect`、`ChatWelcome` | 共享 composer 表面及控件，以及品牌化的空对话主视觉。 |
+| `ChatMascotHero` | 用于欢迎页和会话悬浮位置的零 Cordis 吉祥物精灵、气泡与动效展示。 |
 | `DisclosureRow` | 24px 紧凑折叠行，标题与内容左右排列。 |
 | `Modal` | 页面遮罩之上的居中对话框。 |
 | `SettingsPanel` | 1080×700 居中 Settings 对话框，带本地化导航、关闭按钮和页面内容。 |
@@ -105,6 +108,7 @@ Models 设置编辑器通过 props 接收本地化文案、schema 操作和 Host
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | 搜索与网页检索卡片 |
 | [`src/icons/`](src/icons/) | `ic_ds_*` 字形组件与品牌标记 |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free Settings 导航与对话框 |
+| [`src/chat/`](src/chat/) | 共享转录、composer、轮次活动、欢迎页与吉祥物展示 |
 | [`src/models-settings/`](src/models-settings/) | 通过 props 提供的提供方表单、模型编辑器及其共享样式表 |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | 48 个细分代码文件类别的内嵌内层 SVG markup |
 | [`src/code-file-icon-artwork.manifest.json`](src/code-file-icon-artwork.manifest.json) | 设计导出摘要、已纳入类别与有意排除的图稿 |

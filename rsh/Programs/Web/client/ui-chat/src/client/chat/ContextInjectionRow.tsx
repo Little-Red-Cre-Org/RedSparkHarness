@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
-import { DisclosureRow, IconContextInjectionOutline16, ReferenceIcon } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ChatContextMessage } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ContextMessageNode } from '../contract/snapshot.ts'
 import { contextBody } from './ContextBody.tsx'
-import css from './ContextInjectionRow.module.css'
 
 /** Props for the logged non-user message presentation. */
 export interface ContextInjectionRowProps {
@@ -29,43 +27,17 @@ export interface ContextInjectionRowProps {
  * @returns A collapsed context row with a bounded, form-specific body.
  */
 export function ContextInjectionRow({ content, source, provenance, form, t }: ContextInjectionRowProps) {
-  const [open, setOpen] = useState(false)
   // Resolved rather than declared: a form whose fields are unreadable renders
   // the opaque body, and the marker must say what the row actually shows.
   const { rendered, summary, body } = contextBody(form, { content, source, t })
 
   return (
-    <DisclosureRow
-      className={css.root}
-      icon={provenance.role === 'recall'
-        ? <span data-context-recall-icon><ReferenceIcon kind="session" /></span>
-        : <IconContextInjectionOutline16 size={14} />}
-      chevronClassName={css.chevron}
+    <ChatContextMessage
+      role={provenance.role}
       title={t(provenance.role === 'recall' ? 'message.contextRecall' : 'message.contextInjection')}
-      collapsedContent={provenance.label === null ? undefined : (
-        /* ToolRow's separator shape: an aria-hidden dot, so the accessible name
-           stays the two readable parts and the two disclosure rows expose one
-           name shape. A source that names no producer drops the dot with it. */
-        <>
-          <span className={css.sep} aria-hidden />
-          <span className={css.source} data-context-source>{provenance.label}</span>
-          {summary !== null && (
-            <>
-              <span className={css.sep} aria-hidden />
-              <span className={css.summary} data-context-summary>{summary}</span>
-            </>
-          )}
-        </>
-      )}
-      keepContentWhenOpen
-      open={open}
-      expandable
-      expandOnRowClick
-      onToggle={() => { setOpen(value => !value) }}
-    >
-      <div className={css.body} data-context-injection-body data-context-form={rendered ?? undefined}>
-        {body}
-      </div>
-    </DisclosureRow>
+      source={provenance.label}
+      summary={summary}
+      bodyFormat={rendered ?? undefined}
+    >{body}</ChatContextMessage>
   )
 }

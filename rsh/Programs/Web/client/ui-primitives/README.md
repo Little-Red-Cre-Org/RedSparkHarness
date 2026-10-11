@@ -1,5 +1,5 @@
 ---
-description: "Shared React UI atoms for the dsh web client: controls, icons, markdown and math rendering, and the terminal/read/diff/search/web output cards (zero Cordis)."
+description: "Shared React UI atoms for the dsh web client: controls, chat transcript and composer presentation, icons, Markdown and math rendering, and agent output cards (zero Cordis)."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
+Use `dsh-client-ui-primitives` to build web-client controls, chat presentation, and agent output with shared React UI. It includes standard controls, chat transcript and composer layouts, the mascot presentation, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
 
 ## Table of Contents
 
@@ -46,6 +46,9 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
+| `ChatTranscript`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatContextMessage`, `ChatTurnActivity` | Shared transcript rhythm, user bubble, assistant Markdown frame, collapsed context row, and running-turn label for legacy and Native chat views. |
+| `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
+| `ChatMascotHero` | Cordis-free mascot sprite, speech and animation presentation for welcome and floating chat placements. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |
 | `Modal` | Centered dialog over a page mask. |
 | `SettingsPanel` | Centered 1080×700 Settings dialog with localized navigation, close button, and page content. |
@@ -105,6 +108,7 @@ The package enforces one separation: presentational React atoms with zero Cordis
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | Search and web-retrieval cards |
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
+| [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
 | [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | Embedded inner SVG markup for the 48 detailed code-file categories |
 | [`src/code-file-icon-artwork.manifest.json`](src/code-file-icon-artwork.manifest.json) | Design-export digests, included categories, and intentionally excluded artwork |

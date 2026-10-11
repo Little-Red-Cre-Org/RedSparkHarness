@@ -29,6 +29,13 @@ export { RiskConfirmation } from './RiskConfirmation.tsx'
 export type { RiskConfirmationProps } from './RiskConfirmation.tsx'
 export { ConnectionIndicator } from './ConnectionIndicator.tsx'
 export type { ConnectionIndicatorState } from './ConnectionIndicator.tsx'
+export {
+  ChatAssistantMessage, ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
+  ChatTranscript, ChatTurnActivity, ChatUserMessage, ChatWelcome,
+} from './chat/ChatPresentation.tsx'
+export { ChatContextMessage } from './chat/ChatContextMessage.tsx'
+export type { ChatContextMessageProps } from './chat/ChatContextMessage.tsx'
+export { ChatMascotHero } from './chat/ChatMascotHero.tsx'
 export { FishLogo, FISH_LOGO_PATH, FISH_LOGO_VIEWBOX } from './FishLogo.tsx'
 export { BrandWordmark } from './BrandWordmark.tsx'
 export type { BrandWordmarkProps } from './BrandWordmark.tsx'

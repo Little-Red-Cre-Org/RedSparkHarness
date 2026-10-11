@@ -36,40 +36,6 @@
   line-height: 18px;
 }
 
-.card {
-  box-sizing: border-box;
-  position: relative; /* overlay anchor positioning context */
-  display: flex;
-  flex-direction: column;
-  /* figma Input 75:8208: 12px between the text area and the button row; the
-     card's top pad before .InputText tightened from the drawn 10 to 8. */
-  gap: 12px;
-  width: 100%;
-  max-width: var(--dsh-composer-card-max-width);
-  padding-top: 8px;
-  /* Input stroke: the light neutral (l2, one step above the menus' l1),
-     drawn as the elevation hairline so it costs no layout; the shadow is the
-     soft elevation tier. Fill: the input surface token (elevated in dark). */
-  border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
-  border-radius: 22px;
-  background: var(--dsw-specific-input-major);
-  box-shadow: var(--dsw-elevation-soft);
-  /* The draft text follows the Settings font-size preference (the textarea,
-     mirror, and backdrop all inherit from here, so the three layers stay in
-     step); the line height keeps the default 10px leading via the shared px
-     delta. */
-  font-size: var(--dsh-content-font-size, 14px);
-  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
-  /* Elevated surface in dark, same as the menus: the draft scrollport inside
-     scrolls once the composer hits its height cap, so the thumb takes the l2
-     pair. Declared on the card because the elevation belongs to the surface,
-     and the custom properties inherit down to the box that actually scrolls
-     (see ui-theme styles/scrollbar.css for the rebinding contract). */
-  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
-  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
-}
-
 /* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
    workspace affordance rather than a live composer; hover answers in the
    business blue to invite the click. Native `dashed` has a fixed browser
@@ -243,26 +209,6 @@
   line-clamp: 2;
 }
 
-/* Toolbar: attach + Plan + Read-only on the left; model + send on the right
-   (figma Input_Bottom chrome). */
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  /* 2px moved from the bottom pad to the top: the whole control row sits 2px
-     lower in the card (it read too high against the textarea) while the
-     controls' own centering stays untouched. */
-  padding: 2px 8px 6px;
-  min-width: 0;
-  /* Size container so the chips inside can collapse to icon-only when the
-     card runs out of row width (PermissionSelect @container rule). Anonymous
-     on purpose: CSS modules hash container-name per module, so a name declared
-     here can never match a query in another module's sheet. */
-  container-type: inline-size;
-}
-
 .tools,
 .modes,
 .trailing {
@@ -314,67 +260,6 @@
 
 .add:disabled {
   opacity: 0.5;
-  cursor: default;
-}
-
-/* Plan / Read-only / model — native <select>, chip-like closed chrome
-   (figma ToggleButton: 13/20 medium secondary, 12px chevron). */
-.select {
-  max-width: 220px;
-  height: 28px;
-  padding: 0 20px 0 8px;
-  border: none;
-  border-radius: 8px;
-  outline: none;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 4px center;
-  background-size: 12px 12px;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  appearance: none;
-}
-
-.select:hover:not(:disabled) {
-  background-color: var(--dsw-alias-interactive-bg-hover);
-}
-
-.select:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Primary send uses the product accent; empty text = 0.4 opacity. */
-.primary {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 999px;
-  corner-shape: round;
-  background: var(--dsw-alias-brand-primary);
-  color: #fff;
-  cursor: pointer;
-  transition: background-color 100ms ease;
-  /* Opts out of the row's 2px downward shift (.row top pad): the send circle
-     keeps its original seat while the smaller chips sit lower. Transform, not
-     margin, so flex centering math is untouched. */
-  transform: translateY(-2px);
-}
-
-.primary:hover:not(:disabled) {
-  background: var(--dsw-alias-brand-text);
-}
-
-.primary:disabled {
-  opacity: 0.4;
   cursor: default;
 }
 

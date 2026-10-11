@@ -8,7 +8,8 @@ const read = (name: string): string =>
 
 describe('completed-turn spacing', () => {
   it('combines the flow and footer offsets around turn-tail content', () => {
-    expect(read('ChatView.module.css')).toMatch(/margin-top:\s*var\(--dsh-chat-flow-gap, 16px\)/)
+    expect(read('../../../../ui-primitives/src/chat/ChatPresentation.module.css'))
+      .toMatch(/margin-top:\s*var\(--dsh-chat-flow-gap, 16px\)/)
     const tail = read('TurnTailNodeView.module.css')
     expect(tail).toMatch(/\.root\s*\{[^}]*gap:\s*16px/s)
     expect(tail).toMatch(/\.actions\s*\{[^}]*margin-top:\s*4px/s)
