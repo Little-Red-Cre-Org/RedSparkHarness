@@ -22,11 +22,16 @@
       "types": "./lib/types/win32-dialog-worker.d.ts",
       "default": "./lib/worker.cjs"
     },
+    "./native-picker": {
+      "types": "./lib/types/native-picker.d.ts",
+      "default": "./lib/native-picker.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native-picker.js",
     "lib/worker.cjs",
     "lib/types/**/*.d.ts"
   ],

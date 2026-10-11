@@ -2121,14 +2121,18 @@ export class NativeHeadlessApplication implements NativeApplication {
  * @param config - validated Program configuration.
  * @param executionScope - selected descendant scope for Agent contributions.
  * @param authority - explicit service selection. When supplied, its active and execution values are used as-is;
- * an omitted execution value does not fall back to context. Without this object, both optional services are read
- * from context.
+ * an omitted execution value does not fall back to context. A supplied Workspace registry also takes precedence;
+ * without one, the registry is read from context.
  * @returns the executor registered for disposal with the installation.
  * @throws if `executionScope` does not belong to the installation tree.
  */
 export function createNativeHeadlessApplication(context: NativeContext, config: Config,
   executionScope: NativeScope = context.scope,
-  authority?: { readonly execution?: NativeSessionExecutionOperations; readonly active: NativeActiveSessionOperations },
+  authority?: {
+    readonly execution?: NativeSessionExecutionOperations
+    readonly active: NativeActiveSessionOperations
+    readonly workspaceRegistry?: WorkspaceRegistryRuntime
+  },
 ): NativeHeadlessApplication {
   if (!context.scope.contains(executionScope)) throw new Error('native-headless: execution scope belongs to another installation tree')
   const application = new NativeHeadlessApplication(
@@ -2137,7 +2141,8 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     context.optional('codeRuntime'), context.optional('timeContext'),
     authority === undefined ? context.optional('sessionExecution') : authority.execution,
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
-    context.optional('agentPresets'), context.optional('workspaceRegistry'), executionScope, context.optional('agentInstructions'),
+    context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'),
+    executionScope, context.optional('agentInstructions'),
   )
   context.own(() => application.dispose())
   return application
