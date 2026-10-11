@@ -18,7 +18,6 @@ const CODEX_PROVIDER_ID = 'openai-codex'
 const REGISTRATION_STORE_ID = 'openai-codex-siwc-registration'
 const REGISTRATION_MARKER = 'siwc-registration-v1:'
 const REQUIRED_SCOPE = 'chatgpt.tokens.use.direct'
-const CHATGPT_ACCOUNT_CLAIM = 'https://api.openai.com/auth'
 const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
 const HOST_AGENT_NAME = 'RedSpark Harness'
 const OAUTH_REQUEST_TIMEOUT_MS = 30_000
@@ -64,35 +63,6 @@ export interface SiwcCredential extends OAuthCredential {
  */
 export function isSiwcCredential(value: unknown): value is SiwcCredential {
   return invalidSiwcCredentialFields(value).length === 0
-}
-
-/**
- * Read the account identifier Codex Responses requires from a SIWC access token.
- * @param access - the current SIWC bearer token.
- * @returns the ChatGPT account identifier carried by the token.
- * @throws {HarnessError} code `SIWC_ACCOUNT_ID_INVALID` when the token has no usable account claim.
- */
-export function siwcChatGptAccountId(access: string): string {
-  const parts = access.split('.')
-  if (parts.length !== 3) {
-    throw new HarnessError('Sign in with ChatGPT access token has no usable account identity', 'SIWC_ACCOUNT_ID_INVALID')
-  }
-  let payload: unknown
-  try {
-    payload = JSON.parse(Buffer.from(parts[1] as string, 'base64url').toString('utf8'))
-  } catch {
-    throw new HarnessError('Sign in with ChatGPT access token has no usable account identity', 'SIWC_ACCOUNT_ID_INVALID')
-  }
-  const auth = payload !== null && typeof payload === 'object'
-    ? (payload as Record<string, unknown>)[CHATGPT_ACCOUNT_CLAIM]
-    : undefined
-  const accountId = auth !== null && typeof auth === 'object'
-    ? (auth as Record<string, unknown>).chatgpt_account_id
-    : undefined
-  if (typeof accountId !== 'string' || accountId.length === 0) {
-    throw new HarnessError('Sign in with ChatGPT access token has no usable account identity', 'SIWC_ACCOUNT_ID_INVALID')
-  }
-  return accountId
 }
 
 interface CallbackResult {
@@ -459,7 +429,6 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
     },
     async refresh(credential, _signal): Promise<OAuthCredential> {
       if (!isSiwcCredential(credential)) throw new Error('Sign in with ChatGPT again to use this subscription route')
-      const accountId = siwcChatGptAccountId(credential.access)
       const form = new URLSearchParams({
         grant_type: 'refresh_token',
         client_id: credential.clientId,
@@ -476,9 +445,6 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
       }), 'token refresh')
       const scopes = scopesFrom(tokens.scope, credential.scopes)
       const access = requiredString(tokens.access_token, 'access token')
-      if (siwcChatGptAccountId(access) !== accountId) {
-        throw new HarnessError('Sign in with ChatGPT refresh returned a different account identity', 'SIWC_ACCOUNT_MISMATCH')
-      }
       return {
         ...credential,
         access,

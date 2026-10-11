@@ -68,7 +68,7 @@ import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
 import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
-import { createSiwcOAuth, isSiwcCredential, siwcChatGptAccountId } from './siwc.ts'
+import { createSiwcOAuth, isSiwcCredential } from './siwc.ts'
 import { createNativeCodexResponsesCapture } from './native-responses.ts'
 import type { CodexAccountIdentity } from './native-responses.ts'
 import { toStreamChunks } from './stream.ts'
@@ -367,7 +367,6 @@ function codexIdentityOf(credential: unknown): CodexAccountIdentity {
     subject: credential.subject,
     clientId: credential.clientId,
     extAgentHostId: credential.extAgentHostId,
-    accountId: siwcChatGptAccountId(credential.access),
   }
 }
 
@@ -584,6 +583,7 @@ export class PiAiAdapter extends LlmAdapter {
       const nativeResponses = provider === CODEX_SUBSCRIPTION_ROUTE
         ? createNativeCodexResponsesCapture({
           route: { provider, model },
+          endpoint: `${OPENAI_RESPONSES_BASE_URL}/responses`,
           inputModalities: modelInfo.inputModalities ?? ['text'],
           identity: snapshot.codexIdentity.value,
           ...snapshot.codexIdentity.error === undefined ? {} : { identityError: snapshot.codexIdentity.error },

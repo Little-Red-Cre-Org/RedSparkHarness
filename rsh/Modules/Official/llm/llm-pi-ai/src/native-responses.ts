@@ -8,8 +8,6 @@ import type {
   NativeResponsesTransport,
 } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 
-const CODEX_RESPONSES_URL = 'https://chatgpt.com/backend-api/codex/responses'
-
 /** SIWC identity fixed by the prepared adapter generation. */
 export interface CodexAccountIdentity {
   /** SIWC issuer validated by the saved credential owner. */
@@ -20,14 +18,14 @@ export interface CodexAccountIdentity {
   readonly clientId: string
   /** Host id registered for the saved grant. */
   readonly extAgentHostId: string
-  /** Account id required by the Codex Responses request header. */
-  readonly accountId: string
 }
 
 /** Inputs retained by one prepared `openai-codex` model generation. */
 export interface NativeCodexResponsesCaptureOptions {
   /** Exact route selected during `prepareCall()`. */
   readonly route: NativeResponsesRoute
+  /** Public Responses URL retained by the selected model generation. */
+  readonly endpoint: string
   /** Input modalities declared by the selected account-catalog model. */
   readonly inputModalities: readonly string[]
   /** Identity read during `prepareCall()`, when a usable SIWC grant exists. */
@@ -68,7 +66,6 @@ function sameIdentity(left: CodexAccountIdentity, right: CodexAccountIdentity): 
     && left.subject === right.subject
     && left.clientId === right.clientId
     && left.extAgentHostId === right.extAgentHostId
-    && left.accountId === right.accountId
 }
 
 function routeMismatch(): LlmError {
@@ -224,13 +221,10 @@ function createTransport(
           requestSignal.throwIfAborted()
           const headers = new Headers(options.headers)
           headers.set('authorization', `Bearer ${resolved.accessToken}`)
-          headers.set('chatgpt-account-id', identity.accountId)
-          headers.set('originator', 'pi')
           headers.set('user-agent', attributionHeaders()['user-agent'] as string)
-          headers.set('openai-beta', 'responses=experimental')
           headers.set('accept', 'text/event-stream')
           headers.set('content-type', 'application/json')
-          const response = await fetch(CODEX_RESPONSES_URL, {
+          const response = await fetch(options.endpoint, {
             method: 'POST',
             headers,
             body: finalJson,

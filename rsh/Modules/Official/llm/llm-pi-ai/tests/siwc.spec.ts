@@ -7,12 +7,6 @@ import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { errorChain } from '@deepseek-ai/dsh-llm/native'
 import { createSiwcOAuth, isSiwcCredential } from '../src/siwc.ts'
 
-const accountAccess = (accountId: string): string => {
-  const payload = Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: accountId } }))
-    .toString('base64url')
-  return `header.${payload}.signature`
-}
-
 function memoryCredentials(): CredentialStore {
   const values = new Map<string, Credential>()
   return {
@@ -77,9 +71,9 @@ describe('Sign in with ChatGPT OAuth', () => {
     const kid = 'siwc-test-signing-key'
     const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256', use: 'sig' }
     const issuedClientId = 'issued-test-client-id'
-    const access = accountAccess('synthetic-account-id')
+    const access = 'synthetic-access-token'
     const refresh = 'synthetic-account-refresh-token'
-    let refreshedAccess = accountAccess('synthetic-account-id')
+    let refreshedAccess = 'synthetic-refreshed-access-token'
     let grantScopes = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
     let tokenError: { error?: unknown; error_description?: unknown } | undefined
     let expiration: number | undefined = Math.floor(Date.now() / 1000) + 3600
@@ -204,11 +198,6 @@ describe('Sign in with ChatGPT OAuth', () => {
         refresh: 'synthetic-rotated-refresh-token',
         subject: 'synthetic-account-subject',
       })
-      refreshedAccess = accountAccess('different-account-id')
-      await expect(oauth.refresh(credential, new AbortController().signal)).rejects.toMatchObject({
-        code: 'SIWC_ACCOUNT_MISMATCH',
-      })
-      refreshedAccess = accountAccess('synthetic-account-id')
       tokenError = { error: 'invalid_grant', error_description: 'private diagnostic text' }
       const failedAuthorizationReady = nextAuthorization()
       const failedLogin = oauth.login(interaction, { getDeviceId: () => 'stable-host-id' })

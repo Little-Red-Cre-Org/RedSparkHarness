@@ -2,13 +2,14 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Credential } from '@earendil-works/pi-ai'
+import type { NativeResponsesJsonValue } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import type {} from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { attributionHeaders } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from '../src/adapter.ts'
 import { resolveProfiles } from '../src/config.ts'
 import { memoryAuth } from './auth-double.ts'
 
 const MODEL = 'gpt-6.1-sol'
-const CHATGPT_ACCOUNT_CLAIM = 'https://api.openai.com/auth'
 const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'resource.invoke', 'chatgpt.tokens.use.direct']
 
 interface RecordedRequest {
@@ -30,11 +31,7 @@ interface LocalServer {
 
 const servers: LocalServer[] = []
 
-function accessToken(accountId: string): string {
-  const payload = Buffer.from(JSON.stringify({ [CHATGPT_ACCOUNT_CLAIM]: { chatgpt_account_id: accountId } }))
-    .toString('base64url')
-  return `header.${payload}.signature`
-}
+function accessToken(accountId: string): string { return `opaque-access-${accountId}` }
 
 function siwcCredential(accountId: string, overrides: Partial<Credential> = {}): Credential {
   return {
@@ -56,8 +53,8 @@ function siwcCredential(accountId: string, overrides: Partial<Credential> = {}):
 async function localServer(): Promise<LocalServer> {
   const requests: RecordedRequest[] = []
   const handlers: Pick<LocalServer, 'responses' | 'token'> = {
-    responses: (_request, response) => response.writeHead(200).end(),
-    token: (_request, response) => response.writeHead(500).end(),
+    responses: (_request, response) => { response.writeHead(200).end() },
+    token: (_request, response) => { response.writeHead(500).end() },
   }
   let closeResult: Promise<void> | undefined
   const server = createServer((incoming, outgoing) => {
@@ -119,7 +116,7 @@ function routeFetchThrough(server: LocalServer): void {
     if (url.origin === 'https://auth.openai.com' && url.pathname === '/api/accounts/oauth/token') {
       return fetchUpstream(`${server.url}/token`, init)
     }
-    if (url.origin === 'https://chatgpt.com' && url.pathname === '/backend-api/codex/responses') {
+    if (url.origin === 'https://api.openai.com' && url.pathname === '/v1/responses') {
       return fetchUpstream(`${server.url}/responses`, init)
     }
     return fetchUpstream(input, init)
@@ -133,7 +130,7 @@ function adapterWith(
   return new PiAiAdapter({ profiles, resolveApiKey: () => Promise.resolve(undefined), auth })
 }
 
-function requestBody(model = MODEL): Record<string, unknown> {
+function requestBody(model = MODEL): Readonly<Record<string, NativeResponsesJsonValue>> {
   return {
     model,
     stream: true,
@@ -186,8 +183,6 @@ describe('Native Codex Responses transport', () => {
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(1)
     expect(server.requests.find(request => request.path === '/responses')?.headers).toMatchObject({
       authorization: `Bearer ${accessToken('account-two')}`,
-      'chatgpt-account-id': 'account-two',
-      originator: 'pi',
       'user-agent': attributionHeaders()['user-agent'],
       'x-generation': 'two',
     })
@@ -200,7 +195,7 @@ describe('Native Codex Responses transport', () => {
   it('projects the selected model completely and forwards real status, headers, and response bytes', async () => {
     const server = await localServer()
     const sse = Buffer.from('event: response.completed\ndata: {"type":"response.completed"}\n\n')
-    server.responses = (_request, response) => response.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8' }).end(sse)
+    server.responses = (_request, response) => { response.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8' }).end(sse) }
     routeFetchThrough(server)
     const auth = memoryAuth({ 'openai-codex': siwcCredential('account-one') })
     const profiles = resolveProfiles({
@@ -239,19 +234,20 @@ describe('Native Codex Responses transport', () => {
     expect(Buffer.from(await new Response(response.body).arrayBuffer())).toEqual(sse)
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(1)
     expect(server.requests.find(request => request.path === '/responses')?.headers).toMatchObject({
-      'openai-beta': 'responses=experimental',
+      authorization: `Bearer ${accessToken('account-one')}`,
+      'user-agent': attributionHeaders()['user-agent'],
       accept: 'text/event-stream',
       'content-type': 'application/json',
     })
 
-    server.responses = (_request, outgoing) => outgoing.writeHead(429, { 'content-type': 'application/json' }).end('{"error":"limited"}')
+    server.responses = (_request, outgoing) => { outgoing.writeHead(429, { 'content-type': 'application/json' }).end('{"error":"limited"}') }
     const errorBody = await transport.projectRequest(requestBody(), new AbortController().signal)
     const errorResponse = await transport.forward(errorBody, new AbortController().signal)
     expect(errorResponse.status).toBe(429)
     expect(errorResponse.contentType).toBe('application/json')
     await expect(new Response(errorResponse.body).text()).resolves.toBe('{"error":"limited"}')
     expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(2)
-    server.responses = (_request, outgoing) => outgoing.writeHead(204).end()
+    server.responses = (_request, outgoing) => { outgoing.writeHead(204).end() }
     const emptyBody = await transport.projectRequest(requestBody(), new AbortController().signal)
     const emptyResponse = await transport.forward(emptyBody, new AbortController().signal)
     expect(emptyResponse.status).toBe(204)
@@ -274,7 +270,7 @@ describe('Native Codex Responses transport', () => {
     if (capture === undefined) throw new Error('Codex preparation omitted its Native Responses capture')
     const refreshStarted = Promise.withResolvers<undefined>()
     const refreshReleased = Promise.withResolvers<undefined>()
-    let refreshSignal: AbortSignal | undefined
+    let refreshSignal: AbortSignal | null | undefined
     server.token = async (_request, response) => {
       refreshStarted.resolve(undefined)
       await refreshReleased.promise
@@ -321,7 +317,7 @@ describe('Native Codex Responses transport', () => {
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       const upstream = await routedFetch(input, init)
       const url = input instanceof Request ? new URL(input.url) : new URL(input.toString())
-      if (url.origin !== 'https://chatgpt.com' || url.pathname !== '/backend-api/codex/responses' || upstream.body === null) {
+      if (url.origin !== 'https://api.openai.com' || url.pathname !== '/v1/responses' || upstream.body === null) {
         return upstream
       }
       const reader = upstream.body.getReader()
