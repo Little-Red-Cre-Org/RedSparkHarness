@@ -128,7 +128,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
-`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。`openai-codex` SIWC grant 无法查询 ChatGPT 账户用量，因此 `accounts.usage()` 返回 `USAGE_UNSUPPORTED`。任一受支持账户的凭据记录更新都会触发 `accounts/changed`。`llm-pi-ai` 凭据记录更新会丢弃适配器快照，后续目录查询便会读取新 grant。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
+`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。已提交的 SIWC grant 会通过账户目录激活 `openai-codex`；已提交的 `deepseek-account/default` grant 会激活 `deepseek-account` 路由，并提供账户路由配置中的 `deepseek-flash` 与 `deepseek-v4-pro` 模型。两条路由都会出现在模型目录和可配置提供方列表中。`openai-codex` SIWC grant 无法查询 ChatGPT 账户用量，因此 `accounts.usage()` 返回 `USAGE_UNSUPPORTED`。`native` Host 选择初始模型时，如果账户目录请求失败，authorization service 会记录该 listener failure。DeepSeek 账户 token 由账户凭据所有者按已配置的推理 origin 解析；首个可用账户模型选择也会通过同一所有者检查当前 profile URL。路由会通过 `x-dsh-auth-token` 和 Anthropic 传输要求的 Bearer `Authorization` 请求头发送 token。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。任一受支持账户的凭据记录更新都会触发 `accounts/changed`。`llm-pi-ai` 凭据更新会使适配器失效，后续目录查询会读取新 grant。Host 启动期间，读取账户可用性时已送达的账户凭据更新会在发布模型服务前重新调和；设置值也会在安装不重放的监听器前重新读取。native composition base 在安装期间固定；已安装的 settings Provider 会实时应用已验证的 profile 编辑；Cordis 入口会逐请求解析 settings。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -165,7 +165,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 `openai-codex` 路由会在全新 collection 首次精确解析模型时加载账户目录，因此推理不依赖此前调用模型列表接口。
 
-插件会在可配置提供方目录中声明它能认证的每个已安装目录提供方，并加入当前 profile 声明的每条路由，因此配置界面可以在任何路由存在之前提供完整目录。每个条目都携带 `declared`——pi-ai 是否在该键下不提供任何内容——因为只有适配器能区分手工声明路由与收窄目录路由。路由注册具有原子性：与其他适配器冲突的候选集合会让此前路由继续服务。零路由的裸挂载即休眠姿态：settings 分节提供 profile 前不注册任何内容，分节清空时路由随之消失。
+插件会在可配置提供方目录中声明它能认证的每个已安装目录提供方，并加入当前 profile 声明的每条路由，因此配置界面可以在任何路由存在之前提供完整目录。有效账户凭据会把对应提供方路由加入模型目录；Codex 模型来自已登录账户目录，DeepSeek 账户模型来自账户路由配置。每个条目都携带 `declared`——pi-ai 是否在该键下不提供任何内容——因为只有适配器能区分手工声明路由与收窄目录路由。路由注册具有原子性：与其他适配器冲突的候选集合会让此前路由继续服务。零路由的裸挂载即休眠姿态：settings 分节提供 profile 前不注册任何内容，分节清空时路由随之消失。
 
 ### 回放与词汇
 

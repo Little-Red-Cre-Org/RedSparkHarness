@@ -11,7 +11,7 @@ import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
 import { plugin as executionPlugin, type NativeRootExecutionOperations, type NativeRootRouteId, type NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
-import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
+import { createNativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { type LlmResolvedModelInfo, type ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
@@ -23,6 +23,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
   model?: NativeModel
   maxTokens?: number
   reasoningEffort?: ReasoningEffortId
+  defaultModelSelection?: () => { provider: string; model: string; reasoningEffort?: ReasoningEffortId } | undefined
   home?: string
   preserve?: true
 }) {
@@ -32,6 +33,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
   let roots: NativeRootExecutionOperations | undefined
   let selection: NativeModelSelectionOperations | undefined
   let storage: NativeSessionPersistenceOperations | undefined
+  let headless: ReturnType<typeof createNativeHeadlessApplication> | undefined
   const capture: NativePlugin = { apiVersion: 1, name: 'selection-host-capture', targets: ['host'],
     requires: ['rootExecution', 'modelSelection', 'sessionPersistence', 'activeSessions'], provides: [], resolve: () => (context) => {
       active = context.require('activeSessions')
@@ -45,12 +47,30 @@ export async function fixture(resolve: (provider: string, model: string, signal:
       context.provide('modelDirectory', { providers: () => [{ id: 'fixture', name: 'Fixture' }], resolve,
         catalog: async defaults => ({ default: defaults, routableProviders: ['fixture'], groups: [], failures: [] }) })
     } }
+  const appConfig = { cwd: home, provider: 'fixture', model: 'default', systemPrompt: 'Selection.', maxSteps: 1,
+    ...options?.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
+    ...options?.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort } }
+  const defaultModelSelection = options?.defaultModelSelection
+  const application: NativePlugin = defaultModelSelection === undefined ? appPlugin : {
+    ...appPlugin,
+    resolve: () => (context) => {
+      const active = context.optional('activeSessions')
+      if (active === undefined) throw new Error('selection fixture requires active Sessions')
+      const execution = context.optional('sessionExecution')
+      const app = createNativeHeadlessApplication(context, appConfig, scope, {
+        active,
+        ...execution === undefined ? {} : { execution },
+        defaultModelSelection,
+      })
+      headless = app
+      context.provide('application', app)
+      context.provide('rootExecution', app.rootExecution)
+    },
+  }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined }, { plugin, scope, config: undefined },
     { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: home } },
-    { plugin: appPlugin, scope, config: { cwd: home, provider: 'fixture', model: 'default', systemPrompt: 'Selection.', maxSteps: 1,
-      ...options?.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
-      ...options?.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort } } },
+    { plugin: application, scope, config: appConfig },
     { plugin: executionPlugin, scope, config: undefined }, { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: models, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: home } },
@@ -61,6 +81,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
     await host.start()
     if (roots === undefined || selection === undefined || storage === undefined || active === undefined) throw new Error('actual selection services missing')
     return { host, home, roots, selection, storage, active, route: brandString<NativeRootRouteId>('root'),
+      ...headless === undefined ? {} : { headless },
       async close() {
         await host.stop()
         if (options?.preserve === undefined) await rm(home, { recursive: true, force: true })

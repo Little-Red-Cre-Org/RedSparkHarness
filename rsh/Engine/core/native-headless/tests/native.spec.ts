@@ -20,6 +20,7 @@ import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-
 import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
 import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
 import type { NativeCodeRunRequest, NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
+import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection'
 import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
@@ -29,10 +30,11 @@ import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
 import { plugin as fileReferencePlugin } from '@deepseek-ai/dsh-native-file-reference-local/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { brandString } from '@deepseek-ai/dsh-brand'
+import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
-import { plugin as appPlugin } from '../src/native.ts'
+import { plugin as appPlugin, type NativeHeadlessApplication } from '../src/native.ts'
 
 async function fixture(
   script: ConstructorParameters<typeof MockAdapter>[0],
@@ -48,6 +50,7 @@ async function fixture(
     workspaceWriteRoot?: string
     codeRuntimeProvider?: NativePlugin
     sandboxPolicy?: NativeSandboxPolicy
+    modelSelection?: NativeModelSelectionOperations
   } = {},
 ) {
   const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
@@ -65,6 +68,12 @@ async function fixture(
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
+  }
+  const selectedModelSelection = options.modelSelection
+  const needsSessionExecution = options.fileReferences || selectedModelSelection !== undefined
+  const modelSelectionProvider: NativePlugin | undefined = selectedModelSelection === undefined ? undefined : {
+    apiVersion: 1, name: 'test-model-selection', targets: ['host'], requires: [], provides: ['modelSelection'],
+    resolve: () => (context) => { context.provide('modelSelection', selectedModelSelection) },
   }
   const selectedSandboxPolicy = options.sandboxPolicy
   const sandboxPolicyProvider: NativePlugin | undefined = selectedSandboxPolicy === undefined ? undefined : {
@@ -86,11 +95,12 @@ async function fixture(
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
+    ...(modelSelectionProvider === undefined ? [] : [{ plugin: modelSelectionProvider, scope, config: undefined }]),
     { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}),
       ...options.allowedTools === undefined ? {} : { allowedTools: options.allowedTools },
       ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot } } },
     { plugin: agentPlugin, scope, config: undefined },
-    ...(options.fileReferences ? [{ plugin: sessionExecutionPlugin, scope, config: undefined }] : []),
+    ...(needsSessionExecution ? [{ plugin: sessionExecutionPlugin, scope, config: undefined }] : []),
     { plugin: modelExecutionPlugin, scope, config: undefined },
     { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
       config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
@@ -124,6 +134,30 @@ it('captures resolved builtin tool defaults and explicit route selection', async
       await state.host.stop()
       await rm(state.directory, { recursive: true, force: true })
     }
+  }
+})
+
+it('prepares root input with the effective default model for a fresh Session', async () => {
+  const modelSelection: NativeModelSelectionOperations = {
+    async state() { return { lastUsed: null, next: null, revision: null } },
+    async select() { throw new Error('unused') },
+    async capture(_owner, defaults) { return { config: defaults, requestedConfig: defaults } },
+  }
+  const state = await fixture([textResponse('Prepared input sent.')], { modelSelection })
+  const prepared: { provider: string; model: string }[] = []
+  try {
+    await state.host.run(state.scope, { kind: 'prepared-model' }, invocation =>
+      (state.app as NativeHeadlessApplication).executeRootTurn({ id: SessionId('prepared-model'), resume: false,
+        prepareMessage: async (model) => {
+          prepared.push(model)
+          return createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Prepared prompt.' }] })
+        } }, invocation.signal))
+
+    expect(prepared).toEqual([{ provider: 'mock', model: 'fixture' }])
+    expect(state.adapter.requests[0]).toMatchObject({ provider: 'mock', model: 'fixture' })
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
   }
 })
 

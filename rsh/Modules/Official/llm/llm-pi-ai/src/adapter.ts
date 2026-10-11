@@ -99,6 +99,16 @@ export interface PiAiAdapterOptions {
    */
   resolveApiKey: (provider: string, profile: ResolvedPiAiProviderProfile) => Promise<string | undefined>
   /**
+   * Resolve headers owned by a route's authenticated account.
+   * @param provider - selected route identity.
+   * @param profile - resolved route configuration.
+   * @param signal - request cancellation.
+   * @returns per-request account headers, or undefined when the route has no account authority.
+   */
+  resolveRequestHeaders?: (
+    provider: string, profile: ResolvedPiAiProviderProfile, signal?: AbortSignal,
+  ) => Promise<Readonly<Record<string, string>> | undefined>
+  /**
    * How every collection this adapter builds resolves auth the request-level
    * `apiKey` override does not cover. Required rather than optional: a
    * collection built without them gets pi-ai's in-memory default store, which
@@ -647,6 +657,7 @@ export class PiAiAdapter extends LlmAdapter {
     const apiKey = options.provider === CODEX_SUBSCRIPTION_ROUTE
       ? undefined
       : await this.config.resolveApiKey(options.provider, profile)
+    const providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
 
     const consumer = new AbortController()
     const upstream = options.signal === undefined
@@ -689,7 +700,7 @@ export class PiAiAdapter extends LlmAdapter {
           signal: watchdog.signal,
           onPayload: siwcResponsesPayload,
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
-          headers: requestHeaders(profile.headers),
+          headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
         })
         : snapshot.models.streamSimple(model, context, {
           ...profileOptions(profile, reasoning, apiKey),
@@ -698,7 +709,7 @@ export class PiAiAdapter extends LlmAdapter {
           ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
           signal: watchdog.signal,
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
-          headers: requestHeaders(profile.headers),
+          headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
         })
       const iterator = toStreamChunks(
         events,
