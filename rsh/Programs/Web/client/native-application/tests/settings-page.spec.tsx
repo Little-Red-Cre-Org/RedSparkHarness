@@ -647,14 +647,14 @@ it('resumes an in-flight login after leaving and returning to Models', async () 
     }),
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
   } as unknown as NativeSettingsActions
-  const stable = { ...emptyAccountActions, ...actions }
+  const stable = { ...emptyAccountActions, ...emptyModelActions, ...actions }
   const t = (localeKey: keyof typeof en) => en[localeKey]
   const page = render(<SettingsPage actions={stable} t={t} section="models" />)
-  fireEvent.click(await screen.findByRole('button', { name: en.signIn }))
+  fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
   page.rerender(<SettingsPage actions={stable} t={t} section="general" />)
   page.rerender(<SettingsPage actions={stable} t={t} section="models" />)
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: en.signIn })).toBeNull()
+  expect(screen.queryByRole('button', { name: en.authorizationLoginAdd })).toBeNull()
   page.unmount()
 })
