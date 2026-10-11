@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-10-native-external-operation-broker.md
-2026-10-10-native-external-operation-broker.md: 14cc35a1b57ba641654120e34aad3976a371b97d
-2026-10-10-native-external-operation-broker.zh.md: 20fc48dcef42041267f06ddf82a44332948553ba
+2026-10-10-native-external-operation-broker.md: 3102a935d9ec79589beb84e641992a0b04b27c74
+2026-10-10-native-external-operation-broker.zh.md: eb3e2106138c94c86eae47b47d11861d9d1560a3

@@ -85,7 +85,11 @@ export const plugin = {
                 if (operations !== undefined && failed === undefined) {
                   throw new Error('ptc-external-cancel: canonical nested child omitted its cancellation failure')
                 }
-                queueMicrotask(() => process.emit('SIGTERM'))
+                if (input.signalMode === 'handler-only') {
+                  queueMicrotask(() => process.emit('SIGTERM'))
+                } else if (input.signalMode !== 'parent-os-signal') {
+                  throw new Error('ptc-external-cancel: unknown signal mode')
+                }
                 await waitForAbort(operationSignal)
                 throw new Error('ptc-external-cancel: nested Responses forward completed before cancellation')
               }
