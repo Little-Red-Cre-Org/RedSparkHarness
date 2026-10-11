@@ -63,7 +63,14 @@ export class NativeSettings implements NativeSettingsService {
   private started = false
   private closed = false
 
-  constructor(private readonly storage: NativeSettingsStorage) {}
+  /**
+   * @param storage - persistence for the complete Settings document.
+   * @param onDocumentUpdated - Host notification publisher for changed registered sections.
+   */
+  constructor(
+    private readonly storage: NativeSettingsStorage,
+    private readonly onDocumentUpdated?: (namespace: string, revision: number) => void,
+  ) {}
 
   /** Load the complete document before any consumer registers. */
   async start(): Promise<void> {
@@ -242,6 +249,7 @@ export class NativeSettings implements NativeSettingsService {
       registration.section = nextSection
       registration.value = next
       registration.revision += 1
+      this.onDocumentUpdated?.(registration.namespace, registration.revision)
       if (!deepEqualJson(previous, next)) {
         for (const watcher of registration.listeners) {
           const notification = watcher.tail

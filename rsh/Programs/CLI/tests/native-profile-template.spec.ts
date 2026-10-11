@@ -71,6 +71,8 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       'application', 'renderer', 'connection', 'session',
       'locale', 'theme', 'session-presentation', 'layout', 'sidebar', 'sidebar-right',
     ])
+    const cli = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { dependencies: Record<string, string> }
+    for (const row of client.installations) expect(cli.dependencies).toHaveProperty([row.plugin])
     expect(existsSync(join(home, 'profiles', 'native-web', 'rsh.profile.json'))).toBe(true)
   } finally {
     await rm(home, { recursive: true, force: true })

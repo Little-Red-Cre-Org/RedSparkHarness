@@ -135,4 +135,12 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     settings: NativeSettingsService
   }
+  interface NativeEvents {
+    /** Notify configuration surfaces after one registered raw Settings section changes.
+     * @mode parallel
+     * @param namespace - registered Settings namespace whose stored section changed.
+     * @param revision - namespace revision after the change.
+     */
+    'settings/document-updated': { mode: 'parallel'; args: [namespace: string, revision: number]; result: void }
+  }
 }

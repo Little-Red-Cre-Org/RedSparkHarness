@@ -152,6 +152,8 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 | [`src/siwc.ts`](src/siwc.ts) | 本应用的 Sign in with ChatGPT OAuth 注册、回调、验证与刷新 |
 | [`src/config.ts`](src/config.ts) | Profile schema、解析与可服务性校验 |
 | [`src/catalog.ts`](src/catalog.ts) | 已安装目录集成与漂移门禁 |
+| [`src/configurable-providers.ts`](src/configurable-providers.ts) | Cordis 与 Native Provider 共用的可配置目录投影 |
+| [`src/native.ts`](src/native.ts) | Native model、modelDirectory 与 modelSettings Provider |
 | [`src/provider.ts`](src/provider.ts) | 受支持协议表与提供方构建 |
 | [`src/context.ts`](src/context.ts) | Harness 到 pi-ai 的上下文转换、图片处理、回放恢复 |
 | [`src/stream.ts`](src/stream.ts) | 把 pi-ai 事件转换为 harness `StreamChunk` 值 |
@@ -188,7 +190,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 <a id="model-experience"></a>
 
-原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。移除会先排空已接纳查询，再释放适配器。
+原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。`modelSettings.configurableProviders()` 与 Cordis 入口共用目录投影；`discover()` 使用相同的端点发现路径，调用方传入的 `apiKey` 仅存在于当前请求中。Profile 或 `llm-pi-ai` 凭据记录变化时会发出 `llm/adapters-updated`。移除会先排空已接纳查询，再释放适配器。
 
 ## 模型体验
 

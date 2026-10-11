@@ -5,17 +5,21 @@ import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai
 import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type { AuthorizationFrame, AuthorizationSettlement } from '@deepseek-ai/dsh-authorization/types'
+import { ModelsSettingsStyles } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConversationLocaleKey } from './locales.ts'
 import { AccountCard } from './account-card.tsx'
+import { ModelsSettingsPage } from './models-settings-page.tsx'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
+const styles = ModelsSettingsStyles
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
 /** Settings, credential, authorization and account operations selected from the Native Session client. */
 export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
-  | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'>
+  | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
+  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -110,11 +114,12 @@ export function nativeSettingsDiff(
   return operations
 }
 
-function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
+function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick }: {
   entry: NativeAuthorizationEntry
   actions: NativeSettingsActions
   t: Translate
   onSettled: () => Promise<boolean>
+  onRefresh: () => void
   refreshClick: number
 }) {
   const [attemptId, setAttemptId] = useState(entry.attemptId)
@@ -225,52 +230,73 @@ function AuthorizationRow({ entry, actions, t, onSettled, refreshClick }: {
   }
 
   const settled = [...frames].reverse().find(frame => frame.type === 'settled')
-  return <div>
-    <p>{entry.label} · {entry.configured ? t('configured') : t('notConfigured')}</p>
-    {attemptId === undefined ? <div>
-      {entry.methods.length > 1 ? <label>{t('signInMethod')}
-        <select aria-label={t('signInMethod')} value={method} onChange={(event) => { setMethod(event.target.value) }}>
-          {entry.methods.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
-        </select>
-      </label> : null}
-      <button type="button" onClick={() => { void begin() }}>{t('signIn')}</button>
-    </div> : <>
-      <button type="button" onClick={() => { void cancel(attemptId) }}>{t('cancelSignIn')}</button>
+  return <div role="group" aria-label={entry.label}>
+    <div className={styles['authorizationRow']}>
+      <span className={styles['authorizationIdentity']}>
+        <span className={styles['rowName']}>{entry.label}</span>
+        <span className={styles['authorizationStatus']}>{entry.configured
+          ? t('authorizationConnected') : t('authorizationNotConnected')}</span>
+      </span>
+      <span className={styles['rowActions']}>
+        {attemptId === undefined ? <>
+          {entry.methods.length > 1 ? <label className={styles['field']}>
+            <span className={styles['fieldLabel']}>{t('signInMethod')}</span>
+            <select className={`${styles['input']} ${styles['selectInput']}`} aria-label={t('signInMethod')} value={method}
+              onChange={(event) => { setMethod(event.target.value) }}>
+              {entry.methods.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
+            </select>
+          </label> : null}
+          <button type="button" className={styles['secondaryButton']} onClick={() => { void begin() }}>
+            {entry.configured ? t('authorizationReconnect') : t('authorizationLoginAdd')}
+          </button>
+        </> : <button type="button" className={styles['secondaryButton']}
+          onClick={() => { void cancel(attemptId) }}>{t('cancelSignIn')}</button>}
+      </span>
+    </div>
+    {attemptId === undefined ? null : <>
       {frames.map((frame, index) => {
         if (frame.type !== 'prompt' || frames.slice(index + 1).some(later => later.type === 'prompt-closed' && later.promptId === frame.promptId)) return null
         const value = answers[frame.promptId] ?? (frame.prompt.kind === 'select' ? frame.prompt.options[0]?.id ?? '' : '')
-        return <form key={frame.promptId} onSubmit={(event) => {
+        return <form key={frame.promptId} className={styles['authorizationPrompt']} onSubmit={(event) => {
           event.preventDefault()
           void answer(attemptId, frame.promptId, value)
         }}>
-          <label>{frame.prompt.message}{frame.prompt.kind === 'select'
-            ? <select aria-label={frame.prompt.message} value={value} onChange={(event) => {
-              setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
-            }}>
-              {frame.prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-            : <input type={frame.prompt.kind === 'secret' ? 'password' : 'text'} autoComplete={frame.prompt.kind === 'secret' ? 'off' : undefined}
-              placeholder={frame.prompt.placeholder} aria-label={frame.prompt.message} value={value} onChange={(event) => {
+          <label className={styles['field']}>
+            <span className={styles['fieldLabel']}>{frame.prompt.message}</span>
+            {frame.prompt.kind === 'select'
+              ? <select className={`${styles['input']} ${styles['selectInput']}`} aria-label={frame.prompt.message} value={value} onChange={(event) => {
                 setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
-              }} />}
+              }}>
+                {frame.prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+              : <input className={styles['input']} type={frame.prompt.kind === 'secret' ? 'password' : 'text'} autoComplete={frame.prompt.kind === 'secret' ? 'off' : undefined}
+                placeholder={frame.prompt.placeholder} aria-label={frame.prompt.message} value={value} onChange={(event) => {
+                  setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
+                }} />}
           </label>
-          <button type="submit">{t('authorizationAnswer')}</button>
-          <button type="button" onClick={() => { void decline(attemptId, frame.promptId) }}>{t('decline')}</button>
+          <span className={styles['editorActions']}>
+            <button type="button" className={styles['secondaryButton']} onClick={() => { void decline(attemptId, frame.promptId) }}>{t('decline')}</button>
+            <button type="submit" className={styles['primaryButton']} disabled={value.length === 0}>{t('authorizationAnswer')}</button>
+          </span>
         </form>
       })}
     </>}
-    {frames.map((frame, index) => frame.type === 'notice' ? <p key={index}>
-      {frame.notice.message}{frame.notice.url === undefined ? null : <> <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a></>}
-      {frame.notice.code === undefined ? null : <> <code>{frame.notice.code}</code></>}
-    </p> : null)}
+    {frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
+      <span>{frame.notice.message}</span>
+      {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
+      {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
+    </div> : null)}
     {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
       : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
     {settled.settlement === 'failed' && settled.message !== undefined ? <> {settled.message}</> : null}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
-    {lost && attemptId === undefined && !entry.configured ? <p role="alert">{t('signInIncomplete')}</p> : null}
-    {stopped !== undefined && stopped === entry.attemptId ? <p role="alert">{t('authorizationDisconnected')}</p> : null}
-    {error === undefined ? null : <p role="alert">{t('authorizationError')}: {error}</p>}
+    {lost && attemptId === undefined && !entry.configured ? <p className={styles['error']} role="alert">{t('signInIncomplete')}</p> : null}
+    {stopped !== undefined && stopped === entry.attemptId ? <>
+      <p className={styles['error']} role="alert">{t('authorizationDisconnected')}</p>
+      <button type="button" className={styles['secondaryButton']} onClick={onRefresh}>{t('refreshSettings')}</button>
+    </> : null}
+    {error === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {error}</p>}
   </div>
 }
 
@@ -283,14 +309,14 @@ function pretty(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
 }
 
-/** Registered schema-backed Settings with revision-safe JSON edits and schema-discovered credential refs.
- * @param props - selected native client, localized copy, the route back to the Session page, and an optional authorized callback.
- * @returns the native Settings and write-only credential page.
+/** Registered schema-backed Settings, credentials, authorization and account content.
+ * @param props - selected section, native actions, localized copy and an optional authorized callback.
+ * @returns the content for the selected Settings navigation entry.
  */
-export function SettingsPage({ actions, t, onBack, onAuthorized }: {
+export function SettingsPage({ actions, t, section, onAuthorized }: {
   actions: NativeSettingsActions
   t: Translate
-  onBack: () => void
+  section: string
   onAuthorized?: () => void
 }) {
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
@@ -403,6 +429,17 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     return () => { lifetime.abort() }
   }, [refresh])
 
+  // Rows lose their local attempt on unmount; re-read the list when Models reappears so an in-flight login resumes.
+  const shownSection = useRef(section)
+  useEffect(() => {
+    if (shownSection.current === section) return
+    shownSection.current = section
+    if (section !== 'models') return
+    const lifetime = new AbortController()
+    actions.authorizationList(lifetime.signal).then((entries) => { setAuthorizationEntries(entries) }, () => {})
+    return () => { lifetime.abort() }
+  }, [actions, section])
+
   const save = async (row: NativeSettingsDescriptor): Promise<void> => {
     setSaving(row.namespace)
     setError(undefined)
@@ -455,17 +492,51 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
     } finally { setSaving(undefined) }
   }
 
-  return <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
-    <button type="button" onClick={onBack}>{t('backToSessions')}</button>
-    <h1>{t('settings')}</h1>
-    <button type="button" disabled={loading} onClick={() => { setRefreshClick(count => count + 1); void authorizationSettled() }}>{t('refreshSettings')}</button>
+  const refreshButton = <button type="button" disabled={loading}
+    onClick={() => {
+      setRefreshClick(count => count + 1)
+      void authorizationSettled()
+    }}>{t('refreshSettings')}</button>
+  const refreshAuthorization = (): void => {
+    setRefreshClick(count => count + 1)
+    void authorizationSettled()
+  }
+
+  const subscriptionContent = <>
+    {authorizationError === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {authorizationError}</p>}
+    {accountsError === undefined ? null : <p className={styles['error']} role="alert">{t('accountListError')}: {accountsError}</p>}
+    {accounts.length === 0 ? null : <section aria-label={t('accounts')}>
+      <h3>{t('accounts')}</h3>
+      {accounts.map((account) => {
+        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
+        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
+          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
+          signOutAvailable={entry?.configured ?? account.status === 'ready'}
+          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
+            onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />} />
+      })}
+    </section>}
+    {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
+      key={entry.key} entry={entry} actions={actions} t={t}
+      onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick} />)}
+  </>
+
+  if (section === 'models') return <div>
+    <ModelsSettingsPage actions={actions} t={t}>
+      {subscriptionContent}
+    </ModelsSettingsPage>
+  </div>
+  if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
+  return <div>
+    <h2>{t('settingsGeneral')}</h2>
+    {refreshButton}
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
+    {notice === undefined ? null : <p role="status">{notice}</p>}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
-    {notice === undefined ? null : <p role="status">{notice}</p>}
     {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
     {namespaces.map(row => <section key={row.namespace} aria-label={row.namespace}>
-      <h2>{row.namespace}</h2>
+      <h3>{row.namespace}</h3>
       <p>{t(row.applies === 'live' ? 'appliesLive' : 'appliesRestart')} · {t('revision')}: {row.revision}</p>
       <details><summary>{t('settingsSchema')}</summary>
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(row.schema, null, 2)}</pre>
@@ -479,7 +550,7 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
       <button type="button" disabled={saving !== undefined || loading}
         onClick={() => { void save(row) }}>{saving === row.namespace ? t('savingSettings') : t('saveSettings')}</button>
       {row.credentialRefs.length === 0 ? null : <div>
-        <h3>{t('credentials')}</h3>
+        <h4>{t('credentials')}</h4>
         {row.credentialRefs.map((ref) => {
           const info = credentials[ref]
           return <form key={ref} aria-label={`${t('credential')} ${ref}`} onSubmit={(event) => {
@@ -503,21 +574,5 @@ export function SettingsPage({ actions, t, onBack, onAuthorized }: {
         })}
       </div>}
     </section>)}
-    {accounts.length === 0 && authorizationEntries.length === 0 && authorizationError === undefined && accountsError === undefined ? null : <section aria-label={t('accounts')}>
-      <h2>{t('accounts')}</h2>
-      {authorizationError === undefined ? null : <p role="alert">{t('authorizationError')}: {authorizationError}</p>}
-      {accountsError === undefined ? null : <p role="alert">{t('accountListError')}: {accountsError}</p>}
-      {accounts.map((account) => {
-        const entry = authorizationEntries.find(candidate => candidate.key === account.key)
-        return <AccountCard key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount}
-          signOutAvailable={entry?.configured ?? account.status === 'ready'}
-          authorization={entry === undefined ? undefined : <AuthorizationRow entry={entry} actions={actions} t={t}
-            onSettled={authorizationSettled} refreshClick={refreshClick} />} />
-      })}
-      {authorizationEntries.filter(entry => !accounts.some(account => account.key === entry.key)).map(entry => <AuthorizationRow
-        key={entry.key} entry={entry} actions={actions} t={t}
-        onSettled={authorizationSettled} refreshClick={refreshClick} />)}
-    </section>}
-  </main>
+  </div>
 }

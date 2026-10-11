@@ -97,6 +97,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
     authorizationList: vi.fn(async () => []), authorizationBegin: vi.fn(), authorizationFrames: vi.fn(),
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     accountsList: vi.fn(), accountsUsage: vi.fn(), accountsBalance: vi.fn(), accountsSignOut: vi.fn(),
+    modelsListProviders: vi.fn(async () => []), modelsListConfigurableProviders: vi.fn(async () => []),
+    modelsDiscover: vi.fn(async () => []), settingsEvents: async function* () {},
     credentialsSet: vi.fn(),
     credentialsUnset: vi.fn(),
     list: vi.fn(async () => rows),
@@ -177,6 +179,23 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(screen.getByRole('button', { name: '会话详情' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '切换主题' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    const settingsDialog = screen.getByRole('dialog', { name: '设置' })
+    const settingsNav = within(settingsDialog).getByRole('navigation')
+    expect(within(settingsNav).getAllByRole('button').map(button => button.textContent?.trim())).toEqual([
+      '通用设置', '任务中心', '模型', '插件', 'Agent 预设',
+    ])
+    fireEvent.click(within(settingsDialog).getByRole('button', { name: '模型' }))
+    expect(within(settingsDialog).getByRole('heading', { name: '模型' })).toBeTruthy()
+    expect(within(settingsDialog).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
+    fireEvent.click(within(settingsDialog).getByRole('button', { name: '关闭设置' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(screen.getByRole('dialog', { name: '设置' })).toBeTruthy()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
 
     await host.stop()
     expect(container.childElementCount).toBe(0)
