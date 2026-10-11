@@ -38,6 +38,10 @@
     "./human": {
       "types": "./lib/types/human.d.ts",
       "default": "./lib/human.js"
+    },
+    "./schedule-types": {
+      "types": "./lib/types/schedule-types.d.ts",
+      "default": "./lib/schedule-types.js"
     }
   },
   "dsh": {
@@ -52,7 +56,8 @@
       ],
       "optional": [],
       "provides": [
-        "clientNativeSession"
+        "clientNativeSession",
+        "clientNativeSchedule"
       ]
     }
   },
@@ -63,6 +68,7 @@
     "lib/follow-types.js",
     "lib/model-controls.js",
     "lib/human.js",
+    "lib/schedule-types.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],

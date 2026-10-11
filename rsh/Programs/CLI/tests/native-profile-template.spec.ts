@@ -34,11 +34,18 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       plugin: '@deepseek-ai/dsh-task-scheduler',
       config: { path: join(home, 'profiles', 'native-web', 'task-scheduler.sqlite') },
     })
+    expect(profile.installations.find(row => row.id === 'schedule-controller')).toEqual({
+      id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: 'root',
+    })
+    expect(profile.installations.findIndex(row => row.id === 'schedule-controller'))
+      .toBeGreaterThan(profile.installations.findIndex(row => row.id === 'task-scheduler'))
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
     for (const name of ['native-headless', 'native-headless-query', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
+      expect(shippedNativeProfileComposition(home, name, 'win32').installations
+        .some(row => row.id === 'schedule-controller')).toBe(false)
       ensureShippedNativeProfile(name, home)
       expect(nativeProfileReloadMode(name, home)).toBe('startup')
     }

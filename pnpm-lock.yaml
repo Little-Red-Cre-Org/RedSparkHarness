@@ -9240,6 +9240,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-schedule-controller':
+        specifier: workspace:^
+        version: link:../Web/host/native-schedule-controller
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
@@ -14085,6 +14088,25 @@ importers:
       '@deepseek-ai/dsh-http-routes-cordis':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/http-routes-cordis
+
+  rsh/Programs/Web/host/native-schedule-controller:
+    dependencies:
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/automation/task-scheduler
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../../client/native-session
 
   rsh/Programs/Web/host/native-web-assets:
     dependencies:

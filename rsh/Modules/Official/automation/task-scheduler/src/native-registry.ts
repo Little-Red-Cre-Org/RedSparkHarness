@@ -7,7 +7,7 @@ import type { GoalRef, GoalView } from '@deepseek-ai/dsh-goal/types'
 import type { NativeScheduledGoalAdmission, NativeScheduledGoalAdmissionLease, NativeScheduledGoalExecutor,
   NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
 import type { CreateTaskRequest } from './gui-types.ts'
-import type { NativeTaskSchedulerOperations } from './native-types.ts'
+import type { NativeTaskScheduleView, NativeTaskSchedulerOperations } from './native-types.ts'
 import { SchedulerEngine } from './engine.ts'
 import { TaskStore } from './store.ts'
 import { delayedTime, validateTimingDescription } from './time.ts'
@@ -40,6 +40,8 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
   private closing = false
   private disposal: Promise<void> | undefined
   private readonly startupCancellation = new AbortController()
+  private readonly scheduleListeners = new Set<() => void>()
+  private readonly detachStoreChanges: () => void
   private starting: Promise<void> | undefined
   private startupFailure: { readonly cause: unknown } | undefined
   private goalExecutor: GoalExecutorRegistration | undefined
@@ -51,6 +53,9 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
     report: (error: unknown) => void) {
     this.scheduledGoalHost = { authority: { redeem: (admission, owner, signal) => this.redeemGoalClaim(admission, owner, signal) },
       registerExecutor: executor => this.registerGoalExecutor(executor) }
+    this.detachStoreChanges = store.onChange(() => {
+      for (const listener of this.scheduleListeners) listener()
+    })
     for (const task of store.tasks()) if (task.state !== 'deleted') this.validateRepresentation(task)
     this.engine = new SchedulerEngine(store, async (task, run, signal) => await this.execute(task, run, signal), options, report,
       async (task, run, signal) => await this.deliverReminder(task, run, signal),
@@ -106,6 +111,28 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
     return tasks
   }
   /** @inheritdoc */
+  listSchedules(): readonly NativeTaskScheduleView[] {
+    const runs = new Map<TaskId, ReturnType<TaskStore['runs']>[number]>()
+    for (const run of this.store.runs()) if (!runs.has(run.taskId)) runs.set(run.taskId, run)
+    return this.store.tasks().flatMap((task): NativeTaskScheduleView[] => {
+      if (task.state === 'deleted') return []
+      const lastRun = runs.get(task.id)
+      if (task.state !== 'paused' && task.nextAt === null && (lastRun === undefined || lastRun.state === 'completed')) return []
+      const state = task.state === 'paused' ? 'paused'
+        : lastRun !== undefined && lastRun.state !== 'running' && lastRun.state !== 'completed' ? 'failed' : 'active'
+      return [{ id: task.id, sessionId: SessionId(task.ownerSessionId), title: task.title, state,
+        schedule: task.everySeconds === undefined ? task.at : `${task.at}; every ${task.everySeconds}s`,
+        timeZone: taskTimeZone(task.at),
+        ...(task.nextAt === null ? {} : { nextRunAt: task.nextAt }),
+        ...(lastRun === undefined ? {} : { lastRunAt: lastRun.startedAt }) }]
+    })
+  }
+  /** @inheritdoc */
+  onSchedulesChanged(listener: () => void): () => void {
+    this.scheduleListeners.add(listener)
+    return () => { this.scheduleListeners.delete(listener) }
+  }
+  /** @inheritdoc */
   async change(owner: NativeActiveSessionOwner, id: TaskId, state: Task['state'], signal: AbortSignal): Promise<Task> {
     this.assertOwner(owner)
     signal.throwIfAborted()
@@ -141,7 +168,7 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
       .then(async () => {
         await this.engine.dispose()
         if (this.goalExecutor !== undefined) await this.releaseGoalExecutor(this.goalExecutor)
-      })
+      }).finally(() => { this.detachStoreChanges(); this.scheduleListeners.clear() })
   }
   private assertOwner(owner: NativeActiveSessionOwner): void {
     if (this.startupFailure !== undefined) {
@@ -384,4 +411,9 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
     return start >= 0 && !events.slice(start).some(event => event.type === 'turn/end')
       && events.slice(start + 1).some(event => event.type === 'user/message' && event.data.source.kind === 'user')
   }
+}
+
+function taskTimeZone(at: string): string {
+  const offset = /([+-]\d{2}:\d{2})$/u.exec(at)?.[1]
+  return offset === undefined || offset === '+00:00' ? 'UTC' : `UTC${offset}`
 }

@@ -33,6 +33,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Read-only Native schedule catalog selected by the browser composition. */
+    clientNativeSchedule: NativeScheduleClient
   }
 }
 
@@ -40,10 +42,28 @@ import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
 import type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
 export type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
+export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
+}
+
+/** Read-only browser access to persisted scheduled work. */
+export interface NativeScheduleClient {
+  /**
+   * List active, paused, and failed scheduled plans.
+   * @param signal - caller cancellation.
+   * @returns safe plan metadata without prompts or captured execution configuration.
+   */
+  list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Follow one complete baseline and subsequent schedule changes.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns baseline, upsert, and remove frames from the Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -557,6 +577,17 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed') }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
+const scheduledJobSchema = z.strictObject({
+  id: z.string().min(1), sessionId: z.string().min(1), title: z.string(),
+  state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
+  nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+  lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+})
+const scheduleFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
+  z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
+  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
+])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
@@ -589,6 +620,22 @@ const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']),
     code: z.string().optional(), message: z.string().optional() }),
 ])
+
+function scheduleJob(value: unknown): NativeScheduledJob {
+  const job = scheduledJobSchema.parse(value)
+  const { nextRunAt, lastRunAt, ...metadata } = job
+  return { ...metadata, sessionId: job.sessionId as SessionId,
+    ...(nextRunAt === undefined ? {} : { nextRunAt }), ...(lastRunAt === undefined ? {} : { lastRunAt }) }
+}
+
+function scheduleFrame(value: unknown): NativeScheduleFrame {
+  const frame = scheduleFrameSchema.parse(value)
+  switch (frame.type) {
+    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
+    case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
+    case 'remove': return frame
+  }
+}
 
 function header(value: unknown): SessionHeader {
   const data = fields(value)
@@ -976,17 +1023,50 @@ export function createNativeSessionClient(
   }
 }
 
+function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeScheduleClient {
+  return {
+    async list(signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'schedules/list', {}, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
+      return result.value.map(scheduleJob)
+    },
+    async *follow(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native schedule Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'schedules/follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native schedules follow: invalid response HTTP ${response.status}`)
+        }
+        const events = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of events) yield scheduleFrame(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native schedules follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
+      const rpc = context.require('clientConnection').rpc
+      const client = createNativeSessionClient(rpc, config, context.signal)
+      const schedules = createNativeScheduleClient(rpc, config, context.signal)
       context.own(() => client.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeSchedule', schedules)
     }
   },
 }
