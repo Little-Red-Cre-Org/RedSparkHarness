@@ -22,6 +22,42 @@ const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.toke
 const HOST_AGENT_NAME = 'RedSpark Harness'
 const OAUTH_REQUEST_TIMEOUT_MS = 30_000
 const CALLBACK_TIMEOUT_MS = 10 * 60_000
+const SIWC_TOOL_NAMESPACE = 'harness'
+
+/** Normalize SIWC Responses roles and tool namespaces while preserving existing namespace groups.
+ * @param payload - Responses JSON body (mutated in place and returned).
+ * @returns the same object with system roles mapped to developer and ungrouped tools and calls under `harness`.
+ */
+export function siwcResponsesPayload<T>(payload: T): T {
+  const body = payload as unknown as {
+    input?: { role?: string; type?: string; namespace?: string }[]
+    tools?: unknown
+  }
+  if (body.input !== undefined) {
+    for (const item of body.input) {
+      if (item.role === 'system') item.role = 'developer'
+      if ((item.type === 'function_call' || item.type === 'custom_tool_call') && item.namespace === undefined) {
+        item.namespace = SIWC_TOOL_NAMESPACE
+      }
+    }
+  }
+  if (body.tools !== undefined) {
+    const tools = body.tools as { type?: string }[]
+    const ungrouped = tools.filter(tool => tool.type !== 'namespace')
+    if (ungrouped.length > 0) {
+      body.tools = [
+        ...tools.filter(tool => tool.type === 'namespace'),
+        {
+          type: 'namespace',
+          name: SIWC_TOOL_NAMESPACE,
+          description: 'Tools the harness exposes to the model.',
+          tools: ungrouped,
+        },
+      ]
+    }
+  }
+  return payload
+}
 
 const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] = [
   ['type', value => value === 'oauth'],
@@ -459,9 +495,10 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         signal: AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS),
       }), 'token refresh')
       const scopes = scopesFrom(tokens.scope, credential.scopes)
+      const access = requiredString(tokens.access_token, 'access token')
       return {
         ...credential,
-        access: requiredString(tokens.access_token, 'access token'),
+        access,
         refresh: requiredString(tokens.refresh_token, 'replacement refresh token'),
         expires: expiresAt(tokens.expires_in),
         scopes,

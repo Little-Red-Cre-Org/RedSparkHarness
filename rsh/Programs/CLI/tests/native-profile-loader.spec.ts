@@ -110,9 +110,11 @@ it('registers ready user native preset folders under child scopes and lists thei
     const presetConfig = loaded.profile.installations.find(row => row.id === 'agent-presets')?.config as {
       readonly default: string
       readonly folders: readonly unknown[]
+      readonly managementRoots: readonly { readonly path: string; readonly trust: 'system' | 'user' }[]
     }
     expect(presetConfig.default).toBe('operator')
     expect(presetConfig.folders).toContainEqual(expect.objectContaining({ id: 'operator', trust: 'user', status: 'ready' }))
+    expect(presetConfig.managementRoots).toContainEqual({ path: join(home, '.agent-presets'), trust: 'user' })
   } finally { await rm(home, { recursive: true, force: true }) }
 })
 
