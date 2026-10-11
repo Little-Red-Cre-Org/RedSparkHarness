@@ -64,7 +64,7 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
   t: Translate
 }) {
   const [data, setData] = useState<CachedAccountData>()
-  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'stale'>('loading')
+  const [status, setStatus] = useState<'loading' | 'ready' | 'signed-out' | 'unavailable' | 'usage-unsupported' | 'stale'>('loading')
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState(false)
   const identity = account.provider === 'deepseek-account'
@@ -81,6 +81,9 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
       if (result.status === 'ready') {
         setData({ accountKey: account.key, identity, value: result })
         setStatus('ready')
+      } else if (account.provider === 'openai-codex' && result.status === 'failed' && 'reason' in result && result.reason === 'USAGE_UNSUPPORTED') {
+        setData(undefined)
+        setStatus('usage-unsupported')
       } else if (result.status === 'signed-out') {
         setData(undefined)
         setStatus('signed-out')
@@ -166,7 +169,9 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
           </div> : null}
         </>
       : currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
-        ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}</p>
+        ? <p role={currentStatus === 'unavailable' || currentStatus === 'usage-unsupported' ? 'status' : undefined}>
+          {currentStatus === 'usage-unsupported' ? t('usageUnsupported') : currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}
+        </p>
         : <>
           {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
           <Quotas quotas={currentUsage.quotas} t={t} />
