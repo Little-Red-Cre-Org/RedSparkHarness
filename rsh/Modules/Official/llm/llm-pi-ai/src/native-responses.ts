@@ -94,7 +94,11 @@ function awaitWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
   })
 }
 
-/** Return a captured Codex transport generation with independent operation handles. */
+/**
+ * Capture one Codex transport generation with independent operation handles.
+ * @param options - route, endpoint, account identity and limits fixed by `prepareCall()`.
+ * @returns the generation capture that hands out per-operation transports.
+ */
 export function createNativeCodexResponsesCapture(
   options: NativeCodexResponsesCaptureOptions,
 ): NativeResponsesGenerationCapture {
