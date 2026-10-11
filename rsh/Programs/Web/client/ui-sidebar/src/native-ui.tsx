@@ -2,17 +2,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import {
-  Button, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Modal, Tooltip,
+  Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
   ProjectRowItem, SearchResultItem, SessionNodeItem, WorkspaceSectionEmpty, WorkspaceSectionHeader, workspaceLabel,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SessionSearchRow, WorkspaceGroupRow } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { DirectoryBrowserListing, MenuEntry, SessionSearchRow, WorkspaceGroupRow } from '@deepseek-ai/dsh-client-ui-primitives'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   NativeSessionClient, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame }
+import type {
+  NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+}
   from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type {
   NativeConversationService, NativeConversationSnapshot, NativeSessionPresentation,
@@ -43,6 +45,11 @@ const zh = {
   sessions: '会话', workspace: '工作区', empty: '暂无会话', loading: '正在读取会话…',
   scheduleAction: '定时任务', search: '搜索会话', searchAria: '搜索会话', searchPlaceholder: '搜索会话…',
   sortUpdated: '按最近活动排序', sortManual: '按手动顺序排序', addWorkspace: '新建工作区', workspaceTitle: '工作区名称',
+  viewOptions: '视图选项', groupBy: '分组方式', groupWorkspace: '按工作区', groupFlat: '平铺会话', orderBy: '排序方式',
+  'browser.title': '选择工作区目录', 'browser.home': '主目录', 'browser.newFolder': '新建文件夹', 'browser.folderName': '文件夹名称',
+  'browser.createIn': '在“{name}”中新建文件夹', 'browser.untitledFolder': '未命名文件夹', 'browser.create': '创建',
+  'browser.cancel': '取消', 'browser.open': '打开', 'browser.editPath': '编辑路径', 'browser.loading': '加载中…',
+  'browser.truncated': '文件夹过多，仅显示开头部分。', 'browser.showHidden': '显示隐藏文件',
   'search.pending': '正在搜索…', 'search.noMatches': '没有匹配的会话', 'search.unavailable': '搜索不可用',
   renameTitle: '重命名', refreshTitle: '重新生成标题', titleInput: '会话标题', saveTitle: '保存', cancelTitle: '取消',
   'actions.newSession.aria': '在“{name}”中新建会话', 'actions.session.aria': '会话“{name}”的操作',
@@ -63,6 +70,11 @@ const en = {
   sessions: 'Sessions', workspace: 'Workspaces', empty: 'No sessions yet', loading: 'Loading Sessions…',
   scheduleAction: 'Scheduled tasks', search: 'Search sessions', searchAria: 'Search sessions', searchPlaceholder: 'Search sessions…',
   sortUpdated: 'Sort by recent activity', sortManual: 'Sort by manual order', addWorkspace: 'New workspace', workspaceTitle: 'Workspace title',
+  viewOptions: 'View options', groupBy: 'Group by', groupWorkspace: 'Workspace', groupFlat: 'Flat list', orderBy: 'Order by',
+  'browser.title': 'Select Workspace Directory', 'browser.home': 'Home', 'browser.newFolder': 'New folder', 'browser.folderName': 'Folder name',
+  'browser.createIn': 'New folder in “{name}”', 'browser.untitledFolder': 'Untitled folder', 'browser.create': 'Create',
+  'browser.cancel': 'Cancel', 'browser.open': 'Open', 'browser.editPath': 'Edit path', 'browser.loading': 'Loading…',
+  'browser.truncated': 'Too many folders to list; only the beginning is shown.', 'browser.showHidden': 'Show hidden files',
   'search.pending': 'Searching…', 'search.noMatches': 'No matching sessions', 'search.unavailable': 'Search is unavailable',
   renameTitle: 'Rename', refreshTitle: 'Refresh title', titleInput: 'Session title', saveTitle: 'Save', cancelTitle: 'Cancel',
   'actions.newSession.aria': 'New session in {name}', 'actions.session.aria': 'Session actions for {name}',
@@ -91,6 +103,7 @@ type NativeWorkspacesInjected = {
   hooks: {
     conversation: NativeConversationService
     workspaceRegistry: HostObservable<NativeWorkspaceSnapshot>
+    homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
   selectSession: NativeConversationService['select']
@@ -99,7 +112,9 @@ type NativeWorkspacesInjected = {
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
   selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
-  createWorkspace: () => Promise<void>
+  listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
+  createDirectory: NativeDirectoryPickerClient['createDirectory']
+  createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
   deleteWorkspace: NativeWorkspaceClient['delete']
   toggleSidebar: () => void
@@ -113,6 +128,7 @@ function groupNativeSessions(
   displayTitle: NativeSessionPresentation['displayTitle'],
   collapsedGroups: ReadonlySet<string>,
   order: 'updated' | 'manual',
+  groupBy: 'workspace' | 'flat',
   t: NativeSidebarTranslate,
 ): NativeSessionGroup[] {
   const archived = new Set(registry.archivedSessionIds)
@@ -135,6 +151,7 @@ function groupNativeSessions(
       running: session.running,
       runningSubagentCount: session.runningSubagentCount,
       completed: session.completed,
+      hasActiveSchedule: session.hasActiveSchedule,
       updatedAt: session.updatedAt,
     }))
   }
@@ -162,6 +179,16 @@ function groupNativeSessions(
       containsCurrent: children.some(session => session.id === selected), sessions: children,
     })
   }
+  if (groupBy === 'flat') {
+    const sessions = groups.flatMap(group => group.sessions)
+    if (sessions.length === 0) return []
+    if (order === 'updated') sessions.sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0))
+    return [{
+      key: 'flat', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: t('sessions'),
+      sessionCount: sessions.length, expanded: true, containsCurrent: sessions.some(session => session.id === selected),
+      sessions,
+    }]
+  }
   return groups
 }
 
@@ -175,9 +202,12 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+const SEARCH_DEBOUNCE_MS = 250
+
 function NativeSessionBrowser({
   wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, renameTitle, refreshTitle,
-  searchSessions, archiveSession, selectWorkspace, createWorkspace, renameWorkspace, deleteWorkspace, toggleSidebar, t,
+  searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
+  renameWorkspace, deleteWorkspace, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
@@ -189,7 +219,10 @@ function NativeSessionBrowser({
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
   selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
-  createWorkspace: () => Promise<void>
+  useHomeDirectory: SnapshotSelectorHook<string | undefined>
+  listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
+  createDirectory: NativeDirectoryPickerClient['createDirectory']
+  createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
   deleteWorkspace: NativeWorkspaceClient['delete']
   toggleSidebar: () => void
@@ -197,6 +230,7 @@ function NativeSessionBrowser({
 }) {
   const snapshot = useConversation(value => value)
   const registry = useWorkspaceRegistry(value => value)
+  const homeDirectory = useHomeDirectory(value => value)
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
   const [titleDraft, setTitleDraft] = useState('')
@@ -208,10 +242,15 @@ function NativeSessionBrowser({
   const [searchExpanded, setSearchExpanded] = useState(false)
   const [query, setQuery] = useState('')
   const [order, setOrder] = useState<'updated' | 'manual'>('updated')
+  const [groupBy, setGroupBy] = useState<'workspace' | 'flat'>('workspace')
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
+  const [directoryPickerOpen, setDirectoryPickerOpen] = useState(false)
+  const [directoryPickerBusy, setDirectoryPickerBusy] = useState(false)
+  const [directoryPickerError, setDirectoryPickerError] = useState<string>()
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
   const searchInput = useRef<HTMLInputElement>(null)
-  const groups = groupNativeSessions(snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, t)
+  const groups = groupNativeSessions(snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t)
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
@@ -226,28 +265,30 @@ function NativeSessionBrowser({
     }
     const request = new AbortController()
     setSearchState({ query: searchQuery, status: 'loading', items: [] })
-    void searchSessions(searchQuery, undefined, request.signal).then((page) => {
-      if (request.signal.aborted) return
-      const items = page.items.filter(item => !archived.has(item.sessionId)).map((item) => {
-        const session = sessionItems.get(item.sessionId)
-        const workspace = item.workspaceId === undefined ? undefined : workspaceItems.get(item.workspaceId)
-        return {
-          id: item.sessionId,
-          title: item.title,
-          workspace: workspace?.title ?? (item.cwd === undefined ? t('group.ungrouped') : workspaceLabel(item.cwd)),
-          ...(item.snippet === undefined ? {} : { snippet: item.snippet }),
-          ...(session?.pendingInteraction === undefined ? {} : { pendingInteraction: session.pendingInteraction.kind }),
-          running: session?.running ?? false,
-          runningSubagentCount: session?.runningSubagentCount ?? 0,
-          completed: session?.completed ?? false,
-          hasActiveSchedule: false,
-        }
+    const timer = window.setTimeout(() => {
+      void searchSessions(searchQuery, undefined, request.signal).then((page) => {
+        if (request.signal.aborted) return
+        const items = page.items.filter(item => !archived.has(item.sessionId)).map((item) => {
+          const session = sessionItems.get(item.sessionId)
+          const workspace = item.workspaceId === undefined ? undefined : workspaceItems.get(item.workspaceId)
+          return {
+            id: item.sessionId,
+            title: item.title,
+            workspace: workspace?.title ?? (item.cwd === undefined ? t('group.ungrouped') : workspaceLabel(item.cwd)),
+            ...(item.snippet === undefined ? {} : { snippet: item.snippet }),
+            ...(session?.pendingInteraction === undefined ? {} : { pendingInteraction: session.pendingInteraction.kind }),
+            running: session?.running ?? false,
+            runningSubagentCount: session?.runningSubagentCount ?? 0,
+            completed: session?.completed ?? false,
+            hasActiveSchedule: session?.hasActiveSchedule ?? false,
+          }
+        })
+        setSearchState({ query: searchQuery, status: 'ready', items })
+      }).catch(() => {
+        if (!request.signal.aborted) setSearchState({ query: searchQuery, status: 'error', items: [] })
       })
-      setSearchState({ query: searchQuery, status: 'ready', items })
-    }).catch(() => {
-      if (!request.signal.aborted) setSearchState({ query: searchQuery, status: 'error', items: [] })
-    })
-    return () => { request.abort() }
+    }, SEARCH_DEBOUNCE_MS)
+    return () => { window.clearTimeout(timer); request.abort() }
   }, [searchExpanded, searchQuery, searchSessions, archived, sessionItems, workspaceItems, t])
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
@@ -255,10 +296,53 @@ function NativeSessionBrowser({
   const addWorkspaceAction = <Tooltip label={t('addWorkspace')} delayMs={500} disabled={wide}>
     <button type="button" className={css.workspaceHeaderButton} aria-label={t('addWorkspace')}
       title={t('addWorkspace')} disabled={snapshot.state !== 'ready' || !registry.ready}
-      onClick={() => { runAction(createWorkspace) }}>
+      onClick={() => { setDirectoryPickerError(undefined); setDirectoryPickerOpen(true) }}>
       <IconProjectAddOutline16 size={wide ? 16 : 18} />
     </button>
   </Tooltip>
+  const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false) => {
+    const item = sessionItems.get(session.id)
+    return <div key={session.id}>
+      <SessionNodeItem
+        node={session}
+        currentId={snapshot.selected}
+        now={Date.now()}
+        onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
+        onRename={item?.titleActions?.rename === true
+          ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
+          : undefined}
+        onRefresh={item?.titleActions?.refresh === true
+          ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
+          : undefined}
+        onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
+        allowRemove={false}
+        flat={flat}
+        refreshTitleLabel={t('refreshTitle')}
+        t={t}
+      />
+      {editingId === session.id && <form className={css.sessionRename} onSubmit={(event) => {
+        event.preventDefault()
+        void renameTitle(session.id, titleDraft).then((success) => { if (success) setEditingId(undefined) })
+      }}>
+        <label>{t('titleInput')}
+          <input aria-label={t('titleInput')} value={titleDraft} onChange={(event) => { setTitleDraft(event.target.value) }} />
+        </label>
+        <Button type="submit" variant="primary" size="sm" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</Button>
+        <Button type="button" variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>
+          {t('cancelTitle')}
+        </Button>
+      </form>}
+    </div>
+  }
+  const adoptWorkspaceDirectory = (path: string): void => {
+    setDirectoryPickerError(undefined)
+    setDirectoryPickerBusy(true)
+    void createWorkspace(path).then(() => {
+      setDirectoryPickerOpen(false)
+    }).catch((error: unknown) => {
+      setDirectoryPickerError(errorMessage(error))
+    }).finally(() => { setDirectoryPickerBusy(false) })
+  }
   const confirmWorkspaceDelete = (): void => {
     if (workspaceDeleteTarget === undefined || workspaceDeletePending) return
     setWorkspaceDeletePending(true)
@@ -274,7 +358,7 @@ function NativeSessionBrowser({
     : { query: searchQuery, status: 'loading' as const, items: [] }
   if (!wide) return <WorkspaceSectionHeader
     wide={false}
-    label={t('workspace')}
+    label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
     searchExpanded={searchExpanded}
     query={query}
     maxLength={500}
@@ -288,7 +372,7 @@ function NativeSessionBrowser({
   return <div className={css.workspaceBrowser}>
     <WorkspaceSectionHeader
       wide={wide}
-      label={t('workspace')}
+      label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
       searchExpanded={searchExpanded}
       query={query}
       maxLength={500}
@@ -302,10 +386,35 @@ function NativeSessionBrowser({
       onQueryChange={setQuery}
       onSearchClear={() => { setSearchExpanded(false); setQuery('') }}
       actions={<>
-        <button type="button" className={css.workspaceHeaderButton} aria-label={t(order === 'updated' ? 'sortManual' : 'sortUpdated')}
-          title={t(order === 'updated' ? 'sortManual' : 'sortUpdated')} onClick={() => { setOrder(order === 'updated' ? 'manual' : 'updated') }}>
-          <IconPersonalizationOutline16 />
-        </button>
+        <Menu
+          open={viewOptionsOpen}
+          onClose={() => { setViewOptionsOpen(false) }}
+          items={[
+            { type: 'label', id: 'group-by', text: t('groupBy') },
+            { id: 'workspace', label: t('groupWorkspace') },
+            { id: 'flat', label: t('groupFlat') },
+            { type: 'separator', id: 'order-separator' },
+            { type: 'label', id: 'order-by', text: t('orderBy') },
+            { id: 'updated', label: t('sortUpdated') },
+            { id: 'manual', label: t('sortManual') },
+          ] satisfies readonly MenuEntry[]}
+          selectedIds={[groupBy, order]}
+          onSelect={(id) => {
+            if (id === 'workspace' || id === 'flat') setGroupBy(id)
+            else if (id === 'updated' || id === 'manual') setOrder(id)
+            setViewOptionsOpen(false)
+          }}
+          portal
+          closeOnPointerLeave
+          anchor={(
+            <Tooltip label={t('viewOptions')} side="bottom" delayMs={500}>
+              <button type="button" className={css.workspaceHeaderButton} aria-label={t('viewOptions')}
+                title={t('viewOptions')} onClick={() => { setViewOptionsOpen(value => !value) }}>
+                <IconPersonalizationOutline16 />
+              </button>
+            </Tooltip>
+          )}
+        />
         {addWorkspaceAction}
       </>}
     />
@@ -326,75 +435,50 @@ function NativeSessionBrowser({
         />)}
       </> : <>
         {groups.length === 0 && <WorkspaceSectionEmpty label={snapshot.state === 'loading' || !registry.ready ? t('loading') : t('empty')} />}
-        {groups.map((group) => {
-          const workspaceId = group.workspaceId
-          const workspaceActions = workspaceId === undefined ? undefined : {
-            rename: () => {
-              const workspace = workspaceItems.get(workspaceId)
-              if (workspace !== undefined) { setWorkspaceTitleDraft(workspace.title); setEditingWorkspaceId(workspaceId) }
-            },
-            delete: () => {
-              setWorkspaceDeleteError(undefined)
-              setWorkspaceDeleteTarget({ id: workspaceId, title: group.label })
-            },
-          }
-          return <div className={css.workspaceGroup} key={group.key}>
-            <ProjectRowItem group={group} label={group.label} onToggle={() => {
-              setCollapsedGroups((current) => {
-                const next = new Set(current)
-                if (next.has(group.key)) next.delete(group.key)
-                else next.add(group.key)
-                return next
-              })
-              if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
-            }} onCreate={workspaceId === undefined ? undefined : () => {
-              if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
-            }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
-            {editingWorkspaceId === workspaceId && workspaceId !== undefined && <form className={css.sessionRename} onSubmit={(event) => {
-              event.preventDefault()
-              runAction(async () => { await renameWorkspace(workspaceId, workspaceTitleDraft.trim()); setEditingWorkspaceId(undefined) })
-            }}>
-              <label>{t('workspaceTitle')}
-                <input aria-label={t('workspaceTitle')} required value={workspaceTitleDraft} onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
-              </label>
-              <Button type="submit" variant="primary" size="sm">{t('saveTitle')}</Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingWorkspaceId(undefined) }}>{t('cancelTitle')}</Button>
-            </form>}
-            {group.expanded && group.sessions.map((session) => {
-              const item = sessionItems.get(session.id)
-              return <div key={session.id}>
-                <SessionNodeItem
-                  node={session}
-                  currentId={snapshot.selected}
-                  now={Date.now()}
-                  onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
-                  onRename={item?.titleActions?.rename === true
-                    ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
-                    : undefined}
-                  onRefresh={item?.titleActions?.refresh === true
-                    ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
-                    : undefined}
-                  onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
-                  allowRemove={false}
-                  refreshTitleLabel={t('refreshTitle')}
-                  t={t}
-                />
-                {editingId === session.id && <form className={css.sessionRename} onSubmit={(event) => {
-                  event.preventDefault()
-                  void renameTitle(session.id, titleDraft).then((success) => { if (success) setEditingId(undefined) })
-                }}>
-                  <label>{t('titleInput')}
-                    <input aria-label={t('titleInput')} value={titleDraft} onChange={(event) => { setTitleDraft(event.target.value) }} />
-                  </label>
-                  <Button type="submit" variant="primary" size="sm" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</Button>
-                  <Button type="button" variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>
-                    {t('cancelTitle')}
-                  </Button>
-                </form>}
-              </div>
-            })}
-          </div>
-        })}
+        {groupBy === 'flat'
+          ? groups.flatMap(group => group.sessions.map(session => renderSession(session, true)))
+          : groups.map((group) => {
+            const workspaceId = group.workspaceId
+            const workspaceActions = workspaceId === undefined ? undefined : {
+              rename: () => {
+                const workspace = workspaceItems.get(workspaceId)
+                if (workspace !== undefined) { setWorkspaceTitleDraft(workspace.title); setEditingWorkspaceId(workspaceId) }
+              },
+              delete: () => {
+                setWorkspaceDeleteError(undefined)
+                setWorkspaceDeleteTarget({ id: workspaceId, title: group.label })
+              },
+            }
+            return <div className={css.workspaceGroup} key={group.key}>
+              <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
+                setCollapsedGroups((current) => {
+                  const next = new Set(current)
+                  if (next.has(group.key)) next.delete(group.key)
+                  else next.add(group.key)
+                  return next
+                })
+                if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+              }} onCreate={workspaceId === undefined ? undefined : () => {
+                setCollapsedGroups((current) => {
+                  const next = new Set(current)
+                  next.delete(group.key)
+                  return next
+                })
+                if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+              }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
+              {editingWorkspaceId === workspaceId && workspaceId !== undefined && <form className={css.sessionRename} onSubmit={(event) => {
+                event.preventDefault()
+                runAction(async () => { await renameWorkspace(workspaceId, workspaceTitleDraft.trim()); setEditingWorkspaceId(undefined) })
+              }}>
+                <label>{t('workspaceTitle')}
+                  <input aria-label={t('workspaceTitle')} required value={workspaceTitleDraft} onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
+                </label>
+                <Button type="submit" variant="primary" size="sm">{t('saveTitle')}</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingWorkspaceId(undefined) }}>{t('cancelTitle')}</Button>
+              </form>}
+              {group.expanded && group.sessions.map(session => renderSession(session))}
+            </div>
+          })}
       </>}
     </nav>
     <Modal
@@ -417,6 +501,16 @@ function NativeSessionBrowser({
       {workspaceDeletePending && <div role="status">{t('delete.pending')}</div>}
       {workspaceDeleteError !== undefined && <div role="alert">{workspaceDeleteError}</div>}
     </Modal>
+    <DirectoryBrowser
+      open={directoryPickerOpen}
+      listDirectory={listDirectory}
+      createDirectory={createDirectory}
+      onOpen={adoptWorkspaceDirectory}
+      onClose={() => { setDirectoryPickerOpen(false) }}
+      busy={directoryPickerBusy}
+      ownerError={directoryPickerError}
+      t={t}
+    />
   </div>
 }
 
@@ -484,6 +578,25 @@ export const plugin: NativePlugin = {
     const workspaceRegistry = createSnapshotStore<NativeWorkspaceSnapshot>({
       workspaces: [], archivedSessionIds: [], ready: false,
     })
+    const homeDirectory = createSnapshotStore<string | undefined>(undefined)
+    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ path }) => {
+      homeDirectory.set(path)
+    }).catch((error: unknown) => {
+      if (!context.signal.aborted) console.error('native sidebar home directory lookup failed:', error)
+    })
+    context.own(async () => { await homeLookup })
+    const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
+      const listing = await directoryPicker.list(path, signal ?? context.signal)
+      if (path === undefined) homeDirectory.set(listing.path)
+      return {
+        path: listing.path,
+        home: homeDirectory.getSnapshot() ?? listing.path,
+        crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
+        entries: listing.entries.filter(entry => entry.kind === 'directory')
+          .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),
+        truncated: false,
+      }
+    }
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
@@ -535,7 +648,7 @@ export const plugin: NativePlugin = {
     context.own(slots.inject('sidebar.workspaces', () => slots.register({
       name: 'sidebar.workspaces', locale: 'nativeSidebar',
       inject: (): NativeWorkspacesInjected => ({
-        hooks: { conversation: controller, workspaceRegistry },
+        hooks: { conversation: controller, workspaceRegistry, homeDirectory },
         displayTitle: item => presentation.displayTitle(item),
         selectSession: controller.select.bind(controller),
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
@@ -549,9 +662,9 @@ export const plugin: NativePlugin = {
           const { sessionId } = await workspaceClient.connectWorkspace(id, context.signal)
           await controller.select(sessionId)
         },
-        createWorkspace: async () => {
-          const path = await directoryPicker.pick(context.signal)
-          if (path === null) return
+        listDirectory,
+        createDirectory: (path, name) => directoryPicker.createDirectory(path, name, context.signal),
+        createWorkspace: async (path) => {
           const { workspace } = await workspaceClient.create({ path }, context.signal)
           const { sessionId } = await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
           await controller.select(sessionId)
@@ -560,13 +673,16 @@ export const plugin: NativePlugin = {
         deleteWorkspace: id => workspaceClient.delete(id, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
       }),
-    }, ({ wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, renameTitle, refreshTitle,
-      searchSessions, archiveSession, selectWorkspace, createWorkspace, renameWorkspace, deleteWorkspace, toggleSidebar,
+    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle, selectSession, renameTitle, refreshTitle,
+      searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
+      renameWorkspace, deleteWorkspace, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
+        useHomeDirectory={useHomeDirectory}
         displayTitle={displayTitle} selectSession={selectSession} renameTitle={renameTitle} refreshTitle={refreshTitle}
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
-        createWorkspace={createWorkspace} renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
+        listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
+        renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
         toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',

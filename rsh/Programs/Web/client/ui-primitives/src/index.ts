@@ -56,6 +56,10 @@ export type {
 } from './workspace-rows/types.ts'
 export { WorkspaceSectionEmpty, WorkspaceSectionHeader } from './workspace-rows/WorkspaceSection.tsx'
 export { workspaceLabel } from './workspace-rows/workspace-label.ts'
+export { DirectoryBrowser } from './DirectoryBrowser.tsx'
+export type {
+  DirectoryBrowserEntry, DirectoryBrowserKey, DirectoryBrowserListing, DirectoryBrowserProps, DirectoryBrowserTranslate,
+} from './DirectoryBrowser.tsx'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'
