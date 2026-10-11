@@ -400,6 +400,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     })
     const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
+      hasDocument: false,
       limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
     } })
     const hasSettingsNamespaces = rawSettingsReply.ok
@@ -413,6 +414,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
     const settingsDescription = await client.settingsDescribe()
+    expect(await rpc.call('/api', 'settings/open-document', {}, new AbortController().signal)).toMatchObject({
+      ok: false, error: { code: 'native/settings', message: 'Settings request failed.' },
+    })
     expect(settingsDescription.limits).toEqual({ maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 })
     const settingsViews = settingsDescription.namespaces
     const settingsView = settingsViews.find(row => row.namespace === 'native-settings-test')

@@ -37,6 +37,7 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
+import { openNativeTextFile } from '@deepseek-ai/dsh-native-command'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
@@ -119,7 +120,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate',
+  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'models/providers', 'models/configurable-providers', 'models/discover',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
@@ -615,13 +616,22 @@ export class NativeWebSessionService {
   private async configuration(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
     if (endpoint === 'settings/describe') {
       if (Object.keys(object(payload)).length !== 0) throw new TypeError('native settings: describe takes no fields')
+      const settings = this.settings()
       return {
-        namespaces: this.settings().describe(),
+        hasDocument: settings.documentPath !== undefined,
+        namespaces: settings.describe(),
         limits: {
           maxCredentialRefsPerRead: this.config.maxCredentialRefsPerRead,
           maxSettingsOperations: this.config.maxSettingsOperations,
         },
       }
+    }
+    if (endpoint === 'settings/open-document') {
+      if (Object.keys(object(payload)).length !== 0) throw new TypeError('native settings: open-document takes no fields')
+      const path = this.settings().documentPath
+      if (path === undefined) throw new Error('native settings: no local settings document')
+      await openNativeTextFile(path, signal)
+      return { opened: true }
     }
     if (endpoint === 'settings/mutate') {
       const request = nativeSettingsMutation.parse(payload)
