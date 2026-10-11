@@ -3,8 +3,73 @@ import { expect, it, vi } from 'vitest'
 import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
 import { NativeWebSessionService, resolveNativeWebSessionConfig } from '../src/native.ts'
 import { NativeSessionFeed } from '../src/follow.ts'
+import { NativeSessionListFeed } from '../src/session-list-follow.ts'
+
+it('sends a list baseline, coalesced updates and removal before releasing its follower', async () => {
+  const sessionId = SessionId('list-follow')
+  const item: NativeSessionListItem = {
+    header: { id: sessionId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false },
+    titleProjection: { status: 'absent' }, updatedAt: 1, blank: true, running: false,
+    completed: false, runningSubagentCount: 0, hasActiveSchedule: false,
+  }
+  let present = true
+  const release = vi.fn()
+  const feed = new NativeSessionListFeed(1000, release)
+  const reader = feed.response(new AbortController().signal, async () => [item], async () => present ? item : undefined)
+    .body!.getReader()
+  const readFrame = async (): Promise<string> => {
+    const result = await reader.read()
+    if (result.done) throw new Error('list stream ended before its frame')
+    return new TextDecoder().decode(result.value)
+  }
+
+  expect(await readFrame()).toContain('"type":"baseline"')
+  feed.push(sessionId)
+  feed.push(sessionId)
+  expect(await readFrame()).toContain('"type":"upsert"')
+  present = false
+  feed.push(sessionId)
+  expect(await readFrame()).toContain('"type":"remove"')
+  await reader.cancel()
+  expect(release).toHaveBeenCalledOnce()
+})
+
+it('splits oversized list baselines and skips oversized upserts', async () => {
+  const makeItem = (id: string, title?: string): NativeSessionListItem => ({
+    header: { id: SessionId(id), version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false },
+    titleProjection: title === undefined ? { status: 'absent' } : { status: 'resolved', title },
+    updatedAt: 1, blank: true, running: false, completed: false,
+    runningSubagentCount: 0, hasActiveSchedule: false,
+  })
+  const first = makeItem('list-small-a')
+  const second = makeItem('list-small-b')
+  const oversized = makeItem('list-large', 'x'.repeat(1000))
+  const encoder = new TextEncoder()
+  const frameBytes = (frame: unknown): number => encoder.encode(`data: ${JSON.stringify(frame)}\n\n`).byteLength
+  const release = vi.fn()
+  const feed = new NativeSessionListFeed(frameBytes({ type: 'upsert', item: first }), release)
+  const items = new Map([[first.header.id, first], [second.header.id, second], [oversized.header.id, oversized]])
+  const reader = feed.response(new AbortController().signal, async () => [first, oversized, second],
+    async id => items.get(id)).body!.getReader()
+  const readFrame = async (): Promise<Record<string, unknown>> => {
+    const result = await reader.read()
+    if (result.done) throw new Error('list stream ended before its frame')
+    return JSON.parse(new TextDecoder().decode(result.value).slice(6)) as Record<string, unknown>
+  }
+
+  expect(await readFrame()).toEqual({ type: 'baseline', items: [] })
+  expect(await readFrame()).toEqual({ type: 'upsert', item: first })
+  expect(await readFrame()).toEqual({ type: 'upsert', item: second })
+  feed.push(oversized.header.id)
+  feed.push(second.header.id)
+  expect(await readFrame()).toEqual({ type: 'upsert', item: second })
+  await reader.cancel()
+  expect(release).toHaveBeenCalledOnce()
+})
 
 it('rejects oversized unread output and detaches a cancelled follower exactly once', async () => {
   const overflow = vi.fn()
@@ -38,9 +103,14 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
     },
     async dispose() {},
   }
+  const active = {
+    owners: () => [],
+    onAttached: () => () => Promise.resolve(),
+    onDetached: () => () => Promise.resolve(),
+  } as unknown as NativeActiveSessionOperations
   // Only turn execution participates in this transport settlement fixture.
   const service = new NativeWebSessionService(executor as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, {} as NativeActiveSessionOperations,
+    {} as NativeSessionPersistenceOperations, active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
       maxPendingRequests: 1, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 1,
       maxFollowers: 1, maxPendingHumanRequests: 2 }),

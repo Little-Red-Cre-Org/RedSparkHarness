@@ -30,6 +30,9 @@
       "path": "../ui-session"
     },
     {
+      "path": "../native-session"
+    },
+    {
       "path": "../ui-layout"
     },
     {

@@ -43,7 +43,7 @@ kind: "package-library"
 | `Pill` | 可选中的胶囊按钮，用于视图切换与筛选器；接受 `active` 与 `onClick`。 |
 | `Tag` | 只读胶囊徽章；`tone` 选择八种配色之一。 |
 | `StateDot` | 状态标记：`done`、`warning`、`ongoing`、`error` 或 `idle`。它是 `aria-hidden` 的，名称由渲染点提供。 |
-| `ProjectRowItem`、`SessionNodeItem`、`SearchResultItem` | 通过 props 提供数据的 Workspace 与 Session 行，由 legacy 和 native 侧边栏组合共享。Project 和 Session 树行可聚焦；Enter 和 Space 会触发行操作。嵌套控件仍执行自身操作。 |
+| `ProjectRowItem`、`SessionNodeItem`、`SearchResultItem` | 通过 props 提供数据的 Workspace 与 Session 行，由 legacy 和 native 侧边栏组合共享。Project 和 Session 树行可聚焦；Enter 和 Space 会触发行操作。`SessionNodeItem.allowRemove` 可在 owner 仅支持归档时隐藏 legacy 确认操作。 |
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
 | `DisclosureRow` | 24px 紧凑折叠行，标题与内容左右排列。 |

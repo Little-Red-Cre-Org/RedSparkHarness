@@ -3,9 +3,11 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
+import { loadNativeProfile } from '../src/native-profile-loader.ts'
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-web-template-'))
@@ -53,6 +55,8 @@ it('defines a native-web Host composition and Client profile without Cordis rows
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
+    await loadNativeProfile({ profile: 'native-web', patchFiles: [], target: 'host', home,
+      installAnchor: fileURLToPath(new URL('../package.json', import.meta.url)) })
     for (const name of ['native-headless', 'native-headless-query', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
       expect(shippedNativeProfileComposition(home, name, 'win32').installations
         .some(row => row.id === 'schedule-controller')).toBe(false)
