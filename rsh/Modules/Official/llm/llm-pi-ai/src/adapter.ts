@@ -37,6 +37,7 @@ import type {
   Models,
   ModelThinkingLevel,
   MutableModels,
+  OAuthCredential,
   Provider,
   RefreshModelsContext,
   SimpleStreamOptions,
@@ -537,13 +538,33 @@ export class PiAiAdapter extends LlmAdapter {
     }
   }
 
-  /** Read only the saved grant identity used to key account-local usage. */
-  private async codexUsageIdentity(): Promise<CodexUsageIdentity> {
-    const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
-    if (!isSiwcCredential(credential)) {
-      throw new LlmError('OpenAI Codex usage observation requires its saved Sign in with ChatGPT grant', 'MISSING_CREDENTIAL')
+  /** Build a request-local collection that records the grant used by its SIWC OAuth auth. */
+  private codexUsageModels(
+    snapshot: PiAiSnapshot,
+    captureIdentity: (identity: CodexUsageIdentity) => void,
+  ): MutableModels {
+    const provider = snapshot.models.getProvider(CODEX_SUBSCRIPTION_ROUTE)
+    if (provider === undefined || provider.auth.oauth === undefined) {
+      throw new Error('llm-pi-ai: OpenAI Codex provider has no SIWC OAuth auth')
     }
-    return { issuer: credential.issuer, subject: credential.subject }
+    const oauth = provider.auth.oauth
+    const models: MutableModels = createModels(this.config.auth)
+    models.setProvider({
+      ...provider,
+      auth: {
+        ...provider.auth,
+        oauth: {
+          ...oauth,
+          async toAuth(credential: OAuthCredential) {
+            if (isSiwcCredential(credential)) {
+              captureIdentity({ issuer: credential.issuer, subject: credential.subject })
+            }
+            return oauth.toAuth(credential)
+          },
+        },
+      },
+    })
+    return models
   }
 
   override prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
@@ -598,9 +619,11 @@ export class PiAiAdapter extends LlmAdapter {
       ? undefined
       : await this.config.resolveApiKey(options.provider, profile)
     const providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
-    const codexIdentity = options.provider === CODEX_SUBSCRIPTION_ROUTE && this.config.onCodexUsage !== undefined
-      ? await this.codexUsageIdentity()
-      : undefined
+    const onCodexUsage = options.provider === CODEX_SUBSCRIPTION_ROUTE ? this.config.onCodexUsage : undefined
+    let codexIdentity: CodexUsageIdentity | undefined
+    const streamModels = onCodexUsage === undefined
+      ? snapshot.models
+      : this.codexUsageModels(snapshot, (identity) => { codexIdentity = identity })
 
     const consumer = new AbortController()
     const upstream = options.signal === undefined
@@ -633,7 +656,7 @@ export class PiAiAdapter extends LlmAdapter {
           },
         }, onReplayDegrade)
       const events = options.provider === CODEX_SUBSCRIPTION_ROUTE
-        ? snapshot.models.stream(model as Model<'openai-responses'>, context, {
+        ? streamModels.stream(model as Model<'openai-responses'>, context, {
           ...apiKey === undefined ? {} : { apiKey },
           ...reasoning === undefined || reasoning === 'off' ? {} : { reasoningEffort: reasoning },
           ...profile.timeoutMs === undefined ? {} : { timeoutMs: profile.timeoutMs },
@@ -642,14 +665,18 @@ export class PiAiAdapter extends LlmAdapter {
           maxRetries: 0,
           signal: watchdog.signal,
           onPayload: siwcResponsesPayload,
-          ...codexIdentity === undefined ? {} : {
+          ...onCodexUsage === undefined ? {} : {
             onResponse: (response) => {
               const observation = parseCodexRateLimitHeaders(response.headers)
-              if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, true)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, true)
+              }
             },
             onProviderStreamEvent: (data) => {
               const observation = parseCodexRateLimitEvent(data)
-              if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, false)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, false)
+              }
             },
           },
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.

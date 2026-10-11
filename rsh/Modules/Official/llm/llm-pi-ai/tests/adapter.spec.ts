@@ -13,6 +13,7 @@ import LlmRuntime, { createUserMessage, CONTEXT_WINDOW_EXCEEDED_CODE, LlmError, 
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import type { Credential } from '@earendil-works/pi-ai'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import { DEFAULT_MAX_REQUEST_IMAGE_BYTES, resolveProfiles } from '../src/config.ts'
 import { memoryAuth } from './auth-double.ts'
@@ -900,6 +901,82 @@ describe('provider profile lifecycle', () => {
       for await (const _chunk of adapter.stream({ provider: 'anthropic', model: 'claude-sonnet-4', messages: [] })) { /* drain */ }
     })()).rejects.toMatchObject({ code: 'NO_ADAPTER' })
     expect(new LlmError('x', 'X')).toBeInstanceOf(Error)
+  })
+
+  it('keys Codex usage to the grant that supplies the request bearer token', async () => {
+    const grants: Credential[] = ['catalog', 'usage', 'request'].map(account => ({
+      type: 'oauth',
+      access: `access-${account}`,
+      refresh: 'fixture-refresh-token',
+      expires: Date.now() + 3_600_000,
+      siwc: 'chatgpt-plan',
+      clientId: 'fixture-issued-client-id',
+      issuer: 'https://auth.openai.com',
+      subject: `subject-${account}`,
+      idToken: 'fixture-id-token',
+      extAgentHostId: 'urn:uuid:fixture-host-id',
+      scopes: ['chatgpt.tokens.use.direct'],
+    }))
+    let catalogLoaded = false
+    let postCatalogReads = 0
+    const auth = memoryAuth()
+    auth.credentials.read = (providerId) => {
+      if (providerId !== 'openai-codex') return Promise.resolve(undefined)
+      const grantIndex = catalogLoaded ? (postCatalogReads++ === 0 ? 1 : 2) : 0
+      return Promise.resolve(grants[grantIndex])
+    }
+    const identities: { issuer: string; subject: string }[] = []
+    const profiles = resolveProfiles({ 'openai-codex': {} })
+    const adapter = new PiAiAdapter({
+      profiles: () => profiles,
+      resolveApiKey: () => Promise.resolve(undefined),
+      auth,
+      onCodexUsage: (identity) => { identities.push(identity) },
+    })
+    const message = {
+      type: 'message', id: 'msg_codex', role: 'assistant', status: 'completed',
+      content: [{ type: 'output_text', text: 'hello', annotations: [] }],
+    }
+    const events = [
+      { type: 'response.output_item.added', output_index: 0, item: { ...message, content: [] } },
+      { type: 'response.content_part.added', output_index: 0, content_index: 0,
+        part: { type: 'output_text', text: '', annotations: [] } },
+      { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'hello' },
+      { type: 'response.output_item.done', output_index: 0, item: message },
+      { type: 'response.completed', response: { id: 'resp_codex', status: 'completed', output: [message],
+        usage: { input_tokens: 3, output_tokens: 1, total_tokens: 4 } } },
+    ]
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (typeof input === 'string' && input === 'https://api.openai.com/v1/models') {
+        catalogLoaded = true
+        return new Response(JSON.stringify({ models: [
+          { slug: 'gpt-test', display_name: 'GPT Test', visibility: 'list' },
+        ] }))
+      }
+      return new Response(
+        events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+        { headers: {
+          'content-type': 'text/event-stream',
+          'x-codex-primary-used-percent': '37',
+          'x-codex-primary-window-minutes': '300',
+        } },
+      )
+    })
+    try {
+      await adapter.resolveModel('openai-codex', 'gpt-test')
+      const chunks = []
+      for await (const chunk of adapter.stream({ provider: 'openai-codex', model: 'gpt-test', messages: [] })) {
+        chunks.push(chunk)
+      }
+
+      const [, options] = fetch.mock.calls[1]!
+      expect(new Headers(options?.headers).get('authorization')).toBe('Bearer access-usage')
+      expect(identities).toEqual([{ issuer: 'https://auth.openai.com', subject: 'subject-usage' }])
+      expect(chunks.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'stop' } })
+      expect(postCatalogReads).toBe(1)
+    } finally {
+      fetch.mockRestore()
+    }
   })
 
   it('rejects unsupported or unresolved image input before provider I/O', async () => {
