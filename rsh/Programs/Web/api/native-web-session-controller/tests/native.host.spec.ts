@@ -52,7 +52,30 @@ import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
-import { plugin, resolveNativeWebSessionConfig, type NativeWebSessionService } from '../src/native.ts'
+import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
+
+it('includes nested AggregateError messages in native Session failures', async () => {
+  const failure = new AggregateError([
+    new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
+  ], 'native-headless: turn cleanup failed')
+  const service = new NativeWebSessionService(
+    { dispose: async () => undefined } as unknown as NativeHeadlessApplication,
+    { open: async () => { throw failure } } as unknown as NativeSessionPersistenceOperations,
+    { owners: () => [] } as unknown as NativeActiveSessionOperations,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
+      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
+      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
+    new AbortController().signal,
+  )
+  try {
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
+    })
+  } finally {
+    await service.close()
+  }
+})
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
