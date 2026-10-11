@@ -17,7 +17,10 @@ import { normalizeWorkspacePaths } from './external-operation/fixtures/workspace
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-headless/ptc-external-cancel')
 const fixtureOutput = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
-const bin = join(root, 'rsh/Programs/CLI/lib/bin.js')
+const installedRoot = process.env.DSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT === undefined
+  ? undefined : resolve(process.env.DSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT)
+const bin = installedRoot === undefined ? join(root, 'rsh/Programs/CLI/lib/bin.js')
+  : join(installedRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js')
 const contextProbe = pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href
 const task = 'Delegate a nested task through the external child and cancel it during the nested request.'
 
@@ -107,7 +110,10 @@ it('records and cold-replays PTC cancellation through a captured external Respon
         ['dsh-tool-code-runtime', 'rsh/Modules/Official/code-runtime/tool-code-runtime'],
       ] as const) {
         const link = join(profileModules, '@deepseek-ai', name)
-        symlinkSync(join(root, path), link, 'junction')
+        const source = installedRoot === undefined ? join(root, path)
+          : join(installedRoot, 'node_modules/@deepseek-ai', name)
+        if (!existsSync(source)) throw new Error(`ptc-external-cancel: missing runtime package ${source}`)
+        symlinkSync(source, link, 'junction')
         links.push(link)
       }
       installFixturePackage(profileModules, 'native-ptc-external-cancel-model',

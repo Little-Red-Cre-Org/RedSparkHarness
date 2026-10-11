@@ -1,7 +1,9 @@
 /** Refuse Cordis Context construction in a separate process without editing vendored code. */
 export async function load(url, context, nextLoad) {
   const result = await nextLoad(url, context)
-  if (!url.replaceAll('\\', '/').endsWith('/rsh/Core/vendor/cordis/lib/index.js')) return result
+  const path = url.replaceAll('\\', '/')
+  if (!path.endsWith('/rsh/Core/vendor/cordis/lib/index.js')
+    && !path.endsWith('/node_modules/@deepseek-ai/cordis/lib/index.js')) return result
   const source = String(result.source)
   const marker = 'var Context = class Context {'
   const start = source.indexOf(marker)
