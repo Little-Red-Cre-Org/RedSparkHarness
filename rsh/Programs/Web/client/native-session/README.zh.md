@@ -34,6 +34,10 @@ kind: "package-reference"
 
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
 
+`modeControls(sessionId, signal?)` 会读取当前 agent preset、已安装选项、持久化修订号与空白 Session 锁定状态。模式变更通过携带该修订号的 `selectPreset` 完成。同一响应还包含 plan mode 的可用性及当前或待应用状态；`selectPlanMode(sessionId, active, signal?)` 返回 Host 状态机的 `committed`、`queued`、`cancelled` 或 `noop` 结果。
+
+`permissionControls(sessionId, signal?)` 返回有效的常驻权限策略与已配置选项。`selectPermissionPreset(sessionId, preset, signal?)` 通过 Host 的确切 Session owner 持久化该选择；它不会回答待处理的一次性审批请求。未安装 permission Provider 时，读取结果为 `available: false`、`currentValue: null` 和空选项。
+
 `agentPresetsList(signal?)` 调用 `agent-presets/list` 并校验 Host 返回的 `{ default, presets }`。它同时包含 profile 独有的常驻组合和扫描到的原生目录；目录提供信任级别时，`source` 为 `system` 或 `user`，否则为 `profile`。Host 未安装 Registry 时返回 `default: null` 和空列表。
 
 `agentPresetRead(id, signal?)` 返回 preset 来源、状态、元数据与原生组装文件文本；profile 独有的行没有文件内容。`agentPresetCopy(from, id, name?, signal?)` 将文件 preset 复制到 Host 用户目录；`agentPresetDelete(id, signal?)` 只删除用户 preset。`agentPresetsCanOpenDirectory(signal?)` 报告 Host 打开器是否可用；`agentPresetOpenDirectory(id, signal?)` 打开用户目录，或返回 Host 本地路径。这五个方法都通过 `NativeSessionRpcError` 保留 Host 拒绝码。

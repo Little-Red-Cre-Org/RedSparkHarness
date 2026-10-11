@@ -11,6 +11,9 @@ import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@d
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
+import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
+  type NativeModeControls, type NativePermissionControls, type NativePlanModeSelection } from './composer-controls.ts'
+export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
@@ -497,6 +500,32 @@ export interface NativeSessionClient {
    * @returns current Host capability availability and provider-owned choices.
    */
   modelControls(signal?: AbortSignal): Promise<NativeModelControls>
+  /** Read the selected Session's current mode, mode choices and plan-mode state.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host mode facts and installed choices.
+   */
+  modeControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativeModeControls>
+  /** Select plan mode through the Host's durable and pending-step state machine.
+   * @param sessionId - selected stored Session.
+   * @param active - requested plan-mode state.
+   * @param signal - caller cancellation.
+   * @returns the Host's committed or pending state and outcome.
+   */
+  selectPlanMode(sessionId: SessionId, active: boolean, signal?: AbortSignal): Promise<NativePlanModeSelection>
+  /** Read the selected Session's current standing permission policy and choices.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host permission controls, or an unavailable result when no Provider is installed.
+   */
+  permissionControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativePermissionControls>
+  /** Select a standing permission preset without answering pending one-shot approvals.
+   * @param sessionId - selected stored Session.
+   * @param preset - configured permission preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host persists the policy.
+   */
+  selectPermissionPreset(sessionId: SessionId, preset: string, signal?: AbortSignal): Promise<void>
   /** Persist a Session-local model/effort intent against its last observed revision.
    * @param sessionId - selected stored Session.
    * @param request - complete model choice and expected durable intent revision.
@@ -872,6 +901,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return undefined
   }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
+  if (endpoint === 'session/mode-controls') return nativeModeControlsSchema.parse(value)
+  if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
+  if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(listItem)
@@ -921,6 +953,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/select-model':
     case 'session/select-preset':
       if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
+      break
+    case 'session/select-permission':
+      if (data.changed !== true) throw new TypeError('invalid native permission selection acknowledgement')
       break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
@@ -1213,6 +1248,12 @@ export function createNativeSessionClient(
     async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
     async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
+    modeControls: (sessionId, signal) => call('session/mode-controls', { sessionId }, signal),
+    selectPlanMode: (sessionId, active, signal) => call('session/select-plan-mode', { sessionId, active }, signal),
+    permissionControls: (sessionId, signal) => call('session/permission-controls', { sessionId }, signal),
+    async selectPermissionPreset(sessionId, preset, signal) {
+      await call('session/select-permission', { sessionId, preset }, signal)
+    },
     async selectModel(sessionId, request, signal) {
       await call('session/select-model', { sessionId, ...request }, signal)
     },
