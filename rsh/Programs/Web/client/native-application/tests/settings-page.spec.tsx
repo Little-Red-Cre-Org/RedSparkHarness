@@ -158,7 +158,7 @@ it('renders DeepSeek identity, wallet balance and bonus balance', async () => {
   }
   const readyBalance: Extract<NativeAccountBalance, { status: 'ready' }> = {
     status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }, { currency: 'USD', balance: '0.40' }],
-    bonusWallets: [{ currency: 'CNY', balance: '3.00' }],
+    bonusWallets: [{ currency: 'CNY', balance: '3.00' }, { currency: 'USD', balance: '0E-16' }],
   }
   const accountsUsage = vi.fn(async () => readyUsage)
   const accountsBalance = vi.fn(async () => readyBalance)
@@ -174,6 +174,7 @@ it('renders DeepSeek identity, wallet balance and bonus balance', async () => {
   expect(screen.getByText('¥12.30')).toBeTruthy()
   expect(screen.getByText('$0.40')).toBeTruthy()
   expect(screen.getByText('¥3.00')).toBeTruthy()
+  expect(screen.getByText('$0.00')).toBeTruthy()
   expect(accountsBalance).toHaveBeenCalledWith(deepSeek.key, expect.anything())
   expect(accountsUsage).toHaveBeenCalledWith(chatGptAccount.key, expect.anything())
 })
@@ -516,6 +517,7 @@ it('refresh mid-login then resume and finish', async () => {
     expect(await screen.findByText(en.authorizationAuthorized)).toBeTruthy()
     await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
     await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
+    expect(screen.queryByRole('link', { name: 'https://auth.example/device' })).toBeNull()
     expect(answer).toBe('secret-answer')
     expect(cancel).not.toHaveBeenCalled()
   } finally { await authorization.dispose() }
