@@ -22,9 +22,13 @@ import {
 } from './subagent-lineage.ts'
 
 export { workspaceLabel }
+/** Session row data used by the Workspace browser tree. */
 export type SessionNode = SessionRowNode<SessionId>
+/** Workspace group data used by the Workspace browser tree. */
 export type GroupNode = WorkspaceGroupRow<WorkspaceId, SessionId>
+/** Session search result data used by the flat browser row. */
 export type SearchResultNode = SessionSearchRow<SessionId>
+/** Pending interaction categories displayed on Session rows. */
 export type SessionPendingInteractionStatus = SharedSessionPendingInteractionStatus
 
 /** Group key for Sessions outside every Workspace. */

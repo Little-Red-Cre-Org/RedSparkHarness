@@ -1,8 +1,8 @@
 # Agent Note: Native sidebar session projection
 
-English | [中文](2026-10-11-native-sidebar-session-projection.zh.md)
-
 Status: implemented
+
+English | [中文](2026-10-11-native-sidebar-session-projection.zh.md)
 
 ## Problem
 
