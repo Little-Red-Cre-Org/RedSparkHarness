@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
 import type { NativeModelSettings } from '@deepseek-ai/dsh-llm-pi-ai/native'
