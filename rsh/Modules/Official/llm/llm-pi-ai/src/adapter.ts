@@ -68,6 +68,8 @@ import { catalogProvider } from './catalog.ts'
 import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
 import { createSiwcOAuth, isSiwcCredential } from './siwc.ts'
+import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
+import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
 import { toStreamChunks } from './stream.ts'
 
 /** One resolution's frozen view: the profiles and the collection built from them. */
@@ -103,6 +105,16 @@ export interface PiAiAdapterOptions {
   resolveRequestHeaders?: (
     provider: string, profile: ResolvedPiAiProviderProfile, signal?: AbortSignal,
   ) => Promise<Readonly<Record<string, string>> | undefined>
+  /**
+   * Record SIWC usage observations from the public Responses transport.
+   * @param identity - issuer and subject from the grant used for this request.
+   * @param observation - quota, credit and plan values read from the response.
+   * @param replaceQuotas - whether the observation contains the complete header quota set.
+   * @returns nothing; the callback retains the observation for account usage reads.
+   */
+  onCodexUsage?: (
+    identity: CodexUsageIdentity, observation: CodexUsageObservation, replaceQuotas: boolean,
+  ) => void
   /**
    * How every collection this adapter builds resolves auth the request-level
    * `apiKey` override does not cover. Required rather than optional: a
@@ -525,6 +537,15 @@ export class PiAiAdapter extends LlmAdapter {
     }
   }
 
+  /** Read only the saved grant identity used to key account-local usage. */
+  private async codexUsageIdentity(): Promise<CodexUsageIdentity> {
+    const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
+    if (!isSiwcCredential(credential)) {
+      throw new LlmError('OpenAI Codex usage observation requires its saved Sign in with ChatGPT grant', 'MISSING_CREDENTIAL')
+    }
+    return { issuer: credential.issuer, subject: credential.subject }
+  }
+
   override prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
     const snapshot = this.current()
     return Promise.resolve().then(async () => {
@@ -577,6 +598,9 @@ export class PiAiAdapter extends LlmAdapter {
       ? undefined
       : await this.config.resolveApiKey(options.provider, profile)
     const providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    const codexIdentity = options.provider === CODEX_SUBSCRIPTION_ROUTE && this.config.onCodexUsage !== undefined
+      ? await this.codexUsageIdentity()
+      : undefined
 
     const consumer = new AbortController()
     const upstream = options.signal === undefined
@@ -618,6 +642,16 @@ export class PiAiAdapter extends LlmAdapter {
           maxRetries: 0,
           signal: watchdog.signal,
           onPayload: siwcResponsesPayload,
+          ...codexIdentity === undefined ? {} : {
+            onResponse: response => {
+              const observation = parseCodexRateLimitHeaders(response.headers)
+              if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, true)
+            },
+            onProviderStreamEvent: data => {
+              const observation = parseCodexRateLimitEvent(data)
+              if (observation !== undefined) this.config.onCodexUsage?.(codexIdentity, observation, false)
+            },
+          },
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
           headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
         })

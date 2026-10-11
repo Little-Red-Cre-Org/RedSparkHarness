@@ -40,7 +40,7 @@ The same Consumer exposes `settingsDescribe`, revision-checked `settingsMutate`,
 
 Authorization methods list safe flow metadata, begin an attempt, stream replayable secret-free frames from the authorization Fetch route, and answer, decline or cancel by the current attempt identity.
 
-Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. Account responses contain no credential values.
+Account methods list safe Host-projected identities, read provider usage and sign out by account key. Identity email, name and avatar URL are nullable; usage distinguishes ready, signed-out, failed and unsupported results. OpenAI Codex returns `USAGE_PENDING` until a model call reports limits, then returns the grant email, nullable plan, quota windows and optional credits; these snapshots exist only in Host memory and are isolated by the saved grant issuer and subject. Account responses contain no credential values.
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
