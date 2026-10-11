@@ -288,8 +288,8 @@ function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClic
       {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
       {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
     </div> : null)}
-    {settled?.type !== 'settled' ? null : <p role="status">{t(settled.settlement === 'authorized' ? 'authorizationAuthorized'
-      : settled.settlement === 'cancelled' ? 'authorizationCancelled' : 'authorizationFailed')}
+    {settled?.type !== 'settled' || settled.settlement === 'authorized' ? null : <p role="status">{t(settled.settlement === 'cancelled'
+      ? 'authorizationCancelled' : 'authorizationFailed')}
     {settled.settlement === 'failed' && settled.message !== undefined ? <> {settled.message}</> : null}
     {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
     </p>}
