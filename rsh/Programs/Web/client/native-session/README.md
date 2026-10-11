@@ -45,6 +45,8 @@ Account methods list safe Host-projected identities, read provider usage and sig
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {
+  /** Whether the Host has a local settings document `settingsOpenDocument` can open. */
+  readonly hasDocument: boolean
   /** Registered, redacted Settings namespaces. */
   readonly namespaces: readonly NativeSettingsDescriptor[]
   /** Per-request limits enforced by the selected Host. */
