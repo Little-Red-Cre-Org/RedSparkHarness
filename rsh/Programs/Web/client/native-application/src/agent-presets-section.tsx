@@ -1,5 +1,5 @@
 /** Agent preset management in Native Web Settings. */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, IconBrowseOutline16, IconCopyOutline16, IconFolderOpenOutline16, IconTrashOutline16, Modal, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativeAgentPresetDocument, NativeAgentPresetList, NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
@@ -34,6 +34,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [revealedPaths, setRevealedPaths] = useState<Readonly<Record<string, string>>>({})
+  const detailRequest = useRef<string | null>(null)
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -56,17 +57,22 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         setLoading(false)
       }
     }
-    void load()
     void actions.agentPresetsCanOpenDirectory(lifetime.signal).then((canOpen) => {
       if (!lifetime.signal.aborted) setCanOpenDirectory(canOpen)
     }, () => {
       if (!lifetime.signal.aborted) setCanOpenDirectory(false)
     })
+    // Subscribe before the first roster read so updates between read and listen are not missed.
     void (async () => {
       try {
-        for await (const event of actions.settingsEvents(lifetime.signal)) {
-          if (event.type === 'agent-presets/updated') void load()
-        }
+        const events = actions.settingsEvents(lifetime.signal)
+        const consume = (async () => {
+          for await (const event of events) {
+            if (event.type === 'agent-presets/updated') void load()
+          }
+        })()
+        void load()
+        await consume
       } catch (failure: unknown) {
         if (!lifetime.signal.aborted) setError(failure instanceof Error ? failure.message : String(failure))
       }
@@ -78,16 +84,20 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   }, [actions.agentPresetsList, actions.agentPresetsCanOpenDirectory, actions.settingsEvents])
 
   const openDetails = async (id: string): Promise<void> => {
+    detailRequest.current = id
     setDetailId(id)
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
     try {
-      setDetail(await actions.agentPresetRead(id))
+      const document = await actions.agentPresetRead(id)
+      if (detailRequest.current !== id) return
+      setDetail(document)
     } catch (failure: unknown) {
+      if (detailRequest.current !== id) return
       setDetailError(failure instanceof Error ? failure.message : String(failure))
     } finally {
-      setDetailLoading(false)
+      if (detailRequest.current === id) setDetailLoading(false)
     }
   }
 
@@ -183,7 +193,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       </li>)}
     </ul> : null}
 
-    <Modal open={detailId !== null} onClose={() => { setDetailId(null) }}
+    <Modal open={detailId !== null} onClose={() => { detailRequest.current = null; setDetailId(null) }}
       title={detail?.name ?? detailId ?? t('agentPresetsView')} closeLabel={t('close')} {...dialogProps}>
       {detailLoading ? <p role="status">{t('agentPresetsLoading')}</p> : null}
       {detailError === null ? null : <p className={css.error} role="alert">{detailError}</p>}

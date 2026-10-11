@@ -77,6 +77,10 @@ it('reads, copies and deletes native preset folders and publishes each roster up
       .toMatchObject({ ok: false, error: { code: 'agent-preset/not-found' } })
     expect(registry.list().map(preset => preset.id)).not.toContain('legacy')
     expect(registry.catalog().folders.map(folder => folder.id)).toEqual(['standard', 'mine', 'unavailable'])
+    expect(() => registry.resolvePreset({ fresh: false, facts: { preset: 'legacy', revision: null, locked: false },
+      preset: 'legacy' })).toThrow(/unavailable/)
+    expect(registry.resolvePreset({ fresh: false, facts: { preset: 'legacy', revision: null, locked: true } })?.id)
+      .toBe('legacy')
   } finally {
     await reader?.cancel()
     await settingsEvents.close()

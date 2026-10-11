@@ -152,7 +152,9 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
     const id = request.preset ?? request.facts.preset ?? (request.fresh ? this.defaultPreset : null)
     if (id === null) return null
     const standing = this.standings.get(id)
-    if (standing === undefined || request.fresh && !this.list().some(preset => preset.id === id)) {
+    // Explicit picks and fresh defaults must match the live roster; restored Sessions keep their standing.
+    if (standing === undefined
+      || (request.preset !== undefined || request.fresh) && !this.list().some(preset => preset.id === id)) {
       throw new Error(`agent-presets: standing preset ${id} is unavailable`)
     }
     return standing.preset

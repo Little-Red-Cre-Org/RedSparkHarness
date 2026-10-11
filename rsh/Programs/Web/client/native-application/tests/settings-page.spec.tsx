@@ -174,6 +174,50 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   expect(agentPresetsList).toHaveBeenCalledTimes(3)
 })
 
+it('keeps the later Agent preset detail when an earlier read finishes last', async () => {
+  const roster: NativeAgentPresetList = {
+    default: 'standard',
+    presets: [
+      { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
+      { id: 'legacy', name: 'Legacy', source: 'user', status: 'ready' },
+    ],
+  }
+  const settingsEvents = async function* (signal: AbortSignal): AsyncIterable<NativeSettingsEvent> {
+    await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+  }
+  let finishStandard: ((value: Awaited<ReturnType<NativeSessionClient['agentPresetRead']>>) => void) | undefined
+  const agentPresetRead = vi.fn(async (id: string) => {
+    if (id === 'standard') {
+      return await new Promise<Awaited<ReturnType<NativeSessionClient['agentPresetRead']>>>((resolve) => {
+        finishStandard = resolve
+      })
+    }
+    return { id: 'legacy', name: 'Legacy', source: 'user' as const, status: 'ready' as const,
+      content: '{"formatVersion":1,"installations":[{"id":"legacy"}]}' }
+  })
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    agentPresetsList: vi.fn(async () => roster),
+    agentPresetRead,
+    agentPresetCopy: vi.fn(async () => {}),
+    agentPresetDelete: vi.fn(async () => {}),
+    agentPresetsCanOpenDirectory: vi.fn(async () => false),
+    agentPresetOpenDirectory: vi.fn(async () => ({ opened: false as const, path: '/tmp' })),
+    settingsEvents,
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
+  expect(await screen.findByRole('heading', { name: en.settingsAgentPresets })).toBeTruthy()
+  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsView })[0]!)
+  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsView })[1]!)
+  expect(await screen.findByText('{"formatVersion":1,"installations":[{"id":"legacy"}]}')).toBeTruthy()
+  await act(async () => {
+    finishStandard?.({ id: 'standard', name: 'Standard', source: 'system', status: 'ready',
+      content: '{"formatVersion":1,"installations":[{"id":"stale"}]}' })
+  })
+  expect(screen.getByText('{"formatVersion":1,"installations":[{"id":"legacy"}]}')).toBeTruthy()
+  expect(screen.queryByText('{"formatVersion":1,"installations":[{"id":"stale"}]}')).toBeNull()
+})
+
 it('shows when the ChatGPT sign-in method does not provide usage', async () => {
   const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_UNSUPPORTED' as const }))
   renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
