@@ -6,7 +6,7 @@ import { plugin as scheduleController } from '../src/native.ts'
 
 it('lists safe schedule rows and follows baseline, upsert, and remove frames', async () => {
   const scope = new NativeScope()
-  let jobs: NativeScheduledJob[] = [{ id: 'first', sessionId: 'owner', title: 'First', state: 'active',
+  let jobs: NativeScheduledJob[] = [{ id: 'first', sessionId: 'owner' as NativeScheduledJob['sessionId'], title: 'First', state: 'active',
     schedule: '2026-10-11T12:00:00+08:00', timeZone: 'UTC+08:00', nextRunAt: 1791691200000 }]
   const listeners = new Set<() => void>()
   const scheduler = {
