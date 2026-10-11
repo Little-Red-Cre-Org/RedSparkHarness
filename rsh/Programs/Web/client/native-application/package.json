@@ -38,7 +38,8 @@
       "requires": [
         "clientNativeSession",
         "clientSlots",
-        "clientLocale"
+        "clientLocale",
+        "clientNativeTheme"
       ],
       "optional": [],
       "provides": [
@@ -53,6 +54,7 @@
     "lib/controller.js",
     "lib/native-*.js",
     "lib/account-card.module.css",
+    "lib/NativeSidebarSettings.module.css",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

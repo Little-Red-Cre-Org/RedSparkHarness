@@ -12,10 +12,20 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-schedule/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
+import type {
+  SessionSearchRow, SessionRowNode, SessionPendingInteractionStatus as SharedSessionPendingInteractionStatus,
+  WorkspaceGroupRow,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import { workspaceLabel } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   indexSubagentDescendants, type SubagentDescendantSummary,
 } from './subagent-lineage.ts'
+
+export { workspaceLabel }
+export type SessionNode = SessionRowNode<SessionId>
+export type GroupNode = WorkspaceGroupRow<WorkspaceId, SessionId>
+export type SearchResultNode = SessionSearchRow<SessionId>
+export type SessionPendingInteractionStatus = SharedSessionPendingInteractionStatus
 
 /** Group key for Sessions outside every Workspace. */
 export const UNGROUPED_KEY = ''
@@ -34,67 +44,11 @@ export function owningGroupKey(
     ?.workspaceId as string | undefined) ?? UNGROUPED_KEY
 }
 
-/** Pending interaction kinds with dedicated Workspace-row presentation. */
-export type SessionPendingInteractionStatus = 'approval' | 'plan-review' | 'question'
 type SessionPendingInteractions = ReadonlyMap<SessionId, SessionPendingInteractionBase>
-
-/** One top-level session row in a group or the flat list. */
-export interface SessionNode {
-  id: SessionId
-  /** Stored display title; the renderer substitutes the localized New Session label for blank rows. */
-  title: string
-  /** The provisional blank session (renderer shows the localized New Session title). */
-  blank: boolean
-  /** A Session-scoped UI consumer is awaiting this user. */
-  pendingInteraction?: SessionPendingInteractionStatus
-  running: boolean
-  /** Running descendants connected through uninterrupted subagent-origin lineage. */
-  runningSubagentCount: number
-  /** Finished running while not selected and not yet opened (the green "done" reminder dot). */
-  completed: boolean
-  /** The current list projection contains at least one active Schedule record. */
-  hasActiveSchedule: boolean
-  updatedAt: number
-}
 
 /** Session order selected by the Workspace browser. */
 export type SessionOrderBy = 'manual' | 'updated'
 
-/** One workspace group section: header row facts + visible top-level session rows. */
-export interface GroupNode {
-  /** Group key: the workspace id or {@link UNGROUPED_KEY}. */
-  key: string
-  /** Backing Workspace id; absent only for the ungrouped bucket. */
-  workspaceId: WorkspaceId | undefined
-  cwd: string | undefined
-  /** Workspace creation time (epoch ms); absent only for the ungrouped bucket. */
-  createdAt: number | undefined
-  label: string
-  /** Total visible sessions in the group. */
-  sessionCount: number
-  expanded: boolean
-  /** The group contains the selected session (active folder tint; supplied here so the renderer never scans). */
-  containsCurrent: boolean
-  /** Visible session rows (empty while the group is folded). */
-  sessions: readonly SessionNode[]
-}
-
-/** One flat search row combining list metadata with an optional content match. */
-export interface SearchResultNode {
-  id: SessionId
-  title: string
-  workspace: string
-  /** A Session-scoped UI consumer is awaiting this user. */
-  pendingInteraction?: SessionPendingInteractionStatus
-  running: boolean
-  /** Running descendants connected through uninterrupted subagent-origin lineage. */
-  runningSubagentCount: number
-  /** Finished running while not selected and not yet opened (the green "done" reminder dot). */
-  completed: boolean
-  /** The current list projection contains at least one active Schedule record. */
-  hasActiveSchedule: boolean
-  snippet?: string
-}
 
 /** Bounded merged search projection plus the refine-query hint bit. */
 export interface SearchResultSet {
@@ -116,18 +70,6 @@ interface Group {
   createdAt: number | undefined
   label: string
   sessions: SessionSummary[]
-}
-
-/**
- * Directory display label: basename of the path (both separators accepted).
- * Ungrouped-bucket fallback for surfaces without a workspace title.
- * @param cwd - directory path, or undefined for the ungrouped bucket.
- * @returns basename, the raw cwd when it has no basename, or an empty ungrouped marker.
- */
-export function workspaceLabel(cwd: string | undefined): string {
-  if (cwd === undefined || cwd === '') return ''
-  const base = workspaceTitleOf(cwd)
-  return base !== '' ? base : cwd
 }
 
 /** Recency comparator: newest first, id as the deterministic tiebreak (ids are unique per group). */

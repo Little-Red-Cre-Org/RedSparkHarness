@@ -39,6 +39,9 @@
       "path": "../ui-slots"
     },
     {
+      "path": "../ui-sidebar"
+    },
+    {
       "path": "../ui-session"
     },
     {

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The dsh web client sidebar lets users recognize the active build, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining the navigation controls and rail geometry.
+The dsh web client sidebar lets users recognize the active build, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining the navigation controls and rail geometry. The native-web profile uses the same shell with native Session rows and compact appearance controls.
 
 ## Table of Contents
 
@@ -26,6 +26,8 @@ The dsh web client sidebar lets users recognize the active build, start a new se
 ## Use this package
 
 The sidebar is the navigation shell: users see the brand, start new sessions, collapse the rail, and reach Settings. Feature plugins fill its seats — ui-workspace fills `sidebar.workspaces`, ui-settings registers the trigger row and settings panel at `sidebar.settings`.
+
+In the native-web profile, the native application fills these seats with the Host-backed Session list and Settings panel. Its workspace section groups Sessions by `cwd` as a display projection; Workspace creation, search, sort controls, and scheduled tasks stay disabled until the native Host provides those capabilities.
 
 ### Brand and New Session
 
@@ -92,6 +94,7 @@ These limits define what the shell owns versus what its occupants own; they are 
 
 - **Session state-dot rendering is owned by ui-workspace** — no done/error notification sources are available to this shell.
 - **Workspace browser behavior is composition-owned** — grouping, ordering, search, and row state belong to ui-workspace, not this shell.
+- **Native Workspace data is not available yet** — native path groups are not Workspace identities, and workspace controls and scheduled tasks remain disabled until their Host capabilities are available.
 - **"New task completed" unread marking is local viewing state** — completion-time > last-seen never reaches the host.
 
 <a id="dev-note"></a>

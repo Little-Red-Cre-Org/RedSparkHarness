@@ -13,6 +13,8 @@ The session row menu includes Delete session with confirmation. This removes the
 
 This package lets users browse grouped or flat Session lists, choose a Workspace for a new Session, and manage Workspaces and Sessions through add, rename, reorder, search, fork, archive, and Workspace deletion. Pending interactions appear as warning dots, active scheduled tasks as alarm markers, and subagent-origin Sessions remain hidden. Canonically distinct folder paths remain separate Workspaces. Adding a Workspace requires a composed directory picker; without one, the add action is unavailable.
 
+Workspace and Session rows, the section header, and the empty state are shared props-only components from `ui-primitives`; the legacy browser keeps its existing behavior and presentation through those components.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)
