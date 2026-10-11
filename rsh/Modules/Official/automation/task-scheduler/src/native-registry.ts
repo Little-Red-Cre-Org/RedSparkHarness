@@ -54,7 +54,9 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
     this.scheduledGoalHost = { authority: { redeem: (admission, owner, signal) => this.redeemGoalClaim(admission, owner, signal) },
       registerExecutor: executor => this.registerGoalExecutor(executor) }
     this.detachStoreChanges = store.onChange(() => {
-      for (const listener of this.scheduleListeners) listener()
+      for (const listener of this.scheduleListeners) {
+        try { listener() } catch (error) { report(error) }
+      }
     })
     for (const task of store.tasks()) if (task.state !== 'deleted') this.validateRepresentation(task)
     this.engine = new SchedulerEngine(store, async (task, run, signal) => await this.execute(task, run, signal), options, report,

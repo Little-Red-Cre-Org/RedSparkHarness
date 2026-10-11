@@ -337,6 +337,7 @@ describe('connection node half', () => {
     await fiber.await()
     const connection = ctx.get('connection') as HostConnectionHandle
     const calls: unknown[] = []
+    const otherCalls: unknown[] = []
     const remove = connection.rpc.intercept(
       '/api',
       endpoint => endpoint === 'goals/create',
@@ -345,11 +346,14 @@ describe('connection node half', () => {
         return { ok: true, value: { accepted: true } }
       },
     )
-    expect(() => connection.rpc.intercept(
+    const removeOther = connection.rpc.intercept(
       '/api',
-      () => true,
-      async () => ({ ok: true, value: null }),
-    )).toThrow('already has an interceptor')
+      endpoint => endpoint === 'session.list',
+      async (endpoint, payload) => {
+        otherCalls.push({ endpoint, payload })
+        return { ok: true, value: { source: 'handler2' } }
+      },
+    )
     expect(() => connection.rpc.intercept(
       '/rpc' as '/api',
       () => true,
@@ -361,6 +365,12 @@ describe('connection node half', () => {
       rpcId: RpcId('rpc-shared'),
       method: 'goals/create',
       payload: { args: { agentId: 'agent-1' } },
+    }
+    const otherRequest: ClientRequest = {
+      type: 'client-request',
+      rpcId: RpcId('rpc-shared-2'),
+      method: 'session.list',
+      payload: {},
     }
 
     const claimed = fakeResponse()
@@ -378,6 +388,16 @@ describe('connection node half', () => {
       payload: { args: { agentId: 'agent-1' } },
     }])
 
+    const otherClaimed = fakeResponse()
+    await route.handler(fakePost({
+      host: '127.0.0.1:3080', cookie: loopbackCookie,
+    }, '/api/session.list', otherRequest), otherClaimed.response)
+    expect(JSON.parse(String(otherClaimed.state.body))).toMatchObject({
+      rpcId: 'rpc-shared-2',
+      result: { ok: true, value: { source: 'handler2' } },
+    })
+    expect(otherCalls).toEqual([{ endpoint: 'session.list', payload: {} }])
+
     const denied = fakeResponse()
     await route.handler(fakePost({ host: 'other.example' }, '/api/goals/create', request), denied.response)
     expect(denied.state).toMatchObject({ status: 403, body: 'forbidden' })
@@ -386,16 +406,24 @@ describe('connection node half', () => {
     const unclaimed = fakeResponse()
     await route.handler(fakeRequest({
       host: '127.0.0.1:3080', cookie: loopbackCookie,
-    }, '/api/session.list'), unclaimed.response)
+    }, '/api/settings.get'), unclaimed.response)
     expect(unclaimed.state.status).toBe(404)
 
     await remove()
+    const remainingClaim = fakeResponse()
+    await route.handler(fakePost({
+      host: '127.0.0.1:3080', cookie: loopbackCookie,
+    }, '/api/session.list', otherRequest), remainingClaim.response)
+    expect(remainingClaim.state.status).toBe(200)
+    expect(otherCalls).toHaveLength(2)
+
     const withdrawn = fakeResponse()
     await route.handler(fakePost({
       host: '127.0.0.1:3080', cookie: loopbackCookie,
     }, '/api/goals/create', request), withdrawn.response)
     expect(withdrawn.state.status).toBe(404)
     expect(calls).toHaveLength(1)
+    await removeOther()
 
     const removeAuthenticated = connection.rpc.intercept(
       '/api',

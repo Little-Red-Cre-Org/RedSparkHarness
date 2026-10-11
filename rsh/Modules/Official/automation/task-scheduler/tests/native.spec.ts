@@ -51,7 +51,10 @@ function toolText(result: Awaited<ReturnType<typeof invokeTaskTool>>): string {
 it('projects committed schedule metadata and notifies read-only observers', async () => {
   const state = await fixture([])
   const signal = new AbortController().signal
+  const report = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const throwing = vi.fn(() => { throw new Error('schedule observer failed') })
   const changed = vi.fn()
+  const unsubscribeThrowing = state.schedules.onSchedulesChanged(throwing)
   const unsubscribe = state.schedules.onSchedulesChanged(changed)
   try {
     await state.app.executeSessionOperation({ id: SessionId('schedule-view-owner'), resume: false }, async (owner) => {
@@ -61,13 +64,18 @@ it('projects committed schedule metadata and notifies read-only observers', asyn
       expect(job).toEqual({ id: task.id, sessionId: owner.session.id, title: 'Later', state: 'active',
         schedule: `${at}; every 3600s`, timeZone: 'UTC+08:00', nextRunAt: Date.parse(at) })
       expect(JSON.stringify(job)).not.toContain('Private task prompt.')
+      expect(throwing).toHaveBeenCalledOnce()
       expect(changed).toHaveBeenCalledOnce()
+      expect(report).toHaveBeenCalledWith('native-task-scheduler: Error: schedule observer failed')
       await state.schedules.change(owner, task.id, 'paused', signal)
       expect(state.schedules.listSchedules()[0]?.state).toBe('paused')
+      expect(throwing).toHaveBeenCalledTimes(2)
       expect(changed).toHaveBeenCalledTimes(2)
     }, signal)
   } finally {
     unsubscribe()
+    unsubscribeThrowing()
+    report.mockRestore()
     await state.close()
   }
 })
