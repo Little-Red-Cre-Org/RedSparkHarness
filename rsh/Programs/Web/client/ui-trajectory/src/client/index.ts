@@ -34,9 +34,9 @@ export type {
   TrajectoryContribution,
   TrajectoryConversationViewNode,
   TrajectoryRequestHeaderState,
-  TrajectorySnapshot,
   UseTrajectory,
 } from './trajectory-contract.ts'
+export type { TrajectorySnapshot } from './trajectory-client-augmentation.ts'
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
 export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'locale']
