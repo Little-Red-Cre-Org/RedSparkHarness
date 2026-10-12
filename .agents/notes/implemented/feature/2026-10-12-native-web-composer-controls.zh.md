@@ -12,14 +12,15 @@ Native Web composer 需要读取 agent mode、plan mode 与常驻权限策略的
 
 经过身份验证的 Native Session API 位于[Host controller](../../../../rsh/Programs/Web/api/native-web-session-controller/src/native.ts)，提供 `session/mode-controls`、`session/select-plan-mode`、`session/permission-controls` 和 `session/select-permission`。位于[native-session](../../../../rsh/Programs/Web/client/native-session/src/native.ts) 的 Cordis-free Client 提供 `modeControls`、`selectPlanMode`、`permissionControls` 和 `selectPermissionPreset`，并在返回前解码每种响应。
 
-Mode 读取折叠有界 Session 历史，以获取所选 preset、持久化修订号与永久的首轮锁定状态。Plan-mode 读取将该事件日志与按 Session id 保存的 Provider 待处理选择结合。两种读取都不取得 Session 排他锁，因此轮次进行时也可用。Host 只公布已安装的 preset。Mode 变更继续使用 `session/select-preset` 和 `rootExecution.selectPreset`，遵循 [Native Web model-controls 决策](../architecture/2026-10-05-native-web-model-controls.zh.md)；root executor 负责修订比较、空白 Session 规则和 Agent epoch 替换。Plan-mode 变更调用 [plan-mode](../../../../rsh/Modules/Official/plan/plan-mode/src/native.ts) 中 Provider 的既有状态机：空闲时立即记录 `plan/mode`，否则等到下一次接受的 step 再应用；参见[共享 plan-mode 决策](../architecture/2026-10-08-native-session-title-and-plan-mode.zh.md)。
+Mode 读取通过确切 root Session owner 和完整事件日志折叠所选 preset、持久化修订号与永久的首轮锁定状态。Host 只公布已安装的 preset。Mode 变更继续使用 `session/select-preset` 和 `rootExecution.selectPreset`，遵循 [Native Web model-controls 决策](../architecture/2026-10-05-native-web-model-controls.zh.md)；root executor 负责修订比较、空白 Session 规则和 Agent epoch 替换。Plan-mode 读取包含已安装 Provider 的已记录状态与待应用状态。Plan-mode 变更调用 [plan-mode](../../../../rsh/Modules/Official/plan/plan-mode/src/native.ts) 中 Provider 的既有状态机：空闲时立即记录 `plan/mode`，否则等到下一次接受的 step 再应用；参见[共享 plan-mode 决策](../architecture/2026-10-08-native-session-title-and-plan-mode.zh.md)。
 
-权限读取将 Session 事件传给 [permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations`；读取无需 Session owner 或排他锁。Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过确切 root owner 的 writer 和同一组既有事件写入，不会消费或回答待处理的一次性审批。
+权限读取通过确切 root Session owner 和其完整事件日志完成。[permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations` Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
 
 随附的 `native-web` 模板会安装 plan-mode 和 permission Provider，以及 `standard` 和 `minimal` 常驻 agent preset。profile 可以省略这些可选 Provider，并返回文档说明的不可用响应；模板不会重写用户已有的 profile 文件。
 
 Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode Provider 时返回 `available: false`；缺少 permission Provider 时返回无当前选项且选项列表为空的不可用值。缺少 preset Registry 时仍可读取当前 mode 事实，但不公布可选 preset。修改失败使用既有 Native Session RPC 错误封装。
 
+Native application 会在共享模型与推理选择器旁的 composer 中渲染这些 Host 读取结果。由于 Host 对每个 Session 一次只允许一项读取，controller 会依次读取历史、mode 和 permission 控件。Plan 切换按钮显示已提交和待应用状态。每次修改后（包括失败时）都会刷新受影响控件。详见 [native application](../../../../rsh/Programs/Web/client/native-application/README.zh.md)。
 ## Alternatives considered
 
 **新增 composer 设置存储。** 这会重复持久化 Session 的权威状态，并导致恢复后的 Session 与 Host 持有的 preset、plan-mode 和权限事件折叠结果不一致。
@@ -36,4 +37,4 @@ Host 将 plan-mode 和 permission Provider 保持为可选项。缺少 plan-mode
 
 从 CLI 全新启动 `native-web` 后，可通过经过身份验证的 `/api` RPC 读取两种控制项：mode 选项为 `standard` 和 `minimal`，plan mode 可用且未激活；permission 选项为 `workspace-write` 和 `danger-full-access`，当前选中 `workspace-write`。
 
-经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。该场景使用真实 Provider 和 Session executor，而非平行存储。
+经过身份验证的 Native Web Host 场景检查当前模式和可用选项，通过两个已提交状态修改 plan mode，读取并修改权限 preset，并通过既有修订检查路由修改 agent preset。该场景使用真实 Provider 和 Session executor，而非平行存储。Native application 测试检查 mode 修订、plan-mode 结果和权限修改。

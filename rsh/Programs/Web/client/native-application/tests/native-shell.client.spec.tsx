@@ -241,6 +241,12 @@ it('installs modular Native navigation, Session selection, details, locale and t
       await workspaceClient.archiveSession(id)
     }),
     modelControls: vi.fn(async () => ({ catalog: null, canSelectModel: false, presets: [] })),
+    modeControls: vi.fn(async () => ({ current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } })),
+    selectPlanMode: vi.fn(async () => ({ active: false, outcome: 'noop' as const })),
+    permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
+    selectPermissionPreset: vi.fn(async () => undefined),
+    selectPreset: vi.fn(async () => undefined),
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)

@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
-  ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
+  ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
   ChatMascotHero, ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderOpen16, Pill,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -41,6 +41,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+  selectPlanMode, selectPermissionPreset,
   refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -50,6 +51,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
   selectModel: NativeConversationController['selectModel']
   selectPreset: NativeConversationController['selectPreset']
+  selectPlanMode: NativeConversationController['selectPlanMode']
+  selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
   t: Translate
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
@@ -112,10 +115,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
             files={files} onChange={setFiles} limits={snapshot.modelControls.images}
             disabled={!ready || snapshot.selected === undefined} t={t}
           />}
-          <ModelControls snapshot={snapshot} selectPreset={selectPreset} t={t} />
-          {hasConversation ? <ChatComposerSelect label={t('mode')} disabled value="">
-            <option value="">{t('modeUnavailable')}</option>
-          </ChatComposerSelect> : null}
+          <ModelControls snapshot={snapshot} selectPreset={selectPreset}
+            selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset} t={t} />
         </div>
         <div className={css.toolbarActions}>
           <ModelPickerControl snapshot={snapshot} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />
@@ -155,9 +156,6 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
               <span>{workspace}</span>
               <IconChevronDownOutline14 size={12} />
             </button>
-            <ChatComposerSelect label={t('mode')} disabled value="">
-              <option value="">{t('modeUnavailable')}</option>
-            </ChatComposerSelect>
           </div>
           {composer}
         </section>
@@ -239,9 +237,12 @@ export const plugin: NativePlugin = {
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
           selectPreset: controller.selectPreset.bind(controller),
+          selectPlanMode: controller.selectPlanMode.bind(controller),
+          selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+        selectPlanMode, selectPermissionPreset,
         refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -251,11 +252,14 @@ export const plugin: NativePlugin = {
         answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
         selectModel: NativeConversationController['selectModel']
         selectPreset: NativeConversationController['selectPreset']
+        selectPlanMode: NativeConversationController['selectPlanMode']
+        selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
         renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
+        selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => slots.renderSlot('root', {}) })
       void controller.load()

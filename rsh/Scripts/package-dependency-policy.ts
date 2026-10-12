@@ -180,7 +180,6 @@ export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly strin
     'react',
     '@deepseek-ai/dsh-session',
     '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-agent-presets',
     '@deepseek-ai/dsh-client-native-session',
     '@deepseek-ai/dsh-client-ui-tool',
     '@deepseek-ai/dsh-tool-todo',
