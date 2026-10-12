@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-08-codex-siwc-provider.md
-2026-10-08-codex-siwc-provider.md: b3fee90a77d486e16c9f97196a507f991ea24f34
-2026-10-08-codex-siwc-provider.zh.md: 6ba1500694a7725ba5c1e96b98de6b61ab07b8d9
+2026-10-08-codex-siwc-provider.md: 6979b4b5540a6ea82e52719506e8814e7e597058
+2026-10-08-codex-siwc-provider.zh.md: 0f98419b486d7af5a4eb7109ef1d65e8974d45f5
