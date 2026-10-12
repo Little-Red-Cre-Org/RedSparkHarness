@@ -14,10 +14,7 @@ Native Web composer 需要读取 agent mode、plan mode 与常驻权限策略的
 
 Mode 读取通过确切 root Session owner 和完整事件日志折叠所选 preset、持久化修订号与永久的首轮锁定状态。Host 只公布已安装的 preset。Mode 变更继续使用 `session/select-preset` 和 `rootExecution.selectPreset`，遵循 [Native Web model-controls 决策](../architecture/2026-10-05-native-web-model-controls.zh.md)；root executor 负责修订比较、空白 Session 规则和 Agent epoch 替换。Plan-mode 读取包含已安装 Provider 的已记录状态与待应用状态。Plan-mode 变更调用 [plan-mode](../../../../rsh/Modules/Official/plan/plan-mode/src/native.ts) 中 Provider 的既有状态机：空闲时立即记录 `plan/mode`，否则等到下一次接受的 step 再应用；参见[共享 plan-mode 决策](../architecture/2026-10-08-native-session-title-and-plan-mode.zh.md)。
 
-权限读取和写入通过确切 root owner 调用 [permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations`。Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
-Mode 与权限读取通过确切 root Session owner 和其完整事件日志，折叠所选 preset、持久化修订号、永久的首轮锁定状态与有效策略。Host 只公布已安装的 preset。Mode 变更继续使用 `session/select-preset` 和 `rootExecution.selectPreset`，遵循 [Native Web model-controls 决策](../architecture/2026-10-05-native-web-model-controls.zh.md)；root executor 负责修订比较、空白 Session 规则和 Agent epoch 替换。Plan-mode 读取包含已安装 Provider 的已记录状态与待应用状态。Plan-mode 变更调用 [plan-mode](../../../../rsh/Modules/Official/plan/plan-mode/src/native.ts) 中 Provider 的既有状态机：空闲时立即记录 `plan/mode`，否则等到下一次接受的 step 再应用；参见[共享 plan-mode 决策](../architecture/2026-10-08-native-session-title-and-plan-mode.zh.md)。
-
-权限 Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
+权限读取通过确切 root Session owner 和其完整事件日志完成。[permission-presets](../../../../rsh/Modules/Official/interaction/permission-presets/src/native.ts) 中的 `NativePermissionPresetOperations` Provider 根据所选部署默认值及 `permission/preset`、`sandbox/mode` 和 `approval/policy` 事件解析有效选项。当前策略与某个已配置 preset 匹配时返回该值；无匹配时报告仅供当前显示的 `custom` 选项。选择通过同一组既有事件写入，不会消费或回答待处理的一次性审批。
 
 随附的 `native-web` 模板会安装 plan-mode 和 permission Provider，以及 `standard` 和 `minimal` 常驻 agent preset。profile 可以省略这些可选 Provider，并返回文档说明的不可用响应；模板不会重写用户已有的 profile 文件。
 
