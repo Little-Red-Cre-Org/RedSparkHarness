@@ -228,8 +228,8 @@ describe('release families', () => {
       member('rsh/a/right', '@deepseek-ai/dsh-right', { peerDependencies: { '@deepseek-ai/dsh-left': 'workspace:^' } }),
     ]
 
-    // Sibling packages declare each other as peers, and npm treats an unmet peer
-    // as a warning, so this pair has to publish rather than fail the release.
+    // Sibling peer ordering may cycle, so one ordering preference is omitted
+    // while both manifest declarations remain intact.
     const plan = dsh.publishOrder(members)
     expect(plan.order.map(entry => entry.name)).toEqual([
       '@deepseek-ai/dsh-right',
@@ -251,8 +251,8 @@ describe('release families', () => {
       }),
     ]
 
-    // The install edge is absolute: base publishes first, and the peer edge that
-    // would reverse it is the one dropped.
+    // The install edge is absolute: base publishes first, and the reverse peer
+    // preference is the one omitted. The matching peer edge is already satisfied.
     const plan = dsh.publishOrder(members)
     expect(plan.order.map(entry => entry.name)).toEqual([
       '@deepseek-ai/dsh-base',
@@ -263,7 +263,7 @@ describe('release families', () => {
     ])
   })
 
-  it('refuses an order that would publish a consumer before a dependency it installs', () => {
+  it('drops the peer preference that closes a cycle around an install edge', () => {
     const dsh = releaseFamily('dsh')
     const members = [
       member('rsh/a/alpha', '@deepseek-ai/dsh-alpha', { peerDependencies: { '@deepseek-ai/dsh-bravo': 'workspace:^' } }),
@@ -271,11 +271,15 @@ describe('release families', () => {
       member('rsh/a/charlie', '@deepseek-ai/dsh-charlie', { dependencies: { '@deepseek-ai/dsh-alpha': 'workspace:^' } }),
     ]
 
-    // A cycle of two peer edges closed by one install edge: dropping a peer edge
-    // would order this, and the traversal drops the install edge instead. That
-    // order would publish charlie before the alpha it installs, so it is refused
-    // here rather than published.
-    expect(() => { dsh.publishOrder(members) }).toThrow(/no publish order honours @deepseek-ai\/dsh-charlie -> @deepseek-ai\/dsh-alpha/)
+    const plan = dsh.publishOrder(members)
+    expect(plan.order.map(entry => entry.name)).toEqual([
+      '@deepseek-ai/dsh-bravo',
+      '@deepseek-ai/dsh-alpha',
+      '@deepseek-ai/dsh-charlie',
+    ])
+    expect(plan.droppedPeerEdges).toEqual([
+      { consumer: '@deepseek-ai/dsh-bravo', peer: '@deepseek-ai/dsh-charlie' },
+    ])
   })
 
   it('ignores devDependencies when ordering', () => {

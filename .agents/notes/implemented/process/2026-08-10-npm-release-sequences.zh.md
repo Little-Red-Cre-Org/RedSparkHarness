@@ -104,7 +104,7 @@ registry 的两个行为决定了「怎么尝试一次发布」。写入之间�
 |---|---|
 | `ReleaseFamily` | 一族的身份：成员发现、版本基线、tag 前缀、打包 payload 规则、已安装入口 |
 | `ReleaseMember` | 一个可发布包：目录、包名、版本、manifest |
-| `publishOrder` | 按 npm 会安装的依赖段加 peer 声明做拓扑序，同层按包名排；安装依赖成环是报错而不是随意定序，任何排不进去的 peer 边被丢弃并点名 |
+| `publishOrder` | 先对 `dependencies` 与 `optionalDependencies` 做硬拓扑排序，再稳定加入不成环的 peer 排序偏好；省略的只是发布先后关系，manifest 中 peer 声明及其 optionality 元数据保持不变，并点名每条省略项；安装依赖成环时报错 |
 | `pack` | 把整族打进一个目录并记录上传顺序 |
 | `verify` | 族的版本基线、完整打印出来的发布顺序；发布时还要求本次运行来自该族的 tag、且成员可发布 |
 | `verify-packed-install` | 把一个或多个 pack 目录的 tarball 装进一次性 consumer，并驱动已安装的可执行入口 |
@@ -123,7 +123,7 @@ dsh 的验证会一并安装 vendored 族的 pack 产物。harness 的包把 ven
 
 验证还会打一份 Landlock entry 的 tarball——`dsh-sandbox-local` 把它声明为普通 `dependencies`——同时略去可选依赖。那些可选项背后的平台包需要 musl 工具链且每个架构各构建一次，单台 runner 产不出来；而装不到它们的消费方也必须能起，这正是「可选」在这里的含义。因此验证按目录内容读取 tarball，而不是读发布顺序：一个目录可能只装着为满足跨序列依赖而打出来的包，任何发布顺序都不描述它。
 
-已安装消费方探针会捕获 npm 的 HTTP 诊断信息，并在安装失败时输出。即使 npm 将 peer manifest 获取失败报告为版本未定义的 `ERESOLVE`，日志中仍能看到 registry 响应码和缓存状态。
+已安装消费方探针会捕获 npm 的 HTTP 诊断信息，并在安装失败时输出。即使 npm 将 peer manifest 获取失败报告为版本未定义的 `ERESOLVE`，日志中仍能看到 registry 响应码和缓存状态。探针通过 `execaSync` 解析 Windows 的 `npm.cmd` 入口，并关闭环境扩展，使 npm 只收到为 consumer 准备的环境变量。
 
 ### 本次带出的仓库改动
 

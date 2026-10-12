@@ -10,7 +10,7 @@ P4 外部 child adapter 需要真实 SDK Session 与 turn 协议，同时必须�
 
 ## 决策
 
-唯一的 TypeScript SDK 协议 runtime 与 Session API 放在 `rsh/Engine/subagent/sdk-runtime`。Programs 保留公开的 `@deepseek-ai/dsh-sdk-client` facade 及其同版本 `resolveDshLaunch` 实现。opt-in Native profile 安装一个固定 Program launcher capability。Module 只能通过该能力请求一个所选 provider/model 路由；它得不到任意 executable、argv、profile、patch 或完整父环境。
+唯一的 TypeScript SDK 协议 runtime 与 Session API 放在 `rsh/Engine/subagent/sdk-runtime`。SDK Client 保留公开 facade 与同版本 `resolveDshLaunch` 实现。CLI 私有持有 opt-in Native child profile 安装的固定 launcher capability；SDK Client 不导出该 launcher。Module 只能通过此能力请求一个所选 provider/model 路由；它得不到任意 executable、argv、profile、patch 或完整父环境。
 
 Profile loader 在应用用户 overlay 后，从实际选中的 `pi-ai` installation 派生 child provider map。child adapter 只通过 Host credentials service 解析被选配置的 `apiKeyEnv`，并将该 key 发送给固定 child 进程。已存储的 OAuth 与 credential 记录明确不支持。模型目录仍由 provider 拥有。
 
@@ -21,7 +21,7 @@ Profile loader 在应用用户 overlay 后，从实际选中的 `pi-ai` installa
 ## 后果
 
 - Engine runtime 保持 framework-neutral，并拥有唯一 SDK transport/session 实现；Engine 与 Module 均不反向依赖 Programs。
-- Programs 保留受支持的默认 SDK launcher 与 opt-in 固定 Native child launcher。普通 `native-sdk` 组合不变。
+- SDK Client 保留受支持的默认 launcher 与普通 `native-sdk` 行为。CLI 私有固定 child launcher 优先通过 plain Node 启动同版本构建后的 CLI bin；只有 source launcher 且构建 bin 缺失时，才通过 ESM loader 回退到 source entry。
 - child 只接收有来源证明的 Headless 内建文件权限。父级批准的写入仅通过绑定精确父级的 operation-scoped 审批 relay 支持；自定义工具过滤、persona 和结构化输出仍不支持。
 - `maxTokens` 继续表示每次请求上限。Native `maxSteps` 会在 initialize 握手期间协商并限制到 profile 上限，然后才发布就绪；现有 Headless loop 会在后续 child turn 执行时强制该上限。
 
@@ -30,6 +30,7 @@ Profile loader 在应用用户 overlay 后，从实际选中的 `pi-ai` installa
 - **将协议 runtime 留在 Programs**——未采用，因为 Engine 与 Native Module 消费方会向上依赖 Program SDK client。
 - **另建 child 专用协议 client**——未采用，因为第二套握手与 Session 实现可能偏离公开 TypeScript SDK。
 - **允许 Module 选择 executable 与 argv**——未采用，因为 Program 和 Host 必须保留启动策略与进程范围所有权。
+- **将固定 Native child launcher 留在 SDK Client**——未采用，因为 CLI 依赖 SDK Client，而 SDK Client 又依赖同版本 CLI；安装该 launcher 的 Program 应拥有它。
 
 ## 验证边界
 

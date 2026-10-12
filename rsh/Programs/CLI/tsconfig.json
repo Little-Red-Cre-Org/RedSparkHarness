@@ -78,7 +78,7 @@
       "path": "../../Modules/Official/shell/tool-bash"
     },
     {
-      "path": "../SDK/packages/client"
+      "path": "../../Engine/subagent/sdk-runtime"
     },
     {
       "path": "../../Engine/llm/native-model-selection/tsconfig.host.json"

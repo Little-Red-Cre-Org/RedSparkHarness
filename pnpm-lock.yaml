@@ -9291,12 +9291,12 @@ importers:
       '@deepseek-ai/dsh-sdk-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/sdk-child
-      '@deepseek-ai/dsh-sdk-client':
-        specifier: workspace:^
-        version: link:../SDK/packages/client
       '@deepseek-ai/dsh-sdk-protocol':
         specifier: workspace:^
         version: link:../../Engine/subagent/sdk-protocol
+      '@deepseek-ai/dsh-sdk-runtime':
+        specifier: workspace:^
+        version: link:../../Engine/subagent/sdk-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../Engine/session/session-persistence-jsonl
@@ -9889,9 +9889,6 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../../Core/util/home-paths
-      '@deepseek-ai/dsh-sandbox':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/sandbox/sandbox
       '@deepseek-ai/dsh-sdk-runtime':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/sdk-runtime
@@ -9905,6 +9902,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-sandbox':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/sandbox/sandbox
       '@deepseek-ai/dsh-sdk-protocol':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/sdk-protocol
