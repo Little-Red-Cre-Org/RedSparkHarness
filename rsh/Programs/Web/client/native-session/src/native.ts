@@ -695,11 +695,12 @@ export interface NativeSessionClient {
    * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
    * @param onFollowError - background follow failure after turn settlement, when present.
+   * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void): Promise<{
+    onFollowError?: (error: unknown) => void, lastSeq?: number): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -1134,6 +1135,12 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'baseline' && typeof data.sessionId === 'string' && data.sessionId.length > 0
+    && typeof data.fromSeq === 'number' && Number.isSafeInteger(data.fromSeq) && data.fromSeq >= -1
+    && typeof data.throughSeq === 'number' && Number.isSafeInteger(data.throughSeq) && data.throughSeq >= data.fromSeq
+    && Object.keys(data).length === 4) {
+    return { type: 'baseline', sessionId: data.sessionId as SessionId, fromSeq: data.fromSeq, throughSeq: data.throughSeq }
+  }
   if (data.type === 'submission-update' && (data.status === 'accepted' || data.status === 'rejected' || data.status === 'settled')
     && typeof data.requestId === 'string' && data.requestId.length > 0 && Object.keys(data).length === 3) {
     return { type: 'submission-update', status: data.status, requestId: brandSubmissionRequestId(data.requestId) }
@@ -1189,15 +1196,19 @@ export function createNativeSessionClient(
   }
   async function prompt(
     sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void,
+    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void, lastSeq = -1,
   ) {
     const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     accepted.throwIfAborted()
+    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
+      throw new TypeError('native Session Client: invalid follow cursor')
+    }
     const responseOperation = rpc.response
     if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
     const following = new AbortController()
     // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
     const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined,
+      ...observe === undefined ? {} : { lastSeq },
       ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
@@ -1226,17 +1237,30 @@ export function createNativeSessionClient(
               throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
             }
             let terminal = false
+            let baseline: Extract<NativeSessionFollowFrame, { type: 'baseline' }> | undefined
             const events = response.body.pipeThrough(new TextDecoderStream())
               .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
             let nextSeq: number | undefined
             for await (const { data } of events) {
               const frame = followFrame(JSON.parse(data))
               if (terminal) throw new Error('native Session follow: output after settlement')
+              if (baseline === undefined) {
+                if (frame.type !== 'baseline' || frame.sessionId !== sessionId || frame.fromSeq !== lastSeq) {
+                  throw new Error('native Session follow: first frame does not match the admitted Session cursor')
+                }
+                baseline = frame
+                nextSeq = frame.fromSeq + 1
+              } else if (frame.type === 'baseline') throw new Error('native Session follow: duplicate baseline')
               if (frame.type === 'event') {
-                if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
+                if (nextSeq === undefined || frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
                 nextSeq = frame.event.seq + 1
               }
-              if (frame.type === 'settled') terminal = true
+              if (frame.type === 'settled') {
+                if (nextSeq === undefined || nextSeq - 1 < baseline.throughSeq) {
+                  throw new Error('native Session follow: settled before baseline history completed')
+                }
+                terminal = true
+              }
               observe(frame)
             }
             if (!terminal) throw new Error('native Session follow: EOF before settlement')
@@ -1433,8 +1457,8 @@ export function createNativeSessionClient(
         'session/submissions', { sessionId }, signal,
       )).submissions
     },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
-      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError)
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq)
       pendingPrompts.add(pending)
       const settled = (): void => { pendingPrompts.delete(pending) }
       void pending.then(settled, settled)

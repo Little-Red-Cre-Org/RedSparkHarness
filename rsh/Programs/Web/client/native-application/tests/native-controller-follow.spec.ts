@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionClient, NativeSessionListFrame, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from '../src/controller.ts'
 import { createNativeSessionClient } from '../../native-session/src/native.ts'
@@ -70,6 +70,8 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const encoder = new TextEncoder()
   let admissionCount = 0
   let promptCount = 0
+  const cursorByAdmission = new Map<string, number>()
+  const seedEvent: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} }
   let rows: NativeSessionListItem[] = [
     { header: makeHeader('session-alpha'), titleProjection: { status: 'absent' }, updatedAt: 1,
       blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false },
@@ -79,7 +81,11 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const rosterFrames = frameQueue<NativeSessionListFrame>()
   const rpc = {
     async call(_channel: string, endpoint: string, payload: unknown) {
-      if (endpoint === 'session/start') return { ok: true as const, value: { admissionId: `a${++admissionCount}` } }
+      if (endpoint === 'session/start') {
+        const admissionId = `a${++admissionCount}`
+        cursorByAdmission.set(admissionId, (payload as { lastSeq: number }).lastSeq)
+        return { ok: true as const, value: { admissionId } }
+      }
       const admissionId = (payload as { admissionId: string }).admissionId
       if (endpoint === 'session/await') return { ok: true as const, value: await settlements.get(admissionId)!.promise }
       if (endpoint === 'session/cancel') return { ok: true as const, value: { cancelled: false } }
@@ -90,6 +96,10 @@ it('isolates delayed frames and late carrier errors while retaining title roster
       const body = new ReadableStream<Uint8Array>({
         start(stream) {
           streams.set(admissionId, stream)
+          const request = payload as { sessionId: string }
+          const lastSeq = cursorByAdmission.get(admissionId)!
+          stream.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'baseline', sessionId: request.sessionId,
+            fromSeq: lastSeq, throughSeq: lastSeq })}\n\n`))
           signal.addEventListener('abort', () => { if (!failedStreams.has(admissionId)) stream.close() }, { once: true })
           if (admissionId === 'a1') firstFollowStarted.resolve(undefined)
           else if (admissionId === 'a2') secondFollowStarted.resolve(undefined)
@@ -103,12 +113,12 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const followFailures = [firstFollowFailure, secondFollowFailure, thirdFollowFailure]
   const client: NativeSessionClient = {
     ...transport,
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
       const failure = followFailures[promptCount++]!
       return transport.prompt(sessionId, text, resume, signal, observe, images, (error) => {
         onFollowError?.(error)
         failure.resolve(error)
-      })
+      }, lastSeq)
     },
     async list() { return rows },
     async *follow(signal: AbortSignal) {
@@ -123,7 +133,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
       planMode: { available: false, active: false } } },
     async permissionControls() { return { available: false, currentValue: null, options: [] } },
-    async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
+    async history(id) { return { header: makeHeader(id), events: [seedEvent], inheritedEventCount: 0 } },
   }
   const controller = new NativeConversationController(client, { maxLiveTextChars: 1_000, maxLiveEvents: 100 })
   const unsubscribe = controller.subscribe(() => {
@@ -164,13 +174,13 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     push('a1', { type: 'text-start' })
     push('a1', { type: 'text', text: 'FIRST_TURN_DELAYED_TEXT' })
     push('a1', { type: 'human', prompt: { kind: 'approval', id: 'old-human', toolName: 'old-tool' } })
-    push('a1', { type: 'event', event: { type: 'session/end-seed', seq: 0, time: 1, data: {} } })
+    push('a1', { type: 'event', event: { type: 'session/end-seed', seq: 1, time: 2, data: {} } })
     push('a1', { type: 'title-updated' })
     await alphaTitlePublished.promise
 
     expect(controller.getSnapshot()).toMatchObject({ state: 'sending', selected: 'session-alpha', liveText: 'SECOND_TURN_TEXT' })
     expect(controller.getSnapshot().human).toBeUndefined()
-    expect(controller.getSnapshot().events).toEqual([])
+    expect(controller.getSnapshot().events).toEqual([seedEvent])
 
     fail('a1', new Error('superseded alpha carrier failure'))
     expect(await firstFollowFailure.promise).toMatchObject({ message: 'superseded alpha carrier failure' })
@@ -198,7 +208,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: 'session-beta', error: undefined })
     expect(controller.getSnapshot().liveText).toBeUndefined()
     expect(controller.getSnapshot().human).toBeUndefined()
-    expect(controller.getSnapshot().events).toEqual([])
+    expect(controller.getSnapshot().events).toEqual([seedEvent])
 
     const thirdSend = controller.send('third')
     await thirdFollowStarted.promise

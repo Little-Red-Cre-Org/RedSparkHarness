@@ -209,7 +209,7 @@ it('keeps schedule state unavailable and enforces the shared follower limit', as
       { header: { id: releasedId }, running: false, hasActiveSchedule: false },
     ] })
     const started = await service.handle('session/start', {
-      sessionId: 'follower-limit', text: 'go', resume: true, follow: true,
+      sessionId: 'follower-limit', text: 'go', resume: true, follow: true, lastSeq: -1,
     }, new AbortController().signal)
     if (!started.ok) throw new Error(started.error.message)
     const admissionId = (started.value as { admissionId: string }).admissionId
@@ -459,7 +459,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignProgram: NativePlugin = {
     apiVersion: 1, name: 'foreign-program', targets: ['host'],
     requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
-    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'], provides: [],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'], provides: [],
     resolve: () => (context) => {
       persistence = context.require('sessionPersistence')
       foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',
@@ -554,6 +554,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin: storageDomain, scope, config: { backend: 'json' } },
     { plugin: attachmentStorage, scope, config: { dshHome: directory } },
   ], 'host'))
+  let pendingSelection: Promise<unknown> | undefined
+  let pendingQueuedPrompt: Promise<unknown> | undefined
+  let queuedPromptAbort: AbortController | undefined
   try {
     const baseConfig = { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100,
@@ -678,23 +681,29 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(selectedEvent?.data).toEqual({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'unknown' }, expectedRevision: selectedEvent!.seq })).rejects.toThrow()
     holdResolution = true
-    const selection = client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'high' }, expectedRevision: selectedEvent!.seq })
+    const selection = client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'high' }, expectedRevision: selectedEvent!.seq }).then(
+      () => ({ resolved: true as const }), (error: unknown) => ({ resolved: false as const, error }))
+    pendingSelection = selection
     await resolving.promise
     const queuedAbort = new AbortController()
-    const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal)
-    const refusedQueued = expect(queued).resolves.toEqual({ exitCode: 130 })
+    queuedPromptAbort = queuedAbort
+    const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal).then(
+      result => ({ result }), (error: unknown) => ({ error }))
+    pendingQueuedPrompt = queued
     await vi.waitFor(async () => { expect((await client.status(sessionId)).status === 'running' || requests.length > 0).toBe(true) })
-    await expect(client.modeControls(sessionId)).resolves.toMatchObject({ current: 'alternate',
-      planMode: { available: true, active: false } })
-    await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
+    await expect(client.modeControls(sessionId)).rejects.toThrow('native-headless: exclusive Session maintenance is active')
+    await expect(client.permissionControls(sessionId)).rejects.toThrow('native-headless: exclusive Session maintenance is active')
     expect(requests).toHaveLength(0)
     expect(retainedExecution?.status).toBe('maintenance')
     queuedAbort.abort(new Error('cancel queued dispatch'))
     holdResolution = false
     releaseResolution.resolve(undefined)
-    await selection
-    await refusedQueued
+    expect(await selection).toEqual({ resolved: true })
+    expect(await queued).toEqual({ result: { exitCode: 130 } })
     expect(requests).toHaveLength(0)
+    await expect(client.modeControls(sessionId)).resolves.toMatchObject({ current: 'alternate',
+      planMode: { available: true, active: false } })
+    await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     releaseRetainedRoot?.()
     await conversation.select(sessionId)
     const first = conversation.send('first input')
@@ -715,7 +724,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.selectPreset({ id: sessionId, preset: 'standard', expectedRevision: null })).rejects.toThrow()
     await conversation.select(sessionId)
     expect(conversation.getSnapshot().liveText).toBeUndefined()
-    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
+    expect(conversation.getSnapshot().events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
     await conversation.select(sessionId)
     const png = await readFile(new URL('../../../../../../snapshots/native-sdk/text-turn/image.png', import.meta.url))
     const images = [{ mediaType: 'image/png' as const, data: png.toString('base64'), name: 'image.png' }]
@@ -764,9 +773,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseCleanup()
     await pending
     expect(conversation.getSnapshot().state).toBe('ready')
-    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
+    expect(conversation.getSnapshot().events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
-    expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
+    expect((await client.history(sessionId)).events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
     humanSteps = [toolCallResponse('allow', 'guarded', {}), toolCallResponse('deny', 'guarded', {}),
       toolCallResponse('question', 'ask_user_question', { questions: [{ id: '', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }), textResponse('human complete')]
     const interactive = conversation.send('human input')
@@ -802,7 +811,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'foreign input' }] }) }, foreignAbort.signal)
     await foreignModelReady.promise
     try {
-      const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true }, new AbortController().signal)
+      const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
       if (!started.ok) throw new Error(started.error.message)
       const admission = started.value as { admissionId: string }
       const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
@@ -1036,7 +1045,10 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   } finally {
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
+    holdResolution = false
+    queuedPromptAbort?.abort(new Error('web fixture cleanup'))
     releaseResolution.resolve(undefined)
+    await Promise.all([pendingSelection, pendingQueuedPrompt].filter((pending): pending is Promise<unknown> => pending !== undefined))
     releaseImage.resolve(undefined)
     releaseRetainedRoot?.()
     firstContinue.resolve(undefined)
@@ -1207,7 +1219,7 @@ it('removes the Native Web controller after cancelling and draining retained tit
     await host.start()
     if (nativeWebSession === undefined || persistence === undefined) throw new Error('missing Native Web Session fixture')
     const prompted = await nativeWebSession.handle('session/prompt', {
-      sessionId, text: 'First prompt', resume: false, follow: true,
+      sessionId, text: 'First prompt', resume: false, follow: true, lastSeq: -1,
     }, new AbortController().signal)
     await providerStarted.promise
     expect(prompted).toMatchObject({ ok: true, value: { exitCode: 0 } })

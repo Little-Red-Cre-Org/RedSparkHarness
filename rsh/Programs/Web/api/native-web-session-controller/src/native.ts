@@ -539,10 +539,12 @@ export class NativeWebSessionService {
   private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
     signal.throwIfAborted()
     const fields = object(payload)
-    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow', 'images'].includes(key)) throw new Error('native web session: unexpected prompt field')
+    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow', 'lastSeq', 'images'].includes(key)) throw new Error('native web session: unexpected prompt field')
     const id = sessionId(fields.sessionId)
     if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) throw new TypeError('native web session: text exceeds configured limits or is empty')
     if (fields.follow !== undefined && typeof fields.follow !== 'boolean') throw new TypeError('native web session: follow must be boolean')
+    if (fields.follow === true && (typeof fields.lastSeq !== 'number' || !Number.isSafeInteger(fields.lastSeq) || fields.lastSeq < -1)
+      || fields.follow !== true && fields.lastSeq !== undefined) throw new TypeError('native web session: follow cursor must be an integer at least -1')
     if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
     const images = fields.images === undefined ? [] : z.array(z.strictObject({
       mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']), data: z.string(), name: z.string().optional(),
@@ -615,6 +617,18 @@ export class NativeWebSessionService {
                 }
               }
             }
+          }, onBaseline: async (owner, baselineSignal) => {
+            if (owner.session.id !== id || owner.invocation !== 'root' || !owner.writerAvailable
+              || this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: history baseline lost its exact root owner')
+            const events = await owner.readEvents({ maxEvents: this.config.maxHistoryEvents + 1, signal: baselineSignal })
+            baselineSignal.throwIfAborted()
+            if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: history baseline owner was released')
+            if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
+            const cursor = fields.lastSeq as number
+            if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
+              throw new Error('native web session: follow cursor is outside the exact Session history')
+            }
+            feed.setBaseline(id, cursor, events.slice(cursor + 1))
           }, onChunk: (chunk) => {
             if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
             if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
@@ -1843,7 +1857,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)

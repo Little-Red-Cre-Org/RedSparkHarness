@@ -172,7 +172,7 @@ export function shippedNativeProfileComposition(
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
           : { provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
             ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
-            ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxPendingHumanRequests: 32 } : {}) },
+            ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 500, maxPendingHumanRequests: 32 } : {}) },
       },
       ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [
@@ -248,6 +248,7 @@ export function shippedNativeProfileComposition(
       { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
         config: { maxBytes: 65_536 } },
       { id: 'time-context', plugin: '@deepseek-ai/dsh-native-time-context', scope: ROOT },
+      ...(isHeadlessProfile(profile) ? [{ id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: ROOT, disabled: true }] : []),
       { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
       { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: profile === 'native-tui' ? 'standard' : ROOT,
         config: { allowParallelInProgress: true } },

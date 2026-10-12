@@ -1,10 +1,4 @@
-Model
-Initial
-Chosen
-Reasoning effort
-Provider default
-High
-Preset
+Select model, current Chosen, reasoning effort High
+Mode
 Standard
 Alternate
-Refresh model catalog

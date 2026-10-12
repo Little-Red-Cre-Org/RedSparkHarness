@@ -3642,6 +3642,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-subagent` ([`rsh/Engine/subagent/native-subagent/src/index.ts`](../Engine/subagent/native-subagent/src/index.ts))
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
+- `@deepseek-ai/dsh-native-tmux-context`（[`rsh/Modules/Official/terminal/native-tmux-context/src/index.ts`](../Modules/Official/terminal/native-tmux-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-subagent-list-agents`（[`rsh/Engine/subagent/native-tool-subagent-list-agents/src/index.ts`](../Engine/subagent/native-tool-subagent-list-agents/src/index.ts)）
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
@@ -3674,6 +3675,7 @@ export interface Config {
 - `@deepseek-ai/dsh-subagent-protocol` ([`rsh/Engine/subagent/subagent-protocol/src/index.ts`](../Engine/subagent/subagent-protocol/src/index.ts))
 - `@deepseek-ai/dsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
 - `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
+- `@deepseek-ai/dsh-tmux-context-definition`（[`rsh/Engine/context/tmux-context-definition/src/index.ts`](../Engine/context/tmux-context-definition/src/index.ts)）
 - `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）
 - `@deepseek-ai/dsh-typert-protocol`（[`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts)）

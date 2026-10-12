@@ -46,6 +46,7 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "tmuxContext",
         "agentInstructions",
         "modelSelection",
         "sessionExecution",

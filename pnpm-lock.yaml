@@ -2317,6 +2317,18 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
 
+  rsh/Engine/context/tmux-context-definition:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+
   rsh/Engine/core/agent:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -2578,6 +2590,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../session/session-persistence
+      '@deepseek-ai/dsh-tmux-context-definition':
+        specifier: workspace:^
+        version: link:../../context/tmux-context-definition
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -8465,6 +8480,25 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
 
+  rsh/Modules/Official/terminal/native-tmux-context:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+    devDependencies:
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../../shell/shell
+      '@deepseek-ai/dsh-tmux-context-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/tmux-context-definition
+
   rsh/Modules/Official/terminal/terminal:
     dependencies:
       '@deepseek-ai/dsh-native-agent':
@@ -9316,6 +9350,9 @@ importers:
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
+      '@deepseek-ai/dsh-native-tmux-context':
+        specifier: workspace:^
+        version: link:../../Modules/Official/terminal/native-tmux-context
       '@deepseek-ai/dsh-native-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/native-tool-jobs

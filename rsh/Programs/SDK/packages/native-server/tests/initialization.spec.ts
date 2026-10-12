@@ -113,8 +113,8 @@ it('runs without the optional subagent Provider and drains admitted model work a
   const carrier: NativePlugin = {
     apiVersion: 1, name: 'minimal-sdk-carrier', targets: ['host'],
     requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
-    optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions',
-      'modelSelection', 'agentPresets', 'workspaceRegistry'], provides: ['application', 'rootExecution'],
+    optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions',
+      'modelSelection', 'agentPresets', 'workspaceRegistry', 'commands'], provides: ['application', 'rootExecution'],
     resolve: () => (context) => {
       carrierContext = context
       app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
