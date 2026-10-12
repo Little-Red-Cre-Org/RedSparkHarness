@@ -22,6 +22,8 @@ import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
+import { NativeOnboarding } from './onboarding.tsx'
+import { NativeTrajectoryInspector } from './trajectory.tsx'
 import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
@@ -138,7 +140,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
             <Pill active>{t('chatMode')}</Pill>
           </>}
         </div>
-        <nav aria-label={t('conversationActions')} className={css.actions}>{renderSlot('native.conversation.actions', {})}</nav>
+        <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />}{renderSlot('native.conversation.actions', {})}</nav>
       </header>
       {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
       {selected === undefined || !hasConversation
@@ -261,7 +263,8 @@ export const plugin: NativePlugin = {
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
-      context.provide('clientApplication', { render: () => slots.renderSlot('root', {}) })
+      context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
+        themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
       void controller.load()
     }
   },

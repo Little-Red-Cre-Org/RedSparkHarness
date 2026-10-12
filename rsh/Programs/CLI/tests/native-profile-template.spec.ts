@@ -5,14 +5,54 @@ import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
+import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai/src/adapter.ts'
+import { resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
+import type { PiAiAuthInjection } from '@deepseek-ai/dsh-llm-pi-ai/src/adapter.ts'
+import type { PiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
 import { loadNativeProfile } from '../src/native-profile-loader.ts'
+
+const resolutionAuth: PiAiAuthInjection = {
+  credentials: {
+    read: () => Promise.resolve(undefined),
+    list: () => Promise.resolve([]),
+    modify: () => Promise.reject(new Error('Model resolution must not persist credentials')),
+    delete: () => Promise.reject(new Error('Model resolution must not delete credentials')),
+  },
+  authContext: { env: () => Promise.resolve(undefined), fileExists: () => Promise.resolve(false) },
+}
+
+function piAiResolver(installations: readonly { id: string; config?: unknown }[]): PiAiAdapter {
+  const config = installations.find(row => row.id === 'pi-ai')?.config as { providers: Record<string, PiAiProviderProfile> }
+  return new PiAiAdapter({
+    profiles: () => resolveProfiles(config.providers),
+    resolveApiKey: () => Promise.resolve(undefined),
+    auth: resolutionAuth,
+  })
+}
+
+async function expectModelResolves(
+  installations: readonly { id: string; config?: unknown }[],
+  route: { provider: string; model: string },
+): Promise<void> {
+  const adapter = piAiResolver(installations)
+  try {
+    await expect(adapter.resolveModel(route.provider, route.model))
+      .resolves.toMatchObject({ provider: route.provider, id: route.model })
+  } finally {
+    await adapter.dispose()
+  }
+}
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-web-template-'))
   try {
     const profile = shippedNativeProfileComposition(home, 'native-web', 'win32')
+    const sessionController = profile.installations.find(row => row.id === 'session-controller')
+    expect(sessionController?.config).toMatchObject({ provider: 'deepseek', model: 'deepseek-flash' })
+    const sessionModel = sessionController?.config as { provider: string; model: string }
+    await expectModelResolves(profile.installations, sessionModel)
     expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
       plugin: '@deepseek-ai/dsh-native-web-host',
       config: { projectDir: join(home, 'profiles', 'native-web'), clientReload: 'live' },
@@ -98,7 +138,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
   } finally {
     await rm(home, { recursive: true, force: true })
   }
-})
+}, 10_000)
 
 it('keeps the child SDK sandbox opt-in and confines its selected file provider', () => {
   const child = new Map(shippedNativeProfileComposition('C:/rsh-child', 'native-sdk-dsh-child', 'win32').installations.map(row => [row.id, row]))
@@ -124,11 +164,14 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   expect(profile.installations.some(row => row.id === 'task-scheduler')).toBe(false)
 })
 
-it.each(['native-sdk', 'native-sdk-dsh-child', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
+it.each(['native-sdk', 'native-sdk-dsh-child', 'native-acp'] as const)('installs native list_agents and workspace instructions in %s', (profileName) => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-subagent', profileName, 'win32')
   expect(profile.installations.filter(row => row.id === 'subagent-directory')).toEqual([{
     id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: 'root',
   }])
+  expect(profile.installations.find(row => row.id === 'agent-instructions')).toEqual({
+    id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { maxBytes: 65_536 },
+  })
 })
 
 it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 'native-acp', 'native-tui'] as const)(
@@ -175,7 +218,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
     plugin: '@deepseek-ai/dsh-native-tui',
-    config: { provider: 'deepseek', model: 'deepseek-v4-flash', maxSteps: 8 },
+    config: { provider: 'deepseek', model: 'deepseek-flash', maxSteps: 8 },
   })
   expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
   expect(profile.installations.find(row => row.id === 'task-scheduler')).toMatchObject({
@@ -298,7 +341,7 @@ it.each(['native-headless', 'native-sdk', 'native-acp'] as const)('keeps title a
   expect(plugins).not.toContain('@deepseek-ai/dsh-plan-mode')
 })
 
-it('keeps exact query default and selects one SQLite provider only in the explicit Native profile', () => {
+it('keeps exact query default and selects one SQLite provider only in the explicit Native profile', async () => {
   const installed = createRequire(new URL('../package.json', import.meta.url))
   const standard = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless', 'linux').installations
   const selected = shippedNativeProfileComposition('/tmp/rsh-reference', 'native-headless-query', 'linux').installations
@@ -317,8 +360,13 @@ it('keeps exact query default and selects one SQLite provider only in the explic
     id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: 'root',
     config: { path: join('/tmp/rsh-reference', 'sessions', 'query.sqlite'), openAt: 'first-search' },
   }])
-  expect(standard.find(row => row.id === 'app')?.config).not.toHaveProperty('cwd')
+  expect(standard.find(row => row.id === 'app')?.config).toMatchObject({ cwd: process.cwd() })
   expect(selected.find(row => row.id === 'app')?.config).toMatchObject({ cwd: process.cwd() })
+  for (const profile of [standard, selected]) {
+    const appConfig = profile.find(row => row.id === 'app')?.config as { provider: string; model: string }
+    expect(appConfig).toMatchObject({ provider: 'deepseek', model: 'deepseek-flash' })
+    await expectModelResolves(profile, appConfig)
+  }
   const query = selected.findIndex(row => row.id === 'session-query')
   const projection = selected.findIndex(row => row.id === 'session-projections')
   const cache = selected.findIndex(row => row.id === 'session-projection-cache')

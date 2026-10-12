@@ -52,6 +52,7 @@ Installing or removing the contribution changes the tool-schema prefix. Job stat
 - Truncated output includes an omission marker; `job_output` preserves its status line within the byte budget.
 - An Agent's jobs are cancelled and drained on Agent release. The one-shot native headless application releases its Agent at each turn end, so jobs cannot continue across separate CLI invocations.
 - Native shell, subagent, and workflow producers must register their own runners; this package only exposes controls.
+- The shipped `native-headless` profile includes Native Jobs controls and the `spawn` Subagent Provider, but omits the model-facing `@deepseek-ai/dsh-tool-subagent` Consumer. Direct model-requested background Subagent jobs therefore need a profile that also installs that Consumer; this is a profile-composition gap, not a missing Jobs registry or control implementation.
 
 No invariant companion is published because this package retains no state independent of the job and tool registries.
 

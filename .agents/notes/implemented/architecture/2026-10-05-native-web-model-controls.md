@@ -14,7 +14,7 @@ The Host advertises its selected model directory and installed preset metadata t
 
 The Client folds model intent and preset facts from durable history using their owning pure projections. Every mutation submits the displayed revision. The existing executor exclusively owns Session maintenance and the existing root execution authority performs preset epoch transitions. Retained writers synchronously reserve the selected Agent's idle maintenance before asynchronous directory resolution; cold operations reuse their existing reservation. Concurrent turns queue behind that reservation. The page stays busy until settlement and refreshes durable facts even after a stale revision failure.
 
-The Native composer uses the Cordis-free `ModelPicker` from `ui-primitives` for model and reasoning choices. The picker reads the Host catalog and folded Session intent, refreshes through the existing model-controls action when opened, and submits choices through the existing `selectModel` action. Provider catalog failures remain visible in its menu; Agent presets remain a separate selector.
+The Native composer uses the Cordis-free `ModelPicker` from `ui-primitives` for model and reasoning choices. The picker reads the Host catalog and folded Session intent, refreshes through the existing model-controls action when opened, and submits choices through the existing `selectModel` action. When the initial model-controls request fails before a catalog is available, the picker remains openable before a Session is selected and shows the request error with its retry action. Agent presets remain a separate selector.
 
 ## Alternatives considered
 

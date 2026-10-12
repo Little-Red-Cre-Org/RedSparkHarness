@@ -95,6 +95,7 @@ function isHeadlessProfile(profile: string): boolean {
  * @param profile - shipped profile name.
  * @param platform - target platform for command providers and tools.
  * @returns the profile configuration installed on first use.
+ * @remarks Native SDK, SDK-child and ACP profiles install workspace instructions through their selected filesystem Provider.
  */
 export function shippedNativeProfileComposition(
   home: string,
@@ -146,6 +147,8 @@ export function shippedNativeProfileComposition(
       { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,
         config: { dshHome: home } },
       { id: 'fs', plugin: profile === 'native-sdk-dsh-child' ? '@deepseek-ai/dsh-fs-sandbox' : '@deepseek-ai/dsh-fs-local', scope: ROOT },
+      { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
+        config: { maxBytes: 65_536 } },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
         config: { providers: { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',
@@ -167,8 +170,8 @@ export function shippedNativeProfileComposition(
         scope: ROOT,
         config: profile === 'native-web'
           ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
-          : { provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
-            ...(profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
+          : { provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
+            ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
             ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxPendingHumanRequests: 32 } : {}) },
       },
       ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@deepseek-ai/dsh-native-model-selection', scope: ROOT }] : []),
@@ -183,7 +186,7 @@ export function shippedNativeProfileComposition(
         id: 'session-controller',
         plugin: '@deepseek-ai/dsh-native-web-session-controller',
         scope: ROOT,
-        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-v4-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32, maxPendingHumanRequests: 32,
+        config: { cwd: process.cwd(), provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8, maxPendingRequests: 32, maxHistoryEvents: 100000, maxPromptChars: 100000, maxFollowBufferBytes: 4000000, maxFollowers: 32, maxPendingHumanRequests: 32,
           authorizationKeys: ['llm-pi-ai/openai-codex', 'deepseek-account/default'],
           workspaceRoutes: { maxRoutes: 64, allowedRoots: [process.cwd()] } },
       }] : []),

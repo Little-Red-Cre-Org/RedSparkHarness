@@ -21,7 +21,7 @@ export const plugin = {
         await report('/origin-owner', { sessionId: owner.session.id, invocation: owner.invocation,
           rootOrigin: owner.rootOrigin ?? null, taskScheduleToolVisible: toolsVisible })
       }))
-      const loaded = report('/origin-plugin-loaded', {})
+      const loaded = report('/origin-plugin-loaded', { pid: process.pid })
       context.own(() => loaded)
       const task = (async () => {
         const response = await fetch(`${config.controlUrl}/await-origin-start`, { signal: context.signal })

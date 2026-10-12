@@ -43,7 +43,7 @@ export class SandboxShellController implements ShellOperations {
 
   constructor(
     private readonly local: ShellCommands,
-    private readonly sandbox: ProcessSandbox,
+    private readonly sandbox: Pick<ProcessSandbox, 'confine'>,
     private readonly policy: ShellPolicy,
     private readonly commandArgv: (spec: ShellExecSpec) => readonly string[],
   ) {}

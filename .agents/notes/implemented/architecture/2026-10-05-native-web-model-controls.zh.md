@@ -14,7 +14,7 @@ Host 通过经过身份验证的 Session RPC 提供所选模型目录与已安�
 
 Client 使用所属纯投影从持久化历史折叠模型意图与预设事实。每次修改提交所呈现的修订号。既有执行器独占 Session 维护，既有根执行权威处理预设 epoch 切换。保留的 writer 在异步目录解析前同步占用选定 Agent 的空闲维护准入；冷态操作复用既有准入。并发轮次排在该准入之后。页面保持忙碌直至结算，即使发生过期修订号失败，也刷新持久化事实。
 
-Native composer 使用 `ui-primitives` 中零 Cordis 的 `ModelPicker` 呈现模型与推理选项。Picker 读取 Host 目录和折叠后的 Session 意图，打开时通过既有模型控件操作刷新目录，并通过既有 `selectModel` 操作提交选择。Provider 目录失败会显示在菜单中；Agent 预设仍使用独立选择器。
+Native composer 使用 `ui-primitives` 中零 Cordis 的 `ModelPicker` 呈现模型与推理选项。Picker 读取 Host 目录和折叠后的 Session 意图，打开时通过既有模型控件操作刷新目录，并通过既有 `selectModel` 操作提交选择。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。Agent 预设仍使用独立选择器。
 
 ## 考虑过的替代方案
 

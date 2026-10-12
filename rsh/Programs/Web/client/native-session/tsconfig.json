@@ -30,7 +30,7 @@
       "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
     },
     {
-      "path": "../../api/workspace-files/tsconfig.client.json"
+      "path": "../../api/workspace-files/tsconfig.host.json"
     },
     {
       "path": "../../../../Engine/workspace/workspace-definition"

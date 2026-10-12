@@ -1182,6 +1182,16 @@
       "source": "rsh/Modules/Official/sandbox/sandbox/src/native-types.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "ProcessSandbox",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/sandbox.md",
+      "symbol": "ProcessSandboxChildPaths",
+      "source": "rsh/Modules/Official/sandbox/sandbox/src/native.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/code-runtime.md",
       "symbol": "CodeJsonValue",
       "source": "rsh/Engine/core/code-runtime-definition/src/types.ts"
