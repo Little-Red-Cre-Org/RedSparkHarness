@@ -1,5 +1,5 @@
-/** Native navigation surface over the existing Session and layout owners. */
-import { useEffect, useMemo, useRef, useState } from 'react'
+/** Native navigation surface over the Session, layout, and schedule owners. */
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import {
   Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
@@ -10,7 +10,7 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  NativeSessionClient, NativeSessionListItem,
+  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -23,6 +23,7 @@ import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/native'
 import type {
   InjectFace, PropsLocale, PropsRuntime, SnapshotSelectorHook, TranslateNS,
 } from '@deepseek-ai/dsh-client-ui-slots'
+import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
@@ -44,6 +45,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const zh = {
   sessions: '会话', workspace: '工作区', empty: '暂无会话', loading: '正在读取会话…',
   scheduleAction: '定时任务', search: '搜索会话', searchAria: '搜索会话', searchPlaceholder: '搜索会话…',
+  'schedule.loading': '正在读取定时任务…', 'schedule.empty': '暂无定时任务。', 'schedule.error': '无法读取定时任务。',
+  'schedule.close': '返回会话', 'schedule.nextRun': '下次执行', 'schedule.noNextRun': '暂无后续执行',
+  'schedule.once': '单次执行：{time}（{zone}）', 'schedule.every': '每 {interval} 执行一次，首次于 {time}（{zone}）',
+  'schedule.hours': '{n} 小时', 'schedule.minutes': '{n} 分钟', 'schedule.seconds': '{n} 秒',
+  'schedule.state.active': '计划中', 'schedule.state.paused': '已暂停', 'schedule.state.failed': '执行失败',
   sortUpdated: '按最近活动排序', sortManual: '按手动顺序排序', addWorkspace: '新建工作区', workspaceTitle: '工作区名称',
   viewOptions: '视图选项', groupBy: '分组方式', groupWorkspace: '按工作区', groupFlat: '平铺会话', orderBy: '排序方式',
   'browser.title': '选择工作区目录', 'browser.home': '主目录', 'browser.newFolder': '新建文件夹', 'browser.folderName': '文件夹名称',
@@ -69,6 +75,11 @@ const zh = {
 const en = {
   sessions: 'Sessions', workspace: 'Workspaces', empty: 'No sessions yet', loading: 'Loading Sessions…',
   scheduleAction: 'Scheduled tasks', search: 'Search sessions', searchAria: 'Search sessions', searchPlaceholder: 'Search sessions…',
+  'schedule.loading': 'Loading scheduled tasks…', 'schedule.empty': 'No scheduled tasks.', 'schedule.error': 'Could not load scheduled tasks.',
+  'schedule.close': 'Back to conversation', 'schedule.nextRun': 'Next run', 'schedule.noNextRun': 'No upcoming run',
+  'schedule.once': 'Once · {time} ({zone})', 'schedule.every': 'Every {interval} from {time} ({zone})',
+  'schedule.hours': '{n}h', 'schedule.minutes': '{n} min', 'schedule.seconds': '{n}s',
+  'schedule.state.active': 'Scheduled', 'schedule.state.paused': 'Paused', 'schedule.state.failed': 'Failed',
   sortUpdated: 'Sort by recent activity', sortManual: 'Sort by manual order', addWorkspace: 'New workspace', workspaceTitle: 'Workspace title',
   viewOptions: 'View options', groupBy: 'Group by', groupWorkspace: 'Workspace', groupFlat: 'Flat list', orderBy: 'Order by',
   'browser.title': 'Select Workspace Directory', 'browser.home': 'Home', 'browser.newFolder': 'New folder', 'browser.folderName': 'Folder name',
@@ -546,14 +557,101 @@ function nextWorkspaceSnapshot(snapshot: NativeWorkspaceSnapshot, frame: NativeW
   }
 }
 
-function ScheduledTasksAction({ wide, t }: { wide: boolean; t: NativeSidebarTranslate }) {
+function ScheduledTasksAction({ wide, open, t }: { wide: boolean; open: () => void; t: NativeSidebarTranslate }) {
   return <Tooltip label={t('scheduleAction')} delayMs={500} disabled={wide}>
     <button type="button" className={css.scheduleAction} aria-label={t('scheduleAction')}
-      title={t('scheduleAction')} disabled>
+      title={t('scheduleAction')} onClick={() => { open() }}>
       <IconClockOutline16 size={wide ? 16 : 18} />
       {wide && <span>{t('scheduleAction')}</span>}
     </button>
   </Tooltip>
+}
+
+function scheduleTime(timestamp: number, timeZone: string, locale: NativeLocaleSnapshot['locale']): string {
+  const offsetMinutes = timeZone === 'UTC' ? 0
+    : (timeZone[3] === '+' ? 1 : -1) * (Number(timeZone.slice(4, 6)) * 60 + Number(timeZone.slice(7, 9)))
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
+    .format(timestamp + offsetMinutes * 60000)
+}
+
+function scheduleInterval(seconds: number, t: NativeSidebarTranslate): string {
+  if (seconds % 3600 === 0) return t('schedule.hours', { n: seconds / 3600 })
+  if (seconds % 60 === 0) return t('schedule.minutes', { n: seconds / 60 })
+  return t('schedule.seconds', { n: seconds })
+}
+
+function applyScheduleFrame(jobs: readonly NativeScheduledJob[], frame: NativeScheduleFrame): readonly NativeScheduledJob[] {
+  switch (frame.type) {
+    case 'baseline': return frame.jobs
+    case 'upsert': {
+      const index = jobs.findIndex(job => job.id === frame.job.id)
+      return index === -1 ? [...jobs, frame.job] : jobs.map((job, row) => row === index ? frame.job : job)
+    }
+    case 'remove': return jobs.filter(job => job.id !== frame.id)
+    default: return assertNever(frame)
+  }
+}
+
+/** Render the read-only Native Schedule list while following Host changes.
+ * Closing the panel aborts its live feed.
+ * @param props - Schedule client, locale hook, return action and localized copy.
+ * @returns The live scheduled-task list panel.
+ */
+export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
+  client: NativeScheduleClient
+  close: () => void
+  useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
+  t: NativeSidebarTranslate
+}): ReactNode {
+  const locale = useLocale(snapshot => snapshot.locale)
+  const [jobs, setJobs] = useState<readonly NativeScheduledJob[]>([])
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    void (async () => {
+      try {
+        for await (const frame of client.follow(controller.signal)) {
+          if (frame.type === 'baseline') setReady(true)
+          setJobs(current => applyScheduleFrame(current, frame))
+        }
+      } catch {
+        if (!controller.signal.aborted) setError(true)
+      }
+    })()
+    return () => { controller.abort() }
+  }, [client])
+  return <section className={css.schedulePanel} aria-labelledby="native-scheduled-tasks-title">
+    <header className={css.schedulePanelHeader}>
+      <h1 id="native-scheduled-tasks-title">{t('scheduleAction')}</h1>
+      <button type="button" className={css.scheduleClose} onClick={close}>{t('schedule.close')}</button>
+    </header>
+    {error && <p className={css.scheduleError} role="alert">{t('schedule.error')}</p>}
+    {!ready ? <p className={css.scheduleEmpty} role="status">{t('schedule.loading')}</p>
+      : jobs.length === 0 ? <p className={css.scheduleEmpty}>{t('schedule.empty')}</p>
+        : jobs.map((job) => {
+          const separator = '; every '
+          const separatorIndex = job.schedule.indexOf(separator)
+          const start = separatorIndex === -1 ? job.schedule : job.schedule.slice(0, separatorIndex)
+          const repeat = separatorIndex === -1 ? undefined : job.schedule.slice(separatorIndex + separator.length)
+          const scheduledAt = scheduleTime(Date.parse(start), job.timeZone, locale)
+          const everySeconds = repeat === undefined ? undefined : Number.parseInt(repeat, 10)
+          return <article className={css.scheduleCard} key={job.id}>
+            <div className={css.scheduleCardHeader}>
+              <strong>{job.title}</strong>
+              <span className={css.scheduleBadge} data-state={job.state}>{t(`schedule.state.${job.state}`)}</span>
+            </div>
+            <p className={css.scheduleTiming}>{everySeconds === undefined
+              ? t('schedule.once', { time: scheduledAt, zone: job.timeZone })
+              : t('schedule.every', { interval: scheduleInterval(everySeconds, t), time: scheduledAt, zone: job.timeZone })}</p>
+            <div className={css.scheduleNextRun}>
+              <span>{t('schedule.nextRun')}</span>
+              <strong>{job.nextRunAt === undefined ? t('schedule.noNextRun')
+                : scheduleTime(job.nextRunAt, job.timeZone, locale)}</strong>
+            </div>
+          </article>
+        })}
+  </section>
 }
 
 /** Native SidebarRoot and its optional Session browser are installed independently from AppFrame. */
@@ -563,7 +661,7 @@ export const plugin: NativePlugin = {
   targets: ['client'],
   requires: [
     'clientSlots', 'clientNativeLayout', 'clientNativeConversation', 'clientNativeSessionPresentation',
-    'clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientLocale',
+    'clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientLocale',
   ],
   provides: [],
   resolve: () => (context) => {
@@ -572,6 +670,7 @@ export const plugin: NativePlugin = {
     const controller = context.require('clientNativeConversation')
     const presentation = context.require('clientNativeSessionPresentation')
     const nativeSession = context.require('clientNativeSession')
+    const scheduleClient = context.require('clientNativeSchedule')
     const workspaceClient = context.require('clientNativeWorkspace')
     const directoryPicker = context.require('clientNativeDirectoryPicker')
     const locale = context.require('clientLocale')
@@ -609,6 +708,16 @@ export const plugin: NativePlugin = {
     context.own(async () => { await workspaceFollow })
     context.own(locale.register('sidebar', { en: sidebarEn, zh: sidebarZh }))
     context.own(locale.register('nativeSidebar', { en, zh }))
+
+    const scheduledTasksPanelId = 'scheduled-tasks' as MainPanelId
+    context.own(slots.inject('main', () => slots.register({
+      name: 'main', key: scheduledTasksPanelId, locale: 'nativeSidebar',
+      inject: () => ({
+        client: scheduleClient,
+        close: () => { layout.selectPanel(null) },
+        hooks: { locale: context.require('clientLocale') },
+      }),
+    }, NativeScheduledTasksPanel)))
 
     const panels = createSnapshotStore<readonly SidebarPanelMetadata[]>([])
     const syncPanels = (): void => {
@@ -686,7 +795,9 @@ export const plugin: NativePlugin = {
         toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',
-    }, ({ wide, t }: { wide: boolean; t: NativeSidebarTranslate }) => <ScheduledTasksAction wide={wide} t={t} />)))
+      inject: () => ({ open: () => { layout.selectPanel(scheduledTasksPanelId) } }),
+    }, ({ wide, open, t }: { wide: boolean; open: () => void; t: NativeSidebarTranslate }) => (
+      <ScheduledTasksAction wide={wide} open={open} t={t} />))))
     syncPanels()
   },
 }

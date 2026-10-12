@@ -53,6 +53,7 @@
         "clientNativeConversation",
         "clientNativeSessionPresentation",
         "clientNativeSession",
+        "clientNativeSchedule",
         "clientNativeWorkspace",
         "clientNativeDirectoryPicker",
         "clientLocale"
