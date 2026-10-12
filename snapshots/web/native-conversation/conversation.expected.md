@@ -1,6 +1,4 @@
-User
 Native browser input.
-image.png
 Tool call
 guarded · {}
 Failed
@@ -12,9 +10,11 @@ Tool call
 todo_write · {"todos":[{"content":"Inspect the workspace","status":"completed"},{"content":"Report progress","status":"in_progress"}]}
 Read
 tool-card.txt
-Assistant
+
 Native browser answer.
-User
+
 Second prompt while the title is pending.
-Assistant
+
+Native browser answer.
+
 Native browser answer.

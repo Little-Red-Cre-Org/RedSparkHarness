@@ -22,26 +22,6 @@
   background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--sph-crimson) 10%, transparent), transparent 65%);
 }
 
-.eyebrow {
-  margin: 0;
-  text-align: center;
-  font: 11px/20px var(--ds-font-family-code);
-  letter-spacing: 0.2em;
-  color: var(--dsw-alias-brand-text);
-}
-
-.tagline {
-  margin: 0;
-  text-align: center;
-  font-size: 13px;
-  line-height: 22px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-@media (max-height: 700px), (max-width: 560px) {
-  .tagline { font-size: 12px; }
-}
-
 /* Cap matches the InputBar card. Glow may paint past the sides. */
 .stack {
   display: flex;
@@ -54,125 +34,10 @@
   overflow: visible;
 }
 
-/* figma 34:10411: fish + title, gap 10, centered; 26/32 wt500. The preview
-   badge is a product addition outside that source: a mono superscript pill
-   riding the title's top-right. */
-.headline {
-  display: flex;
-  /* Overflow-driven: the fish and the title group are two wrap units sharing
-     one centered line while they fit; squeezed, the fish takes its own line
-     above the group. No breakpoint. */
-  flex-wrap: wrap;
-  column-gap: 10px;
-  /* Wrapped, the fish sits on its own line; more air than the 10px side gap
-     keeps it reading as a mark above the title, not a squeezed inline glyph. */
-  row-gap: 12px;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-primary);
-}
-
-/* Title text + badge as one wrap unit so the title never breaks mid-text with
-   the badge stranded beside a fragment. When the badge no longer fits beside
-   the title it wraps to its own centered line below; while both fit, the group
-   is content-sized and centering is a no-op, keeping the superscript snug. */
-.titleGroup {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  /* Superscript sits 7 from the title. */
-  column-gap: 7px;
-  row-gap: 4px;
-  min-width: 0;
-}
-
-.previewBadge {
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 1px 7px 0;
-  border: 0.5px solid var(--dsw-alias-interactive-bg-hover);
-  border-radius: 24px;
-  background: var(--dsw-alias-state-business-tertiary);
-  color: var(--dsw-alias-label-primary-bluish);
-  font-family: var(--ds-font-family-code);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-/* Keep hover detection on a stationary box while the mark moves within it;
-   hover rules target the hitbox so a slot-occupant mark swims too. */
-.fishHitbox {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-}
-
-/* The swim morph's curves poke slightly past the viewBox edges, so clipping
-   would slice the tail mid-wag. The hero mark stays in the same primary ink
-   as its headline. */
 .fish {
   display: block;
-  overflow: visible;
-  transform-origin: 50% 60%;
-  color: var(--dsw-alias-brand-text);
-}
-
-/* Hover swim: a slow continuous sway about the body center — the head
-   (left) lifts as the whale rises, then settles back with a small
-   counter-tilt, like treading water. Negative rotation = head up (the head
-   is the left half; origin 50% 60%). */
-@keyframes hero-fish-swim {
-  0%,
-  100% {
-    transform: none;
-  }
-
-  35% {
-    transform: rotate(-4deg) translate(-0.4px, -0.9px);
-  }
-
-  70% {
-    transform: rotate(1.6deg) translate(0.3px, 0.2px);
-  }
-}
-
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .fishHitbox:hover .fish {
-    animation: hero-fish-swim 1.6s ease-in-out infinite;
-  }
-}
-
-/* Workspace row sits 12px above the input card (figma y80 → y112). */
-.body {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  overflow: visible;
-}
-
-.body > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Must beat `.body > :not(.glow)` specificity so the open Menu (and its
-   right-hand submenu) paints above the InputBar card. */
-.body > .workspaceRow {
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  /* figma 75:8208 workspace row: px 8 above the card. */
-  padding-left: 8px;
+  width: 34px;
+  height: 34px;
 }
 
 /* Folder + label + chevron — transparent at rest; fill only on hover / open.

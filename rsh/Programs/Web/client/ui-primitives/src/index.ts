@@ -29,6 +29,15 @@ export { RiskConfirmation } from './RiskConfirmation.tsx'
 export type { RiskConfirmationProps } from './RiskConfirmation.tsx'
 export { ConnectionIndicator } from './ConnectionIndicator.tsx'
 export type { ConnectionIndicatorState } from './ConnectionIndicator.tsx'
+export {
+  ChatAssistantMessage, ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
+  ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, ChatWelcome,
+} from './chat/ChatPresentation.tsx'
+export { ChatReasoningDisclosure } from './chat/ChatReasoningDisclosure.tsx'
+export { ChatMessageActionRow, ChatMessageActionMeta, ChatMessageCopyAction } from './chat/ChatMessageActions.tsx'
+export { ChatContextMessage } from './chat/ChatContextMessage.tsx'
+export type { ChatContextMessageProps } from './chat/ChatContextMessage.tsx'
+export { ChatMascotHero } from './chat/ChatMascotHero.tsx'
 export { FishLogo, FISH_LOGO_PATH, FISH_LOGO_VIEWBOX } from './FishLogo.tsx'
 export { BrandWordmark } from './BrandWordmark.tsx'
 export type { BrandWordmarkProps } from './BrandWordmark.tsx'
@@ -56,6 +65,10 @@ export type {
 } from './workspace-rows/types.ts'
 export { WorkspaceSectionEmpty, WorkspaceSectionHeader } from './workspace-rows/WorkspaceSection.tsx'
 export { workspaceLabel } from './workspace-rows/workspace-label.ts'
+export { DirectoryBrowser } from './DirectoryBrowser.tsx'
+export type {
+  DirectoryBrowserEntry, DirectoryBrowserKey, DirectoryBrowserListing, DirectoryBrowserProps, DirectoryBrowserTranslate,
+} from './DirectoryBrowser.tsx'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'
