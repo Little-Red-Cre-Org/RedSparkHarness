@@ -12,7 +12,7 @@ export interface PwshPolicy {
 /** Applies confinement to PowerShell commands and classifies runner outcomes. */
 export class SandboxPwshController extends SandboxShellController {
   /** @param local - managed PowerShell executor. @param sandbox - confinement runner. @param policy - current sandbox policy. */
-  constructor(local: LocalPwshController, sandbox: ProcessSandbox, policy: PwshPolicy) {
+  constructor(local: LocalPwshController, sandbox: Pick<ProcessSandbox, 'confine'>, policy: PwshPolicy) {
     super(local, sandbox, policy, spec => local.argv(spec))
   }
 }

@@ -27,6 +27,8 @@
 
 native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
+`native-sdk`、`native-sdk-dsh-child` 与 `native-acp` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。显式选择的 `dsh-sdk` 子启动器会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
+
 
 ## 应用参数
 

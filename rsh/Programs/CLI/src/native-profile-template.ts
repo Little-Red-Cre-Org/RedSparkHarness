@@ -95,6 +95,7 @@ function isHeadlessProfile(profile: string): boolean {
  * @param profile - shipped profile name.
  * @param platform - target platform for command providers and tools.
  * @returns the profile configuration installed on first use.
+ * @remarks Native SDK, SDK-child and ACP profiles install workspace instructions through their selected filesystem Provider.
  */
 export function shippedNativeProfileComposition(
   home: string,
@@ -146,6 +147,8 @@ export function shippedNativeProfileComposition(
       { id: 'attachments', plugin: '@deepseek-ai/dsh-attachment-local', scope: ROOT,
         config: { dshHome: home } },
       { id: 'fs', plugin: profile === 'native-sdk-dsh-child' ? '@deepseek-ai/dsh-fs-sandbox' : '@deepseek-ai/dsh-fs-local', scope: ROOT },
+      { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
+        config: { maxBytes: 65_536 } },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: ROOT,
         config: { providers: { 'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions',

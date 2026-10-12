@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-client-ui-settings-models` lets Web users configure API keys, provider model lists and custom pi-ai routes, and sign in through provider-owned flows. Provider rows combine the current directory, Settings document and credential status. First-run onboarding presents a versioned notice and, when needed, an official DeepSeek credential step. `ui-primitives` shares the API forms and stylesheet with the native Models page.
+`dsh-client-ui-settings-models` lets Web users configure API keys, provider model lists and custom pi-ai routes, and sign in through provider-owned flows. Provider rows combine the current directory, Settings document and credential status. First-run onboarding presents a versioned notice and, when needed, a provider credential step. `ui-primitives` shares the API forms, onboarding content and stylesheets with the native application.
 
 ## Table of Contents
 
@@ -75,7 +75,7 @@ Each settings write carries the card's current `revision`, so a concurrent write
 
 ### Onboarding coordinator
 
-The notice step owns its exact copy in `src/client/locales.ts` and its acknowledgement version in `src/onboarding-copy.ts`; on loopback it compares and writes `ui-onboarding.welcomeNoticeVersion` through the existing settings API, and only an explicit Continue records the current version. A non-loopback browser cannot use that Host-only namespace, so acknowledgement is process-local and the notice returns after reload. The DeepSeek step renders the existing `ProviderEditor` in credential-only mode inside the shared onboarding modal; `credentials.set` stays the only secret write, and no provider settings are changed.
+The notice step owns its exact copy in `src/client/locales.ts` and its acknowledgement version in `src/onboarding-copy.ts`; on loopback it compares and writes `ui-onboarding.welcomeNoticeVersion` through the existing settings API, and only an explicit Continue records the current version. A non-loopback browser cannot use that Host-only namespace, so acknowledgement is process-local and the notice returns after reload. The DeepSeek step uses the shared `ModelOnboardingView`, provider editors and modal; the Cordis adapter supplies the joined Settings, credential and authorization state. `credentials.set` remains the only secret write.
 
 </details>
 

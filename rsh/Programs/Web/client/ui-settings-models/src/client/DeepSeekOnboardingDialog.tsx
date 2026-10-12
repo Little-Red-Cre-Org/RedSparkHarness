@@ -3,21 +3,17 @@
  * Readiness comes from the shared provider/settings/credential join.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import { ModelOnboardingView, OnboardingModal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ModelsSettingsState, ModelsSettingsStore } from './store.ts'
 import { onboardingReadiness, protocolChoices } from './store.ts'
 import { isSubscriptionProvider } from './authorized-provider.ts'
-import { CustomProviderCard } from './CustomProviderCard.tsx'
 import type { ModelsOperations } from './operations.ts'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
-import { ModelsSettingsStyles as formStyles } from '@deepseek-ai/dsh-client-ui-primitives'
-import { ProviderEditor } from './ProviderEditor.tsx'
 import type { en } from './locales.ts'
-import { OnboardingModal } from './OnboardingModal.tsx'
-import styles from './DeepSeekOnboardingDialog.module.css'
 
 /** Registration-side dependencies of {@link DeepSeekOnboardingDialog}. */
 export interface DeepSeekOnboardingInjected {
@@ -52,7 +48,6 @@ function assertNever(_value: never): never {
 export function DeepSeekOnboardingDialog(props: DeepSeekOnboardingDialogProps): ReactNode {
   const { complete, controller, useModels, operations, schema, t } = props
   const state = useModels(snapshot => snapshot)
-  const [selected, setSelected] = useState('deepseek-official')
   const readiness = onboardingReadiness(state)
 
   useEffect(() => {
@@ -81,9 +76,16 @@ export function DeepSeekOnboardingDialog(props: DeepSeekOnboardingDialogProps): 
   }
 
   const providers = state.rows.filter(candidate => state.namespaces.has(candidate.entry.settingsNs)
-    && !isSubscriptionProvider(candidate.entry))
-  const row = providers.find(candidate => candidate.entry.provider === selected)
-  const namespace = row === undefined ? undefined : state.namespaces.get(row.entry.settingsNs)
+    && !isSubscriptionProvider(candidate.entry)).flatMap((candidate) => {
+    const namespace = state.namespaces.get(candidate.entry.settingsNs)
+    return namespace === undefined ? [] : [{
+      provider: candidate.entry.provider,
+      displayName: candidate.entry.displayName,
+      namespace,
+      settingsPath: candidate.entry.settingsPath,
+      ...(candidate.entry.declared === undefined ? {} : { declared: candidate.entry.declared }),
+    }]
+  })
   const customNamespace = state.namespaces.get('llm-pi-ai')
   const protocols = protocolChoices(customNamespace, schema)
 
@@ -95,45 +97,16 @@ export function DeepSeekOnboardingDialog(props: DeepSeekOnboardingDialogProps): 
     void controller.load()
   }
 
-  return (
-    <OnboardingModal title={t('onboardingTitle')}>
-      <p className={styles.description}>{t('onboardingDescription')}</p>
-      <select className={`${styles.provider} ${formStyles['input']} ${formStyles['selectInput']}`}
-        aria-label={t('onboardingProvider')} value={selected} onChange={(event) => { setSelected(event.target.value) }}>
-        {providers.map(candidate => (
-          <option key={candidate.entry.provider} value={candidate.entry.provider}>{candidate.entry.displayName}</option>
-        ))}
-        {protocols.length > 0 ? <option value="">{t('customTitle')}</option> : null}
-      </select>
-      <div className={styles.editor}>
-        {selected === '' && customNamespace !== undefined ? <CustomProviderCard
-          taken={state.rows.map(candidate => candidate.entry.provider)}
-          protocols={protocols}
-          revision={customNamespace.revision}
-          operations={operations}
-          t={t}
-          readOnly={!state.writable}
-          onClose={finishCredential}
-        /> : row !== undefined && namespace !== undefined ? <ProviderEditor
-          key={selected}
-          provider={row.entry.provider}
-          displayName={row.entry.displayName}
-          namespace={namespace}
-          schema={schema}
-          settingsPath={row.entry.settingsPath}
-          operations={operations}
-          t={t}
-          readOnly={false}
-          hideTitle
-          declared={row.entry.declared === true}
-          credentialRequired
-          autoFocusCredential
-          cancelLabelKey="onboardingLater"
-          submitLabelKey="onboardingSave"
-          submitBusyLabelKey="onboardingSaving"
-          onClose={finishCredential}
-        /> : null}
-      </div>
-    </OnboardingModal>
-  )
+  return <OnboardingModal title={t('onboardingTitle')}>
+    <ModelOnboardingView
+      providers={providers}
+      {...customNamespace === undefined || protocols.length === 0
+        ? {} : { customProvider: { namespace: customNamespace, protocols } }}
+      operations={operations}
+      schema={schema}
+      t={t}
+      readOnly={!state.writable}
+      onClose={finishCredential}
+    />
+  </OnboardingModal>
 }
