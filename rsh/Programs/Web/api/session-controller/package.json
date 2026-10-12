@@ -26,6 +26,9 @@
       "types": "./lib/types/remote-events.d.ts",
       "default": "./lib/types/remote-events.js"
     },
+    "./client-event-types": {
+      "types": "./lib/types/client-event-types.d.ts"
+    },
     "./client": {
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
@@ -108,6 +111,9 @@
     "@deepseek-ai/dsh-workspace": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-jobs": {
       "optional": true
     },
