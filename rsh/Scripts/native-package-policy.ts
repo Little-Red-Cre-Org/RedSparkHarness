@@ -304,7 +304,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session/session-title', ['./normalize', './types']],
   ['rsh/Engine/session-query/session-query', ['./source', './definition']],
   ['rsh/Engine/session-query/session-query-sqlite', ['./core']],
-  ['rsh/Engine/goal/goal', ['./types']],
+  ['rsh/Engine/goal/goal', ['./types', './projection']],
   ['rsh/Modules/Official/interaction/commands', ['./facts', './brand']],
   ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy', './native-types']],
   ['rsh/Programs/Web/client/ui-tool', ['./tool-renderer']],
