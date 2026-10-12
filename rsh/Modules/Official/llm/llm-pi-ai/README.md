@@ -194,7 +194,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 <a id="model-experience"></a>
 
-The native `modelDirectory` uses this installation’s exact adapter and configured routes. Catalog failures are isolated per Provider, and an unadvertised model can still resolve through its actual route. `modelSettings.configurableProviders()` shares the Cordis directory projection, and `discover()` uses the same endpoint discovery path while keeping a supplied `apiKey` in the current call only. Profile or `llm-pi-ai` credential-record changes emit `llm/adapters-updated`. Removal drains accepted lookups before releasing the adapter.
+The native `modelDirectory` uses this installation’s exact adapter and configured routes. Catalog failures are isolated per Provider, and an unadvertised model can still resolve through its actual route. `modelSettings.configurableProviders()` shares the Cordis directory projection, and `discover()` uses the same endpoint discovery path while keeping a supplied `apiKey` in the current call only. Profile or `llm-pi-ai` credential-record changes emit `llm/adapters-updated`. The installed DeepSeek catalog contains `deepseek-flash` and `deepseek-v4-pro`. Removal drains accepted lookups, credential resolutions and Native Responses transports before releasing the adapter; a transport close failure is reported after both work groups settle.
 
 ## Model Experience
 

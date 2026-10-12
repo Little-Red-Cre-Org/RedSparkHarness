@@ -455,7 +455,7 @@ describe('Native Codex Responses transport', () => {
     expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
   })
 
-  it('waits for credential refresh before reporting a failed transport close', async () => {
+  it('drains credential refreshes before reporting a failed response-stream close', async () => {
     const server = await localServer()
     routeFetchThrough(server)
     const auth = memoryAuth({ 'openai-codex': siwcCredential('account-one') })
@@ -536,52 +536,83 @@ describe('Native Codex Responses transport', () => {
     const streamBody = await streamTransport.projectRequest(requestBody(), new AbortController().signal)
     const streamingResponse = await streamTransport.forward(streamBody, new AbortController().signal)
     await bodyStarted.promise
-    const consumerCancellation = streamingResponse.body?.cancel()
-    await cancellationStarted.promise
-    let closeSettled = false
-    const closing = streamTransport.close().finally(() => { closeSettled = true })
-    await Promise.resolve()
-    expect(closeSettled).toBe(false)
 
-    const disposalRefreshStarted = Promise.withResolvers<undefined>()
-    const disposalRefreshReleased = Promise.withResolvers<undefined>()
+    const pendingCredentialRefreshStarted = Promise.withResolvers<undefined>()
+    const pendingCredentialRefreshReleased = Promise.withResolvers<undefined>()
     server.token = async (_request, response) => {
-      disposalRefreshStarted.resolve(undefined)
-      await disposalRefreshReleased.promise
+      pendingCredentialRefreshStarted.resolve(undefined)
+      await pendingCredentialRefreshReleased.promise
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
         access_token: accessToken('account-one'),
-        refresh_token: 'refresh-account-one-disposal-rotated',
+        refresh_token: 'refresh-account-one-rotated',
         expires_in: 3600,
       }))
     }
     auth.stored.set('openai-codex', siwcCredential('account-one', { expires: 0 }))
     adapter.invalidate()
-    const preparing = adapter.prepareCall('openai-codex', MODEL).then(
-      () => undefined,
-      (error: unknown) => error,
+    let disposeSettled = false
+    let disposeError: unknown
+    let disposedBeforeCredentialRefresh: boolean | undefined
+    let credentialWasUnchangedBeforeRefreshCompletion: boolean | undefined
+    let consumerCancellationResult: PromiseSettledResult<void> | undefined
+    let closingResult: PromiseSettledResult<void> | undefined
+    let credentialResolutionResult: PromiseSettledResult<Awaited<ReturnType<typeof adapter.getProviderAuth>>> | undefined
+    const observe = <T>(work: Promise<T>): Promise<PromiseSettledResult<T>> => work.then(
+      value => ({ status: 'fulfilled', value }),
+      (reason: unknown) => ({ status: 'rejected', reason }),
     )
-    await disposalRefreshStarted.promise
-    let disposalSettled = false
-    const disposing = adapter.dispose().then(
-      () => ({ kind: 'resolved' as const }),
-      (cause: unknown) => ({ kind: 'rejected' as const, cause }),
-    ).finally(() => { disposalSettled = true })
+    let observedCredentialResolution: Promise<PromiseSettledResult<Awaited<ReturnType<typeof adapter.getProviderAuth>>>> | undefined
+    let observedConsumerCancellation: Promise<PromiseSettledResult<void>> | undefined
+    let observedClosing: Promise<PromiseSettledResult<void>> | undefined
+    let observedDisposal: Promise<void> | undefined
+    try {
+      observedCredentialResolution = observe(adapter.getProviderAuth('openai-codex'))
+      await pendingCredentialRefreshStarted.promise
 
-    cancellationReleased.resolve(undefined)
-    await expect(consumerCancellation).rejects.toBe(cancellationFailure)
-    await expect(closing).rejects.toBe(cancellationFailure)
-    await upstreamClosed.promise
-    await Promise.resolve()
-    const waitedForCredentialRefresh = !disposalSettled
-    const credentialBeforeRefreshSettled = auth.stored.get('openai-codex')
-    disposalRefreshReleased.resolve(undefined)
-    const disposalOutcome = await disposing
+      const consumerCancellation = streamingResponse.body?.cancel()
+      if (consumerCancellation === undefined) throw new Error('Native Responses stream did not expose a body')
+      observedConsumerCancellation = observe(consumerCancellation)
+      await cancellationStarted.promise
+      observedClosing = observe(streamTransport.close())
+      observedDisposal = adapter.dispose().then(
+        () => { disposeSettled = true },
+        (error: unknown) => { disposeSettled = true; disposeError = error },
+      )
 
-    expect(waitedForCredentialRefresh).toBe(true)
-    expect(credentialBeforeRefreshSettled).toMatchObject({ refresh: 'refresh-account-one' })
-    expect(disposalOutcome).toEqual({ kind: 'rejected', cause: cancellationFailure })
-    expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-disposal-rotated' })
-    await expect(preparing).resolves.toMatchObject({ code: 'ABORTED' })
-    await server.close()
+      cancellationReleased.resolve(undefined)
+      consumerCancellationResult = await observedConsumerCancellation
+      closingResult = await observedClosing
+      await upstreamClosed.promise
+      await new Promise<void>((resolve) => { setImmediate(resolve) })
+      disposedBeforeCredentialRefresh = disposeSettled
+      const pendingCredential = auth.stored.get('openai-codex')
+      credentialWasUnchangedBeforeRefreshCompletion = pendingCredential?.type === 'oauth'
+        && pendingCredential.refresh === 'refresh-account-one'
+    } finally {
+      cancellationReleased.resolve(undefined)
+      pendingCredentialRefreshReleased.resolve(undefined)
+      if (observedClosing === undefined) observedClosing = observe(streamTransport.close())
+      if (observedDisposal === undefined) {
+        observedDisposal = adapter.dispose().then(
+          () => { disposeSettled = true },
+          (error: unknown) => { disposeSettled = true; disposeError = error },
+        )
+      }
+      await Promise.all([
+        observedCredentialResolution ?? Promise.resolve(undefined),
+        observedConsumerCancellation ?? Promise.resolve(undefined),
+        observedClosing,
+        observedDisposal ?? Promise.resolve(undefined),
+      ])
+      await server.close()
+    }
+    if (observedCredentialResolution !== undefined) credentialResolutionResult = await observedCredentialResolution
+    expect(consumerCancellationResult).toMatchObject({ status: 'rejected', reason: cancellationFailure })
+    expect(closingResult).toMatchObject({ status: 'rejected', reason: cancellationFailure })
+    expect(credentialResolutionResult?.status).toBe('fulfilled')
+    expect(disposedBeforeCredentialRefresh).toBe(false)
+    expect(credentialWasUnchangedBeforeRefreshCompletion).toBe(true)
+    expect(disposeError).toBe(cancellationFailure)
+    expect(auth.stored.get('openai-codex')).toMatchObject({ refresh: 'refresh-account-one-rotated' })
   })
 })

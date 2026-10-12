@@ -23,6 +23,8 @@
 
 运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp`、`native-headless`、`native-headless-query`、`native-sdk` 和 `native-acp` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
+`native-headless`、`native-headless-query`、`native-tui` 和 `native-web` 会话默认值使用随附 pi-ai 的 `deepseek` 路由和 `deepseek-flash` 模型。Native ACP 保留显式的 `deepseek-official` 路由。
+
 native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
 
@@ -50,7 +52,7 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 随附的 `native-web` profile 会为 Native Session API 安装 `standard` 和 `minimal` agent mode、plan-mode Provider，以及 `workspace-write` 和 `danger-full-access` 常驻权限 preset。
 
-显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
+普通 `native-headless` 模板也会在首次初始化时把启动目录记录为应用工作区根目录。显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。该 profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
 
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。启动器在导入入口前校验所有选中包的 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。
 
