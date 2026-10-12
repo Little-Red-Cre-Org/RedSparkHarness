@@ -42,9 +42,9 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
-`session/mode-controls` 从有界 Session 历史读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；它还会读取 plan mode 状态及待处理选择。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
+`session/mode-controls` 通过确切 root owner 读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。同一读取还会返回 plan mode 的可用性与状态。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
 
-`session/permission-controls` 从 Session 历史返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
+`session/permission-controls` 返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
 
 `agent-presets/read` 返回一个目录的来源、状态、元数据与原始 `agent.native.json` 文本；profile 独有的组合没有文件内容。`agent-presets/copy` 将已就绪目录复制到 `<DSH_HOME>/.agent-presets`；`agent-presets/delete` 只删除用户目录。`agent-presets/can-open-directory` 报告 Host 打开器是否可用；`agent-presets/open-directory` 打开用户目录，或返回 Host 本地路径。找不到、格式无效和只读拒绝分别保留 `agent-preset/*` 错误码；其他管理失败使用 `native/agent-presets`，打开器失败使用 `native/agent-presets-directory`。文件操作完成后，Host 会在设置事件流发布 `agent-presets/updated`。
 

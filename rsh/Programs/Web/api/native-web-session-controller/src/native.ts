@@ -300,8 +300,8 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
-  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/answer-human', 'session/rename-title', 'session/refresh-title',
-  'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -1138,35 +1138,34 @@ export class NativeWebSessionService {
         }
         if (endpoint === 'session/mode-controls') {
           const id = sessionId(fields.sessionId)
-          const history = await readNativeSessionHistory(id, {
-            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
-            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          const route = await this.routeForSession(id, accepted)
+          return await this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, operationSignal) => {
+            const events = await owner.readEvents({ signal: operationSignal })
+            const facts = foldNativeAgentPresetFacts(owner.session.header, events)
+            const presets = this.selections.presets?.list() ?? []
+            const planMode = this.selections.planMode
+            const planState = planMode?.state(owner)
+            return {
+              current: facts.preset,
+              options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+                ...description === undefined ? {} : { description } })),
+              revision: facts.revision,
+              locked: facts.locked,
+              canSelect: presets.length > 0 && !facts.locked,
+              planMode: { available: planMode !== undefined, ...(planState === undefined
+                ? { active: false }
+                : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
+            }
           }, accepted)
-          const facts = foldNativeAgentPresetFacts(history.header, history.events)
-          const presets = this.selections.presets?.list() ?? []
-          const planMode = this.selections.planMode
-          const planState = planMode?.state(id, history.events)
-          return {
-            current: facts.preset,
-            options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
-              ...description === undefined ? {} : { description } })),
-            revision: facts.revision,
-            locked: facts.locked,
-            canSelect: presets.length > 0 && !facts.locked,
-            planMode: { available: planMode !== undefined, ...(planState === undefined
-              ? { active: false }
-              : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
-          }
         }
         if (endpoint === 'session/permission-controls') {
           const id = sessionId(fields.sessionId)
-          const history = await readNativeSessionHistory(id, {
-            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
-            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
-          }, accepted)
+          const route = await this.routeForSession(id, accepted)
           const permissions = this.selections.permissionPresets
           if (permissions === undefined) return { available: false, currentValue: null, options: [] }
-          return { available: true, ...await permissions.controls(history.events, accepted) }
+          const controls = await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => permissions.controls(owner, operationSignal), accepted)
+          return { available: true, ...controls }
         }
         if (endpoint === 'session/select-plan-mode') {
           const id = sessionId(fields.sessionId)

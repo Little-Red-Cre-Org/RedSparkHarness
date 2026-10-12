@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
-  NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
+  NativeScheduleClient, NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -62,9 +62,14 @@ const sessionProvider = (
   name: 'test-native-session-provider',
   targets: ['client'],
   requires: [],
-  provides: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
+  provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve: () => (context) => {
+    const schedules: NativeScheduleClient = {
+      list: async () => [],
+      follow: async function* () { yield { type: 'baseline', jobs: [] } },
+    }
     context.provide('clientNativeSession', client)
+    context.provide('clientNativeSchedule', schedules)
     context.provide('clientNativeWorkspace', workspace)
     context.provide('clientNativeDirectoryPicker', directoryPicker)
     context.own(() => client.close())
@@ -236,6 +241,12 @@ it('installs modular Native navigation, Session selection, details, locale and t
       await workspaceClient.archiveSession(id)
     }),
     modelControls: vi.fn(async () => ({ catalog: null, canSelectModel: false, presets: [] })),
+    modeControls: vi.fn(async () => ({ current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } })),
+    selectPlanMode: vi.fn(async () => ({ active: false, outcome: 'noop' as const })),
+    permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
+    selectPermissionPreset: vi.fn(async () => undefined),
+    selectPreset: vi.fn(async () => undefined),
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -296,6 +307,11 @@ it('installs modular Native navigation, Session selection, details, locale and t
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
 
+    fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))
+    expect(await screen.findByRole('heading', { name: 'Scheduled tasks' })).toBeTruthy()
+    expect(screen.getByText('No scheduled tasks.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to conversation' }))
+
     fireEvent.click(within(alphaRow).getByRole('button', { name: 'Session actions for Alpha' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Session title' }), { target: { value: 'Renamed Alpha' } })
@@ -310,9 +326,9 @@ it('installs modular Native navigation, Session selection, details, locale and t
 
     fireEvent.click(screen.getByRole('button', { name: 'Session details' }))
     expect(screen.getByRole('complementary', { name: 'Session details' })).toBeTruthy()
-    expect(screen.getByText('C:\\Work\\Shared')).toBeTruthy()
+    expect(screen.getByTitle('C:\\Work\\Shared')).toBeTruthy()
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    await screen.findByText('C:\\Work\\Shared')
+    await screen.findByTitle('C:\\Work\\Shared')
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
 
     const createButton = screen.getByText('New Session').closest('button')
@@ -377,7 +393,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(document.documentElement.style.getPropertyValue('color-scheme')).toBe('')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('')
-    expect(mediaMock.removeEventListener).toHaveBeenCalledTimes(2)
+    expect(mediaMock.removeEventListener).toHaveBeenCalledTimes(mediaMock.addEventListener.mock.calls.length)
     expect(languageListeners.size).toBe(0)
     expect(close).toHaveBeenCalledOnce()
     expect(host.diagnostics().every(item => item.state === 'disposed' && item.cleanup === 'complete')).toBe(true)

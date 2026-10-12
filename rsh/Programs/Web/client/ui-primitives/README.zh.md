@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件、侧边栏行、目录选择器、聊天展示与 agent 输出。它提供标准控件、由回调驱动的目录浏览器、聊天转录与 composer 布局、吉祥物、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。渲染器会丢弃不受信任模型输出中的原始 HTML、限制链接并解析 ANSI 转义。组件不 import Cordis；调用方提供本地化文案与数据回调，颜色使用 `--dsw-*` 设计 token。
+使用 `dsh-client-ui-primitives` 为 Web 客户端构建共享控件、侧边栏、聊天视图和 agent 输出卡片。它提供 Workspace 与 Session 行、目录浏览、`SidebarPathBar`、聊天与 composer 布局、图标、浮层、Settings 表单，以及安全的 Markdown、代码、终端、文件、差异、搜索、网页和 JSON 渲染。组件使用 React 与 `--dsw-*` token，接收本地化文案和数据回调，不 import Cordis。
 
 ## 目录
 
@@ -47,6 +47,7 @@ kind: "package-library"
 | `ProjectRowItem`、`SessionNodeItem`、`SearchResultItem` | 通过 props 提供数据的 Workspace 与 Session 行，由 legacy 和 native 侧边栏组合共享。Project 和 Session 树行可聚焦；Enter 和 Space 会触发行操作。`SessionNodeItem.allowRemove` 可在 owner 仅支持归档时隐藏 legacy 确认操作。 |
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
 | `DirectoryBrowser` | 由回调驱动的 Miller 分栏目录选择器，支持路径导航、创建文件夹、显示隐藏条目，并由 owner 提供本地化文案。 |
+| `SidebarPathBar` | 文件面板与会话详情共用的自适应路径栏；调用方传入路径和尾部控件。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
 | `ChatTranscript`、`ChatTurnGroup`、`ChatUserMessage`、`ChatAssistantMessage`、`ChatReasoningDisclosure`、`ChatContextMessage`、`ChatTurnActivity` | legacy 与 Native 聊天视图共享的轮次分组、转录节奏、消息外框、折叠推理与上下文行，以及运行中轮次标签。 |
 | `ChatMessageActionRow`、`ChatMessageCopyAction`、`ChatMessageActionMeta` | 共享消息复制操作与弱化的元信息行。 |
@@ -111,6 +112,7 @@ Models 设置编辑器通过 props 接收本地化文案、schema 操作和 Host
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | 搜索与网页检索卡片 |
 | [`src/icons/`](src/icons/) | `ic_ds_*` 字形组件与品牌标记 |
 | [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | 供 browse 与 Native Workspace 流程共享的目录导航对话框 |
+| [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | 文件面板与会话详情共用的 token 路径栏 |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free Settings 导航与对话框 |
 | [`src/chat/`](src/chat/) | 共享转录、composer、轮次活动、欢迎页与吉祥物展示 |
 | [`src/models-settings/`](src/models-settings/) | 通过 props 提供的提供方表单、模型编辑器及其共享样式表 |
