@@ -12,7 +12,7 @@
   ],
   "references": [
     {
-      "path": "../../api/workspace-files/tsconfig.host.json"
+      "path": "../../api/workspace-files/tsconfig.client.json"
     },
     {
       "path": "../../../../Core/util/workspace-path"
