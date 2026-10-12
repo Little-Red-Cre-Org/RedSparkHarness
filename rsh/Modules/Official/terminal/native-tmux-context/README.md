@@ -73,6 +73,7 @@ The message adds the current location on the first step when that location diffe
 - The query needs POSIX `ps` and `tmux`, a `TMUX_PANE` value, and a matching controlling terminal; otherwise it contributes no location message.
 - The Provider reads location metadata only; it does not read pane text, terminal contents, or pixel dimensions.
 - A location change during a turn appears on the next turn because preparation runs on step one only.
+- No runtime invariant companion is published because Native Headless owns durable Session appends and reconstructs the Provider's transient suppression state from committed events.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -77,6 +77,7 @@ Provider 通过所选 `shell` 服务查询，并返回带来源信息的 user �
 - 查询需要 POSIX `ps` 和 `tmux`、`TMUX_PANE` 值及匹配的控制终端；否则不会添加位置消息。
 - Provider 只读取位置元数据；它不会读取窗格文本、终端内容或像素尺寸。
 - 由于准备只在每轮第一步执行，轮次中途的位置变化会在下一轮显示。
+- 不会发布 runtime invariant 配套包，因为 Native Headless 持有 Session 持久追加权，并根据已提交事件恢复 Provider 的临时去重状态。
 
 <a id="dev-note"></a>
 ### 开发备注

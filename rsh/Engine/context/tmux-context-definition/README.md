@@ -56,6 +56,7 @@ The entry declares the Native service and augments `NativeServices`; it does not
 ## Known Limitations and Deferred Work
 
 - The package declares types only; callers must install a Provider and an application that consumes the service.
+- No runtime invariant companion is published because this package declares service types only and has no independent runtime state to observe.
 
 <a id="dev-note"></a>
 

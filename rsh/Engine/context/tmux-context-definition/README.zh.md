@@ -58,6 +58,7 @@ import type { NativeTmuxContext, NativeTmuxContextRequest } from '@deepseek-ai/d
 ## 已知限制与待办
 
 - 本包只声明类型；调用方必须安装 Provider 和消费该服务的应用。
+- 本包不会发布 runtime invariant 配套包，因为它只声明服务类型，没有可独立观察的运行时状态。
 
 <a id="dev-note"></a>
 
