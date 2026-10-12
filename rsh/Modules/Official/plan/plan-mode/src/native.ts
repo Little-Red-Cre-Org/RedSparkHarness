@@ -23,7 +23,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import { UserQuestionError } from '@deepseek-ai/dsh-user-questions/native'
 import type {} from './common.ts'
@@ -73,12 +73,12 @@ export interface NativePlanMode {
    * @returns attached agents with their logged and pending plan mode.
    */
   states(): readonly (NativePlanModeState & { readonly agent: NativeAgent })[]
-  /** Read one Session's logged mode and pending selection.
-   * @param sessionId - Session whose state is read.
-   * @param events - complete current Session event log.
-   * @returns the logged mode and any pending selection.
+  /** Read one exact attached root owner's logged and pending mode.
+   * @param owner - exact active root Session owner.
+   * @returns the owner's plan mode state.
+   * @throws when the owner is not attached to this plan-mode Provider.
    */
-  state(sessionId: SessionId, events: readonly SessionEvent[]): NativePlanModeState
+  state(owner: NativeActiveSessionOwner): NativePlanModeState
   /** Select plan mode using the same pending-step rules as `/plan`.
    * @param owner - exact active root Session owner.
    * @param active - requested plan-mode state.
@@ -251,11 +251,10 @@ export const plugin: NativePlugin = {
         states: () => [...states].map(([agent, { owner, state }]) => ({
           agent, ...selections.get(owner.session.id, view(owner, state)),
         })),
-        state(sessionId, events) {
-          const logged = events.findLast(event => event.type === 'plan/mode')
-          const active = logged?.type === 'plan/mode' ? logged.data.active : false
-          const pending = selections.pending(sessionId)
-          return pending === undefined ? { active } : { active, pending: pending.active }
+        state(owner) {
+          const entry = states.get(owner.agent)
+          if (entry === undefined || entry.owner !== owner) throw new Error('plan-mode: exact root owner is not attached')
+          return selections.get(owner.session.id, view(owner, entry.state))
         },
         async select(owner, active, signal) {
           const entry = states.get(owner.agent)
