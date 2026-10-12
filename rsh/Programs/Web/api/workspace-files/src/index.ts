@@ -31,7 +31,6 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { Remote, RemoteError, TypertRemoteService, type TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
 import { WorkspaceChangeFeed } from './changes.ts'
 import { cutWorkspaceFilePage, WorkspaceFilePageTooLargeError, type WorkspaceFilePage } from './native-helpers.ts'
-import type {} from './remote-types.ts'
 import type {
   WorkspaceByteRange,
   WorkspaceDirectoryEntry,
@@ -43,7 +42,7 @@ import type {
   WorkspaceFileWatchFrame,
 } from './types.ts'
 
-export type * from './types.ts'
+export type * from './remote-types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
