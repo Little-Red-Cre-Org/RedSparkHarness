@@ -218,7 +218,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
     plugin: '@deepseek-ai/dsh-native-tui',
-    config: { provider: 'deepseek', model: 'deepseek-flash', maxSteps: 8 },
+    config: { provider: 'deepseek', model: 'deepseek-flash', maxSteps: 8, maxStreamChunks: 500 },
   })
   expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
   expect(profile.installations.find(row => row.id === 'task-scheduler')).toMatchObject({
