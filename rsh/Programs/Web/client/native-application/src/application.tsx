@@ -22,6 +22,7 @@ import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
+import { NativeTrajectoryInspector } from './trajectory.tsx'
 import { ModelControls } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
@@ -139,7 +140,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
             <Pill active>{t('chatMode')}</Pill>
           </>}
         </div>
-        <nav aria-label={t('conversationActions')} className={css.actions}>{renderSlot('native.conversation.actions', {})}</nav>
+        <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />}{renderSlot('native.conversation.actions', {})}</nav>
       </header>
       {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
       {selected === undefined || !hasConversation
