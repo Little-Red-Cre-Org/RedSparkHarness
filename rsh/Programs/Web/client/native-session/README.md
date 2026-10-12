@@ -32,6 +32,8 @@ The `./list-types` export contains the neutral Host/Client wire row for stored S
 
 `executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
 
+`commands(sessionId, signal?)` reads the selected Session's command descriptors through `session/commands`, including each command's optional input hint and attachment support. The Client validates the Host response and keeps no command catalog cache.
+
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
 
 `agentPresetsList(signal?)` calls `agent-presets/list` and validates the Host's `{ default, presets }` response. It includes profile-only standing compositions and scanned native folders; `source` is `system` or `user` when a folder supplies trust and `profile` otherwise. Without a Registry, the Host returns `default: null` and an empty list.

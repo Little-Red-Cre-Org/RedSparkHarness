@@ -4,7 +4,27 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeScheduleFrame, NativeScheduledJob } from '../src/schedule-types.ts'
-import { nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
+import { createNativeSessionClient, nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
+
+it('reads a typed slash-command catalog for the selected Session', async () => {
+  const sessionId = 'command-catalog-session' as SessionId
+  const catalog = { commands: [{ name: 'compact', description: 'Compact the current Session',
+    input: { hint: '[target]', attachments: true } }] }
+  const calls: unknown[] = []
+  const rpc: ClientConnectionRpc = {
+    call: async (channel, endpoint, payload) => {
+      calls.push([channel, endpoint, payload])
+      return { ok: true, value: catalog }
+    },
+  }
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 10000 })
+  try {
+    expect(await client.commands(sessionId)).toEqual(catalog.commands)
+    expect(calls).toEqual([['/api', 'session/commands', { sessionId }]])
+  } finally {
+    await client.close()
+  }
+})
 
 it('lists schedule rows and decodes follow frames until caller cancellation', async () => {
   const scope = new NativeScope()
