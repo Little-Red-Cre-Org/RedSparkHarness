@@ -30,6 +30,10 @@ it('creates, submits and restores the built native conversation through the ship
   for (const [name, path] of [
     ['native-web-host', 'Programs/Web/host/native-web-host'],
     ['native-web-session-controller', 'Programs/Web/api/native-web-session-controller'],
+    ['storage', 'Core/storage/storage'],
+    ['storage-json', 'Core/storage/storage-json'],
+    ['storage-domain', 'Core/storage/storage-domain'],
+    ['workspace', 'Modules/Official/workspace/workspace'],
     ['session-title', 'Engine/session/session-title'],
     ['session-title-first-prompt-llm', 'Engine/session/session-title-first-prompt-llm'],
     ['credentials-local', 'Modules/Official/credentials/credentials-local'],
@@ -108,13 +112,18 @@ it('creates, submits and restores the built native conversation through the ship
         yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name, arguments: JSON.stringify(args) } };
         yield { type: 'finish', reason: { kind: 'tool-calls' } }; return;
       }
+      const reasoning = 'I will inspect the result.\\nThen I will summarize it.';
+      yield { type: 'block-start', index: 0, blockType: 'reasoning' };
+      yield { type: 'reasoning-delta', index: 0, text: reasoning };
+      yield { type: 'block-end', index: 0, block: { type: 'reasoning', text: reasoning } };
       const text = 'Native browser answer.';
-      yield { type: 'block-start', index: 0, blockType: 'text' };
-      yield { type: 'text-delta', index: 0, text };
+      yield { type: 'block-start', index: 1, blockType: 'text' };
+      yield { type: 'text-delta', index: 1, text };
       const abort = () => { resume() }; request.signal.addEventListener('abort', abort, { once: true });
       if (request.signal.aborted) resume();
       try { await continued } finally { request.signal.removeEventListener('abort', abort) }
-      yield { type: 'block-end', index: 0, block: { type: 'text', text } };
+      yield { type: 'block-end', index: 1, block: { type: 'text', text } };
+      yield { type: 'usage', usage: { inputTokens: 20, outputTokens: 8 } };
       yield { type: 'finish', reason: { kind: 'stop' } };
     } };
       context.provide('model', model);
@@ -137,7 +146,7 @@ it('creates, submits and restores the built native conversation through the ship
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-provider'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'storage-hub' || row.id === 'storage-json' || row.id === 'storage-domain' || row.id === 'workspace' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-llm'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
@@ -162,6 +171,10 @@ it('creates, submits and restores the built native conversation through the ship
       : fixture.find(event => event.type === 'user/message')?.data?.content?.find(block => block.type === 'text')?.text
     if (text === undefined) throw new Error('recorded browser Session has no human input')
     const page = await browser.newPage({ locale: 'en-US' })
+    const waitForComposerReady = () => page.waitForFunction(() => {
+      const editor = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')
+      return editor !== null && !editor.disabled
+    })
     const rpcMethods = new Set<string>()
     page.on('request', (request) => {
       if (request.method() !== 'POST' || !new URL(request.url()).pathname.startsWith('/api/')) return
@@ -177,14 +190,14 @@ it('creates, submits and restores the built native conversation through the ship
     const sidebar = page.locator('[data-slot="sidebar"]')
     // The brand button shares this accessible name; keep the visible creation action in the sidebar path.
     await sidebar.getByRole('button', { name: 'New session', exact: true }).filter({ hasText: 'New Session' }).click()
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     await page.getByRole('combobox', { name: 'Preset', exact: true }).selectOption('alternate')
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     const selectedRoute = JSON.stringify(['mock', 'chosen'])
     await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(selectedRoute)
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).selectOption('high')
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     const controlsText = (await page.getByRole('group', { name: 'Model and preset', exact: true }).innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const controlsPath = join(scenario, 'controls.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
@@ -209,7 +222,7 @@ it('creates, submits and restores the built native conversation through the ship
     const humanPath = join(scenario, 'human.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(humanPath, humanText)
     else expect(humanText).toBe(readFileSync(humanPath, 'utf8'))
-    const live = page.getByRole('article', { name: 'Live assistant output', exact: true })
+    const live = page.locator('[data-streaming="true"]')
     await live.getByText('Native browser answer.', { exact: true }).waitFor()
     const todoPanel = page.getByRole('complementary', { name: 'Task list', exact: true })
     expect(await todoPanel.locator('[data-todo-status]').allTextContents()).toEqual([
@@ -219,23 +232,27 @@ it('creates, submits and restores the built native conversation through the ship
     const todoPath = join(scenario, 'todos.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(todoPath, todoText)
     else expect(todoText).toBe(readFileSync(todoPath, 'utf8'))
-    expect(await page.getByRole('status').innerText()).toBe('Running…')
+    await page.getByRole('button', { name: 'Stop', exact: true }).waitFor()
     const liveText = (await live.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const livePath = join(scenario, 'live.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(livePath, liveText)
     else expect(liveText).toBe(readFileSync(livePath, 'utf8'))
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/release', { method: 'POST' }); if (!response.ok) throw new Error('fixture release failed') })
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     expect(await live.count()).toBe(0)
     const workspaceTree = sidebar.getByRole('tree', { name: 'Workspaces', exact: true })
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/title-started', { method: 'POST' }); if (!response.ok) throw new Error('title fixture did not start') })
     expect(await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).count()).toBe(0)
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Second prompt while the title is pending.')
+    const secondPromptStarted = page.waitForResponse((response) => {
+      return response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/session/start'
+    })
     await page.getByRole('button', { name: 'Send', exact: true }).click()
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
-    await page.getByText('Second prompt while the title is pending.', { exact: true }).waitFor()
+    await secondPromptStarted
     expect(await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).count()).toBe(0)
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/title-release', { method: 'POST' }); if (!response.ok) throw new Error('title fixture release failed') })
+    await waitForComposerReady()
+    await page.getByLabel('Session records').getByText('Second prompt while the title is pending.', { exact: true }).waitFor()
     let sessionRow = workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' })
     await sessionRow.waitFor()
     await sessionRow.getByRole('button', { name: 'Session actions for Native browser session', exact: true }).click()
@@ -260,9 +277,26 @@ it('creates, submits and restores the built native conversation through the ship
     expect(modelMessages.some(message => message.content.some(block => block.type === 'image' && typeof block.attachment?.attachmentId === 'string'))).toBe(true)
     const transcript = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     expect(transcript).toContain('Native browser answer.')
+    const conversationHeader = page.locator('main > header')
+    expect(await conversationHeader.getByText('Native browser session', { exact: true }).count()).toBe(1)
+    expect(await conversationHeader.getByText('Chat', { exact: true }).count()).toBe(1)
+    const turnIds = await page.locator('[data-chat-turn]').evaluateAll(nodes =>
+      new Set(nodes.map(node => (node as HTMLElement).dataset.chatTurn)).size)
+    expect(turnIds).toBeGreaterThan(1)
+    const reasoningDisclosure = page.locator('[data-variant="think"] [data-disclosure-row]').first()
+    expect(await reasoningDisclosure.getAttribute('aria-expanded')).toBe('false')
+    expect(transcript).toContain('I will inspect the result.')
+    expect(transcript).not.toContain('Then I will summarize it.')
+    const actionRow = page.locator('[data-chat-message-action-row]').first()
+    expect(await actionRow.getByRole('button', { name: 'Copy' }).count()).toBe(1)
+    expect(await actionRow.getByLabel('28 tokens').count()).toBe(1)
+    expect(await actionRow.getByLabel('Duration').count()).toBe(1)
+    expect(await actionRow.getByLabel('Time').count()).toBe(1)
     const transcriptPath = join(scenario, 'conversation.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(transcriptPath, transcript)
     else expect(transcript).toBe(readFileSync(transcriptPath, 'utf8'))
+    await reasoningDisclosure.click()
+    await page.getByText('Then I will summarize it.', { exact: false }).waitFor()
     const readCard = page.locator('[data-tool="read"]')
     expect(await readCard.getAttribute('data-state')).toBe('ok')
     expect(await page.locator('[data-tool="guarded"][data-state="error"]').count()).toBe(1)
@@ -274,10 +308,9 @@ it('creates, submits and restores the built native conversation through the ship
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cardPath, cardText)
     else expect(cardText).toBe(readFileSync(cardPath, 'utf8'))
     await page.reload()
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
     await sidebar.getByRole('tree', { name: 'Workspaces', exact: true })
       .getByRole('treeitem').filter({ hasText: 'Native browser session' }).click()
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     expect(await page.getByRole('combobox', { name: 'Model', exact: true }).inputValue()).toBe(selectedRoute)
     expect(await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).inputValue()).toBe('high')
     expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).inputValue()).toBe('alternate')
@@ -289,7 +322,7 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await page.locator('[data-tool="guarded"][data-state="error"]').count()).toBe(1)
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Continue without tasks.')
     await page.getByRole('button', { name: 'Send', exact: true }).click()
-    await page.getByRole('status').filter({ hasText: 'Ready' }).waitFor()
+    await waitForComposerReady()
     expect(await todoPanel.count()).toBe(0)
     const darkBefore = await page.locator('body').getAttribute('data-ds-dark-theme')
     await page.getByRole('button', { name: 'Switch language', exact: true }).click()

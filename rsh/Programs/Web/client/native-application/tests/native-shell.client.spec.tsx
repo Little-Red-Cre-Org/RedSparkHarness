@@ -377,7 +377,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(document.documentElement.style.getPropertyValue('color-scheme')).toBe('')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('')
-    expect(mediaMock.removeEventListener).toHaveBeenCalledOnce()
+    expect(mediaMock.removeEventListener).toHaveBeenCalledTimes(2)
     expect(languageListeners.size).toBe(0)
     expect(close).toHaveBeenCalledOnce()
     expect(host.diagnostics().every(item => item.state === 'disposed' && item.cleanup === 'complete')).toBe(true)
