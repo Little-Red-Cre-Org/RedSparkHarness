@@ -3,7 +3,7 @@
 import type {
   AssistantMessageNode, ConversationLocation, ConversationNode, RunningToolCall, ToolResultNode,
   SystemPromptNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import type { TrajectorySnapshot } from './client/trajectory-contract.ts'
 import { contextForm, contextProvenance, toAssistantBlocks } from './client/trajectory-event-projection.ts'

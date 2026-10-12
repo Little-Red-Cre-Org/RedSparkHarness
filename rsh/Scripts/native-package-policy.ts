@@ -293,8 +293,9 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ]],
 ])
 
-/** Additional Cordis-free exports shared by mixed packages' native entries. */
+/** Cordis-free source subpaths exposed beside compatibility package exports. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Programs/Web/api/session-controller', ['./client-event-types']],
   ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
@@ -304,7 +305,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session-query/session-query-sqlite', ['./core']],
   ['rsh/Engine/goal/goal', ['./types']],
   ['rsh/Modules/Official/interaction/commands', ['./facts', './brand']],
-  ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy']],
+  ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy', './native-types']],
   ['rsh/Programs/Web/client/ui-tool', ['./tool-renderer']],
   ['rsh/Programs/Web/client/locale', ['./dictionary']],
   ['rsh/Modules/Official/spill/spill-policy', ['./notice']],
@@ -318,7 +319,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/CLI', ['./native-profile']],
   ['rsh/Programs/DesktopHost', ['./native-host']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
-  ['rsh/Engine/llm/llm', ['./message']],
+  ['rsh/Engine/llm/llm', ['./brand', './message', './types']],
+  ['rsh/Engine/llm/llm-retry', ['./types']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
   ['rsh/Core/subprocess/subprocess-local', ['./child-connection']],
@@ -352,8 +354,9 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/subagent/codex-app-server', ['./wire']],
 ])
 
-/** Additional native exports compiled only for the Host. */
+/** Compiler faces that load each additional Cordis-free source export. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/api/session-controller/client-event-types', ['client']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],
   ['rsh/Engine/session/session-projection/definition', ['host']],
@@ -365,6 +368,8 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/webhook/webhook/types', ['host']],
   ['rsh/Programs/Web/client/ui-conversation/tool-records', ['client']],
   ['rsh/Programs/Web/client/ui-conversation/conversation-copy', ['client']],
+  ['rsh/Programs/Web/client/ui-conversation/native-types', ['client']],
+  ['rsh/Engine/llm/llm-retry/types', ['client']],
   ['rsh/Programs/Web/client/ui-tool/tool-renderer', ['client']],
   ['rsh/Programs/Web/client/locale/dictionary', ['client']],
   ['rsh/Modules/Official/spill/spill-policy/notice', ['client']],
