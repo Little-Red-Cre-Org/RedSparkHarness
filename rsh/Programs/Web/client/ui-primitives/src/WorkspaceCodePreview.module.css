@@ -13,8 +13,6 @@
 .renderer .code {
   --dsl-code-block-border-radius: 0px;
   --dsl-code-block-line-white-space: pre;
-  /* In a sidebar pane the code sits on the pane's own background; the chat
-     card's gray fill stays a chat-only default. */
   --dsl-code-block-background: transparent;
   display: flex;
   flex: 1 1 auto;
@@ -26,8 +24,6 @@
   min-width: 0;
 }
 
-/* The banner is the scrollport's sibling, so the source scrollbar starts
-   below it. */
 .renderer .code > [data-code-block-content] {
   position: relative;
   display: block;

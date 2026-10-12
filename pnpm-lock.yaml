@@ -12803,6 +12803,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../../api/workspace-files
       '@deepseek-ai/dsh-util-workspace-path':
         specifier: workspace:^
         version: link:../../../../Core/util/workspace-path

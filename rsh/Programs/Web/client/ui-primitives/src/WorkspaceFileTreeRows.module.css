@@ -1,0 +1,66 @@
+.level {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.level .level {
+  padding-left: 18px;
+}
+
+.item {
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 10px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.icon,
+.fileIcon {
+  flex: 0 0 auto;
+}
+
+.icon {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.other {
+  color: var(--dsw-alias-label-tertiary);
+  cursor: default;
+}
+
+.other:hover {
+  background: transparent;
+}
+
+.note {
+  margin: 0;
+  padding: 3px 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
