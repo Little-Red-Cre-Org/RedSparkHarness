@@ -63,7 +63,8 @@
         "clientNativeSession",
         "clientNativeSchedule",
         "clientNativeWorkspace",
-        "clientNativeDirectoryPicker"
+        "clientNativeDirectoryPicker",
+        "clientNativeWorkspaceFiles"
       ]
     }
   },
@@ -89,7 +90,8 @@
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^"
+    "@deepseek-ai/dsh-authorization": "workspace:^",
+    "@deepseek-ai/dsh-api-workspace-files": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

@@ -259,7 +259,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Programs/Web/api/workspace-files/src/index.ts:69`](../Programs/Web/api/workspace-files/src/index.ts)
+来源：[`rsh/Programs/Web/api/workspace-files/src/index.ts:70`](../Programs/Web/api/workspace-files/src/index.ts)
 
 <a id="deepseek-aidsh-archify"></a>
 
