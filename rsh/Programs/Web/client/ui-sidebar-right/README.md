@@ -9,13 +9,14 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The right Sidebar: where the docking kit meets this product. It holds one docking surface per session, draws it as one edge-anchored panel in the frame's right column in either of two presentations, puts the expand button in the conversation header, and owns the navigation controller (`ctx.sidebarRight`), the tab-type registry (`ctx.sidebarRightTabs`), and the Tab domain that tells each open tab how it was navigated to and how long it lives.
+The right Sidebar hosts per-Session tabs in a resizable docked or fullscreen panel. Cordis composition provides tab navigation, resource previews, layout controls, and expand/collapse. Native composition reuses this package's entry for a two-section, read-only Session details panel over header, roster, and history facts.
 
 ## Table of Contents
 
 - [What lives here, and what does not](#what-lives-here-and-what-does-not)
 - [Presentations](#presentations)
 - [The expand button](#the-expand-button)
+- [Native Session details](#native-session-details)
 - [State](#state)
 - [Extension seats](#extension-seats)
 - [`ctx.sidebarRight`](#ctxsidebarright)
@@ -55,6 +56,13 @@ While the panel is hidden, one button in the conversation header's corner seat (
 The panel takes the conversation's ground colour and content font sizes rather than a raised layer of its own: it is a column of the page, not a card over it.
 
 The `rightbar` entry is a root-scoped controller. It reads `usePanelInfo` and mounts the Session-scoped `rightbar.session` subtree only while the Conversation is selected. Switching to a global panel hides the right Sidebar and releases its frame track without deleting the Session's tab state.
+
+<a id="native-session-details"></a>
+## Native Session details
+
+Native profile uses the package's Native entry and rightbar slot for two local sections. Overview reads the selected Session header and roster; Activity counts turns, messages, tool calls, and token usage from durable history, then displays the latest provider, model, and request context. `SidebarPathBar` presents the working directory.
+
+The Native panel only displays facts its existing client APIs supply. It omits the legacy file tree and document previews because the Native profile has no Session-scoped workspace-file client. Trajectory and turn inspection are outside this panel.
 
 <a id="state"></a>
 ## State

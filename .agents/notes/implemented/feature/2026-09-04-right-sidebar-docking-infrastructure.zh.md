@@ -12,7 +12,7 @@ Agent 产出的文件是最尖锐的案例。产出文件 chip 或 `read` 行的
 
 ## Decision
 
-右列是每会话一份的停靠面（分栏 pane、tab、浮动面板与可撤销的操作序列），由 `ui-sidebar-right` 基于 `ui-dockkit` 引擎持有，取代原来的 Detail 面板。本篇只管这个面：引擎、框架的右列、面板的两种呈现与控件、每会话的状态。面里放什么由别处决定：插件如何声明 tab 类型、打开内容、拿到 props 见[tab 类型与导航](../architecture/2026-09-05-sidebar-tab-types-and-navigation.zh.md)；地址背后的活数据见[客户端资源模型](../architecture/2026-09-05-client-resource-model.zh.md)；读工作区文件见[工作区文件服务](../architecture/2026-09-05-workspace-files-service.zh.md)；引导页、文本预览与文件树见[随包类型](2026-09-05-sidebar-text-preview-and-file-tree.zh.md)。
+右列是每会话一份的停靠面（分栏 pane、tab、浮动面板与可撤销的操作序列），由 `ui-sidebar-right` 基于 `ui-dockkit` 引擎持有，取代原来的 Detail 面板。本篇只管这个面：引擎、框架的右列、面板的两种呈现与控件、每会话的状态。面里放什么由别处决定：插件如何声明 tab 类型、打开内容、拿到 props 见[tab 类型与导航](../architecture/2026-09-05-sidebar-tab-types-and-navigation.zh.md)；地址背后的活数据见[客户端资源模型](../architecture/2026-09-05-client-resource-model.zh.md)；读工作区文件见[工作区文件服务](../architecture/2026-09-05-workspace-files-service.zh.md)；引导页、文本预览与文件树见[随包类型](2026-09-05-sidebar-text-preview-and-file-tree.zh.md)。Native 只读 Session 详情由[Native Session 详情](2026-10-12-native-session-details.zh.md)说明。
 
 ### 包拓扑
 

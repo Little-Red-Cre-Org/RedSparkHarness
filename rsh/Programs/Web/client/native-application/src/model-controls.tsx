@@ -28,7 +28,7 @@ export function ModelPickerControl({ snapshot, selectModel, refreshModelControls
     locked={!ready || !controls?.canSelectModel}
     state={state}
     load={() => { void refreshModelControls() }}
-    select={async selection => {
+    select={async (selection) => {
       await selectModel(selection)
       return true
     }}

@@ -310,9 +310,9 @@ it('installs modular Native navigation, Session selection, details, locale and t
 
     fireEvent.click(screen.getByRole('button', { name: 'Session details' }))
     expect(screen.getByRole('complementary', { name: 'Session details' })).toBeTruthy()
-    expect(screen.getByText('C:\\Work\\Shared')).toBeTruthy()
+    expect(screen.getByTitle('C:\\Work\\Shared')).toBeTruthy()
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    await screen.findByText('C:\\Work\\Shared')
+    await screen.findByTitle('C:\\Work\\Shared')
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
 
     const createButton = screen.getByText('New Session').closest('button')

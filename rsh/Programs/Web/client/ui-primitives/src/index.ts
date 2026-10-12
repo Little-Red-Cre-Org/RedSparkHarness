@@ -74,6 +74,7 @@ export { DirectoryBrowser } from './DirectoryBrowser.tsx'
 export type {
   DirectoryBrowserEntry, DirectoryBrowserKey, DirectoryBrowserListing, DirectoryBrowserProps, DirectoryBrowserTranslate,
 } from './DirectoryBrowser.tsx'
+export { SidebarPathBar } from './SidebarPathBar.tsx'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'
