@@ -37,7 +37,7 @@ A fixed Overview above the ledger projects real record start/duration timing fro
 
 ### Native Client
 
-The `@deepseek-ai/dsh-client-ui-trajectory/native` entry exports the props-only table, timeline, and turn views plus `NativeTrajectoryView`. It builds its ledger from append-origin User, Assistant, and Tool-result events already held by the Native session controller. The native view displays the event window it receives and does not load earlier pages or durable image bytes.
+The `@deepseek-ai/dsh-client-ui-trajectory/native` entry exports the props-only table, timeline, and turn views plus `NativeTrajectoryView`. It projects durable turn and step lifecycle records, assistant attempts, messages and Tool results already held by the Native session controller. Failed turns without messages retain their own rows, and assistant duration uses the persisted step start. The native view displays the event window it receives and does not load earlier pages or durable image bytes.
 
 -----
 
