@@ -26,7 +26,7 @@ const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url))
 const BASE_PATCH = join(REPO_ROOT, 'rsh/Compatibility/DSH/bundle/base/cordis.patch.yml')
 const WEB_PATCH = join(REPO_ROOT, 'rsh/Compatibility/DSH/bundle/web-app/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Compatibility/DSH/bridge/subagent-codex')
-const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Engine/subagent/subagent-claude-code')
+const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'rsh/Modules/Official/subagent/subagent-claude-code')
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'rsh/Programs/CLI/package.json')
 const MINIMAL_PROMPT = 'You are a helpful software engineer assistant.'

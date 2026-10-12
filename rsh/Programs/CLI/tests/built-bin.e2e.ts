@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { Readable, Writable } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -18,6 +18,7 @@ import * as yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { loadNativeProfile } from '../src/native-profile-loader.ts'
 import { ensureShippedNativeProfile } from '../src/native-profile-template.ts'
+import { startMessagesFixture } from '../../../Modules/Official/subagent/subagent-claude-code/tests/messages-fixture.ts'
 
 /** Published-entry acceptance for argument errors, profile lifecycle, and boot-free config dumps. */
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url))
@@ -35,6 +36,8 @@ async function runBuiltBin(
   args: readonly string[] = [],
   env: Readonly<Record<string, string | undefined>> = {},
   cwd?: string,
+  timeoutMs = SPAWN_TIMEOUT_MS,
+  onSpawned?: (pid: number | undefined) => void,
 ): Promise<{ stdout: string; code: number; stderr: string }> {
   // Node 24 reports the experimental node:sqlite import used by the compatibility
   // bundle on stderr. The built-entry assertions cover CLI diagnostics, so keep this
@@ -46,17 +49,19 @@ async function runBuiltBin(
     Object.entries({ ...process.env, ...env, NODE_OPTIONS: nodeOptions })
       .filter((entry): entry is [string, string] => entry[1] !== undefined),
   )
-  const result = await execa(process.execPath, [dshBin, ...args], {
+  const child = execa(process.execPath, [dshBin, ...args], {
     input: '',
-    timeout: SPAWN_TIMEOUT_MS,
+    timeout: timeoutMs,
     killSignal: 'SIGKILL',
     reject: false,
     env: childEnv,
     extendEnv: false,
     ...cwd === undefined ? {} : { cwd },
   })
+  onSpawned?.(child.pid)
+  const result = await child
   if (result.timedOut) {
-    throw new Error(`dsh built bin did not exit within ${SPAWN_TIMEOUT_MS / 1_000}s. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
+    throw new Error(`dsh built bin did not exit within ${timeoutMs / 1_000}s. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
   }
   return { stdout: result.stdout, code: result.exitCode ?? -1, stderr: result.stderr }
 }
@@ -67,6 +72,42 @@ async function waitForFile(file: string): Promise<void> {
     if (Date.now() >= deadline) throw new Error(`dsh profile lifecycle marker did not appear: ${file}`)
     await new Promise(resolve => setTimeout(resolve, 20))
   }
+}
+
+function findNativeClaudeHome(tempRoot: string, workspace: string): string | undefined {
+  const parents = [tempRoot, ...readdirSync(tempRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => join(tempRoot, entry.name))]
+  for (const parent of parents) {
+    for (const home of readdirSync(parent, { withFileTypes: true })) {
+      if (!home.isDirectory() || !home.name.startsWith('dsh-claude-code-native-')) continue
+      const homePath = join(parent, home.name)
+      const settingsPath = join(homePath, '.claude', 'settings.json')
+      if (!existsSync(settingsPath)) continue
+      const settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as {
+        permissions?: { additionalDirectories?: string[]; blockReadsOutsideWorkingDirectories?: boolean }
+      }
+      if (settings.permissions?.blockReadsOutsideWorkingDirectories === true
+        && settings.permissions.additionalDirectories?.length === 1
+        && settings.permissions.additionalDirectories[0] === workspace) return homePath
+    }
+  }
+  return undefined
+}
+
+async function waitForNativeClaudeHome(
+  tempRoot: string,
+  workspace: string,
+  childSettled: () => boolean,
+): Promise<string> {
+  const deadline = Date.now() + SPAWN_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    const home = findNativeClaudeHome(tempRoot, workspace)
+    if (home !== undefined) return home
+    if (childSettled()) break
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+  throw new Error('Native Claude did not create its workspace-bound home while the profile was running')
 }
 
 interface ProfileLifecycleFixture {
@@ -189,6 +230,28 @@ function createNativeCliFixture(): { home: string; marker: string } {
     '',
   ].join('\n'))
   return { home, marker }
+}
+
+function persistedEvents(storageRoot: string): unknown[] {
+  const events: unknown[] = []
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) visit(path)
+      else if (entry.isFile() && entry.name.endsWith('.jsonl')) {
+        events.push(...readFileSync(path, 'utf8').split(/\r?\n/u).filter(Boolean)
+          .map(line => JSON.parse(line) as unknown))
+      }
+    }
+  }
+  visit(storageRoot)
+  return events
+}
+
+function sessionEvents(events: readonly unknown[], type: string): Record<string, unknown>[] {
+  return events.flatMap(event => typeof event === 'object' && event !== null && 'type' in event
+    && event.type === type && 'data' in event && typeof event.data === 'object' && event.data !== null
+    ? [event.data as Record<string, unknown>] : [])
 }
 
 /** A live native profile whose app can prove candidate rejection, turnover, and run failures. */
@@ -565,6 +628,225 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       rmSync(fixture.home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS)
+
+  it('runs Claude through the shipped Native headless Subagent Consumer and parent Session without Cordis', async () => {
+    const parentKey = 'built-native-claude-parent-key'
+    const childTask = 'NATIVE_CLAUDE_PROFILE_CHILD_TASK_20261012'
+    const parentServer = await startMockLlmServer({
+      sequence: ['tool_call_success', 'success'],
+      apiKey: parentKey,
+      toolName: 'subagent',
+      toolArguments: JSON.stringify({ description: 'Return a short fixture result', prompt: childTask }),
+      successText: 'Native parent completed after Claude.',
+    })
+    let completeMessages!: () => void
+    const messagesComplete = new Promise<void>((resolve) => { completeMessages = resolve })
+    const messages = await startMessagesFixture({
+      kind: 'complete',
+      text: 'Claude child fixture result.',
+      beforeComplete: messagesComplete,
+    })
+    const home = mkdtempSync(join(tmpdir(), 'dsh-native-claude-session-'))
+    const workspace = join(home, 'workspace')
+    const sandboxTempRoot = join(home, 'sandbox-temp')
+    mkdirSync(workspace)
+    mkdirSync(sandboxTempRoot)
+    const profilePath = join(home, 'profiles', 'native-headless', 'rsh.profile.json')
+    const observerPackage = join(home, 'profiles', 'native-headless', 'node_modules', '@fixture', 'subprocess-observer')
+    const observationPath = join(home, 'native-subprocess-observation.json')
+    const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
+    let profileRun: Promise<{ stdout: string; code: number; stderr: string }> | undefined
+    let cliPid: number | undefined
+    let cliSettled = false
+    let nativeHome: string | undefined
+    try {
+      ensureShippedNativeProfile('native-headless', home)
+      const profile = JSON.parse(readFileSync(profilePath, 'utf8')) as {
+        installations: Array<{ id: string; plugin: string; scope: string; config?: Record<string, unknown> }>
+      }
+      const app = profile.installations.find(row => row.id === 'app')
+      const subagents = profile.installations.find(row => row.id === 'subagents')
+      const modelProvider = profile.installations.find(row => row.id === 'pi-ai')
+      const workflowWorker = profile.installations.find(row => row.id === 'workflow-worker')
+      const ralphTool = profile.installations.find(row => row.id === 'ralph-tool')
+      const sandboxPolicy = profile.installations.find(row => row.id === 'sandbox-policy')
+      if (app === undefined || subagents === undefined || modelProvider === undefined
+        || workflowWorker === undefined || ralphTool === undefined || sandboxPolicy === undefined) {
+        throw new Error('shipped Native headless profile omitted its model, Subagent or workflow Provider')
+      }
+      app.config = { ...app.config, cwd: workspace, provider: 'deepseek', model: 'native-claude-parent-fixture', maxSteps: 4 }
+      sandboxPolicy.config = { ...sandboxPolicy.config, workspaceRoot: workspace }
+      subagents.config = { providerName: 'claude-code' }
+      workflowWorker.config = { ...workflowWorker.config, subagentProvider: 'claude-code' }
+      ralphTool.config = { ...ralphTool.config, subagentProvider: 'claude-code' }
+      modelProvider.config = { providers: { deepseek: {
+        apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions', baseURL: parentServer.baseURL,
+        models: [{ id: 'native-claude-parent-fixture' }],
+      } } }
+      profile.installations.push({
+        id: 'subagent-tool',
+        plugin: '@deepseek-ai/dsh-tool-subagent',
+        scope: 'root',
+        config: { toolName: 'subagent', maxDepth: 2, maxSteps: 2 },
+      })
+      profile.installations.push({
+        id: 'claude-code-driver',
+        plugin: '@deepseek-ai/dsh-subagent-claude-code',
+        scope: 'root',
+        config: { name: 'claude-code', model: 'native-claude-child-fixture', apiKeyEnv: 'ANTHROPIC_API_KEY', baseUrl: messages.baseUrl },
+      })
+      mkdirSync(observerPackage, { recursive: true })
+      writeFileSync(join(observerPackage, 'package.json'), JSON.stringify({
+        name: '@fixture/subprocess-observer',
+        type: 'module',
+        exports: { './package.json': './package.json', './native.js': './native.js' },
+        dsh: { native: {
+          apiVersion: 1, entry: './native.js', targets: ['host'], requires: ['subprocess'], optional: [], provides: [],
+        } },
+      }))
+      writeFileSync(join(observerPackage, 'native.js'), [
+        "import { writeFileSync } from 'node:fs'",
+        'export const plugin = {',
+        "  apiVersion: 1, name: 'test-subprocess-observer', targets: ['host'], requires: ['subprocess'], optional: [], provides: [],",
+        '  resolve(config) {',
+        '    const observationPath = config.observationPath',
+        '    return context => {',
+        "      const subprocess = context.require('subprocess')",
+        '      const originalSpawn = subprocess.spawn',
+        '      const spawns = []',
+        '      const write = () => writeFileSync(observationPath, JSON.stringify({ spawns }))',
+        '      subprocess.spawn = function (spec) {',
+        '        const handle = originalSpawn.call(subprocess, spec)',
+        "        if (typeof spec.env?.CLAUDE_CONFIG_DIR === 'string') {",
+        '          const record = { cwd: spec.cwd, home: spec.env.HOME, configDir: spec.env.CLAUDE_CONFIG_DIR, outcome: null, rangeEmpty: null }',
+        '          spawns.push(record)',
+        '          write()',
+        '          const waitForExit = handle.waitForExit.bind(handle)',
+        '          handle.waitForExit = async signal => {',
+        '            const rangeEmpty = await waitForExit(signal)',
+        '            record.rangeEmpty = rangeEmpty',
+        '            write()',
+        '            return rangeEmpty',
+        '          }',
+        '          void handle.done.then(outcome => {',
+        '            record.outcome = { exitCode: outcome.exitCode, signal: outcome.signal }',
+        '            write()',
+        '          }, () => { record.outcome = "rejected"; write() })',
+        '        }',
+        '        return handle',
+        '      }',
+        '      context.own(() => { subprocess.spawn = originalSpawn })',
+        '    }',
+        '  },',
+        '}',
+      ].join('\n'))
+      profile.installations.push({
+        id: 'subprocess-observer',
+        plugin: '@fixture/subprocess-observer',
+        scope: 'root',
+        config: { observationPath },
+      })
+      writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
+
+      profileRun = runBuiltBin(['--profile', 'native-headless', 'complete', 'the', 'requested', 'work'], {
+        DSH_HOME: home,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: parentKey,
+        ANTHROPIC_API_KEY: 'built-native-claude-child-key',
+        TMP: sandboxTempRoot,
+        TEMP: sandboxTempRoot,
+        TMPDIR: sandboxTempRoot,
+        DSH_NATIVE_PROFILE_OBSERVATION_PATH: undefined,
+        NODE_OPTIONS: `--import=${noCordisHook}`,
+      }, workspace, 25_000, (pid) => { cliPid = pid }).finally(() => { cliSettled = true })
+      try {
+        nativeHome = await waitForNativeClaudeHome(sandboxTempRoot, workspace, () => cliSettled)
+      } catch (error: unknown) {
+        if (cliSettled && profileRun !== undefined) {
+          const exited = await profileRun
+          throw new Error(`${error instanceof Error ? error.message : String(error)}; dsh exit ${exited.code}; stderr: ${exited.stderr}`)
+        }
+        throw error
+      }
+      await messages.requestStarted
+      expect(existsSync(join(nativeHome, '.claude', 'settings.json'))).toBe(true)
+      completeMessages()
+      const result = await profileRun
+
+      expect(result.code, result.stderr).toBe(0)
+      expect(result.stdout).toBe('Native parent completed after Claude.')
+      expect(parentServer.requests).toHaveLength(2)
+      expect(JSON.stringify(parentServer.requests[0]?.body)).toContain('complete the requested work')
+      expect(JSON.stringify(parentServer.requests[1]?.body)).toContain('Claude child fixture result.')
+      expect(messages.requests).toHaveLength(1)
+      expect(messages.requests[0]?.body.model).toBe('native-claude-child-fixture')
+
+      const events = persistedEvents(join(home, 'sessions'))
+      const starts = sessionEvents(events, 'subagent/external-start')
+      const ends = sessionEvents(events, 'subagent/external-end')
+      expect(starts).toHaveLength(1)
+      expect(ends).toHaveLength(1)
+      expect(starts[0]).toMatchObject({
+        version: 0,
+        provider: 'claude-code',
+        remoteId: expect.any(String),
+        parentSessionId: expect.any(String),
+        rootSessionId: expect.any(String),
+      })
+      expect((starts[0]?.remoteId as string).length).toBeGreaterThan(0)
+      expect(ends[0]).toMatchObject({
+        id: starts[0]?.id,
+        provider: 'claude-code',
+        remoteId: starts[0]?.remoteId,
+        stopReason: 'completed',
+      })
+      expect(nativeHome).toBeDefined()
+      expect(existsSync(nativeHome!)).toBe(false)
+      expect(findNativeClaudeHome(sandboxTempRoot, workspace)).toBeUndefined()
+      const backendTempRoot = dirname(nativeHome!)
+      if (backendTempRoot !== sandboxTempRoot) expect(existsSync(backendTempRoot)).toBe(false)
+      expect(cliPid).toBeDefined()
+      expect(() => process.kill(cliPid!, 0)).toThrow()
+      const observed = JSON.parse(readFileSync(observationPath, 'utf8')) as {
+        spawns: Array<{
+          cwd: string
+          home: string
+          configDir: string
+          outcome: { exitCode: number; signal: string | null } | 'rejected' | null
+          rangeEmpty: boolean | null
+        }>
+      }
+      expect(observed.spawns).toHaveLength(1)
+      expect(observed.spawns[0]).toMatchObject({
+        cwd: workspace,
+        home: nativeHome,
+        configDir: join(nativeHome!, '.claude'),
+        outcome: { exitCode: 0, signal: null },
+        rangeEmpty: true,
+      })
+      const evidencePath = process.env.DSH_NATIVE_PROFILE_OBSERVATION_PATH
+      if (evidencePath !== undefined) {
+        writeFileSync(evidencePath, `${JSON.stringify({
+          formatVersion: 1,
+          cliPid: cliPid ?? null,
+          cliExited: cliSettled,
+          cliExitCode: result.code,
+          selectedChildHome: nativeHome,
+          selectedChildHomeObservedBeforeMessagesCompleted: true,
+          selectedChildHomeRemovedAfterRun: !existsSync(nativeHome!),
+          backendTempCapabilityRoot: backendTempRoot === sandboxTempRoot ? null : backendTempRoot,
+          backendTempCapabilityRootRemoved: backendTempRoot === sandboxTempRoot ? null : !existsSync(backendTempRoot),
+          managedSubprocess: observed.spawns[0],
+        }, null, 2)}\n`)
+      }
+    } finally {
+      completeMessages()
+      await profileRun?.catch(() => undefined)
+      await parentServer.close()
+      await messages.close()
+      rmSync(home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS * 2)
 
   it('keeps a running native Host on invalid JSON patch and hands an in-flight app to the valid generation', async () => {
     const fixture = createNativeProfileReloadFixture()

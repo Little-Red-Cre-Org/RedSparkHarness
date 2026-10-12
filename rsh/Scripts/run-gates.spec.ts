@@ -612,7 +612,7 @@ describe('Node 24 lane ownership', () => {
       expect.arrayContaining([
         'rsh/Core/subprocess/subprocess-local/tests/spawn-runner-built.e2e.ts',
         'rsh/Compatibility/DSH/bridge/subagent-codex/tests/loader-composition.e2e.ts',
-        'rsh/Engine/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
+        'rsh/Modules/Official/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
         'rsh/Modules/Community/experimental/agent-team/tests/built-lib.e2e.ts',
       ]),
     )

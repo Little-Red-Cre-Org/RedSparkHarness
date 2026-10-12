@@ -56,6 +56,8 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 普通 `native-headless` 模板也会在首次初始化时把启动目录记录为应用工作区根目录。显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。该 profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
 
+随附的两个 headless 模板都含有禁用的 `tmux-context` 安装项。通过 profile overlay 启用它，并组合一个 `shell` Provider，即可将当前 pane 位置作为持久模型上下文；[Native tmux 上下文 README](../../Modules/Official/terminal/native-tmux-context/README.zh.md) 说明所需条件与消息格式。
+
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。启动器在导入入口前校验所有选中包的 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。
 
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。

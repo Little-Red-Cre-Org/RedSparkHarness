@@ -49,6 +49,12 @@ function installFixturePackage(profileModules: string, packageName: string, sour
   return directory
 }
 
+function startCli(home: string, task: string) {
+  return execa(process.execPath, [
+    '--import', contextProbe, bin, '--profile', 'native-headless', task,
+  ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 45_000 })
+}
+
 it('records and cold-replays PTC cancellation through a captured external Responses generation', async () => {
   if (!existsSync(bin)) throw new Error('build the shipped dsh CLI before running ptc-external-cancel snapshot')
   const mode = process.env.DSH_SNAPSHOT
@@ -78,7 +84,7 @@ it('records and cold-replays PTC cancellation through a captured external Respon
     const sessions = join(home, 'sessions')
     const audit = join(home, 'lifecycle.jsonl')
     const links: string[] = []
-    let child: ReturnType<typeof execa> | undefined
+    let child: ReturnType<typeof startCli> | undefined
     let childSettled = true
     let childFailure: unknown
     let runFailed = false
@@ -150,11 +156,10 @@ it('records and cold-replays PTC cancellation through a captured external Respon
         config: { toolName: 'subagent', maxDepth: 2 } })
       writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
 
-      child = execa(process.execPath, [
-        '--import', contextProbe, bin, '--profile', 'native-headless', replayTask,
-      ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 45_000 })
+      const launchedChild = startCli(home, replayTask)
+      child = launchedChild
       childSettled = false
-      void child.then(() => { childSettled = true }, error => {
+      void launchedChild.then(() => { childSettled = true }, error => {
         childSettled = true
         childFailure = error
       })
@@ -167,9 +172,9 @@ it('records and cold-replays PTC cancellation through a captured external Respon
           await new Promise(resolve => setTimeout(resolve, 20))
         }
         if (childSettled) throw new Error('ptc-external-cancel: child exited before parent signal delivery')
-        expect(child.kill(signal)).toBe(true)
+        expect(launchedChild.kill(signal)).toBe(true)
       }
-      const childResult = await child
+      const childResult = await launchedChild
       expect(childResult.exitCode, childResult.stderr).toBe(signal === 'SIGINT' ? 130 : 0)
       expect(childResult.signal).toBeUndefined()
 

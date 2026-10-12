@@ -113,7 +113,7 @@ export interface Config {
 
 依赖：[`AgentOptions`](subsystems/core.zh.md) · [`SessionId`](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/agent-loop/src/index.ts:274`](../Engine/core/agent-loop/src/index.ts)
+来源：[`rsh/Engine/core/agent-loop/src/index.ts:279`](../Engine/core/agent-loop/src/index.ts)
 
 <a id="deepseek-aidsh-agent-presets"></a>
 
@@ -2446,7 +2446,7 @@ export interface Config {
 export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[number]
 ```
 
-来源：[`rsh/Engine/subagent/subagent-claude-code/src/index.ts:38`](../Engine/subagent/subagent-claude-code/src/index.ts)
+来源：[`rsh/Modules/Official/subagent/subagent-claude-code/src/index.ts:39`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-codex"></a>
 
@@ -3580,6 +3580,7 @@ export interface Config {
 
 由其他包作为库导入；`cordis.yml` 无法加载它们。
 
+- `@deepseek-ai/dsh-acp-protocol`（[`rsh/Modules/Official/subagent/acp-protocol/src/index.ts`](../Modules/Official/subagent/acp-protocol/src/index.ts)）
 - `@deepseek-ai/dsh-agent-loop-testkit`（[`rsh/Tests/test-support/agent-loop-testkit/src/index.ts`](../Tests/test-support/agent-loop-testkit/src/index.ts)）
 - `@deepseek-ai/dsh-agent-preset-standing`（[`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts)）
 - `@deepseek-ai/dsh-anonymous-user-id`（[`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts)）
@@ -3642,6 +3643,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-subagent` ([`rsh/Engine/subagent/native-subagent/src/index.ts`](../Engine/subagent/native-subagent/src/index.ts))
 - `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
+- `@deepseek-ai/dsh-native-tmux-context`（[`rsh/Modules/Official/terminal/native-tmux-context/src/index.ts`](../Modules/Official/terminal/native-tmux-context/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-tool-subagent-list-agents`（[`rsh/Engine/subagent/native-tool-subagent-list-agents/src/index.ts`](../Engine/subagent/native-tool-subagent-list-agents/src/index.ts)）
 - `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
@@ -3674,6 +3676,7 @@ export interface Config {
 - `@deepseek-ai/dsh-subagent-protocol` ([`rsh/Engine/subagent/subagent-protocol/src/index.ts`](../Engine/subagent/subagent-protocol/src/index.ts))
 - `@deepseek-ai/dsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
 - `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
+- `@deepseek-ai/dsh-tmux-context-definition`（[`rsh/Engine/context/tmux-context-definition/src/index.ts`](../Engine/context/tmux-context-definition/src/index.ts)）
 - `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）
 - `@deepseek-ai/dsh-typert-protocol`（[`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts)）

@@ -24,7 +24,6 @@ import type {
   SettingsSectionHooks,
 } from '@deepseek-ai/dsh-compat-settings-definition'
 import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition/events'
 import { redactSecrets } from './redact.ts'
 
 export type {

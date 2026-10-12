@@ -83,7 +83,7 @@ ACP metadata does not enter model requests or change their cacheable prefix.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- The library validates and encodes ACP metadata; it does not read or write the Engine's durable `execution/policy` event. The consuming Program owns that conversion, execution limits, permission enforcement, Session persistence, and external child transport.
+- No runtime invariant companion is published because the library validates and encodes ACP metadata but owns no execution state to compare; the consuming Program owns durable-event conversion, execution limits, permission enforcement, Session persistence, and external child transport.
 
 <a id="dev-note"></a>
 ### Dev Note

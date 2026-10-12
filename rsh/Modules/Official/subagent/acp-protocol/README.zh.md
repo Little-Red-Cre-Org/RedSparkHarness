@@ -83,7 +83,7 @@ ACP 元数据不会进入模型请求，也不会改变可复用的请求前缀�
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 本库只校验并编码 ACP 元数据；它不会读写 Engine 持久化的 `execution/policy` event。消费方 Program 负责转换、执行上限、权限强制执行、Session 持久化和外部子任务传输。
+- 本库不发布运行时不变量伴随包，因为它只校验和编码 ACP 元数据，不拥有可供比较的执行状态；消费方 Program 负责转换为持久化事件、执行上限、权限强制执行、Session 持久化和外部子任务传输。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -1,14 +1,16 @@
 /** Built native conversation records and restores a keyless Session through the shipped Client roster. */
 import { lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
@@ -21,6 +23,24 @@ it('creates, submits and restores the built native conversation through the ship
   const profile = join(home, 'profiles/native-web')
   const workspace = join(home, 'work')
   const sessionRoot = join(home, 'sessions')
+  const fixedSessionClock = join(home, 'fixed-session-clock.mjs')
+  const fixedSessionTime = Date.UTC(2025, 0, 1)
+  writeFileSync(fixedSessionClock, `Date.now = () => ${fixedSessionTime}\n`)
+  const readStoredSessionRows = () => {
+    const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
+    const stored = readdirSync(sessionRoot, { recursive: true }).find(path => typeof path === 'string' && path.endsWith(name))
+    if (typeof stored !== 'string') throw new Error('native Web omitted Session JSONL')
+    return readFileSync(join(sessionRoot, stored), 'utf8').trim().split('\n').slice(1)
+      .map((line, index) => parseSessionEvent(JSON.parse(line), index))
+  }
+  const readStoredSessionId = () => {
+    const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
+    const stored = readdirSync(sessionRoot, { recursive: true }).find(path => typeof path === 'string' && path.endsWith(name))
+    if (typeof stored !== 'string') throw new Error('native Web omitted Session JSONL')
+    const header = JSON.parse(readFileSync(join(sessionRoot, stored), 'utf8').split('\n', 1)[0] ?? 'null') as { id?: unknown }
+    if (typeof header.id !== 'string') throw new Error('native Web Session header omitted its id')
+    return header.id
+  }
   ensureShippedNativeProfile('native-web', home)
   mkdirSync(workspace)
   writeFileSync(join(workspace, 'tool-card.txt'), 'Persisted read-card content.\n')
@@ -30,6 +50,7 @@ it('creates, submits and restores the built native conversation through the ship
   for (const [name, path] of [
     ['native-web-host', 'Programs/Web/host/native-web-host'],
     ['native-web-session-controller', 'Programs/Web/api/native-web-session-controller'],
+    ['settings-file', 'Modules/Official/settings/settings-file'],
     ['storage', 'Core/storage/storage'],
     ['storage-json', 'Core/storage/storage-json'],
     ['storage-domain', 'Core/storage/storage-domain'],
@@ -72,7 +93,7 @@ it('creates, submits and restores the built native conversation through the ship
       context.effect(context.require('tools').register({ schema: { name: 'guarded', description: 'Guarded fixture.',
         parameters: { type: 'object', properties: {}, additionalProperties: false } }, approval: { reason: 'Protect this action.' },
         execute: async () => ({ isError: false, content: [{ type: 'text', text: 'guarded allowed' }] }) }, context.scope));
-      const reasoning = { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' };
+      const reasoning = { efforts: [{ id: 'medium', name: 'Medium' }, { id: 'high', name: 'High' }], defaultEffort: 'medium' };
       context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Fixture' }],
         resolve: async (provider, id) => ({ provider, id, name: id, reasoning, inputModalities: ['text', 'image'] }),
         catalog: async defaults => ({ default: defaults, routableProviders: ['mock'], failures: [], groups: [{ id: 'mock', name: 'Fixture',
@@ -80,18 +101,35 @@ it('creates, submits and restores the built native conversation through the ship
       let resume; const continued = new Promise(resolve => { resume = resolve });
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/release', methods: ['POST'], requestBody: 'buffered',
         fetch: async () => { resume(); return new Response('released') } }));
-      let titleResume; const titleReleased = new Promise(resolve => { titleResume = resolve });
-      let titleStarted; const titleObserved = new Promise(resolve => { titleStarted = resolve });
-      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/title-started', methods: ['POST'], requestBody: 'buffered',
-        fetch: async () => { await titleObserved; return new Response('started') } }));
-      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/title-release', methods: ['POST'], requestBody: 'buffered',
-        fetch: async () => { titleResume(); return new Response('released') } }));
-      context.own(() => { resume(); titleResume() });
-      let step = 0;
+      let activeTitleResume; const activeTitleReleased = new Promise(resolve => { activeTitleResume = resolve });
+      let activeTitleStart; const activeTitleObserved = new Promise(resolve => { activeTitleStart = resolve });
+      let idleTitleResume; const idleTitleReleased = new Promise(resolve => { idleTitleResume = resolve });
+      let idleTitleStart; const idleTitleObserved = new Promise(resolve => { idleTitleStart = resolve });
+      let secondAnswerStart; const secondAnswerObserved = new Promise(resolve => { secondAnswerStart = resolve });
+      let secondAnswerResume; const secondAnswerReleased = new Promise(resolve => { secondAnswerResume = resolve });
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/active-title-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await activeTitleObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/active-title-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { activeTitleResume(); return new Response('released') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/idle-title-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await idleTitleObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/idle-title-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { idleTitleResume(); return new Response('released') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/second-answer-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await secondAnswerObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/second-answer-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { secondAnswerResume(); return new Response('released') } }));
+      context.own(() => { resume(); activeTitleResume(); idleTitleResume(); secondAnswerResume() });
+      let step = 0; let answerCount = 0; let titleCount = 0;
       const model = { async *stream(request) {
       if (request.purpose === 'session-title') {
-        titleStarted();
-        await titleReleased;
+        if (titleCount++ === 0) {
+          activeTitleStart();
+          await activeTitleReleased;
+        } else {
+          idleTitleStart();
+          await idleTitleReleased;
+        }
         const title = 'Native browser session';
         yield { type: 'block-start', index: 0, blockType: 'text' };
         yield { type: 'text-delta', index: 0, text: title };
@@ -119,9 +157,16 @@ it('creates, submits and restores the built native conversation through the ship
       const text = 'Native browser answer.';
       yield { type: 'block-start', index: 1, blockType: 'text' };
       yield { type: 'text-delta', index: 1, text };
-      const abort = () => { resume() }; request.signal.addEventListener('abort', abort, { once: true });
-      if (request.signal.aborted) resume();
-      try { await continued } finally { request.signal.removeEventListener('abort', abort) }
+      if (answerCount++ === 0) {
+        const abort = () => { resume() }; request.signal.addEventListener('abort', abort, { once: true });
+        if (request.signal.aborted) resume();
+        try { await continued } finally { request.signal.removeEventListener('abort', abort) }
+      } else {
+        const abort = () => { secondAnswerResume() }; request.signal.addEventListener('abort', abort, { once: true });
+        if (request.signal.aborted) secondAnswerResume();
+        secondAnswerStart();
+        try { await secondAnswerReleased } finally { request.signal.removeEventListener('abort', abort) }
+      }
       yield { type: 'block-end', index: 1, block: { type: 'text', text } };
       yield { type: 'usage', usage: { inputTokens: 20, outputTokens: 8 } };
       yield { type: 'finish', reason: { kind: 'stop' } };
@@ -137,7 +182,7 @@ it('creates, submits and restores the built native conversation through the ship
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
       maxSteps: 6, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
-      maxFollowers: 2, maxPendingHumanRequests: 2 }],
+      maxFollowers: 3, maxPendingHumanRequests: 2 }],
     ['tools', 'native-tools'], ['approval', 'native-approval'],
     ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
     ['presets', 'agent-presets', { default: 'standard' }],
@@ -146,10 +191,12 @@ it('creates, submits and restores the built native conversation through the ship
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
     ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
-    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'storage-hub' || row.id === 'storage-json' || row.id === 'storage-domain' || row.id === 'workspace' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-llm'),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'storage-hub' || row.id === 'storage-json' || row.id === 'storage-domain' || row.id === 'workspace' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-llm' || row.id === 'settings'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
-  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
+  const child = execa(process.execPath, [
+    '--import', pathToFileURL(fixedSessionClock).href, join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web',
+  ], {
     cwd: root, env: { ...process.env, DSH_HOME: home }, reject: false,
   })
   let browser: Browser | undefined
@@ -170,35 +217,63 @@ it('creates, submits and restores the built native conversation through the ship
     const text = fixture === undefined ? 'Native browser input.'
       : fixture.find(event => event.type === 'user/message')?.data?.content?.find(block => block.type === 'text')?.text
     if (text === undefined) throw new Error('recorded browser Session has no human input')
-    const page = await browser.newPage({ locale: 'en-US' })
+    const page = await browser.newPage({ locale: 'en-US', timezoneId: 'UTC' })
     const waitForComposerReady = () => page.waitForFunction(() => {
       const editor = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')
       return editor !== null && !editor.disabled
     })
     const rpcMethods = new Set<string>()
+    const rpcPaths = new Set<string>()
+    const rpcCalls: { pathname: string; method?: string; payload?: Record<string, unknown> }[] = []
+    const followResponses: { admissionId: string; response: import('playwright').Response }[] = []
     page.on('request', (request) => {
-      if (request.method() !== 'POST' || !new URL(request.url()).pathname.startsWith('/api/')) return
-      const body = request.postDataJSON() as { method?: unknown } | null
-      if (typeof body?.method === 'string') rpcMethods.add(body.method)
+      const pathname = new URL(request.url()).pathname
+      if (!pathname.startsWith('/api/')) return
+      rpcPaths.add(pathname)
+      if (request.method() !== 'POST') return
+      const body = request.postDataJSON() as { method?: unknown; payload?: unknown } | null
+      if (typeof body?.method === 'string') {
+        rpcMethods.add(body.method)
+        const payload = typeof body.payload === 'object' && body.payload !== null && !Array.isArray(body.payload)
+          ? body.payload as Record<string, unknown> : undefined
+        rpcCalls.push({ pathname, method: body.method, ...(payload === undefined ? {} : { payload }) })
+      }
+    })
+    page.on('response', (response) => {
+      if (new URL(response.url()).pathname !== '/api/native-session/follow') return
+      const body = response.request().postDataJSON() as { admissionId?: unknown } | null
+      if (typeof body?.admissionId === 'string') followResponses.push({ admissionId: body.admissionId, response })
     })
     await page.goto(address)
     await page.waitForFunction(() => ['ready', 'failed'].includes(document.querySelector('#root')?.getAttribute('data-native-boot-state') ?? ''))
     if (await page.locator('#root').getAttribute('data-native-boot-state') !== 'ready') {
       throw new Error(await page.locator('#root').innerText())
     }
+    expect(await page.locator('#root').evaluate(rootElement => (rootElement as HTMLElement).inert)).toBe(true)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await page.locator('[class*="onboardingOverlay"]').waitFor({ state: 'detached' })
+    await page.locator('#root h1').waitFor({ timeout: 15_000 })
     expect(await page.locator('#root h1').innerText()).toBe('RedSpark Harness')
+    expect([...rpcMethods]).toEqual(expect.arrayContaining([
+      'models/providers', 'models/configurable-providers', 'settings/describe',
+    ]))
     const sidebar = page.locator('[data-slot="sidebar"]')
     // The brand button shares this accessible name; keep the visible creation action in the sidebar path.
     await sidebar.getByRole('button', { name: 'New session', exact: true }).filter({ hasText: 'New Session' }).click()
     await waitForComposerReady()
-    await page.getByRole('combobox', { name: 'Preset', exact: true }).selectOption('alternate')
+    await page.getByRole('combobox', { name: 'Mode', exact: true }).selectOption('alternate')
     await waitForComposerReady()
-    const selectedRoute = JSON.stringify(['mock', 'chosen'])
-    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(selectedRoute)
+    await page.getByRole('button', { name: 'Select model, current Initial', exact: true }).click()
+    await page.getByRole('menuitem', { name: /^Model\b/u }).click()
+    await page.getByRole('menuitemradio', { name: 'Chosen', exact: true }).click()
     await waitForComposerReady()
-    await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).selectOption('high')
+    await page.getByRole('button', { name: 'Select model, current Chosen, reasoning effort Medium', exact: true }).click()
+    await page.getByRole('menuitem', { name: /^Effort\b/u }).click()
+    await page.getByRole('menuitemradio', { name: 'High', exact: true }).click()
     await waitForComposerReady()
-    const controlsText = (await page.getByRole('group', { name: 'Model and preset', exact: true }).innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
+    const modelPickerLabel = await page.getByRole('button', { name: 'Select model, current Chosen, reasoning effort High', exact: true }).getAttribute('aria-label')
+    if (modelPickerLabel === null) throw new Error('model picker omitted its accessible current selection')
+    const controlsText = `${modelPickerLabel}\n${(await page.getByRole('group', { name: 'Model, mode, and permission controls', exact: true }).innerText()).replace(/\r\n/gu, '\n').trimEnd()}\n`
     const controlsPath = join(scenario, 'controls.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
     else expect(controlsText).toBe(readFileSync(controlsPath, 'utf8'))
@@ -241,29 +316,48 @@ it('creates, submits and restores the built native conversation through the ship
     await waitForComposerReady()
     expect(await live.count()).toBe(0)
     const workspaceTree = sidebar.getByRole('tree', { name: 'Workspaces', exact: true })
-    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/title-started', { method: 'POST' }); if (!response.ok) throw new Error('title fixture did not start') })
+    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/active-title-started', { method: 'POST' }); if (!response.ok) throw new Error('active title fixture did not start') })
     expect(await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).count()).toBe(0)
-    await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Second prompt while the title is pending.')
+    await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Second prompt after first title started.')
     const secondPromptStarted = page.waitForResponse((response) => {
       return response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/session/start'
     })
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     await secondPromptStarted
-    expect(await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).count()).toBe(0)
-    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/title-release', { method: 'POST' }); if (!response.ok) throw new Error('title fixture release failed') })
-    await waitForComposerReady()
-    await page.getByLabel('Session records').getByText('Second prompt while the title is pending.', { exact: true }).waitFor()
+    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/second-answer-started', { method: 'POST' }); if (!response.ok) throw new Error('second answer fixture did not start') })
+    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/active-title-release', { method: 'POST' }); if (!response.ok) throw new Error('active title fixture release failed') })
+    await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).waitFor()
+    const activeTitleRows = readStoredSessionRows()
+    expect(activeTitleRows.some(row => row.type === 'session/title' && row.data.title === 'Native browser session')).toBe(true)
+    expect(activeTitleRows.some(row => row.type === 'turn/start' && row.data.turn === 2)).toBe(true)
+    expect(activeTitleRows.some(row => row.type === 'turn/end' && row.data.turn === 2)).toBe(false)
+    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/second-answer-release', { method: 'POST' }); if (!response.ok) throw new Error('second answer fixture release failed') })
+    expect(await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).count()).toBe(1)
+    await page.getByLabel('Session records').getByText('Second prompt after first title started.', { exact: true }).waitFor()
     let sessionRow = workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' })
     await sessionRow.waitFor()
+    await page.evaluate(async () => { const response = await fetch('/api/native-fixture/second-answer-release', { method: 'POST' }); if (!response.ok) throw new Error('second answer fixture release failed') })
+    await waitForComposerReady()
+    const secondTurnRows = readStoredSessionRows()
+    const secondTurnEnd = secondTurnRows.findLast((row): row is Extract<ReturnType<typeof readStoredSessionRows>[number], { type: 'turn/end' }> =>
+      row.type === 'turn/end' && row.data.turn === 2)
+    const secondTurnAnswers = secondTurnRows.filter(row => row.type === 'assistant/message' && row.data.turn === 2
+      && row.data.message.content.some(block => block.type === 'text' && block.text === 'Native browser answer.'))
+    const cancelCalls = rpcCalls.filter(call => call.pathname === '/api/session/cancel')
+    if (secondTurnEnd?.data.reason.kind !== 'completed' || secondTurnAnswers.length !== 1 || cancelCalls.length > 0) {
+      throw new Error(`second turn did not complete cleanly: ${JSON.stringify({
+        turnEnd: secondTurnEnd,
+        assistantAnswers: secondTurnAnswers.length,
+        cancelCalls,
+        alerts: await page.getByRole('alert').allTextContents(),
+      })}`)
+    }
     await sessionRow.getByRole('button', { name: 'Session actions for Native browser session', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
     await page.getByRole('textbox', { name: 'Session title', exact: true }).fill('Pinned browser title')
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     sessionRow = workspaceTree.getByRole('treeitem').filter({ hasText: 'Pinned browser title' })
     await sessionRow.waitFor()
-    await sessionRow.getByRole('button', { name: 'Session actions for Pinned browser title', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Refresh title', exact: true }).click()
-    await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).waitFor()
     await page.getByRole('button', { name: 'Session details', exact: true }).click()
     const details = page.getByRole('complementary', { name: 'Session details', exact: true })
     await details.waitFor()
@@ -278,7 +372,7 @@ it('creates, submits and restores the built native conversation through the ship
     const transcript = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     expect(transcript).toContain('Native browser answer.')
     const conversationHeader = page.locator('main > header')
-    expect(await conversationHeader.getByText('Native browser session', { exact: true }).count()).toBe(1)
+    expect(await conversationHeader.getByText('Pinned browser title', { exact: true }).count()).toBe(1)
     expect(await conversationHeader.getByText('Chat', { exact: true }).count()).toBe(1)
     const turnIds = await page.locator('[data-chat-turn]').evaluateAll(nodes =>
       new Set(nodes.map(node => (node as HTMLElement).dataset.chatTurn)).size)
@@ -287,8 +381,11 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await reasoningDisclosure.getAttribute('aria-expanded')).toBe('false')
     expect(transcript).toContain('I will inspect the result.')
     expect(transcript).not.toContain('Then I will summarize it.')
-    const actionRow = page.locator('[data-chat-message-action-row]').first()
-    expect(await actionRow.getByRole('button', { name: 'Copy' }).count()).toBe(1)
+    const actionRow = page.locator('[data-chat-message-action-row]')
+      .filter({ has: page.getByRole('button', { name: 'Copy', exact: true }) }).first()
+    const copyButton = actionRow.getByRole('button', { name: 'Copy', exact: true })
+    await copyButton.waitFor({ state: 'visible' })
+    expect(await copyButton.count()).toBe(1)
     expect(await actionRow.getByLabel('28 tokens').count()).toBe(1)
     expect(await actionRow.getByLabel('Duration').count()).toBe(1)
     expect(await actionRow.getByLabel('Time').count()).toBe(1)
@@ -307,22 +404,158 @@ it('creates, submits and restores the built native conversation through the ship
     const cardPath = join(scenario, 'tool-card.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cardPath, cardText)
     else expect(cardText).toBe(readFileSync(cardPath, 'utf8'))
+
+    const cursorBeforeIdleTitle = readStoredSessionRows().at(-1)?.seq
+    if (cursorBeforeIdleTitle === undefined) throw new Error('native Web Session has no durable cursor before idle title')
+    const callsBeforeIdleTitle = rpcCalls.length
+    const idleTitleSessionId = readStoredSessionId()
+    const startIdleTitleRequest = async () => page.evaluate(({ sessionId, rpcId }) => {
+      type Outcome = { ok: true } | { ok: false; error: string }
+      const target = window as Window & { __nativeIdleTitleRequest?: Promise<Outcome> }
+      target.__nativeIdleTitleRequest = (async (): Promise<Outcome> => {
+        const response = await fetch('/api/session/refresh-title', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ type: 'client-request', rpcId, method: 'session/refresh-title', payload: { sessionId } }) })
+        if (!response.ok) throw new Error(`Host title refresh failed with HTTP ${response.status}`)
+        const envelope: unknown = await response.json()
+        if (typeof envelope !== 'object' || envelope === null || !('result' in envelope)) {
+          throw new Error('Host title refresh returned an invalid response')
+        }
+        const result = envelope.result
+        if (typeof result !== 'object' || result === null || !('ok' in result) || result.ok !== true) {
+          const detail = typeof result === 'object' && result !== null && 'error' in result ? result.error : undefined
+          const message = typeof detail === 'object' && detail !== null && 'message' in detail && typeof detail.message === 'string'
+            ? detail.message : 'Host title refresh failed'
+          throw new Error(message)
+        }
+        return { ok: true }
+      })().catch((error: unknown) => ({ ok: false, error: String(error) }))
+    }, { sessionId: idleTitleSessionId, rpcId: randomUUID() })
+    const releaseIdleTitleFixture = async () => page.evaluate(async () => {
+      const response = await fetch('/api/native-fixture/idle-title-release', { method: 'POST' })
+      if (!response.ok) throw new Error('idle title fixture release failed')
+    })
+    const settleIdleTitleRequest = async () => page.evaluate(async () => {
+      const target = window as Window & { __nativeIdleTitleRequest?: Promise<{ ok: true } | { ok: false; error: string }> }
+      const request = target.__nativeIdleTitleRequest
+      if (request === undefined) throw new Error('idle title RPC was not started')
+      const outcome = await request
+      delete target.__nativeIdleTitleRequest
+      return outcome
+    })
+    let idleTitleRequestPending = false
+    let idleTitleReleased = false
+    let idleTitleFailure: unknown
+    try {
+      await startIdleTitleRequest()
+      idleTitleRequestPending = true
+      await page.evaluate(async () => {
+        const response = await fetch('/api/native-fixture/idle-title-started', { method: 'POST' })
+        if (!response.ok) throw new Error('idle title fixture did not start')
+      })
+      await releaseIdleTitleFixture()
+      idleTitleReleased = true
+      const outcome = await settleIdleTitleRequest()
+      idleTitleRequestPending = false
+      if (!outcome.ok) throw new Error(outcome.error)
+    } catch (error) {
+      idleTitleFailure = error
+    } finally {
+      if (idleTitleRequestPending) {
+        try {
+          if (!idleTitleReleased) await releaseIdleTitleFixture()
+          const outcome = await settleIdleTitleRequest()
+          if (!outcome.ok) throw new Error(outcome.error)
+        } catch (cleanupError) {
+          idleTitleFailure = idleTitleFailure === undefined
+            ? cleanupError
+            : new AggregateError([idleTitleFailure, cleanupError], 'idle title request and cleanup both failed')
+        }
+      }
+    }
+    if (idleTitleFailure !== undefined) throw idleTitleFailure
+    await workspaceTree.getByRole('treeitem').filter({ hasText: 'Native browser session' }).waitFor()
+    const idleTitleRows = readStoredSessionRows()
+    const idleTitle = idleTitleRows.findLast(row => row.type === 'session/title' && row.data.title === 'Native browser session')
+    const idleTitleIndex = idleTitleRows.findLastIndex(row => row.type === 'session/title' && row.data.title === 'Native browser session')
+    const secondTurnEndIndex = idleTitleRows.findLastIndex(row => row.type === 'turn/end' && row.data.turn === 2)
+    if (idleTitle === undefined) throw new Error('idle title was not durably recorded')
+    expect(idleTitle.seq).toBeGreaterThan(cursorBeforeIdleTitle)
+    expect(idleTitleIndex).toBeGreaterThan(secondTurnEndIndex)
+    expect(rpcCalls.slice(callsBeforeIdleTitle).map(call => call.method)).toEqual(['session/refresh-title'])
+
+    const continuationStarted = page.waitForResponse(response =>
+      response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/session/start')
+    await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Continue without tasks.')
+    await page.getByRole('button', { name: 'Send', exact: true }).click()
+    const continuationStartResponse = await continuationStarted
+    const continuationStartRequest = continuationStartResponse.request().postDataJSON() as {
+      payload?: { sessionId?: unknown; lastSeq?: unknown }
+    }
+    const continuationStartEnvelope = await continuationStartResponse.json() as {
+      result?: { ok?: boolean; value?: { admissionId?: unknown } }
+    }
+    const continuationAdmissionId = continuationStartEnvelope.result?.value?.admissionId
+    if (continuationStartEnvelope.result?.ok !== true || typeof continuationAdmissionId !== 'string') {
+      throw new Error('next Session admission omitted its accepted identity')
+    }
+    expect(continuationStartRequest.payload?.lastSeq).toBe(cursorBeforeIdleTitle)
+    const continuedTurn = page.locator('[data-chat-turn]').filter({ hasText: 'Continue without tasks.' })
+    await continuedTurn.getByText('Native browser answer.', { exact: true }).waitFor()
+    await waitForComposerReady()
+    const continuedRows = readStoredSessionRows()
+    const continuationIndex = continuedRows.findIndex(row => row.type === 'user/message'
+      && row.data.content.some(block => block.type === 'text' && block.text === 'Continue without tasks.'))
+    const continuationUserRows = continuedRows.filter(row => row.type === 'user/message'
+      && row.data.content.some(block => block.type === 'text' && block.text === 'Continue without tasks.'))
+    const continuationAnswers = continuedRows.slice(continuationIndex + 1).filter(row => row.type === 'assistant/message'
+      && row.data.turn === 3 && row.data.message.content.some(block => block.type === 'text' && block.text === 'Native browser answer.'))
+    const continuationEnd = continuedRows.findLast((row): row is Extract<SessionEvent, { type: 'turn/end' }> =>
+      row.type === 'turn/end' && row.data.turn === 3)
+    expect(continuationUserRows).toHaveLength(1)
+    expect(continuationAnswers).toHaveLength(1)
+    expect(continuationEnd?.data.reason.kind).toBe('completed')
+    expect(rpcCalls.filter(call => call.pathname === '/api/session/cancel')).toHaveLength(0)
+
+    const followResponse = followResponses.findLast(item => item.admissionId === continuationAdmissionId)?.response
+    if (followResponse === undefined) throw new Error('next Session admission has no captured follow stream')
+    const followFrames = (await followResponse.text()).split(/\r?\n/u).filter(line => line.startsWith('data: '))
+      .map(line => JSON.parse(line.slice(6)) as {
+        type: string
+        sessionId?: string
+        fromSeq?: number
+        throughSeq?: number
+        event?: ReturnType<typeof parseSessionEvent>
+      })
+    const baseline = followFrames.find((frame): frame is typeof frame & { type: 'baseline'; sessionId: string; fromSeq: number; throughSeq: number } =>
+      frame.type === 'baseline' && typeof frame.sessionId === 'string' && typeof frame.fromSeq === 'number' && typeof frame.throughSeq === 'number')
+    if (baseline === undefined) throw new Error('next Session follow stream omitted its history baseline')
+    expect(baseline.sessionId).toBe(continuationStartRequest.payload?.sessionId)
+    expect(baseline.fromSeq).toBe(cursorBeforeIdleTitle)
+    expect(baseline.throughSeq).toBeGreaterThan(idleTitle.seq)
+    const baselineEvents = followFrames.filter((frame): frame is typeof frame & { type: 'event'; event: ReturnType<typeof parseSessionEvent> } =>
+      frame.type === 'event' && frame.event !== undefined && frame.event.seq <= baseline.throughSeq).map(frame => frame.event)
+    const durableBaselineSuffix = continuedRows.filter(row => row.seq > baseline.fromSeq && row.seq <= baseline.throughSeq)
+    expect(baselineEvents).toEqual(durableBaselineSuffix)
+
+    const transcriptAfterContinuation = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     await page.reload()
     await sidebar.getByRole('tree', { name: 'Workspaces', exact: true })
       .getByRole('treeitem').filter({ hasText: 'Native browser session' }).click()
     await waitForComposerReady()
-    expect(await page.getByRole('combobox', { name: 'Model', exact: true }).inputValue()).toBe(selectedRoute)
-    expect(await page.getByRole('combobox', { name: 'Reasoning effort', exact: true }).inputValue()).toBe('high')
-    expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).inputValue()).toBe('alternate')
-    expect(await page.getByRole('combobox', { name: 'Preset', exact: true }).isDisabled()).toBe(true)
+    expect(await page.getByRole('button', { name: 'Select model, current Chosen, reasoning effort High', exact: true }).count()).toBe(1)
+    expect(await page.getByRole('combobox', { name: 'Mode', exact: true }).inputValue()).toBe('alternate')
+    expect(await page.getByRole('combobox', { name: 'Mode', exact: true }).isDisabled()).toBe(true)
+    const restoredRows = readStoredSessionRows()
+    const latestTurnEnd = restoredRows.findLastIndex(row => row.type === 'turn/end')
+    expect(latestTurnEnd).toBeGreaterThanOrEqual(0)
+    expect(restoredRows.slice(latestTurnEnd + 1).some(row => row.type === 'session/end-seed')).toBe(true)
     await page.waitForFunction(() => { const img = document.querySelector('section img'); return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 })
-    expect((await page.locator('section').innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(transcript)
+    await reasoningDisclosure.click()
+    await page.getByText('Then I will summarize it.', { exact: false }).waitFor()
     await readCard.getByRole('button').click()
     expect((await readCard.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(cardText)
+    expect((await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n').toBe(transcriptAfterContinuation)
     expect(await page.locator('[data-tool="guarded"][data-state="error"]').count()).toBe(1)
-    await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Continue without tasks.')
-    await page.getByRole('button', { name: 'Send', exact: true }).click()
-    await waitForComposerReady()
     expect(await todoPanel.count()).toBe(0)
     const darkBefore = await page.locator('body').getAttribute('data-ds-dark-theme')
     await page.getByRole('button', { name: 'Switch language', exact: true }).click()
@@ -330,7 +563,8 @@ it('creates, submits and restores the built native conversation through the ship
     await page.getByRole('button', { name: '切换主题', exact: true }).click()
     const darkAfter = await page.locator('body').getAttribute('data-ds-dark-theme')
     expect(darkAfter !== null).not.toBe(darkBefore !== null)
-    expect([...rpcMethods]).toEqual(expect.arrayContaining(['session/list', 'session/rename-title', 'session/refresh-title']))
+    expect([...rpcMethods]).toEqual(expect.arrayContaining(['directories/list', 'session/history', 'session/rename-title', 'session/refresh-title']))
+    expect([...rpcPaths]).toContain('/api/native-session/list-follow')
     console.log(`native browser RPC methods: ${[...rpcMethods].sort().join(', ')}`)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     {

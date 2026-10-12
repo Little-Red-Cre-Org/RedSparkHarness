@@ -40,6 +40,8 @@ import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
+import { plugin as tmuxContextPlugin } from '@deepseek-ai/dsh-native-tmux-context/native'
+import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
 import { plugin as fileReferencePlugin } from '@deepseek-ai/dsh-native-file-reference-local/native'
@@ -76,6 +78,8 @@ async function fixture(
   options: {
     approvalPolicy?: 'ask' | 'never'
     timeContext?: { timeZone: string; refreshIntervalMs?: number }
+    tmuxContext?: { refreshIntervalMs?: number }
+    shellOperations?: ShellOperations
     instructions?: boolean
     ptc?: boolean
     fileReferences?: boolean
@@ -130,6 +134,11 @@ async function fixture(
     apiVersion: 1, name: 'test-external-subagent-driver', targets: ['host'], requires: [], provides: ['externalSubagentDriver'],
     resolve: () => (context) => { context.provide('externalSubagentDriver', externalSubagentDriver) },
   }
+  const selectedShell = options.shellOperations
+  const shellProvider: NativePlugin | undefined = selectedShell === undefined ? undefined : {
+    apiVersion: 1, name: 'test-shell', targets: ['host'], requires: [], provides: ['shell'],
+    resolve: () => (context) => { context.provide('shell', selectedShell) },
+  }
   const capture: NativePlugin = {
     apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution'], optional: ['approval', 'sessionExecution', 'subagents'], provides: [],
     resolve: () => (context) => {
@@ -166,7 +175,9 @@ async function fixture(
         config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
       ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
       ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
+      ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
+      ...(options.tmuxContext === undefined ? [] : [{ plugin: tmuxContextPlugin, scope, config: options.tmuxContext }]),
       ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
       { plugin: toolsPlugin, scope, config: undefined },
       { plugin: policyPlugin, scope, config: undefined },
@@ -201,6 +212,33 @@ async function fixture(
   return {
     host, scope, app, filesystem, agents, tools, rootExecution, sessionExecution, subagents, approval,
     adapter, directory, workspace, sessions,
+  }
+}
+
+const TMUX_LOCATION = 'work\\t2\\teditor\\t1\\t%3\\t1\\t1\\tlayout-3'
+
+function shellResult(stdout: string): ShellRunResult {
+  return {
+    exitCode: 0, signal: null, timedOut: false, aborted: false, timeoutMs: 30_000,
+    stdout: { text: stdout, truncated: false }, stderr: { text: '', truncated: false },
+  }
+}
+
+function testShell(run: ShellOperations['run']): ShellOperations {
+  return {
+    sandboxMode: undefined,
+    resolve(request: ShellExecRequest): ShellExecSpec {
+      return {
+        command: request.command,
+        workdir: request.workdir ?? process.cwd(),
+        timeoutMs: request.timeoutMs ?? 30_000,
+        stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000,
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+        sandboxPolicy: request.sandboxPolicy,
+      }
+    },
+    run,
+    start() { throw new Error('unexpected background shell process') },
   }
 }
 
@@ -1567,6 +1605,103 @@ it('projects a program failure as an explicit native code-runtime tool error', a
       } finally { await reader.close() }
     } finally { await storage.close() }
   } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('records Native tmux context once and suppresses it after a new Host restores the Session', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-tmux-'))
+  let activeHost: NativeHost | undefined
+  const selectedShell = testShell(async () => shellResult(`${TMUX_LOCATION}\n`))
+  try {
+    const first = await fixture([textResponse('tmux recorded')], {
+      directory, tmuxContext: {}, shellOperations: selectedShell,
+    })
+    activeHost = first.host
+    await first.host.run(first.scope, { kind: 'tmux-context' }, invocation =>
+      first.app.run(['report the current pane'], invocation.signal))
+
+    const firstStorage = new JsonlSessionBackend({ root: first.sessions, compression: 'none' })
+    let sessionId: SessionId
+    try {
+      const row = (await firstStorage.list())[0]
+      if (row === undefined) throw new Error('tmux Session was not stored')
+      sessionId = row.header.id
+      const reader = await firstStorage.open(sessionId, 'read')
+      try {
+        expect((await reader.read()).events.filter(event => event.type === 'user/message'
+          && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-tmux-context')).toHaveLength(1)
+      } finally { await reader.close() }
+    } finally { await firstStorage.close() }
+    await first.host.stop()
+    activeHost = undefined
+
+    const resumed = await fixture([textResponse('tmux restored')], {
+      directory, tmuxContext: {}, shellOperations: selectedShell,
+    })
+    activeHost = resumed.host
+    await resumed.host.run(resumed.scope, { kind: 'tmux-resume' }, invocation =>
+      resumed.app.run(['--resume', sessionId, 'continue'], invocation.signal))
+    const tmuxMessages = resumed.adapter.requests[0]?.messages.filter(message => message.role === 'user'
+      && message.source.kind === 'plugin' && message.source.plugin === 'native-tmux-context')
+    expect(tmuxMessages).toHaveLength(1)
+
+    const resumedStorage = new JsonlSessionBackend({ root: resumed.sessions, compression: 'none' })
+    try {
+      const reader = await resumedStorage.open(sessionId, 'read')
+      try {
+        expect((await reader.read()).events.filter(event => event.type === 'user/message'
+          && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-tmux-context')).toHaveLength(1)
+      } finally { await reader.close() }
+    } finally { await resumedStorage.close() }
+  } finally {
+    await activeHost?.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('drains an aborted tmux query before stopping without appending its late reading', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const aborted = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const selectedShell = testShell(spec => new Promise((resolve) => {
+    entered.resolve(undefined)
+    if (spec.signal?.aborted) aborted.resolve(undefined)
+    else spec.signal?.addEventListener('abort', () => { aborted.resolve(undefined) }, { once: true })
+    void release.promise.then(() => { resolve(shellResult(`${TMUX_LOCATION}\n`)) })
+  }))
+  const state = await fixture([textResponse('must not reach model')], {
+    tmuxContext: {}, shellOperations: selectedShell,
+  })
+  try {
+    const running = state.host.run(state.scope, { kind: 'tmux-cancel' }, invocation =>
+      state.app.run(['report the current pane'], invocation.signal))
+      .then(value => ({ value }), (error: unknown) => ({ error }))
+    await entered.promise
+    let stopped = false
+    const stopping = state.host.stop().then(() => { stopped = true })
+    await aborted.promise
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(stopped).toBe(false)
+    release.resolve(undefined)
+    const outcome = await running
+    expect(outcome).toHaveProperty('error')
+    await stopping
+    expect(state.adapter.requests).toHaveLength(0)
+
+    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const row = (await storage.list())[0]
+      if (row === undefined) throw new Error('cancelled tmux Session was not stored')
+      const reader = await storage.open(row.header.id, 'read')
+      try {
+        expect((await reader.read()).events.some(event => event.type === 'user/message'
+          && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-tmux-context')).toBe(false)
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    release.resolve(undefined)
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

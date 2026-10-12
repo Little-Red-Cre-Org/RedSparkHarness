@@ -41,6 +41,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/native-headless.snapshot.ts',
   'snapshots/native-headless/ptc-jobs.snapshot.ts',
   'snapshots/native-headless/ptc-external-cancel.snapshot.ts',
+  'snapshots/native-headless/claude-code.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
   'snapshots/native-headless/search-native.snapshot.ts',
   'snapshots/native-headless-query/session-query.snapshot.ts',
