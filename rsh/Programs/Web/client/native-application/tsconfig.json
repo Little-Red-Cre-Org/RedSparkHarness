@@ -57,6 +57,9 @@
       "path": "../ui-attachment"
     },
     {
+      "path": "../ui-trajectory"
+    },
+    {
       "path": "../ui-primitives"
     }
   ]
