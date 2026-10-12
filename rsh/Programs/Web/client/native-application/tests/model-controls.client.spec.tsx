@@ -53,10 +53,10 @@ async function renderControls() {
   await controller.load()
   await controller.select('session-alpha' as SessionId)
   render(<ModelControls snapshot={controller.getSnapshot()}
-    selectModel={controller.selectModel.bind(controller)} selectPreset={controller.selectPreset.bind(controller)}
+    selectPreset={controller.selectPreset.bind(controller)}
     selectPlanMode={controller.selectPlanMode.bind(controller)}
     selectPermissionPreset={controller.selectPermissionPreset.bind(controller)}
-    refreshModelControls={controller.refreshModelControls.bind(controller)} t={key => en[key]} />)
+    t={key => en[key]} />)
   return { controller, selectPreset, selectPlanMode, selectPermissionPreset }
 }
 
