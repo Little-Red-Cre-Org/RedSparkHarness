@@ -1,5 +1,5 @@
 /** Native Session file RPCs stay inside the selected Session workspace. */
-import { renameSync, symlinkSync } from 'node:fs'
+import { renameSync, symlinkSync, unlinkSync } from 'node:fs'
 import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -154,6 +154,54 @@ it.each(['file', 'parent directory'] as const)('rejects a %s replaced by an outs
   } finally {
     await service?.close()
     await filesystem?.close()
+    await rm(temp, { recursive: true, force: true })
+  }
+})
+
+it('rejects read-all when a nested directory swaps around path verification', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'dsh-native-session-files-'))
+  const workspace = join(temp, 'workspace')
+  const parentPath = join(workspace, 'nested')
+  const movedPath = join(workspace, 'nested.original')
+  const targetPath = join(parentPath, 'secret.txt')
+  const outside = join(temp, 'outside')
+  const outsideFile = join(outside, 'secret.txt')
+  await mkdir(parentPath, { recursive: true })
+  await mkdir(outside)
+  await writeFile(targetPath, 'inside')
+  await writeFile(outsideFile, 'outside secret')
+  let phase = 0
+  class SwapAroundResolveFileSystem extends LocalFileSystemBackend {
+    override async resolve(path: string, options?: { cwd?: string; signal?: AbortSignal }): Promise<FsTarget> {
+      if (phase === 1 && path === targetPath) {
+        unlinkSync(parentPath)
+        renameSync(movedPath, parentPath)
+        phase = 2
+      }
+      return super.resolve(path, options)
+    }
+
+    override contains(parent: FsTarget, child: FsTarget): boolean {
+      const contained = super.contains(parent, child)
+      if (contained && child.targetKey === targetPath && (phase === 0 || phase === 2)) {
+        renameSync(parentPath, movedPath)
+        symlinkSync(outside, parentPath, symlinkType(true))
+        phase++
+      }
+      return contained
+    }
+  }
+
+  const fs = new SwapAroundResolveFileSystem(resolveLocalFilesystemConfig({ cwd: workspace }))
+  const id = SessionId('workspace-files-resolve-stat-swap')
+  const service = serviceFor(workspace, id, fs)
+  try {
+    await expect(service.handle('session/files/read-all', { sessionId: id, path: 'nested/secret.txt' }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: false, error: { code: 'native/session-files' } })
+    expect(phase).toBe(1)
+  } finally {
+    await service.close()
+    await fs.close()
     await rm(temp, { recursive: true, force: true })
   }
 })
