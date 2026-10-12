@@ -287,7 +287,7 @@ class WorkspaceFileObservationQueue {
 async function* workspaceFileText(file: FileHandle, signal: AbortSignal, path: string): AsyncIterable<string> {
   const decoder = new TextDecoder('utf-8', { fatal: true })
   let sampledBytes = 0
-  for await (const chunk of file.createReadStream({ autoClose: false, signal })) {
+  for await (const chunk of file.createReadStream({ autoClose: false, signal }) as AsyncIterable<Uint8Array>) {
     signal.throwIfAborted()
     if (sampledBytes < 8192) {
       const sample = chunk.subarray(0, Math.min(chunk.length, 8192 - sampledBytes))
@@ -472,7 +472,7 @@ export class NativeWebSessionService {
     private readonly config: Config, private readonly lifetime: AbortSignal,
     private readonly selections: NativeWebSelectionProviders = {},
     private readonly notifyAgentPresetsUpdated: () => void = () => {},
-    private readonly fileSystem: FileSystemOperations | undefined = undefined) {
+    private readonly fileSystem?: FileSystemOperations) {
     this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests, (agent) => {
       const owner = this.active.owners().find(candidate => candidate.agent === agent)
       if (owner !== undefined) this.publishListChange(owner.session.id)
@@ -991,8 +991,8 @@ export class NativeWebSessionService {
   ): Promise<{ readonly file: FileHandle; readonly info: BigIntStats }> {
     signal.throwIfAborted()
     const path = this.requireFileSystem().processPath(target)
-    const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0)
-      | (directory ? fsConstants.O_DIRECTORY ?? 0 : 0)
+    const flags = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
+      | (directory ? fsConstants.O_DIRECTORY : 0)
     const file = await open(path, flags)
     try {
       const info = await this.verifyWorkspaceFileHandle(root, target, file, signal)
