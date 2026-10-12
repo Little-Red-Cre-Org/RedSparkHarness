@@ -100,6 +100,7 @@
     "lib/index.js",
     "lib/client.js",
     "lib/native.js",
+    "lib/native-ui.module.css",
     "lib/types/**/*.d.ts"
   ]
 }

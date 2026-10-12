@@ -10628,6 +10628,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../workspace-files
       '@deepseek-ai/dsh-approval-definition':
         specifier: workspace:^
         version: link:../../../../Engine/core/approval-definition
@@ -10646,6 +10649,9 @@ importers:
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs
       '@deepseek-ai/dsh-host-directory-picker-native':
         specifier: workspace:^
         version: link:../../host/directory-picker-native
@@ -10725,6 +10731,9 @@ importers:
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../../../Modules/Official/sandbox/native-sandbox-policy
@@ -11489,6 +11498,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../../api/workspace-files
       '@deepseek-ai/dsh-authorization':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/authorization

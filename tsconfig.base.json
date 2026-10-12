@@ -265,7 +265,9 @@
       "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": ["./rsh/Programs/Web/client/ui-sidebar-documentpreview/src"],
       "@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client": ["./rsh/Programs/Web/client/ui-sidebar-documentpreview/src/client"],
       "@deepseek-ai/dsh-api-workspace-files": ["./rsh/Programs/Web/api/workspace-files/src"],
-      "@deepseek-ai/dsh-api-workspace-files/types": ["./rsh/Programs/Web/api/workspace-files/src/types.ts"],
+      "@deepseek-ai/dsh-api-workspace-files/types": ["./rsh/Programs/Web/api/workspace-files/src/remote-types.ts"],
+      "@deepseek-ai/dsh-api-workspace-files/native-types": ["./rsh/Programs/Web/api/workspace-files/src/types.ts"],
+      "@deepseek-ai/dsh-api-workspace-files/native-helpers": ["./rsh/Programs/Web/api/workspace-files/src/native-helpers.ts"],
       "@deepseek-ai/dsh-api-workspace-files/client": ["./rsh/Programs/Web/api/workspace-files/src/client/index.ts"],
       "@deepseek-ai/dsh-client-resources": ["./rsh/Programs/Web/client/resources/src"],
       "@deepseek-ai/dsh-client-resources/client": ["./rsh/Programs/Web/client/resources/src/client"],
@@ -373,6 +375,11 @@
       "@deepseek-ai/dsh-code-runtime": ["./rsh/Compatibility/DSH/bridge/compat-code-runtime/src"],
       "@deepseek-ai/dsh-user-approval": ["./rsh/Compatibility/DSH/bridge/compat-user-approval/src"],
       "@deepseek-ai/dsh-approval-definition/legacy": ["./rsh/Engine/core/approval-definition/src/legacy.ts"],
+      // Compatibility adapter exports are hand-written because the generator only maps native-safe subpaths.
+      "@deepseek-ai/dsh-compat-settings-adapters/agent-default-model": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-default-model.ts"],
+      "@deepseek-ai/dsh-compat-settings-adapters/agent-loop": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-loop.ts"],
+      "@deepseek-ai/dsh-compat-settings-adapters/agent-presets": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-presets.ts"],
+      "@deepseek-ai/dsh-compat-settings-adapters/tool-subagent": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/tool-subagent.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
       "@deepseek-ai/dsh-acp": ["./rsh/Programs/ACP/packages/acp/src"],
       "@deepseek-ai/dsh-acp-app": ["./rsh/Compatibility/DSH/bundle/acp-app/src"],

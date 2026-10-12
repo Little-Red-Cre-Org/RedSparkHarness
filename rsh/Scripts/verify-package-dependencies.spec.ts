@@ -306,6 +306,7 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-brand',
         '@deepseek-ai/dsh-commands',
         '@deepseek-ai/dsh-authorization',
+        '@deepseek-ai/dsh-api-workspace-files',
       ],
       '@deepseek-ai/dsh-client-native-application': [
         '@deepseek-ai/dsh-native-runtime',

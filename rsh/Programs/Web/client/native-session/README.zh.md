@@ -88,6 +88,8 @@ type NativeSettingsEvent =
 
 `clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
+`clientNativeWorkspaceFiles` 服务提供 `list(sessionId, path, signal?)`、`stat(sessionId, path, signal?)`、`follow(sessionId, signal)`、`read(sessionId, path, range, signal?)`、`readAll(sessionId, path, signal?)` 和 `readRelated(sessionId, path, relativePath, signal?)`。路径相对于该 Session 的工作区；`relativePath` 从基础文件所在目录解析。目录列表返回 `{ path, entries, truncated }`；stat 返回 `{ absolutePath, version, bytes? }`；文本页增加 `{ offset, text, lines, eof }`；完整读取增加 `{ offset: 0, data, eof: true }`，其中 `data` 是 base64 字节。`follow` 先产出 `ready` 帧，再产出 Host 仪表化文件系统观察生成的 `change` 帧；中止其 signal 会结束流。这些方法复用 `@deepseek-ai/dsh-api-workspace-files/native-types` 中的响应类型。
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {
@@ -109,7 +111,7 @@ interface NativeSettingsDescription {
 
 `close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
-已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
+已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets、workspace-files 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 

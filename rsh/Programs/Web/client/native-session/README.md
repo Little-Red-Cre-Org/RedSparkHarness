@@ -88,6 +88,8 @@ The same Cordis-free installation provides `clientNativeWorkspace` and `clientNa
 
 The `clientNativeSchedule` service exposes `list()` and `follow(signal)` for active, paused, and failed task rows. Its complete baseline and later upsert/remove frames contain schedule metadata without prompts or execution configuration; Host failures retain the `native/schedules` code.
 
+The `clientNativeWorkspaceFiles` service exposes `list(sessionId, path, signal?)`, `stat(sessionId, path, signal?)`, `follow(sessionId, signal)`, `read(sessionId, path, range, signal?)`, `readAll(sessionId, path, signal?)` and `readRelated(sessionId, path, relativePath, signal?)`. Paths are relative to that Session's workspace; `relativePath` starts from the base file's directory. Listings return `{ path, entries, truncated }`; stat returns `{ absolutePath, version, bytes? }`; text pages add `{ offset, text, lines, eof }`; complete reads add `{ offset: 0, data, eof: true }` with base64 bytes. `follow` yields a `ready` frame followed by `change` frames from the Host's instrumented filesystem observations; aborting its signal ends the stream. These methods use the shared `@deepseek-ai/dsh-api-workspace-files/native-types` response types.
+
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */
 interface NativeSettingsDescription {
@@ -109,7 +111,7 @@ Prompt uploads carry ordered encoded raster images; the Host admits them under i
 
 `close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.
 
-The published declarations reference native-runtime, client-connection, native-model-selection, agent-presets and brand, so those packages are production dependencies for type resolution. The shared Session package remains a peer because event validation and format interpretation use the application's same Session implementation.
+The published declarations reference native-runtime, client-connection, native-model-selection, agent-presets, workspace-files and brand, so those packages are production dependencies for type resolution. The shared Session package remains a peer because event validation and format interpretation use the application's same Session implementation.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 

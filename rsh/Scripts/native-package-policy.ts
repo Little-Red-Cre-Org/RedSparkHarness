@@ -313,6 +313,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
+  ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory', './responses-transport']],
@@ -357,6 +358,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Compiler faces that load each additional Cordis-free source export. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/api/workspace-files/native-helpers', ['host']],
   ['rsh/Programs/Web/api/session-controller/client-event-types', ['client']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],

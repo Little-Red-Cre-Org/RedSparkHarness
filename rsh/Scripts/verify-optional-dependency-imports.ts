@@ -155,9 +155,11 @@ function cordisFreeSourceClosure(
   if (!typesPath.startsWith('./lib/types/') || !typesPath.endsWith('.d.ts')) {
     throw new Error(`optional Cordis peer has an unsupported safe-entry types path: ${typesPath}`)
   }
-  const sourcePath = resolve(directory, 'src', typesPath.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
-  const entry = project.program.getSourceFile(sourcePath)
-  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded safe-entry source: ${sourcePath}`)
+  const sourceStem = resolve(directory, 'src', typesPath.slice('./lib/types/'.length, -'.d.ts'.length))
+  const sourcePaths = [`${sourceStem}.ts`, `${sourceStem}.tsx`]
+  const entry = sourcePaths.map(sourcePath => project.program.getSourceFile(sourcePath))
+    .find((source): source is ts.SourceFile => source !== undefined)
+  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded safe-entry source: ${sourcePaths.join(' or ')}`)
   const visited = new Set<string>()
   const pending = [entry]
   while (pending.length > 0) {
