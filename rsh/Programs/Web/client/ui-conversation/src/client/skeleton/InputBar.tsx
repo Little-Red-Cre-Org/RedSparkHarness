@@ -17,7 +17,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import clsx from 'clsx'
 import {
-  IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
+  ChatComposerButton, ChatComposerCard, ChatComposerToolbar, IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // Type-only: the `plan` projection key merge (the TodoDock posture — the
 // composer reads a host-computed value; the domain owns the key).
@@ -430,10 +430,9 @@ export const InputBar = memo(function InputBar({
           their pointer events), so the WHOLE capsule is the pick target.
           pointerdown stops here so the Menu's outside-close cannot race the
           click's reopen (close-then-open flickers the chip's open echo). */}
-      <div
+      <ChatComposerCard
         ref={cardRef}
-        className={clsx(css.card, workspaceTrigger && css.cardWorkspaceTrigger)}
-        data-composer-card
+        className={clsx(workspaceTrigger && css.cardWorkspaceTrigger)}
         onClick={workspaceTrigger ? onRequestWorkspace : undefined}
         onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}
       >
@@ -484,7 +483,7 @@ export const InputBar = memo(function InputBar({
             <DecoratorPortals editor={workspaceTrigger ? null : editor} />
           </div>
         </div>
-        <div className={css.row}>
+        <ChatComposerToolbar>
           <div className={css.tools}>
             <Tooltip label={t('input.commands')} side="top" delayMs={500}>
               <button
@@ -524,43 +523,27 @@ export const InputBar = memo(function InputBar({
             <ContextMeter useProjection={useProjection} t={t} />
             {interruptible && (
               <Tooltip label={t('input.stop')} side="top" delayMs={500} disabled={stop === undefined}>
-                <button
-                  type="button"
-                  className={css.primary}
-                  aria-label={t('input.stop')}
+                <ChatComposerButton
+                  kind="stop"
+                  label={t('input.stop')}
                   disabled={stop === undefined}
                   onMouseDown={keepFocus}
                   onClick={stop}
-                >
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
-                  </svg>
-                </button>
+                />
               </Tooltip>
             )}
             <Tooltip label={primaryLabel} side="top" delayMs={500} disabled={primaryDisabled}>
-              <button
-                type="button"
-                className={css.primary}
-                aria-label={primaryLabel}
+              <ChatComposerButton
+                kind={primaryStops ? 'stop' : 'send'}
+                label={primaryLabel}
                 disabled={primaryDisabled}
                 onMouseDown={keepFocus}
                 onClick={onPrimary}
-              >
-                {primaryStops ? (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
-                  </svg>
-                )}
-              </button>
+              />
             </Tooltip>
           </div>
-        </div>
-      </div>
+        </ChatComposerToolbar>
+      </ChatComposerCard>
       {variant === 'composer' && input !== undefined && sessionId !== undefined
         ? renderSlot('conversation.composer.dock', {})
         : null}
