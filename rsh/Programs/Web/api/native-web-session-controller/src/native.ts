@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { constants as fsConstants } from 'node:fs'
 import type { BigIntStats } from 'node:fs'
-import { open, opendir, readdir, stat } from 'node:fs/promises'
+import { open, opendir, readdir, readlink, realpath, stat } from 'node:fs/promises'
 import { posix, relative, sep, win32 } from 'node:path'
 import type { FileHandle } from 'node:fs/promises'
 import { TextDecoder } from 'node:util'
@@ -973,30 +973,46 @@ export class NativeWebSessionService {
 
   private async verifyWorkspaceFileHandle(
     root: FsTarget, target: FsTarget, file: FileHandle, signal: AbortSignal,
-  ): Promise<BigIntStats> {
+  ): Promise<{ readonly info: BigIntStats; readonly path: string }> {
     const fs = this.requireFileSystem()
     signal.throwIfAborted()
-    const resolved = await fs.resolve(fs.processPath(target), { signal })
-    if (!fs.contains(root, resolved)) throw new Error('opened file is outside the Session workspace')
-    const current = await stat(fs.processPath(resolved), { bigint: true })
     const opened = await file.stat({ bigint: true })
-    if (opened.dev !== current.dev || opened.ino !== current.ino) {
-      throw new Error('workspace file changed while opening')
+
+    if (process.platform === 'linux') {
+      const descriptorPath = await readlink(`/proc/self/fd/${file.fd}`)
+      const resolved = await fs.resolve(descriptorPath, { signal })
+      if (!fs.contains(root, resolved)) throw new Error('opened file is outside the Session workspace')
+      return { info: opened, path: fs.processPath(resolved) }
     }
-    return opened
+
+    const path = await realpath(fs.processPath(target))
+    const resolved = await fs.resolve(path, { signal })
+    if (!fs.contains(root, resolved)) throw new Error('opened file is outside the Session workspace')
+
+    const currentFile = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW)
+    try {
+      const current = await currentFile.stat({ bigint: true })
+      if (opened.dev !== current.dev || opened.ino !== current.ino) {
+        throw new Error('workspace file changed while opening')
+      }
+      if (await realpath(path) !== path) throw new Error('opened file path changed while opening')
+    } finally {
+      await currentFile.close()
+    }
+    return { info: opened, path }
   }
 
   private async openWorkspaceFile(
     root: FsTarget, target: FsTarget, signal: AbortSignal, directory = false,
-  ): Promise<{ readonly file: FileHandle; readonly info: BigIntStats }> {
+  ): Promise<{ readonly file: FileHandle; readonly info: BigIntStats; readonly path: string }> {
     signal.throwIfAborted()
     const path = this.requireFileSystem().processPath(target)
     const flags = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
       | (directory ? fsConstants.O_DIRECTORY : 0)
     const file = await open(path, flags)
     try {
-      const info = await this.verifyWorkspaceFileHandle(root, target, file, signal)
-      return { file, info }
+      const { info, path } = await this.verifyWorkspaceFileHandle(root, target, file, signal)
+      return { file, info, path }
     } catch (error: unknown) {
       await file.close()
       throw error
@@ -1058,12 +1074,18 @@ export class NativeWebSessionService {
         await directory.close()
       }
     }
-    const { file, info } = await this.openWorkspaceFile(root, target, signal, true)
+    const { file, info, path } = await this.openWorkspaceFile(root, target, signal, true)
     try {
       if (!info.isDirectory()) throw new Error('opened path is not a directory')
-      const descriptorPath = process.platform === 'linux' ? `/proc/self/fd/${file.fd}`
-        : `/dev/fd/${file.fd}`
-      return { cwd: descriptorPath, names: await readdir(descriptorPath), file }
+      const cwd = process.platform === 'linux' ? `/proc/self/fd/${file.fd}` : path
+      const names = await readdir(cwd)
+      if (process.platform === 'darwin') {
+        const current = await stat(path, { bigint: true })
+        if (info.dev !== current.dev || info.ino !== current.ino) {
+          throw new Error('workspace directory changed while listing')
+        }
+      }
+      return { cwd, names, file }
     } catch (error: unknown) {
       await file.close()
       throw error
