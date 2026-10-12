@@ -1,2 +1,1 @@
-Assistant
 Native browser answer.

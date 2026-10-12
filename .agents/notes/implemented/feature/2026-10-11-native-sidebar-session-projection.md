@@ -6,20 +6,20 @@ English | [中文](2026-10-11-native-sidebar-session-projection.zh.md)
 
 ## Problem
 
-The native Session client exposes stored headers and title actions, but it has no Workspace registry, activity ordering, or cross-Session status feed. The native sidebar still needs useful navigation without claiming that path groups are Host Workspaces.
+The native Session and Workspace clients expose a Host Workspace registry, ordered Session membership, activity timestamps, Session status, and directory browsing. The native sidebar uses those feeds while keeping host operations behind its injected UI owner.
 
 ## Decision
 
-The native sidebar groups listed Sessions by `SessionHeader.cwd` as a client-only display projection. A group has no `WorkspaceId`; its label comes from `workspaceLabel(cwd)`, and the ungrouped group uses the localized label. Group and Session rows sort by the newest available `header.createdAt`. The sidebar uses `NativeSessionPresentation.displayTitle` and the existing rename and refresh-title actions.
+The native sidebar groups Sessions by the Host registry's `workspaceId` and uses each Workspace's ordered Session membership. It also supports a flat Session view, recent-activity or manual ordering, Session search and archive, Workspace rename and deletion, and directory-based Workspace creation. Shared Cordis-free rows provide the same status, activity time, hover path, and row menus used by the legacy sidebar.
 
-The projection does not display relative activity time or Session status because the native list does not provide `updatedAt`, pending interaction, running, or completion facts. Workspace creation, search, sort controls, and scheduled tasks stay disabled until their Host services exist. Workspace-only actions are omitted from path groups.
+Workspace expansion only changes the visible group. Its new-session action opens or creates the reusable blank Session through `connectWorkspace`. The sidebar also opens the read-only scheduled-task panel described in the [Native scheduled-task list note](2026-10-12-native-scheduled-task-list.md); drag reordering, moving Sessions, and multi-page search are not presented.
 
 ## Alternatives considered
 
-- **Treat each cwd as a Workspace identity:** rejected because Workspace membership and order are Host-owned facts; a path does not supply a Workspace id or its ordered Session membership.
-- **Derive activity or status from creation time, selected history, or placeholder values:** rejected because these values would misstate the Session's current state.
-- **Wait for every Workspace and schedule API before rendering the sidebar:** rejected because the current Host already supports listing, selecting, creating, and renaming Sessions.
+- **Treat each cwd as a Workspace identity:** rejected because the Host registry supplies Workspace ids, membership, and order.
+- **Duplicate the legacy row and directory-browser UI in the Native composition:** rejected because shared Cordis-free presentation keeps both sidebars aligned while Host operations remain in their owners.
+- **Wait for the Schedule feed before rendering Workspace navigation:** rejected because Workspace and Session feeds support the sidebar's core navigation independently.
 
 ## Consequences
 
-The native sidebar provides grouped Session navigation and title management now, while registered Workspace behavior remains unavailable. When native Workspace and Session summary feeds arrive, replace the cwd projection with their authoritative membership, manual order, activity timestamps, and status values; do not turn cwd into a persistent Workspace identity.
+The native sidebar's Workspace and Session rows use Host registry and Session-summary data. The task list remains read-only; drag gestures, Session moves, and additional search pages are not presented in this composition.

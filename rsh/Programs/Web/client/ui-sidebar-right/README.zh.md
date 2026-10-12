@@ -9,13 +9,14 @@ kind: "package-reference"
 
 ## 概述
 
-右侧 Sidebar：停靠套件与本产品相遇的地方。它为每个会话持有一个停靠面，以两种呈现形态之一把它画成贴靠框架右列边缘的一块面板，把展开按钮放进会话 header，并拥有导航控制器（`ctx.sidebarRight`）、tab 类型注册表（`ctx.sidebarRightTabs`），以及告诉每个已开 tab 它是如何被导航到、能活多久的 Tab 域。
+右侧 Sidebar 在可调整宽度的停靠面或全屏面板中承载每个 Session 的 tab。Cordis 组合提供 tab 导航、资源预览、布局操作和展开/收起。Native 组合复用本包的入口，以 Session header、roster 和 history 事实呈现只读的两页会话详情。
 
 ## 目录
 
 - [什么住在这里，什么不住](#what-lives-here-and-what-does-not)
 - [呈现形态](#presentations)
 - [展开按钮](#the-expand-button)
+- [Native 会话详情](#native-session-details)
 - [状态](#state)
 - [扩展席位](#extension-seats)
 - [`ctx.sidebarRight`](#ctxsidebarright)
@@ -55,6 +56,13 @@ kind: "package-reference"
 面板取会话区的底色与正文字号，而不是自成一层浮起的表面：它是页面的一列，不是压在页面上的卡片。
 
 `rightbar` 入口是 root 作用域的控制器。它读取 `usePanelInfo`，仅在选中会话界面时挂载 session 作用域的 `rightbar.session` 子树。切换到全局面板会隐藏右侧 Sidebar 并释放框架列宽，但不删除会话的 tab 状态。
+
+<a id="native-session-details"></a>
+## Native 会话详情
+
+Native 组合通过本包的 Native 入口与 rightbar slot 提供两个本地分区。概览读取当前 Session header 与 roster；活动页从 durable history 统计轮次、消息、工具调用和 token 用量，并显示最近的 provider、model 与请求上下文。`SidebarPathBar` 展示工作目录。
+
+Native 面板只显示现有客户端 API 能提供的事实。由于 Native profile 没有 Session 作用域的工作区文件客户端，它省略 legacy 文件树与文档预览。Trajectory 与 turn inspector 不属于本面板。
 
 <a id="state"></a>
 ## 状态

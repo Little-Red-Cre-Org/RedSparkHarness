@@ -44,9 +44,11 @@ dsh --help                          # the launcher's own help
 
 A profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). `patchReload: live` watches the profile and home-level patch files; `startup` applies them once.
 
-The `./native-profile` library export shares validated profile parsing and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
+The `./native-profile` library export shares validated profile parsing, preset expansion, and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
 
 Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
+
+The shipped `native-web` profile installs the `standard` and `minimal` agent modes, the plan-mode Provider, and the standing permission presets `workspace-write` and `danger-full-access` for its Native Session API.
 
 Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, the profile records the invoking directory as the application's workspace root. It stores its index at `$DSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
 

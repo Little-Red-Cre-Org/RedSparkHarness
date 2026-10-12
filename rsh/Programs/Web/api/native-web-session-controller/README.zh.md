@@ -22,21 +22,39 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
+配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session 和 Workspace 流的并发跟随者数量。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
+当此 Program 的浏览器轮次处于活动状态时，`session/queue` 与 `session/steer` 接受带稳定身份的文本。队列操作将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id，`session/submissions` 返回两个待处理 inbox。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
+
+`session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。历史无法读取的行仍会显示，标题标记为不可用；`updatedAt` 回退为 `header.createdAt`，`blank` 和 `completed` 为 false，运行状态及 Host 管理的字段仍会投影。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`maxFollowBufferBytes` 限制非空基线和每条 upsert 帧的编码字节数：基线超限时先发送空基线，再逐 Session 发送 upsert；单条 upsert 超限时跳过。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
+
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
-可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
+经过身份认证的 `session/commands` 端点接受 `{ sessionId }`，并返回所选 Session 确切 Program root Agent 可用的 `{ commands }`。每个有效描述符包含名称、说明，以及可选的输入提示和附件支持信息；查询会检查 Web Program 的命令可见性，但不会分派命令处理器。
 
-可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 仅流式发送 Settings 文档、凭据引用及模型适配器失效通知，不携带值；取消请求会关闭流。
+控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
+
+控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, entries, crumbs }`，create-directory 创建一个子目录。Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。
+
+可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
+
+`session/mode-controls` 从有界 Session 历史读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；它还会读取 plan mode 状态及待处理选择。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
+
+`session/permission-controls` 从 Session 历史返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
+
+`agent-presets/read` 返回一个目录的来源、状态、元数据与原始 `agent.native.json` 文本；profile 独有的组合没有文件内容。`agent-presets/copy` 将已就绪目录复制到 `<DSH_HOME>/.agent-presets`；`agent-presets/delete` 只删除用户目录。`agent-presets/can-open-directory` 报告 Host 打开器是否可用；`agent-presets/open-directory` 打开用户目录，或返回 Host 本地路径。找不到、格式无效和只读拒绝分别保留 `agent-preset/*` 错误码；其他管理失败使用 `native/agent-presets`，打开器失败使用 `native/agent-presets-directory`。文件操作完成后，Host 会在设置事件流发布 `agent-presets/updated`。
+
+删除目录后，新的名单读取和新的 preset 解析不会再提供该启动时加载的 preset。已使用该组合的 Session 会继续运行；其插件作用域会保留到 Host 重新加载 profile。
+
+可选 modelDirectory 与 modelSettings 提供 `models/providers`、`models/configurable-providers` 和 `models/discover`。缺少列表 Provider 时返回空列表；目录失败使用 `native/models-directory`，发现失败使用通用消息和 `native/models-discovery`。发现请求接受 Settings namespace 与草稿；传入的 `apiKey` 仅用于该请求，不会返回上游响应正文。POST `/api/native-session/settings-events` 流式发送 Settings 文档、凭据引用、模型适配器与 Agent 预设失效通知，不携带值；取消请求会关闭流。
 
 安装 Settings 与 modelSettings 后，此 Host 会持有 `agent-default-model`。账户授权以 `authorized` 结算后，只有在没有已保存默认值且没有通过 profile 引用、提供方原生认证或已存提供方 key 配置的非账户提供方 API key 时，才会保存第一个已登录账户模型。启用 modelSelection 后，只有当 root Session 历史中没有记录的模型路由时，才会使用已保存的 provider/model；持久化选择和历史请求路由优先。Settings 写入会发布 `settings/document-updated`，账户路由变更后 pi-ai 会发布 `llm/adapters-updated`。
 
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
-可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
+可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
@@ -83,3 +101,4 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI、文件及音频上传不由该包提供。
+- 控制器对所有 Session 行均返回 `hasActiveSchedule: false`。控制器提供 `rootExecution`，而 `taskScheduler` 要求该服务；若控制器依赖 scheduler 会形成加载循环。

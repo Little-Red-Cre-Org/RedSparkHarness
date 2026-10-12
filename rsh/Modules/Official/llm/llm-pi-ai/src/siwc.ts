@@ -22,6 +22,42 @@ const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.toke
 const HOST_AGENT_NAME = 'RedSpark Harness'
 const OAUTH_REQUEST_TIMEOUT_MS = 30_000
 const CALLBACK_TIMEOUT_MS = 10 * 60_000
+const SIWC_TOOL_NAMESPACE = 'harness'
+
+/** Normalize SIWC Responses roles and tool namespaces while preserving existing namespace groups.
+ * @param payload - Responses JSON body (mutated in place and returned).
+ * @returns the same object with system roles mapped to developer and ungrouped tools and calls under `harness`.
+ */
+export function siwcResponsesPayload<T>(payload: T): T {
+  const body = payload as unknown as {
+    input?: { role?: string; type?: string; namespace?: string }[]
+    tools?: unknown
+  }
+  if (body.input !== undefined) {
+    for (const item of body.input) {
+      if (item.role === 'system') item.role = 'developer'
+      if ((item.type === 'function_call' || item.type === 'custom_tool_call') && item.namespace === undefined) {
+        item.namespace = SIWC_TOOL_NAMESPACE
+      }
+    }
+  }
+  if (body.tools !== undefined) {
+    const tools = body.tools as { type?: string }[]
+    const ungrouped = tools.filter(tool => tool.type !== 'namespace')
+    if (ungrouped.length > 0) {
+      body.tools = [
+        ...tools.filter(tool => tool.type === 'namespace'),
+        {
+          type: 'namespace',
+          name: SIWC_TOOL_NAMESPACE,
+          description: 'Tools the harness exposes to the model.',
+          tools: ungrouped,
+        },
+      ]
+    }
+  }
+  return payload
+}
 
 const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] = [
   ['type', value => value === 'oauth'],
@@ -29,6 +65,8 @@ const SIWC_CREDENTIAL_FIELDS: readonly [string, (value: unknown) => boolean][] =
   ['issuer', value => value === ISSUER],
   ['clientId', value => typeof value === 'string'],
   ['subject', value => typeof value === 'string'],
+  ['name', value => value === undefined || typeof value === 'string'],
+  ['picture', value => value === undefined || typeof value === 'string'],
   ['idToken', value => typeof value === 'string'],
   ['extAgentHostId', value => typeof value === 'string'],
   ['scopes', value => Array.isArray(value)],
@@ -51,6 +89,8 @@ export interface SiwcCredential extends OAuthCredential {
   readonly issuer: typeof ISSUER
   readonly subject: string
   readonly email?: string
+  readonly name?: string
+  readonly picture?: string
   readonly idToken: string
   readonly extAgentHostId: string
   readonly scopes: readonly string[]
@@ -270,6 +310,8 @@ function expiresAt(value: unknown): number {
 async function verifiedIdentity(idToken: string, clientId: string, nonce: string | undefined, signal: AbortSignal): Promise<{
   readonly subject: string
   readonly email?: string
+  readonly name?: string
+  readonly picture?: string
 }> {
   const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
   const response = await fetch(JWKS_URL, { headers: { accept: 'application/json' }, signal: requestSignal })
@@ -298,9 +340,16 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
   if (nonce !== undefined && payload.nonce !== nonce) {
     throw new Error('Sign in with ChatGPT ID token nonce did not match')
   }
+  const pictureUrl = typeof payload.picture === 'string' && URL.canParse(payload.picture)
+    ? new URL(payload.picture)
+    : undefined
   return {
     subject: payload.sub,
     ...typeof payload.email === 'string' ? { email: payload.email } : {},
+    ...typeof payload.name === 'string' ? { name: payload.name } : {},
+    ...pictureUrl !== undefined && (pictureUrl.protocol === 'http:' || pictureUrl.protocol === 'https:')
+      ? { picture: pictureUrl.href }
+      : {},
   }
 }
 
@@ -419,6 +468,8 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
           issuer: ISSUER,
           subject: identity.subject,
           ...identity.email === undefined ? {} : { email: identity.email },
+          ...identity.name === undefined ? {} : { name: identity.name },
+          ...identity.picture === undefined ? {} : { picture: identity.picture },
           idToken,
           extAgentHostId,
           scopes,
@@ -444,9 +495,10 @@ export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
         signal: AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS),
       }), 'token refresh')
       const scopes = scopesFrom(tokens.scope, credential.scopes)
+      const access = requiredString(tokens.access_token, 'access token')
       return {
         ...credential,
-        access: requiredString(tokens.access_token, 'access token'),
+        access,
         refresh: requiredString(tokens.refresh_token, 'replacement refresh token'),
         expires: expiresAt(tokens.expires_in),
         scopes,

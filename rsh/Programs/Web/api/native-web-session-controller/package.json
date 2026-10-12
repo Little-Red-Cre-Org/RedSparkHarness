@@ -38,7 +38,8 @@
         "modelExecution",
         "agents",
         "sessionExecution",
-        "activeSessions"
+        "activeSessions",
+        "workspaceRegistry"
       ],
       "optional": [
         "tools",
@@ -51,7 +52,8 @@
         "modelDirectory",
         "modelSettings",
         "agentPresets",
-        "workspaceRegistry",
+        "planMode",
+        "permissionPresets",
         "agentInstructions",
         "userQuestions",
         "attachments",
@@ -92,6 +94,8 @@
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-plan-mode": "workspace:^",
+    "@deepseek-ai/dsh-permission-presets": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
@@ -100,7 +104,10 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^"
+    "@deepseek-ai/dsh-native-command": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^",
+    "@deepseek-ai/dsh-host-directory-picker-native": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
@@ -116,7 +123,6 @@
     "@deepseek-ai/dsh-client-native-application": "workspace:^",
     "@deepseek-ai/dsh-attachment-local": "workspace:^",
     "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-permission-presets": "workspace:^",
     "@deepseek-ai/dsh-storage": "workspace:^",
     "@deepseek-ai/dsh-storage-domain": "workspace:^",
     "@deepseek-ai/dsh-storage-json": "workspace:^",

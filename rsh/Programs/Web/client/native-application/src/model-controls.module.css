@@ -1,0 +1,17 @@
+.root {
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.select {
+  max-width: 180px;
+  border-radius: 999px;
+  corner-shape: round;
+}

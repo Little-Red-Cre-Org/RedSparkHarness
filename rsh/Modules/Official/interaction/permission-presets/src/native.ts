@@ -1,13 +1,14 @@
 /** Native permission presets persist through the exact Program-owned Session writer. */
 import { z } from 'zod'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { sessionApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-sandbox/native-types'
 import type {} from './native-definition.ts'
-import type { NativePermissionPresetOperations, NativePermissionPresetSpec } from './native-definition.ts'
-import { defaultPermissionPresets } from './presets.ts'
+import type { NativePermissionPresetControls, NativePermissionPresetOperations, NativePermissionPresetSpec } from './native-definition.ts'
+import { CUSTOM_PRESET, defaultPermissionPresets } from './presets.ts'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 
 const presetSpec = z.strictObject({
@@ -37,26 +38,52 @@ export const plugin: NativePlugin = {
     return (context) => {
       const active = context.require('activeSessions') as Pick<NativeActiveSessionOperations, 'owner'>
       const agents = context.require('agents') as Pick<NativeAgentRegistry, 'get'>
+      const sandboxPolicy = context.require('sandboxPolicy')
+      const approval = context.require('approval')
+      const assertOwner = (owner: NativeActiveSessionOwner, signal: AbortSignal): void => {
+        signal.throwIfAborted()
+        if (owner.invocation !== 'root' || !owner.writerAvailable || agents.get(owner.agent.id) !== owner.agent
+          || active.owner(owner.agent, owner.session) !== owner) {
+          throw new Error('permission-presets: exact writable root owner is unavailable')
+        }
+      }
+      const currentValue = (events: readonly SessionEvent[]): string => {
+        const sandbox = events.findLast(event => event.type === 'sandbox/mode')
+        const sandboxMode = sandbox?.type === 'sandbox/mode'
+          ? sandbox.data.mode : sandboxPolicy.defaultMode
+        const approvalEvent = events.findLast(event => event.type === 'approval/policy')
+        const approvalPolicy = approvalEvent?.type === 'approval/policy' ? approvalEvent.data.policy : approval.policy
+        const matches = (spec: NativePermissionPresetSpec): boolean =>
+          spec.sandbox === sandboxMode && spec.approval === approvalPolicy
+        const selected = events.findLast(event => event.type === 'permission/preset')
+        const name = selected?.type === 'permission/preset' ? selected.data.preset : undefined
+        const spec = name === undefined ? undefined : presets[name]
+        return name !== undefined && spec !== undefined && matches(spec)
+          ? name : Object.entries(presets).find(([, spec]) => matches(spec))?.[0] ?? CUSTOM_PRESET
+      }
+      const controls = (events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls> => {
+        signal.throwIfAborted()
+        const selectedValue = currentValue(events)
+        return Promise.resolve({ currentValue: selectedValue, options: [
+          ...Object.entries(presets).map(([value, spec]) => ({ value, name: spec.name ?? value,
+            ...spec.description === undefined ? {} : { description: spec.description } })),
+          ...selectedValue === CUSTOM_PRESET ? [{ value: CUSTOM_PRESET, name: 'Custom',
+            description: 'Current sandbox and approval settings do not match a preset.' }] : [],
+        ] })
+      }
       const service: NativePermissionPresetOperations = {
+        controls,
         resolve(name) {
           const spec = presets[name]
           if (spec === undefined) throw new Error(`permission-presets: unknown native preset ${JSON.stringify(name)}`)
           return spec
         },
         async apply(owner, name, signal) {
-          signal.throwIfAborted()
-          const assertOwner = (): void => {
-            signal.throwIfAborted()
-            if (owner.invocation !== 'root' || !owner.writerAvailable || agents.get(owner.agent.id) !== owner.agent
-              || active.owner(owner.agent, owner.session) !== owner) {
-              throw new Error('permission-presets: exact writable root owner is unavailable')
-            }
-          }
-          assertOwner()
+          assertOwner(owner, signal)
           const spec = service.resolve(name)
           const currentEvents = await owner.readEvents({ signal })
           const currentPreset = currentEvents.findLast(event => event.type === 'permission/preset')
-          assertOwner()
+          assertOwner(owner, signal)
           if (currentPreset?.type !== 'permission/preset' || currentPreset.data.preset !== name) {
             owner.append('permission/preset', { preset: name })
           }
@@ -67,9 +94,9 @@ export const plugin: NativePlugin = {
           if (sessionApprovalPolicy(owner.session) !== spec.approval) {
             owner.append('approval/policy', { policy: spec.approval })
           }
-          assertOwner()
+          assertOwner(owner, signal)
           await owner.flush()
-          assertOwner()
+          assertOwner(owner, signal)
         },
       }
       context.provide('permissionPresets', service)
@@ -77,4 +104,5 @@ export const plugin: NativePlugin = {
   },
 }
 
-export type { NativePermissionPresetOperations, NativePermissionPresetSpec } from './native-definition.ts'
+export type { NativePermissionPresetControls, NativePermissionPresetOperations, NativePermissionPresetOption,
+  NativePermissionPresetSpec } from './native-definition.ts'

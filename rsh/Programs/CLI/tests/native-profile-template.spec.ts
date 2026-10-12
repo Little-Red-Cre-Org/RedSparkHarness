@@ -3,9 +3,11 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
+import { loadNativeProfile } from '../src/native-profile-loader.ts'
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-web-template-'))
@@ -17,6 +19,16 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     })
     expect(profile.installations.find(row => row.id === 'session-controller')?.plugin)
       .toBe('@deepseek-ai/dsh-native-web-session-controller')
+    const nativeWebRows = new Map(profile.installations.map(row => [row.id, row]))
+    expect(nativeWebRows.get('storage-hub')?.plugin).toBe('@deepseek-ai/dsh-storage')
+    expect(nativeWebRows.get('storage-json')).toMatchObject({ config: { root: join(home, 'storages') } })
+    expect(nativeWebRows.get('storage-domain')).toMatchObject({ config: { backend: 'json' } })
+    expect(nativeWebRows.get('workspace')).toEqual({
+      id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: 'root',
+    })
+    expect(nativeWebRows.get('session-controller')).toMatchObject({
+      config: { workspaceRoutes: { maxRoutes: 64, allowedRoots: [process.cwd()] } },
+    })
     expect(profile.installations.find(row => row.id === 'session-title')).toEqual({
       id: 'session-title', plugin: '@deepseek-ai/dsh-session-title', scope: 'root',
       config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 },
@@ -34,11 +46,20 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       plugin: '@deepseek-ai/dsh-task-scheduler',
       config: { path: join(home, 'profiles', 'native-web', 'task-scheduler.sqlite') },
     })
+    expect(profile.installations.find(row => row.id === 'schedule-controller')).toEqual({
+      id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: 'root',
+    })
+    expect(profile.installations.findIndex(row => row.id === 'schedule-controller'))
+      .toBeGreaterThan(profile.installations.findIndex(row => row.id === 'task-scheduler'))
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
 
     ensureShippedNativeProfile('native-web', home)
     expect(nativeProfileReloadMode('native-web', home)).toBe('live')
+    await loadNativeProfile({ profile: 'native-web', patchFiles: [], target: 'host', home,
+      installAnchor: fileURLToPath(new URL('../package.json', import.meta.url)) })
     for (const name of ['native-headless', 'native-headless-query', 'native-sdk', 'native-sdk-dsh-child', 'native-acp', 'native-tui']) {
+      expect(shippedNativeProfileComposition(home, name, 'win32').installations
+        .some(row => row.id === 'schedule-controller')).toBe(false)
       ensureShippedNativeProfile(name, home)
       expect(nativeProfileReloadMode(name, home)).toBe('startup')
     }
@@ -74,6 +95,17 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     const cli = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { dependencies: Record<string, string> }
     for (const row of client.installations) expect(cli.dependencies).toHaveProperty([row.plugin])
     expect(existsSync(join(home, 'profiles', 'native-web', 'rsh.profile.json'))).toBe(true)
+  } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+}, 10_000)
+
+it('resolves the shipped native-headless profile through the public loader', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-headless-template-'))
+  try {
+    ensureShippedNativeProfile('native-headless', home)
+    await loadNativeProfile({ profile: 'native-headless', patchFiles: [], target: 'host', home,
+      installAnchor: fileURLToPath(new URL('../package.json', import.meta.url)) })
   } finally {
     await rm(home, { recursive: true, force: true })
   }
@@ -296,7 +328,7 @@ it('keeps exact query default and selects one SQLite provider only in the explic
     id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: 'root',
     config: { path: join('/tmp/rsh-reference', 'sessions', 'query.sqlite'), openAt: 'first-search' },
   }])
-  expect(standard.find(row => row.id === 'app')?.config).not.toHaveProperty('cwd')
+  expect(standard.find(row => row.id === 'app')?.config).toMatchObject({ cwd: process.cwd() })
   expect(selected.find(row => row.id === 'app')?.config).toMatchObject({ cwd: process.cwd() })
   const query = selected.findIndex(row => row.id === 'session-query')
   const projection = selected.findIndex(row => row.id === 'session-projections')
@@ -315,16 +347,27 @@ it('keeps exact query default and selects one SQLite provider only in the explic
   ]) expect(installed.resolve(`${packageName}/package.json`)).toBeTruthy()
 })
 
-it('installs plan mode beside the native TUI command registry', () => {
-  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', 'native-tui', 'linux')
+it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset roster in %s', (profileName) => {
+  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', profileName, 'linux')
   const ids = profile.installations.map(row => row.id)
   const plan = profile.installations.find(row => row.id === 'plan-mode')
   expect(plan).toMatchObject({ plugin: '@deepseek-ai/dsh-plan-mode', scope: 'root' })
   expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
   expect(ids).toContain('commands')
   expect(ids).toContain('user-questions')
-  expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
-    .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }])
+  expect(profile.installations.filter(row => ['agent-presets', 'preset-standard', 'preset-minimal'].includes(row.id))).toEqual([
+    { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'standard' } },
+    { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
+      config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+    { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
+      config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+  ])
+  if (profileName === 'native-web') {
+    expect(profile.installations.find(row => row.id === 'permission-presets')).toEqual({
+      id: 'permission-presets', plugin: '@deepseek-ai/dsh-permission-presets', scope: 'root',
+    })
+  }
 })
 
 it('declares every shipped template plugin as a CLI runtime dependency', async () => {

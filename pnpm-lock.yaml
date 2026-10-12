@@ -9289,6 +9289,9 @@ importers:
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/native-sandbox-policy
+      '@deepseek-ai/dsh-native-schedule-controller':
+        specifier: workspace:^
+        version: link:../Web/host/native-schedule-controller
       '@deepseek-ai/dsh-native-sdk-server':
         specifier: workspace:^
         version: link:../SDK/packages/native-server
@@ -9415,6 +9418,9 @@ importers:
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../Modules/Official/workspace/workspace
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -9762,9 +9768,6 @@ importers:
       '@deepseek-ai/dsh-workflow-worker-thread':
         specifier: workspace:^
         version: link:../../Engine/workflow/workflow-worker-thread
-      '@deepseek-ai/dsh-workspace':
-        specifier: workspace:^
-        version: link:../../Modules/Official/workspace/workspace
       '@deepseek-ai/schemastery':
         specifier: link:../../Core/vendor/schemastery
         version: link:../../Core/vendor/schemastery
@@ -10643,6 +10646,9 @@ importers:
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-host-directory-picker-native':
+        specifier: workspace:^
+        version: link:../../host/directory-picker-native
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
@@ -10673,6 +10679,12 @@ importers:
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-permission-presets':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/permission-presets
+      '@deepseek-ai/dsh-plan-mode':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/plan/plan-mode
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -10691,6 +10703,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/workspace/workspace
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -10713,9 +10731,6 @@ importers:
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../../host/native-web-assets
-      '@deepseek-ai/dsh-permission-presets':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/permission-presets
       '@deepseek-ai/dsh-storage':
         specifier: workspace:^
         version: link:../../../../Core/storage/storage
@@ -11499,6 +11514,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-workspace-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/workspace/workspace-definition
 
   rsh/Programs/Web/client/resources:
     devDependencies:
@@ -13220,6 +13238,9 @@ importers:
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@deepseek-ai/dsh-client-test-runtime':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/client-runtime
@@ -13391,6 +13412,9 @@ importers:
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@deepseek-ai/dsh-client-resources':
         specifier: workspace:^
         version: link:../resources
@@ -14137,6 +14161,25 @@ importers:
       '@deepseek-ai/dsh-http-routes-cordis':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/http-routes-cordis
+
+  rsh/Programs/Web/host/native-schedule-controller:
+    dependencies:
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/automation/task-scheduler
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/dsh-client-native-session':
+        specifier: workspace:^
+        version: link:../../client/native-session
 
   rsh/Programs/Web/host/native-web-assets:
     dependencies:

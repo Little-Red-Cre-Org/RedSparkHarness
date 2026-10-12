@@ -6,20 +6,20 @@ Status: implemented
 
 ## Problem
 
-原生 Session 客户端提供已存储的 header 和标题操作，但没有 Workspace 注册表、活动时间排序或跨 Session 状态流。原生侧边栏仍需要提供可用的导航，同时不能把路径分组说成 Host Workspace。
+原生 Session 与 Workspace 客户端提供 Host Workspace 注册表、有序的 Session 成员关系、活动时间戳、Session 状态和目录浏览。原生侧边栏使用这些数据流，并通过注入的 UI owner 调用宿主操作。
 
 ## Decision
 
-原生侧边栏按 `SessionHeader.cwd` 将已列出的 Session 组成纯客户端展示分组。分组没有 `WorkspaceId`；标签由 `workspaceLabel(cwd)` 生成，未分组使用本地化标签。分组和 Session 行按当前可用的最新 `header.createdAt` 排序。侧边栏使用 `NativeSessionPresentation.displayTitle` 以及现有的重命名和刷新标题操作。
+原生侧边栏按 Host 注册表的 `workspaceId` 对 Session 分组，并使用每个 Workspace 有序的 Session 成员关系。它还支持平铺 Session 视图、按最近活动或手动排序、Session 搜索与归档、Workspace 重命名与删除，以及通过目录选择创建 Workspace。共享的零 Cordis 行组件提供与 legacy 侧边栏相同的状态、活动时间、悬停路径和行菜单。
 
-由于原生列表不提供 `updatedAt`、待处理交互、运行状态或完成状态，展示层不显示相对活动时间或 Session 状态。Workspace 创建、搜索、排序控件和定时任务在对应 Host 服务可用前保持禁用。路径分组不显示仅适用于 Workspace 的操作。
+展开 Workspace 只改变可见分组。其新会话操作通过 `connectWorkspace` 打开或创建可复用的空白 Session。侧边栏还会打开只读定时任务面板，详见 [Native 定时任务列表记录](2026-10-12-native-scheduled-task-list.zh.md)；当前组合未提供拖动排序、移动 Session 或多页搜索。
 
 ## Alternatives considered
 
-- **把每个 cwd 当作 Workspace 身份：**拒绝，因为 Workspace 归属和顺序由 Host 管理；路径不能提供 Workspace id 或有序的 Session 成员关系。
-- **从创建时间、当前选中历史或占位值推导活动时间和状态：**拒绝，因为这些值会错误描述 Session 当前状态。
-- **等 Workspace 和定时任务 API 全部就绪后再渲染侧边栏：**拒绝，因为现有 Host 已支持列出、选择、创建和重命名 Session。
+- **把每个 cwd 当作 Workspace 身份：**拒绝，因为 Host 注册表提供 Workspace id、成员关系和顺序。
+- **在 Native 组合中复制 legacy 行与目录浏览器 UI：**拒绝，共享零 Cordis 展示组件可保持两个侧边栏一致，同时让 Host 操作留在其 owner 中。
+- **等 Schedule 数据流就绪后再渲染 Workspace 导航：**拒绝，因为 Workspace 与 Session 数据流本身已支持侧边栏的核心导航。
 
 ## Consequences
 
-原生侧边栏现在提供分组 Session 导航和标题管理，但尚不提供注册 Workspace 行为。原生 Workspace 和 Session 摘要流就绪后，应改用其权威成员关系、手动顺序、活动时间和状态值替换 cwd 投影；不能把 cwd 转成持久 Workspace 身份。
+原生侧边栏的 Workspace 与 Session 行使用 Host 注册表和 Session 摘要数据。定时任务列表保持只读；此组合不提供拖动手势、Session 移动和更多搜索结果页。

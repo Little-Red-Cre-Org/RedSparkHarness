@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-把一次性文本委派运行在全新的 Codex app-server 线程中，并返回选定的最终答案或安全失败诊断。runner 使用固定版本 @openai/codex@0.162.1，同时保留 Codex 对设置和身份验证的控制权。Native 请求要求 Engine 从精确选中的已准备模型 generation 捕获 Responses transport。已交付的 Providers 尚未提供此能力，因此 admission 会在连接子进程前失败；父级 `maxTokens` 还要求此 generation 对最终投影请求执行输出上限。
+把一次性文本委派运行在全新的 Codex app-server 线程中，并返回选定的最终答案或安全失败诊断。runner 使用固定版本 @openai/codex@0.162.1，同时保留 Codex 对设置和身份验证的控制权。Native 请求要求 Engine 从精确选中的已准备模型 generation 捕获 Responses transport。已交付的 SIWC `openai-codex` 路由会提供此传输，但报告不支持输出 token 上限；因此带父级 `maxTokens` 的请求会在连接子进程前失败。已交付 profile 模板仍默认选择进程内 subagent 提供方，且不会安装此 external driver。
 
 ## 目录
 
@@ -27,7 +27,7 @@ kind: "package-reference"
 | 路径 | 当前状态 | 证据边界 |
 |---|---|---|
 | DSH Cordis Codex 兼容 runner | 通过 Official 产品 runner 执行的一次性文本路径 | 修复 sandboxMode 传递并断言生成的 config.toml 后，只重跑了两个受影响的真实产品权限用例：显式 bypass marker 写入通过；never 加配置 workspace-write 的用例确认 config.toml 包含 workspace-write，但 nested product tool 返回 blocked by policy 后跳过，写入和继承仍未验证。此前三文件集合的 64 通过/1 跳过早于 fixture 修复；其继承归因已被取代。 |
-| Native Codex external driver | Engine 必须从精确选中的已准备模型 generation 捕获 Responses transport。已交付的 Providers 尚未提供此能力，因此 admission 会在连接子进程前失败；父级 `maxTokens` 还要求此 generation 对最终投影请求执行输出上限。 | Engine 捕获逻辑会拒绝缺少 `PreparedAdapterCall.nativeResponses` 的情况；driver 会检查捕获的 route 与输出上限能力。 |
+| Native Codex external driver | Native 准入会使用从选中预备模型代际捕获的 Responses transport。已交付的 SIWC `openai-codex` 路由会提供传输，但不执行输出 token 上限；已交付 profile 模板仍保留进程内默认路径，且不安装此 driver。Codex 产品完整执行仍需独立验证。 | Engine 捕获逻辑会拒绝缺少 `PreparedAdapterCall.nativeResponses` 的情况；driver 会在连接前检查捕获的 route 和输出上限能力。 |
 | Native 进程内 spawn 提供方 | 已交付的 Native profile 模板选择进程内 `spawn` 提供方；专用 `native-sdk-dsh-child` 则选择 `dsh-sdk`。本 Codex 驱动不会替代这两条路径。 | Native 子任务执行由 [native-subagent](../../../../Engine/subagent/native-subagent/README.zh.md) 负责。上面的 `native-admission.spec.ts` 用例只覆盖本包连接前的拒绝。 |
 
 <a id="use-this-package"></a>
@@ -70,11 +70,11 @@ Codex 设置与凭据继续由产品原生机制管理。app-server 命令从固
 
 `src/native.ts` 验证配置、要求 Core 的 `childConnection` 并注册唯一的 `NativeExternalSubagentDriver`。它声明支持 model 与 reasoning effort route，并声明不支持 persona、工具筛选、结构化输出和 approval relay。`src/run.ts` 拥有产品运行与协议决策；`src/wire.ts` 使用 Core 共享 transport 实现 JSON-RPC 分帧。
 
-兼容桥接接受的请求会启动受管 child range、初始化 app-server、创建临时 thread、提交一个 turn，并根据该 thread 的终态通知结算。Native run 在进入此产品进程路径前要求已捕获的 Engine Responses transport；目前没有已交付的 Provider 提供所需的 prepared-generation 能力，因此 Native admission 会在连接前失败。进程失败、取消和释放都由同一个 Core child connection 管理；卸载模块时会 drain 正在运行的 run。
+兼容桥接接受的请求会启动受管 child range、初始化 app-server、创建临时 thread、提交一个 turn，并根据该 thread 的终态通知结算。Native run 在进入此产品进程路径前要求已捕获的 Engine Responses transport；选中时，已交付的 SIWC `openai-codex` 提供方会提供该能力，而已交付 profile 模板不会安装此 driver。进程失败、取消和释放都由同一个 Core child connection 管理；卸载模块时会 drain 正在运行的 run。
 
 Native product runner 根据捕获的 Engine 直接 schema 构建 Codex 与 Responses function 定义。它只在 Engine 记录完整模型响应后才向 Codex 返回响应，并将每个 app-server 调用的 thread、turn、call ID、名称、namespace 和 JSON 参数与一次性 grant 精确匹配，再通过捕获的 Engine operation 执行。工具结果会返回文本和已验证图像的 data URL；result 自带上下文与已接受的 settlement context 只追加一次到下一条持久化请求。结论型结果会关闭后续模型请求，并在所有已接受的工具回复写出后中断精确 Codex turn；turn 报告 `interrupted` 时仍保留并返回 Engine 原始结果。若 Codex 在报告该中断前再次请求模型，gateway 会返回本地 403，并保留成功结论，不会将其改记为致命模型错误。
 
-隔离 Native product runner 要求提供捕获的 `projectRequest` 与 `forward` 回调，以应用所选 provider 的策略并使用其凭据。它记录并转发同一份投影后的请求体；本包不解析 provider 凭据，也不实现这些回调。Transport 必须来自 Engine 选中的 prepared model generation。只有该 generation 执行上限且最终投影请求包含不超过父级上限的有效 `max_output_tokens` 时，才接受父级输出 token 上限。Engine 会传播绑定到外层 operation 准确 prepared model handle 的进程内 generation 能力；同 route 嵌套请求会从该 generation 捕获独立 transport，不会重新查找后续 adapter。这不会启用 provider override，Native Codex driver 仍会拒绝该选项。Native 执行仍需要真实捕获的 Provider transport 和 SDK 事件投影；已交付的 Provider 尚未提供该 transport，因此 admission 仍会在连接子进程前失败。
+隔离 Native product runner 要求提供捕获的 `projectRequest` 与 `forward` 回调，以应用所选 provider 的策略并使用其凭据。它记录并转发同一份投影后的请求体；本包不解析 provider 凭据，也不实现这些回调。Transport 必须来自 Engine 选中的 prepared model generation。只有该 generation 执行上限且最终投影请求包含不超过父级上限的有效 `max_output_tokens` 时，才接受父级输出 token 上限。Engine 会传播绑定到外层 operation 准确 prepared model handle 的进程内 generation 能力；同 route 嵌套请求会从该 generation 捕获独立 transport，不会重新查找后续 adapter。这不会启用 provider override，Native Codex driver 仍会拒绝该选项。选中时，已交付的 SIWC `openai-codex` 路由会提供捕获的传输，但已交付 profile 不会安装 Codex driver，且提供方无法执行输出 token 上限。Native Codex 完整执行与 SDK 事件投影仍需独立验证。
 
 释放流程会先排空已接受的 Engine 执行与 Core 管理的 child range，再关闭本地 gateway 并删除私有 Codex home。对于 Node 定义的可重试文件删除错误，它会使用同一个已解析的 `disposeGraceMs` 延迟后重试一次；删除持续失败时仍会拒绝释放操作。
 
@@ -110,7 +110,7 @@ Codex 会为提交的任务消耗独立上下文和轮次。子任务 token 由�
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Native product admission** — 隔离的 product runner 会执行已捕获的工具授权，但已交付的模型 Providers 尚未公开 prepared-generation Responses transport。请求执行前仍需 Provider transport 与 SDK 集成；Native 配置不能选择其他模型、注入子进程环境变量或放宽固定权限策略。
+- **Native product admission** — 隔离的 product runner 会执行已捕获的工具授权。Engine 与 SIWC provider 已为显式组合的路由提供 prepared-generation Responses transport；已交付的 Native profiles 仍选择进程内 spawn provider，且未启用 Codex external driver，Codex 产品请求的成功执行仍未验证。Native 配置不能选择其他模型、注入子进程环境变量或放宽固定权限策略。
 - **文本任务输入**——初始任务只接受文本。已接受的 Engine 工具结果可以包含已验证图像，捕获的图像服务会先解析图像，gateway 再生成 data URL。
 - **不继承会话**——每次运行都会创建临时线程，没有恢复或池化路径。
 - **不支持 Native 可选 request 能力**——persona、工具筛选、结构化输出和父级审批 relay 均不支持并会被拒绝。

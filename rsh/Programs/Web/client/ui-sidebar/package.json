@@ -52,6 +52,10 @@
         "clientNativeLayout",
         "clientNativeConversation",
         "clientNativeSessionPresentation",
+        "clientNativeSession",
+        "clientNativeSchedule",
+        "clientNativeWorkspace",
+        "clientNativeDirectoryPicker",
         "clientLocale"
       ],
       "optional": [],
@@ -87,6 +91,7 @@
     "@deepseek-ai/dsh-client-ui-theme": "workspace:^",
     "@deepseek-ai/dsh-client-ui-session": "workspace:^",
     "@deepseek-ai/dsh-client-ui-workspace": "workspace:^",
+    "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@types/react": "~18.3.1",
     "@deepseek-ai/cordis": "workspace:^",
     "react": "^18.2.0",

@@ -59,7 +59,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - persona 是作用域内的字面文本；不支持模板变量插值。
-- 外部操作 broker 通过捕获的父级 writer 记录每个完整模型请求及响应或失败，并在转发前预留保守的单操作尝试上限。准入会等待 `subagent/external-start` 已刷新。它捕获精确的父级工具目录，只执行从已记录响应投影出的一次性 grant；每个完整工具结果会在执行捕获的 Native 接受前持久化，其 settlement 会在交还产品前持久化。settlement 刷新后，捕获的 Headless 附件服务会把已接受的图片引用解析为已验证字节，capture dispose 会排空这些读取。`concludesTurn` 会阻止后续推理。Official Codex driver 借用从已选预备模型代际捕获的传输；Engine 在产品释放以及已接纳的模型、工具和审批工作排空后关闭它。父级设置 `maxTokens` 上限时，该代际必须能限制最终投影后的 `max_output_tokens`；缺少传输或不支持上限都会在 child 启动前失败。嵌套 Responses 调用继承绑定到确切外层预备代际的进程内能力；路由匹配时从该代际捕获，provider/model 明确变化时只为 child 预备一个代际，且不改变 parent。每个 child 都独立捕获并关闭自己的传输。已交付的 Provider 尚未提供捕获传输，因此 Native Responses child 仍会在产品启动前失败。外部驱动的后台运行仍不受支持；端到端 Native Codex 执行仍需要两种 SDK 事件投影。
+- 外部操作 broker 通过捕获的父级 writer 记录每个完整模型请求及响应或失败，并在转发前预留保守的单操作尝试上限。准入会等待 `subagent/external-start` 已刷新。它捕获精确的父级工具目录，只执行从已记录响应投影出的一次性 grant；每个完整工具结果会在执行捕获的 Native 接受前持久化，其 settlement 会在交还产品前持久化。settlement 刷新后，捕获的 Headless 附件服务会把已接受的图片引用解析为已验证字节，capture dispose 会排空这些读取。`concludesTurn` 会阻止后续推理。Official Codex driver 借用从已选预备模型代际捕获的 Core 传输；选中时，已交付的 SIWC `openai-codex` 提供方会提供该传输。Engine 会在产品释放且已接纳的模型、工具和审批工作排空后关闭它。已交付 profile 模板仍选择进程内 `spawn`，且不会安装此 external driver。父级设置 `maxTokens` 上限时，该代际必须能限制最终投影后的 `max_output_tokens`；SIWC 传输报告不支持此能力，因此相关请求会在 child 启动前失败。嵌套 Responses 调用继承绑定到确切外层预备代际的进程内能力；路由匹配时从该代际捕获，provider/model 明确变化时只为 child 预备一个代际，且不改变 parent。每个 child 都独立捕获并关闭自己的传输。外部驱动的后台运行仍不受支持；端到端 Native Codex 执行仍需要两种 SDK 事件投影。
 - 不发布 invariant 配套模块：Program 保留 Agent、Session 与写入器权威；提供者仅拥有已接受调用与作用域安装。
 
 <a id="dev-note"></a>

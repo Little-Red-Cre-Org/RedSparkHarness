@@ -1,5 +1,5 @@
 ---
-description: "Shared React UI atoms for the dsh web client: controls, icons, markdown and math rendering, and the terminal/read/diff/search/web output cards (zero Cordis)."
+description: "Shared Cordis-free React components for the dsh web client: controls, workspace rows, directory browsing, chat transcript and composer presentation, icons, Markdown, and agent-output cards."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
+Use `dsh-client-ui-primitives` to build shared controls, sidebars, chat views, and agent-output cards in the Web client. It includes workspace and Session rows, directory browsing, `SidebarPathBar`, chat and composer layouts, icons, overlays, Settings forms, and safe Markdown, code, terminal, file, diff, search, web, and JSON rendering. Components use React and `--dsw-*` tokens, accept localized labels and data callbacks, and do not import Cordis.
 
 ## Table of Contents
 
@@ -40,12 +40,19 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `Switch` | Two-state toggle, 36×20. `label` is required, so the control cannot ship unnamed. |
 | `Input` | Single-line text entry for search boxes and inline forms. |
 | `Menu` | Dropdown of items, separators, and group labels, with nested submenus. |
+| `ModelPicker` | Composer model and reasoning picker; the owner supplies its catalog, current selection, actions, and localized copy. |
 | `Pill` | Selectable capsule button for view switchers and filters; takes `active` and `onClick`. |
 | `Tag` | Read-only capsule badge; `tone` selects one of eight palettes. |
 | `StateDot` | Status mark: `done`, `warning`, `ongoing`, `error`, or `idle`. `aria-hidden`, so the render site owns the name. |
-| `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. Nested controls retain their actions. |
+| `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
+| `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
+| `SidebarPathBar` | Responsive path header shared by file panes and Session details; callers supply the path and trailing controls. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
+| `ChatTranscript`, `ChatTurnGroup`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatReasoningDisclosure`, `ChatContextMessage`, `ChatTurnActivity` | Shared turn grouping, transcript rhythm, message frames, collapsed reasoning and context rows, and running-turn label for legacy and Native chat views. |
+| `ChatMessageActionRow`, `ChatMessageCopyAction`, `ChatMessageActionMeta` | Shared message copy control and muted metadata row. |
+| `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
+| `ChatMascotHero` | Cordis-free mascot sprite, speech and animation presentation for welcome and floating chat placements. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |
 | `Modal` | Centered dialog over a page mask. |
 | `SettingsPanel` | Centered 1080×700 Settings dialog with localized navigation, close button, and page content. |
@@ -82,7 +89,7 @@ The Models settings editors receive localized copy, schema operations and Host c
 
 ### Localizing copy
 
-The atoms cannot read the application locale, so every piece of user-facing copy arrives through required label props. `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's label interface.
+The components cannot read the application locale, so every piece of user-facing copy arrives through required label props or a translation callback. `DirectoryBrowser` takes its translation callback with the directory-browser key set; `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's copy interface.
 
 -----
 
@@ -92,7 +99,7 @@ The atoms cannot read the application locale, so every piece of user-facing copy
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The package enforces one separation: presentational React atoms with zero Cordis and zero slot knowledge, styled only through `--dsw-*` tokens, while every feature-specific concern (locale, session data, composition) stays in the composing plugin.
+The package owns Cordis-free React components styled through `--dsw-*` tokens. Feature owners provide directory listings, mutations, localized copy, and session data; the directory browser owns only its navigation and display state.
 
 ### Source map
 
@@ -104,7 +111,10 @@ The package enforces one separation: presentational React atoms with zero Cordis
 | [`src/ReadBlock.tsx`](src/ReadBlock.tsx) / [`src/DiffBlock.tsx`](src/DiffBlock.tsx) | Read and diff cards |
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | Search and web-retrieval cards |
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
+| [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
+| [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | Token-styled path row shared by file panes and Session details |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
+| [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
 | [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | Embedded inner SVG markup for the 48 detailed code-file categories |
 | [`src/code-file-icon-artwork.manifest.json`](src/code-file-icon-artwork.manifest.json) | Design-export digests, included categories, and intentionally excluded artwork |

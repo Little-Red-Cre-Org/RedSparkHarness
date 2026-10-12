@@ -11,10 +11,24 @@ import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@d
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
+import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
+  type NativeModeControls, type NativePermissionControls, type NativePlanModeSelection } from './composer-controls.ts'
+export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
+import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
+import { createNativeWorkspaceClients } from './workspaces.ts'
+import { NativeSessionRpcError } from './rpc-error.ts'
+export { NativeSessionRpcError } from './rpc-error.ts'
+import { nativeSubmissionRequestId as brandSubmissionRequestId } from './follow-types.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId as NativeSubmissionRequestIdType } from './follow-types.ts'
+export { nativeSubmissionRequestId } from './follow-types.ts'
+export type { NativePendingSubmission, NativeSubmissionRequestId, NativeSubmissionUpdate } from './follow-types.ts'
+export type {
+  NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
+  NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
+} from './workspaces.ts'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -33,17 +47,41 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
+    /** Read-only Native schedule catalog selected by the browser composition. */
+    clientNativeSchedule: NativeScheduleClient
+    /** Native Workspace RPC Consumer selected by the browser composition. */
+    clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
+    /** Native directory chooser and browser selected by the browser composition. */
+    clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
   }
 }
 
 import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
-import type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
-export type { NativeSessionListItem, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
+export type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
+import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
+export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
+}
+
+/** Read-only browser access to persisted scheduled work. */
+export interface NativeScheduleClient {
+  /**
+   * List active, paused, and failed scheduled plans.
+   * @param signal - caller cancellation.
+   * @returns safe plan metadata without prompts or captured execution configuration.
+   */
+  list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Follow one complete baseline and subsequent schedule changes.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns baseline, upsert, and remove frames from the Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -96,6 +134,45 @@ export interface NativeSettingsDescription {
     /** Maximum operations accepted by one atomic Settings mutation. */
     readonly maxSettingsOperations: number
   }
+}
+
+/** File-backed and profile-installed preset choices advertised by the Host. */
+export interface NativeAgentPresetList {
+  /** Fresh-session default, or null when no preset Registry is installed. */
+  readonly default: string | null
+  /** Ready standing choices and file folders that need attention or installation. */
+  readonly presets: readonly {
+    /** Preset id. */
+    readonly id: string
+    /** Display name. */
+    readonly name: string
+    /** Optional display description. */
+    readonly description?: string
+    /** Folder trust, or `profile` for a profile-only composition. */
+    readonly source: 'profile' | 'system' | 'user'
+    /** Native folder or standing composition status. */
+    readonly status: 'ready' | 'needs-migration' | 'invalid'
+    /** Short reason when a folder cannot be installed. */
+    readonly problem?: string
+  }[]
+}
+
+/** Native preset metadata and optional raw composition file returned by the Host. */
+export interface NativeAgentPresetDocument {
+  /** Preset id. */
+  readonly id: string
+  /** Profile-only, shipped or user-authored source. */
+  readonly source: 'profile' | 'system' | 'user'
+  /** Composition file status. */
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  /** Display name. */
+  readonly name: string
+  /** Optional display description. */
+  readonly description?: string
+  /** Raw `agent.native.json` text when the folder has a composition file. */
+  readonly content?: string
+  /** Short reason when the folder cannot be installed. */
+  readonly problem?: string
 }
 
 /** One path-addressed Settings edit. */
@@ -182,6 +259,7 @@ export type NativeSettingsEvent =
   | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
   | { readonly type: 'credentials/reference-updated'; readonly ref: string }
   | { readonly type: 'llm/adapters-updated' }
+  | { readonly type: 'agent-presets/updated' }
   | { readonly type: 'accounts/changed'; readonly key: string }
 
 /** Provider-reported quota window, with reset time in Unix seconds. */
@@ -222,20 +300,48 @@ export type NativeAccountBalance =
   | { readonly status: 'ready'; readonly wallets: readonly NativeAccountWallet[]; readonly bonusWallets: readonly NativeAccountWallet[] }
   | { readonly status: 'signed-out' | 'failed' | 'unsupported' }
 
-/** Structured rejection from one native Host RPC endpoint. */
-export class NativeSessionRpcError extends Error {
-  /** @param code - stable native RPC failure code.
-   * @param message - Host refusal message.
-   * @param details - safe, endpoint-specific failure facts.
-   */
-  constructor(readonly code: string, message: string, readonly details: object) {
-    super(message)
-    this.name = 'NativeSessionRpcError'
-  }
-}
-
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** List native preset folders and installed standing compositions.
+   * @param signal - caller cancellation.
+   * @returns current preset catalog; empty with a null default when no Registry is installed.
+   */
+  agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
+  /** Read one preset's metadata and raw native composition file.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns Host-owned preset details; profile-only compositions have no file content.
+   */
+  agentPresetRead(id: string, signal?: AbortSignal): Promise<NativeAgentPresetDocument>
+  /** Copy one file-backed preset into the Host's user preset directory.
+   * @param from - source preset id.
+   * @param id - new directory id.
+   * @param name - optional display name.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host writes the copy.
+   */
+  agentPresetCopy(
+    from: string, id: string, name?: string, signal?: AbortSignal,
+  ): Promise<void>
+  /** Delete one user-authored preset.
+   * @param id - preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host removes its directory.
+   */
+  agentPresetDelete(id: string, signal?: AbortSignal): Promise<void>
+  /** Report whether the Host can open a preset folder in its file manager.
+   * @param signal - caller cancellation.
+   * @returns Host-local opener availability.
+   */
+  agentPresetsCanOpenDirectory(signal?: AbortSignal): Promise<boolean>
+  /** Open one user preset folder or return its Host-local path.
+   * @param id - user preset id.
+   * @param signal - caller cancellation.
+   * @returns whether the Host opened the folder, or its path for display.
+   */
+  agentPresetOpenDirectory(
+    id: string, signal?: AbortSignal,
+  ): Promise<{ readonly opened: true } | { readonly opened: false; readonly path: string }>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
@@ -398,6 +504,32 @@ export interface NativeSessionClient {
    * @returns current Host capability availability and provider-owned choices.
    */
   modelControls(signal?: AbortSignal): Promise<NativeModelControls>
+  /** Read the selected Session's current mode, mode choices and plan-mode state.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host mode facts and installed choices.
+   */
+  modeControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativeModeControls>
+  /** Select plan mode through the Host's durable and pending-step state machine.
+   * @param sessionId - selected stored Session.
+   * @param active - requested plan-mode state.
+   * @param signal - caller cancellation.
+   * @returns the Host's committed or pending state and outcome.
+   */
+  selectPlanMode(sessionId: SessionId, active: boolean, signal?: AbortSignal): Promise<NativePlanModeSelection>
+  /** Read the selected Session's current standing permission policy and choices.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host permission controls, or an unavailable result when no Provider is installed.
+   */
+  permissionControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativePermissionControls>
+  /** Select a standing permission preset without answering pending one-shot approvals.
+   * @param sessionId - selected stored Session.
+   * @param preset - configured permission preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host persists the policy.
+   */
+  selectPermissionPreset(sessionId: SessionId, preset: string, signal?: AbortSignal): Promise<void>
   /** Persist a Session-local model/effort intent against its last observed revision.
    * @param sessionId - selected stored Session.
    * @param request - complete model choice and expected durable intent revision.
@@ -418,15 +550,42 @@ export interface NativeSessionClient {
    * @returns the durable command lifecycle identity and normalized outcome.
    */
   executeCommand(sessionId: SessionId, line: string, signal?: AbortSignal): Promise<CommandExecution>
+  /** List slash commands available to the selected Session's exact Program root owner.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns visible command descriptions and optional input hints and attachment support.
+   */
+  commands(sessionId: SessionId, signal?: AbortSignal): Promise<readonly CommandDescriptor[]>
   /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
   close(): Promise<void>
   /**
    * @param signal - caller cancellation.
-   * @returns stored Session headers.
+   * @returns Session rows ordered by latest activity.
    */
   list(signal?: AbortSignal): Promise<readonly NativeSessionListItem[]>
+  /**
+   * Follow the Host list after its complete ordered baseline.
+   * @param signal - ends this iteration without changing Session state.
+   * @returns baseline, upsert and removal frames from the selected Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeSessionListFrame>
+  /**
+   * Search Session titles and current recorded message text in bounded Host pages.
+   * @param query - non-empty literal search text.
+   * @param cursor - continuation returned by the preceding page.
+   * @param signal - caller cancellation.
+   * @returns matching Session titles and message snippets.
+   */
+  search(query: string, cursor?: string, signal?: AbortSignal): Promise<NativeSessionSearchPage>
+  /**
+   * Archive one Session through the selected Workspace registry.
+   * @param sessionId - stored Session identity.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host records the archive.
+   */
+  archive(sessionId: SessionId, signal?: AbortSignal): Promise<void>
   /** Pin a title through the selected Host Session owner. */
   renameTitle(sessionId: SessionId, title: string, signal?: AbortSignal): Promise<void>
   /** Deliberately unpin and regenerate through the selected Host provider or fallback. */
@@ -446,6 +605,37 @@ export interface NativeSessionClient {
     readonly events: readonly SessionEvent[]
     readonly inheritedEventCount: number
   }>
+  /** Submit one identified prompt to the active Session's next-turn inbox.
+   * @param sessionId - selected Session.
+   * @param prompt - non-empty text to run after the active turn.
+   * @param requestId - caller-generated stable identity reused as the durable message id.
+   * @param signal - cancellation before durable admission.
+   * @returns accepted queue placement; Host failures retain the request id in error details.
+   */
+  queue(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
+    signal?: AbortSignal): Promise<NativePendingSubmission>
+  /** Submit one identified prompt to the active Session's next-step inbox.
+   * @param sessionId - selected Session.
+   * @param prompt - non-empty text for the next model step.
+   * @param requestId - caller-generated stable identity reused as the durable message id.
+   * @param signal - cancellation before durable admission.
+   * @returns accepted steering placement; Host failures retain the request id in error details.
+   */
+  steer(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
+    signal?: AbortSignal): Promise<NativePendingSubmission>
+  /** Remove one identified request that is still waiting in a Host inbox.
+   * @param sessionId - selected Session.
+   * @param requestId - stable identity supplied when the request was queued or steered.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host persists the removal.
+   */
+  dequeue(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, signal?: AbortSignal): Promise<void>
+  /** Read accepted submissions still waiting in either Host inbox.
+   * @param sessionId - selected Session.
+   * @param signal - caller cancellation.
+   * @returns pending queued and steering requests with their stable identities.
+   */
+  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<readonly NativePendingSubmission[]>
   /**
    * @param sessionId - selected identity.
    * @param text - human input.
@@ -557,7 +747,31 @@ const accountBalanceSchema = z.discriminatedUnion('status', [
   z.strictObject({ status: z.literal('failed') }),
   z.strictObject({ status: z.literal('unsupported') }),
 ])
+const scheduledJobSchema = z.strictObject({
+  id: z.string().min(1), sessionId: z.string().min(1), title: z.string(),
+  state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
+  nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+  lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+})
+const scheduleFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
+  z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
+  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
+])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
+const nativeAgentPresetListSchema = z.strictObject({
+  default: z.string().nullable(),
+  presets: z.array(z.strictObject({
+    id: z.string().min(1), name: z.string(), description: z.string().optional(),
+    source: z.enum(['profile', 'system', 'user']),
+    status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
+  })),
+})
+const nativeAgentPresetDocumentSchema = z.strictObject({
+  id: z.string().min(1), source: z.enum(['profile', 'system', 'user']),
+  status: z.enum(['ready', 'needs-migration', 'invalid']), name: z.string(),
+  description: z.string().optional(), content: z.string().optional(), problem: z.string().optional(),
+})
 const configurableModelProviderSchema = z.strictObject({
   provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
   declared: z.boolean().optional(), error: z.string().optional(),
@@ -572,8 +786,29 @@ const settingsEventSchema = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
   z.strictObject({ type: z.literal('llm/adapters-updated') }),
+  z.strictObject({ type: z.literal('agent-presets/updated') }),
   z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
 ])
+const listItemSchema = z.strictObject({
+  header: z.unknown(), titleProjection: z.unknown(),
+  titleActions: z.strictObject({ rename: z.boolean(), refresh: z.boolean() }).optional(),
+  updatedAt: z.number().int().nonnegative().refine(Number.isSafeInteger), blank: z.boolean(),
+  running: z.boolean(), completed: z.boolean(), runningSubagentCount: z.number().int().nonnegative().refine(Number.isSafeInteger),
+  pendingInteraction: z.strictObject({ kind: z.enum(['approval', 'plan-review', 'question']) }).optional(),
+  workspaceId: z.string().min(1).optional(), hasActiveSchedule: z.boolean(),
+})
+const listFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), items: z.array(listItemSchema) }),
+  z.strictObject({ type: z.literal('upsert'), item: listItemSchema }),
+  z.strictObject({ type: z.literal('remove'), sessionId: z.string().min(1) }),
+])
+const searchPageSchema = z.strictObject({
+  items: z.array(z.strictObject({
+    sessionId: z.string().min(1), title: z.string(), workspaceId: z.string().min(1).optional(),
+    cwd: z.string().optional(), snippet: z.string().optional(),
+  })),
+  cursor: z.string().optional(),
+})
 const authorizationFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
     message: z.string(), url: z.string().optional(), code: z.string().optional(),
@@ -590,6 +825,22 @@ const authorizationFrameSchema = z.discriminatedUnion('type', [
     code: z.string().optional(), message: z.string().optional() }),
 ])
 
+function scheduleJob(value: unknown): NativeScheduledJob {
+  const job = scheduledJobSchema.parse(value)
+  const { nextRunAt, lastRunAt, ...metadata } = job
+  return { ...metadata, sessionId: job.sessionId as SessionId,
+    ...(nextRunAt === undefined ? {} : { nextRunAt }), ...(lastRunAt === undefined ? {} : { lastRunAt }) }
+}
+
+function scheduleFrame(value: unknown): NativeScheduleFrame {
+  const frame = scheduleFrameSchema.parse(value)
+  switch (frame.type) {
+    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
+    case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
+    case 'remove': return frame
+  }
+}
+
 function header(value: unknown): SessionHeader {
   const data = fields(value)
   if (typeof data.id !== 'string' || data.id.length === 0 || data.version !== SESSION_FORMAT_VERSION
@@ -598,13 +849,59 @@ function header(value: unknown): SessionHeader {
   return data as unknown as SessionHeader
 }
 
+function listItem(value: unknown): NativeSessionListItem {
+  const data = listItemSchema.parse(value)
+  const projection = fields(data.titleProjection)
+  const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved' && typeof projection.title === 'string'
+    && projection.title.length > 0 ? { status: 'resolved', title: projection.title }
+    : projection.status === 'absent' ? { status: 'absent' }
+      : projection.status === 'unavailable' ? { status: 'unavailable' }
+        : (() => { throw new TypeError('invalid native Session title projection') })()
+  return {
+    header: header(data.header), titleProjection,
+    ...data.titleActions === undefined ? {} : { titleActions: data.titleActions },
+    updatedAt: data.updatedAt, blank: data.blank, running: data.running, completed: data.completed,
+    runningSubagentCount: data.runningSubagentCount,
+    ...data.pendingInteraction === undefined ? {} : { pendingInteraction: data.pendingInteraction },
+    ...data.workspaceId === undefined ? {} : { workspaceId: data.workspaceId as Branded<'WorkspaceId'> },
+    hasActiveSchedule: data.hasActiveSchedule,
+  }
+}
+
+function listFrame(value: unknown): NativeSessionListFrame {
+  const frame = listFrameSchema.parse(value)
+  if (frame.type === 'baseline') return { type: 'baseline', items: frame.items.map(listItem) }
+  if (frame.type === 'upsert') return { type: 'upsert', item: listItem(frame.item) }
+  return { type: 'remove', sessionId: frame.sessionId as SessionId }
+}
+
 const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
   id: z.string(), name: z.string(), scope: z.string(),
   state: z.enum(['planned', 'activating', 'ready', 'draining', 'failed', 'disposed']),
   failure: z.enum(['activation', 'cleanup']).optional(),
 })) }) as unknown as z.ZodType<NativePluginInventory>
+const nativeCommandCatalogSchema = z.strictObject({ commands: z.array(z.strictObject({
+  definitionId: z.string().optional(), name: z.string().min(1), description: z.string().min(1),
+  input: z.strictObject({ hint: z.string(), attachments: z.boolean().optional() }).optional(),
+})) }) as unknown as z.ZodType<{ readonly commands: readonly CommandDescriptor[] }>
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
+  if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
+  if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
+    if (fields(value).updated !== true) throw new TypeError('invalid native Agent preset write acknowledgement')
+    return undefined
+  }
+  if (endpoint === 'agent-presets/can-open-directory') {
+    if (typeof value !== 'boolean') throw new TypeError('invalid native Agent preset directory capability')
+    return value
+  }
+  if (endpoint === 'agent-presets/open-directory') {
+    const data = fields(value)
+    if (data.opened === true) return { opened: true }
+    if (data.opened === false && typeof data.path === 'string') return { opened: false, path: data.path }
+    throw new TypeError('invalid native Agent preset directory response')
+  }
   if (endpoint === 'models/providers') {
     if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
     return value.map(item => llmProviderSchema.parse(item))
@@ -649,26 +946,37 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return undefined
   }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
+  if (endpoint === 'session/mode-controls') return nativeModeControlsSchema.parse(value)
+  if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
+  if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
+  if (endpoint === 'session/commands') return nativeCommandCatalogSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
-    return value.map((item) => {
-      const data = fields(item)
-      const projection = fields(data.titleProjection)
-      const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved'
-        && typeof projection.title === 'string' && projection.title.length > 0
-        ? { status: 'resolved', title: projection.title }
-        : projection.status === 'absent'
-          ? { status: 'absent' }
-          : projection.status === 'unavailable'
-            ? { status: 'unavailable' }
-            : (() => { throw new TypeError('invalid native Session title projection') })()
-      const actions = data.titleActions === undefined ? undefined : fields(data.titleActions)
-      if (actions !== undefined && (typeof actions.rename !== 'boolean' || typeof actions.refresh !== 'boolean')) {
-        throw new Error('native session: invalid title action capabilities')
-      }
-      return { header: header(data.header), titleProjection,
-        ...(actions === undefined ? {} : { titleActions: { rename: actions.rename as boolean, refresh: actions.refresh as boolean } }) }
-    })
+    return value.map(listItem)
+  }
+  if (endpoint === 'session/search') {
+    const page = searchPageSchema.parse(value)
+    return { items: page.items.map(item => ({
+      sessionId: item.sessionId as SessionId, title: item.title,
+      ...item.workspaceId === undefined ? {} : { workspaceId: item.workspaceId as Branded<'WorkspaceId'> },
+      ...item.cwd === undefined ? {} : { cwd: item.cwd },
+      ...item.snippet === undefined ? {} : { snippet: item.snippet },
+    })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
+  }
+  if (endpoint === 'session/queue' || endpoint === 'session/steer') return pendingSubmission(value)
+  if (endpoint === 'session/dequeue') {
+    const data = fields(value)
+    if (Object.keys(data).length !== 1 || typeof data.requestId !== 'string' || data.requestId.length === 0) {
+      throw new TypeError('invalid native Session dequeue acknowledgement')
+    }
+    return undefined
+  }
+  if (endpoint === 'session/submissions') {
+    const data = fields(value)
+    if (Object.keys(data).length !== 1 || !Array.isArray(data.submissions)) {
+      throw new TypeError('invalid native Session submissions snapshot')
+    }
+    return { submissions: data.submissions.map(pendingSubmission) }
   }
   const data = fields(value)
   switch (endpoint) {
@@ -707,6 +1015,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/select-preset':
       if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
       break
+    case 'session/select-permission':
+      if (data.changed !== true) throw new TypeError('invalid native permission selection acknowledgement')
+      break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
         || !Number.isSafeInteger(data.inheritedEventCount) || data.inheritedEventCount < 0
@@ -719,6 +1030,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/create':
       if (typeof data.sessionId !== 'string' || data.sessionId.length === 0) throw new TypeError('invalid native Session identity')
       break
+    case 'session/archive':
+      if (data.archived !== true) throw new TypeError('invalid native Session archive acknowledgement')
+      return undefined
     case 'session/prompt':
     case 'session/await':
       if (typeof data.exitCode !== 'number' || !Number.isSafeInteger(data.exitCode)
@@ -737,6 +1051,10 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'submission-update' && (data.status === 'accepted' || data.status === 'rejected' || data.status === 'settled')
+    && typeof data.requestId === 'string' && data.requestId.length > 0 && Object.keys(data).length === 3) {
+    return { type: 'submission-update', status: data.status, requestId: brandSubmissionRequestId(data.requestId) }
+  }
   if (data.type === 'title-updated' && Object.keys(data).length === 1) return { type: 'title-updated' }
   if (data.type === 'human' && Object.keys(data).length === 2) return { type: 'human', prompt: nativeWebHumanSchema.parse(data.prompt) as NativeWebHumanPrompt }
   if (data.type === 'human-removed' && typeof data.id === 'string' && data.id.length > 0 && Object.keys(data).length === 2) return { type: 'human-removed', id: data.id as NativeWebHumanId }
@@ -748,6 +1066,14 @@ function followFrame(value: unknown): NativeSessionFollowFrame {
   if (data.type === 'text' && typeof data.text === 'string' && Object.keys(data).length === 2) return { type: 'text', text: data.text }
   if ((data.type === 'text-start' || data.type === 'settled') && Object.keys(data).length === 1) return { type: data.type }
   throw new TypeError('native Session follow: invalid frame')
+}
+
+function pendingSubmission(value: unknown): NativePendingSubmission {
+  const data = fields(value)
+  if (typeof data.requestId !== 'string' || data.requestId.length === 0
+    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
+    || Object.keys(data).length !== 3) throw new TypeError('invalid native Session pending submission')
+  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted' }
 }
 
 function objectConfig(input: unknown): Record<string, unknown> {
@@ -771,6 +1097,7 @@ export function createNativeSessionClient(
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
   const pendingFollows = new Set<Promise<void>>()
+  const pendingListFollows = new Set<Promise<void>>()
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
@@ -867,6 +1194,14 @@ export function createNativeSessionClient(
     }
   }
   return {
+    agentPresetsList: signal => call('agent-presets/list', {}, signal),
+    agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
+    async agentPresetCopy(from, id, name, signal) {
+      await call('agent-presets/copy', { from, id, ...(name === undefined ? {} : { name }) }, signal)
+    },
+    async agentPresetDelete(id, signal) { await call('agent-presets/delete', { id }, signal) },
+    agentPresetsCanOpenDirectory: signal => call('agent-presets/can-open-directory', {}, signal),
+    agentPresetOpenDirectory: (id, signal) => call('agent-presets/open-directory', { id }, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
     async settingsOpenDocument(signal) {
       await call('settings/open-document', {}, signal)
@@ -942,8 +1277,8 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      while (pendingPrompts.size > 0 || pendingFollows.size > 0) {
-        await Promise.allSettled([...pendingPrompts, ...pendingFollows])
+      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0) {
+        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows])
       }
     },
     async answerHuman(sessionId, id, answer, signal) {
@@ -952,9 +1287,46 @@ export function createNativeSessionClient(
       await call('session/answer-human', { sessionId, admissionId, id, answer }, signal)
     },
     list: signal => call('session/list', {}, signal),
+    async *follow(signal) {
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      const following = new AbortController()
+      const accepted = AbortSignal.any([lifetime, signal, following.signal])
+      const completed = Promise.withResolvers<void>()
+      pendingListFollows.add(completed.promise)
+      const finish = (): void => {
+        following.abort()
+        completed.resolve(undefined)
+        pendingListFollows.delete(completed.promise)
+      }
+      accepted.addEventListener('abort', finish, { once: true })
+      if (accepted.aborted) finish()
+      try {
+        const response = await responseOperation('/api', 'native-session/list-follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native Session list follow: invalid response HTTP ${response.status}`)
+        }
+        const frames = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of frames) yield listFrame(JSON.parse(data))
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      } finally {
+        accepted.removeEventListener('abort', finish)
+        finish()
+      }
+    },
+    search: (query, cursor, signal) => call('session/search', { query, ...(cursor === undefined ? {} : { cursor }) }, signal),
+    async archive(sessionId, signal) { await call('session/archive', { sessionId }, signal) },
     async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
     async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
+    modeControls: (sessionId, signal) => call('session/mode-controls', { sessionId }, signal),
+    selectPlanMode: (sessionId, active, signal) => call('session/select-plan-mode', { sessionId, active }, signal),
+    permissionControls: (sessionId, signal) => call('session/permission-controls', { sessionId }, signal),
+    async selectPermissionPreset(sessionId, preset, signal) {
+      await call('session/select-permission', { sessionId, preset }, signal)
+    },
     async selectModel(sessionId, request, signal) {
       await call('session/select-model', { sessionId, ...request }, signal)
     },
@@ -962,8 +1334,22 @@ export function createNativeSessionClient(
       await call('session/select-preset', { sessionId: id, ...request }, signal)
     },
     executeCommand: (sessionId, line, signal) => call('session/command', { sessionId, line }, signal),
+    commands: async (sessionId, signal) => (await call<{ readonly commands: readonly CommandDescriptor[] }>(
+      'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
+    queue: (sessionId, prompt, requestId, signal) =>
+      call('session/queue', { sessionId, prompt, requestId }, signal),
+    steer: (sessionId, prompt, requestId, signal) =>
+      call('session/steer', { sessionId, prompt, requestId }, signal),
+    async dequeue(sessionId, requestId, signal) {
+      await call('session/dequeue', { sessionId, requestId }, signal)
+    },
+    async submissions(sessionId, signal) {
+      return (await call<{ submissions: readonly NativePendingSubmission[] }>(
+        'session/submissions', { sessionId }, signal,
+      )).submissions
+    },
     prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
       const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError)
       pendingPrompts.add(pending)
@@ -976,17 +1362,54 @@ export function createNativeSessionClient(
   }
 }
 
+function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeScheduleClient {
+  return {
+    async list(signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'schedules/list', {}, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
+      return result.value.map(scheduleJob)
+    },
+    async *follow(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native schedule Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'schedules/follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native schedules follow: invalid response HTTP ${response.status}`)
+        }
+        const events = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of events) yield scheduleFrame(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native schedules follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
+      const rpc = context.require('clientConnection').rpc
+      const client = createNativeSessionClient(rpc, config, context.signal)
+      const schedules = createNativeScheduleClient(rpc, config, context.signal)
+      const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
+      context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
+      context.provide('clientNativeSchedule', schedules)
+      context.provide('clientNativeWorkspace', clients.workspace)
+      context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }
   },
 }

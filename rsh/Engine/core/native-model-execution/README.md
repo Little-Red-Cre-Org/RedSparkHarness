@@ -56,6 +56,6 @@ The service does not alter the request prefix; any later cache effect follows th
 
 ## Known Limitations and Deferred Work
 
-- The caller still owns the turn and step sequence. Native SDK and Web consumers remain to be migrated.
-- A prepared adapter call may carry `nativeResponses` from that exact Provider generation. `captureResponses()` requires its route to match the prepared handle; `captureResponsesOperation()` prepares a changed route once, then captures from that route's exact handle. Capture rejects an absent capability or a parent `maxTokens` ceiling that the selected generation cannot enforce. Shipped adapter Providers do not yet provide this capability, so Native external Responses requests fail before child startup until the trusted Provider transport is implemented.
+- The caller still owns the turn and step sequence. Native Headless provides this execution path to the shipped SDK and Web compositions.
+- A prepared adapter call may carry `nativeResponses` from that exact Provider generation. `captureResponses()` requires its route to match the prepared handle; `captureResponsesOperation()` prepares a changed route once, then captures from that route's exact handle. The shipped `llm-pi-ai` SIWC `openai-codex` generation provides the transport for Native external Responses operations. Capture rejects an absent capability or a parent `maxTokens` ceiling that the selected generation cannot enforce; shipped profile templates retain their in-process subagent default and do not install the Codex external driver.
 - The package manifest and the Session and LLM dependencies retain Cordis during the repository transition.

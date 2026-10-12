@@ -61,6 +61,6 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制和后续工作
 
-- 调用方仍拥有 turn 与 step 的顺序。原生 SDK 与 Web Consumer 尚待迁移。
-- 预备的 adapter call 可以携带来自同一 Provider 代际的 `nativeResponses`。`captureResponses()` 要求路由与预备 handle 匹配；`captureResponsesOperation()` 会先为变化的路由只预备一次，再从该路由的确切 handle 捕获。缺少能力，或所选代际无法执行父级 `maxTokens` 上限时，capture 会拒绝。已交付的 adapter Provider 尚未提供此能力，因此可信 Provider 传输实现完成前，Native external Responses 请求会在 child 启动前失败。
+- 调用方仍拥有 turn 与 step 的顺序。已交付的 SDK 与 Web composition 都通过 Native Headless 使用此执行路径。
+- 预备的 adapter call 可以携带来自同一 Provider 代际的 `nativeResponses`。`captureResponses()` 要求路由与预备 handle 匹配；`captureResponsesOperation()` 会先为变化的路由只预备一次，再从该路由的确切 handle 捕获。已交付的 `llm-pi-ai` SIWC `openai-codex` 代际会为 Native external Responses 操作提供传输。缺少能力，或所选代际无法执行父级 `maxTokens` 上限时，capture 会拒绝；已交付 profile 模板仍默认选择进程内 subagent，且不会安装 Codex external driver。
 - 仓库过渡期间，本包 manifest 及 Session、LLM 依赖仍保留 Cordis。

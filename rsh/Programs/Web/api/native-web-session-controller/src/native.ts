@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -16,19 +17,27 @@ import type { NativeSessionTitles } from '@deepseek-ai/dsh-session-title/native'
 import { createNativeHeadlessApplication, resolveNativeHeadlessConfig, type Config as TurnConfig,
   type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
+import type {} from '@deepseek-ai/dsh-workspace/native'
 import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
 import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
+import { NativeAgentPresetError } from '@deepseek-ai/dsh-agent-presets/native'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permission-presets/native-definition'
+import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
+import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 
 import { NativeWebHumanInteraction } from './human.ts'
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
@@ -39,7 +48,7 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
 import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type {} from '@deepseek-ai/dsh-credentials/native'
-import { openNativeTextFile } from '@deepseek-ai/dsh-native-command'
+import { canOpenNativePath, openNativePath, openNativeTextFile } from '@deepseek-ai/dsh-native-command'
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
@@ -48,11 +57,27 @@ import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import { NativeWebAccounts, NativeWebAuthorization } from './authorization.ts'
 import { NativeWebModels } from './models.ts'
 import { NativeWebSettingsEvents } from './settings-events.ts'
-import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
+import { NativeSessionListFeed } from './session-list-follow.ts'
+import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@deepseek-ai/dsh-client-native-session/list-types'
+import { NativeWebWorkspaceService } from './workspaces.ts'
+import { NativeWebDirectoryService } from './directories.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 const CODEX_ACCOUNT_KEY = parseCredentialKey('llm-pi-ai/openai-codex')
 const DEEPSEEK_ACCOUNT_KEY = parseCredentialKey('deepseek-account/default')
+
+interface NativeAgentPresetListRow {
+  readonly id: string
+  readonly name: string
+  readonly description?: string
+  readonly source: 'profile' | 'system' | 'user'
+  readonly status: 'ready' | 'needs-migration' | 'invalid'
+  readonly problem?: string
+}
+
+const nativeAgentPresetEmpty = z.strictObject({})
+const nativeAgentPresetId = z.strictObject({ id: z.string() })
+const nativeAgentPresetCopy = z.strictObject({ from: z.string(), id: z.string(), name: z.string().optional() })
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
@@ -110,6 +135,49 @@ function errorMessage(error: unknown): string {
   return `${error.message}: ${error.errors.map(errorMessage).join('; ')}`
 }
 
+function submissionErrorDetails(endpoint: string, payload: unknown): Record<string, unknown> {
+  if (endpoint !== 'session/queue' && endpoint !== 'session/steer' && endpoint !== 'session/dequeue'
+    || payload === null || typeof payload !== 'object' || Array.isArray(payload)) return {}
+  const requestId = (payload as Record<string, unknown>)['requestId']
+  return typeof requestId === 'string' ? { requestId } : {}
+}
+
+function latestTurnState(events: readonly SessionEvent[]): {
+  running: boolean
+  completed: boolean
+} {
+  let running = false
+  let completed = false
+  for (const event of events) {
+    if (event.type === 'turn/start') { running = true; completed = false }
+    if (event.type === 'turn/end') { running = false; completed = event.data.reason.kind === 'completed' }
+  }
+  return { running, completed }
+}
+
+function startsSessionConversation(event: SessionEvent): boolean {
+  return event.type === 'turn/start'
+    || event.type === 'user/message' && event.data.source.kind === 'plugin'
+      && event.data.source.plugin === 'task-scheduler' && event.data.source.form === 'notice'
+}
+
+function searchSnippet(events: readonly SessionEvent[], query: string): string | undefined {
+  const current = new Set(foldSurface(events).nodes)
+  for (const event of events) {
+    if (!current.has(event.seq)) continue
+    if (event.type !== 'user/message' && event.type !== 'assistant/message') continue
+    const message = deriveEventMessage(event)
+    for (const block of message?.content ?? []) {
+      if (block.type !== 'text') continue
+      const index = block.text.toLowerCase().indexOf(query)
+      if (index < 0) continue
+      const start = Math.max(0, index - 80)
+      return Array.from(block.text.slice(start)).slice(0, 240).join('')
+    }
+  }
+  return undefined
+}
+
 /** Resolve Program settings and resource limits before installing routes.
  * @param input - profile configuration.
  * @returns validated native Session configuration.
@@ -129,10 +197,18 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
+  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/answer-human', 'session/rename-title', 'session/refresh-title',
+  'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'agent-presets/list',
+  'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
+  'agent-presets/can-open-directory', 'agent-presets/open-directory',
   'models/providers', 'models/configurable-providers', 'models/discover', 'plugins/inventory',
   'credentials/describe', 'credentials/set', 'credentials/unset', 'authorization/list', 'authorization/begin', 'authorization/answer', 'authorization/decline', 'authorization/cancel',
-  'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out'])
+  'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out',
+  'workspaces/list', 'workspaces/create', 'workspaces/rename', 'workspaces/delete', 'workspaces/reorder', 'workspaces/reorder-session',
+  'workspaces/archive-session', 'workspaces/search', 'workspaces/connect',
+  'directories/pick', 'directories/list', 'directories/create-directory'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
@@ -147,6 +223,13 @@ function credentialRefsRequest(maxCredentialRefsPerRead: number) {
 const nativeCredentialSet = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), value: z.string().min(1) })
 const nativeCredentialUnset = z.strictObject({ ref: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/) })
 const sessionTitleReadConcurrency = 4
+const sessionSearchScanLimit = 100
+const sessionSearchResultLimit = 20
+const sessionSearchQueryMaxChars = 500
+const nativeSessionSearch = z.strictObject({
+  query: z.string().trim().min(1).max(sessionSearchQueryMaxChars).refine(query => !query.includes('\0')),
+  cursor: z.string().regex(/^(0|[1-9][0-9]*)$/).optional(),
+})
 
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
@@ -156,6 +239,8 @@ export interface NativeWebSelectionProviders {
     readonly selection: NativeModelSelectionOperations
     readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
   } | undefined
+  readonly planMode?: NativePlanMode | undefined
+  readonly permissionPresets?: NativePermissionPresetOperations | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
@@ -163,6 +248,16 @@ export interface NativeWebSelectionProviders {
   readonly titles?: NativeSessionTitles | undefined
   readonly commands?: NativeCommandOperations | undefined
   readonly commandScope?: NativeScope | undefined
+  readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
+  readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
+}
+
+interface NativeSessionListContext {
+  readonly owners: readonly NativeActiveSessionOwner[]
+  readonly ownerBySession: ReadonlyMap<SessionId, NativeActiveSessionOwner>
+  readonly runningSubagentCount: ReadonlyMap<SessionId, number>
+  readonly workspaceBySession: ReadonlyMap<SessionId, WorkspaceId>
+  readonly archived: ReadonlySet<SessionId>
 }
 
 interface NativeDefaultModelSettings {
@@ -198,6 +293,7 @@ export class NativeWebSessionService {
     settled: boolean
     feed: NativeSessionFeed | undefined
     following: boolean
+    submissions: Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>
   }>()
   private readonly human: NativeWebHumanInteraction
   private followers = 0
@@ -206,6 +302,10 @@ export class NativeWebSessionService {
   private readonly controls: NativeConnectionRequestOwner
   private readonly settlements: NativeConnectionRequestOwner
   private readonly followTasks = new Set<Promise<void>>()
+  private readonly listFeeds = new Map<NativeSessionListFeed, () => void>()
+  private readonly ownerEvents = new Map<NativeActiveSessionOwner, () => void>()
+  private readonly removeAttached: () => Promise<void>
+  private readonly removeDetached: () => Promise<void>
 
   /**
    * @param executor - shared Program executor, not another Agent loop.
@@ -219,11 +319,41 @@ export class NativeWebSessionService {
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
     private readonly config: Config, private readonly lifetime: AbortSignal,
-    private readonly selections: NativeWebSelectionProviders = {}) {
-    this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests)
+    private readonly selections: NativeWebSelectionProviders = {},
+    private readonly notifyAgentPresetsUpdated: () => void = () => {}) {
+    this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests, (agent) => {
+      const owner = this.active.owners().find(candidate => candidate.agent === agent)
+      if (owner !== undefined) this.publishListChange(owner.session.id)
+    })
     this.requests = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.controls = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
     this.settlements = new NativeConnectionRequestOwner(lifetime, config.maxPendingRequests)
+    this.removeAttached = this.active.onAttached((owner) => {
+      this.watchOwner(owner)
+      this.publishListChange(owner.session.id)
+      if (owner.session.header.parentSession !== undefined) this.publishListChange(owner.session.header.parentSession)
+      return Promise.resolve()
+    })
+    this.removeDetached = this.active.onDetached((owner) => {
+      this.ownerEvents.get(owner)?.()
+      this.ownerEvents.delete(owner)
+      this.publishListChange(owner.session.id)
+      if (owner.session.header.parentSession !== undefined) this.publishListChange(owner.session.header.parentSession)
+      return Promise.resolve()
+    })
+    for (const owner of this.active.owners()) this.watchOwner(owner)
+  }
+
+  private watchOwner(owner: NativeActiveSessionOwner): void {
+    if (this.ownerEvents.has(owner)) return
+    this.ownerEvents.set(owner, owner.onEvent(() => {
+      this.publishListChange(owner.session.id)
+      if (owner.session.header.parentSession !== undefined) this.publishListChange(owner.session.header.parentSession)
+    }))
+  }
+
+  private publishListChange(id: SessionId): void {
+    for (const feed of this.listFeeds.keys()) feed.push(id)
   }
 
   private humanFeed(agent: NativeAgent): NativeSessionFeed | undefined {
@@ -280,11 +410,13 @@ export class NativeWebSessionService {
     let admitted!: () => void
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
+    const submissions = new Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>()
     const execution = this.requests.run(this.lifetime, async (accepted) => {
       admitted()
       const turnSignal = AbortSignal.any([accepted, controller.signal])
       try {
-        const result = await this.executor.executeRootTurn({ id, resume: fields.resume as boolean,
+        const route = await this.routeForSession(id, turnSignal)
+        const result = await this.executor.executeRootTurn({ id, route, resume: fields.resume as boolean,
           ...imageProviders === undefined ? { message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }
             : { prepareMessage: async (route, preparationSignal) => {
               const info = await imageProviders.directory.resolve(route.provider, route.model, preparationSignal)
@@ -295,7 +427,43 @@ export class NativeWebSessionService {
               preparationSignal.throwIfAborted()
               return createUserMessage({ source: { kind: 'user' }, content })
             } },
-          ...feed === undefined ? {} : { onEvent: (event) => { feed.push({ type: 'event', event }) }, onChunk: (chunk) => {
+          ...feed === undefined ? {} : { onEvent: (event) => {
+            feed.push({ type: 'event', event })
+            if (event.type === 'agent/inbox/spliced') {
+              for (const message of event.data.inserted) {
+                const requestId = brandString<NativeSubmissionRequestId>(message.id)
+                if (submissions.get(requestId) === 'submitting') {
+                  submissions.set(requestId, 'accepted')
+                  feed.push({ type: 'submission-update', requestId, status: 'accepted' })
+                }
+              }
+              if (event.data.outcome === 'canceled') {
+                const owner = this.active.owners().find(candidate => candidate.session.id === id
+                  && candidate.invocation === 'root' && candidate.writerAvailable)
+                const pendingIds = new Set(owner === undefined ? [] : [
+                  ...owner.messages('next-turn'), ...owner.messages('next-step'),
+                ].map(message => message.id))
+                for (const [requestId, status] of submissions) {
+                  if (status === 'accepted' && !pendingIds.has(MessageId(requestId))) {
+                    submissions.delete(requestId)
+                    feed.push({ type: 'submission-update', requestId, status: 'rejected' })
+                  }
+                }
+              }
+            }
+            if (event.type === 'user/message') {
+              const requestId = brandString<NativeSubmissionRequestId>(event.data.id)
+              if (submissions.get(requestId) === 'accepted') submissions.set(requestId, 'claimed')
+            }
+            if (event.type === 'turn/end') {
+              for (const [requestId, status] of submissions) {
+                if (status === 'claimed') {
+                  submissions.delete(requestId)
+                  feed.push({ type: 'submission-update', requestId, status: 'settled' })
+                }
+              }
+            }
+          }, onChunk: (chunk) => {
             if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
             if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
           } } }, turnSignal)
@@ -330,10 +498,11 @@ export class NativeWebSessionService {
     }).finally(() => { feed?.finish() })
     this.followTasks.add(followTask)
     void followTask.then(() => { this.followTasks.delete(followTask) })
-    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
+    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false, submissions }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
-    void done.then(() => { turn.settled = true }, (error: unknown) => { turn.settled = true; refused(error) })
+    const markSettled = (): void => { turn.settled = true; this.publishListChange(id) }
+    void done.then(markSettled, (error: unknown) => { markSettled(); refused(error) })
     try { await acknowledgement } catch (error: unknown) { this.turns.delete(id); throw error }
     return { admissionId }
   }
@@ -352,10 +521,31 @@ export class NativeWebSessionService {
     }
     const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
     signal.throwIfAborted()
-    if (this.followers >= this.config.maxFollowers) return new Response('native Session follow: capacity reached', { status: 429 })
+    if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
+      return new Response('native Session follow: capacity reached', { status: 429 })
+    }
     turn.following = true
     this.followers++
     return turn.feed.response(signal, () => { this.followers-- })
+  }
+
+  /** Follow the complete Session list through the selected authenticated Fetch carrier.
+   * @param request - authenticated empty POST request.
+   * @returns baseline and coalesced Session updates as an SSE stream.
+   */
+  async followList(request: Request): Promise<Response> {
+    z.strictObject({}).parse(await request.json())
+    const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
+    signal.throwIfAborted()
+    if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
+      return new Response('native Session list follow: capacity reached', { status: 429 })
+    }
+    const feed = new NativeSessionListFeed(this.config.maxFollowBufferBytes, () => { this.listFeeds.delete(feed) })
+    const stop = (): void => { feed.close() }
+    this.listFeeds.set(feed, stop)
+    return feed.response(signal,
+      () => this.listSessions(signal),
+      id => this.projectSession(id, this.listProjectionContext(), signal))
   }
 
   private async finishFollow(id: SessionId, feed: NativeSessionFeed | undefined): Promise<void> {
@@ -389,7 +579,7 @@ export class NativeWebSessionService {
       throw new Error(`native web session: command /${parsed.name} is unavailable`)
     }
     if (this.turns.has(id)) throw new Error('native web session: command requires an idle Session')
-    const route = this.config.rootRouteId ?? brandString<NativeRootRouteId>('root')
+    const route = await this.routeForSession(id, signal)
     return this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, accepted) => {
       if (this.turns.has(id)) throw new Error('native web session: command requires an idle Session')
       if (this.executor.rootExecution.capture(owner).id !== route) {
@@ -410,6 +600,91 @@ export class NativeWebSessionService {
     }, signal)
   }
 
+  private async commandCatalog(id: SessionId, signal: AbortSignal): Promise<unknown> {
+    const commands = this.selections.commands
+    const scope = this.selections.commandScope
+    if (commands === undefined || scope === undefined) throw new Error('native web session: command catalog is unavailable')
+    const visibleNames = new Set(commands.list(scope).map(command => command.name))
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, (owner) => {
+      if (this.executor.rootExecution.capture(owner).id !== route) {
+        throw new Error('native web session: command catalog requires this Program root owner')
+      }
+      return Promise.resolve({ commands: commands.list(owner.agent.scope).filter(command => visibleNames.has(command.name)) })
+    }, signal)
+  }
+
+  private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativePendingSubmission> {
+    const request = z.strictObject({
+      sessionId: z.string().min(1).max(256),
+      prompt: z.string().min(1).max(this.config.maxPromptChars),
+      requestId: z.string().min(1).max(256),
+    }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const turn = this.turns.get(id)
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (turn === undefined || turn.settled || turn.controller.signal.aborted || owner === undefined) {
+      throw new Error('native web session: queued submission requires an active browser turn')
+    }
+    this.executor.rootExecution.capture(owner)
+    const requestId = brandString<NativeSubmissionRequestId>(request.requestId)
+    if (turn.submissions.has(requestId)) throw new Error('native web session: duplicate submission request id')
+    const message = freezeMessage({ id: MessageId(request.requestId), role: 'user' as const, source: { kind: 'user' as const },
+      content: [{ type: 'text' as const, text: request.prompt }] })
+    turn.submissions.set(requestId, 'submitting')
+    try { await owner.enqueue(message, target, true, signal) }
+    catch (error: unknown) { turn.submissions.delete(requestId); throw error }
+    return { requestId, placement: target === 'next-turn' ? 'queued' : 'steering', status: 'accepted' }
+  }
+
+  private async dequeue(payload: unknown, signal: AbortSignal): Promise<{ requestId: NativeSubmissionRequestId }> {
+    const request = z.strictObject({ sessionId: z.string().min(1).max(256), requestId: z.string().min(1).max(256) }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const messageId = MessageId(request.requestId)
+    const remove = async (owner: NativeActiveSessionOwner): Promise<{ requestId: NativeSubmissionRequestId }> => {
+      for (const target of ['next-turn', 'next-step'] as const) {
+        if (owner.messages(target).some(message => message.id === messageId)) {
+          await owner.remove([messageId], target, signal)
+          return { requestId: brandString<NativeSubmissionRequestId>(request.requestId) }
+        }
+      }
+      throw new Error('native web session: pending submission not found')
+    }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return remove(owner)
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, remove, signal)
+  }
+
+  private async pendingSubmissions(id: SessionId, signal: AbortSignal): Promise<{ submissions: readonly NativePendingSubmission[] }> {
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return { submissions: this.projectPendingSubmissions(owner) }
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    const submissions = await this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
+      Promise.resolve(this.projectPendingSubmissions(activeOwner)), signal)
+    return { submissions }
+  }
+
+  private projectPendingSubmissions(owner: NativeActiveSessionOwner): readonly NativePendingSubmission[] {
+    return [
+      ...owner.messages('next-turn').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'queued' as const, status: 'accepted' as const })),
+      ...owner.messages('next-step').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'steering' as const, status: 'accepted' as const })),
+    ]
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -417,13 +692,15 @@ export class NativeWebSessionService {
   async image(request: Request): Promise<Response> {
     return this.controls.run(request.signal, async (signal) => {
       const fields = z.strictObject({ sessionId: z.string().min(1).max(256), attachmentId: z.string().min(1) }).parse(await request.json())
+      const id = sessionId(fields.sessionId)
       const attachments = this.selections.attachments
       if (attachments === undefined) return new Response(null, { status: 404 })
-      const history = await readNativeSessionHistory(sessionId(fields.sessionId), {
+      const history = await readNativeSessionHistory(id, {
         active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
         label: 'native web image', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
       }, signal)
-      if (history.header.cwd !== this.config.cwd) return new Response(null, { status: 403 })
+      const workspace = this.workspaceForSession(id)
+      if (history.header.cwd !== this.config.cwd && history.header.cwd !== workspace?.path) return new Response(null, { status: 403 })
       const image = history.events.flatMap(event => isAppendSurfaceEvent(event) ? deriveEventMessage(event)?.content ?? [] : [])
         .find(block => block.type === 'image' && block.attachment.attachmentId === fields.attachmentId)
       if (image?.type !== 'image') return new Response(null, { status: 404 })
@@ -465,27 +742,42 @@ export class NativeWebSessionService {
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      if (endpoint.startsWith('agent-presets/')) {
+        return { ok: true, value: await this.controls.run(signal, accepted => this.agentPresets(endpoint, payload, accepted)) }
+      }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
       }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
+      if (endpoint === 'session/queue' || endpoint === 'session/steer') {
+        const target = endpoint === 'session/queue' ? 'next-turn' : 'next-step'
+        return { ok: true, value: await this.requests.run(signal, accepted => this.submit(payload, target, accepted)) }
+      }
+      if (endpoint === 'session/dequeue') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.dequeue(payload, accepted)) }
+      }
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
       }
-      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
+      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human'
+        || endpoint === 'session/mode-controls' || endpoint === 'session/permission-controls' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
-        const allowed = ['session/list', 'session/create', 'session/model-controls'].includes(endpoint) ? []
-          : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
-            : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
-              : endpoint === 'session/rename-title' ? ['sessionId', 'title']
-                : endpoint === 'session/refresh-title' ? ['sessionId']
-                  : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
-                    : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
+        const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
+          : endpoint === 'session/search' ? ['query', 'cursor']
+            : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
+              : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
+                : endpoint === 'session/select-plan-mode' ? ['sessionId', 'active']
+                  : endpoint === 'session/select-permission' ? ['sessionId', 'preset']
+                    : endpoint === 'session/rename-title' ? ['sessionId', 'title']
+                      : endpoint === 'session/refresh-title' ? ['sessionId']
+                        : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
+                          : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
+        if (endpoint === 'agent-presets/list') return this.agentPresetsList()
         if (endpoint === 'session/model-controls') {
           const defaultSelection = this.selections.defaultModel?.() ?? {
             provider: this.config.provider, model: this.config.model,
@@ -499,7 +791,68 @@ export class NativeWebSessionService {
               ...description === undefined ? {} : { description } })) ?? [],
           }
         }
+        if (endpoint === 'session/mode-controls') {
+          const id = sessionId(fields.sessionId)
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          }, accepted)
+          const facts = foldNativeAgentPresetFacts(history.header, history.events)
+          const presets = this.selections.presets?.list() ?? []
+          const planMode = this.selections.planMode
+          const planState = planMode?.state(id, history.events)
+          return {
+            current: facts.preset,
+            options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+              ...description === undefined ? {} : { description } })),
+            revision: facts.revision,
+            locked: facts.locked,
+            canSelect: presets.length > 0 && !facts.locked,
+            planMode: { available: planMode !== undefined, ...(planState === undefined
+              ? { active: false }
+              : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
+          }
+        }
+        if (endpoint === 'session/permission-controls') {
+          const id = sessionId(fields.sessionId)
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          }, accepted)
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) return { available: false, currentValue: null, options: [] }
+          return { available: true, ...await permissions.controls(history.events, accepted) }
+        }
+        if (endpoint === 'session/select-plan-mode') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.active !== 'boolean') throw new TypeError('native web session: plan mode must be boolean')
+          const planMode = this.selections.planMode
+          if (planMode === undefined) throw new Error('native web session: plan mode is unavailable')
+          const route = await this.routeForSession(id, accepted)
+          return await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => planMode.select(owner, fields.active as boolean, operationSignal), accepted)
+        }
+        if (endpoint === 'session/select-permission') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid permission preset')
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) throw new Error('native web session: permission presets are unavailable')
+          const route = await this.routeForSession(id, accepted)
+          await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => permissions.apply(owner, fields.preset as string, operationSignal), accepted)
+          return { changed: true }
+        }
         if (endpoint === 'session/list') return this.listSessions(accepted)
+        if (endpoint === 'session/search') return this.searchSessions(payload, accepted)
+        if (endpoint === 'session/archive') {
+          const registry = this.selections.workspaceRegistry
+          if (registry === undefined) throw new Error('session archive is unsupported by this Host')
+          const archiveId = sessionId(fields.sessionId)
+          await registry.archiveSession(archiveId, accepted)
+          accepted.throwIfAborted()
+          this.publishListChange(archiveId)
+          return { archived: true }
+        }
         if (endpoint === 'session/create') {
           const id = SessionId(randomUUID())
           await this.executor.executeSessionOperation({ id, resume: false }, () => Promise.resolve(undefined), accepted)
@@ -508,19 +861,21 @@ export class NativeWebSessionService {
         const id = sessionId(fields.sessionId)
         if (endpoint === 'session/rename-title' || endpoint === 'session/refresh-title') {
           const titles = this.selections.titles
-          if (titles === undefined || !this.canManageTitle(id)) throw new Error('native web session: title changes are unavailable for this Session owner')
+          const route = await this.routeForSession(id, accepted)
+          if (titles === undefined || !this.canManageTitle(id, route)) throw new Error('native web session: title changes are unavailable for this Session owner')
           if (endpoint === 'session/rename-title') {
             if (typeof fields.title !== 'string') throw new TypeError('native web session: title must be a string')
-            await this.executor.executeSessionOperation({ id, resume: true, route: this.titleRoute() },
+            await this.executor.executeSessionOperation({ id, resume: true, route },
               async (owner) => { await titles.rename(owner, fields.title as string) }, accepted)
           } else {
-            await this.executor.executeSessionOperation({ id, resume: true, route: this.titleRoute() },
+            await this.executor.executeSessionOperation({ id, resume: true, route },
               async (owner) => { await titles.refresh(owner, accepted) }, accepted)
           }
           return { changed: true }
         }
         if (endpoint === 'session/select-model' || endpoint === 'session/select-preset') {
           if (this.turns.has(id)) throw new Error('native web session: selection requires an idle Session')
+          const route = await this.routeForSession(id, accepted)
           const expectedRevision = fields.expectedRevision === null ? null
             : typeof fields.expectedRevision === 'number' ? SessionSeq(fields.expectedRevision)
               : (() => { throw new TypeError('native web session: invalid selection revision') })()
@@ -530,7 +885,7 @@ export class NativeWebSessionService {
             const parsed = modelSelectionInput.parse(fields.selected)
             const selected = { provider: parsed.provider, model: parsed.model,
               ...parsed.reasoningEffort === undefined ? {} : { reasoningEffort: parsed.reasoningEffort } }
-            await this.executor.executeSessionOperation({ id, resume: true },
+            await this.executor.executeSessionOperation({ id, resume: true, route },
               (owner, effective) => {
                 const execution = selection.executionFor(owner.agent)
                 const commit = (signal: AbortSignal) => selection.selection.select(owner, { selected, expectedRevision }, signal)
@@ -542,7 +897,7 @@ export class NativeWebSessionService {
             if (this.selections.presets === undefined) throw new Error('native web session: preset selection is unavailable')
             if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid preset')
             await this.executor.rootExecution.selectPreset({ id, preset: fields.preset, expectedRevision,
-              route: this.config.rootRouteId ?? brandString<NativeRootRouteId>('root') }, accepted)
+              route }, accepted)
           }
           return { changed: true }
         }
@@ -550,6 +905,8 @@ export class NativeWebSessionService {
           active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
           label: 'native web session', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
         }, accepted)
+        if (endpoint === 'session/commands') return this.commandCatalog(id, accepted)
+        if (endpoint === 'session/submissions') return this.pendingSubmissions(id, accepted)
         if (endpoint === 'session/answer-human') {
           accepted.throwIfAborted()
           const turn = this.turns.get(id)
@@ -576,6 +933,16 @@ export class NativeWebSessionService {
         throw new Error('native web session: unsupported endpoint')
       }) }
     } catch (error: unknown) {
+      if (endpoint.startsWith('agent-presets/')) {
+        if (error instanceof NativeAgentPresetError) {
+          return { ok: false, error: { code: error.code, message: error.message, details: error.details } }
+        }
+        return { ok: false, error: {
+          code: endpoint === 'agent-presets/open-directory' ? 'native/agent-presets-directory' : 'native/agent-presets',
+          message: endpoint === 'agent-presets/open-directory' ? 'Could not open Agent preset folder.' : 'Agent preset request failed.',
+          details: {},
+        } }
+      }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         const settingsRequest = endpoint.startsWith('settings/')
         const conflict = settingsRequest ? settingsConflictDetails(error) : undefined
@@ -586,63 +953,244 @@ export class NativeWebSessionService {
           details: conflict ?? {},
         } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: errorMessage(error), details: {} } }
+      if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
+        return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
+      }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session',
+        message: errorMessage(error), details: submissionErrorDetails(endpoint, payload) } }
     }
+  }
+
+  private agentPresetsList(): {
+    readonly default: string | null
+    readonly presets: readonly NativeAgentPresetListRow[]
+  } {
+    const service = this.selections.presets
+    if (service === undefined) return { default: null, presets: [] }
+    const catalog = service.catalog()
+    const standing = service.list()
+    const folders = new Map(catalog.folders.map(folder => [folder.id, folder]))
+    const registered = new Set(standing.map(preset => preset.id))
+    const presets: NativeAgentPresetListRow[] = standing.map((preset) => {
+      const folder = folders.get(preset.id)
+      return { id: preset.id, name: preset.name,
+        ...preset.description === undefined ? {} : { description: preset.description },
+        source: folder?.trust ?? 'profile', status: 'ready' as const }
+    })
+    for (const folder of catalog.folders) {
+      if (registered.has(folder.id)) continue
+      presets.push({ id: folder.id, name: folder.name,
+        ...folder.description === undefined ? {} : { description: folder.description },
+        source: folder.trust, status: folder.status,
+        ...folder.problem === undefined ? {} : { problem: folder.problem } })
+    }
+    return { default: catalog.default, presets }
+  }
+
+  private async agentPresets(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
+    if (endpoint === 'agent-presets/list') {
+      nativeAgentPresetEmpty.parse(payload)
+      return this.agentPresetsList()
+    }
+    if (endpoint === 'agent-presets/can-open-directory') {
+      nativeAgentPresetEmpty.parse(payload)
+      return canOpenNativePath()
+    }
+    if (endpoint === 'agent-presets/read') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      return await this.agentPresetService(id).read(id)
+    }
+    if (endpoint === 'agent-presets/copy') {
+      const { from, id, name } = nativeAgentPresetCopy.parse(payload)
+      await this.agentPresetService(from).copy(from, id, name)
+      this.notifyAgentPresetsUpdated()
+      return { updated: true }
+    }
+    if (endpoint === 'agent-presets/delete') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      await this.agentPresetService(id).delete(id)
+      this.notifyAgentPresetsUpdated()
+      return { updated: true }
+    }
+    if (endpoint === 'agent-presets/open-directory') {
+      const { id } = nativeAgentPresetId.parse(payload)
+      const path = this.agentPresetService(id).directory(id)
+      if (!canOpenNativePath()) return { opened: false, path }
+      await openNativePath(path, signal)
+      return { opened: true }
+    }
+    throw new Error('agent-presets: unsupported endpoint')
+  }
+
+  private agentPresetService(id: string): NativeAgentPresetOperations {
+    const service = this.selections.presets
+    if (service === undefined) throw new NativeAgentPresetError('agent-preset/not-found',
+      'this deployment composes no agent presets', { agentPreset: id, available: [] })
+    return service
   }
 
   private async listSessions(signal: AbortSignal): Promise<NativeSessionListItem[]> {
     const stored = await this.persistence.list({ signal })
     signal.throwIfAborted()
-    const sessions = [...new Map(stored.map(snapshot => [snapshot.header.id, snapshot.header])).values()]
+    const projection = this.listProjectionContext()
+    const sessions = new Map(stored.map(snapshot => [snapshot.header.id, snapshot.header]))
+    for (const owner of projection.owners) sessions.set(owner.session.id, owner.session.header)
+    const headers = [...sessions.values()].filter(header => !projection.archived.has(header.id))
     const result = new Map<SessionId, NativeSessionListItem>()
     let cursor = 0
     const readNext = async (): Promise<void> => {
       for (;;) {
         signal.throwIfAborted()
-        const header = sessions[cursor++]
+        const header = headers[cursor++]
         if (header === undefined) return
-        let titleProjection: NativeSessionListItem['titleProjection']
-        try {
-          const history = await readNativeSessionHistory(header.id, {
-            active: this.active,
-            persistence: this.persistence,
-            maxHistoryEvents: this.config.maxHistoryEvents,
-            label: 'native web Session title',
-            onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
-          }, signal)
-          const title = foldSessionTitle(history.events)
-          titleProjection = title === undefined ? { status: 'absent' } : { status: 'resolved', title: title.title }
-        } catch {
-          if (signal.aborted) signal.throwIfAborted()
-          titleProjection = { status: 'unavailable' }
-        }
-        const canManageTitle = !this.turns.has(header.id) && this.canManageTitle(header.id)
-        result.set(header.id, { header, titleProjection,
-          titleActions: { rename: canManageTitle, refresh: canManageTitle } })
+        const item = await this.projectSession(header.id, projection, signal)
+        if (item !== undefined) result.set(header.id, item)
       }
     }
-    const readers = Array.from({ length: Math.min(sessionTitleReadConcurrency, sessions.length) }, () => readNext())
+    const readers = Array.from({ length: Math.min(sessionTitleReadConcurrency, headers.length) }, () => readNext())
     const settlements = await Promise.allSettled(readers)
     signal.throwIfAborted()
     const unexpected = settlements.find(settlement => settlement.status === 'rejected')
     if (unexpected?.status === 'rejected') throw unexpected.reason
-    return sessions.map(header => result.get(header.id) as NativeSessionListItem)
+    return headers.map(header => result.get(header.id)).filter((item): item is NativeSessionListItem => item !== undefined)
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+  }
+
+  private listProjectionContext(): NativeSessionListContext {
+    const owners = this.active.owners()
+    const ownerBySession = new Map(owners.map(owner => [owner.session.id, owner]))
+    const runningSubagentCount = new Map<SessionId, number>()
+    for (const owner of owners) {
+      const active = this.selections.executionFor?.(owner.agent).status === 'running'
+      if (!active) continue
+      const parent = owner.session.header.parentSession
+      if (parent !== undefined) runningSubagentCount.set(parent, (runningSubagentCount.get(parent) ?? 0) + 1)
+    }
+    const workspaceBySession = new Map<SessionId, WorkspaceId>()
+    for (const workspace of this.selections.workspaceRegistry?.list() ?? []) {
+      for (const id of workspace.sessionIds) workspaceBySession.set(id, workspace.id)
+    }
+    return {
+      owners, ownerBySession, runningSubagentCount, workspaceBySession,
+      archived: new Set(this.selections.workspaceRegistry?.archivedSessionIds ?? []),
+    }
+  }
+
+  private async projectSession(id: SessionId, context: NativeSessionListContext,
+    signal: AbortSignal): Promise<NativeSessionListItem | undefined> {
+    if (context.archived.has(id)) return undefined
+    const owner = context.ownerBySession.get(id)
+    const header = owner?.session.header ?? (await this.persistence.stat(id, { signal }))?.header
+    if (header === undefined) return undefined
+    let history: Awaited<ReturnType<typeof readNativeSessionHistory>> | undefined
+    try {
+      history = await readNativeSessionHistory(id, {
+        active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+        label: 'native web Session list', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
+      }, signal)
+    } catch {
+      if (signal.aborted) signal.throwIfAborted()
+      // An unreadable history affects this row's projections, not the rest of the list.
+    }
+    const title = history === undefined ? undefined : foldSessionTitle(history.events)
+    const turn = history === undefined ? undefined : latestTurnState(history.events)
+    const currentOwner = this.active.owners().find(candidate => candidate.session.id === id)
+    const execution = currentOwner === undefined ? undefined : this.selections.executionFor?.(currentOwner.agent)
+    const running = execution?.status === 'running' || this.turns.get(id)?.settled === false
+      || this.selections.executionFor === undefined && (turn?.running ?? false)
+    const rootOwner = currentOwner?.invocation === 'root' ? currentOwner : undefined
+    const pendingKind = rootOwner === undefined ? undefined : this.human.pendingKind(rootOwner.agent)
+    const canManageTitle = !this.turns.has(id) && this.canManageTitle(id)
+    const workspaceId = context.workspaceBySession.get(id)
+    return {
+      header: history?.header ?? header,
+      titleProjection: history === undefined ? { status: 'unavailable' }
+        : title === undefined ? { status: 'absent' } : { status: 'resolved', title: title.title },
+      titleActions: { rename: canManageTitle, refresh: canManageTitle },
+      updatedAt: history?.events.reduce((latest, event) => Math.max(latest, event.time), history.header.createdAt) ?? header.createdAt,
+      blank: history === undefined ? false : !history.events.some(startsSessionConversation), running,
+      completed: !running && (turn?.completed ?? false),
+      runningSubagentCount: context.runningSubagentCount.get(id) ?? 0,
+      ...(pendingKind === undefined ? {} : { pendingInteraction: { kind: pendingKind } }),
+      ...(workspaceId === undefined ? {} : { workspaceId }),
+      hasActiveSchedule: false,
+    }
+  }
+
+  private async searchSessions(payload: unknown, signal: AbortSignal): Promise<NativeSessionSearchPage> {
+    const request = nativeSessionSearch.parse(payload)
+    const start = request.cursor === undefined ? 0 : Number(request.cursor)
+    if (!Number.isSafeInteger(start)) throw new TypeError('native Session search cursor is invalid')
+    const stored = await this.persistence.list({ signal })
+    const context = this.listProjectionContext()
+    const sessions = new Map(stored.map(snapshot => [snapshot.header.id, snapshot.header]))
+    for (const owner of context.owners) sessions.set(owner.session.id, owner.session.header)
+    const headers = [...sessions.values()].filter(header => !context.archived.has(header.id))
+    if (start > headers.length) throw new TypeError('native Session search cursor is outside the current list')
+    const end = Math.min(headers.length, start + sessionSearchScanLimit)
+    const normalized = request.query.toLowerCase()
+    const items: NativeSessionSearchItem[] = []
+    let next = end
+    for (let index = start; index < end; index++) {
+      signal.throwIfAborted()
+      const header = headers[index]
+      if (header === undefined) break
+      const history = await readNativeSessionHistory(header.id, {
+        active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+        label: 'native web Session search', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
+      }, signal)
+      const title = foldSessionTitle(history.events)?.title ?? ''
+      const titleMatched = title.toLowerCase().includes(normalized)
+      const match = titleMatched ? undefined : searchSnippet(history.events, normalized)
+      if (titleMatched || match !== undefined) {
+        const workspaceId = context.workspaceBySession.get(header.id)
+        items.push({ sessionId: header.id, title,
+          ...(workspaceId === undefined ? {} : { workspaceId }),
+          ...(header.cwd === undefined ? {} : { cwd: header.cwd }),
+          ...(match === undefined ? {} : { snippet: match }),
+        })
+        if (items.length === sessionSearchResultLimit) { next = index + 1; break }
+      }
+    }
+    return { items, ...(next < headers.length ? { cursor: String(next) } : {}) }
   }
 
   /** Whether the selected root route can operate on this stored or attached Session. */
-  private canManageTitle(id: SessionId): boolean {
+  private canManageTitle(id: SessionId, route?: NativeRootRouteId): boolean {
     if (this.selections.titles === undefined) return false
     const roots = this.executor.rootExecution
-    const route = this.titleRoute()
+    const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
+    const workspace = this.workspaceForSession(id)
+    const owners = this.active.owners().filter(owner => owner.session.id === id)
+    if (owners.some(owner => owner.invocation === 'delegated')) return false
+    if (owner === undefined && workspace !== undefined && route === undefined) return true
     try {
-      roots.resolve(route)
-      const owners = this.active.owners().filter(owner => owner.session.id === id)
-      if (owners.some(owner => owner.invocation === 'delegated')) return false
-      const owner = owners.find(candidate => candidate.invocation === 'root')
-      return owner === undefined || owner.writerAvailable && roots.capture(owner).id === route
+      const selectedRoute = route
+        ?? (owner === undefined ? workspace === undefined
+          ? this.titleRoute()
+          : roots.workspaceRoutes().find(candidate => candidate.workspaceId === workspace.id)?.id
+          : roots.capture(owner).id)
+      if (selectedRoute === undefined) return false
+      roots.resolve(selectedRoute)
+      const root = owners.find(candidate => candidate.invocation === 'root')
+      return root === undefined || root.writerAvailable && roots.capture(root).id === selectedRoute
     } catch {
       return false
     }
+  }
+
+  private async routeForSession(id: SessionId, signal: AbortSignal): Promise<NativeRootRouteId> {
+    const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
+    if (owner !== undefined) return this.executor.rootExecution.capture(owner).id
+    const workspace = this.workspaceForSession(id)
+    if (workspace === undefined) return this.titleRoute()
+    const route = this.executor.rootExecution.workspaceRoutes().find(candidate => candidate.workspaceId === workspace.id)
+    if (route !== undefined) return route.id
+    return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.titleRoute(), workspaceId: workspace.id }, signal)).id
+  }
+
+  private workspaceForSession(id: SessionId) {
+    return this.selections.workspaceRegistry?.list().find(workspace => workspace.sessionIds.includes(id))
   }
 
   private titleRoute(): NativeRootRouteId {
@@ -738,6 +1286,10 @@ export class NativeWebSessionService {
   async close(): Promise<void> {
     this.human.close()
     this.shutdown.abort(new Error('native Session follow: disposed'))
+    for (const stop of this.listFeeds.values()) stop()
+    await Promise.all([this.removeAttached(), this.removeDetached()])
+    for (const remove of this.ownerEvents.values()) remove()
+    this.ownerEvents.clear()
     const results = await Promise.allSettled([this.requests.close(), this.controls.close(), this.settlements.close()])
     const executor = await Promise.allSettled([this.executor.dispose()])
     while (this.followTasks.size > 0) await Promise.allSettled([...this.followTasks])
@@ -763,8 +1315,8 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 /** Native Host Session installer; the Web Host remains the selected application. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
-  requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
+  requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -773,6 +1325,7 @@ export const plugin: NativePlugin = {
         maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human,
         maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations,
         authorizationKeys: _authorizationKeys, ...turn } = config
+      const workspaceRegistry = context.require('workspaceRegistry')
       const settings = context.optional('settings')
       const defaultSettings = settings?.register<'agent-default-model', NativeDefaultModelSettings>(
         'agent-default-model', {}, resolveDefaultModelSettings,
@@ -781,7 +1334,7 @@ export const plugin: NativePlugin = {
       const readDefaultModel = () => defaultModelSelection(defaultSettings)
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
-        defaultModelSelection: readDefaultModel,
+        defaultModelSelection: readDefaultModel, workspaceRegistry,
       })
       const models = context.optional('modelSelection')
       const modelSettings = context.optional('modelSettings')
@@ -795,6 +1348,11 @@ export const plugin: NativePlugin = {
       context.own(() => modelEndpoints.close())
       const settingsEvents = new NativeWebSettingsEvents(context)
       context.own(() => settingsEvents.close())
+      const workspaceService = new NativeWebWorkspaceService(context, workspaceRegistry, executor,
+        context.require('sessionPersistence'), context.require('activeSessions'),
+        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), config.maxHistoryEvents, config.maxFollowers)
+      context.own(() => workspaceService.close())
+      const directoryService = new NativeWebDirectoryService(context.signal)
       let defaultModelInitialization: Promise<void> | undefined
       const initializeDefaultModel = (): Promise<void> => {
         if (defaultSettings === undefined || modelSettings === undefined) return Promise.resolve()
@@ -815,9 +1373,13 @@ export const plugin: NativePlugin = {
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), defaultModel: readDefaultModel,
           presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
+          planMode: context.optional('planMode'), permissionPresets: context.optional('permissionPresets'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
-          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } })
+          workspaceRegistry,
+          executionFor: agent => context.require('agents').execution(agent),
+          models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },
+        () => { settingsEvents.agentPresetsUpdated() })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
@@ -825,10 +1387,16 @@ export const plugin: NativePlugin = {
           ? authorization.handle(endpoint, payload)
           : endpoint.startsWith('accounts/') ? accounts.handle(endpoint, payload, signal)
             : endpoint.startsWith('models/') ? modelEndpoints.handle(endpoint, payload, signal)
-              : endpoint === 'plugins/inventory' ? Promise.resolve(pluginInventory(context.optional('pluginInventory'), payload))
-                : service.handle(endpoint, payload, signal)))
+              : endpoint.startsWith('workspaces/') ? workspaceService.handle(endpoint, payload, signal)
+                : endpoint.startsWith('directories/') ? directoryService.handle(endpoint, payload, signal)
+                  : endpoint === 'plugins/inventory' ? Promise.resolve(pluginInventory(context.optional('pluginInventory'), payload))
+                    : service.handle(endpoint, payload, signal)))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/workspaces/follow', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => workspaceService.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/list-follow', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.followList(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.image(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/authorization', methods: ['POST'], requestBody: 'buffered',

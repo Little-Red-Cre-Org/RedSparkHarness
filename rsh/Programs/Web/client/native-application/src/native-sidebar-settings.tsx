@@ -14,7 +14,7 @@ import css from './NativeSidebarSettings.module.css'
 
 /** Bind Settings page operations to the selected Native Session Consumer.
  * @param client - selected Native Session service.
- * @returns the Settings page's bound operation face.
+ * @returns the shared Settings actions bound to the client.
  */
 export function createNativeSettingsActions(client: NativeSessionClient): NativeSettingsActions {
   return {
@@ -35,6 +35,12 @@ export function createNativeSettingsActions(client: NativeSessionClient): Native
     modelsListConfigurableProviders: client.modelsListConfigurableProviders.bind(client),
     modelsDiscover: client.modelsDiscover.bind(client),
     settingsEvents: client.settingsEvents.bind(client),
+    agentPresetsList: client.agentPresetsList.bind(client),
+    agentPresetRead: client.agentPresetRead.bind(client),
+    agentPresetCopy: client.agentPresetCopy.bind(client),
+    agentPresetDelete: client.agentPresetDelete.bind(client),
+    agentPresetsCanOpenDirectory: client.agentPresetsCanOpenDirectory.bind(client),
+    agentPresetOpenDirectory: client.agentPresetOpenDirectory.bind(client),
   }
 }
 

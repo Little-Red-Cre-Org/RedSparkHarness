@@ -22,12 +22,17 @@
       "types": "./lib/types/win32-dialog-worker.d.ts",
       "default": "./lib/worker.cjs"
     },
+    "./native-picker": {
+      "types": "./lib/types/native-picker.d.ts",
+      "default": "./lib/native-picker.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/worker.cjs",
+    "lib/native-picker.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -38,6 +43,11 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

@@ -28,8 +28,10 @@
   border-radius: 30%;
   background: transparent;
   transform: translateX(-50%);
-  cursor: pointer;
+  cursor: default;
 }
+
+button.character { cursor: pointer; }
 
 [data-placement='floating'] .character {
   width: 108px;

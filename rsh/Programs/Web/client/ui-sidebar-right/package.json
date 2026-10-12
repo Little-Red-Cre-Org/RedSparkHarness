@@ -50,6 +50,7 @@
         "clientSlots",
         "clientNativeLayout",
         "clientNativeConversation",
+        "clientNativeSession",
         "clientLocale"
       ],
       "optional": [],
@@ -73,6 +74,7 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
     "@deepseek-ai/dsh-client-locale": "workspace:^",
+    "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-client-resources": "workspace:^",
     "@deepseek-ai/dsh-client-store": "workspace:^",
     "@deepseek-ai/dsh-client-test-runtime": "workspace:^",

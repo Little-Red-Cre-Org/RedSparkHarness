@@ -1,7 +1,12 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
+import {
+  ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
+  ChatMascotHero, ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderOpen16, Pill,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
@@ -10,16 +15,17 @@ import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
-import { NativeComposerAttachments, NativeMessageImage } from './attachments.tsx'
+import { NativeComposerAttachments } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
-import { ToolCard, toolCardRecords } from './tool-cards.tsx'
-import { ModelControls } from './model-controls.tsx'
+import { NativeTranscript } from './native-transcript.tsx'
+import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
+import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
 
@@ -32,27 +38,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Frame-owned central panel, keyed by a matching sidebar panel id. */
     main: { kind: 'keyed'; scope: 'root' }
   }
-}
-
-function Message({ event, t, sessionId, loadImage }: {
-  event: SessionEvent
-  t: Translate
-  sessionId: SessionId
-  loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
-}) {
-  const message = isAppendSurfaceEvent(event) ? deriveEventMessage(event) : null
-  if (message === null || message.role === 'system' || event.type === 'tool/result') return null
-  const content = message.content.filter(block => block.type !== 'tool-call')
-  if (content.length === 0) return null
-  const role = message.role === 'assistant' ? 'assistant' : 'user'
-  return <article data-event-seq={event.seq}>
-    <strong>{t(role)}</strong>
-    {content.map((block, index) => block.type === 'image'
-      ? <NativeMessageImage key={index} image={block.attachment} sessionId={sessionId} loadImage={loadImage} t={t} />
-      : <pre key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-        {block.type === 'text' ? block.text : JSON.stringify(block, null, 2)}
-      </pre>)}
-  </article>
 }
 
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
@@ -70,64 +55,137 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
 }) {
   const activeLocale = useLocale(value => value.locale)
-  const toolCards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
+  const markdownLabels = useMemo<MarkdownLabels>(() => ({
+    code: { copyLabel: t('markdownCopy'), copiedLabel: t('markdownCopied') },
+    footnotes: t('markdownFootnotes'),
+  }), [activeLocale, t])
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
   const [files, setFiles] = useState<readonly File[]>([])
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const followsTranscript = useRef(true)
+  const followedSession = useRef(snapshot.selected)
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
-  return <>
-    <main style={{ margin: 'auto', maxWidth: 1000, padding: 24 }}>
-      <h1>{t('title')}</h1>
-      <nav aria-label={t('sessions')} style={{ display: 'flex', gap: 8 }}>
-        {renderSlot('native.conversation.actions', {})}
-      </nav>
-      <p role="status">{snapshot.state === 'closed' ? '' : t(snapshot.state)}</p>
-      {snapshot.error === undefined ? null : <p role="alert">{t('error')}: {snapshot.error}</p>}
-      {selected === undefined ? <p>{t('empty')}</p> : <>
-        <ModelControls snapshot={snapshot} selectModel={selectModel} selectPreset={selectPreset}
-          refreshModelControls={refreshModelControls} t={t} />
-        {todos === null ? null : <aside aria-label={t('todos')}>
-          <h2>{t('todos')}</h2>
-          <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
-            <span>{t(todo.status)}</span>: {todo.content}
-          </li>)}</ul>
-        </aside>}
-        <section aria-label={t('facts')}>
-          {snapshot.events.map((event) => {
-            const card = toolCards.get(event.seq)
-            return card === undefined
-              ? <Message key={event.seq} event={event} t={t} sessionId={selected} loadImage={loadImage} />
-              : <ToolCard key={event.seq} block={card} locale={activeLocale} cwd={snapshot.header?.cwd} />
-          })}
-        </section>
-        <details><summary>{t('facts')}</summary>
-          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(snapshot.events, null, 2)}</pre>
-        </details>
-        {snapshot.liveText === undefined ? null : <article aria-label={t('live')}><strong>{t('assistant')}</strong>
-          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{snapshot.liveText}</pre>
-          {snapshot.liveTruncated === true ? <p>{t('truncated')}</p> : null}
-        </article>}
-        {snapshot.human === undefined ? null : <HumanInteraction key={snapshot.human.id} answerHuman={answerHuman} prompt={snapshot.human}
-          disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} />}
-        <form onSubmit={(event) => {
-          event.preventDefault()
-          if (!ready || draft.trim().length === 0) return
-          void send(draft, files).then((success) => {
-            if (success) { setDraft(''); setFiles([]) }
-          })
-        }}>
-          <label>{t('prompt')}<textarea aria-label={t('prompt')} value={draft} disabled={!ready}
-            onChange={(event) => { setDraft(event.target.value) }} rows={4} style={{ display: 'block', width: '100%' }} /></label>
+  const hasConversation = snapshot.events.some(event => isAppendSurfaceEvent(event)
+    && deriveEventMessage(event)?.role !== 'system')
+  const petState = snapshot.human !== undefined ? 'waiting' : sending ? 'thinking' : 'idle'
+  const workspace = snapshot.header?.cwd?.split(/[\\/]/).at(-1) ?? t('workspaceUnavailable')
+  const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
+  const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
+    : selectedTitle?.status === 'absent' ? t('untitledSession') : t('titleUnavailable')
+  useLayoutEffect(() => {
+    if (followedSession.current !== snapshot.selected) {
+      followedSession.current = snapshot.selected
+      followsTranscript.current = true
+    }
+    const scroll = scrollRef.current
+    if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
+  }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
+  const submit = (): void => {
+    if (!ready || snapshot.selected === undefined || draft.trim().length === 0) return
+    void send(draft, files).then((success) => {
+      if (success) { setDraft(''); setFiles([]) }
+    })
+  }
+  const composer = <form className={css.composerForm} onSubmit={(event) => {
+    event.preventDefault()
+    submit()
+  }}>
+    <ChatComposerCard>
+      <label className={css.editorLabel}>
+        <span className={css.visuallyHidden}>{t('prompt')}</span>
+        <textarea className={css.editor} aria-label={t('prompt')} placeholder={t('composerPlaceholder')}
+          value={draft} disabled={!ready || snapshot.selected === undefined}
+          onChange={(event) => { setDraft(event.target.value) }} rows={1}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              submit()
+            }
+          }} />
+      </label>
+      <ChatComposerToolbar>
+        <div className={css.toolbarOptions}>
           {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
-            files={files} onChange={setFiles} limits={snapshot.modelControls.images} disabled={!ready} t={t}
+            files={files} onChange={setFiles} limits={snapshot.modelControls.images}
+            disabled={!ready || snapshot.selected === undefined} t={t}
           />}
-          <button type="submit" disabled={!ready || draft.trim().length === 0}>{t('send')}</button>
-          <button type="button" disabled={!sending || snapshot.state === 'cancelling'} onClick={cancel}>{t('cancel')}</button>
-        </form>
-        <p>{t('settled')}</p>
-      </>}
+          <ModelControls snapshot={snapshot} selectPreset={selectPreset} t={t} />
+          {hasConversation ? <ChatComposerSelect label={t('mode')} disabled value="">
+            <option value="">{t('modeUnavailable')}</option>
+          </ChatComposerSelect> : null}
+        </div>
+        <div className={css.toolbarActions}>
+          <ModelPickerControl snapshot={snapshot} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />
+          {sending
+            ? <ChatComposerButton kind="stop" label={t('cancel')} disabled={snapshot.state === 'cancelling'} onClick={cancel} />
+            : <ChatComposerButton kind="send" label={t('send')} type="submit"
+              disabled={!ready || snapshot.selected === undefined || draft.trim().length === 0} />}
+        </div>
+      </ChatComposerToolbar>
+    </ChatComposerCard>
+  </form>
+  return <>
+    <main className={css.page}>
+      <h1 className={css.visuallyHidden}>{t('title')}</h1>
+      <header className={css.header}>
+        <div className={css.heading}>
+          {selected === undefined ? null : <>
+            <strong className={css.sessionTitle}>{conversationTitle}</strong>
+            <Pill active>{t('chatMode')}</Pill>
+          </>}
+        </div>
+        <nav aria-label={t('conversationActions')} className={css.actions}>{renderSlot('native.conversation.actions', {})}</nav>
+      </header>
+      {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
+      {selected === undefined || !hasConversation
+        ? <section className={css.empty}>
+          <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="hero" state="idle"
+            characterLabel={t('petCharacter')} speech={t('petSpeech')}
+            pauseLabel={t('petPause')} enableMotionLabel={t('petEnableMotion')} resumeLabel={t('petResume')} />
+          <div className={css.welcome}>
+            <ChatWelcome eyebrow={t('heroEyebrow')} title={t('heroHeadline')} badge={t('heroPreview')}
+              tagline={t('heroTagline')} mark={<FishLogo size={34} />} />
+          </div>
+          <div className={css.contextRow}>
+            <button type="button" className={css.workspace} disabled>
+              <IconFolderOpen16 size={16} />
+              <span>{workspace}</span>
+              <IconChevronDownOutline14 size={12} />
+            </button>
+            <ChatComposerSelect label={t('mode')} disabled value="">
+              <option value="">{t('modeUnavailable')}</option>
+            </ChatComposerSelect>
+          </div>
+          {composer}
+        </section>
+        : <>
+          <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="floating" state={petState}
+            characterLabel={t('petCharacter')} speech={sending ? t('petThinking') : t('petSpeech')}
+            pauseLabel={t('petPause')} enableMotionLabel={t('petEnableMotion')} resumeLabel={t('petResume')} />
+          <div ref={scrollRef} className={css.scroll} onScroll={(event) => {
+            const element = event.currentTarget
+            followsTranscript.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
+          }}>
+            {todos === null ? null : <aside className={css.todos} aria-label={t('todos')}>
+              <h2>{t('todos')}</h2>
+              <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
+                <span>{t(todo.status)}</span>: {todo.content}
+              </li>)}</ul>
+            </aside>}
+            <section aria-label={t('facts')}>
+              <NativeTranscript snapshot={snapshot} sessionId={selected} locale={activeLocale} loadImage={loadImage}
+                markdownLabels={markdownLabels} imageGroupClassName={css.images} truncatedClassName={css.extra}
+                activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} />
+              {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
+                answerHuman={answerHuman} prompt={snapshot.human}
+                disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} /></div>}
+            </section>
+          </div>
+          <div className={css.composerArea}>{composer}</div>
+        </>}
     </main>
   </>
 }
