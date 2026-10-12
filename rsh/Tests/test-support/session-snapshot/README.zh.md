@@ -142,7 +142,7 @@ ACP harness 将生成 workspace 的原生路径、解析后路径及 JSON 转义
 
 ### 数据流
 
-场景在启动器下运行 agent，通过 harness 向它喂入输入脚本，并捕获 stdout 与持久化日志。规范化器把捕获内容规范化——id 转为首次出现序列，将 `subagent/external-operation` 记录中的 UUID `parentEpoch` 和 `rootEpoch` 转为 `{{epoch:n}}`，生成 cwd 转为 `{{cwd}}`、`system/message` 文本转为 `{{system}}`、header 工具 schema 转为 `{{tools}}`——使已录制与本次运行可以结构化比较。身份映射器只从这两个准确的操作字段分配 epoch token，并保留重复值关系。会话日志规范化器仅将 Engine 写入的 `subagent/external-start.data.startedAt`、六种 `subagent/external-operation` 变体根部的 `data.at` 以及 `subagent/external-end.data.finishedAt` 时钟归零；嵌套的同名时钟字段不会归零。随后工厂把规范化 stdout 与重新持久化日志同已提交 fixture 比较，或在录制/刷新模式下回写它们；其保护在任何比较结果被采信之前就拒绝畸形或漂移的 fixture。
+场景在启动器下运行 agent，通过 harness 向它喂入输入脚本，并捕获 stdout 与持久化日志。规范化器把捕获内容规范化——id 转为首次出现序列，将 `subagent/external-start` 和 `subagent/external-operation` 记录中的 UUID `parentEpoch` 和 `rootEpoch` 转为 `{{epoch:n}}`，生成 cwd 转为 `{{cwd}}`、`system/message` 文本转为 `{{system}}`、header 工具 schema 转为 `{{tools}}`——使已录制与本次运行可以结构化比较。身份映射器只从这两种生命周期记录的准确字段分配 epoch token，并保留重复值关系。会话日志规范化器仅将 Engine 写入的 `subagent/external-start.data.startedAt`、六种 `subagent/external-operation` 变体根部的 `data.at` 以及 `subagent/external-end.data.finishedAt` 时钟归零；嵌套的同名时钟字段不会归零。随后工厂把规范化 stdout 与重新持久化日志同已提交 fixture 比较，或在录制/刷新模式下回写它们；其保护在任何比较结果被采信之前就拒绝畸形或漂移的 fixture。
 
 </details>
 

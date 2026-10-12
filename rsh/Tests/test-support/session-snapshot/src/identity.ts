@@ -105,7 +105,8 @@ export function redactSessionSnapshotIds(logs: readonly string[]): string[] {
       if (record.type === 'feedback/message-put' && isRecord(record.data) && isRecord(record.data.item)) {
         claim(record.data.item.version, 'id')
       }
-      if (record.type === 'subagent/external-operation' && isRecord(record.data)) {
+      if ((record.type === 'subagent/external-start' || record.type === 'subagent/external-operation')
+        && isRecord(record.data)) {
         claim(record.data.parentEpoch, 'epoch')
         claim(record.data.rootEpoch, 'epoch')
       }
