@@ -103,6 +103,7 @@
     "lib/client.js",
     "lib/native.js",
     "lib/native-ui.module.css",
+    "lib/native-files.module.css",
     "lib/types/**/*.d.ts"
   ]
 }
