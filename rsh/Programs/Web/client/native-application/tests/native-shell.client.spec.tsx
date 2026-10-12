@@ -160,7 +160,11 @@ it('installs modular Native navigation, Session selection, details, locale and t
     }
     return { sessionId: sessionId as NativeSessionListItem['header']['id'] }
   })
-  const pickDirectory = vi.fn(async () => 'C:\\Work\\New')
+  const listDirectory = vi.fn(async () => ({
+    path: 'C:\\Work\\New', entries: [], crumbs: [
+      { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
+    ],
+  }))
   const workspaceClient: NativeWorkspaceClient = {
     async list() { return workspaceBaseline() },
     async *follow(signal) {
@@ -194,7 +198,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     close: vi.fn(async () => undefined),
   }
   const directoryPicker: NativeDirectoryPickerClient = {
-    pick: pickDirectory, list: vi.fn(), createDirectory: vi.fn(),
+    pick: vi.fn(), list: listDirectory, createDirectory: vi.fn(),
   }
   const close = vi.fn(async () => undefined)
   const clientMock = {
@@ -335,8 +339,10 @@ it('installs modular Native navigation, Session selection, details, locale and t
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
+    await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledWith('workspace-new', expect.any(AbortSignal)) })
-    expect(pickDirectory).toHaveBeenCalledWith(expect.any(AbortSignal))
+    expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\New' }, expect.any(AbortSignal))
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-in-workspace', expect.any(AbortSignal)) })
 
@@ -371,7 +377,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(document.documentElement.style.getPropertyValue('color-scheme')).toBe('')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('')
-    expect(mediaMock.removeEventListener).toHaveBeenCalledOnce()
+    expect(mediaMock.removeEventListener).toHaveBeenCalledTimes(2)
     expect(languageListeners.size).toBe(0)
     expect(close).toHaveBeenCalledOnce()
     expect(host.diagnostics().every(item => item.state === 'disposed' && item.cleanup === 'complete')).toBe(true)

@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本插件把 RedSpark 吉祥物变为可选的 Agent 状态展示。它持有桌宠持久化偏好，注册内置赤绯及正常版、Q版两种形态，占据欢迎首屏和活动会话中的 `conversation.pet`，并添加「通用 > 个性化 > 桌宠」控件。`ui-conversation` 只声明和摆放 slot，不认识任何角色、素材、设置或状态规则。
+本插件把 RedSpark 吉祥物变为可选的 Agent 状态展示。它持有桌宠持久化偏好，注册内置赤绯及正常版、Q版两种形态，占据欢迎首屏和活动会话中的 `conversation.pet`，并添加「通用 > 个性化 > 桌宠」控件。共享的零 Cordis `ChatMascotHero` 负责精灵布局与动效展示；本插件提供所选角色、活动状态与本地化文案。`ui-conversation` 只声明并摆放 slot，不认识任何角色、素材、设置或状态规则。
 
 ## 目录
 
