@@ -1,5 +1,5 @@
 /** Workspace instructions remain durable and nonduplicated through a cold SDK process restore. */
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { execa } from 'execa'
 import { createServer, type IncomingMessage } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -220,10 +220,11 @@ it('reuses durable workspace instructions across a cold-restored SDK Session', a
   }
   try {
     home = mkdtempSync(join(tmpdir(), 'dsh-native-sdk-scheduled-origin-'))
-    const workspace = join(home, 'workspace')
+    const workspacePath = join(home, 'workspace')
     const sessions = join(home, 'sessions')
     const patch = join(home, 'model.patch.json')
-    mkdirSync(workspace)
+    mkdirSync(workspacePath)
+    const workspace = realpathSync.native(workspacePath)
     mkdirSync(join(workspace, '.git'))
     writeFileSync(join(workspace, 'AGENTS.md'), `# Workspace fixture\n${workspaceInstruction}\n`)
     writeFileSync(join(home, 'AGENTS.md'), `# Isolated global fixture\n${globalInstruction}\n`)
@@ -388,9 +389,9 @@ it('reuses durable workspace instructions across a cold-restored SDK Session', a
     expect(idleIndex).toBeGreaterThan(endIndex)
 
     const redacted = redactSessionSnapshotIds([raw])[0] ?? raw
-    const normalized = normalizeSessionSnapshot(redacted, { sessionIds: [], cwd: join(home, 'workspace') }, { identityMode: 'preserve' })
-    const prompts = normalizedSystemPrompts(raw, { sessionIds: [], cwd: join(home, 'workspace') })
-    const schemas = normalizedToolSchemas(raw, { sessionIds: [], cwd: join(home, 'workspace') })
+    const normalized = normalizeSessionSnapshot(redacted, { sessionIds: [], cwd: workspace }, { identityMode: 'preserve' })
+    const prompts = normalizedSystemPrompts(raw, { sessionIds: [], cwd: workspace })
+    const schemas = normalizedToolSchemas(raw, { sessionIds: [], cwd: workspace })
     if (prompts[0] === undefined || schemas[0] === undefined) {
       throw new Error('native SDK scheduled-origin: model request header missing')
     }

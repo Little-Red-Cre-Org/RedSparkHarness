@@ -42,6 +42,10 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Prepare Linux workspace-write sandbox
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
       - name: Build Web and desktop sources
         run: pnpm run build
       - name: Typecheck
