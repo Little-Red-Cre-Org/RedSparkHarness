@@ -42,20 +42,30 @@ export function ChatUserMessage({ attachments, bubble, summary, actions, pending
   )
 }
 
-/** Frame assistant Markdown and preserve the streaming state for CSS.
- * @param props - message content, streaming state and durable event sequence.
+/** Frame assistant Markdown, optional actions and streaming state.
+ * @param props - message content, actions, streaming state and durable event sequence.
  * @returns assistant message frame.
  */
-export function ChatAssistantMessage({ children, streaming, eventSeq }: {
+export function ChatAssistantMessage({ children, streaming, eventSeq, actions }: {
   children: ReactNode
   streaming?: boolean
   eventSeq?: number
+  actions?: ReactNode
 }) {
   return (
     <div className={css.assistantRoot} data-streaming={streaming || undefined} data-event-seq={eventSeq}>
       <div className={css.assistantBody}>{children}</div>
+      {actions == null ? null : <div className={css.assistantActions}>{actions}</div>}
     </div>
   )
+}
+
+/** Group transcript rows that belong to one durable turn.
+ * @param props - turn number and its ordered messages and Tool cards.
+ * @returns one visually grouped turn.
+ */
+export function ChatTurnGroup({ turn, children }: { turn: number; children: ReactNode }) {
+  return <div className={css.turnGroup} data-chat-turn={turn}>{children}</div>
 }
 
 /** Render the compact activity label shared by the legacy and Native chat views.

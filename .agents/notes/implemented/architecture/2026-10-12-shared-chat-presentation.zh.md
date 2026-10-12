@@ -10,9 +10,9 @@ Status: implemented
 
 ## Decision
 
-`ui-primitives` 持有无 Cordis 的聊天展示组件及其 token 样式。Legacy chat 与 Native conversation 共用相同的转录节奏、用户气泡、助手 Markdown 外框、运行中轮次标签、composer 卡片与工具栏控件、欢迎页主视觉和吉祥物舞台。每种组合仍自行持有数据投影、操作和本地化文案。Native 根级 Tool 卡片与持久图片 renderer 仍由调用方持有。Native 当前显示内置吉祥物图集，不读取桌宠偏好或自定义形态。
+`ui-primitives` 持有无 Cordis 的聊天展示组件及其 token 样式。Legacy chat 与 Native conversation 共用相同的转录节奏、用户气泡、助手 Markdown 外框、折叠推理行、消息复制操作、运行中轮次标签、composer 卡片与工具栏控件、欢迎页主视觉和吉祥物舞台。`ui-chat` 的旧 ReasoningRow 和 MessageIconActions 适配器复用共享的推理展示与操作行。Native 按轮次分组持久化消息和根级 Tool 卡片，并从 Session 事件投影每条助手消息的用量、耗时和时间。每种组合仍自行持有数据投影和本地化文案。Native 根级 Tool 卡片与持久图片 renderer 仍由调用方持有。对话标题读取 Native 会话列表中的 Session 标题，并用 pill 标记固定的对话视图；右侧详情操作仍由 slot 提供。Native 当前显示内置吉祥物图集，不读取桌宠偏好或自定义形态。
 
-Native composer 只展示选定 Host Consumer 已公布的数据与操作。Native 对话状态提供模式之前，模式将显示为禁用的选择器；本次变更不增加 Host API。
+Native composer 只展示选定 Host Consumer 已公布的数据与操作。Native 对话状态提供模式之前，模式选择保持禁用；标题中的 Chat pill 只标识固定视图，不切换模式。本次变更不增加 Host API。
 
 ## Alternatives considered
 
@@ -24,4 +24,4 @@ Native composer 只展示选定 Host Consumer 已公布的数据与操作。Nati
 
 ## Consequences
 
-共享包新增公开展示组件，但不持有 Session 事实或操作。Native 保留既有 append-origin 转录、模型控件、审批流程、Tool 卡片和图片加载。当前 Native consumer 未提供状态或操作的功能仍不可用，包括模式与计划选择、命令补全以及排队/引导控件。
+共享包持有展示与剪贴板复制行为，但不持有 Session 事实或 Host 操作。Native 保留既有 append-origin 投影、模型控件、审批流程、Tool 卡片和图片加载。当前 Native consumer 未提供状态或操作的功能仍不可用，包括模式与计划选择、轨迹导航、消息反馈、命令补全以及排队/引导控件。
