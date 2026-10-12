@@ -81,6 +81,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
 
 /** Published type imports whose provider must be installed by the consumer. */
 const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
+  '@deepseek-ai/dsh-client-ui-user-questions': ['@deepseek-ai/dsh-user-questions'],
   '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
   '@deepseek-ai/dsh-session-log-export': [
     '@deepseek-ai/dsh-attachment',
@@ -186,8 +187,9 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 
 /** Client runtime peers whose values must resolve to the shared application instances. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-client-ui-tool': ['react'],
   '@deepseek-ai/dsh-client-ui-approval': ['react'],
+  '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
+  '@deepseek-ai/dsh-client-ui-tool': ['react'],
   '@deepseek-ai/dsh-client-ui-attachment': ['react'],
   '@deepseek-ai/dsh-client-ui-goal': ['react'],
   '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
@@ -200,6 +202,7 @@ export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly strin
     '@deepseek-ai/dsh-client-native-session',
     '@deepseek-ai/dsh-client-ui-tool',
     '@deepseek-ai/dsh-client-ui-approval',
+    '@deepseek-ai/dsh-client-ui-user-questions',
     '@deepseek-ai/dsh-tool-todo',
   ],
   '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
@@ -237,7 +240,8 @@ const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-goal/projection': ['foldGoal'],
   '@deepseek-ai/dsh-client-ui-primitives': [
     'Button', 'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
-    'IconChevronLeftOutline14', 'IconChevronRightOutline14', 'IconCloseFill14', 'IconCloseOutline16',
+    'IconCheckOutline14', 'IconChevronDownOutline14', 'IconChevronLeftOutline14', 'IconChevronRightOutline14',
+    'IconChevronUpOutline14', 'IconCloseFill14', 'IconCloseOutline16',
     'IconCodeOutline16', 'IconEditOutline16', 'IconGoalOutline16', 'IconInspectOutline12', 'IconSearchOutline16', 'IconSparkle16',
     'ReadBlock', 'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension', 'fileSizeText',
     'IconSettingsOutline16', 'IconUserOutline16', 'JsonTree', 'MarkdownText', 'Tooltip', 'extractMarkdownPlainText',

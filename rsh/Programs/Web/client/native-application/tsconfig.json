@@ -60,6 +60,9 @@
       "path": "../ui-approval"
     },
     {
+      "path": "../ui-user-questions"
+    },
+    {
       "path": "../ui-attachment"
     },
     {

@@ -1,57 +1,24 @@
 /** Human input cards project pending Host requests without Session write authority. */
-import { useState } from 'react'
 import { NativeApprovalCard } from '@deepseek-ai/dsh-client-ui-approval/native'
+import { NativeQuestionComposer } from '@deepseek-ai/dsh-client-ui-user-questions/native'
 import type { NativeWebHumanPrompt } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeConversationController } from './controller.ts'
-import type { ConversationLocaleKey } from './locales.ts'
-import css from './human.module.css'
 
-/** Render one exact pending approval or question batch.
- * @param props - observed presentation, answer callback, submission state and locale.
- * @returns actionable pending request card.
+/** Render the Native approval or question presentation with the existing Host answer API.
+ * @param props - observed prompt, answer callback, submission state and locale.
+ * @returns the shared approval or question card.
  */
-export function HumanInteraction({ answerHuman, prompt, disabled, t, locale }: {
+export function HumanInteraction({ answerHuman, prompt, disabled, locale }: {
   answerHuman: NativeConversationController['answerHuman']
   prompt: NativeWebHumanPrompt
   disabled: boolean
-  t: (key: ConversationLocaleKey) => string
   locale: 'en' | 'zh'
 }) {
-  const [choices, setChoices] = useState<Record<string, readonly string[]>>({})
-  const [custom, setCustom] = useState<Record<string, string>>({})
   if (prompt.kind === 'approval') return <NativeApprovalCard
     presentationKey={String(prompt.id)} toolName={prompt.toolName} reason={prompt.reason}
     disabled={disabled} locale={locale}
     onAnswer={(outcome) => { void answerHuman(prompt, { kind: 'approval', outcome }) }} />
-  return <form className={css.card} aria-label={t('questions')} onSubmit={(event) => {
-    event.preventDefault()
-    if (disabled) return
-    void answerHuman(prompt, { kind: 'questions', answer: { answers: prompt.questions.map(question => ({
-      id: question.id, selected: [...choices[question.id] ?? []],
-      ...custom[question.id] ? { custom: custom[question.id] } : {},
-    })) } })
-  }}>
-    <h2>{t('questions')}</h2>
-    {prompt.questions.map(question => <fieldset className={css.fieldset} key={question.id} disabled={disabled}>
-      <legend>{question.header ?? question.question}</legend>
-      {question.header === undefined ? null : <p>{question.question}</p>}
-      {question.detail === undefined ? null : <pre className={css.detail}>{question.detail}</pre>}
-      {(question.options ?? []).map(option => <label className={css.option} key={option.label}>
-        <input type={question.multiSelect ? 'checkbox' : 'radio'} name={question.id}
-          checked={(choices[question.id] ?? []).includes(option.label)} onChange={(event) => {
-            setChoices({ ...choices, [question.id]: question.multiSelect
-              ? event.target.checked
-                ? [...choices[question.id] ?? [], option.label]
-                : (choices[question.id] ?? []).filter(label => label !== option.label)
-              : [option.label] })
-            if (!question.multiSelect) setCustom({ ...custom, [question.id]: '' })
-          }} />{option.label}{option.description === undefined ? null : <span> — {option.description}</span>}
-      </label>)}
-      <label className={css.other}>{t('other')}<textarea aria-label={t('other')} value={custom[question.id] ?? ''} onChange={(event) => {
-        setCustom({ ...custom, [question.id]: event.target.value })
-        if (!question.multiSelect) setChoices({ ...choices, [question.id]: [] })
-      }} /></label>
-    </fieldset>)}
-    <button className={css.button} type="submit" disabled={disabled}>{t('answer')}</button>
-  </form>
+  return <NativeQuestionComposer
+    requestKey={String(prompt.id)} questions={prompt.questions} disabled={disabled} locale={locale}
+    onAnswer={answer => answerHuman(prompt, { kind: 'questions', answer })} />
 }

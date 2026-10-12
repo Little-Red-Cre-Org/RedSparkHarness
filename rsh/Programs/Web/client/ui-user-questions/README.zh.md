@@ -35,6 +35,8 @@ kind: "package-reference"
 
 `plan-review` 意图——由 `dsh-plan-mode` 在 `exit_plan_mode` 审阅上设置——渲染等待审批卡片的布局：一条 `Plan review` 条带、计划作为可滚动的 markdown 主体，以及一行 `Chat about it` / `Refuse` / `Approve` 的决定操作。Approve 与 Refuse 用提问方自己的选项标签回答；`Chat about it` 以 `ASK_CANCELLED` 拒绝该等待，让编辑器归位，用户可以直接说出他想说的话。
 
+`./native` 入口通过 props 导出共享的问题 composer 和 plan-review 展示。Native 使用现有结构化答案响应 plan-review 意图；Native Host 答案 API 不支持仅取消单个问题，因此普通问题视图不显示关闭操作，plan-review 视图不显示 `Chat about it`。
+
 ### 失败与恢复
 
 通用提问流程把当前题号、已选标签、自定义文本和显式跳过状态保存在非持久化 slot 存储中；该存储归属对应会话，并以待处理请求的本地渲染标识为键。从会话 A 切换到 B 会重新挂载严格的会话级编辑器条目，但返回 A 时会复用 A 的存储并恢复未完成草稿。不同的请求标识读取空草稿，并在首次编辑时替换旧值；成功回答或取消会清除相符的值。请求是否仍在等待由主机保持权威。
@@ -91,6 +93,7 @@ kind: "package-reference"
 
 - **未提交草稿的生命周期限于当前页面与会话**：只要该会话作用域仍留在页面内，会话导航就会保留草稿；完整刷新页面、会话被裁剪，或待处理请求以新的本地标识重新交付时，则从空草稿开始。存储从不把草稿写入主机、`localStorage` 或磁盘。
 - **每次只有一个请求拥有编辑器**：后续待处理请求仍留在会话快照中，并在较早请求落定后显示。
+- **Native 无法关闭单个待处理问题**：`answerHuman` 接受答案，但不提供仅取消问题的操作；Native 对话仍可取消整轮。
 
 <a id="dev-note"></a>
 ### 开发备注

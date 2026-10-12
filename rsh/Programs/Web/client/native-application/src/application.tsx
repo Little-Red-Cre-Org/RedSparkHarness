@@ -182,7 +182,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
                 activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} />
               {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
                 answerHuman={answerHuman} prompt={snapshot.human}
-                disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} locale={activeLocale} /></div>}
+                disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
             </section>
           </div>
           <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>

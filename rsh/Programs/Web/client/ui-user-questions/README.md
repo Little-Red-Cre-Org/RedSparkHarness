@@ -35,6 +35,8 @@ A multi-select draft keeps its selected labels while the user opens or edits the
 
 A `plan-review` intent — set by `dsh-plan-mode` on the `exit_plan_mode` review — renders the waiting-approval card layout: a `Plan review` strip, the plan as the scrolling markdown body, and one decision row of `Chat about it` / `Refuse` / `Approve`. Approve and Refuse answer with the asker's own option labels; `Chat about it` rejects the wait as `ASK_CANCELLED`, returning the composer so the user can say what they want instead.
 
+The `./native` entry exports the shared question composer and plan-review presentation through props. Native uses the existing structured answer for plan-review intent; the Native Host answer API has no question-only cancellation, so its generic question view omits dismiss and its plan-review view omits `Chat about it`.
+
 ### Failure and recovery
 
 The generic question flow keeps its current page, selected labels, custom text, and explicit skips in a non-persisted Slot store scoped to the owning Session and keyed by the pending request's local render identity. Switching from Session A to B remounts the strict composer entry, but returning to A reuses A's store and restores the unfinished draft. A different request identity reads an empty draft and replaces the previous value on its first edit; a successful answer or cancellation clears the matching value. The host remains authoritative for whether the request is pending.
@@ -91,6 +93,7 @@ These limits define draft durability and composer ownership; they are current pa
 
 - **Unsubmitted drafts have page-and-Session lifetime** — Session navigation preserves them while that Session scope remains in the page, but a full page reload, Session pruning, or a newly delivered pending-request identity starts with an empty draft. The store never writes them to the Host, `localStorage`, or disk.
 - **One request owns the composer at a time** — later pending requests remain in the session snapshot and become visible after the earlier request resolves.
+- **Native cannot dismiss one pending question** — `answerHuman` accepts an answer but does not expose question-only cancellation; cancelling the full turn remains available from the Native conversation.
 
 <a id="dev-note"></a>
 ### Dev Note
