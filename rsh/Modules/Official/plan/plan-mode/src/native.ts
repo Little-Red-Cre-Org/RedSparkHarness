@@ -23,7 +23,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import { UserQuestionError } from '@deepseek-ai/dsh-user-questions/native'
 import type {} from './common.ts'
@@ -49,20 +49,43 @@ interface NativePlanState {
   notice: { readonly id: MessageId; readonly active: boolean } | undefined
 }
 
-/** Read-only view of one agent's plan mode. */
+/** Read-only plan-mode state for one Session. */
 export interface NativePlanModeState {
-  /** Agent whose session is reported. */
-  readonly agent: NativeAgent
   /** Last logged plan mode. */
   readonly active: boolean
   /** Selected mode awaiting the next accepted step, when one is pending. */
   readonly pending?: boolean
 }
 
-/** Native plan-mode capability: observe logged and pending state without selecting it. */
+/** Result of selecting plan mode through the Native Host. */
+export interface NativePlanModeSelection {
+  /** Last committed plan-mode value. */
+  readonly active: boolean
+  /** Selected value waiting for the next accepted step. */
+  readonly pending?: boolean
+  /** Outcome of this selection. */
+  readonly outcome: 'committed' | 'queued' | 'cancelled' | 'noop'
+}
+
+/** Native plan-mode capability over each attached root Session's logged and pending state. */
 export interface NativePlanMode {
-  /** Read the state of every attached agent. */
-  states(): readonly NativePlanModeState[]
+  /** Read the state of every attached agent.
+   * @returns attached agents with their logged and pending plan mode.
+   */
+  states(): readonly (NativePlanModeState & { readonly agent: NativeAgent })[]
+  /** Read one Session's logged mode and pending selection.
+   * @param sessionId - Session whose state is read.
+   * @param events - complete current Session event log.
+   * @returns the logged mode and any pending selection.
+   */
+  state(sessionId: SessionId, events: readonly SessionEvent[]): NativePlanModeState
+  /** Select plan mode using the same pending-step rules as `/plan`.
+   * @param owner - exact active root Session owner.
+   * @param active - requested plan-mode state.
+   * @param signal - cancellation for queued guidance and durable writes.
+   * @returns the committed or pending state and selection outcome.
+   */
+  select(owner: NativeActiveSessionOwner, active: boolean, signal: AbortSignal): Promise<NativePlanModeSelection>
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -224,11 +247,29 @@ export const plugin: NativePlugin = {
       })
       for (const owner of sessions.owners()) await attach(owner)
 
-      context.provide('planMode', {
+      const planMode: NativePlanMode = {
         states: () => [...states].map(([agent, { owner, state }]) => ({
           agent, ...selections.get(owner.session.id, view(owner, state)),
         })),
-      } satisfies NativePlanMode)
+        state(sessionId, events) {
+          const logged = events.findLast(event => event.type === 'plan/mode')
+          const active = logged?.type === 'plan/mode' ? logged.data.active : false
+          const pending = selections.pending(sessionId)
+          return pending === undefined ? { active } : { active, pending: pending.active }
+        },
+        async select(owner, active, signal) {
+          const entry = states.get(owner.agent)
+          if (entry === undefined || entry.owner !== owner || !owner.writerAvailable) {
+            throw new Error('plan-mode: exact writable root owner is not attached')
+          }
+          signal.throwIfAborted()
+          const selection = selections.select(owner.session.id, view(owner, entry.state), active)
+          if (selection.outcome === 'committed') await owner.flush()
+          await reconcile(owner, entry.state, signal)
+          return { ...selections.get(owner.session.id, view(owner, entry.state)), outcome: selection.outcome }
+        },
+      }
+      context.provide('planMode', planMode)
 
       context.effect(tools.registerValueTool({
         schema: {

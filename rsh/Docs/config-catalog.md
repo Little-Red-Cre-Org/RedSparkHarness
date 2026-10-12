@@ -1631,7 +1631,7 @@ export interface PresetSpec {
 
 Depends on: [`NativeApprovalPolicy`](../Engine/core/approval-definition/src/index.ts) · [`SandboxMode`](subsystems/sandbox.md)
 
-Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:125`](../Modules/Official/interaction/permission-presets/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:120`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 <a id="deepseek-aidsh-persona"></a>
 

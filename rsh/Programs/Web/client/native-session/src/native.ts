@@ -11,6 +11,9 @@ import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@d
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
+import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
+  type NativeModeControls, type NativePermissionControls, type NativePlanModeSelection } from './composer-controls.ts'
+export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
@@ -18,6 +21,10 @@ import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-a
 import { createNativeWorkspaceClients } from './workspaces.ts'
 import { NativeSessionRpcError } from './rpc-error.ts'
 export { NativeSessionRpcError } from './rpc-error.ts'
+import { nativeSubmissionRequestId as brandSubmissionRequestId } from './follow-types.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId as NativeSubmissionRequestIdType } from './follow-types.ts'
+export { nativeSubmissionRequestId } from './follow-types.ts'
+export type { NativePendingSubmission, NativeSubmissionRequestId, NativeSubmissionUpdate } from './follow-types.ts'
 export type {
   NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
   NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -497,6 +504,32 @@ export interface NativeSessionClient {
    * @returns current Host capability availability and provider-owned choices.
    */
   modelControls(signal?: AbortSignal): Promise<NativeModelControls>
+  /** Read the selected Session's current mode, mode choices and plan-mode state.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host mode facts and installed choices.
+   */
+  modeControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativeModeControls>
+  /** Select plan mode through the Host's durable and pending-step state machine.
+   * @param sessionId - selected stored Session.
+   * @param active - requested plan-mode state.
+   * @param signal - caller cancellation.
+   * @returns the Host's committed or pending state and outcome.
+   */
+  selectPlanMode(sessionId: SessionId, active: boolean, signal?: AbortSignal): Promise<NativePlanModeSelection>
+  /** Read the selected Session's current standing permission policy and choices.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns Host permission controls, or an unavailable result when no Provider is installed.
+   */
+  permissionControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativePermissionControls>
+  /** Select a standing permission preset without answering pending one-shot approvals.
+   * @param sessionId - selected stored Session.
+   * @param preset - configured permission preset id.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host persists the policy.
+   */
+  selectPermissionPreset(sessionId: SessionId, preset: string, signal?: AbortSignal): Promise<void>
   /** Persist a Session-local model/effort intent against its last observed revision.
    * @param sessionId - selected stored Session.
    * @param request - complete model choice and expected durable intent revision.
@@ -572,6 +605,37 @@ export interface NativeSessionClient {
     readonly events: readonly SessionEvent[]
     readonly inheritedEventCount: number
   }>
+  /** Submit one identified prompt to the active Session's next-turn inbox.
+   * @param sessionId - selected Session.
+   * @param prompt - non-empty text to run after the active turn.
+   * @param requestId - caller-generated stable identity reused as the durable message id.
+   * @param signal - cancellation before durable admission.
+   * @returns accepted queue placement; Host failures retain the request id in error details.
+   */
+  queue(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
+    signal?: AbortSignal): Promise<NativePendingSubmission>
+  /** Submit one identified prompt to the active Session's next-step inbox.
+   * @param sessionId - selected Session.
+   * @param prompt - non-empty text for the next model step.
+   * @param requestId - caller-generated stable identity reused as the durable message id.
+   * @param signal - cancellation before durable admission.
+   * @returns accepted steering placement; Host failures retain the request id in error details.
+   */
+  steer(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
+    signal?: AbortSignal): Promise<NativePendingSubmission>
+  /** Remove one identified request that is still waiting in a Host inbox.
+   * @param sessionId - selected Session.
+   * @param requestId - stable identity supplied when the request was queued or steered.
+   * @param signal - caller cancellation.
+   * @returns completion after the Host persists the removal.
+   */
+  dequeue(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, signal?: AbortSignal): Promise<void>
+  /** Read accepted submissions still waiting in either Host inbox.
+   * @param sessionId - selected Session.
+   * @param signal - caller cancellation.
+   * @returns pending queued and steering requests with their stable identities.
+   */
+  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<readonly NativePendingSubmission[]>
   /**
    * @param sessionId - selected identity.
    * @param text - human input.
@@ -882,6 +946,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     return undefined
   }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
+  if (endpoint === 'session/mode-controls') return nativeModeControlsSchema.parse(value)
+  if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
+  if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
   if (endpoint === 'session/commands') return nativeCommandCatalogSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
@@ -895,6 +962,21 @@ function decodeReply(endpoint: string, value: unknown): unknown {
       ...item.cwd === undefined ? {} : { cwd: item.cwd },
       ...item.snippet === undefined ? {} : { snippet: item.snippet },
     })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
+  }
+  if (endpoint === 'session/queue' || endpoint === 'session/steer') return pendingSubmission(value)
+  if (endpoint === 'session/dequeue') {
+    const data = fields(value)
+    if (Object.keys(data).length !== 1 || typeof data.requestId !== 'string' || data.requestId.length === 0) {
+      throw new TypeError('invalid native Session dequeue acknowledgement')
+    }
+    return undefined
+  }
+  if (endpoint === 'session/submissions') {
+    const data = fields(value)
+    if (Object.keys(data).length !== 1 || !Array.isArray(data.submissions)) {
+      throw new TypeError('invalid native Session submissions snapshot')
+    }
+    return { submissions: data.submissions.map(pendingSubmission) }
   }
   const data = fields(value)
   switch (endpoint) {
@@ -933,6 +1015,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/select-preset':
       if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
       break
+    case 'session/select-permission':
+      if (data.changed !== true) throw new TypeError('invalid native permission selection acknowledgement')
+      break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
         || !Number.isSafeInteger(data.inheritedEventCount) || data.inheritedEventCount < 0
@@ -966,6 +1051,10 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'submission-update' && (data.status === 'accepted' || data.status === 'rejected' || data.status === 'settled')
+    && typeof data.requestId === 'string' && data.requestId.length > 0 && Object.keys(data).length === 3) {
+    return { type: 'submission-update', status: data.status, requestId: brandSubmissionRequestId(data.requestId) }
+  }
   if (data.type === 'title-updated' && Object.keys(data).length === 1) return { type: 'title-updated' }
   if (data.type === 'human' && Object.keys(data).length === 2) return { type: 'human', prompt: nativeWebHumanSchema.parse(data.prompt) as NativeWebHumanPrompt }
   if (data.type === 'human-removed' && typeof data.id === 'string' && data.id.length > 0 && Object.keys(data).length === 2) return { type: 'human-removed', id: data.id as NativeWebHumanId }
@@ -977,6 +1066,14 @@ function followFrame(value: unknown): NativeSessionFollowFrame {
   if (data.type === 'text' && typeof data.text === 'string' && Object.keys(data).length === 2) return { type: 'text', text: data.text }
   if ((data.type === 'text-start' || data.type === 'settled') && Object.keys(data).length === 1) return { type: data.type }
   throw new TypeError('native Session follow: invalid frame')
+}
+
+function pendingSubmission(value: unknown): NativePendingSubmission {
+  const data = fields(value)
+  if (typeof data.requestId !== 'string' || data.requestId.length === 0
+    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
+    || Object.keys(data).length !== 3) throw new TypeError('invalid native Session pending submission')
+  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted' }
 }
 
 function objectConfig(input: unknown): Record<string, unknown> {
@@ -1224,6 +1321,12 @@ export function createNativeSessionClient(
     async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
     async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
+    modeControls: (sessionId, signal) => call('session/mode-controls', { sessionId }, signal),
+    selectPlanMode: (sessionId, active, signal) => call('session/select-plan-mode', { sessionId, active }, signal),
+    permissionControls: (sessionId, signal) => call('session/permission-controls', { sessionId }, signal),
+    async selectPermissionPreset(sessionId, preset, signal) {
+      await call('session/select-permission', { sessionId, preset }, signal)
+    },
     async selectModel(sessionId, request, signal) {
       await call('session/select-model', { sessionId, ...request }, signal)
     },
@@ -1235,6 +1338,18 @@ export function createNativeSessionClient(
       'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
+    queue: (sessionId, prompt, requestId, signal) =>
+      call('session/queue', { sessionId, prompt, requestId }, signal),
+    steer: (sessionId, prompt, requestId, signal) =>
+      call('session/steer', { sessionId, prompt, requestId }, signal),
+    async dequeue(sessionId, requestId, signal) {
+      await call('session/dequeue', { sessionId, requestId }, signal)
+    },
+    async submissions(sessionId, signal) {
+      return (await call<{ submissions: readonly NativePendingSubmission[] }>(
+        'session/submissions', { sessionId }, signal,
+      )).submissions
+    },
     prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
       const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError)
       pendingPrompts.add(pending)

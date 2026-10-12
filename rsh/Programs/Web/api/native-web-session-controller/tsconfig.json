@@ -51,6 +51,12 @@
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
+      "path": "../../../../Modules/Official/plan/plan-mode"
+    },
+    {
+      "path": "../../../../Modules/Official/interaction/permission-presets"
+    },
+    {
       "path": "../../../../Modules/Official/settings/settings"
     },
     {
@@ -82,9 +88,6 @@
     },
     {
       "path": "../../../../Core/storage/storage-domain"
-    },
-    {
-      "path": "../../../../Modules/Official/interaction/permission-presets"
     },
     {
       "path": "../../../../Modules/Official/sandbox/native-sandbox-policy"

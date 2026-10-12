@@ -10636,6 +10636,12 @@ importers:
       '@deepseek-ai/dsh-native-session-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-session-execution
+      '@deepseek-ai/dsh-permission-presets':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/interaction/permission-presets
+      '@deepseek-ai/dsh-plan-mode':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/plan/plan-mode
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -10682,9 +10688,6 @@ importers:
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../../host/native-web-assets
-      '@deepseek-ai/dsh-permission-presets':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/interaction/permission-presets
       '@deepseek-ai/dsh-storage':
         specifier: workspace:^
         version: link:../../../../Core/storage/storage
