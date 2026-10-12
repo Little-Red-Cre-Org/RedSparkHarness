@@ -32,7 +32,13 @@ kind: "package-reference"
 
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
+`commands(sessionId, signal?)` 通过 `session/commands` 读取所选 Session 的命令描述符，包括各命令可选的输入提示和附件支持信息。Client 会验证 Host 响应，且不缓存命令目录。
+
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
+
+`modeControls(sessionId, signal?)` 会读取当前 agent preset、已安装选项、持久化修订号与空白 Session 锁定状态。模式变更通过携带该修订号的 `selectPreset` 完成。同一响应还包含 plan mode 的可用性及当前或待应用状态；`selectPlanMode(sessionId, active, signal?)` 返回 Host 状态机的 `committed`、`queued`、`cancelled` 或 `noop` 结果。
+
+`permissionControls(sessionId, signal?)` 返回有效的常驻权限策略与已配置选项。`selectPermissionPreset(sessionId, preset, signal?)` 通过 Host 的确切 Session owner 持久化该选择；它不会回答待处理的一次性审批请求。未安装 permission Provider 时，读取结果为 `available: false`、`currentValue: null` 和空选项。
 
 `agentPresetsList(signal?)` 调用 `agent-presets/list` 并校验 Host 返回的 `{ default, presets }`。它同时包含 profile 独有的常驻组合和扫描到的原生目录；目录提供信任级别时，`source` 为 `system` 或 `user`，否则为 `profile`。Host 未安装 Registry 时返回 `default: null` 和空列表。
 
@@ -106,6 +112,8 @@ interface NativeSettingsDescription {
 已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
+
+`queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求；`submissions(sessionId)` 返回待处理 inbox 的位置。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
 
 <a id="invariants"></a>
 

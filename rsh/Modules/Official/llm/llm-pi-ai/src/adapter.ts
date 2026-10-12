@@ -653,6 +653,7 @@ export class PiAiAdapter extends LlmAdapter {
           inputModalities: modelInfo.inputModalities ?? ['text'],
           identity: snapshot.codexIdentity.value,
           ...snapshot.codexIdentity.error === undefined ? {} : { identityError: snapshot.codexIdentity.error },
+          ...this.config.onCodexUsage === undefined ? {} : { onCodexUsage: this.config.onCodexUsage },
           headers: requestHeaders(profile.headers),
           timeoutMs: profile.timeoutMs,
           streamIdleTimeoutMs: profile.streamIdleTimeoutMs,

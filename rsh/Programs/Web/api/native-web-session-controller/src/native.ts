@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -29,9 +30,12 @@ import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/mod
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import { NativeAgentPresetError } from '@deepseek-ai/dsh-agent-presets/native'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permission-presets/native-definition'
+import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 
@@ -131,6 +135,13 @@ function errorMessage(error: unknown): string {
   return `${error.message}: ${error.errors.map(errorMessage).join('; ')}`
 }
 
+function submissionErrorDetails(endpoint: string, payload: unknown): Record<string, unknown> {
+  if (endpoint !== 'session/queue' && endpoint !== 'session/steer' && endpoint !== 'session/dequeue'
+    || payload === null || typeof payload !== 'object' || Array.isArray(payload)) return {}
+  const requestId = (payload as Record<string, unknown>)['requestId']
+  return typeof requestId === 'string' ? { requestId } : {}
+}
+
 function latestTurnState(events: readonly SessionEvent[]): {
   running: boolean
   completed: boolean
@@ -186,7 +197,9 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
-  'session/select-model', 'session/select-preset', 'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
+  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/answer-human', 'session/rename-title', 'session/refresh-title',
+  'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -226,6 +239,8 @@ export interface NativeWebSelectionProviders {
     readonly selection: NativeModelSelectionOperations
     readonly executionFor: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status' | 'runMaintenance'>
   } | undefined
+  readonly planMode?: NativePlanMode | undefined
+  readonly permissionPresets?: NativePermissionPresetOperations | undefined
   readonly presets?: NativeAgentPresetOperations | undefined
   readonly attachments?: AttachmentOperations | undefined
   readonly settings?: NativeSettingsService | undefined
@@ -278,6 +293,7 @@ export class NativeWebSessionService {
     settled: boolean
     feed: NativeSessionFeed | undefined
     following: boolean
+    submissions: Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>
   }>()
   private readonly human: NativeWebHumanInteraction
   private followers = 0
@@ -394,6 +410,7 @@ export class NativeWebSessionService {
     let admitted!: () => void
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
+    const submissions = new Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>()
     const execution = this.requests.run(this.lifetime, async (accepted) => {
       admitted()
       const turnSignal = AbortSignal.any([accepted, controller.signal])
@@ -410,7 +427,43 @@ export class NativeWebSessionService {
               preparationSignal.throwIfAborted()
               return createUserMessage({ source: { kind: 'user' }, content })
             } },
-          ...feed === undefined ? {} : { onEvent: (event) => { feed.push({ type: 'event', event }) }, onChunk: (chunk) => {
+          ...feed === undefined ? {} : { onEvent: (event) => {
+            feed.push({ type: 'event', event })
+            if (event.type === 'agent/inbox/spliced') {
+              for (const message of event.data.inserted) {
+                const requestId = brandString<NativeSubmissionRequestId>(message.id)
+                if (submissions.get(requestId) === 'submitting') {
+                  submissions.set(requestId, 'accepted')
+                  feed.push({ type: 'submission-update', requestId, status: 'accepted' })
+                }
+              }
+              if (event.data.outcome === 'canceled') {
+                const owner = this.active.owners().find(candidate => candidate.session.id === id
+                  && candidate.invocation === 'root' && candidate.writerAvailable)
+                const pendingIds = new Set(owner === undefined ? [] : [
+                  ...owner.messages('next-turn'), ...owner.messages('next-step'),
+                ].map(message => message.id))
+                for (const [requestId, status] of submissions) {
+                  if (status === 'accepted' && !pendingIds.has(MessageId(requestId))) {
+                    submissions.delete(requestId)
+                    feed.push({ type: 'submission-update', requestId, status: 'rejected' })
+                  }
+                }
+              }
+            }
+            if (event.type === 'user/message') {
+              const requestId = brandString<NativeSubmissionRequestId>(event.data.id)
+              if (submissions.get(requestId) === 'accepted') submissions.set(requestId, 'claimed')
+            }
+            if (event.type === 'turn/end') {
+              for (const [requestId, status] of submissions) {
+                if (status === 'claimed') {
+                  submissions.delete(requestId)
+                  feed.push({ type: 'submission-update', requestId, status: 'settled' })
+                }
+              }
+            }
+          }, onChunk: (chunk) => {
             if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
             if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
           } } }, turnSignal)
@@ -445,7 +498,7 @@ export class NativeWebSessionService {
     }).finally(() => { feed?.finish() })
     this.followTasks.add(followTask)
     void followTask.then(() => { this.followTasks.delete(followTask) })
-    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
+    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false, submissions }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
     const markSettled = (): void => { turn.settled = true; this.publishListChange(id) }
@@ -547,6 +600,91 @@ export class NativeWebSessionService {
     }, signal)
   }
 
+  private async commandCatalog(id: SessionId, signal: AbortSignal): Promise<unknown> {
+    const commands = this.selections.commands
+    const scope = this.selections.commandScope
+    if (commands === undefined || scope === undefined) throw new Error('native web session: command catalog is unavailable')
+    const visibleNames = new Set(commands.list(scope).map(command => command.name))
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, (owner) => {
+      if (this.executor.rootExecution.capture(owner).id !== route) {
+        throw new Error('native web session: command catalog requires this Program root owner')
+      }
+      return Promise.resolve({ commands: commands.list(owner.agent.scope).filter(command => visibleNames.has(command.name)) })
+    }, signal)
+  }
+
+  private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativePendingSubmission> {
+    const request = z.strictObject({
+      sessionId: z.string().min(1).max(256),
+      prompt: z.string().min(1).max(this.config.maxPromptChars),
+      requestId: z.string().min(1).max(256),
+    }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const turn = this.turns.get(id)
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (turn === undefined || turn.settled || turn.controller.signal.aborted || owner === undefined) {
+      throw new Error('native web session: queued submission requires an active browser turn')
+    }
+    this.executor.rootExecution.capture(owner)
+    const requestId = brandString<NativeSubmissionRequestId>(request.requestId)
+    if (turn.submissions.has(requestId)) throw new Error('native web session: duplicate submission request id')
+    const message = freezeMessage({ id: MessageId(request.requestId), role: 'user' as const, source: { kind: 'user' as const },
+      content: [{ type: 'text' as const, text: request.prompt }] })
+    turn.submissions.set(requestId, 'submitting')
+    try { await owner.enqueue(message, target, true, signal) }
+    catch (error: unknown) { turn.submissions.delete(requestId); throw error }
+    return { requestId, placement: target === 'next-turn' ? 'queued' : 'steering', status: 'accepted' }
+  }
+
+  private async dequeue(payload: unknown, signal: AbortSignal): Promise<{ requestId: NativeSubmissionRequestId }> {
+    const request = z.strictObject({ sessionId: z.string().min(1).max(256), requestId: z.string().min(1).max(256) }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const messageId = MessageId(request.requestId)
+    const remove = async (owner: NativeActiveSessionOwner): Promise<{ requestId: NativeSubmissionRequestId }> => {
+      for (const target of ['next-turn', 'next-step'] as const) {
+        if (owner.messages(target).some(message => message.id === messageId)) {
+          await owner.remove([messageId], target, signal)
+          return { requestId: brandString<NativeSubmissionRequestId>(request.requestId) }
+        }
+      }
+      throw new Error('native web session: pending submission not found')
+    }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return remove(owner)
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, remove, signal)
+  }
+
+  private async pendingSubmissions(id: SessionId, signal: AbortSignal): Promise<{ submissions: readonly NativePendingSubmission[] }> {
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return { submissions: this.projectPendingSubmissions(owner) }
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    const submissions = await this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
+      Promise.resolve(this.projectPendingSubmissions(activeOwner)), signal)
+    return { submissions }
+  }
+
+  private projectPendingSubmissions(owner: NativeActiveSessionOwner): readonly NativePendingSubmission[] {
+    return [
+      ...owner.messages('next-turn').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'queued' as const, status: 'accepted' as const })),
+      ...owner.messages('next-step').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'steering' as const, status: 'accepted' as const })),
+    ]
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -613,21 +751,31 @@ export class NativeWebSessionService {
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
+      if (endpoint === 'session/queue' || endpoint === 'session/steer') {
+        const target = endpoint === 'session/queue' ? 'next-turn' : 'next-step'
+        return { ok: true, value: await this.requests.run(signal, accepted => this.submit(payload, target, accepted)) }
+      }
+      if (endpoint === 'session/dequeue') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.dequeue(payload, accepted)) }
+      }
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
       }
-      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human' ? this.controls : this.requests
+      const admission = endpoint === 'session/cancel' || endpoint === 'session/status' || endpoint === 'session/answer-human'
+        || endpoint === 'session/mode-controls' || endpoint === 'session/permission-controls' ? this.controls : this.requests
       return { ok: true, value: await admission.run(signal, async (accepted) => {
         const fields = object(payload)
         const allowed = ['session/list', 'session/create', 'session/model-controls', 'agent-presets/list'].includes(endpoint) ? []
           : endpoint === 'session/search' ? ['query', 'cursor']
             : endpoint === 'session/select-model' ? ['sessionId', 'selected', 'expectedRevision']
               : endpoint === 'session/select-preset' ? ['sessionId', 'preset', 'expectedRevision']
-                : endpoint === 'session/rename-title' ? ['sessionId', 'title']
-                  : endpoint === 'session/refresh-title' ? ['sessionId']
-                    : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
-                      : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
+                : endpoint === 'session/select-plan-mode' ? ['sessionId', 'active']
+                  : endpoint === 'session/select-permission' ? ['sessionId', 'preset']
+                    : endpoint === 'session/rename-title' ? ['sessionId', 'title']
+                      : endpoint === 'session/refresh-title' ? ['sessionId']
+                        : endpoint === 'session/answer-human' ? ['sessionId', 'admissionId', 'id', 'answer']
+                          : endpoint === 'session/cancel' ? ['sessionId', 'admissionId'] : ['sessionId']
         for (const key of Object.keys(fields)) if (!allowed.includes(key)) throw new Error(`native web session: unexpected field ${key}`)
         if (endpoint === 'agent-presets/list') return this.agentPresetsList()
         if (endpoint === 'session/model-controls') {
@@ -642,6 +790,57 @@ export class NativeWebSessionService {
             presets: this.selections.presets?.list().map(({ id, name, description }) => ({ id, name,
               ...description === undefined ? {} : { description } })) ?? [],
           }
+        }
+        if (endpoint === 'session/mode-controls') {
+          const id = sessionId(fields.sessionId)
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          }, accepted)
+          const facts = foldNativeAgentPresetFacts(history.header, history.events)
+          const presets = this.selections.presets?.list() ?? []
+          const planMode = this.selections.planMode
+          const planState = planMode?.state(id, history.events)
+          return {
+            current: facts.preset,
+            options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+              ...description === undefined ? {} : { description } })),
+            revision: facts.revision,
+            locked: facts.locked,
+            canSelect: presets.length > 0 && !facts.locked,
+            planMode: { available: planMode !== undefined, ...(planState === undefined
+              ? { active: false }
+              : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
+          }
+        }
+        if (endpoint === 'session/permission-controls') {
+          const id = sessionId(fields.sessionId)
+          const history = await readNativeSessionHistory(id, {
+            active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
+            label: 'native web session', onCleanupFailure: (error) => { this.controls.recordCleanupFailure(error) },
+          }, accepted)
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) return { available: false, currentValue: null, options: [] }
+          return { available: true, ...await permissions.controls(history.events, accepted) }
+        }
+        if (endpoint === 'session/select-plan-mode') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.active !== 'boolean') throw new TypeError('native web session: plan mode must be boolean')
+          const planMode = this.selections.planMode
+          if (planMode === undefined) throw new Error('native web session: plan mode is unavailable')
+          const route = await this.routeForSession(id, accepted)
+          return await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => planMode.select(owner, fields.active as boolean, operationSignal), accepted)
+        }
+        if (endpoint === 'session/select-permission') {
+          const id = sessionId(fields.sessionId)
+          if (typeof fields.preset !== 'string' || fields.preset.length === 0) throw new TypeError('native web session: invalid permission preset')
+          const permissions = this.selections.permissionPresets
+          if (permissions === undefined) throw new Error('native web session: permission presets are unavailable')
+          const route = await this.routeForSession(id, accepted)
+          await this.executor.executeSessionOperation({ id, resume: true, route },
+            (owner, operationSignal) => permissions.apply(owner, fields.preset as string, operationSignal), accepted)
+          return { changed: true }
         }
         if (endpoint === 'session/list') return this.listSessions(accepted)
         if (endpoint === 'session/search') return this.searchSessions(payload, accepted)
@@ -706,6 +905,8 @@ export class NativeWebSessionService {
           active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
           label: 'native web session', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
         }, accepted)
+        if (endpoint === 'session/commands') return this.commandCatalog(id, accepted)
+        if (endpoint === 'session/submissions') return this.pendingSubmissions(id, accepted)
         if (endpoint === 'session/answer-human') {
           accepted.throwIfAborted()
           const turn = this.turns.get(id)
@@ -755,7 +956,8 @@ export class NativeWebSessionService {
       if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
         return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: errorMessage(error), details: {} } }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session',
+        message: errorMessage(error), details: submissionErrorDetails(endpoint, payload) } }
     }
   }
 
@@ -1114,7 +1316,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -1171,6 +1373,7 @@ export const plugin: NativePlugin = {
       const service = new NativeWebSessionService(executor, context.require('sessionPersistence'), context.require('activeSessions'), config, context.signal,
         { directory: context.optional('modelDirectory'), defaultModel: readDefaultModel,
           presets: context.optional('agentPresets'), attachments: context.optional('attachments'),
+          planMode: context.optional('planMode'), permissionPresets: context.optional('permissionPresets'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           workspaceRegistry,

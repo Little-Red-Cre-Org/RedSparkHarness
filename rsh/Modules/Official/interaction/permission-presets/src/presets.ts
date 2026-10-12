@@ -2,6 +2,13 @@
 import type { NativeApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
 
+/**
+ * Derived current value when effective knobs match no configured preset.
+ * Clients may show it as the current value, but it is never a switch target
+ * or event payload.
+ */
+export const CUSTOM_PRESET = 'custom'
+
 /** One sandbox/approval bundle and optional client presentation. */
 export interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
