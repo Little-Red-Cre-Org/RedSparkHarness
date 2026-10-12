@@ -211,6 +211,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Programs/Web/client/ui-attachment', ['client']],
+  ['rsh/Programs/Web/client/ui-goal', ['client']],
   ['rsh/Programs/Web/client/ui-trajectory', ['client']],
   ['rsh/Modules/Official/spill/spill', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
@@ -303,7 +304,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session/session-title', ['./normalize', './types']],
   ['rsh/Engine/session-query/session-query', ['./source', './definition']],
   ['rsh/Engine/session-query/session-query-sqlite', ['./core']],
-  ['rsh/Engine/goal/goal', ['./types']],
+  ['rsh/Engine/goal/goal', ['./types', './projection']],
   ['rsh/Modules/Official/interaction/commands', ['./facts', './brand']],
   ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy', './native-types']],
   ['rsh/Programs/Web/client/ui-tool', ['./tool-renderer']],
