@@ -386,7 +386,7 @@ export class PiAiAdapter extends LlmAdapter {
     this.snapshot = undefined
   }
 
-  /** Cancel catalog work and drain credential resolutions and Native transports. */
+  /** Cancel catalog work, drain credential resolutions and Native transports, then report close failures. */
   dispose(): Promise<void> {
     if (this.disposeResult !== undefined) return this.disposeResult
     this.snapshot = undefined
@@ -395,15 +395,15 @@ export class PiAiAdapter extends LlmAdapter {
     const credentialWork = [...this.credentialResolutions]
     this.disposeResult = Promise.all([
       Promise.allSettled(credentialWork),
-      Promise.allSettled(closing).then((results) => {
-        for (const result of results) {
-          if (result.status !== 'rejected') continue
-          const failure: unknown = result.reason
-          if (failure instanceof Error) throw failure
-          throw new Error('llm-pi-ai failed to close a Native Responses transport')
-        }
-      }),
-    ]).then(() => undefined)
+      Promise.allSettled(closing),
+    ]).then(([, results]) => {
+      for (const result of results) {
+        if (result.status !== 'rejected') continue
+        const failure: unknown = result.reason
+        if (failure instanceof Error) throw failure
+        throw new Error('llm-pi-ai failed to close a Native Responses transport')
+      }
+    })
     return this.disposeResult
   }
 
