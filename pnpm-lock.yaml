@@ -11383,9 +11383,6 @@ importers:
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
-      '@deepseek-ai/dsh-agent-presets':
-        specifier: workspace:^
-        version: link:../../../../Engine/preset/agent-presets
       '@deepseek-ai/dsh-authorization':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/authorization

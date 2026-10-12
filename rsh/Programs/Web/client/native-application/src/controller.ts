@@ -5,14 +5,18 @@ import type {
 import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeModeControls, NativePermissionControls } from '@deepseek-ai/dsh-client-native-session/native'
 import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
-import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Settled durable history and the Client's outstanding operation. */
 export interface ConversationSnapshot {
   readonly header?: SessionHeader | undefined
   readonly modelControls?: NativeModelControls | undefined
+  /** Host-owned choices for this Session's agent mode and plan mode. */
+  readonly modeControls?: NativeModeControls | undefined
+  /** Host-owned current permission policy and choices for this Session. */
+  readonly permissionControls?: NativePermissionControls | undefined
   readonly human?: NativeWebHumanPrompt | undefined
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
@@ -86,8 +90,21 @@ export class NativeConversationController {
   }
 
   private async restore(id: SessionId): Promise<void> {
+    // The Host rejects concurrent reads of one Session as busy, so read in sequence.
     const history = await this.client.history(id, this.lifetime.signal)
-    this.publish({ selected: id, header: history.header, events: history.events })
+    const modeControls = await this.client.modeControls(id, this.lifetime.signal)
+    const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
+    this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls })
+  }
+
+  private async refreshModeControls(id: SessionId): Promise<void> {
+    const modeControls = await this.client.modeControls(id, this.lifetime.signal)
+    if (!this.lifetime.signal.aborted && this.snapshot.selected === id) this.publish({ modeControls })
+  }
+
+  private async refreshPermissionControls(id: SessionId): Promise<void> {
+    const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
+    if (!this.lifetime.signal.aborted && this.snapshot.selected === id) this.publish({ permissionControls })
   }
 
   private startRosterFollow(): Promise<void> {
@@ -218,22 +235,72 @@ export class NativeConversationController {
     })
   }
 
-  /** Select a registered composition before the first turn locks the root epoch.
+  /** Select a registered mode before the first turn locks the root epoch.
    * @param preset - identifier advertised by the Host's standing registry.
-   * @returns completion after Program-owned Agent replacement and durable history refresh.
+   * @returns completion after Host selection and refreshed Session controls.
    */
   selectPreset(preset: string): Promise<void> {
     this.assertReady()
     const id = this.snapshot.selected
-    const header = this.snapshot.header
-    if (id === undefined || header === undefined) throw new Error('native conversation: select a Session')
-    const { revision, locked } = foldNativeAgentPresetFacts(header, this.snapshot.events)
-    if (locked) throw new Error('native conversation: preset is locked by the first turn')
+    const controls = this.snapshot.modeControls
+    if (id === undefined || controls === undefined) throw new Error('native conversation: mode controls unavailable')
+    if (controls.locked) throw new Error('native conversation: mode is locked by the first turn')
     this.publish({ state: 'loading', error: undefined })
     return this.run(async () => {
-      try { await this.client.selectPreset({ id, preset, expectedRevision: revision }, this.lifetime.signal) }
+      try { await this.client.selectPreset({ id, preset,
+        expectedRevision: controls.revision === null ? null : SessionSeq(controls.revision) }, this.lifetime.signal) }
       finally { if (!this.lifetime.signal.aborted) await this.restore(id) }
     })
+  }
+
+  /** Select a standing permission policy for the selected Session.
+   * @param preset - configured permission preset id.
+   * @returns completion after Host selection and a refreshed permission value.
+   */
+  selectPermissionPreset(preset: string): Promise<void> {
+    this.assertReady()
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.permissionControls?.available !== true) {
+      throw new Error('native conversation: permission controls unavailable')
+    }
+    this.publish({ state: 'loading', error: undefined })
+    return this.run(async () => {
+      try { await this.client.selectPermissionPreset(id, preset, this.lifetime.signal) }
+      finally { if (!this.lifetime.signal.aborted) await this.refreshPermissionControls(id) }
+    })
+  }
+
+  /** Change plan mode without changing the active turn's busy state.
+   * @param active - requested plan-mode state.
+   * @returns completion after the Host reply or after mode controls refreshes following a rejection.
+   */
+  selectPlanMode(active: boolean): Promise<void> {
+    const id = this.snapshot.selected
+    const controls = this.snapshot.modeControls
+    if (id === undefined || controls?.planMode.available !== true) {
+      throw new Error('native conversation: plan mode unavailable')
+    }
+    const work = (async () => {
+      try {
+        const result = await this.client.selectPlanMode(id, active, this.lifetime.signal)
+        if (this.snapshot.selected === id && this.snapshot.modeControls !== undefined) {
+          this.publish({ error: undefined, modeControls: { ...this.snapshot.modeControls,
+            planMode: { available: true, active: result.active,
+              ...result.pending === undefined ? {} : { pending: result.pending } } } })
+        }
+      } catch (error: unknown) {
+        this.publish({ error: error instanceof Error ? error.message : String(error) })
+        if (!this.lifetime.signal.aborted && this.snapshot.selected === id) {
+          try { await this.refreshModeControls(id) }
+          catch (refreshError: unknown) {
+            this.publish({ error: refreshError instanceof Error ? refreshError.message : String(refreshError) })
+          }
+        }
+      }
+    })()
+    this.pending.add(work)
+    void work.finally(() => { this.pending.delete(work) })
+    return work
   }
 
   /** Fetch a recorded image without changing execution readiness.

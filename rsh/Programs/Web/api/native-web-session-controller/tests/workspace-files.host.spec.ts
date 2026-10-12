@@ -1,4 +1,5 @@
 /** Native Session file RPCs stay inside the selected Session workspace. */
+import { renameSync, symlinkSync } from 'node:fs'
 import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,6 +10,7 @@ import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-sess
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import type { ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
+import { FsVersion, type FsTarget } from '@deepseek-ai/dsh-fs/types'
 import { NativeWebSessionService, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 function serviceFor(workspace: string, id: ReturnType<typeof SessionId>, fs: LocalFileSystemBackend): NativeWebSessionService {
@@ -29,6 +31,31 @@ function serviceFor(workspace: string, id: ReturnType<typeof SessionId>, fs: Loc
     undefined,
     fs,
   )
+}
+
+// Swap synchronously after containment returns so each test pins the race point.
+class SwapAfterContainmentFileSystem extends LocalFileSystemBackend {
+  didSwap = false
+
+  constructor(
+    config: ReturnType<typeof resolveLocalFilesystemConfig>,
+    private readonly targetPath: string,
+    private readonly swap: () => void,
+  ) { super(config) }
+
+  override contains(parent: FsTarget, child: FsTarget): boolean {
+    const contained = super.contains(parent, child)
+    if (contained && !this.didSwap && child.targetKey === this.targetPath) {
+      this.didSwap = true
+      this.swap()
+    }
+    return contained
+  }
+}
+
+function symlinkType(directory: boolean): 'dir' | 'file' | 'junction' {
+  if (process.platform === 'win32' && directory) return 'junction'
+  return directory ? 'dir' : 'file'
 }
 
 async function value(result: Promise<ConnectionRpcResult<unknown>>): Promise<unknown> {
@@ -84,6 +111,96 @@ it('rejects traversal and a path that resolves through a symlink outside the wor
       sessionId: id, path: 'base.txt', relativePath: '../outside/secret.txt',
     }, new AbortController().signal)).resolves.toMatchObject({ ok: false, error: { code: 'native/session-files' } })
   } finally {
+    await service.close()
+    await fs.close()
+    await rm(temp, { recursive: true, force: true })
+  }
+})
+
+it.each(['file', 'parent directory'] as const)('rejects a %s replaced by an outside symlink after containment', async (variant) => {
+  const temp = await mkdtemp(join(tmpdir(), 'dsh-native-session-files-'))
+  const workspace = join(temp, 'workspace')
+  const parentPath = join(workspace, 'nested')
+  const filePath = variant === 'file' ? join(workspace, 'secret.txt') : join(parentPath, 'secret.txt')
+  const movedPath = variant === 'file' ? join(workspace, 'secret.original') : join(workspace, 'nested.original')
+  const outside = join(temp, 'outside')
+  const outsideFile = join(outside, 'secret.txt')
+  await mkdir(workspace, { recursive: true })
+  await mkdir(outside)
+  if (variant === 'parent directory') await mkdir(parentPath)
+  await writeFile(filePath, 'inside')
+  await writeFile(outsideFile, 'outside secret')
+  let filesystem: LocalFileSystemBackend | undefined
+  let service: NativeWebSessionService | undefined
+  try {
+    const swappingFs = new SwapAfterContainmentFileSystem(
+      resolveLocalFilesystemConfig({ cwd: workspace }), filePath, () => {
+        if (variant === 'file') {
+          renameSync(filePath, movedPath)
+          symlinkSync(outsideFile, filePath, symlinkType(false))
+        } else {
+          renameSync(parentPath, movedPath)
+          symlinkSync(outside, parentPath, symlinkType(true))
+        }
+      })
+    filesystem = swappingFs
+    const id = SessionId(`workspace-${variant.replace(' ', '-')}-swap`)
+    service = serviceFor(workspace, id, swappingFs)
+    await expect(service.handle('session/files/read-all', {
+      sessionId: id, path: variant === 'file' ? 'secret.txt' : 'nested/secret.txt',
+    },
+    new AbortController().signal)).resolves.toMatchObject({ ok: false, error: { code: 'native/session-files' } })
+    expect(swappingFs.didSwap).toBe(true)
+  } finally {
+    await service?.close()
+    await filesystem?.close()
+    await rm(temp, { recursive: true, force: true })
+  }
+})
+
+it('lists the real workspace directory when Session cwd is a symlink', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'dsh-native-session-files-'))
+  const workspace = join(temp, 'workspace')
+  const cwd = join(temp, 'workspace-link')
+  await mkdir(workspace)
+  await writeFile(join(workspace, 'notes.txt'), 'notes')
+  await symlink(workspace, cwd, symlinkType(true))
+  const id = SessionId('workspace-files-symlink-cwd')
+  const fs = new LocalFileSystemBackend(resolveLocalFilesystemConfig({ cwd }))
+  const service = serviceFor(cwd, id, fs)
+  try {
+    await expect(value(service.handle('session/files/list', { sessionId: id, path: '.' }, new AbortController().signal)))
+      .resolves.toMatchObject({ path: '', entries: [{ name: 'notes.txt', type: 'file', size: 5 }] })
+  } finally {
+    await service.close()
+    await fs.close()
+    await rm(temp, { recursive: true, force: true })
+  }
+})
+
+it('filters outside observations and closes a workspace file follow on queue overflow', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'dsh-native-session-files-'))
+  const workspace = join(temp, 'workspace')
+  const outside = join(temp, 'outside')
+  await mkdir(workspace)
+  await mkdir(outside)
+  const id = SessionId('workspace-files-follow-overflow')
+  const fs = new LocalFileSystemBackend(resolveLocalFilesystemConfig({ cwd: workspace }))
+  const service = serviceFor(workspace, id, fs)
+  const reader = (await service.followWorkspaceFiles(new Request('http://localhost', {
+    method: 'POST', body: JSON.stringify({ sessionId: id }),
+  }))).body!.getReader()
+  try {
+    const ready = await reader.read()
+    expect(new TextDecoder().decode(ready.value)).toContain('"kind":"ready"')
+    const outsideTarget = await fs.resolve('other.txt', { cwd: outside })
+    const insideTarget = await fs.resolve('notes.txt', { cwd: workspace })
+    const observation = { kind: 'present' as const, version: FsVersion('follow-version') }
+    for (let index = 0; index < 100; index++) service.observeWorkspaceFile(outsideTarget, observation)
+    for (let index = 0; index < 100; index++) service.observeWorkspaceFile(insideTarget, observation)
+    await expect(reader.read()).resolves.toMatchObject({ done: true })
+  } finally {
+    await reader.cancel()
     await service.close()
     await fs.close()
     await rm(temp, { recursive: true, force: true })

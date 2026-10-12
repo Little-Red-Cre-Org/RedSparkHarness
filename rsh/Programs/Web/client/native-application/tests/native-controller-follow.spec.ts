@@ -120,6 +120,9 @@ it('isolates delayed frames and late carrier errors while retaining title roster
       }
     },
     async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
     async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
   }
   const controller = new NativeConversationController(client, { maxLiveTextChars: 1_000, maxLiveEvents: 100 })

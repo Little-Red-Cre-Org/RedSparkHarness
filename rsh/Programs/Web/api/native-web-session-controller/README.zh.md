@@ -34,7 +34,7 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 经过身份认证的 `session/commands` 端点接受 `{ sessionId }`，并返回所选 Session 确切 Program root Agent 可用的 `{ commands }`。每个有效描述符包含名称、说明，以及可选的输入提示和附件支持信息；查询会检查 Web Program 的命令可见性，但不会分派命令处理器。
 
-Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` 和 `read-related`，请求包含 `{ sessionId, path }`，必要时还包含 `range` 或 `relativePath`。Host 将每个路径（包括从基础文件目录解析的 `readRelated` 路径）限制在 Session 的 `cwd` 内；header 缺少 `cwd` 时使用所选 Workspace 或配置根目录。绝对路径以及解析到根目录外的路径或符号链接会以 `native/session-files` 失败。`list` 返回 `{ path, entries, truncated }`；`stat` 返回文件身份与版本；`read` 接受从 1 开始的行范围；完整读取返回 base64 字节。经过身份验证的 POST `/api/native-session/files-follow` 会为该根目录内由文件系统操作产生的观察发送 `ready` 和 `change` 帧；断开或取消会关闭流并释放跟随者槽位。
+Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` 和 `read-related`，请求包含 `{ sessionId, path }`，必要时还包含 `range` 或 `relativePath`。Host 将每个路径（包括从基础文件目录解析的 `readRelated` 路径）限制在 Session 的 `cwd` 内；header 缺少 `cwd` 时使用所选 Workspace 或配置根目录。绝对路径以及解析到根目录外的路径或符号链接会以 `native/session-files` 失败。Host 会先解析根目录，因此 Session `cwd` 是目录符号链接时也可列出 `.`。Host 会在每次打开文件或目录后重新解析路径并核对其与受限目标的文件身份；读取和 stat 使用该文件描述符，Linux 列表也从已打开的目录描述符枚举。`list` 返回 `{ path, entries, truncated }`；`stat` 返回文件身份与版本；`read` 接受从 1 开始的行范围；完整读取返回 base64 字节。经过身份验证的 POST `/api/native-session/files-follow` 会在入队前过滤观察，以 `maxFollowBufferBytes` 限制待发送 SSE 编码字节，并在超限时关闭；断开或取消也会关闭流并释放跟随者槽位。
 
 控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
 
@@ -42,9 +42,9 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
-`session/mode-controls` 从有界 Session 历史读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；它还会读取 plan mode 状态及待处理选择。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
+`session/mode-controls` 通过确切 root owner 读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。同一读取还会返回 plan mode 的可用性与状态。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
 
-`session/permission-controls` 从 Session 历史返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。该读取不会取得 Session 排他所有权，因此轮次进行时也可用。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
+`session/permission-controls` 返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
 
 `agent-presets/read` 返回一个目录的来源、状态、元数据与原始 `agent.native.json` 文本；profile 独有的组合没有文件内容。`agent-presets/copy` 将已就绪目录复制到 `<DSH_HOME>/.agent-presets`；`agent-presets/delete` 只删除用户目录。`agent-presets/can-open-directory` 报告 Host 打开器是否可用；`agent-presets/open-directory` 打开用户目录，或返回 Host 本地路径。找不到、格式无效和只读拒绝分别保留 `agent-preset/*` 错误码；其他管理失败使用 `native/agent-presets`，打开器失败使用 `native/agent-presets-directory`。文件操作完成后，Host 会在设置事件流发布 `agent-presets/updated`。
 
