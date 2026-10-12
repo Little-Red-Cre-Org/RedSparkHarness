@@ -29,6 +29,7 @@ import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-time-context/native'
+import type {} from '@deepseek-ai/dsh-tmux-context-definition'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
 import type { NativeToolApproval, NativeToolApprovalRequest, NativeToolExecution, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
@@ -45,6 +46,7 @@ import {
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
 import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
+import type { NativeTmuxContext } from '@deepseek-ai/dsh-tmux-context-definition'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
   callConfigEquals, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
@@ -341,6 +343,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly approval: NativeApprovalServiceDefinition | undefined,
     private readonly codeRuntime: NativeCodeRuntime | undefined,
     private readonly timeContext: NativeTimeContext | undefined,
+    private readonly tmuxContext: NativeTmuxContext | undefined,
     private readonly sessionExecution?: NativeSessionExecutionOperations,
     private readonly activeSessionRegistry?: NativeActiveSessionOperations,
     private readonly modelSelection?: NativeModelSelectionOperations,
@@ -623,6 +626,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         seedResident = !this.seededContinuations.has(resident)
         if (seedResident) {
           this.timeContext?.seed(session, stored.events)
+          this.tmuxContext?.seed(session, stored.events)
           this.agentInstructions?.seed(session, stored.events)
           this.seededContinuations.add(resident)
         }
@@ -634,6 +638,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         const lastTurn = restoredPrefix.findLast(event => event.type === 'turn/end')
         turn = lastTurn?.type === 'turn/end' ? lastTurn.data.turn + 1 : 1
         this.timeContext?.seed(session, restoredPrefix)
+        this.tmuxContext?.seed(session, restoredPrefix)
         this.agentInstructions?.seed(session, restoredPrefix)
       } else {
         const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
@@ -645,6 +650,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         session = Session.fromRestore(id, repaired, writer.header, writer.inheritedEventCount, stored.eventState,
           (event) => { pending.push(event) })
         this.timeContext?.seed(session, repaired)
+        this.tmuxContext?.seed(session, repaired)
         this.agentInstructions?.seed(session, stored.events)
         restoredPrefix = [...repaired, ...pending]
         acceptedPreset = foldNativeAgentPresetFacts(session.header, restoredPrefix).preset
@@ -691,6 +697,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       })
       const record = (event: SessionEvent): void => {
         this.timeContext?.record(session, event)
+        this.tmuxContext?.record(session, event)
       }
       const track = (event: SessionEvent): void => { owner.track(event) }
       const persist = (): Promise<void> => owner.persist()
@@ -864,6 +871,11 @@ export class NativeHeadlessApplication implements NativeApplication {
           const timeContext = this.timeContext?.prepare({ session, turn, step })
           if (timeContext !== undefined) {
             track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
+          }
+          const tmuxContext = await this.tmuxContext?.prepare({ session, turn, step, signal })
+          signal.throwIfAborted()
+          if (tmuxContext !== undefined) {
+            track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
           }
           const priorHeader = session.requestHeader()
           if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
@@ -2163,7 +2175,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
   const application = new NativeHeadlessApplication(
     context, context.require('fs'), context.require('sessionPersistence'), context.require('modelExecution'), resolveNativeHeadlessConfig(config), context.require('agents'),
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
-    context.optional('codeRuntime'), context.optional('timeContext'),
+    context.optional('codeRuntime'), context.optional('timeContext'), context.optional('tmuxContext'),
     authority === undefined ? context.optional('sessionExecution') : authority.execution,
     authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
     authority?.defaultModelSelection,
@@ -2177,7 +2189,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)
