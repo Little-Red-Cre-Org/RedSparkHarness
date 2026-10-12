@@ -83,10 +83,16 @@ export interface NativeTurnRequest {
   readonly onChunk?: (chunk: StreamChunk) => void
   /** Observe Session events after backend append; a failure interrupts the turn. */
   readonly onEvent?: (event: SessionEvent) => void
+  /** Capture this root admission's bounded history cursor after restore and before input is appended.
+   * @param owner - exact sole root Session writer.
+   * @param signal - composed caller, Agent and Program cancellation.
+   * @returns completion before this turn admits input; rejection refuses the input.
+   */
+  readonly onBaseline?: (owner: NativeActiveSessionOwner, signal: AbortSignal) => void | Promise<void>
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'onBaseline'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -745,6 +751,11 @@ export class NativeHeadlessApplication implements NativeApplication {
         throw new Error('native-headless: duplicate tool schema')
       }
       await persist()
+      if (request.onBaseline !== undefined) {
+        if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: root history baseline requires the active root owner')
+        await request.onBaseline(activeOwner, signal)
+        signal.throwIfAborted()
+      }
       if (operation !== undefined) {
         if (activeOwner === undefined) throw new Error('native-headless: Session operation requires the active Session Provider')
         try {

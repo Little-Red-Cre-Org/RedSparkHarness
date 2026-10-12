@@ -29,11 +29,11 @@ kind: "package-reference"
 
 ### 何时选择
 
-为明确选择的 Native Headless profile 选择此 Provider，并在同一组合中安装 shell 执行器。兼容 Agent pre-step 路径使用单独的 `dsh-tmux-context` 包。
+当明确选择的 Native Headless profile 需要读取 tmux 位置时，选择此 Provider。没有 `shell` 服务时不会添加位置消息。兼容 Agent pre-step 路径使用单独的 `dsh-tmux-context` 包。
 
 ### 最小配置
 
-随附 profile 已声明禁用行。此 overlay 启用该行并设置刷新下限；同一组合还必须安装 shell Provider：
+随附 profile 已声明禁用行。此 overlay 启用该行并设置刷新下限；要读取 tmux 位置，请在同一组合安装 `shell` Provider。没有该服务时，此 Provider 不会添加位置消息：
 
 ```json
 {

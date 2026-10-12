@@ -29,11 +29,11 @@ Install the Provider in a Native profile when model requests should include the 
 
 ### When to choose it
 
-Choose this Provider for an explicitly selected Native Headless profile that also installs a shell executor. Use the separate `dsh-tmux-context` package for the compatibility Agent pre-step path.
+Choose this Provider for an explicitly selected Native Headless profile when tmux readings should be available. Without a `shell` service it adds no location message. Use the separate `dsh-tmux-context` package for the compatibility Agent pre-step path.
 
 ### Minimal configuration
 
-The shipped profiles already declare a disabled row. This overlay enables it and sets a refresh floor; the same composition must also install a shell Provider:
+The shipped profiles already declare a disabled row. This overlay enables it and sets a refresh floor; install a `shell` Provider in the same composition for tmux readings. Without one, this Provider adds no location message:
 
 ```json
 {

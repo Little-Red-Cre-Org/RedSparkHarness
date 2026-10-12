@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
@@ -119,7 +119,7 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
       maxFollowers: 1, maxPendingHumanRequests: 2 }),
     new AbortController().signal)
   try {
-    const start = await service.handle('session/start', { sessionId: 'overflow-session', text: 'input', resume: true, follow: true }, new AbortController().signal)
+    const start = await service.handle('session/start', { sessionId: 'overflow-session', text: 'input', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
     if (!start.ok) throw new Error(start.error.message)
     await entered.promise
     let settled = false
@@ -138,6 +138,33 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
   }
 })
 
+it('sends a bounded baseline cursor before missing and buffered Session events', async () => {
+  const sessionId = SessionId('baseline-follow')
+  const feed = new NativeSessionFeed(10_000, () => { throw new Error('unexpected follow overflow') })
+  const beforeBaseline = { type: 'session/end-seed', seq: 0, time: 1, data: {} } as SessionEvent
+  const afterBaseline = { type: 'session/end-seed', seq: 2, time: 3, data: {} } as SessionEvent
+  feed.push({ type: 'event', event: beforeBaseline })
+  feed.push({ type: 'event', event: afterBaseline })
+  feed.setBaseline(sessionId, -1, [beforeBaseline, { type: 'session/end-seed', seq: 1, time: 2, data: {} } as SessionEvent])
+  feed.finish()
+
+  const reader = feed.response(new AbortController().signal, () => undefined).body!.getReader()
+  const frames: unknown[] = []
+  while (true) {
+    const result = await reader.read()
+    if (result.done) break
+    const serialized = new TextDecoder().decode(result.value).trim().slice('data: '.length)
+    frames.push(JSON.parse(serialized))
+  }
+  expect(frames).toEqual([
+    { type: 'baseline', sessionId, fromSeq: -1, throughSeq: 1 },
+    { type: 'event', event: beforeBaseline },
+    { type: 'event', event: { type: 'session/end-seed', seq: 1, time: 2, data: {} } },
+    { type: 'event', event: afterBaseline },
+    { type: 'settled' },
+  ])
+})
+
 it('queues and steers identified inputs through the active root inbox', async () => {
   const sessionId = SessionId('queued-submissions')
   const accepted = Promise.withResolvers<NativeTurnRequest>()
@@ -148,8 +175,9 @@ it('queues and steers identified inputs through the active root inbox', async ()
   let acceptedRequest!: NativeTurnRequest
   let seq = 0
   const owner = {
-    session: { id: sessionId }, invocation: 'root', writerAvailable: true,
+    agent: {}, session: { id: sessionId }, invocation: 'root', writerAvailable: true,
     onEvent: () => () => {},
+    readEvents: async () => [],
     messages: (target: 'next-turn' | 'next-step') => pending[target],
     enqueue: async (message: ReturnType<typeof createUserMessage>, target: 'next-turn' | 'next-step') => {
       pending[target].push(message)
@@ -165,11 +193,16 @@ it('queues and steers identified inputs through the active root inbox', async ()
     },
   }
   const active = {
-    owners: () => [owner], onAttached: () => () => {}, onDetached: () => () => {},
+    owners: () => [owner], owner: () => owner, onAttached: () => () => {}, onDetached: () => () => {},
   } as unknown as NativeActiveSessionOperations
   const executor = {
     rootExecution: { capture: () => ({ id: 'root' }) },
-    executeRootTurn: (request: NativeTurnRequest) => { acceptedRequest = request; accepted.resolve(request); return settled.promise },
+    async executeRootTurn(request: NativeTurnRequest, signal: AbortSignal) {
+      acceptedRequest = request
+      accepted.resolve(request)
+      await request.onBaseline?.(owner as unknown as NativeActiveSessionOwner, signal)
+      return settled.promise
+    },
     dispose: async () => undefined,
   } as unknown as NativeHeadlessApplication
   const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
@@ -177,7 +210,7 @@ it('queues and steers identified inputs through the active root inbox', async ()
       maxPendingRequests: 2, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 100000,
       maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal)
   try {
-    const started = await service.handle('session/start', { sessionId, text: 'current turn', resume: true, follow: true }, new AbortController().signal)
+    const started = await service.handle('session/start', { sessionId, text: 'current turn', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
     if (!started.ok) throw new Error(started.error.message)
     const request = await accepted.promise
     const queueId = 'queued-request'

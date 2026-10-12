@@ -42,8 +42,8 @@ export class NativeConversationController {
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
   private turn: AbortController | undefined
-  private foregroundAdmission: { readonly sessionId: SessionId } | undefined
-  private followErrorOwner: { readonly sessionId: SessionId } | undefined
+  private foregroundAdmission: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
+  private followErrorOwner: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private closing: Promise<void> | undefined
 
   /**
@@ -90,10 +90,10 @@ export class NativeConversationController {
   }
 
   private async restore(id: SessionId): Promise<void> {
-    // The Host rejects concurrent reads of one Session as busy, so read in sequence.
-    const history = await this.client.history(id, this.lifetime.signal)
+    // Controls can cold-open the Session and append its end-seed marker, so history is read last.
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
     const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
+    const history = await this.client.history(id, this.lifetime.signal)
     this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls })
   }
 
@@ -322,9 +322,10 @@ export class NativeConversationController {
     this.assertReady()
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
+    const lastSeq = this.snapshot.events.at(-1)?.seq ?? -1
     const turn = new AbortController()
     const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
-    const admission = { sessionId: id }
+    const admission = { sessionId: id, lastSeq }
     this.foregroundAdmission = admission
     this.followErrorOwner = admission
     this.turn = turn
@@ -368,7 +369,7 @@ export class NativeConversationController {
             if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
               this.publish({ error: error instanceof Error ? error.message : String(error) })
             }
-          })
+          }, lastSeq)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }
@@ -387,7 +388,14 @@ export class NativeConversationController {
     })
   }
 
-  private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId }): void {
+  private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId; readonly lastSeq: number }): void {
+    if (frame.type === 'baseline') {
+      if (this.foregroundAdmission !== admission || this.snapshot.selected !== admission.sessionId) return
+      if (frame.sessionId !== admission.sessionId || frame.fromSeq !== admission.lastSeq) {
+        throw new Error('native conversation: follow baseline does not match the selected Session history')
+      }
+      return
+    }
     if (frame.type === 'title-updated') {
       return
     }
@@ -397,7 +405,9 @@ export class NativeConversationController {
     else if (frame.type === 'event') {
       const last = this.snapshot.events.at(-1)?.seq
       if (last !== undefined && frame.event.seq <= last) return
-      if (last !== undefined && frame.event.seq !== last + 1) throw new Error('native conversation: live history sequence gap')
+      if (last !== undefined && frame.event.seq !== last + 1) {
+        throw new Error(`native conversation: live history sequence gap; expected ${last + 1}, received ${frame.event.seq} (${frame.event.type})`)
+      }
       if (this.snapshot.events.length >= this.limits.maxLiveEvents) throw new Error('native conversation: live history exceeds configured limit')
       this.publish({ events: [...this.snapshot.events, frame.event],
         ...frame.event.type === 'assistant/message' || frame.event.type === 'assistant/attempt' ? { liveText: undefined, liveTruncated: false } : {} })
