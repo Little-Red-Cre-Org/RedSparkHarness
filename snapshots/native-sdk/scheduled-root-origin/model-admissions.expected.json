@@ -1,5 +1,10 @@
 [
   {
+    "input": "Use the workspace instructions for this first turn.",
+    "outcome": "completed",
+    "taskScheduleToolVisible": false
+  },
+  {
     "input": "Report the result of this restored scheduled root.",
     "outcome": "completed",
     "taskScheduleToolVisible": false

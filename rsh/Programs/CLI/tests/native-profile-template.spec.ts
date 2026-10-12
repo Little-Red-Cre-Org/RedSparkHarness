@@ -164,11 +164,14 @@ it('defines a native-acp Host composition without Cordis rows', () => {
   expect(profile.installations.some(row => row.id === 'task-scheduler')).toBe(false)
 })
 
-it.each(['native-sdk', 'native-sdk-dsh-child', 'native-acp'] as const)('installs native list_agents explicitly in %s', (profileName) => {
+it.each(['native-sdk', 'native-sdk-dsh-child', 'native-acp'] as const)('installs native list_agents and workspace instructions in %s', (profileName) => {
   const profile = shippedNativeProfileComposition('C:/rsh-native-subagent', profileName, 'win32')
   expect(profile.installations.filter(row => row.id === 'subagent-directory')).toEqual([{
     id: 'subagent-directory', plugin: '@deepseek-ai/dsh-native-tool-subagent-list-agents', scope: 'root',
   }])
+  expect(profile.installations.find(row => row.id === 'agent-instructions')).toEqual({
+    id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { maxBytes: 65_536 },
+  })
 })
 
 it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 'native-acp', 'native-tui'] as const)(

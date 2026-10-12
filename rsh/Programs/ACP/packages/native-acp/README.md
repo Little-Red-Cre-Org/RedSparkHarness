@@ -48,7 +48,7 @@ The [native ACP decision](../../../../../.agents/notes/implemented/architecture/
 
 #### What the model sees
 
-Text, resource-link references and normalized image references admitted by `session/prompt` enter the durable Session inbox and reach the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). Resource links use the compatibility carrier's bracketed text with JSON-quoted name and URI; adjacent text concatenates without fetching the resource, preserving text/image order. Durable model choices affect subsequent request assembly through the selected Provider; protocol configuration notifications add no model input.
+Text, resource-link references and normalized image references admitted by `session/prompt` enter the durable Session inbox and reach the model through the [native Session executor](../../../../Engine/core/native-headless/README.md#model-experience). The shipped ACP composition also installs `dsh-agent-instructions`, whose workspace guidance is prepared through the selected filesystem Provider and persisted as a user message in that Session. Resource links use the compatibility carrier's bracketed text with JSON-quoted name and URI; adjacent text concatenates without fetching the resource, preserving text/image order. Durable model choices affect subsequent request assembly through the selected Provider; protocol configuration notifications add no model input.
 
 #### Token effect
 

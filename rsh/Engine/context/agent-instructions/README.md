@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-agent-instructions` gives agents workspace guidance from user-global and project-level `AGENTS.md`-compatible files. It loads the applicable chain for the first request. It does not watch external edits continuously: successful filesystem operations discover newly relevant nested files and make later changes or removals visible, while session resume reconciles the baseline. `dsh-base` enables this behavior by default, while profiles can disable it. A byte budget bounds the injected context: broader files are omitted before the most specific file is truncated, and an empty chain adds nothing.
+`dsh-agent-instructions` gives agents workspace guidance from user-global and project-level `AGENTS.md`-compatible files. It loads the applicable chain for the first request. It does not watch external edits continuously: successful filesystem operations discover newly relevant nested files and make later changes or removals visible, while session resume reconciles the baseline. `dsh-base` enables this behavior by default, while profiles can disable it. Shipped Native SDK, SDK-child and ACP profiles install it with a 65,536-byte budget through their selected filesystem Provider. The budget bounds injected context: broader files are omitted before the most specific file is truncated, and an empty chain adds nothing.
 
 ## Table of Contents
 
