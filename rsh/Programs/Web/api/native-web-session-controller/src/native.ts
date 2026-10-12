@@ -1,6 +1,11 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import { constants as fsConstants } from 'node:fs'
+import type { BigIntStats } from 'node:fs'
+import { open, opendir, readdir, stat } from 'node:fs/promises'
 import { posix, relative, sep, win32 } from 'node:path'
+import type { FileHandle } from 'node:fs/promises'
+import { TextDecoder } from 'node:util'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
@@ -39,7 +44,8 @@ import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-
 import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { FileSystemOperations, FsInfo, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
+import type { FileSystemOperations, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
+import { FsVersion } from '@deepseek-ai/dsh-fs/types'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {
   WorkspaceDirectoryEntry,
@@ -205,27 +211,51 @@ function searchSnippet(events: readonly SessionEvent[], query: string): string |
 }
 
 type WorkspaceFileObservation = readonly [target: FsTarget, observation: FsObservation]
+type QueuedWorkspaceFileFrame = { readonly frame: WorkspaceFileWatchFrame; readonly bytes: number }
 
-/** Queue observations that arrive while a Session root resolves or its Client is paused. */
+/** Queue only in-workspace frames while a Client is paused. */
 class WorkspaceFileObservationQueue {
-  private readonly values: WorkspaceFileObservation[] = []
-  private waiter: ((result: IteratorResult<WorkspaceFileObservation>) => void) | undefined
+  private readonly values: QueuedWorkspaceFileFrame[] = []
+  private waiter: ((result: IteratorResult<WorkspaceFileWatchFrame>) => void) | undefined
+  private bytes = 0
   private closed = false
 
-  next(): Promise<IteratorResult<WorkspaceFileObservation>> {
+  constructor(
+    private readonly maxBytes: number,
+    private readonly fs: FileSystemOperations,
+    private readonly root: FsTarget,
+    private readonly overflow: () => void,
+  ) {}
+
+  next(): Promise<IteratorResult<WorkspaceFileWatchFrame>> {
     const value = this.values.shift()
-    if (value !== undefined) return Promise.resolve({ done: false, value })
+    if (value !== undefined) {
+      this.bytes -= value.bytes
+      return Promise.resolve({ done: false, value: value.frame })
+    }
     if (this.closed) return Promise.resolve({ done: true, value: undefined })
     return new Promise((resolve) => { this.waiter = resolve })
   }
 
   push(value: WorkspaceFileObservation): void {
     if (this.closed) return
+    const [target, observation] = value
+    if (!this.fs.contains(this.root, target)) return
+    const absolutePath = this.fs.processPath(target)
+    const frame: WorkspaceFileWatchFrame = { kind: 'change', change: observation.kind === 'present'
+      ? { absolutePath, version: observation.version }
+      : { absolutePath, absent: true } }
+    const bytes = Buffer.byteLength(`data: ${JSON.stringify(frame)}\n\n`)
     const waiter = this.waiter
-    if (waiter === undefined) this.values.push(value)
-    else {
+    if (waiter !== undefined) {
       this.waiter = undefined
-      waiter({ done: false, value })
+      waiter({ done: false, value: frame })
+    } else if (this.bytes + bytes > this.maxBytes) {
+      this.close()
+      this.overflow()
+    } else {
+      this.values.push({ frame, bytes })
+      this.bytes += bytes
     }
   }
 
@@ -233,11 +263,12 @@ class WorkspaceFileObservationQueue {
     if (this.closed) return
     this.closed = true
     this.values.length = 0
+    this.bytes = 0
     this.waiter?.({ done: true, value: undefined })
     this.waiter = undefined
   }
 
-  async *read(signal: AbortSignal): AsyncIterable<WorkspaceFileObservation> {
+  async *read(signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame> {
     const stop = (): void => { this.close() }
     signal.addEventListener('abort', stop, { once: true })
     if (signal.aborted) stop()
@@ -251,6 +282,21 @@ class WorkspaceFileObservationQueue {
       signal.removeEventListener('abort', stop)
     }
   }
+}
+
+async function* workspaceFileText(file: FileHandle, signal: AbortSignal, path: string): AsyncIterable<string> {
+  const decoder = new TextDecoder('utf-8', { fatal: true })
+  let sampledBytes = 0
+  for await (const chunk of file.createReadStream({ autoClose: false, signal })) {
+    signal.throwIfAborted()
+    if (sampledBytes < 8192) {
+      const sample = chunk.subarray(0, Math.min(chunk.length, 8192 - sampledBytes))
+      if (sample.includes(0)) throw new Error(`"${path}" is not text`)
+      sampledBytes += sample.length
+    }
+    yield decoder.decode(chunk, { stream: true })
+  }
+  yield decoder.decode()
 }
 
 function workspaceFilePath(path: string, allowRoot = false): string {
@@ -656,7 +702,7 @@ export class NativeWebSessionService {
 
   /** Follow instrumented filesystem observations inside one Session workspace.
    * @param request - authenticated Fetch request with a Session id.
-   * @returns `ready` followed by workspace file change frames.
+   * @returns frames; closes if queued frame bytes exceed `maxFollowBufferBytes`.
    */
   async followWorkspaceFiles(request: Request): Promise<Response> {
     const fields = z.strictObject({ sessionId: z.string().min(1).max(256) }).parse(await request.json())
@@ -676,53 +722,65 @@ export class NativeWebSessionService {
       this.followers--
     }
     signal.addEventListener('abort', release, { once: true })
-    const iterator = this.followWorkspaceFileChanges(id, signal)[Symbol.asyncIterator]()
     const encoder = new TextEncoder()
+    let streamController: ReadableStreamDefaultController<Uint8Array> | undefined
+    let streamEnded = false
+    const end = (): void => {
+      disconnect.abort()
+      release()
+      if (streamEnded) return
+      streamEnded = true
+      streamController?.close()
+      void iterator.return?.()
+    }
+    const iterator: AsyncIterator<WorkspaceFileWatchFrame> = this.followWorkspaceFileChanges(id, signal, end)[Symbol.asyncIterator]()
     const body = new ReadableStream<Uint8Array>({
+      start(controller) { streamController = controller },
       async pull(controller) {
         try {
           const next = await iterator.next()
+          if (streamEnded) return
           if (next.done) {
             release()
+            streamEnded = true
             controller.close()
           } else controller.enqueue(encoder.encode(`data: ${JSON.stringify(next.value)}\n\n`))
         } catch (error: unknown) {
           release()
+          if (streamEnded) return
+          streamEnded = true
           controller.error(error)
         }
       },
       async cancel() {
         disconnect.abort()
         release()
+        streamEnded = true
         await iterator.return?.()
       },
     }, { highWaterMark: 0 })
     return new Response(body, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } })
   }
 
-  private async *followWorkspaceFileChanges(id: SessionId, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame> {
+  private async *followWorkspaceFileChanges(
+    id: SessionId, signal: AbortSignal, overflow: () => void,
+  ): AsyncIterable<WorkspaceFileWatchFrame> {
     signal.throwIfAborted()
-    const follower = new WorkspaceFileObservationQueue()
-    this.workspaceFileFollowers.add(follower)
+    let follower: WorkspaceFileObservationQueue | undefined
     const stop = (): void => {
-      follower.close()
-      this.workspaceFileFollowers.delete(follower)
+      follower?.close()
+      if (follower !== undefined) this.workspaceFileFollowers.delete(follower)
     }
     signal.addEventListener('abort', stop, { once: true })
-    if (signal.aborted) stop()
     try {
       const fs = this.requireFileSystem()
       const rootPath = await this.workspaceFileRoot(id, signal)
       const root = await fs.resolve(rootPath, { signal })
-      if (signal.aborted || !this.workspaceFileFollowers.has(follower)) return
+      if (signal.aborted) return
+      follower = new WorkspaceFileObservationQueue(this.config.maxFollowBufferBytes, fs, root, overflow)
+      this.workspaceFileFollowers.add(follower)
       yield { kind: 'ready' }
-      for await (const [target, observation] of follower.read(signal)) {
-        if (!fs.contains(root, target)) continue
-        const absolutePath = fs.processPath(target)
-        yield { kind: 'change', change: observation.kind === 'present'
-          ? { absolutePath, version: observation.version }
-          : { absolutePath, absent: true } }
-      }
+      for await (const frame of follower.read(signal)) yield frame
     } finally {
       signal.removeEventListener('abort', stop)
       stop()
@@ -895,9 +953,11 @@ export class NativeWebSessionService {
     const fs = this.requireFileSystem()
     const acceptedPath = workspaceFilePath(path, allowRoot)
     const root = await fs.resolve(rootPath, { signal })
-    const entry = await fs.lstat(acceptedPath, { cwd: rootPath }, signal)
+    const rootListing = allowRoot && acceptedPath === '.'
+    const entry = await fs.lstat(rootListing ? fs.processPath(root) : acceptedPath,
+      rootListing ? undefined : { cwd: rootPath }, signal)
     if (entry === undefined) throw new Error(`no entry at "${path}"`)
-    const target = await fs.resolve(acceptedPath, { cwd: rootPath, signal })
+    const target = rootListing ? root : await fs.resolve(acceptedPath, { cwd: rootPath, signal })
     if (!fs.contains(root, target)) throw new Error(`"${path}" is outside the Session workspace`)
     return { root, target, entry }
   }
@@ -905,22 +965,49 @@ export class NativeWebSessionService {
   private async locateWorkspaceFile(rootPath: string, path: string, signal: AbortSignal): Promise<{
     readonly root: FsTarget
     readonly target: FsTarget
-    readonly info: FsInfo
   }> {
-    const fs = this.requireFileSystem()
     const located = await this.inspectWorkspaceFilePath(rootPath, path, signal)
     if (located.entry.type !== 'file') throw new Error(`"${path}" is a ${located.entry.type}`)
-    const info = await fs.stat(located.target, signal)
-    if (info === undefined) throw new Error(`no entry at "${path}"`)
-    if (info.type !== 'file') throw new Error(`"${path}" is a ${info.type}`)
-    return { root: located.root, target: located.target, info }
+    return { root: located.root, target: located.target }
   }
 
-  private workspaceFileStat(target: FsTarget, info: FsInfo): WorkspaceFileStat {
+  private async verifyWorkspaceFileHandle(
+    root: FsTarget, target: FsTarget, file: FileHandle, signal: AbortSignal,
+  ): Promise<BigIntStats> {
+    const fs = this.requireFileSystem()
+    signal.throwIfAborted()
+    const resolved = await fs.resolve(fs.processPath(target), { signal })
+    if (!fs.contains(root, resolved)) throw new Error('opened file is outside the Session workspace')
+    const current = await stat(fs.processPath(resolved), { bigint: true })
+    const opened = await file.stat({ bigint: true })
+    if (opened.dev !== current.dev || opened.ino !== current.ino) {
+      throw new Error('workspace file changed while opening')
+    }
+    return opened
+  }
+
+  private async openWorkspaceFile(
+    root: FsTarget, target: FsTarget, signal: AbortSignal, directory = false,
+  ): Promise<{ readonly file: FileHandle; readonly info: BigIntStats }> {
+    signal.throwIfAborted()
+    const path = this.requireFileSystem().processPath(target)
+    const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0)
+      | (directory ? fsConstants.O_DIRECTORY ?? 0 : 0)
+    const file = await open(path, flags)
+    try {
+      const info = await this.verifyWorkspaceFileHandle(root, target, file, signal)
+      return { file, info }
+    } catch (error: unknown) {
+      await file.close()
+      throw error
+    }
+  }
+
+  private workspaceFileStat(target: FsTarget, info: BigIntStats): WorkspaceFileStat {
     return {
       absolutePath: this.requireFileSystem().processPath(target),
-      version: info.version,
-      ...info.size === undefined ? {} : { bytes: info.size },
+      version: FsVersion(`${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`),
+      bytes: Number(info.size),
     }
   }
 
@@ -934,53 +1021,124 @@ export class NativeWebSessionService {
     return { offset, limit }
   }
 
-  private async cutWorkspaceFilePage(target: FsTarget, offset: number, limit: number, signal: AbortSignal, path: string): Promise<{
+  private async cutWorkspaceFilePage(file: FileHandle, offset: number, limit: number, signal: AbortSignal, path: string): Promise<{
     readonly text: string
     readonly lines: number
     readonly eof: boolean
   }> {
-    return cutWorkspaceFilePage(await this.requireFileSystem().streamText(target, signal), offset, limit,
-      this.config.workspaceFiles.maxBytes, path)
+    return cutWorkspaceFilePage(workspaceFileText(file, signal, path), offset, limit, this.config.workspaceFiles.maxBytes, path)
+  }
+
+  private async workspaceDirectoryNames(
+    root: FsTarget, target: FsTarget, signal: AbortSignal,
+  ): Promise<{ readonly cwd: string; readonly names: string[]; readonly file?: FileHandle }> {
+    const fs = this.requireFileSystem()
+    if (process.platform === 'win32') {
+      const path = fs.processPath(target)
+      const directory = await opendir(path)
+      try {
+        const resolved = await fs.resolve(path, { signal })
+        if (!fs.contains(root, resolved)) throw new Error('opened directory is outside the Session workspace')
+        const opened = await stat(fs.processPath(resolved), { bigint: true })
+        if (!opened.isDirectory()) throw new Error('opened path is not a directory')
+        const names: string[] = []
+        while (true) {
+          const entry = await directory.read()
+          if (entry === null) break
+          names.push(entry.name)
+        }
+        const current = await fs.resolve(path, { signal })
+        if (!fs.contains(root, current)) throw new Error('opened directory is outside the Session workspace')
+        const currentInfo = await stat(fs.processPath(current), { bigint: true })
+        if (opened.dev !== currentInfo.dev || opened.ino !== currentInfo.ino) {
+          throw new Error('workspace directory changed while listing')
+        }
+        return { cwd: fs.processPath(resolved), names }
+      } finally {
+        await directory.close()
+      }
+    }
+    const { file, info } = await this.openWorkspaceFile(root, target, signal, true)
+    try {
+      if (!info.isDirectory()) throw new Error('opened path is not a directory')
+      const descriptorPath = process.platform === 'linux' ? `/proc/self/fd/${file.fd}`
+        : `/dev/fd/${file.fd}`
+      return { cwd: descriptorPath, names: await readdir(descriptorPath), file }
+    } catch (error: unknown) {
+      await file.close()
+      throw error
+    }
   }
 
   private async listWorkspaceFiles(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceDirectoryListing> {
     const rootPath = await this.workspaceFileRoot(id, signal)
     const located = await this.inspectWorkspaceFilePath(rootPath, path, signal, true)
     if (located.entry.type !== 'directory') throw new Error(`"${path}" is a ${located.entry.type}`)
-    const children = await this.requireFileSystem().listDir(located.target, signal)
-    for (const child of children) {
-      if (!this.requireFileSystem().contains(located.root, child.target)) {
-        throw new Error(`"${child.name}" resolves outside the Session workspace`)
+    const fs = this.requireFileSystem()
+    const directory = await this.workspaceDirectoryNames(located.root, located.target, signal)
+    try {
+      const children = []
+      for (const name of directory.names.sort((left, right) => left.localeCompare(right))) {
+        const target = await fs.resolve(name, { cwd: directory.cwd, signal })
+        if (!fs.contains(located.root, target)) throw new Error(`"${name}" resolves outside the Session workspace`)
+        const child = await fs.stat(target, signal)
+        children.push({ name, type: child?.type ?? 'other', target, ...(child?.size === undefined ? {} : { size: child.size }) })
       }
+      const entries = children.slice(0, this.config.workspaceFiles.maxEntries).map(workspaceFileEntry)
+      return { path: workspacePathOf(fs, located.root, located.target), entries, truncated: children.length > entries.length }
+    } finally {
+      await directory.file?.close()
     }
-    const entries = children.slice(0, this.config.workspaceFiles.maxEntries).map(workspaceFileEntry)
-    return { path: workspacePathOf(this.requireFileSystem(), located.root, located.target), entries,
-      truncated: children.length > entries.length }
   }
 
   private async statWorkspaceFile(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceFileStat> {
     const rootPath = await this.workspaceFileRoot(id, signal)
-    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
-    return this.workspaceFileStat(target, info)
+    const { root, target } = await this.locateWorkspaceFile(rootPath, path, signal)
+    const { file, info } = await this.openWorkspaceFile(root, target, signal)
+    try {
+      if (!info.isFile()) throw new Error(`"${path}" is not a regular file`)
+      return this.workspaceFileStat(target, info)
+    } finally {
+      await file.close()
+    }
   }
 
   private async readWorkspaceFile(id: SessionId, path: string, range: WorkspaceFileRange, signal: AbortSignal): Promise<WorkspaceFileText> {
     const rootPath = await this.workspaceFileRoot(id, signal)
-    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
+    const { root, target } = await this.locateWorkspaceFile(rootPath, path, signal)
     const { offset, limit } = this.resolveWorkspaceFileRange(range)
-    const page = await this.cutWorkspaceFilePage(target, offset, limit, signal, path)
-    if (page.text.includes(String.fromCharCode(0))) throw new Error(`"${path}" is not text`)
-    return { ...this.workspaceFileStat(target, info), offset, text: page.text, lines: page.lines, eof: page.eof }
+    const { file, info } = await this.openWorkspaceFile(root, target, signal)
+    try {
+      if (!info.isFile()) throw new Error(`"${path}" is not a regular file`)
+      const page = await this.cutWorkspaceFilePage(file, offset, limit, signal, path)
+      if (page.text.includes(String.fromCharCode(0))) throw new Error(`"${path}" is not text`)
+      return { ...this.workspaceFileStat(target, info), offset, text: page.text, lines: page.lines, eof: page.eof }
+    } finally {
+      await file.close()
+    }
   }
 
   private async readAllWorkspaceFileAtRoot(rootPath: string, path: string, signal: AbortSignal): Promise<WorkspaceFileBytes> {
-    const fs = this.requireFileSystem()
-    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
+    const { root, target } = await this.locateWorkspaceFile(rootPath, path, signal)
     const limit = this.config.workspaceFiles.maxFileBytes
-    if (info.size !== undefined && info.size > limit) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
-    const bytes = await fs.readByteRange(target, { offset: 0, length: limit + 1 }, signal)
-    if (bytes.length > limit) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
-    return { ...this.workspaceFileStat(target, info), offset: 0, data: Buffer.from(bytes).toString('base64'), eof: true }
+    const { file, info } = await this.openWorkspaceFile(root, target, signal)
+    try {
+      if (!info.isFile()) throw new Error(`"${path}" is not a regular file`)
+      if (info.size > BigInt(limit)) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
+      const bytes = Buffer.allocUnsafe(limit + 1)
+      let bytesRead = 0
+      while (bytesRead < bytes.length) {
+        signal.throwIfAborted()
+        const result = await file.read(bytes, bytesRead, bytes.length - bytesRead, bytesRead)
+        if (result.bytesRead === 0) break
+        bytesRead += result.bytesRead
+      }
+      if (bytesRead > limit) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
+      return { ...this.workspaceFileStat(target, info), offset: 0,
+        data: bytes.subarray(0, bytesRead).toString('base64'), eof: true }
+    } finally {
+      await file.close()
+    }
   }
 
   private async readAllWorkspaceFile(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceFileBytes> {
