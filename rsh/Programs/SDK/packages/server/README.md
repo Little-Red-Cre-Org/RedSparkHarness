@@ -105,7 +105,7 @@ Read these pages when the plugin contract is not enough. They move from the wire
 
 #### What the model sees
 
-For each accepted `session/prompt`, text and durable content references enter one user message verbatim. Inline `SdkEncodedImageBlock` values are validated and committed through the composition's attachment store first, so the session log retains content-addressed image references rather than base64 bytes. This package adds no system-prompt prose or tool schema; those come from the other plugins in the composition.
+For each accepted `session/prompt`, text and durable content references enter one user message verbatim. Inline `SdkEncodedImageBlock` values are validated and committed through the composition's attachment store first, so the session log retains content-addressed image references rather than base64 bytes. The shipped `native-sdk` and `native-sdk-dsh-child` compositions also install `dsh-agent-instructions`; its workspace guidance is a durable user message prepared through the selected filesystem Provider. This server package adds no system-prompt prose or tool schema; those come from the other plugins in the composition.
 
 #### Token effect
 

@@ -27,6 +27,8 @@ The native-headless, native-headless-query, native-tui, and native-web session d
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
+The `native-sdk`, `native-sdk-dsh-child`, and `native-acp` compositions install workspace instructions through each process's selected filesystem Provider. The opt-in `dsh-sdk` child launcher resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+
 
 ## App arguments
 
