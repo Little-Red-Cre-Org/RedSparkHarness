@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. File reads may target paths outside the workspace; directory listing and instrumented filesystem observations remain workspace-scoped. The service exposes no mutation operation.
+Use this package to preview files from a Session filesystem in the web client. It reads UTF-8 text by page or bytes by bounded window, reads complete files, resolves related paths from a file's directory, and reports metadata. File reads may target paths outside the workspace; listing and observed filesystem operations stay workspace-scoped. It has no file mutation operation.
 
 The `./types` export carries these responses with the Workspace Files Remote error-code augmentation. `./native-types` exposes the same response type source from [`src/types.ts`](src/types.ts) without Cordis references for Native package consumers. `./native-helpers` shares the bounded UTF-8 page cutter with Native Host consumers.
 

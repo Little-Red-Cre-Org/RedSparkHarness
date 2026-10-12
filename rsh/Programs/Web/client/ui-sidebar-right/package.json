@@ -53,7 +53,9 @@
         "clientNativeSession",
         "clientLocale"
       ],
-      "optional": [],
+      "optional": [
+        "clientNativeWorkspaceFiles"
+      ],
       "provides": []
     }
   },

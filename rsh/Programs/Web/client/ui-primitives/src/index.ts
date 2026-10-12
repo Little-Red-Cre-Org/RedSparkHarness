@@ -54,6 +54,7 @@ export { FileTypeIcon, classifyFileType, fileExtension } from './FileTypeIcon.ts
 export type {
   CodeFileType, FileType, FileTypeIconProps, FileTypeKind, FileTypeProjectContext,
 } from './FileTypeIcon.tsx'
+export { isCodeFileType } from './code-file-types.ts'
 export { projectUserText, type UserTextReferences } from './user-text.tsx'
 export { Tooltip } from './Tooltip.tsx'
 export type { TooltipSide } from './Tooltip.tsx'
@@ -75,6 +76,22 @@ export type {
   DirectoryBrowserEntry, DirectoryBrowserKey, DirectoryBrowserListing, DirectoryBrowserProps, DirectoryBrowserTranslate,
 } from './DirectoryBrowser.tsx'
 export { SidebarPathBar } from './SidebarPathBar.tsx'
+export { WorkspaceFileTreeRows, orderWorkspaceFileEntries } from './WorkspaceFileTreeRows.tsx'
+export type { WorkspaceFileTreeLabels, WorkspaceFileTreeLevel, WorkspaceFileTreeRowsProps } from './WorkspaceFileTreeRows.tsx'
+export {
+  WorkspaceCodePreview, WorkspaceHtmlPreview, WorkspaceImagePreview, WorkspaceMarkdownPreview,
+  workspaceImageMediaType,
+} from './WorkspaceFilePreview.tsx'
+export type {
+  WorkspaceCodePreviewProps, WorkspaceHtmlPreviewProps, WorkspaceImagePreviewProps,
+  WorkspaceMarkdownPreviewProps,
+} from './WorkspaceFilePreview.tsx'
+export { LoadingIndicator } from './LoadingIndicator.tsx'
+export {
+  createWorkspaceHtmlDocument, htmlRelativePath, packWorkspaceHtml,
+} from './workspace-html.ts'
+export type { HtmlAsset, HtmlBundle, ReadHtmlRelative } from './workspace-html.ts'
+export { CODE_EXTENSIONS, languageForPath } from './workspace-code-languages.ts'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'
