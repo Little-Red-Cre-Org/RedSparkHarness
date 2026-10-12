@@ -61,15 +61,15 @@ export const plugin: NativePlugin = {
         return name !== undefined && spec !== undefined && matches(spec)
           ? name : Object.entries(presets).find(([, spec]) => matches(spec))?.[0] ?? CUSTOM_PRESET
       }
-      const controls = async (events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls> => {
+      const controls = (events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls> => {
         signal.throwIfAborted()
         const selectedValue = currentValue(events)
-        return { currentValue: selectedValue, options: [
+        return Promise.resolve({ currentValue: selectedValue, options: [
           ...Object.entries(presets).map(([value, spec]) => ({ value, name: spec.name ?? value,
             ...spec.description === undefined ? {} : { description: spec.description } })),
           ...selectedValue === CUSTOM_PRESET ? [{ value: CUSTOM_PRESET, name: 'Custom',
             description: 'Current sandbox and approval settings do not match a preset.' }] : [],
-        ] }
+        ] })
       }
       const service: NativePermissionPresetOperations = {
         controls,
