@@ -1,5 +1,6 @@
 /** Human input cards project pending Host requests without Session write authority. */
 import { useState } from 'react'
+import { NativeApprovalCard } from '@deepseek-ai/dsh-client-ui-approval/native'
 import type { NativeWebHumanPrompt } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeConversationController } from './controller.ts'
 import type { ConversationLocaleKey } from './locales.ts'
@@ -9,19 +10,19 @@ import css from './human.module.css'
  * @param props - observed presentation, answer callback, submission state and locale.
  * @returns actionable pending request card.
  */
-export function HumanInteraction({ answerHuman, prompt, disabled, t }: {
+export function HumanInteraction({ answerHuman, prompt, disabled, t, locale }: {
   answerHuman: NativeConversationController['answerHuman']
   prompt: NativeWebHumanPrompt
   disabled: boolean
   t: (key: ConversationLocaleKey) => string
+  locale: 'en' | 'zh'
 }) {
   const [choices, setChoices] = useState<Record<string, readonly string[]>>({})
   const [custom, setCustom] = useState<Record<string, string>>({})
-  if (prompt.kind === 'approval') return <section className={css.card} aria-label={t('approval')}>
-    <h2>{t('approval')}</h2><p>{prompt.toolName}</p>{prompt.reason === undefined ? null : <p>{prompt.reason}</p>}
-    <button className={css.button} disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-once' }) }}>{t('allow')}</button>
-    <button className={css.button} disabled={disabled} onClick={() => { void answerHuman(prompt, { kind: 'approval', outcome: 'rejected' }) }}>{t('deny')}</button>
-  </section>
+  if (prompt.kind === 'approval') return <NativeApprovalCard
+    presentationKey={String(prompt.id)} toolName={prompt.toolName} reason={prompt.reason}
+    disabled={disabled} locale={locale}
+    onAnswer={(outcome) => { void answerHuman(prompt, { kind: 'approval', outcome }) }} />
   return <form className={css.card} aria-label={t('questions')} onSubmit={(event) => {
     event.preventDefault()
     if (disabled) return

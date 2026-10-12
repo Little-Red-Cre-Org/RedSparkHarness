@@ -10,6 +10,8 @@ kind: "package-reference"
 
 基于 Agent-scoped Remote Event waterfall 的浏览器审批界面。插件通过 `ctx.uiSession` 发布每个待处理请求、接管 Conversation composer、按需渲染关联的 Tool 详情，并将用户决定返回给等待中的 Host 请求。当浏览器必须为等待中的 Host 操作收集批准时，请使用它。
 
+`./native` 入口通过 props 和 Host 答案回调导出相同的审批卡片展示，不会加载 legacy plugin 入口。
+
 ## 目录
 
 - [模型体验](#model-experience)
@@ -31,7 +33,7 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **面板只提供临时决定**——它支持仅本次允许和拒绝；持久权限策略仍由 Host 侧审批包拥有。
+- **审批卡只提供临时决定**——支持仅本次允许和拒绝；Native Host 答案不包含按 Session 允许的结果，持久权限策略仍由 Host 侧审批包拥有。
 
 
 <a id="dev-note"></a>
@@ -44,4 +46,4 @@ kind: "package-reference"
 
 </details>
 
-**运行时不变式：** 不发布伴生入口。Remote listener 与临时 Slot entry 由各自注册表持有并观察。
+**运行时不变式：** 不发布伴生入口。Remote listener 与临时 Slot entry 由各自注册表持有并观察；`./native` 是仅依赖 props 的视图入口。

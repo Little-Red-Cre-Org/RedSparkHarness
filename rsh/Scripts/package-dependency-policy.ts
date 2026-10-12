@@ -187,6 +187,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
 /** Client runtime peers whose values must resolve to the shared application instances. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-tool': ['react'],
+  '@deepseek-ai/dsh-client-ui-approval': ['react'],
   '@deepseek-ai/dsh-client-ui-attachment': ['react'],
   '@deepseek-ai/dsh-client-ui-goal': ['react'],
   '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
@@ -198,6 +199,7 @@ export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly strin
     '@deepseek-ai/dsh-native-model-selection',
     '@deepseek-ai/dsh-client-native-session',
     '@deepseek-ai/dsh-client-ui-tool',
+    '@deepseek-ai/dsh-client-ui-approval',
     '@deepseek-ai/dsh-tool-todo',
   ],
   '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
@@ -234,7 +236,7 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 const PEER_REQUIRED_HOST_EXPORTS = {
   '@deepseek-ai/dsh-goal/projection': ['foldGoal'],
   '@deepseek-ai/dsh-client-ui-primitives': [
-    'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
+    'Button', 'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
     'IconChevronLeftOutline14', 'IconChevronRightOutline14', 'IconCloseFill14', 'IconCloseOutline16',
     'IconCodeOutline16', 'IconEditOutline16', 'IconGoalOutline16', 'IconInspectOutline12', 'IconSearchOutline16', 'IconSparkle16',
     'ReadBlock', 'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension', 'fileSizeText',
