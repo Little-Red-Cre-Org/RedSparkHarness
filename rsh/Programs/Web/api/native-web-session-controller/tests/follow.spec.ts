@@ -186,6 +186,9 @@ it('queues and steers identified inputs through the active root inbox', async ()
       .resolves.toMatchObject({ ok: true, value: { requestId: queueId, placement: 'queued', status: 'accepted' } })
     await expect(service.handle('session/steer', { sessionId, prompt: 'next step', requestId: steerId }, new AbortController().signal))
       .resolves.toMatchObject({ ok: true, value: { requestId: steerId, placement: 'steering', status: 'accepted' } })
+    const claimedSteer = pending['next-step'].shift()
+    if (claimedSteer === undefined) throw new Error('missing claimed steering fixture message')
+    request.onEvent?.({ type: 'user/message', seq: seq++, time: seq, data: claimedSteer } as SessionEvent)
     const canceledId = 'canceled-request'
     await expect(service.handle('session/queue', { sessionId, prompt: 'remove me', requestId: canceledId }, new AbortController().signal))
       .resolves.toMatchObject({ ok: true, value: { requestId: canceledId, placement: 'queued', status: 'accepted' } })
@@ -195,7 +198,6 @@ it('queues and steers identified inputs through the active root inbox', async ()
       ok: true,
       value: { submissions: [
         { requestId: queueId, placement: 'queued', status: 'accepted' },
-        { requestId: steerId, placement: 'steering', status: 'accepted' },
       ] },
     })
     await expect(service.handle('session/start', { sessionId, text: 'second turn', resume: true }, new AbortController().signal))
@@ -203,11 +205,9 @@ it('queues and steers identified inputs through the active root inbox', async ()
 
     const admissionId = (started.value as { admissionId: string }).admissionId
     const response = await service.follow(new Request('http://localhost', { method: 'POST', body: JSON.stringify({ sessionId, admissionId }) }))
-    for (const target of ['next-step', 'next-turn'] as const) {
-      const message = pending[target].shift()
-      if (message === undefined) throw new Error(`missing ${target} fixture message`)
-      request.onEvent?.({ type: 'user/message', seq: seq++, time: seq, data: message } as SessionEvent)
-    }
+    const queuedMessage = pending['next-turn'].shift()
+    if (queuedMessage === undefined) throw new Error('missing next-turn fixture message')
+    request.onEvent?.({ type: 'user/message', seq: seq++, time: seq, data: queuedMessage } as SessionEvent)
     request.onEvent?.({ type: 'turn/end', seq: seq++, time: seq, data: { turn: 1, reason: { kind: 'completed' } } } as SessionEvent)
     settled.resolve({ exitCode: 0 })
     const frames: unknown[] = []

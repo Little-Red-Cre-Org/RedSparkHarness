@@ -437,7 +437,7 @@ export class NativeWebSessionService {
                   ...owner.messages('next-turn'), ...owner.messages('next-step'),
                 ].map(message => message.id))
                 for (const [requestId, status] of submissions) {
-                  if (status !== 'submitting' && !pendingIds.has(MessageId(requestId))) {
+                  if (status === 'accepted' && !pendingIds.has(MessageId(requestId))) {
                     submissions.delete(requestId)
                     feed.push({ type: 'submission-update', requestId, status: 'rejected' })
                   }
