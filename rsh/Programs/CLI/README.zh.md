@@ -81,6 +81,6 @@ Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目
 
 ## 开发
 
-当 `DSH_EXAMPLE_MODE=lib` 时，[构建入口测试](tests/built-bin.e2e.ts)要求存在 `lib/bin.js`；入口缺失会失败，而不是跳过整组测试。未显式选择构建模式时，尚未构建的工作区可以跳过这些测试。
+当 `DSH_EXAMPLE_MODE=lib` 时，[构建入口测试](tests/built-bin.e2e.ts)要求存在 `lib/bin.js`；入口缺失会失败，而不是跳过整组测试。已发布 native-headless profile 的 loader 检查也要求已构建的 native plugin 入口，请在运行该测试前执行 `pnpm run build`。未显式选择构建模式时，尚未构建的工作区可以跳过这些测试。
 
 生产运行需要已构建的包与前端产物。请在仓库根目录单独运行 `pnpm run build`，然后使用 `pnpm dsh <args...>` 运行 TypeScript 入口并转发所有参数；模块解析约定以[源码执行参考](reference/README.zh.md#source-execution)为准。

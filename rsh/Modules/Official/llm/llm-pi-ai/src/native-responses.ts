@@ -1,69 +1,15 @@
 /** Raw Responses transport for one SIWC-bound Native Codex operation. */
 
 import { attributionHeaders, LlmError } from '@deepseek-ai/dsh-llm/native'
+import type {
+  NativeResponsesGenerationCapture,
+  NativeResponsesJsonValue,
+  NativeResponsesRoute,
+  NativeResponsesTransport,
+} from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { siwcResponsesPayload } from './siwc.ts'
 import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
 import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
-
-// Package-private copies mirror Core's responses-transport.ts interface and are replaced by the Core import once published.
-/** Immutable JSON accepted by the captured provider's complete Responses request projector. */
-export type NativeResponsesJsonValue = null | boolean | number | string
-  | readonly NativeResponsesJsonValue[]
-  | { readonly [key: string]: NativeResponsesJsonValue }
-
-/** Exact provider and model route selected by the Engine. */
-export interface NativeResponsesRoute {
-  readonly provider: string
-  readonly model: string
-}
-
-/** Response stream returned by a captured provider transport. */
-export interface NativeResponsesTransportResponse {
-  readonly status: number
-  readonly contentType: string | null
-  readonly body: ReadableStream<Uint8Array> | null
-}
-
-/** Captured provider operations consumed by one isolated Native Responses gateway. */
-export interface NativeResponsesTransport {
-  readonly route: NativeResponsesRoute
-  /** Whether this captured provider generation enforces `max_output_tokens` on inference. */
-  readonly outputTokenLimit: 'supported' | 'unsupported'
-  /**
-   * Project the complete request for this generation's model, image policy, and SIWC endpoint.
-   * The returned body does not share JSON objects with the input, which remains unchanged.
-   * @param body - complete Responses JSON before provider-specific projection.
-   * @param signal - product operation cancellation.
-   * @returns final JSON body to log and forward unchanged.
-   */
-  projectRequest(body: NativeResponsesJsonValue, signal: AbortSignal): Promise<NativeResponsesJsonValue>
-  /**
-   * Forward the exact projected request through this captured provider generation.
-   * @param body - final projected JSON already admitted by the parent Engine.
-   * @param signal - product operation cancellation.
-   * @returns provider status, content type and response stream.
-   */
-  forward(body: NativeResponsesJsonValue, signal: AbortSignal): Promise<NativeResponsesTransportResponse>
-  /**
-   * Reject new calls and drain accepted projections, response streams, and credential refreshes.
-   * @returns the same quiescent close result on repeated calls.
-   */
-  close(): Promise<void>
-}
-
-/** Capture a route from the provider generation retained by one prepared model call. */
-export interface NativeResponsesGenerationCapture {
-  /**
-   * Capture a one-operation Responses transport from this exact prepared generation.
-   * @param request - Engine-selected route and optional parent output-token ceiling.
-   * @param signal - operation cancellation.
-   * @returns a generation-bound transport that must be closed after the operation.
-   * Partial resources must be released if cancellation or failure prevents returning a transport.
-   */
-  capture(
-    request: { readonly route: NativeResponsesRoute; readonly maxTokens?: number }, signal: AbortSignal,
-  ): Promise<NativeResponsesTransport>
-}
 
 /** SIWC identity fixed by the prepared adapter generation. */
 export interface CodexAccountIdentity {

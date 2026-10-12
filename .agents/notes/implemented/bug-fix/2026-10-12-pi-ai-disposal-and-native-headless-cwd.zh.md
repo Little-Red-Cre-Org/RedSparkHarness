@@ -10,7 +10,7 @@
 
 ## 决策
 
-pi-ai 适配器会在已预备的 Codex 调用上公开 `nativeResponses`；Engine/gateway 消费者仍未接线。释放时会中止目录刷新、排空已接纳的凭据解析和活动 Native Responses 传输关闭，并在两组工作都结算后报告首个关闭错误。`native-headless`、`native-headless-query`、`native-tui` 和 Web session-controller 默认值统一使用 catalog 可解析的 `deepseek/deepseek-flash`；native ACP Provider 仍显式使用 `deepseek-official`。`native-headless` 和 query 模板会把 `process.cwd()` 记录为应用 `cwd`；TUI 保留原有 `cwd` 行为。
+pi-ai 适配器会在已预备的 Codex 调用上公开 `nativeResponses`；Native model executor 会从确切的预备代际捕获该能力，用于 external Responses 操作。释放时会中止目录刷新、排空已接纳的凭据解析和活动 Native Responses 传输关闭，并在两组工作都结算后报告首个关闭错误。`native-headless`、`native-headless-query`、`native-tui` 和 Web session-controller 默认值统一使用 catalog 可解析的 `deepseek/deepseek-flash`；native ACP Provider 仍显式使用 `deepseek-official`。`native-headless` 和 query 模板会把 `process.cwd()` 记录为应用 `cwd`；TUI 保留原有 `cwd` 行为。
 
 ## 考虑过的替代方案
 

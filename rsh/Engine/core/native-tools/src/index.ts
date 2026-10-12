@@ -1,5 +1,6 @@
 /** Reversible native tool contributions consumed by a selected application. */
 import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
 import { deepFreeze, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
@@ -8,7 +9,7 @@ import type {
 } from '@deepseek-ai/dsh-session/native'
 import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validateJsonSchemaValue } from './json-schema.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
-import type { NativeToolRestriction } from './types.ts'
+import type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
 import {
   registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, type AsyncPolicyRegistration,
 } from './result-processing.ts'
@@ -16,6 +17,24 @@ export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.
 
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
 export type NativeToolMode = 'native' | 'ptc' | 'both'
+
+/** Captured Registry entries for one model catalog or program binding set. */
+export interface NativeToolExecutionSnapshot {
+  /** Schemas captured from the exact visible registrations admitted to this operation. */
+  readonly schemas: readonly ToolSchema[]
+  /** Canonical input/output schemas captured for PTC bindings; absent for model-only snapshots. */
+  readonly programSchemas?: readonly ToolSdkSchema[]
+  /** Cancellation for this snapshot; callers combine it with their operation signal. */
+  readonly signal: AbortSignal
+  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns exact admitted preparation. */
+  prepare(call: NativeToolExecution): Promise<NativePreparedToolInvocation>
+  /** @param call - pending invocation. @returns overlap only when the captured registration permits it. */
+  executionMode(call: Pick<NativeToolExecution, 'agent' | 'name' | 'arguments'>): 'parallel' | 'exclusive'
+  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns the admitted call and result. */
+  execute(call: NativeToolExecution): Promise<{ readonly call: NativeToolExecution; readonly result: NativeToolResult }>
+  /** Close admission, cancel accepted executions and wait for their body pipelines to settle. */
+  dispose(): Promise<void>
+}
 
 /** One model-requested tool invocation with its Session and cancellation. */
 export interface NativeToolExecution {
@@ -28,6 +47,10 @@ export interface NativeToolExecution {
   readonly signal: AbortSignal
   /** Exact enclosing admitted invocation for a nested program call. */
   readonly parent?: NativeToolExecution
+  /** Exact external-child route and resource ceilings inherited by nested delegation. */
+  readonly delegationContext?: NativeToolDelegationContext
+  /** Exact program/business registrations captured for this external operation's PTC bindings. */
+  readonly programSnapshot?: NativeToolExecutionSnapshot
   /** Unbound application approval authority; the registry binds it to each admitted invocation. */
   readonly approvalAuthority?: NativeToolApprovalAuthority
   /** Append and persist a tool-owned Session event before returning a model-visible result. */
@@ -88,6 +111,44 @@ export interface NativeToolResult {
   readonly additionalContexts?: readonly UserMessage[]
   /** A successful result may finish the turn after the current model batch settles. */
   readonly concludesTurn?: true
+}
+
+/** One wire-parsed product tool call admitted from a recorded external model response. */
+export interface NativeExternalToolCall {
+  readonly callId: ToolCallId
+  readonly name: string
+  readonly arguments: JsonValue
+}
+
+/** Result whose acceptance is deferred until its external-operation event is durable. */
+export interface NativeExternalToolInvocation {
+  readonly result: NativeToolResult
+  /** @returns settlement contexts and turn conclusion after the Engine records this exact result. */
+  acceptRecordedResult(): { readonly settlementContexts: readonly UserMessage[]; readonly concludesTurn: boolean }
+  /**
+   * Read verified bytes referenced by this result and its accepted settlement contexts.
+   * @returns each referenced image once, in first-occurrence order.
+   * @throws before this invocation's result is accepted or after its captured owner closes.
+   */
+  readAcceptedImages(): Promise<readonly StoredImageAttachment[]>
+}
+
+export type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
+
+/** Captured Engine tool authority for one external operation. */
+export interface NativeExternalToolOperations {
+  /** Schemas from the exact filtered tool registrations admitted to this operation. */
+  readonly schemas: readonly ToolSchema[]
+  /** Canonical program-only bindings from the same exact filtered Registry registrations. */
+  readonly programSchemas: readonly ToolSdkSchema[]
+  /** Prompt sections rendered against this operation's captured direct and program catalogs. */
+  readonly promptText: string
+  /** @param call - one wire-parsed model call. @param signal - external operation cancellation. @returns its unaccepted result. */
+  execute(call: NativeExternalToolCall, signal: AbortSignal): Promise<NativeExternalToolInvocation>
+  /** Close admission, cancel active calls, and await their body pipelines and cleanup.
+   * The Engine broker owns durable result acceptance and settlement.
+   */
+  dispose(): Promise<void>
 }
 
 /** A tool whose canonical JSON result is validated before presentation or program consumption. */
@@ -245,7 +306,8 @@ export type NativePtcDispatchLogPolicy = (
   call: NativeToolExecution, original: Readonly<NativeToolResult>, next: () => Promise<NativePtcDispatchLog>, signal: AbortSignal,
 ) => Promise<NativePtcDispatchLog>
 
-export type { NativeToolRestriction } from './types.ts'
+export type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
+export type { ToolSdkSchema } from './ts-types.ts'
 
 interface CompiledToolRestriction {
   readonly allow?: ReadonlySet<string>
@@ -254,6 +316,8 @@ interface CompiledToolRestriction {
 
 /** One prepared invocation retaining its selected contribution until dispatch or cancellation. */
 export interface NativePreparedToolInvocation {
+  /** Exact frozen invocation admitted by the Registry. */
+  readonly call: NativeToolExecution
   /** @returns the contribution result; rejects cancellation or a second dispatch. */
   execute(): Promise<NativeToolResult>
   /** Release an invocation that will not be dispatched; repeated abandonment has no effect. */
@@ -674,6 +738,123 @@ export class NativeToolRegistry {
   }
 
   /**
+   * Capture exact model-callable registrations for one product operation.
+   * @param names - additional allowlist intersected with the current model-visible catalog.
+   * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @returns captured schemas and execution authority that rejects removed or replaced registrations.
+   */
+  captureModelSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
+    return this.captureSnapshot(names, scope, 'model')
+  }
+
+  /**
+   * Capture exact program-bound registrations without treating them as direct model calls.
+   * @param names - additional allowlist intersected with the current SDK binding catalog.
+   * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @returns captured schemas, PTC bindings and exact execution authority.
+   */
+  captureProgramSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
+    return this.captureSnapshot(names, scope, 'program')
+  }
+
+  private captureSnapshot(
+    names: readonly string[], scope: NativeScope | undefined, catalog: 'model' | 'program',
+  ): NativeToolExecutionSnapshot {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const catalogNames = new Set(catalog === 'model' ? this.modelSchemas(scope).map(schema => schema.name)
+      : this.sdkSchemas(scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name))
+    const allowed = new Set(names)
+    const registrations = new Map([...this.visible(scope)].filter(([name]) => allowed.has(name) && catalogNames.has(name)))
+    const schemas = deepFreeze([...registrations.values()].map(entry => structuredClone(entry.schema)))
+    const programSchemas = catalog === 'program' ? deepFreeze([...registrations.values()].map((entry) => {
+      if (entry.outputSchema === undefined) throw new Error(`native-tools: tool ${entry.schema.name} has no canonical output schema`)
+      return { ...structuredClone(entry.schema), output: structuredClone(entry.outputSchema) }
+    })) : undefined
+    const controller = new AbortController()
+    const pending = new Set<Promise<void>>()
+    const undispatched = new Set<() => void>()
+    let closed = false
+    let disposal: Promise<void> | undefined
+    return {
+      schemas,
+      ...(programSchemas === undefined ? {} : { programSchemas }),
+      signal: controller.signal,
+      prepare: async (call) => {
+        if (closed) throw new Error('native-tools: model snapshot is closed')
+        const entry = registrations.get(call.name)
+        if (entry === undefined) throw new HarnessError(`native-tools: tool ${call.name} is outside the captured catalog`, 'TOOL_DENIED')
+        const completion = Promise.withResolvers<void>()
+        pending.add(completion.promise)
+        const admitted = { ...call, signal: AbortSignal.any([call.signal, controller.signal]) }
+        try {
+          this.assertVisible(admitted, entry)
+          const prepared = await this.prepareSelected(admitted, entry)
+          if (controller.signal.aborted) {
+            prepared.abandon()
+            throw new Error('native-tools: captured snapshot closed during preparation')
+          }
+          let state: 'ready' | 'running' | 'closed' = 'ready'
+          const finish = (): void => {
+            state = 'closed'
+            undispatched.delete(abandon)
+            pending.delete(completion.promise)
+            completion.resolve()
+          }
+          const abandon = (): void => {
+            if (state !== 'ready') return
+            prepared.abandon()
+            finish()
+          }
+          undispatched.add(abandon)
+          return {
+            call: prepared.call,
+            async execute() {
+              if (state !== 'ready') throw new Error('native-tools: captured invocation is already dispatched or abandoned')
+              state = 'running'
+              undispatched.delete(abandon)
+              try { return await prepared.execute() }
+              finally { finish() }
+            },
+            abandon,
+          }
+        } catch (error: unknown) {
+          pending.delete(completion.promise)
+          completion.resolve()
+          throw error
+        }
+      },
+      executionMode: (call) => {
+        if (this.agents.get(call.agent.id) !== call.agent) return 'exclusive'
+        const entry = registrations.get(call.name)
+        if (entry?.isConcurrencySafe === undefined) return 'exclusive'
+        try {
+          if (this.visible(call.agent.scope).get(call.name) !== entry) return 'exclusive'
+          const args = snapshotJsonValue(call.arguments)
+          if (args === undefined) return 'exclusive'
+          entry.validate(args)
+          return entry.isConcurrencySafe(deepFreeze(args)) ? 'parallel' : 'exclusive'
+        } catch {
+          // Invalid arguments or a failed classifier cannot authorize body overlap.
+          return 'exclusive'
+        }
+      },
+      async execute(call) {
+        const prepared = await this.prepare(call)
+        try { return { call: prepared.call, result: await prepared.execute() } }
+        catch (error: unknown) { prepared.abandon(); throw error }
+      },
+      dispose() {
+        if (disposal !== undefined) return disposal
+        closed = true
+        controller.abort(new Error('native-tools: model snapshot closed'))
+        for (const abandon of [...undispatched]) abandon()
+        disposal = Promise.all([...pending]).then(() => {})
+        return disposal
+      },
+    }
+  }
+
+  /**
    * Reject model calls outside the selected transport before approval or body execution.
    * @param call - model-requested operation and its application-owned Session attribution.
    * @returns the guarded contribution result for the application to record.
@@ -735,6 +916,11 @@ export class NativeToolRegistry {
     if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const entry = this.visible(call.agent.scope).get(call.name)
     if (entry === undefined) throw new Error(`native-tools: unknown tool ${call.name}`)
+    return this.prepareSelected(call, entry)
+  }
+
+  private async prepareSelected(call: NativeToolExecution, entry: ToolRegistration): Promise<NativePreparedToolInvocation> {
+    if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const argumentsValue = snapshotJsonValue(call.arguments)
     if (argumentsValue === undefined) throw new ToolArgsError(['arguments must be lossless JSON'])
     const policies = [...this.resultPolicies.visible(call.agent.scope).values()]
@@ -788,6 +974,7 @@ export class NativeToolRegistry {
       const assertVisible = (): void => { this.assertVisible(admitted, entry) }
       const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies, wrappers)
       return {
+        call: admitted,
         async execute() {
           signal.throwIfAborted()
           if (phase !== 'ready') throw new Error('native-tools: prepared invocation is already dispatched or abandoned')

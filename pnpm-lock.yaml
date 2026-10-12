@@ -2530,6 +2530,9 @@ importers:
       '@deepseek-ai/dsh-approval-definition':
         specifier: workspace:^
         version: link:../approval-definition
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
@@ -2600,6 +2603,9 @@ importers:
       '@deepseek-ai/dsh-native-file-reference-local':
         specifier: workspace:^
         version: link:../../../Modules/Official/fs/native-file-reference-local
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../subagent/native-subagent
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../../Modules/Official/guard/repeat-tool-reminder
@@ -2621,6 +2627,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-tool-subagent':
+        specifier: workspace:^
+        version: link:../../subagent/tool-subagent
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -2660,6 +2669,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../native-tools
 
   rsh/Engine/core/native-session-execution:
     dependencies:
@@ -2675,9 +2687,15 @@ importers:
       '@deepseek-ai/dsh-native-agent':
         specifier: workspace:^
         version: link:../native-agent
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../native-model-execution
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../session
@@ -2690,6 +2708,9 @@ importers:
 
   rsh/Engine/core/native-tools:
     dependencies:
+      '@deepseek-ai/dsh-attachment':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/attachment/attachment
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
@@ -4284,6 +4305,9 @@ importers:
       '@deepseek-ai/dsh-native-jobs':
         specifier: workspace:^
         version: link:../../core/native-jobs
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../../core/native-prompt
@@ -8364,12 +8388,15 @@ importers:
       '@deepseek-ai/dsh-json-rpc-line':
         specifier: workspace:^
         version: link:../../../../Core/util/json-rpc-line
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-model-execution
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-      '@deepseek-ai/dsh-native-subagent':
+      '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
-        version: link:../../../../Engine/subagent/native-subagent
+        version: link:../../../../Engine/core/native-tools
       '@deepseek-ai/dsh-subprocess':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess
@@ -8379,6 +8406,22 @@ importers:
       '@openai/codex':
         specifier: 0.162.1
         version: 0.162.1
+      eventsource-parser:
+        specifier: ^3.1.0
+        version: 3.1.0
+    devDependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/native-subagent
+      '@deepseek-ai/dsh-subprocess-local':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess-local
+      '@deepseek-ai/dsh-util-values':
+        specifier: workspace:^
+        version: link:../../../../Core/util/values
 
   rsh/Modules/Official/subagent/sdk-child:
     devDependencies:

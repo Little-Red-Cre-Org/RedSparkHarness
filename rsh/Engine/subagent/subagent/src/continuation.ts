@@ -429,6 +429,12 @@ export class SubagentContinuationManager {
         'NOT_RESUMABLE',
       )
     }
+    if (descriptor.delegationContext !== undefined) {
+      throw new SubagentError(
+        `subagent "${childId}" requires inherited Native authority that this Provider cannot restore`,
+        'NOT_RESUMABLE',
+      )
+    }
     let activation: Activation
     try {
       activation = await this.activations.materialize({

@@ -86,6 +86,8 @@ This section explains how the tool mirrors provider lifecycle and settles runs; 
 
 One instance is one provider plus one tool name. The plugin mirrors provider lifecycle: it registers the tool when the named provider appears and disposes it when the provider leaves, so sibling load order and HMR replacement cannot strand a dangling tool. Direct Agent setup passes its unpublished Session explicitly and awaits installation before publication. A settings-backed standing preset receives each matching Agent from lifecycle events, selects policy from its Session, and installs through its Context. A numeric `maxDepth` or configured LLM selection the provider cannot enforce fails the mount instead of the first delegation. At most one instance in a tool scope may own model selection because `list_subagent_models` has a global name.
 
+The `./native` entry passes the nearest `responsesGeneration` from the external-child tool's existing PTC parent-call chain to `subagents.resolve` as process-local state, not durable `delegationContext`; generation reuse, override, and close ownership are defined by [native-subagent](../native-subagent/README.md#known-limitations-and-deferred-work).
+
 ### Foreground settlement
 
 A foreground call awaits `run.result`, maps every non-completed stop reason to an error headline, appends the provider diagnostic and any preserved partial assistant text, and always awaits `run.dispose()` before returning; when result collection and disposal both reject, the errored result preserves both failures.

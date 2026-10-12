@@ -63,6 +63,7 @@ import type {
   StreamChunk,
 } from '@deepseek-ai/dsh-llm/native'
 import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
@@ -70,11 +71,7 @@ import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
 import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from './siwc.ts'
 import { createNativeCodexResponsesCapture } from './native-responses.ts'
-import type {
-  CodexAccountIdentity,
-  NativeResponsesGenerationCapture,
-  NativeResponsesTransport,
-} from './native-responses.ts'
+import type { CodexAccountIdentity } from './native-responses.ts'
 import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
 import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
 import { toStreamChunks } from './stream.ts'
@@ -386,7 +383,9 @@ export class PiAiAdapter extends LlmAdapter {
     this.snapshot = undefined
   }
 
-  /** Cancel catalog work, drain credential resolutions and Native transports, then report close failures. */
+  /** Cancel catalog work and drain credentials and transports.
+   * @returns a promise that settles all credential and transport work before reporting a transport close failure.
+   */
   dispose(): Promise<void> {
     if (this.disposeResult !== undefined) return this.disposeResult
     this.snapshot = undefined
@@ -638,7 +637,7 @@ export class PiAiAdapter extends LlmAdapter {
     provider: string,
     model: string,
     signal?: AbortSignal,
-  ): Promise<PreparedAdapterCall & { readonly nativeResponses?: NativeResponsesGenerationCapture }> {
+  ): Promise<PreparedAdapterCall> {
     const snapshot = this.current()
     return Promise.resolve().then(async () => {
       this.lifetime.signal.throwIfAborted()
