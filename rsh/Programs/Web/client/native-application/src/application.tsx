@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
-  ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
+  ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
   ChatMascotHero, ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderOpen16, Pill,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -22,7 +22,7 @@ import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
-import { ModelControls } from './model-controls.tsx'
+import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
 import css from './conversation.module.css'
@@ -115,14 +115,11 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
             files={files} onChange={setFiles} limits={snapshot.modelControls.images}
             disabled={!ready || snapshot.selected === undefined} t={t}
           />}
-          {snapshot.selected === undefined
-            ? <ChatComposerSelect label={t('model')} disabled value=""><option value="">{t('unavailable')}</option></ChatComposerSelect>
-            : <ModelControls snapshot={snapshot} selectModel={selectModel}
-              selectPreset={selectPreset} selectPlanMode={selectPlanMode}
-              selectPermissionPreset={selectPermissionPreset}
-              refreshModelControls={refreshModelControls} t={t} />}
+          <ModelControls snapshot={snapshot} selectPreset={selectPreset}
+            selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset} t={t} />
         </div>
         <div className={css.toolbarActions}>
+          <ModelPickerControl snapshot={snapshot} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />
           {sending
             ? <ChatComposerButton kind="stop" label={t('cancel')} disabled={snapshot.state === 'cancelling'} onClick={cancel} />
             : <ChatComposerButton kind="send" label={t('send')} type="submit"

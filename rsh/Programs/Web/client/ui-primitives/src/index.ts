@@ -15,6 +15,11 @@ export { Switch } from './Switch.tsx'
 export { Input } from './Input.tsx'
 export { Menu } from './Menu.tsx'
 export type { MenuEntry, MenuItem, MenuSeparator, MenuLabel } from './Menu.tsx'
+export { ModelPicker } from './ModelPicker.tsx'
+export type {
+  ModelPickerEffort, ModelPickerFailure, ModelPickerGroup, ModelPickerLocaleKey,
+  ModelPickerModel, ModelPickerProps, ModelPickerSelection, ModelPickerState, ModelPickerTranslate,
+} from './ModelPicker.tsx'
 export { useAnchoredMaxHeight } from './useAnchoredMaxHeight.ts'
 export { useAnchoredPosition } from './useAnchoredPosition.ts'
 export type { AnchoredPositionOptions } from './useAnchoredPosition.ts'

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-12-native-web-composer-controls.md
-2026-10-12-native-web-composer-controls.md: dda5b83b1124f8379c9081eadba706b559363953
-2026-10-12-native-web-composer-controls.zh.md: a82241f49d4d05bbfc8ece05540918757905e0da
+2026-10-12-native-web-composer-controls.md: 14193cc532a94e936bff10aee241ba5f33ec0736
+2026-10-12-native-web-composer-controls.zh.md: 7fb45574931ea39269ddabb9de52173fbf443e83

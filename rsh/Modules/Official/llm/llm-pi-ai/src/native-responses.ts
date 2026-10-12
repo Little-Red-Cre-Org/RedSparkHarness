@@ -2,6 +2,8 @@
 
 import { attributionHeaders, LlmError } from '@deepseek-ai/dsh-llm/native'
 import { siwcResponsesPayload } from './siwc.ts'
+import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
+import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
 
 // Package-private copies mirror Core's responses-transport.ts interface and are replaced by the Core import once published.
 /** Immutable JSON accepted by the captured provider's complete Responses request projector. */
@@ -87,6 +89,10 @@ export interface NativeCodexResponsesCaptureOptions {
   readonly identity: CodexAccountIdentity | undefined
   /** Identity error observed during `prepareCall()`, if the saved record was malformed. */
   readonly identityError?: unknown
+  /** Record response quota headers and rate-limit events for the grant used by the request. */
+  readonly onCodexUsage?: (
+    identity: CodexUsageIdentity, observation: CodexUsageObservation, replaceQuotas: boolean,
+  ) => void
   /** Profile headers after Harness attribution has claimed `User-Agent`. */
   readonly headers: Readonly<Record<string, string>>
   /** Captured whole-request timeout. */
@@ -290,13 +296,23 @@ function createTransport(
             redirect: 'manual',
             signal: requestSignal,
           })
+          const usageIdentity = { issuer: resolved.identity.issuer, subject: resolved.identity.subject }
+          if (options.onCodexUsage !== undefined) {
+            const observation = parseCodexRateLimitHeaders(Object.fromEntries(response.headers.entries()))
+            if (observation !== undefined) options.onCodexUsage(usageIdentity, observation, true)
+          }
           if (response.body !== null) {
+            const eventObserver = options.onCodexUsage === undefined
+              ? undefined
+              : codexRateLimitEventObserver(usageIdentity, options.onCodexUsage)
             responseBody = trackedResponseBody(
               response.body,
               operation,
               requestSignal,
               options.streamIdleTimeoutMs,
               () => { exchangeActive = false },
+              eventObserver === undefined ? undefined : (chunk) => { eventObserver.onChunk(chunk) },
+              eventObserver === undefined ? undefined : () => { eventObserver.onEnd() },
             )
           } else {
             exchangeActive = false
@@ -341,6 +357,44 @@ function createTransport(
   return transport
 }
 
+function codexRateLimitEventObserver(
+  identity: CodexUsageIdentity,
+  report: NonNullable<NativeCodexResponsesCaptureOptions['onCodexUsage']>,
+): { onChunk(chunk: Uint8Array): void; onEnd(): void } {
+  const decoder = new TextDecoder()
+  let lineBuffer = ''
+  const observeLine = (line: string): void => {
+    if (!line.startsWith('data:')) return
+    const payload = line.slice(5).trim()
+    if (payload === '[DONE]') return
+    let event: unknown
+    try {
+      event = JSON.parse(payload)
+    } catch {
+      return
+    }
+    const observation = parseCodexRateLimitEvent(event)
+    if (observation !== undefined) report(identity, observation, false)
+  }
+  const consume = (text: string): void => {
+    lineBuffer += text
+    let newline = lineBuffer.indexOf('\n')
+    while (newline !== -1) {
+      const line = lineBuffer.slice(0, newline)
+      observeLine(line.endsWith('\r') ? line.slice(0, -1) : line)
+      lineBuffer = lineBuffer.slice(newline + 1)
+      newline = lineBuffer.indexOf('\n')
+    }
+  }
+  return {
+    onChunk(chunk): void { consume(decoder.decode(chunk, { stream: true })) },
+    onEnd(): void {
+      consume(decoder.decode())
+      if (lineBuffer.length > 0) observeLine(lineBuffer.endsWith('\r') ? lineBuffer.slice(0, -1) : lineBuffer)
+    },
+  }
+}
+
 interface TrackedResponseBody {
   readonly stream: ReadableStream<Uint8Array>
   cancel(reason: Error): Promise<void>
@@ -352,6 +406,8 @@ function trackedResponseBody(
   signal: AbortSignal,
   idleTimeoutMs: number | undefined,
   onSettled: () => void,
+  onChunk?: (chunk: Uint8Array) => void,
+  onEnd?: () => void,
 ): TrackedResponseBody {
   const reader = body.getReader()
   const reads = new Set<Promise<ReadableStreamReadResult<Uint8Array>>>()
@@ -410,12 +466,14 @@ function trackedResponseBody(
       try {
         const result = await read
         if (result.done) {
+          onEnd?.()
           settled = true
           releaseLock()
           if (cancellation === undefined) notifySettled()
           controller.close()
           return
         }
+        onChunk?.(result.value)
         controller.enqueue(result.value)
       } catch (error: unknown) {
         settled = true

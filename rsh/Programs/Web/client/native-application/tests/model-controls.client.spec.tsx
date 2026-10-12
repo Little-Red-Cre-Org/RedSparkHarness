@@ -26,19 +26,22 @@ async function renderControls() {
       { value: 'read-only', name: 'Read Only' }, { value: 'workspace-write', name: 'Workspace Write' },
     ],
   }
+  const selectPreset = vi.fn(async ({ preset }: { preset: string }) => {
+    mode = { ...mode, current: preset, revision: 8 }
+  })
+  const selectPlanMode = vi.fn(async (_id: SessionId, active: boolean) => ({
+    active: false, pending: active, outcome: 'queued' as const,
+  }))
+  const selectPermissionPreset = vi.fn(async (_id: SessionId, preset: string) => {
+    permission = { ...permission, currentValue: preset }
+  })
   const client = {
     async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
     async modeControls() { return mode },
     async permissionControls() { return permission },
-    selectPreset: vi.fn(async ({ preset }: { preset: string }) => {
-      mode = { ...mode, current: preset, revision: 8 }
-    }),
-    selectPlanMode: vi.fn(async (_id: SessionId, active: boolean) => ({
-      active: false, pending: active, outcome: 'queued' as const,
-    })),
-    selectPermissionPreset: vi.fn(async (_id: SessionId, preset: string) => {
-      permission = { ...permission, currentValue: preset }
-    }),
+    selectPreset,
+    selectPlanMode,
+    selectPermissionPreset,
     async *follow() { yield { type: 'baseline' as const, items: [] } },
     async history(id: SessionId) {
       return { header: { version: SESSION_FORMAT_VERSION, id, createdAt: 1, isSeeded: false },
@@ -54,27 +57,31 @@ async function renderControls() {
     selectPlanMode={controller.selectPlanMode.bind(controller)}
     selectPermissionPreset={controller.selectPermissionPreset.bind(controller)}
     refreshModelControls={controller.refreshModelControls.bind(controller)} t={key => en[key]} />)
-  return { client, controller }
+  return { controller, selectPreset, selectPlanMode, selectPermissionPreset }
 }
 
 it.each(['mode', 'plan', 'permission'] as const)('routes the %s composer control through the Host Client', async (control) => {
-  const { client, controller } = await renderControls()
+  const { controller, selectPreset, selectPlanMode, selectPermissionPreset } = await renderControls()
 
   if (control === 'mode') {
     fireEvent.change(screen.getByRole('combobox', { name: en.mode }), { target: { value: 'minimal' } })
-    await waitFor(() => expect(client.selectPreset).toHaveBeenCalledWith({
-      id: 'session-alpha', preset: 'minimal', expectedRevision: 7,
-    }, expect.any(AbortSignal)))
+    await waitFor(() => {
+      expect(selectPreset).toHaveBeenCalledWith({
+        id: 'session-alpha', preset: 'minimal', expectedRevision: 7,
+      }, expect.any(AbortSignal))
+    })
     expect(controller.getSnapshot().modeControls?.current).toBe('minimal')
   } else if (control === 'plan') {
     fireEvent.click(screen.getByRole('button', { name: en.planModeOff }))
-    await waitFor(() => expect(client.selectPlanMode).toHaveBeenCalledWith(
-      'session-alpha', true, expect.any(AbortSignal)))
+    await waitFor(() => {
+      expect(selectPlanMode).toHaveBeenCalledWith('session-alpha', true, expect.any(AbortSignal))
+    })
     expect(controller.getSnapshot().modeControls?.planMode).toEqual({ available: true, active: false, pending: true })
   } else {
     fireEvent.change(screen.getByRole('combobox', { name: en.permission }), { target: { value: 'read-only' } })
-    await waitFor(() => expect(client.selectPermissionPreset).toHaveBeenCalledWith(
-      'session-alpha', 'read-only', expect.any(AbortSignal)))
+    await waitFor(() => {
+      expect(selectPermissionPreset).toHaveBeenCalledWith('session-alpha', 'read-only', expect.any(AbortSignal))
+    })
     expect(controller.getSnapshot().permissionControls?.currentValue).toBe('read-only')
   }
 })

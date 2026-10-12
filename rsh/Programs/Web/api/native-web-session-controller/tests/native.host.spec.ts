@@ -684,6 +684,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal)
     const refusedQueued = expect(queued).resolves.toEqual({ exitCode: 130 })
     await vi.waitFor(async () => { expect((await client.status(sessionId)).status === 'running' || requests.length > 0).toBe(true) })
+    await expect(client.modeControls(sessionId)).resolves.toMatchObject({ current: 'alternate',
+      planMode: { available: true, active: false } })
+    await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     expect(requests).toHaveLength(0)
     expect(retainedExecution?.status).toBe('maintenance')
     queuedAbort.abort(new Error('cancel queued dispatch'))
