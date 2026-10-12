@@ -82,7 +82,10 @@ type NativePermissionPresetSpec = Readonly<Omit<PresetSpec, 'name' | 'descriptio
 ```ts type-equiv
 /** Program-owned validation and durable application of a configured preset. */
 interface NativePermissionPresetOperations {
-  /** @param events - complete current Session event log. @param signal - read cancellation. @returns effective policy and configured choices. */
+  /** @param events - complete current Session event log.
+   * @param signal - read cancellation.
+   * @returns effective policy and configured choices.
+   */
   controls(events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls>
   /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
   resolve(name: string): Readonly<NativePermissionPresetSpec>
