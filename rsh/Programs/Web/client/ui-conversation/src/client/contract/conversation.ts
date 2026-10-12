@@ -1,4 +1,4 @@
-import type { SessionEventLike } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionEventLike } from '@deepseek-ai/dsh-api-session-controller/client-event-types'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 
 /** Definition-local identity and lifecycle role extracted from one event. */
