@@ -311,8 +311,8 @@ function createTransport(
               requestSignal,
               options.streamIdleTimeoutMs,
               () => { exchangeActive = false },
-              eventObserver?.onChunk,
-              eventObserver?.onEnd,
+              eventObserver === undefined ? undefined : (chunk) => { eventObserver.onChunk(chunk) },
+              eventObserver === undefined ? undefined : () => { eventObserver.onEnd() },
             )
           } else {
             exchangeActive = false
