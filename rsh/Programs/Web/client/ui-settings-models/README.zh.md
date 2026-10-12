@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-client-ui-settings-models` 让 Web 用户配置 API 密钥、提供方模型列表和自定义 pi-ai 路由，并通过提供方自有流程登录。提供方行汇总当前目录、Settings 文档与凭据状态。首次运行时，页面显示版本化声明，并在需要时要求配置官方 DeepSeek 凭据。`ui-primitives` 与 native Models 页面共享 API 表单和样式表。
+`dsh-client-ui-settings-models` 让 Web 用户配置 API 密钥、提供方模型列表和自定义 pi-ai 路由，并通过提供方自有流程登录。提供方行汇总当前目录、Settings 文档与凭据状态。首次运行时，页面显示版本化声明，并在需要时要求配置提供方凭据。`ui-primitives` 与 native application 共享 API 表单、引导内容和样式表。
 
 ## 目录
 
@@ -75,7 +75,7 @@ kind: "package-reference"
 
 ### 引导协调器
 
-声明步骤在 `src/client/locales.ts` 中持有精确文案，并在 `src/onboarding-copy.ts` 中持有确认版本；回环时它通过既有 settings API 比较并写入 `ui-onboarding.welcomeNoticeVersion`，且只有显式点击「继续」才会记录当前版本。非回环浏览器无法使用这个仅限宿主的 namespace，因此确认只保留在进程内，刷新后声明会再次出现。DeepSeek 步骤在共享引导模态框内以仅凭据模式渲染既有 `ProviderEditor`；`credentials.set` 仍是唯一的机密写入，且不改变任何提供方设置。
+声明步骤在 `src/client/locales.ts` 中持有精确文案，并在 `src/onboarding-copy.ts` 中持有确认版本；回环时它通过既有 settings API 比较并写入 `ui-onboarding.welcomeNoticeVersion`，且只有显式点击「继续」才会记录当前版本。非回环浏览器无法使用这个仅限宿主的 namespace，因此确认只保留在进程内，刷新后声明会再次出现。DeepSeek 步骤使用共享的 `ModelOnboardingView`、提供方编辑器与模态框；Cordis 适配器提供合并后的 Settings、凭据和授权状态。`credentials.set` 仍是唯一的机密写入。
 
 </details>
 

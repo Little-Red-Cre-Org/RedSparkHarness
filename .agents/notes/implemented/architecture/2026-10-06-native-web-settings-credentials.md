@@ -22,7 +22,7 @@ The Host validates `maxCredentialRefsPerRead` and `maxSettingsOperations` as pos
 
 ## Supported scope
 
-The surface covers schemas explicitly published by active Settings registrations and credential references in their current resolved values. Secret fields must be reachable through the Settings redactor's `object`, `dict` or `array` traversal; unsupported secret schema nodes remain unsafe to publish. The generic editor does not edit hidden `role('secret')` fields, create authorization grants or complete opaque grant-record editing. The native Models page separately presents API provider settings through shared editors ([decision](2026-10-11-native-models-settings-page.md)); provider-specific onboarding dialogs remain in the legacy plugin. Browser authorization login remains separate work.
+The surface covers schemas explicitly published by active Settings registrations and credential references in their current resolved values. Secret fields must be reachable through the Settings redactor's `object`, `dict` or `array` traversal; unsupported secret schema nodes remain unsafe to publish. The generic editor does not edit hidden `role('secret')` fields, create authorization grants or complete opaque grant-record editing. The native Models page separately presents API provider settings and authorization through shared editors and existing Host actions ([decision](2026-10-11-native-models-settings-page.md)). Native first-run onboarding reuses its provider editor and stores welcome acknowledgement locally ([decision](../feature/2026-10-12-native-web-first-run-onboarding.md)).
 
 ## Alternatives considered
 
