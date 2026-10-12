@@ -133,7 +133,7 @@ describe('document toolbar', () => {
     fireEvent.click(view.container.querySelector('[data-textpreview-retry]')!)
     await settle()
     expect(read).toHaveBeenCalledTimes(2)
-    expect(view.container.querySelector('[data-textpreview-path]')?.textContent).toBe(ABSOLUTE_PATH)
+    expect(view.container.querySelector('[data-sidebar-path]')?.textContent).toBe(ABSOLUTE_PATH)
     expect(view.container.querySelector('[data-textpreview-tool="wrap"]')).toBeNull()
     expect(view.container.querySelector('[data-textpreview-failed]')).toBeNull()
     fireEvent.click(view.container.querySelector('[data-textpreview-tool="reload"]')!)

@@ -311,11 +311,11 @@
   font: inherit;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
 }
 
-.scheduleAction:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.scheduleAction:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .collapsed .scheduleAction {
@@ -338,6 +338,116 @@
   flex-direction: column;
   gap: 4px;
   margin-bottom: 8px;
+}
+
+.schedulePanel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 880px;
+  margin: auto;
+  padding: 24px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.schedulePanelHeader,
+.scheduleCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.schedulePanelHeader h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.scheduleClose {
+  flex: none;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.scheduleClose:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.scheduleClose:focus-visible {
+  outline: 2px solid var(--dsw-alias-interactive-bg-hover);
+  outline-offset: 2px;
+}
+
+.scheduleCard {
+  margin: 12px 0;
+  padding: 16px;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.scheduleCardHeader > strong {
+  font-size: 15px;
+}
+
+.scheduleBadge {
+  flex: none;
+  border-radius: 20px;
+  padding: 4px 10px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  font-size: 12px;
+}
+
+.scheduleBadge[data-state='active'] {
+  color: #248149;
+}
+
+.scheduleBadge[data-state='paused'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.scheduleBadge[data-state='failed'] {
+  color: #c32132;
+}
+
+.scheduleTiming {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
+.scheduleNextRun {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--dsw-alias-border-l3);
+  font-size: 12px;
+}
+
+.scheduleNextRun > span {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.scheduleNextRun > strong {
+  font-weight: 500;
+}
+
+.scheduleEmpty {
+  margin-top: 22px;
+  padding: 30px 16px;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 12px;
+  color: var(--dsw-alias-label-secondary);
+  text-align: center;
+}
+
+.scheduleError {
+  color: #c32132;
 }
 
 .panelRow {

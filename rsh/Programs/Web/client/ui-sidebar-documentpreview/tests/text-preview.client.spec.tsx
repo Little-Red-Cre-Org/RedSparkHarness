@@ -126,7 +126,7 @@ describe('TextPreview — pages', () => {
       })
       const view = render(<TextPreview {...h.props()} />)
       await settle()
-      const path = view.container.querySelector('[data-textpreview-path]')
+      const path = view.container.querySelector('[data-sidebar-path]')
       expect(path?.textContent).toBe(absolutePath)
       expect(path?.getAttribute('title')).toBe(absolutePath)
       expect(h.read).toHaveBeenCalledWith(SESSION, PATH, 1, h.controller.signal)
@@ -139,11 +139,11 @@ describe('TextPreview — pages', () => {
     h.useResource.mockReturnValue({ status: 'loading', value: undefined, failure: undefined })
     const view = render(<TextPreview {...h.props()} />)
     await settle()
-    expect(view.container.querySelector('[data-textpreview-path]')?.textContent).toBe(PATH)
+    expect(view.container.querySelector('[data-sidebar-path]')?.textContent).toBe(PATH)
     h.useResource.mockReturnValue(metadata)
     view.rerender(<TextPreview {...h.props()} />)
-    expect(view.container.querySelector('[data-textpreview-path]')?.textContent).toBe(ABSOLUTE_PATH)
-    expect(view.container.querySelector('[data-textpreview-path]')?.getAttribute('title')).toBe(ABSOLUTE_PATH)
+    expect(view.container.querySelector('[data-sidebar-path]')?.textContent).toBe(ABSOLUTE_PATH)
+    expect(view.container.querySelector('[data-sidebar-path]')?.getAttribute('title')).toBe(ABSOLUTE_PATH)
   })
 
   it('marks the path clipped while its text is wider than its box, re-reading on resize', async () => {
@@ -170,9 +170,9 @@ describe('TextPreview — pages', () => {
       const h = harness({ 1: page(1, ['one'], true) })
       const view = render(<TextPreview {...h.props()} />)
       await settle()
-      const path = view.container.querySelector<HTMLElement>('[data-textpreview-path]')
+      const path = view.container.querySelector<HTMLElement>('[data-sidebar-path]')
       const text = path?.firstElementChild
-      expect(path?.hasAttribute('data-textpreview-path-clipped')).toBe(false)
+      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(false)
       const observer = FakeResizeObserver.latest
       if (observer === undefined) throw new Error('expected the path to observe its size')
       expect(observer.observe).toHaveBeenCalledWith(path)
@@ -180,11 +180,11 @@ describe('TextPreview — pages', () => {
 
       boxWidth = 120
       act(() => { observer.fire() })
-      expect(path?.hasAttribute('data-textpreview-path-clipped')).toBe(true)
+      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(true)
 
       boxWidth = 300
       act(() => { observer.fire() })
-      expect(path?.hasAttribute('data-textpreview-path-clipped')).toBe(false)
+      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(false)
       view.unmount()
       expect(observer.disconnect).toHaveBeenCalledTimes(1)
     } finally {
