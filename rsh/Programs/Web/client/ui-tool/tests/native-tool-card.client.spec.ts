@@ -10,7 +10,7 @@ const block: RunningToolCall = {
 }
 
 function props(locale: 'en' | 'zh'): GenericToolCardProps {
-  const row = NativeToolCard({ block, toolName: 'read', locale }) as ReactElement<{ children: ReactElement<GenericToolCardProps>[] }>
+  const row = NativeToolCard({ block, toolName: 'read', locale }) as ReactElement<{ children: [ReactElement<GenericToolCardProps>, unknown] }>
   return row.props.children[0].props
 }
 
