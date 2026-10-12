@@ -22,7 +22,7 @@ import { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-shell'
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
 import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
-import { defaultPermissionPresets } from './presets.ts'
+import { CUSTOM_PRESET, defaultPermissionPresets } from './presets.ts'
 import type { PresetSpec } from './presets.ts'
 import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-settings'
@@ -34,6 +34,7 @@ import type { PermissionSelect, PresetOption } from './types.ts'
 
 export type * from './types.ts'
 export type { PresetSpec } from './presets.ts'
+export { CUSTOM_PRESET } from './presets.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -47,12 +48,6 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     permissions: PermissionProjectionState
   }
 }
-
-/**
- * Returned when effective knob values match no table entry. Clients may show
- * it as the current value, but it is never a switch target or event payload.
- */
-export const CUSTOM_PRESET = 'custom'
 
 /** Settings namespace carrying the default for future sessions. */
 export const PERMISSION_SETTINGS_NAMESPACE = 'permission'

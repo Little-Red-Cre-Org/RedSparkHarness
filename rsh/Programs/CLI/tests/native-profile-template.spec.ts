@@ -336,16 +336,27 @@ it('keeps exact query default and selects one SQLite provider only in the explic
   ]) expect(installed.resolve(`${packageName}/package.json`)).toBeTruthy()
 })
 
-it('installs plan mode beside the native TUI command registry', () => {
-  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', 'native-tui', 'linux')
+it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset roster in %s', (profileName) => {
+  const profile = shippedNativeProfileComposition('/tmp/rsh-plan', profileName, 'linux')
   const ids = profile.installations.map(row => row.id)
   const plan = profile.installations.find(row => row.id === 'plan-mode')
   expect(plan).toMatchObject({ plugin: '@deepseek-ai/dsh-plan-mode', scope: 'root' })
   expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
   expect(ids).toContain('commands')
   expect(ids).toContain('user-questions')
-  expect(shippedNativeProfileComposition('/tmp/rsh-plan', 'native-web', 'linux').installations
-    .some(row => row.plugin === '@deepseek-ai/dsh-plan-mode')).toBe(false)
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }])
+  expect(profile.installations.filter(row => ['agent-presets', 'preset-standard', 'preset-minimal'].includes(row.id))).toEqual([
+    { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'standard' } },
+    { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
+      config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+    { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
+      config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+  ])
+  if (profileName === 'native-web') {
+    expect(profile.installations.find(row => row.id === 'permission-presets')).toEqual({
+      id: 'permission-presets', plugin: '@deepseek-ai/dsh-permission-presets', scope: 'root',
+    })
+  }
 })
 
 it('declares every shipped template plugin as a CLI runtime dependency', async () => {

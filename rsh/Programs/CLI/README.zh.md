@@ -48,6 +48,8 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 选择内置 `native-*` profile 会在首次使用时创建原生 profile 文件；已有 profile 保留其配置。
 
+随附的 `native-web` profile 会为 Native Session API 安装 `standard` 和 `minimal` agent mode、plan-mode Provider，以及 `workspace-write` 和 `danger-full-access` 常驻权限 preset。
+
 显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
 
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。启动器在导入入口前校验所有选中包的 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。

@@ -48,6 +48,8 @@ The `./native-profile` library export shares validated profile parsing, preset e
 
 Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
 
+The shipped `native-web` profile installs the `standard` and `minimal` agent modes, the plan-mode Provider, and the standing permission presets `workspace-write` and `danger-full-access` for its Native Session API.
+
 Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, the profile records the invoking directory as the application's workspace root. It stores its index at `$DSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
 
 A native profile instead declares `dsh.profile.runtime: "native"` and `config: "rsh.profile.json"` in its package manifest. Its versioned JSON file lists scope identities and plugin installations, each with an id, package name, scope and complete config. Native `--patch` files are versioned JSON overlays that replace an existing installation's config or `disabled` value in argument order. The launcher validates every selected package's `dsh.native` metadata before importing entries, refuses nonempty Cordis patch layers, and starts one selected native application. See [native headless](../../Engine/core/native-headless/README.md) for the available one-shot application.
