@@ -634,6 +634,7 @@
       "@deepseek-ai/dsh-client-ui-conversation/conversation-copy": ["./rsh/Programs/Web/client/ui-conversation/src/conversation-copy.ts"],
       "@deepseek-ai/dsh-client-ui-conversation/native-types": ["./rsh/Programs/Web/client/ui-conversation/src/native-types.ts"],
       "@deepseek-ai/dsh-client-ui-conversation/tool-records": ["./rsh/Programs/Web/client/ui-conversation/src/tool-records.ts"],
+      "@deepseek-ai/dsh-client-ui-goal/native": ["./rsh/Programs/Web/client/ui-goal/src/native.ts"],
       "@deepseek-ai/dsh-client-ui-layout/native": ["./rsh/Programs/Web/client/ui-layout/src/native.ts"],
       "@deepseek-ai/dsh-client-ui-session/native": ["./rsh/Programs/Web/client/ui-session/src/native.ts"],
       "@deepseek-ai/dsh-client-ui-sidebar-right/native": ["./rsh/Programs/Web/client/ui-sidebar-right/src/native.ts"],

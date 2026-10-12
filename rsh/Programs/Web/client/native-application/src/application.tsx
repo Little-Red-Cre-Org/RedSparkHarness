@@ -20,6 +20,7 @@ import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
+import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
 import { NativeOnboarding } from './onboarding.tsx'
@@ -184,7 +185,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} t={t} /></div>}
             </section>
           </div>
-          <div className={css.composerArea}>{composer}</div>
+          <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>
         </>}
     </main>
   </>
