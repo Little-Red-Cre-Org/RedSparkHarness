@@ -1815,7 +1815,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/sandbox/sandbox-local/src/backend.ts:42`](../Modules/Official/sandbox/sandbox-local/src/backend.ts)
+来源：[`rsh/Modules/Official/sandbox/sandbox-local/src/backend.ts:45`](../Modules/Official/sandbox/sandbox-local/src/backend.ts)
 
 <a id="deepseek-aidsh-sandbox-policy"></a>
 
