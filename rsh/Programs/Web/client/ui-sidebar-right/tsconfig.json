@@ -33,6 +33,9 @@
       "path": "../ui-layout"
     },
     {
+      "path": "../native-session"
+    },
+    {
       "path": "../ui-primitives"
     },
     {
