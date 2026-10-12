@@ -32,7 +32,7 @@ function outputText(value: unknown): string {
   if (typeof value === 'string') return value
   if (value instanceof Uint8Array) return Buffer.from(value).toString('utf8')
   if (Array.isArray(value)) return value.map(outputText).join('\n')
-  return value === undefined ? '' : String(value)
+  return value === undefined ? '' : JSON.stringify(value) ?? ''
 }
 
 function isRecord(value: unknown): value is JsonObject {
@@ -51,7 +51,7 @@ async function within<T>(promise: Promise<T>, label: string, timeoutMs = 30_000)
     return await Promise.race([
       promise,
       new Promise<T>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error(`packed-jobs: timed out waiting for ${label}`)), timeoutMs)
+        timer = setTimeout(() => { reject(new Error(`packed-jobs: timed out waiting for ${label}`)) }, timeoutMs)
       }),
     ])
   } finally {
@@ -203,7 +203,10 @@ async function closeServer(server: ReturnType<typeof createServer>): Promise<voi
   if (!server.listening) return
   server.closeAllConnections()
   await new Promise<void>((resolve, reject) => {
-    server.close(error => error === undefined ? resolve() : reject(error))
+    server.close((error) => {
+      if (error === undefined) resolve()
+      else reject(error)
+    })
   })
 }
 

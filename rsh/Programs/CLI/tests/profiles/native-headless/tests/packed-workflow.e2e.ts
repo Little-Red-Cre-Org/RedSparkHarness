@@ -80,7 +80,10 @@ async function closeServer(server: ReturnType<typeof createServer>): Promise<voi
   if (!server.listening) return
   server.closeAllConnections()
   await new Promise<void>((resolve, reject) => {
-    server.close(error => error === undefined ? resolve() : reject(error))
+    server.close((error) => {
+      if (error === undefined) resolve()
+      else reject(error)
+    })
   })
 }
 
@@ -176,7 +179,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       if (maybeExit === undefined) throw new Error('packed-workflow: dsh process produced no exit result')
       const exit = maybeExit
       processSettled = true
-      const failureOutput = `dsh stdout:\n${String(exit.stdout)}\ndsh stderr:\n${String(exit.stderr)}`
+      const failureOutput = `dsh stdout:\n${exit.stdout}\ndsh stderr:\n${exit.stderr}`
       expect(exit.timedOut, failureOutput).toBe(false)
       expect(exit.signal, failureOutput).toBeUndefined()
       expect(exit.exitCode, failureOutput).toBe(0)
