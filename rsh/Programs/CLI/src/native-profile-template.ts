@@ -69,6 +69,14 @@ const NATIVE_SESSION_TITLE_INSTALLATIONS = [
     config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
 ] as const
 
+const NATIVE_AGENT_PRESET_INSTALLATIONS = [
+  { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
+  { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
+    config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+  { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
+    config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+] as const
+
 function cliRuntimeRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
@@ -147,7 +155,9 @@ export function shippedNativeProfileComposition(
   const windows = platform === 'win32'
   return {
     formatVersion: 1,
-    scopes: profile === 'native-tui' ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }] : [{ id: ROOT }],
+    scopes: profile === 'native-web' || profile === 'native-tui'
+      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }]
+      : [{ id: ROOT }],
     installations: [
       {
         id: 'app',
@@ -183,17 +193,15 @@ export function shippedNativeProfileComposition(
         { id: 'ask-user-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT },
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
         { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: ROOT },
-        { id: 'plan-mode', plugin: '@deepseek-ai/dsh-plan-mode', scope: ROOT, config: { section: PLAN_MODE_SECTION } },
         { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
-        { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
-        { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
-          config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
-        { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
-          config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
       ] : []),
       ...(profile === 'native-web' ? [
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
         { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
+      ] : []),
+      ...(profile === 'native-web' || profile === 'native-tui' ? [
+        { id: 'plan-mode', plugin: '@deepseek-ai/dsh-plan-mode', scope: ROOT, config: { section: PLAN_MODE_SECTION } },
+        ...NATIVE_AGENT_PRESET_INSTALLATIONS,
       ] : []),
       { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: ROOT },
       { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: ROOT },
@@ -286,6 +294,7 @@ export function shippedNativeProfileComposition(
       ...(profile === 'native-web' ? [{ id: 'user-questions', plugin: '@deepseek-ai/dsh-user-questions', scope: ROOT },
         { id: 'tool-ask-user', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT }] : []),
       { id: 'approval', plugin: '@deepseek-ai/dsh-native-approval', scope: ROOT },
+      ...(profile === 'native-web' ? [{ id: 'permission-presets', plugin: '@deepseek-ai/dsh-permission-presets', scope: ROOT }] : []),
       { id: 'bash-tool', plugin: windows ? '@deepseek-ai/dsh-tool-pwsh' : '@deepseek-ai/dsh-tool-bash', scope: ROOT },
       { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: ROOT },
       { id: 'settings', plugin: '@deepseek-ai/dsh-settings-file', scope: ROOT,

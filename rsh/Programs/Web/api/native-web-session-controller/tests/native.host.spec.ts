@@ -31,6 +31,7 @@ import { plugin as tools } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as approval } from '@deepseek-ai/dsh-native-approval/native'
 import { plugin as questions } from '@deepseek-ai/dsh-user-questions/native'
 import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
+import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mode/src/native.ts'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
 import { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm/native'
@@ -540,6 +541,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       webhookRuleRegistration, nativePolicyProbe].map(plugin =>
       ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
+    { plugin: planMode, scope, config: { section: 'Use the plan to guide implementation.' } },
     { plugin: permissionPresets, scope, config: { presets: {
       'workspace-write': { sandbox: 'workspace-write', approval: 'ask' },
       'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
@@ -649,12 +651,24 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(sessions[0]).toMatchObject({ blank: true, running: false, completed: false,
       runningSubagentCount: 0, hasActiveSchedule: false })
     expect(sessions[0]!.updatedAt).toBeGreaterThanOrEqual(sessions[0]!.header.createdAt)
+    const initialMode = await client.modeControls(sessionId)
+    expect(initialMode).toMatchObject({ current: 'standard', revision: null, locked: false, canSelect: true,
+      options: [{ id: 'standard' }, { id: 'alternate' }], planMode: { available: true, active: false } })
+    expect(await client.permissionControls(sessionId)).toMatchObject({ available: true, currentValue: 'workspace-write',
+      options: [{ value: 'workspace-write' }, { value: 'danger-full-access' }, { value: 'read-only' }] })
+    await client.selectPermissionPreset(sessionId, 'danger-full-access')
+    expect(await client.permissionControls(sessionId)).toMatchObject({ currentValue: 'danger-full-access' })
+    await client.selectPermissionPreset(sessionId, 'workspace-write')
+    await expect(client.selectPlanMode(sessionId, true)).resolves.toEqual({ active: true, outcome: 'committed' })
+    await expect(client.selectPlanMode(sessionId, false)).resolves.toEqual({ active: false, outcome: 'committed' })
     const listAbort = new AbortController()
     const listFollowing = client.follow(listAbort.signal)[Symbol.asyncIterator]()
     await expect(listFollowing.next()).resolves.toMatchObject({ value: { type: 'baseline', items: [{ header: { id: sessionId } }] } })
     const nextListFrame = listFollowing.next()
     expect((await client.modelControls()).catalog?.groups[0]?.models[0]?.id).toBe('chosen')
     await conversation.selectPreset('alternate')
+    expect(await client.modeControls(sessionId)).toMatchObject({ current: 'alternate', locked: false, canSelect: true,
+      planMode: { available: true, active: false } })
     await expect(nextListFrame).resolves.toMatchObject({ value: { type: 'upsert', item: { header: { id: sessionId }, blank: true } } })
     listAbort.abort()
     await listFollowing.return?.()
@@ -670,6 +684,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal)
     const refusedQueued = expect(queued).resolves.toEqual({ exitCode: 130 })
     await vi.waitFor(async () => { expect((await client.status(sessionId)).status === 'running' || requests.length > 0).toBe(true) })
+    await expect(client.modeControls(sessionId)).resolves.toMatchObject({ current: 'alternate',
+      planMode: { available: true, active: false } })
+    await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     expect(requests).toHaveLength(0)
     expect(retainedExecution?.status).toBe('maintenance')
     queuedAbort.abort(new Error('cancel queued dispatch'))
