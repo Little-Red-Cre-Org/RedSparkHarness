@@ -120,6 +120,12 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
   let directCalls = 0
   let rootCalls = 0
   let readOnlyDelegationStarted = false
+  let childResult: {
+    readonly exitCode: number | undefined
+    readonly signal: NodeJS.Signals | undefined
+    readonly timedOut: boolean
+    readonly failed: boolean
+  } | undefined
   const server = createServer((request, response) => {
     let body = ''
     request.setEncoding('utf8')
@@ -218,13 +224,16 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     }
   })
   child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
-  void child.then(() => { exited = true }, () => { exited = true })
+  void child.then((result) => {
+    childResult = { exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, failed: result.failed }
+    exited = true
+  }, () => { exited = true })
   const receive = async (predicate: (frame: Record<string, unknown>) => boolean): Promise<Record<string, unknown>> => {
     const deadline = Date.now() + 30_000
     for (;;) {
       const index = frames.findIndex(predicate)
       if (index >= 0) return frames.splice(index, 1)[0]!
-      if (exited) throw new Error(`native SDK child profile exited early: ${stderr}`)
+      if (exited) throw new Error(`native SDK child profile exited early: ${JSON.stringify({ stderr, childResult, frames, partialOutput: buffer })}`)
       if (Date.now() > deadline) throw new Error(`native SDK child profile timed out: ${JSON.stringify({
         stderr, rootCalls, childCalls, directCalls, rootRequestCount: rootRequests.length,
         childRequestCount: childRequests.length,
