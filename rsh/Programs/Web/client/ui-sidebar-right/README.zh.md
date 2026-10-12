@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-右侧 Sidebar 在可调整宽度的停靠面或全屏面板中承载每个 Session 的 tab。Cordis 组合提供 tab 导航、资源预览、布局操作和展开/收起。Native 组合复用本包的入口，以 Session header、roster 和 history 事实呈现只读的两页会话详情。
+右侧 Sidebar 在可调整宽度的停靠面或全屏面板中承载每个 Session 的 tab。Cordis 组合提供 tab 导航、资源预览、布局操作和展开/收起。Native 组合复用本包的入口，呈现只读会话详情；可选工作区文件客户端存在时，还会提供文件树和文档预览。
 
 ## 目录
 
@@ -60,9 +60,9 @@ kind: "package-reference"
 <a id="native-session-details"></a>
 ## Native 会话详情
 
-Native 组合通过本包的 Native 入口与 rightbar slot 提供两个本地分区。概览读取当前 Session header 与 roster；活动页从 durable history 统计轮次、消息、工具调用和 token 用量，并显示最近的 provider、model 与请求上下文。`SidebarPathBar` 展示工作目录。
+Native 组合通过本包的 Native 入口与 rightbar slot 提供详情。概览读取当前 Session header 与 roster；活动页从 durable history 统计轮次、消息、工具调用和 token 用量，并显示最近的 provider、model 与请求上下文。`SidebarPathBar` 展示工作目录。
 
-Native 面板只显示现有客户端 API 能提供的事实。由于 Native profile 没有 Session 作用域的工作区文件客户端，它省略 legacy 文件树与文档预览。Trajectory 与 turn inspector 不属于本面板。
+存在 `clientNativeWorkspaceFiles` 时，“文件”页会按需列出工作区相对目录，“预览”页会显示所选文件。文本与源码分页调用 `read`；Markdown 和代码复用 `ui-primitives` 中零 Cordis 的渲染器。HTML、图片和 PDF 调用 `readAll`；HTML 直接引用的相对脚本和样式表通过 `readRelated` 读取，并在不透明源沙箱 iframe 中运行。文件变化后，`follow` 会重新读取已展开目录与当前预览。缺少该可选服务时只显示“概览”和“活动”。Native 不使用 Cordis tab 或 legacy 插件入口；legacy 文件树与预览适配器也使用相同的 props-only 行和文档展示。Trajectory 与 turn inspector 仍不属于本面板。
 
 <a id="state"></a>
 ## 状态

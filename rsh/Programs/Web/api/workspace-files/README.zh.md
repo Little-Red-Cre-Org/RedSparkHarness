@@ -9,9 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可从 Web Client 预览 Session 文件系统允许读取的文件。它按页读取 UTF-8 文本、按有界窗口或完整文件读取原始字节、从基文件目录解析关联文件，并报告元数据。文件读取可以指向工作区外路径；目录列举与已埋点的文件系统观察仍限定于工作区。本服务不提供修改操作。
+使用本包可通过 Web Client 预览 Session 文件系统中的文件。它按页读取 UTF-8 文本、按有界窗口或完整文件读取字节、从文件所在目录解析关联路径，并报告元数据。文件读取可以指向工作区外路径；目录列举与已埋点的文件系统观察仍限定于工作区。本服务不提供文件修改操作。
 
-`./types` 导出带有 Workspace Files Remote 错误码合并的这些响应；`./native-types` 从 [`src/types.ts`](src/types.ts) 发布相同响应类型源，且不引用 Cordis，供 Native 使用。`./native-helpers` 与 Native Host 消费方共用有界 UTF-8 分页器。
+`./types` 添加 Workspace Files Remote 错误码。`./native-types` 从 [`src/types.ts`](src/types.ts) 发布不引用 Cordis 的响应类型，供 Native 包消费方使用。`./native-helpers` 与 Native Host 消费方共用有界 UTF-8 分页器。
 
 ## 目录
 

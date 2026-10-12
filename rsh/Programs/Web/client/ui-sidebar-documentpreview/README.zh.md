@@ -53,6 +53,8 @@ PNG、JPEG、GIF、WebP、BMP、ICO 和 SVG 通过 Blob URL 在 `<img>` 静态�
 
 共享文案来自 `sidebarDocumentPreview`；各内置渲染器拥有自己的本地化标签。
 
+代码、Markdown、HTML、图片和加载展示位于零 Cordis 的 `ui-primitives`，并与 Native 会话文件预览共享。本包仍持有 legacy tab 注册、Remote 读取、资源导航和 PDF.js 查看器。
+
 首次读取、追加页及 HTML/PDF/图片准备共用加载指示器，并遵循减少动态效果偏好。下一页加载期间保留已显示的内容。PDF 页面组成一个纵向、适配宽度的连续序列，并在接近视口时惰性渲染。代码预览默认显示源码行号，但复制文本不包含行号；纯文本与代码使用相同字号和行高。代码直接坐在分栏自身的背景上，而不是会话卡片的填充色；复制条与占满剩余高度的内部滚动区相邻，因此横纵滚动条都从复制控件下方开始。
 
 <a id="navigation"></a>
