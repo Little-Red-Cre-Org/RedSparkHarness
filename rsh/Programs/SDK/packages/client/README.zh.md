@@ -53,7 +53,7 @@ console.log(result.finalResponse)
 
 `HarnessClientOptions.onApprovalRequest` 通过 `(request, signal) => outcome` 处理 Native approval 问题。返回值可为 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；省略回调时会以 `unavailable` 关闭处理。关闭 client 或取消 parent 请求会中止 signal。回调迟到的结果会被忽略，runtime 会对该请求回复 `cancelled`。
 
-`@deepseek-ai/dsh-sdk-client/native` 为 Native Module 提供 `createNativeDeepSeekHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeDeepSeekHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。
+`@deepseek-ai/dsh-sdk-client/native` 为 Native Module 提供 `createNativeDeepSeekHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeDeepSeekHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
 
 可选的 `dsh-sdk-child` Module 会快照所选提供方配置与父 Session 实际启用的 Native Headless 内建文件权限。只有确切的父级 `write_file` 权限、`approvalRequired`、workspace-write 根，以及绑定当前 parent owner 与 turn 的 `dsh-sdk` driver callback 同时存在时，child 才获得 `write_file`；缺少该 authority 时不能新增 writer。只有这一真实 relay 组合会在私有 child profile 中安装 `ask` 策略的 Native Approval。请求、取消与单次决策都会返回既有 parent approval authority，并由它作为唯一的持久 approval 事件写入者。child 使用共享 sandbox policy 与 process-sandbox backend；backend 仍允许其临时目录语义，Windows enforcement 在适用时为 partial（部分）。launcher 会把 child 已解析的 cwd 与精确私有 home 传给 `ProcessSandbox.confineChildProcess`，因此 workspace-write profile 替换 `/tmp` 时仍能访问提供方 overlay，也不会暴露同级临时路径。除非现有策略授权覆盖该目录，否则所选 cwd 保持只读。该 profile 为 opt-in，不改变标准 `native-sdk`。
 
@@ -83,8 +83,7 @@ console.log(result.finalResponse)
 |---|---|
 | [`src/api.ts`](src/api.ts) | Program facade：标准 launcher 与向后兼容的 `DeepSeekHarness` 导出 |
 | [`src/client.ts`](src/client.ts) | Program facade：同版本 `dsh` 解析与本地进程适配器 |
-| [`src/native-launcher.ts`](src/native-launcher.ts) | 固定 Native child launcher：提供方 overlay、父 sandbox policy 与私有 home 清理 |
-| [`src/native.ts`](src/native.ts) | Native Host 固定 child launcher 导出 |
+| [`src/native.ts`](src/native.ts) | Native Host SDK facade；固定 child launcher 由 CLI 持有 |
 | Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.zh.md) | 唯一的 `HarnessClient`、`DeepSeekHarness` 与 provider-neutral SDK 协议 runtime 实现 |
 | — | 本包不发布 runtime invariant companion，因为它是在调用方进程中运行的 SDK client library，而非 runtime plugin；公开 SDK API 覆盖其 launcher 与 connection 生命周期。 |
 
