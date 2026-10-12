@@ -24,8 +24,8 @@
  * reported, and the fix it asks for (`import type`, or dropping the binding) is
  * what the published package wants regardless. Both compiler faces are scanned,
  * and only files that ship — a published package's `src` — are subject. A
- * package with Cordis-free exports may make its Cordis peer optional: legacy
- * entries may still load Cordis, while each declared safe export's static source
+ * package with Cordis-free exports may classify a peer as compatibility-only:
+ * legacy entries may load it, while each declared safe export's static source
  * closure may not. The packed-consumer test checks the emitted artifact too.
  */
 

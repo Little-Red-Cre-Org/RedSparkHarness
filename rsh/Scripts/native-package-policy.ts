@@ -256,6 +256,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/compaction/compaction-tool-result-pruner', ['@deepseek-ai/cordis']],
   ['rsh/Engine/compaction/command-compact', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/interaction/commands', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Engine/session-query/tool-session-query', ['@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session']],
   ['rsh/Engine/workflow/workflow-worker-thread', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/tool-workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools']],

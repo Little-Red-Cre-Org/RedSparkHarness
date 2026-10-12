@@ -90,7 +90,7 @@ registry 的两个行为决定了「怎么尝试一次发布」。写入之间�
 
 ### optional 依赖绝不在模块作用域被加载
 
-`optionalDependencies` 里的依赖，或带 `peerDependenciesMeta.<name>.optional` 的 peer，在安装出来的树里可以不存在——这份「可以不存在」正是 optional 的全部承诺。而静态 import 在引入方模块加载时就求值，于是一个缺失的包不再表现为「这个能力不可用」，而是变成所有能走到该模块的代码的加载失败。普通工作区测试无法暴露这种失败，因为每个包都已存在。因此，[原生浏览器入口测试](2026-09-23-native-browser-export-dependency-closure.zh.md)会构造缺少 Cordis 的安装消费者并导入指定子路径。下述源码门禁拒绝模块作用域的 optional 导入，但允许拥有独立原生入口的包在仅旧入口可达的源码中导入 Cordis。
+`optionalDependencies` 里的依赖，或带 `peerDependenciesMeta.<name>.optional` 的 peer，在安装出来的树里可以不存在——这份「可以不存在」正是 optional 的全部承诺。而静态 import 在引入方模块加载时就求值，于是一个缺失的包不再表现为「这个能力不可用」，而是变成所有能走到该模块的代码的加载失败。普通工作区测试无法暴露这种失败，因为每个包都已存在。因此，[原生浏览器入口测试](2026-09-23-native-browser-export-dependency-closure.zh.md)会构造缺少 Cordis 的安装消费者并导入指定子路径。下述源码门禁拒绝模块作用域的 optional 导入；Cordis 或按包明确标记为仅兼容入口使用的 peer 可以例外，但仍须保持在每个 Cordis-free 导出的源码闭包之外，旧入口才能加载兼容 peer 而不让 Native 入口依赖它。
 
 [`verify-optional-dependency-imports`](../../../../rsh/Scripts/verify-optional-dependency-imports.ts) 堵掉这个洞。它从每个包自己的 manifest 读取「这个包允许谁缺失」，再扫描会发布出去的文件——`rsh/*/*/src/` 与 `rsh/Programs/*/src/`——且两个编译门面各扫一遍。Cordis-free 入口按声明路径的 stem 匹配对应编译门面实际加载的 `.ts` 或 `.tsx` 源文件。对于 Cordis peer 可选且公开 `./native` 的包，它沿着原生源码入口的静态值导入检查 Cordis，允许独立的旧入口继续依赖 Cordis。`vendor/` 不在范围内，那是[受 vendoring 政策管辖](../../../../rsh/Core/vendor/README.md)的固定上游源码。值与类型的判定对着绑定好的 Program 做，而不是看 import 写法，因为 `verbatimModuleSyntax` 是关的：编译器本来就会消除绑定解析为类型的 import，所以 `import type {}`、`import {}`、内联 `type` 说明符、以及解析为类型的具名绑定都不产生产物、一律放行，而裸 import、值绑定、星号 re-export 在相关入口中会被保留并报错。只有 type 相位会消除 import：`import defer` 仍然解析并链接它的模块，只推迟求值，所以门禁把它算作一次加载。
 

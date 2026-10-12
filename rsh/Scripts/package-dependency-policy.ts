@@ -184,6 +184,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
     '@deepseek-ai/dsh-invariants',
   ],
   '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol'],
+  '@deepseek-ai/dsh-tool-session-query': ['@deepseek-ai/dsh-tools'],
   '@deepseek-ai/dsh-web': ['@deepseek-ai/cordis'],
   '@deepseek-ai/dsh-web-fetch-http': ['@deepseek-ai/cordis'],
   '@deepseek-ai/dsh-web-search-deepseek': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-compat-settings-definition', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-native-tools', '@deepseek-ai/dsh-settings-definition'],

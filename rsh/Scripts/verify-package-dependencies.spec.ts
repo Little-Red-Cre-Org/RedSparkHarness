@@ -1522,6 +1522,11 @@ describe('dependency sections', () => {
           '@deepseek-ai/dsh-user-approval',
         ],
       },
+      {
+        name: '@deepseek-ai/dsh-tool-session-query',
+        manifestPath: 'rsh/Engine/session-query/tool-session-query/package.json',
+        peers: ['@deepseek-ai/dsh-tools'],
+      },
     ]
     for (const profile of profiles) {
       const peerEntries = Object.fromEntries(profile.peers.map(name => [name, 'workspace:^']))
