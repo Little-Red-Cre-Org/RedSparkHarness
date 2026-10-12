@@ -23,6 +23,7 @@ import { NativeComposerAttachments } from './attachments.tsx'
 import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
+import { NativeOnboarding } from './onboarding.tsx'
 import { NativeTrajectoryInspector } from './trajectory.tsx'
 import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
@@ -263,7 +264,8 @@ export const plugin: NativePlugin = {
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
-      context.provide('clientApplication', { render: () => slots.renderSlot('root', {}) })
+      context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
+        themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
       void controller.load()
     }
   },

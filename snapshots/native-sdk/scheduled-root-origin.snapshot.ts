@@ -1,5 +1,5 @@
-/** Durable scheduled-root classification stays out of the cold-restored SDK prompt projection. */
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+/** Workspace instructions remain durable and nonduplicated through a cold SDK process restore. */
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { execa } from 'execa'
 import { createServer, type IncomingMessage } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -20,12 +20,24 @@ const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-sdk/scheduled-root-origin')
 const fixture = join(scenario, 'session.v3.jsonl')
 const sessionId = 'sdk-scheduled-root-origin'
+const workspaceInstruction = 'SDK_WORKSPACE_INSTRUCTIONS_51d2c8'
+const globalInstruction = 'SDK_PARENT_GLOBAL_INSTRUCTIONS_51d2c8'
+const firstPrompt = 'Use the workspace instructions for this first turn.'
 const prompt = 'Report the result of this restored scheduled root.'
-const finalResponse = 'The restored scheduled root completed through the native SDK.'
+const finalResponse = 'The restored scheduled root completed with workspace guidance through the native SDK.'
 
 interface ModelRequest extends Record<string, unknown> {
   readonly messages?: readonly { readonly role: string; readonly content: unknown }[]
   readonly tools?: readonly { readonly function?: { readonly name?: string } }[]
+}
+
+function requestText(messages: ModelRequest['messages']): string {
+  return (messages ?? []).filter(message => message.role === 'user').flatMap(message => {
+    if (typeof message.content === 'string') return [message.content]
+    if (!Array.isArray(message.content)) return []
+    return message.content.flatMap(block => typeof block === 'object' && block !== null
+      && 'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : [])
+  }).join('\n')
 }
 
 interface OriginOwner {
@@ -69,13 +81,14 @@ function sessionEvent(notification: HarnessNotification): SessionEvent | undefin
   return notification.params.event as SessionEvent
 }
 
-it('keeps a durable scheduled root marker out of both cold-restored SDK projections', async () => {
+it('reuses durable workspace instructions across a cold-restored SDK Session', async () => {
   const originReady = Promise.withResolvers<void>()
   const originFailure = Promise.withResolvers<void>()
   const originPluginLoaded = Promise.withResolvers<void>()
   const originRootWaiting = Promise.withResolvers<void>()
   const originRootRejected = Promise.withResolvers<void>()
   const owners: OriginOwner[] = []
+  const originPluginPids: number[] = []
   const requests: ModelRequest[] = []
   const serverFailures: unknown[] = []
   const readinessFailures: { first?: { message?: string }; late?: { message?: string }; ownersAtRejection?: number; requestsAtRejection?: number }[] = []
@@ -147,6 +160,8 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
         return
       }
       if (request.url === '/origin-plugin-loaded') {
+        const { pid } = JSON.parse(await readBody(request)) as { pid: number }
+        originPluginPids.push(pid)
         originPluginLoaded.resolve()
         response.end('ok')
         return
@@ -205,10 +220,14 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
   }
   try {
     home = mkdtempSync(join(tmpdir(), 'dsh-native-sdk-scheduled-origin-'))
-    const workspace = join(home, 'workspace')
+    const workspacePath = join(home, 'workspace')
     const sessions = join(home, 'sessions')
     const patch = join(home, 'model.patch.json')
-    mkdirSync(workspace)
+    mkdirSync(workspacePath)
+    const workspace = realpathSync.native(workspacePath)
+    mkdirSync(join(workspace, '.git'))
+    writeFileSync(join(workspace, 'AGENTS.md'), `# Workspace fixture\n${workspaceInstruction}\n`)
+    writeFileSync(join(home, 'AGENTS.md'), `# Isolated global fixture\n${globalInstruction}\n`)
     const profile = join(home, 'profiles', 'native-sdk')
     const fixturePackage = join(profile, 'node_modules', 'fixture-sdk-scheduled-origin')
     mkdirSync(fixturePackage, { recursive: true })
@@ -252,7 +271,7 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
       if (process.platform !== 'win32') chmodSync(launcher, 0o700)
       updateStage('start SDK without initialize and verify readiness cancellation')
       const python = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/text-turn/client.py'),
-        launcher, home, workspace, patch, prompt, 'scheduled-origin'], {
+        launcher, home, workspace, patch, firstPrompt, prompt, 'scheduled-origin'], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
           NATIVE_SDK_FIXTURE_KEY: 'fixture-key', NATIVE_SDK_SCHEDULED_ORIGIN_CONTROL_URL: controlUrl }, timeout: 45_000,
       })
@@ -280,6 +299,10 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
       await post('/start-origin')
       const readyResponse = await fetch(`${controlUrl}/await-origin-ready`, { signal: AbortSignal.timeout(15_000) })
       if (!readyResponse.ok || await readyResponse.text() !== 'ready') throw new Error('native SDK scheduled-origin: maintenance did not settle')
+      updateStage('send the first workspace-guided prompt through the initialized SDK Host')
+      const first = await waitFor('first workspace-guided SDK prompt settles',
+        initializing.session(sessionId).run(firstPrompt), report)
+      expect(first.finalResponse).toBe(finalResponse)
       await waitFor('close initialized SDK Host', initializing.close(), report)
       initializing = undefined
       updateStage('cold restore the same scheduled root through a fresh public SDK prompt')
@@ -295,10 +318,15 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
     expect(readinessFailures[0]).toMatchObject({ first: { message: expect.stringContaining('closing') as unknown },
       late: { message: expect.any(String) as unknown }, ownersAtRejection: 0, requestsAtRejection: 0 })
     updateStage('assert durable marker, owner classification, and raw SDK projection')
-    expect(owners).toHaveLength(2)
+    expect(owners).toHaveLength(3)
     for (const owner of owners) expect(owner).toMatchObject({ sessionId, invocation: 'root',
       rootOrigin: 'scheduled', taskScheduleToolVisible: false })
-    expect(requests).toHaveLength(1)
+    expect(requests).toHaveLength(2)
+    expect(originPluginPids).toHaveLength(3)
+    expect(new Set(originPluginPids).size).toBe(3)
+    const modelRequestsText = requests.map(request => requestText(request.messages))
+    expect(modelRequestsText.join('\n')).toContain(workspaceInstruction)
+    expect(modelRequestsText.join('\n')).toContain(globalInstruction)
     const toolNames = (requests[0]?.tools ?? []).flatMap(tool => tool.function?.name === undefined ? [] : [tool.function.name])
     expect(toolNames).not.toContain('task_schedule')
     expect(run.finalResponse).toBe(finalResponse)
@@ -321,18 +349,35 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
     const markers = events.filter(event => event.type === 'session/root-origin')
     expect(markers).toHaveLength(1)
     expect(markers[0]).toMatchObject({ ignorable: true, data: { origin: 'scheduled' } })
-    const rawInput = events.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
+    const instructionEvents = events.filter((event): event is Extract<SessionEvent, { type: 'user/message' }> =>
+      event.type === 'user/message' && event.data.source.kind === 'agent-instructions')
+    expect(instructionEvents).toHaveLength(1)
+    const instructionText = instructionEvents[0]!.data.content
+      .flatMap(block => block.type === 'text' ? [block.text] : []).join('\n')
+    expect(instructionText).toContain(workspaceInstruction)
+    expect(instructionText).toContain(globalInstruction)
+    for (const modelRequest of requests) {
+      const text = requestText(modelRequest.messages)
+      expect(text).toContain(instructionText)
+      expect(text.split(instructionText)).toHaveLength(2)
+    }
+    const rawInput = events.find(event => event.type === 'user/message' && event.data.id === input.data.id)
     if (rawInput?.type !== 'user/message' || receipt?.type !== 'agent/inbox/spliced'
       || assistant?.type !== 'assistant/message' || end?.type !== 'turn/end') {
       throw new Error('native SDK scheduled-origin: durable turn ordering events missing')
     }
     const rawReceipt = events.find(event => event.type === 'agent/inbox/spliced'
       && event.data.inserted.some(message => message.id === rawInput.data.id))
-    const rawAssistant = events.find(event => event.type === 'assistant/message')
-    const rawEnd = events.find(event => event.type === 'turn/end')
+    const rawAssistant = events.find((event): event is Extract<SessionEvent, { type: 'assistant/message' }> =>
+      event.type === 'assistant/message' && event.seq === assistant.seq)
+    const rawEnd = events.find((event): event is Extract<SessionEvent, { type: 'turn/end' }> =>
+      event.type === 'turn/end' && event.seq === end.seq)
     expect(rawReceipt).toBeDefined()
     expect(rawAssistant).toBeDefined()
     expect(rawEnd).toBeDefined()
+    expect(rawAssistant?.data.turn).toBe(assistant.data.turn)
+    expect(rawEnd?.data.turn).toBe(end.data.turn)
+    expect(assistant.data.turn).toBe(end.data.turn)
     expect(events.indexOf(markers[0]!)).toBeLessThan(events.indexOf(rawReceipt!))
     expect(events.indexOf(rawReceipt!)).toBeLessThan(events.indexOf(rawInput))
     expect(events.indexOf(rawInput)).toBeLessThan(events.indexOf(rawAssistant!))
@@ -344,9 +389,9 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
     expect(idleIndex).toBeGreaterThan(endIndex)
 
     const redacted = redactSessionSnapshotIds([raw])[0] ?? raw
-    const normalized = normalizeSessionSnapshot(redacted, { sessionIds: [], cwd: join(home, 'workspace') }, { identityMode: 'preserve' })
-    const prompts = normalizedSystemPrompts(raw, { sessionIds: [], cwd: join(home, 'workspace') })
-    const schemas = normalizedToolSchemas(raw, { sessionIds: [], cwd: join(home, 'workspace') })
+    const normalized = normalizeSessionSnapshot(redacted, { sessionIds: [], cwd: workspace }, { identityMode: 'preserve' })
+    const prompts = normalizedSystemPrompts(raw, { sessionIds: [], cwd: workspace })
+    const schemas = normalizedToolSchemas(raw, { sessionIds: [], cwd: workspace })
     if (prompts[0] === undefined || schemas[0] === undefined) {
       throw new Error('native SDK scheduled-origin: model request header missing')
     }
@@ -355,13 +400,15 @@ it('keeps a durable scheduled root marker out of both cold-restored SDK projecti
       language: process.env.DSH_NATIVE_SDK_PYTHON === undefined ? 'typescript' : 'python',
       readinessFailures,
       owners,
+      originPluginPids,
       modelRequests: requests,
       result: run,
       rawSession: raw,
     }, null, 2))
     const promptSnapshot = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const schemaSnapshot = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    const admissionSnapshot = `${JSON.stringify([{ input: prompt, outcome: 'completed', taskScheduleToolVisible: false }], null, 2)}\n`
+    const admissionSnapshot = `${JSON.stringify([firstPrompt, prompt].map(input => ({ input, outcome: 'completed',
+      taskScheduleToolVisible: false })), null, 2)}\n`
     if (process.env.DSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), promptSnapshot)
