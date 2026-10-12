@@ -26,7 +26,7 @@ kind: "package-reference"
 
 只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。
 
-模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
+模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
 转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。持久化用户文本使用共享右对齐气泡；除 `native-time-context` 提供的上下文外，非用户上下文使用折叠来源行，Native 转录不显示该上下文。助手文本使用共享 Markdown renderer，临时助手文本使用其流式模式。Native 视图按轮次分组可见消息和根级 Tool 卡片，默认折叠助手推理，并为每条助手消息显示复制操作以及可用的 token 用量、耗时和事件时间。顶部读取所选 Session 列表标题，以静态 pill 标记当前对话视图，并保留现有详情操作。读者位于末尾时，视图会跟随新事件和实时文本；向上滚动后暂停跟随，直至读者回到末尾。现有 Native 根级 Tool 和图片 renderer 保持原样。传输和历史错误会显示；发送失败时保留草稿。
 

@@ -14,18 +14,20 @@ export function ModelPickerControl({ snapshot, selectModel, refreshModelControls
   t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
 }) {
   const controls = snapshot.modelControls
+  const catalogUnavailable = controls === undefined || controls.catalog === null
   const selected = foldNativeModelSelectionState(snapshot.events).next ?? controls?.catalog?.default
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined
+  const canRetryCatalog = snapshot.state === 'ready' && catalogUnavailable
   const state: ModelPickerState = {
     current: selected ?? null,
     groups: controls?.catalog?.groups ?? [],
     failures: controls?.catalog?.failures ?? [],
     status: snapshot.state === 'ready' ? 'ready' : controls === undefined ? 'loading' : 'selecting',
-    error: null,
+    error: catalogUnavailable ? snapshot.error ?? null : null,
   }
   return <ModelPicker
     available
-    locked={!ready || !controls?.canSelectModel}
+    locked={!canRetryCatalog && (!ready || !controls?.canSelectModel)}
     state={state}
     load={() => { void refreshModelControls() }}
     select={async (selection) => {
