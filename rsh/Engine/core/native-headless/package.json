@@ -36,7 +36,8 @@
         "modelSelection",
         "agentPresets",
         "workspaceRegistry",
-        "agentInstructions"
+        "agentInstructions",
+        "tmuxContext"
       ],
       "provides": [
         "application",
@@ -93,6 +94,7 @@
     "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
+    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",

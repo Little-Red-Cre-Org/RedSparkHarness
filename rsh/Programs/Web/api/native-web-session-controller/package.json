@@ -48,6 +48,7 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "tmuxContext",
         "modelSelection",
         "modelDirectory",
         "modelSettings",

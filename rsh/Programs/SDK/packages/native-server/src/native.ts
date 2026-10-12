@@ -587,7 +587,7 @@ export class NativeSdkApplication implements NativeApplication {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
-  optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
+  optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
     'agentPresets', 'workspaceRegistry', 'commands'],
   provides: ['application', 'rootExecution'],
   resolve(input) {

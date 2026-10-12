@@ -248,6 +248,7 @@ export function shippedNativeProfileComposition(
       { id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: ROOT,
         config: { maxBytes: 65_536 } },
       { id: 'time-context', plugin: '@deepseek-ai/dsh-native-time-context', scope: ROOT },
+      ...(isHeadlessProfile(profile) ? [{ id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: ROOT, disabled: true }] : []),
       { id: 'tool-jobs', plugin: '@deepseek-ai/dsh-native-tool-jobs', scope: ROOT },
       { id: 'tool-todo', plugin: '@deepseek-ai/dsh-tool-todo', scope: profile === 'native-tui' ? 'standard' : ROOT,
         config: { allowParallelInProgress: true } },

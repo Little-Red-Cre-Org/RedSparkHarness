@@ -2252,6 +2252,16 @@
       "source": "rsh/Modules/Official/feedback/message-feedback/src/types.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/tmux-context.md",
+      "symbol": "NativeTmuxContextRequest",
+      "source": "rsh/Engine/context/tmux-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/tmux-context.md",
+      "symbol": "NativeTmuxContext",
+      "source": "rsh/Engine/context/tmux-context-definition/src/index.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/feedback.md",
       "symbol": "FeedbackCategory",
       "source": "rsh/Modules/Official/feedback/command-feedback/src/types.ts"

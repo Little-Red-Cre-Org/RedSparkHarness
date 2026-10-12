@@ -12,6 +12,8 @@ The native Web boot and Session RPC packages had no conversation consumer, so us
 
 The native Client application consumes the existing Session RPC Consumer and supplies only conversation interaction and presentation. It creates or selects a persisted Session and submits human text through the sole Host turn executor. The selected renderer owns the React root; the application owns its view controller and outstanding calls.
 
+Restoration reads mode and permission controls before its final durable history snapshot. A control lookup can cold-open the Session and append `session/end-seed`; reading history afterward keeps the first live event contiguous with the displayed transcript.
+
 Cancellation changes the view to stopping without declaring readiness. The send operation remains pending through Host writer cleanup and durable history refresh. Application release aborts owned calls and awaits their settlement; removing React does not release execution ownership early.
 
 ## Transcript and composition

@@ -384,6 +384,17 @@ it('keeps exact query default and selects one SQLite provider only in the explic
   ]) expect(installed.resolve(`${packageName}/package.json`)).toBeTruthy()
 })
 
+it('keeps Native tmux context opt-in in the two shipped headless profiles', () => {
+  for (const profileName of ['native-headless', 'native-headless-query'] as const) {
+    expect(shippedNativeProfileComposition('C:/rsh-native-tmux', profileName, 'linux').installations.find(row => row.id === 'tmux-context'))
+      .toEqual({ id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: 'root', disabled: true })
+  }
+  for (const profileName of ['native-sdk', 'native-web', 'native-acp', 'native-tui'] as const) {
+    expect(shippedNativeProfileComposition('C:/rsh-native-tmux', profileName, 'linux').installations.some(row => row.id === 'tmux-context'))
+      .toBe(false)
+  }
+})
+
 it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset roster in %s', (profileName) => {
   const profile = shippedNativeProfileComposition('/tmp/rsh-plan', profileName, 'linux')
   const ids = profile.installations.map(row => row.id)

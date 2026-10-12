@@ -30,7 +30,9 @@ The context group provides plugins that add model-visible context to each reques
 | [`file-reference-local/`](file-reference-local/README.md) | Cordis local-workspace completion provider for `@file` mentions | — |
 | [`time-context/`](time-context/README.md) | Cordis Agent pre-step Provider for current time, browser zone, and elapsed time | `ctx.sessionProjections` |
 | [`native-time-context/`](native-time-context/README.md) | Native Provider that returns durable current-time, browser-zone, and elapsed-time messages to an application Consumer | `timeContext` |
-| [`tmux-context/`](tmux-context/README.md) | The agent's tmux session, window, and pane location | — |
+| [`tmux-context-definition/`](tmux-context-definition/README.md) | Cordis-free Native Definition for the durable tmux-context service | `tmuxContext` |
+| [`native-tmux-context/`](../../Modules/Official/terminal/native-tmux-context/README.md) | Native Provider that queries the agent's own tmux session, window, and pane through the selected shell | `tmuxContext` |
+| [`tmux-context/`](tmux-context/README.md) | Compatibility Agent pre-step Provider for the agent's tmux session, window, and pane location | — |
 
 -----
 
