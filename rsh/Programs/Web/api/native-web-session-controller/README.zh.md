@@ -26,6 +26,8 @@ kind: "package-reference"
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
+当此 Program 的浏览器轮次处于活动状态时，`session/queue` 与 `session/steer` 接受带稳定身份的文本。队列操作将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id，`session/submissions` 返回两个待处理 inbox。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
+
 `session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。历史无法读取的行仍会显示，标题标记为不可用；`updatedAt` 回退为 `header.createdAt`，`blank` 和 `completed` 为 false，运行状态及 Host 管理的字段仍会投影。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`maxFollowBufferBytes` 限制非空基线和每条 upsert 帧的编码字节数：基线超限时先发送空基线，再逐 Session 发送 upsert；单条 upsert 超限时跳过。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
 
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
