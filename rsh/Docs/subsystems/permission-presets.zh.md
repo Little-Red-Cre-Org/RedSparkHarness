@@ -69,7 +69,7 @@ interface PresetOption {
 
 ## Native 宿主写入
 
-Native 宿主入口通过 `permissionPresets` 提供策略读取与写入。`controls()` 将当前 Session 事件日志与部署默认值折叠，返回匹配的预设或推导出的 `custom` 值及可用选项；它无需 Session owner。`resolve()` 返回一个已配置的不可变捆绑项；`apply()` 通过确切 root owner 的 Program writer 记录发生变化的持久事实，并等待刷新完成。该操作只记录策略；由沙箱与审批 Provider 强制执行。Native 入口不会安装 Cordis 设置、命令或客户端投影。
+Native 宿主入口通过 `permissionPresets` 提供策略读取与写入。`controls()` 为确切且可写的 root owner 读取当前匹配的预设或推导出的 `custom` 值，以及可用选项；`resolve()` 返回一个已配置的不可变捆绑项；`apply()` 通过该 owner 的 Program writer 记录发生变化的持久事实，并等待刷新完成。该操作只记录策略；由沙箱与审批 Provider 强制执行。Native 入口不会安装 Cordis 设置、命令或客户端投影。
 
 ```ts type-equiv
 /** The same two durable policy knobs bundled by the Cordis permission service. */
@@ -82,11 +82,8 @@ type NativePermissionPresetSpec = Readonly<Omit<PresetSpec, 'name' | 'descriptio
 ```ts type-equiv
 /** Program-owned validation and durable application of a configured preset. */
 interface NativePermissionPresetOperations {
-  /** @param events - complete current Session event log.
-   * @param signal - read cancellation.
-   * @returns effective policy and configured choices.
-   */
-  controls(events: readonly SessionEvent[], signal: AbortSignal): Promise<NativePermissionPresetControls>
+  /** @param owner - exact writable root Session. @param signal - read cancellation. @returns effective policy and configured choices. */
+  controls(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativePermissionPresetControls>
   /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
   resolve(name: string): Readonly<NativePermissionPresetSpec>
   /**

@@ -71,7 +71,6 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^"
   },
@@ -94,7 +93,6 @@
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
     "@deepseek-ai/dsh-tool-todo": "workspace:^"
   }
