@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-当委派任务应在父工作区中以全新、无人值守的 Claude Code 会话运行时，安装这个 Profile Bundle。每次运行接受一个自包含文本任务，并返回最终答案或安全的失败诊断；推理、工具通信、stderr、用量信息和工作区差异不会进入父 Session。Claude 原生设置与身份验证继续是权威来源，而 Profile 配置选择模型、环境和 `permissionMode`。针对平台锁定的运行时仅在需要时启动，并且绝不会回退到宿主 `claude` 可执行文件。当隔离和真实 Claude Code 行为比续接或提示更重要时，选择本包。
+为保留的 Cordis 兼容入口安装此 Profile Bundle；若要把 Claude Code 作为受限的外部 subagent driver，则组合其 Native 入口。每次运行接受一个自包含文本任务，并只返回最终文本或安全失败；产品推理、工具通信、stderr、用量和工作区差异不会进入父 Session。兼容入口使用 Claude 原生设置和配置的权限模式。Native 运行要求显式 Claude 模型和由 Host 凭据服务解析的凭据，并将 `Read` 限定到父工作区。平台锁定的运行时按需启动，且绝不回退到宿主 `claude` 可执行文件。
 
 ## 目录
 
@@ -41,6 +41,8 @@ dsh --profile <name>
 
 ### 配置
 
+以下字段只配置保留的 Cordis 兼容入口；Native 入口使用单独且显式的配置。
+
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `providerName` | `claude-code` | `ctx.subagents` 上的非空注册名称；每个已挂载实例都需要唯一值 |
@@ -57,7 +59,11 @@ dsh --profile <name>
 | `plan` | 使用原生规划模式，拒绝执行审批，并把完整计划作为最终答案返回 |
 | `bypassPermissions` | 显式设置 SDK 的危险确认并跳过权限检查 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)是每个受支持字段及其 JSDoc 的穷尽式真源。已配置的 `model` 会原样传给该提供方实例的每次 query；省略时保留原生模型选择。具有凭证特征的环境变量会在显式 `env` 覆盖生效前被移除，因此供子进程使用的 API 密钥必须在该配置中显式提供。提供方省略 SDK 的 `settingSources` 选项，因此 Claude Code 会相对于父会话 cwd 读取宿主机常规的用户、项目与本地设置。它不会复制或过滤这些文件、创建或修改登录状态、检查 `PATH`，也不会回退到宿主 `claude` 可执行文件。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)记录保留的 Cordis 入口。其提供方名称、可选模型、环境和权限模式不配置 Native 入口。兼容入口保留既有 Claude 行为：配置模型会原样传给每次 query，凭证类环境变量会先从父环境移除再叠加显式 `env`，SDK 会相对于父 Session cwd 读取宿主用户、项目和本地设置。
+
+### Native 外部 driver
+
+`./native` 入口接受 `name`（默认 `claude-code`），要求显式产品 `model`，并接受 `apiKeyEnv`（默认 `ANTHROPIC_API_KEY`）以从 Host 凭据服务解析凭据。可选的 `baseUrl` 指定 HTTP(S) Anthropic endpoint，`disposeGraceMs` 默认 `3000`。Claude Code 拥有模型协议；Native 只返回最终文本，并且只有父级授予内置 `read_file` 时才启用 Claude `Read`。提供方固定使用 `dontAsk`，把父级 `maxSteps` 映射到 SDK `maxTurns`，并在启动进程前拒绝 `maxTokens`、路由覆盖、persona、工具筛选、输出 schema 与父级审批。私有 `CLAUDE_CONFIG_DIR` 仅包含生成的用户设置；宿主管理设置仍可能生效，因此这些设置不是读取授权来源。`PreToolUse` hook 会解析每个路径，并拒绝读取规范化后的父工作区之外的文件，包括 SDK 设置扩大可读目录时。子进程遵循所选 backend 报告的执行等级；Windows ACL 与较旧内核的 Landlock 可能报告 `partial`，因此本入口不宣称完整操作系统隔离。若所选 backend 无法应用父沙箱策略，提供方会在启动前失败。
 
 ### 暴露工具
 
@@ -100,7 +106,7 @@ dsh --profile <name>
 ### 设计理念
 
 - **每次运行一个全新 query。** 每次运行都拥有独立的 SDK query、取消控制器、CLI 进程与不持久化的产品会话；没有续接、恢复或池化。
-- **原生设置是权威。** 提供方故意省略 SDK 的 `settingSources` 选项，因此 Claude Code 读取宿主机常规的用户、项目与本地设置；可选 `model` 与必需的 `permissionMode` 是仅有的 query 级覆盖。
+- **两种入口保留各自的设置来源。** Cordis 兼容入口读取宿主用户、项目和本地设置；Native 入口要求显式模型、使用私有用户设置，并通过 `PreToolUse` hook 限制父工作区读取。宿主管理设置仍保持启用。
 - **刻意无人值守。** `AskUserQuestion` 被禁用，除 bypass 模式外权限提示都会被拒绝，因此 query 绝不会等待用户界面。
 
 ### 源码地图
@@ -108,13 +114,15 @@ dsh --profile <name>
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：配置 schema、提供方注册 |
-| [`src/run.ts`](src/run.ts) | SDK query 生命周期、结果接受与权限处理 |
+| [`src/run.ts`](src/run.ts) | Cordis 适配器：把旧入口接到共享产品 controller |
+| [`src/controller.ts`](src/controller.ts) | 共享 SDK query、进程生命周期与结果接受 |
+| [`src/native.ts`](src/native.ts) | 受限 Native external-subagent driver |
 | [`src/process.ts`](src/process.ts) | dispose（资源释放）时的 managed-range 逐级终止 |
 | [`cordis.patch.yml`](cordis.patch.yml) | 注册休眠提供方的 Profile patch 层 |
 
 ### 运行流程
 
-一次启动只接受非空的文本块序列，并根据父会话确定子级 cwd。它创建私有 `AbortController`，用精确拼接的任务调用官方 SDK `query()`，并仅在 SDK 的 custom-spawn 钩子已经提供由子进程 seam 管理的活动 CLI 句柄后发布运行。提供方完整迭代消息流，只接受满足 `subtype: "success"`、`is_error: false` 且 `result` 非空白、随后迭代器正常结束的 `result` 消息。其余一切结果都映射为带固定类别的 `error` 诊断，命名生命周期阶段与已观测进程结果——类别集合见 [`src/run.ts`](src/run.ts)。本地取消会在结果竞态中胜出并映射为 `aborted`，且不附带失败诊断。
+启动只接受非空文本任务，并根据父请求确定子级 cwd。两个入口都通过共享 controller 调用官方 SDK `query()`；只有 SDK 已提供由子进程服务管理的活动 CLI 句柄后才会发布运行，并且仅在收到成功终态 `result` 且消息迭代器正常结束后才完成。Cordis 适配器保留既有 `SubagentRun` 结果和诊断处理；Native 适配器使用父级准入、沙箱、工作区、工具与生命周期权威，并只返回 Claude 最终文本。
 
 </details>
 
@@ -125,12 +133,12 @@ dsh --profile <name>
 
 当包级约定不够用时阅读以下页面。它们从本提供方逐步进入它接入的 seam 与兄弟产品提供方。
 
-- [Subagent 子系统](../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
-- [dsh-subagent seam](../subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
-- [Codex 兼容桥接包](../../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)——Codex 产品的旧版 Cordis 适配器。
-- [Official Codex app-server 产品包](../../../Modules/Official/subagent/codex-app-server/README.zh.md)——native app-server 协议与外部 child driver 的 owner。
-- [Claude Code 与 Codex 后端](../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)——每个受支持配置字段及其源声明。
+- [Subagent 子系统](../../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
+- [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
+- [Codex 兼容桥接包](../../../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)——Codex 产品的旧版 Cordis 适配器。
+- [Official Codex app-server 产品包](../codex-app-server/README.zh.md)——native app-server 协议与外部 child driver 的 owner。
+- [Claude Code 与 Codex 后端](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)——每个受支持配置字段及其源声明。
 
 -----
 
@@ -141,7 +149,7 @@ dsh --profile <name>
 
 #### 模型看到什么
 
-Claude Code 子级会在一个全新的 SDK query 中接收独立文本任务。它的工作区是父会话 cwd；所选提供方实例会固定已配置的模型、环境与非交互权限模式，而省略的模型及其余产品设置来自 Claude 原生配置。可执行版本来自 Bundle 锁定的 SDK 平台载荷。
+Claude Code 子级会在全新 SDK query 中接收独立文本任务。兼容入口配置可选模型、环境和非交互权限模式；省略模型时由 Claude 宿主设置选择。Native 入口要求自己的显式模型和 Host 解析的凭据；只有父级授予 `read_file` 时才允许在父工作区内使用 `Read`。两个入口都使用 Bundle 锁定的 SDK 平台载荷中的可执行文件。
 
 #### Token 影响
 
@@ -149,7 +157,7 @@ Claude Code 子级会在一个全新的 SDK query 中接收独立文本任务。
 
 #### KV Cache 影响
 
-与父级请求缓存相互独立。能否复用只取决于 Claude Code 自身的模型、指令、工具、原生设置和全新 query。
+与父级请求缓存相互独立。能否复用取决于 Claude Code 自身的模型、指令、可用工具、原生设置和全新 query。
 
 ### 父级调度与结果（间接）
 
@@ -174,12 +182,12 @@ Claude Code 子级会在一个全新的 SDK query 中接收独立文本任务。
 
 - **每次运行均新建一个 query 和一个进程**——不支持续接、恢复、池化、进度流或产品会话持久化。
 - **静态选择实例**——Profile 配置项固定提供方名称、可选模型与工具绑定；调用无法动态选择或修改提供方与模型，而且每个公开工具都需要唯一的 `toolName`。
-- **宿主设置有意保持权威**——省略 `model` 时由项目与用户设置选择模型；原生设置始终保留其余工具和行为，本提供方不提供经过筛选或与宿主环境隔离的生产模式。
+- **兼容入口设置由宿主掌控**——省略兼容配置中的 `model` 时由 Claude 项目与用户设置选择模型。Native 要求显式模型并使用私有用户配置；宿主管理设置仍保持启用，而 `PreToolUse` hook 会限制父工作区的 `Read`。
 - **身份验证与账户状态仍由原生机制管理**——Bundle 会提供 CLI，但不会创建账户、登录或改写 Claude 设置；配置与身份验证失败会公开其生命周期阶段与安全的 `unknown` 回退，而不会增加单独的公开分类。
 - **委派时必须存在 SDK 平台载荷**——省略 optional dependencies 的安装、不受支持的平台以及缺失或损坏的载荷都会在第一次 query 时失败；不会回退到宿主 CLI。
-- **没有人工交互路径**——`AskUserQuestion` 被禁用，权限提示会被拒绝，MCP elicitation 会被拒绝，阻塞对话会以拒绝方式失败而不会挂起。
-- **assistant 载荷仅包含最终文本**——失败运行可以额外公开独立的安全诊断；推理、中间消息、工具通信、用量信息、stderr 和工作区差异仍只保留在产品内部，通用 Job id、通知与状态来自共享作业运行时。
-- **没有可选的共享能力**——对于本提供方，共享服务会拒绝 `agentOptions`、输出 schema、子任务角色设定、工具筛选和 harness 深度强制约束。
+- **Native 没有人工交互路径**——Native 固定使用 `dontAsk`，禁用 `AskUserQuestion`、MCP server 和插件，并拒绝权限请求而不暂停等待；兼容入口保留配置的 `permissionMode`。
+- **assistant 载荷仅包含最终文本**——父工具结果可单独包含安全失败诊断，后台状态由共享 Job 控制负责；推理、中间消息、工具通信、用量信息、stderr 和工作区差异仍只保留在产品内部。
+- **Native 能力受限**——Native 使用 Claude 模型协议；只有父级授予 `read_file` 时，产品 `Read` 工具才可用。提供方会拒绝路由覆盖、输出 schema、子任务 persona、工具筛选、父级审批和 `maxTokens`，因为无法强制执行这些字段。
 - **没有按实际经过时间触发的超时或副作用回滚**——长时间运行的工作由调用方取消，且取消前已更改的文件或外部系统不会恢复原状。
 
 <a id="dev-note"></a>

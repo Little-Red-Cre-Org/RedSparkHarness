@@ -9,6 +9,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import type {} from '@deepseek-ai/dsh-subprocess'
 import {
   assertPositiveFinite,
   NO_START_CAPABILITIES,
@@ -23,9 +24,9 @@ import {
   DEFAULT_DISPOSE_GRACE_MS,
   claudeCodeStartupFailure,
   startClaudeCodeRun,
-  type ClaudeCodePermissionMode,
   type ClaudeCodeRunSpec,
 } from './run.ts'
+import type { ClaudeCodePermissionMode } from './controller.ts'
 
 export const name = 'subagent-claude-code'
 export const inject = ['subagents', 'subprocess']

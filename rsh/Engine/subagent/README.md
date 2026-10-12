@@ -31,7 +31,6 @@ The subagent package family lets an agent delegate a task to a child, continue t
 | [`subagent-acp/`](subagent-acp/README.md) | Runs an out-of-process child over the Agent Client Protocol | registers on `ctx.subagents` |
 | [`codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) | Provides the official app-server product driver for Native external subagents | `externalSubagentDriver` |
 | [`subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md) | Runs a real Codex child through the official app-server protocol in compatibility profiles | registers on `ctx.subagents` |
-| [`subagent-claude-code/`](subagent-claude-code/README.md) | Runs a real Claude Code child through the official Agent SDK | registers on `ctx.subagents` |
 | [`tool-subagent/`](tool-subagent/README.md) | Exposes delegation to the model | registers on `ctx.tools` |
 | [`tool-subagent-control/`](tool-subagent-control/README.md) | Exposes adjacent-agent messaging, interrupt, and listing to the model | registers on `ctx.tools` |
 | [`native-subagent/`](native-subagent/README.md) | Provides native delegation and continuable children through the selected Program | `subagents` |

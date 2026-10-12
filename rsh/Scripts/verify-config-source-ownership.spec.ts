@@ -14,7 +14,7 @@ describe('configuration source ownership gate', () => {
   it('rejects inline endpoints in shipped bundle patches', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-config-source-ownership-'))
     roots.push(root)
-    const directory = join(root, 'rsh/Engine/subagent/subagent-claude-code')
+    const directory = join(root, 'rsh/Modules/Official/subagent/subagent-claude-code')
     mkdirSync(directory, { recursive: true })
     writeFileSync(
       join(directory, 'cordis.patch.yml'),
@@ -22,7 +22,7 @@ describe('configuration source ownership gate', () => {
     )
 
     expect(collectConfigSourceOwnershipViolations(root)).toEqual([
-      'rsh/Engine/subagent/subagent-claude-code/cordis.patch.yml:2: inlines a credential or endpoint from the environment.'
+      'rsh/Modules/Official/subagent/subagent-claude-code/cordis.patch.yml:2: inlines a credential or endpoint from the environment.'
       + ' The adapter resolves apiKeyEnv through ctx.credentials and the endpoint through the'
       + ' environment snapshot; inlining here bypasses both ladders.',
     ])

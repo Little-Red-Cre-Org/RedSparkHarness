@@ -4,4 +4,4 @@ export {
   apply,
   inject,
   name,
-} from '../../../../../../Compatibility/DSH/bridge/subagent-codex/tests/fixtures/loader/fixture.ts'
+} from '../../../../../../../Compatibility/DSH/bridge/subagent-codex/tests/fixtures/loader/fixture.ts'

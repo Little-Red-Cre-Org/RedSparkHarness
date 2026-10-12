@@ -128,7 +128,7 @@ dsh --profile <name>
 - [Subagent 子系统](../../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
 - [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
 - [Official Codex app-server 产品包](../../../../Modules/Official/subagent/codex-app-server/README.zh.md)——协议、native driver、进程与清理的权威实现。
-- [Claude Code subagent 提供方](../../../../Engine/subagent/subagent-claude-code/README.zh.md)——经官方 Agent SDK 的兄弟产品后端。
+- [Claude Code subagent 提供方](../../../../Modules/Official/subagent/subagent-claude-code/README.zh.md)——经官方 Agent SDK 的兄弟产品后端。
 - [Claude Code 与 Codex 后端](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
 - [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-codex)——每个受支持配置字段及其源声明。
 

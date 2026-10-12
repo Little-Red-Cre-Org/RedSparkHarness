@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Install this Profile Bundle when a delegated task should run as a fresh, unattended Claude Code session in the parent workspace. Each run accepts one self-contained text task and returns the final answer or a safe failure diagnostic; reasoning, tool traffic, stderr, usage, and workspace diffs stay out of the parent Session. Native Claude settings and authentication remain authoritative, while Profile configuration selects the model, environment, and `permissionMode`. The platform-pinned runtime starts on demand and never falls back to the host `claude` executable. Choose it when isolation and genuine Claude Code behavior matter more than continuation or prompts.
+Install this Profile Bundle for the retained Cordis compatibility entry, or compose its Native entry when Claude Code should run as the bounded external subagent driver. Each run accepts one self-contained text task and returns final text or a safe failure; product reasoning, tool traffic, stderr, usage, and workspace diffs stay out of the parent Session. Compatibility runs use Claude's native settings and the configured permission mode. Native runs require an explicit Claude model and a Host-resolved credential, and constrain `Read` to the parent workspace. The platform-pinned runtime starts on demand and never falls back to the host `claude` executable.
 
 ## Table of Contents
 
@@ -41,15 +41,17 @@ Removing the package withdraws the provider and its private runtime closure on t
 
 ### Configuration
 
+These fields configure the retained Cordis compatibility entry only; the Native entry has a separate, explicit configuration.
+
 | Field | Default | Meaning |
 |---|---|---|
-| `providerName` | `claude-code` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value |
-| `model` | native Claude settings | Optional non-empty model name fixed for every run from this provider instance; omission sends no SDK override |
-| `env` | `{}` | Explicit SDK/CLI environment layered over the credential-scrubbed parent environment |
-| `permissionMode` | `dontAsk` | Native non-interactive permission policy fixed for every run from this provider instance |
+| `providerName` | `claude-code` | Non-empty registry name on `ctx.subagents`; each mounted compatibility instance needs a unique value |
+| `model` | native Claude settings | Optional non-empty model name fixed for every compatibility run from this provider instance; omission sends no SDK override |
+| `env` | `{}` | Explicit compatibility SDK/CLI environment layered over the credential-scrubbed parent environment |
+| `permissionMode` | `dontAsk` | Compatibility non-interactive permission policy fixed for every run from this provider instance |
 | `disposeGraceMs` | `3000` | Grace between the shared managed-range owner's termination tiers |
 
-| `permissionMode` value | Native behavior |
+| `permissionMode` value | Compatibility behavior |
 |---|---|
 | `dontAsk` | Deny operations that are not already authorized instead of prompting |
 | `acceptEdits` | Accept file edits; any remaining permission prompt is denied by the unattended callback |
@@ -57,7 +59,11 @@ Removing the package withdraws the provider and its private runtime closure on t
 | `plan` | Run in native planning mode, deny execution approval, and return the completed plan as the final answer |
 | `bypassPermissions` | Explicitly set the SDK's dangerous confirmation and bypass permission checks |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) is the exhaustive source for every accepted field and its JSDoc. A configured `model` passes unchanged to every query from that provider instance; omission leaves native model selection in force. Credential-shaped ambient variables are removed before the explicit `env` overlay, so an API key intended for the child must be supplied there. The provider omits the SDK `settingSources` option, so Claude Code reads the host's normal user, project, and local settings relative to the parent Session cwd. It does not copy or filter those files, create or modify login state, inspect `PATH`, or fall back to a host `claude` executable.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) documents the retained Cordis entry. Its provider name, optional model, environment, and permission mode do not configure the Native entry. The compatibility entry preserves prior Claude behavior: a configured model passes unchanged to each query, credential-shaped ambient variables are removed before the explicit `env` overlay, and the SDK loads host user, project, and local settings relative to the parent Session cwd.
+
+### Native external driver
+
+The `./native` entry accepts `name` (default `claude-code`), requires an explicit product `model`, and accepts `apiKeyEnv` (default `ANTHROPIC_API_KEY`) for a credential resolved through the Host credentials service. Optional `baseUrl` selects an HTTP(S) Anthropic endpoint, and `disposeGraceMs` defaults to `3000`. Claude Code owns the model protocol; Native returns only final text and enables Claude's `Read` only when the parent grants the built-in `read_file` tool. The provider runs with fixed `dontAsk`, maps parent `maxSteps` to SDK `maxTurns`, and rejects `maxTokens`, route overrides, persona, tool filtering, output schema, and parent approval before process startup. A private `CLAUDE_CONFIG_DIR` contains only generated user settings; managed settings may still apply, so those settings are not the read authority. A `PreToolUse` hook resolves each requested path and denies `Read` outside the canonical parent workspace, including when SDK settings add a wider readable directory. Child confinement uses the selected backend's reported enforcement; Windows ACL and older-kernel Landlock may report `partial`, so this entry does not claim full OS isolation. It fails before startup when no selected backend can apply the parent sandbox policy.
 
 ### Exposing the tool
 
@@ -100,7 +106,7 @@ This section explains how the provider drives a real Claude Code CLI and where t
 ### Design concept
 
 - **One fresh query per run.** Every run has an independent SDK query, cancellation controller, CLI process, and non-persisted product session; there is no continuation, resume, or pooling.
-- **Native settings are authoritative.** The provider deliberately omits the SDK `settingSources` option, so Claude Code reads the host's normal user, project, and local settings; an optional `model` and the required `permissionMode` are the only query-level overrides.
+- **Compatibility and Native settings stay distinct.** The Cordis entry keeps host user, project, and local settings. The Native entry uses its private user settings, leaves managed settings active, and enforces the parent workspace read limit in a `PreToolUse` hook.
 - **Unattended by design.** `AskUserQuestion` is disabled and permission prompts are denied except in bypass mode, so the query never waits for a user interface.
 
 ### Source map
@@ -108,13 +114,15 @@ This section explains how the provider drives a real Claude Code CLI and where t
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: config schema, provider registration |
-| [`src/run.ts`](src/run.ts) | The SDK query lifecycle, result acceptance, and permission handling |
+| [`src/run.ts`](src/run.ts) | Cordis adapter over the shared product controller |
+| [`src/controller.ts`](src/controller.ts) | Shared SDK query, process lifecycle, and result acceptance |
+| [`src/native.ts`](src/native.ts) | Bounded Native external-subagent driver |
 | [`src/process.ts`](src/process.ts) | Managed-range termination escalation on disposal |
 | [`cordis.patch.yml`](cordis.patch.yml) | The Profile patch layer that registers the dormant provider |
 
 ### Run flow
 
-A start accepts only a non-empty sequence of text blocks and derives the child cwd from the parent session. It creates a private `AbortController`, calls the official SDK `query()` with the exact concatenated task, and publishes the run only after the SDK's custom-spawn hook has supplied a live CLI handle owned by the subprocess seam. The provider iterates the complete message stream and accepts only a `result` message with `subtype: "success"`, `is_error: false`, and a nonblank `result`, followed by normal iterator completion. Every other outcome maps to a fixed-category `error` diagnostic naming the lifecycle stage and observed process outcome — the category set lives in [`src/run.ts`](src/run.ts). Local cancellation wins the result race and maps to `aborted` without a failure diagnostic.
+A start accepts only non-empty text blocks and derives the child cwd from the parent request. Both entries invoke the official SDK `query()` through the shared controller, which publishes a run only after the SDK has supplied a live CLI handle owned by the subprocess service and accepts only a successful terminal SDK result followed by normal iterator completion. The Cordis adapter preserves the existing SubagentRun result and diagnostic handling; the Native adapter uses parent admission, sandbox, workspace, tool, and lifecycle authority, then returns only Claude's final text.
 
 </details>
 
@@ -125,12 +133,12 @@ A start accepts only a non-empty sequence of text blocks and derives the child c
 
 Read these pages when the package-level contract is not enough. They move from this provider to the seam it plugs into and the sibling product provider.
 
-- [Subagent subsystem](../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
-- [dsh-subagent seam](../subagent/README.md) — the registry and start API this provider registers on.
-- [Codex compatibility bridge](../../../Compatibility/DSH/bridge/subagent-codex/README.md) — the legacy Cordis adapter for the Codex product.
-- [Official Codex app-server product](../../../Modules/Official/subagent/codex-app-server/README.md) — the native app-server protocol and external-child driver owner.
-- [Claude Code and Codex backends](../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) — every accepted config field and its source declaration.
+- [Subagent subsystem](../../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
+- [dsh-subagent seam](../../../../Engine/subagent/subagent/README.md) — the registry and start API this provider registers on.
+- [Codex compatibility bridge](../../../../Compatibility/DSH/bridge/subagent-codex/README.md) — the legacy Cordis adapter for the Codex product.
+- [Official Codex app-server product](../codex-app-server/README.md) — the native app-server protocol and external-child driver owner.
+- [Claude Code and Codex backends](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) — every accepted Cordis config field and its source declaration.
 
 -----
 
@@ -141,7 +149,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The Claude Code child receives the standalone text task as one fresh SDK query. Its workspace is the parent Session cwd; the selected provider instance fixes the query's configured model, environment, and non-interactive permission mode, while an omitted model and every other product setting come from native Claude configuration. The executable version comes from the Bundle's pinned SDK platform payload.
+The Claude Code child receives the standalone text task as one fresh SDK query. Compatibility configuration fixes its optional model, environment, and non-interactive permission mode, while an omitted model and other product settings come from Claude's host configuration. The Native entry instead requires its own explicit model and Host-resolved credential, and limits `Read` to the parent workspace when the parent grants `read_file`. Both use the executable version from the pinned SDK platform payload.
 
 #### Token effect
 
@@ -149,7 +157,7 @@ The child pays for an independent Claude Code context and query. Child tokens do
 
 #### KV Cache effect
 
-Independent of the parent request cache. Reuse depends only on Claude Code's own model, instructions, tools, native settings, and fresh query.
+The compatibility entry keeps the prior product-owned request path. The Native entry runs Claude Code's model and permitted product tools for a bounded standalone task, then sends only final text through the parent-owned Subagent result.
 
 ### Parent scheduling and results, indirectly
 
@@ -174,12 +182,12 @@ These limits define when this provider is a poor fit or needs special operationa
 
 - **One fresh query and process per run** — there is no continuation, resume, pooling, progress stream, or product-session persistence.
 - **Static instance selection** — Profile rows fix provider names, optional models, and tool bindings; calls cannot choose or change either a provider or model dynamically, and every exposed tool needs a unique `toolName`.
-- **Host settings are intentionally authoritative** — when `model` is omitted, project and user settings choose it; native settings always retain the remaining tools and behavior, and the provider does not provide a filtered or hermetic production mode.
+- **Compatibility settings remain host-owned** — when the compatibility `model` is omitted, Claude's project and user settings choose it. Native instead requires an explicit model and uses a private user config; managed settings remain active, while a `PreToolUse` hook enforces the selected parent workspace for `Read`.
 - **Authentication and account state remain native** — the Bundle supplies the CLI but does not create an account, log in, or rewrite Claude settings; configuration and authentication failures surface with their lifecycle stage and the safe `unknown` fallback rather than a separate public classification.
 - **The SDK platform payload is required at delegation time** — installs that omit optional dependencies, unsupported platforms, and missing or damaged payloads fail at the first query; there is no host-CLI fallback.
-- **No human interaction path** — `AskUserQuestion` is disabled, permission prompts are denied, MCP elicitation is declined, and blocking dialogs fail closed instead of suspending.
-- **Assistant payload is final text only** — reasoning, intermediate messages, tool traffic, usage, stderr, and workspace diffs remain product-local.
-- **No optional shared capabilities** — `agentOptions`, output schemas, child personas, tool filtering, and harness depth enforcement are rejected by the shared service for this provider.
+- **No Native human interaction path** — Native fixes `dontAsk`, disables `AskUserQuestion`, MCP servers, and plugins, and denies permission requests instead of suspending; Compatibility keeps its configured `permissionMode`.
+- **Assistant payload is final text only** — a parent tool result may separately include a safe failure diagnostic, and shared Job controls own background status; reasoning, intermediate messages, tool traffic, usage, stderr, and workspace diffs remain product-local.
+- **Bounded Native capabilities** — Native uses Claude's model protocol and permits the product `Read` tool only when the parent grants `read_file`; it rejects route overrides, output schemas, child personas, tool filtering, parent approval, and `maxTokens` because this provider cannot enforce them.
 - **No wall-clock timeout or side-effect rollback** — the caller cancels long work, and files or external systems changed before cancellation are not restored.
 
 <a id="dev-note"></a>

@@ -2,7 +2,7 @@ import { createServer, type IncomingHttpHeaders, type ServerResponse } from 'nod
 
 /** One deterministic response emitted by the package-private Messages server. */
 export type MessagesBehavior =
-  | { readonly kind: 'complete'; readonly text: string }
+  | { readonly kind: 'complete'; readonly text: string; readonly beforeComplete?: Promise<void> }
   | { readonly kind: 'hold' }
   | {
     readonly kind: 'tool-use'
@@ -184,7 +184,8 @@ export async function startMessagesFixture(
       })
       requestStartedResolve()
       if (behavior.kind === 'complete') {
-        complete(response, body, behavior.text)
+        if (behavior.beforeComplete === undefined) complete(response, body, behavior.text)
+        else void behavior.beforeComplete.then(() => complete(response, body, behavior.text))
       } else if (behavior.kind === 'tool-use' && requests.length === 1) {
         toolUse(response, body, behavior.toolName, behavior.input)
       } else if (

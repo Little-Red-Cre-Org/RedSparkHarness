@@ -392,7 +392,7 @@
     { "path": "./rsh/Engine/subagent/subagent-spawn-in-process" },
     { "path": "./rsh/Engine/subagent/subagent-fork-in-process" },
     { "path": "./rsh/Engine/subagent/subagent-acp" },
-    { "path": "./rsh/Engine/subagent/subagent-claude-code" },
+    { "path": "./rsh/Modules/Official/subagent/subagent-claude-code" },
     { "path": "./rsh/Compatibility/DSH/bridge/subagent-codex" },
     { "path": "./rsh/Compatibility/DSH/subagent/subagent-dsh-sdk" },
     { "path": "./rsh/Engine/jobs/jobs" },

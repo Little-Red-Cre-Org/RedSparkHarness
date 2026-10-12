@@ -17,6 +17,7 @@ kind: "package-group"
 |---|---|---|
 | [`sdk-child/`](sdk-child/README.zh.md) | 通过 Host 批准的受管连接，使用标准 `dsh --profile native-sdk` launcher 运行子任务 | `externalSubagentDriver` |
 | [`codex-app-server/`](codex-app-server/README.zh.md) | 为原生外部子 agent 提供 Codex app-server 驱动；在可执行权限与执行上限之前拒绝原生请求 | `externalSubagentDriver` |
+| [`subagent-claude-code/`](subagent-claude-code/README.zh.md) | 在 Native 父级准入、进程所有权与工作区读取限制下运行 Claude Agent SDK | `externalSubagentDriver` |
 
 ## 相关文档
 

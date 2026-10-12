@@ -20,6 +20,9 @@ import type {
 import { Context } from '@deepseek-ai/cordis'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeExternalSubagentDriver, NativeExternalSubagentRequest } from '@deepseek-ai/dsh-native-subagent/native'
+import type { SessionId } from '@deepseek-ai/dsh-session'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import type {
@@ -29,6 +32,7 @@ import type {
 } from '@deepseek-ai/dsh-subprocess'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as claudeCode from '../src/index.ts'
+import { plugin as nativeClaudeCode } from '../src/native.ts'
 import type { ClaudeCodePermissionMode } from '../src/run.ts'
 import {
   startMessagesFixture,
@@ -189,7 +193,9 @@ interface RealRuntime {
   readonly spawnSpecs: SubprocessSpawnSpec[]
 }
 
-async function realRuntime(): Promise<RealRuntime> {
+async function realRuntime(
+  beforeSpawn?: (spec: SubprocessSpawnSpec) => void,
+): Promise<RealRuntime> {
   const ctx = new Context()
   contexts.push(ctx)
   await ctx.plugin(SessionProjectionRegistry)
@@ -200,6 +206,7 @@ async function realRuntime(): Promise<RealRuntime> {
   const spawn = ctx.subprocess.spawn.bind(ctx.subprocess)
   vi.spyOn(ctx.subprocess, 'spawn').mockImplementation((spec) => {
     spawnSpecs.push(spec)
+    beforeSpawn?.(spec)
     const handle = spawn(spec)
     handles.push(handle)
     return handle
@@ -473,6 +480,216 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
     expect(fixture.requests).toHaveLength(1)
     expect(fixture.requests[0]!.headers['x-api-key']).toBe(fakeKey)
     await expectQuiescent(harness.handles)
+  })
+
+  it('bounds Native Read when SDK settings allow the parent directory', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-claude-code-native-read-scope-'))
+    roots.push(root)
+    const workspace = join(root, 'workspace')
+    mkdirSync(workspace)
+    const outsidePath = join(root, 'outside-secret.txt')
+    const outsideSecret = 'NATIVE_READ_OUTSIDE_WORKSPACE_SECRET'
+    writeFileSync(outsidePath, outsideSecret)
+    const fixture = await startMessagesFixture({
+      kind: 'tool-use',
+      toolName: 'Read',
+      input: { file_path: outsidePath },
+      finalText: 'The outside read was denied.',
+    })
+    fixtures.push(fixture)
+    const runtime = await realRuntime((spec) => {
+      const configDir = spec.env?.['CLAUDE_CONFIG_DIR']
+      expect(configDir).toBeDefined()
+      const settingsPath = join(configDir!, 'settings.json')
+      const settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as {
+        permissions: {
+          additionalDirectories: string[]
+          blockReadsOutsideWorkingDirectories: boolean
+        }
+      }
+      settings.permissions.additionalDirectories = [root]
+      writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`)
+    })
+    const controller = new AbortController()
+    const owned: Array<() => void | Promise<void>> = []
+    let driver: NativeExternalSubagentDriver | undefined
+    const nativeContext = {
+      signal: controller.signal,
+      require: (name: string) => {
+        if (name === 'credentials') {
+          return { resolve: async () => ({ value: fakeKey }) }
+        }
+        if (name === 'sandbox') {
+          return { confineChildProcess: () => { throw new Error('unexpected sandbox call') } }
+        }
+        if (name === 'subprocess') return runtime.ctx.subprocess
+        throw new Error(`unexpected Native service ${name}`)
+      },
+      provide: (name: string, service: unknown) => {
+        if (name !== 'externalSubagentDriver') throw new Error(`unexpected Native service ${name}`)
+        driver = service as NativeExternalSubagentDriver
+      },
+      own: (dispose: () => void | Promise<void>) => {
+        owned.push(dispose)
+        return async () => { await dispose() }
+      },
+    } as unknown as NativeContext
+    await nativeClaudeCode.resolve({
+      name: 'claude-native-fixture',
+      model: 'claude-native-fixture-model',
+      apiKeyEnv: 'ANTHROPIC_API_KEY',
+      baseUrl: fixture.baseUrl,
+      disposeGraceMs: 3_000,
+    })(nativeContext)
+    expect(driver).toBeDefined()
+    const request = {
+      id: 'native-outside-read' as NativeExternalSubagentRequest['id'],
+      parentSessionId: 'native-parent' as SessionId,
+      rootSessionId: 'native-parent' as SessionId,
+      parentEpoch: 'parent-epoch',
+      rootEpoch: 'parent-epoch',
+      parentDepth: 0,
+      maxDepth: 1,
+      limits: { maxSteps: 2 },
+      authority: {
+        toolNames: ['read_file'],
+        builtinToolNames: ['read_file'],
+        sandboxPolicy: {
+          mode: 'danger-full-access' as const,
+          workspaceRoot: workspace,
+          sessionId: 'native-parent' as SessionId,
+        },
+        approvalRequired: false,
+      },
+      label: 'Read only the selected workspace',
+      cwd: workspace,
+      prompt: [{ type: 'text' as const, text: `Read ${outsidePath}.` }],
+      route: {
+        provider: 'claude-native-fixture',
+        model: 'engine-route-model-must-not-win',
+        overrides: {},
+      },
+    } satisfies NativeExternalSubagentRequest
+    await expect(driver!.start({ ...request, cwd: root }, controller.signal))
+      .rejects.toThrow('child workspace must remain inside the parent workspace root')
+    expect(runtime.spawnSpecs).toHaveLength(0)
+    const run = await driver!.start(request, controller.signal)
+    let configDir: string | undefined
+    try {
+      await fixture.requestStarted
+      await expect(run.result).resolves.toEqual({
+        output: [{ type: 'text', text: 'The outside read was denied.' }],
+        stopReason: 'completed',
+      })
+      await vi.waitFor(() => expect(fixture.requests).toHaveLength(2))
+      expect(fixture.requests[0]?.body.model).toBe('claude-native-fixture-model')
+      const secondMessages = fixture.requests[1]?.body.messages
+      expect(Array.isArray(secondMessages)).toBe(true)
+      const toolResults = (secondMessages as Array<{ content?: unknown }>).flatMap(message =>
+        Array.isArray(message.content) ? message.content : [])
+        .filter((block): block is { type: string; tool_use_id: string; content: string } =>
+          typeof block === 'object'
+          && block !== null
+          && 'type' in block
+          && block.type === 'tool_result'
+          && 'tool_use_id' in block
+          && block.tool_use_id === 'toolu_dsh_fixture'
+          && 'content' in block
+          && typeof block.content === 'string')
+      expect(toolResults).toHaveLength(1)
+      expect(toolResults[0]?.content).toContain('outside the parent workspace')
+      expect(JSON.stringify(fixture.requests)).not.toContain(outsideSecret)
+      expect(runtime.spawnSpecs).toHaveLength(1)
+      expect(runtime.spawnSpecs[0]?.env?.ANTHROPIC_BASE_URL).toBe(fixture.baseUrl)
+      configDir = runtime.spawnSpecs[0]?.env?.CLAUDE_CONFIG_DIR
+      expect(configDir).toContain('dsh-claude-code-native-')
+      expect(JSON.parse(readFileSync(join(configDir!, 'settings.json'), 'utf8'))).toEqual({
+        permissions: {
+          additionalDirectories: [root],
+          blockReadsOutsideWorkingDirectories: true,
+        },
+      })
+    } finally {
+      controller.abort(new Error('finish Native read-scope fixture'))
+      await run.dispose()
+      await Promise.all(owned.map(dispose => dispose()))
+    }
+    expect(configDir).toBeDefined()
+    expect(existsSync(configDir!)).toBe(false)
+    await expectQuiescent(runtime.handles)
+  })
+
+  it('classifies direct Native disposal as cancellation and settles the SDK child', async () => {
+    const { fixture, workspace } = await realInstanceFixture({ kind: 'hold' })
+    const runtime = await realRuntime()
+    const providerLifetime = new AbortController()
+    const caller = new AbortController()
+    const owned: Array<() => void | Promise<void>> = []
+    let driver: NativeExternalSubagentDriver | undefined
+    const nativeContext = {
+      signal: providerLifetime.signal,
+      require: (name: string) => {
+        if (name === 'credentials') return { resolve: async () => ({ value: fakeKey }) }
+        if (name === 'sandbox') return { confineChildProcess: () => { throw new Error('unexpected sandbox call') } }
+        if (name === 'subprocess') return runtime.ctx.subprocess
+        throw new Error(`unexpected Native service ${name}`)
+      },
+      provide: (name: string, service: unknown) => {
+        if (name !== 'externalSubagentDriver') throw new Error(`unexpected Native service ${name}`)
+        driver = service as NativeExternalSubagentDriver
+      },
+      own: (dispose: () => void | Promise<void>) => {
+        owned.push(dispose)
+        return async () => { await dispose() }
+      },
+    } as unknown as NativeContext
+    await nativeClaudeCode.resolve({
+      name: 'claude-native-dispose-fixture',
+      model: 'claude-native-fixture-model',
+      apiKeyEnv: 'ANTHROPIC_API_KEY',
+      baseUrl: fixture.baseUrl,
+      disposeGraceMs: 3_000,
+    })(nativeContext)
+    const request = {
+      id: 'native-dispose' as NativeExternalSubagentRequest['id'],
+      parentSessionId: 'native-parent' as SessionId,
+      rootSessionId: 'native-parent' as SessionId,
+      parentEpoch: 'parent-epoch',
+      rootEpoch: 'parent-epoch',
+      parentDepth: 0,
+      maxDepth: 1,
+      limits: { maxSteps: 2 },
+      authority: {
+        toolNames: [],
+        builtinToolNames: [],
+        sandboxPolicy: {
+          mode: 'danger-full-access' as const,
+          workspaceRoot: workspace,
+          sessionId: 'native-parent' as SessionId,
+        },
+        approvalRequired: false,
+      },
+      label: 'Cancel the active Native Claude child',
+      cwd: workspace,
+      prompt: [{ type: 'text' as const, text: 'Wait for cancellation.' }],
+      route: {
+        provider: 'claude-native-dispose-fixture',
+        model: 'engine-route-model-must-not-win',
+        overrides: {},
+      },
+    } satisfies NativeExternalSubagentRequest
+    const run = await driver!.start(request, caller.signal)
+    await fixture.requestStarted
+    const disposal = run.dispose()
+    expect(run.dispose()).toBe(disposal)
+    await expect(run.result).resolves.toEqual({ output: [], stopReason: 'aborted' })
+    expect(caller.signal.aborted).toBe(false)
+    await disposal
+    await Promise.all(owned.map(dispose => dispose()))
+    await expectQuiescent(runtime.handles)
+    const privateHome = runtime.spawnSpecs[0]?.env?.HOME
+    expect(privateHome).toBeDefined()
+    expect(existsSync(privateHome!)).toBe(false)
   })
 
   it('overrides interactive settings, denies a write, and returns a safe diagnostic', async () => {

@@ -259,7 +259,7 @@ function queryFrom(
 
 function waitingQuery(signal: AbortSignal, close = vi.fn()): Query {
   async function* stream(): AsyncGenerator<SDKMessage, void> {
-    yield { type: 'system', subtype: 'init' } as SDKMessage
+    yield { type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage
     await new Promise<never>((_resolve, reject) => {
       const fail = (): void => {
         reject(signal.reason instanceof Error
@@ -328,7 +328,7 @@ beforeEach(() => {
       env: options.env!,
       signal: options.abortController!.signal,
     }))
-    return queryFrom([{ type: 'system', subtype: 'init' } as SDKMessage])
+    return queryFrom([{ type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage])
   })
 })
 
@@ -378,7 +378,7 @@ describe('task admission and package contracts', () => {
         CLAUDE_AGENT_SDK_VERSION,
       ]),
     ))
-    const lockfile = readFileSync(resolve(root, '../../../../pnpm-lock.yaml'), 'utf8')
+    const lockfile = readFileSync(resolve(root, '../../../../../pnpm-lock.yaml'), 'utf8')
     for (const packageName of CLAUDE_PLATFORM_PACKAGES) {
       expect(lockfile).toContain(
         `  '${packageName}@${CLAUDE_AGENT_SDK_VERSION}':`,
@@ -844,6 +844,7 @@ describe('query options and result mapping', () => {
     vi.stubEnv('HOST_VISIBLE', 'visible')
     vi.stubEnv('HOST_SECRET_TOKEN', 'must-not-leak')
     vi.stubEnv('DSH_INTERNAL', 'must-not-leak')
+    vi.stubEnv('ANTHROPIC_BASE_URL', 'https://ambient.example')
     const child = fakeChild()
     const spawn = vi.fn(() => child.handle)
     const captured: SubprocessHandle[] = []
@@ -855,7 +856,9 @@ describe('query options and result mapping', () => {
       env: {
         HOST_VISIBLE: 'overridden',
         ANTHROPIC_API_KEY: 'explicit-fake-key',
+        ANTHROPIC_BASE_URL: 'https://configured.example',
       },
+      removeAmbientEnv: ['ANTHROPIC_BASE_URL'],
       disposeGraceMs: 17,
       spawn,
     }
@@ -886,6 +889,12 @@ describe('query options and result mapping', () => {
     })
     expect(options.env).not.toHaveProperty('HOST_SECRET_TOKEN')
     expect(options.env).not.toHaveProperty('DSH_INTERNAL')
+    expect(options.env?.['ANTHROPIC_BASE_URL']).toBe('https://configured.example')
+    const ambientOnlyOptions = claudeQueryOptions({
+      ...spec,
+      env: {},
+    }, new AbortController(), () => {}, () => {})
+    expect(ambientOnlyOptions.env).not.toHaveProperty('ANTHROPIC_BASE_URL')
     expect(options).not.toHaveProperty('settingSources')
 
     const callbackSignal = new AbortController().signal
@@ -1012,7 +1021,7 @@ describe('query options and result mapping', () => {
 
   it('consumes the complete stream and keeps the latest strict success', async () => {
     const query = queryFrom([
-      { type: 'system', subtype: 'init' } as SDKMessage,
+      { type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage,
       success('first'),
       success('last'),
     ])
@@ -1021,7 +1030,7 @@ describe('query options and result mapping', () => {
       stopReason: 'completed',
     })
     await expect(consumeClaudeQuery(
-      queryFrom([{ type: 'system', subtype: 'init' } as SDKMessage]),
+      queryFrom([{ type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage]),
     )).rejects.toThrow(expectedFailureDiagnostic('query-run', 'invalid-result'))
 
     const onPermissionDenied = vi.fn()
@@ -1178,7 +1187,7 @@ describe('run publication, cancellation, and settlement', () => {
     for (const [messages, category] of [
       [[success('answer', true)], 'invalid-result'],
       [[success('')], 'invalid-result'],
-      [[{ type: 'system', subtype: 'init' } as SDKMessage], 'invalid-result'],
+      [[{ type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage], 'invalid-result'],
     ] as const) {
       const fixture = fakeRun(messages)
       const run = await startClaudeCodeRun(request(), fixture.spec)
@@ -1200,7 +1209,7 @@ describe('run publication, cancellation, and settlement', () => {
     for (const outcome of outcomes) {
       const child = fakeChild()
       async function* stream(): AsyncGenerator<SDKMessage, void> {
-        yield { type: 'system', subtype: 'init' } as SDKMessage
+        yield { type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage
         child.settle(outcome)
         await Promise.resolve()
         throw new Error('SECRET_TOKEN from process transport')
@@ -1234,7 +1243,8 @@ describe('run publication, cancellation, and settlement', () => {
   it('gives local cancellation precedence and isolates overlapping controllers', async () => {
     const firstChild = fakeChild()
     const secondChild = fakeChild()
-    const children = [firstChild, secondChild]
+    const thirdChild = fakeChild()
+    const children = [firstChild, secondChild, thirdChild]
     const controllers: AbortController[] = []
     let index = 0
     const spec: ClaudeCodeRunSpec = {
@@ -1247,7 +1257,7 @@ describe('run publication, cancellation, and settlement', () => {
     queryMock.mockImplementation(({ prompt, options }) => {
       controllers.push(options.abortController!)
       options.spawnClaudeCodeProcess!(sdkSpawnOptions())
-      return prompt === 'wait'
+      return prompt === 'wait' || prompt === 'dispose'
         ? waitingQuery(options.abortController!.signal)
         : queryFrom([success('second answer')])
     })
@@ -1260,8 +1270,13 @@ describe('run publication, cancellation, and settlement', () => {
       request([{ type: 'text', text: 'finish' }]),
       spec,
     )
-    expect(controllers).toHaveLength(2)
+    const third = await startClaudeCodeRun(
+      request([{ type: 'text', text: 'dispose' }]),
+      spec,
+    )
+    expect(controllers).toHaveLength(3)
     expect(controllers[0]).not.toBe(controllers[1])
+    expect(controllers[1]).not.toBe(controllers[2])
     firstAbort.abort(new Error('parent cancelled'))
     await expect(first.result).resolves.toEqual({
       output: [],
@@ -1272,6 +1287,12 @@ describe('run publication, cancellation, and settlement', () => {
       stopReason: 'completed',
     })
     expect(controllers[1]!.signal.aborted).toBe(false)
+    expect(third.dispose()).toBe(third.dispose())
+    await third.dispose()
+    await expect(third.result).resolves.toEqual({
+      output: [],
+      stopReason: 'aborted',
+    })
     await Promise.all([first.dispose(), second.dispose()])
   })
 
@@ -1586,7 +1607,7 @@ describe('run publication, cancellation, and settlement', () => {
       options.spawnClaudeCodeProcess!(sdkSpawnOptions())
       async function* stream(): AsyncGenerator<SDKMessage, void> {
         controller.abort(new Error('cancelled while the first message arrived'))
-        yield { type: 'system', subtype: 'init' } as SDKMessage
+        yield { type: 'system', subtype: 'init', session_id: 'claude-session-fixture' } as SDKMessage
       }
       return Object.assign(stream(), { close }) as unknown as Query
     })
