@@ -18,6 +18,12 @@
       "path": "../../../../Engine/core/session"
     },
     {
+      "path": "../../../../Engine/core/native-tools/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.client.json"
+    },
+    {
       "path": "../../../../Engine/llm/llm"
     },
     {

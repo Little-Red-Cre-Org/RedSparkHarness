@@ -37,6 +37,7 @@ const PUBLISHED_TYPE_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-native-application': [
     '@deepseek-ai/dsh-native-runtime',
     '@deepseek-ai/dsh-client-native-session',
+    '@deepseek-ai/dsh-native-tools',
   ],
   '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],

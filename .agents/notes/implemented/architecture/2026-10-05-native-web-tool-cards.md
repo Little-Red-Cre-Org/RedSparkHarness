@@ -10,7 +10,7 @@ Native conversations need readable Tool progress, errors and result cards after 
 
 ## Decision
 
-Tool record types have one pure Conversation export. Compatibility re-exports preserve every consumer. The native Tool renderer reuses GenericToolCard, ToolRow, models, atoms and typed dictionaries; optional unsupported actions disappear. Native conversations pair accepted root calls and results from Session events without a second execution registry or writer. Raw facts preserve nested dispatch records.
+Tool record types have one pure Conversation export. Compatibility re-exports preserve every consumer. The native Tool renderer reuses GenericToolCard, ToolRow, models, atoms and typed dictionaries; optional unsupported actions disappear. Native conversations pair accepted root calls and results from Session events without a second execution registry or writer. The Native card recursively displays PTC child calls from raw dispatch records.
 
 Mixed Client packages publish explicit pure subpaths alongside their dynamic compatibility entry. Their static leaf builds preserve bare imports and emit actual stylesheet assets without classifying the entire package as statically linked. The native policy follows the complete source and public declaration graph. It admits existing Client stylesheets and resolved declared DefinitelyTyped providers, while missing assets, Host stylesheet edges and Cordis references remain invalid. Production declarations and browser imports have explicit dependencies; React instances stay shared peers.
 
@@ -20,8 +20,8 @@ The generated event producer/consumer matrix reads the Host and Client aggregate
 
 ## Alternatives considered
 
-A second card implementation would duplicate metadata parsing and UI behavior. Importing compatibility Client entries would retain Cordis declaration dependencies. Converting entire packages to static assembly would change compatibility composition. No-op file or inspection callbacks would advertise unavailable actions. Root-only cards preserve this batch's narrow scope without discarding the raw nested facts.
+A second card implementation would duplicate metadata parsing and UI behavior. Importing compatibility Client entries would retain Cordis declaration dependencies. Converting entire packages to static assembly would change compatibility composition. No-op file or inspection callbacks would advertise unavailable actions. Keeping sub-call hierarchy in raw facts until Native had a display avoided a second execution registry.
 
 ## Consequences
 
-The explicit native Web renderer and future Desktop composition share Tool presentation without changing product defaults. The existing browser scenario records a real filesystem read, approval rejection and cold restored cards; a focused dependency case rejects missing and Host stylesheets. A nested call hierarchy and additional Tool-specific presenters remain separate product work.
+The explicit native Web renderer and future Desktop composition share Tool presentation without changing product defaults. The existing browser scenario records a real filesystem read, approval rejection and cold restored cards; a focused dependency case rejects missing and Host stylesheets. Native and legacy views render nested dispatch through the shared card models; additional Tool-specific presenters remain separate product work.
