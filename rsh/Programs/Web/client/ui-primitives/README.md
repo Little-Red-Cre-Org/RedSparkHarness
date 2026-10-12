@@ -47,7 +47,8 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
-| `ChatTranscript`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatContextMessage`, `ChatTurnActivity` | Shared transcript rhythm, user bubble, assistant Markdown frame, collapsed context row, and running-turn label for legacy and Native chat views. |
+| `ChatTranscript`, `ChatTurnGroup`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatReasoningDisclosure`, `ChatContextMessage`, `ChatTurnActivity` | Shared turn grouping, transcript rhythm, message frames, collapsed reasoning and context rows, and running-turn label for legacy and Native chat views. |
+| `ChatMessageActionRow`, `ChatMessageCopyAction`, `ChatMessageActionMeta` | Shared message copy control and muted metadata row. |
 | `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
 | `ChatMascotHero` | Cordis-free mascot sprite, speech and animation presentation for welcome and floating chat placements. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |

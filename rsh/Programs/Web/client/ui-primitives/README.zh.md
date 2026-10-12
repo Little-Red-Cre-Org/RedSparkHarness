@@ -47,7 +47,8 @@ kind: "package-library"
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
 | `DirectoryBrowser` | 由回调驱动的 Miller 分栏目录选择器，支持路径导航、创建文件夹、显示隐藏条目，并由 owner 提供本地化文案。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
-| `ChatTranscript`、`ChatUserMessage`、`ChatAssistantMessage`、`ChatContextMessage`、`ChatTurnActivity` | 由 legacy 与 Native 聊天视图共享的转录节奏、用户气泡、助手 Markdown 外框、折叠上下文行和运行中轮次标签。 |
+| `ChatTranscript`、`ChatTurnGroup`、`ChatUserMessage`、`ChatAssistantMessage`、`ChatReasoningDisclosure`、`ChatContextMessage`、`ChatTurnActivity` | legacy 与 Native 聊天视图共享的轮次分组、转录节奏、消息外框、折叠推理与上下文行，以及运行中轮次标签。 |
+| `ChatMessageActionRow`、`ChatMessageCopyAction`、`ChatMessageActionMeta` | 共享消息复制操作与弱化的元信息行。 |
 | `ChatComposerCard`、`ChatComposerToolbar`、`ChatComposerButton`、`ChatComposerSelect`、`ChatWelcome` | 共享 composer 表面及控件，以及品牌化的空对话主视觉。 |
 | `ChatMascotHero` | 用于欢迎页和会话悬浮位置的零 Cordis 吉祥物精灵、气泡与动效展示。 |
 | `DisclosureRow` | 24px 紧凑折叠行，标题与内容左右排列。 |

@@ -112,13 +112,18 @@ it('creates, submits and restores the built native conversation through the ship
         yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name, arguments: JSON.stringify(args) } };
         yield { type: 'finish', reason: { kind: 'tool-calls' } }; return;
       }
+      const reasoning = 'I will inspect the result.\\nThen I will summarize it.';
+      yield { type: 'block-start', index: 0, blockType: 'reasoning' };
+      yield { type: 'reasoning-delta', index: 0, text: reasoning };
+      yield { type: 'block-end', index: 0, block: { type: 'reasoning', text: reasoning } };
       const text = 'Native browser answer.';
-      yield { type: 'block-start', index: 0, blockType: 'text' };
-      yield { type: 'text-delta', index: 0, text };
+      yield { type: 'block-start', index: 1, blockType: 'text' };
+      yield { type: 'text-delta', index: 1, text };
       const abort = () => { resume() }; request.signal.addEventListener('abort', abort, { once: true });
       if (request.signal.aborted) resume();
       try { await continued } finally { request.signal.removeEventListener('abort', abort) }
-      yield { type: 'block-end', index: 0, block: { type: 'text', text } };
+      yield { type: 'block-end', index: 1, block: { type: 'text', text } };
+      yield { type: 'usage', usage: { inputTokens: 20, outputTokens: 8 } };
       yield { type: 'finish', reason: { kind: 'stop' } };
     } };
       context.provide('model', model);
@@ -272,9 +277,26 @@ it('creates, submits and restores the built native conversation through the ship
     expect(modelMessages.some(message => message.content.some(block => block.type === 'image' && typeof block.attachment?.attachmentId === 'string'))).toBe(true)
     const transcript = (await page.locator('section').last().innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     expect(transcript).toContain('Native browser answer.')
+    const conversationHeader = page.locator('main > header')
+    expect(await conversationHeader.getByText('Native browser session', { exact: true }).count()).toBe(1)
+    expect(await conversationHeader.getByText('Chat', { exact: true }).count()).toBe(1)
+    const turnIds = await page.locator('[data-chat-turn]').evaluateAll(nodes =>
+      new Set(nodes.map(node => (node as HTMLElement).dataset.chatTurn)).size)
+    expect(turnIds).toBeGreaterThan(1)
+    const reasoningDisclosure = page.locator('[data-variant="think"] [data-disclosure-row]').first()
+    expect(await reasoningDisclosure.getAttribute('aria-expanded')).toBe('false')
+    expect(transcript).toContain('I will inspect the result.')
+    expect(transcript).not.toContain('Then I will summarize it.')
+    const actionRow = page.locator('[data-chat-message-action-row]').first()
+    expect(await actionRow.getByRole('button', { name: 'Copy' }).count()).toBe(1)
+    expect(await actionRow.getByLabel('28 tokens').count()).toBe(1)
+    expect(await actionRow.getByLabel('Duration').count()).toBe(1)
+    expect(await actionRow.getByLabel('Time').count()).toBe(1)
     const transcriptPath = join(scenario, 'conversation.expected.md')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(transcriptPath, transcript)
     else expect(transcript).toBe(readFileSync(transcriptPath, 'utf8'))
+    await reasoningDisclosure.click()
+    await page.getByText('Then I will summarize it.', { exact: false }).waitFor()
     const readCard = page.locator('[data-tool="read"]')
     expect(await readCard.getAttribute('data-state')).toBe('ok')
     expect(await page.locator('[data-tool="guarded"][data-state="error"]').count()).toBe(1)

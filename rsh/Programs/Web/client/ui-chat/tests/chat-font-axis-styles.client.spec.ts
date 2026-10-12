@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest'
 
 const read = (name: string): string =>
   readFileSync(fileURLToPath(new URL(`../src/client/chat/${name}`, import.meta.url)), 'utf8')
+const readPrimitives = (name: string): string =>
+  readFileSync(fileURLToPath(new URL(`../../ui-primitives/src/chat/${name}`, import.meta.url)), 'utf8')
 
 function declarationsFrom(source: string, selector: string): string[] {
   const declarationText = source.replace(/\/\*[\s\S]*?\*\//g, ' ')
@@ -20,8 +22,8 @@ function declarationsFrom(source: string, selector: string): string[] {
 
 describe('chat flow font-size axis', () => {
   it('think text reads the secondary tier (one step under the body size)', () => {
-    const css = read('ReasoningRow.module.css')
-    for (const selector of ['.summary', '.thinkBody']) {
+    const css = readPrimitives('ChatReasoningDisclosure.module.css')
+    for (const selector of ['.summary', '.body']) {
       expect(declarationsFrom(css, selector)).toEqual(expect.arrayContaining([
         'font-size: var(--dsh-content-font-size-secondary, 13px)',
         'line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px))',
@@ -78,7 +80,7 @@ describe('chat flow font-size axis', () => {
     // The DisclosureRow title starts at leading (16 + delta) + gap 6; a fixed
     // 22px indent would misalign at every non-default size.
     const indent = 'calc(22px + var(--dsh-content-font-delta, 0px))'
-    expect(declarationsFrom(read('ReasoningRow.module.css'), '.thinkBody'))
+    expect(declarationsFrom(readPrimitives('ChatReasoningDisclosure.module.css'), '.body'))
       .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
     expect(declarationsFrom(read('MessageItem.module.css'), '.compactionBody'))
       .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
@@ -137,20 +139,20 @@ describe('chat flow font-size axis', () => {
     // no-hover devices keep the row visible. 'always' has no rule at all —
     // absence, not an override, keeps the latest turn's row shown.
     const css = read('MessageIconActions.module.css')
-    expect(css).toContain("[data-actions-reveal='hover'] .actions,")
-    expect(css).toMatch(/\) \.actions \{\s*opacity: 0/)
-    expect(css).toContain("[data-actions-reveal='hover']:hover .actions,")
-    expect(css).toContain("[data-actions-reveal='hover']:focus-within .actions,")
-    expect(css).toMatch(/\):focus-within \.actions \{\s*opacity: 1/)
+    expect(css).toContain("[data-actions-reveal='hover'] [data-chat-message-action-row],")
+    expect(css).toMatch(/\) \[data-chat-message-action-row\] \{\s*opacity: 0/)
+    expect(css).toContain("[data-actions-reveal='hover']:hover [data-chat-message-action-row],")
+    expect(css).toContain("[data-actions-reveal='hover']:focus-within [data-chat-message-action-row],")
+    expect(css).toMatch(/\):focus-within \[data-chat-message-action-row\] \{\s*opacity: 1/)
     expect(css).not.toContain("[data-actions-reveal='always']")
   })
 
   it('uses flow sibling selectors to reveal only the latest user-authored row', () => {
     const css = read('MessageIconActions.module.css')
     const userKinds = ":is([data-chat-flow-kind='user'], [data-chat-flow-kind='steering'])"
-    expect(css).toContain(`${userKinds}:has(\n    ~ ${userKinds}\n  ) .actions`)
-    expect(css).toContain('):hover .actions')
-    expect(css).toContain('):focus-within .actions')
+    expect(css).toContain(`${userKinds}:has(\n    ~ ${userKinds}\n  ) [data-chat-message-action-row]`)
+    expect(css).toContain('):hover [data-chat-message-action-row]')
+    expect(css).toContain('):focus-within [data-chat-message-action-row]')
   })
 
   it('the interrupted-turn tag stays fixed like the dense token variants', () => {
