@@ -29,6 +29,8 @@ kind: "package-reference"
 
 `./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用通过同一个 Agent execution owner 接纳一个根输入。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入与 `run_code` 提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。process-sandbox Provider 按该 Session 策略在 `read-only` 或 `workspace-write` 下约束代码，并拒绝 `danger-full-access`；策略限制 Session 时，builtin 和 PTC Consumer 会拒绝非 process Provider。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
 
+每条 `execution/policy` 记录在读取时都必需；无法强制执行该记录的 consumer 不能运行此 Session。Headless 将其中的 `maxSteps` 作为每个已接纳 turn 的上限，并将可选 `maxTokens` 作为硬输出 token 上限。每次分发前都会检查最终选定且已准备的 generation，因此 model-selection 控件和 Provider 默认值都不能扩大该上限。`session-owner` 审批记录表示执行要求，本身不构成授权证明：恢复时，Program 必须为精确的实时 Agent 与 Session 签发新的进程内 capability，否则会在模型工作前拒绝执行。
+
 可选的 allowedTools 列表会过滤每个请求中的内置工具和注册工具 schema，并拒绝不在该列表中的调用。提示词 section 收到的名称来自同一份已发送 schema 快照；既有 Session writer 会持久化组装后的系统提示词，并在恢复和分叉时校验。
 
 应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；未中止的非授权结果会变为 `APPROVAL_*` 工具结果错误。取消在决定审计刷新后保留借用 signal 的原始原因；审计或清理失败仍作为错误传播。每个 Session 使用一个由其标识派生的子作用域原生 Agent。Turn 在该 Agent 的显式 initiator boundary 内运行，Program 在已接纳工作排空后释放身份。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。

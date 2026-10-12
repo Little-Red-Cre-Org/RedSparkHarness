@@ -110,6 +110,8 @@ profile 的 `models` 列表会替换而非扩展路由的已安装目录；每�
 
 对于自托管 Chat Completions 端点，`thinkingTokenBudgetField` 选择推理预算参数，`vllmPriority` 在服务端启用优先级调度时设置整数调度优先级。模板参数接受 `$var: thinking.budget`。`openai-responses` 网关可设置 `supportsMaxOutputTokens: false` 来省略 `max_output_tokens`。ChatGPT 计划的 `openai-codex` 路由会在派发前拒绝不受支持的控件，包括输出 token 上限、temperature、prompt cache retention 与 WebSocket 传输。
 
+预备调用会报告其解析后模型与推理强度能否执行每个请求的 `maxTokens` 上限。ChatGPT 计划路由不报告输出上限支持，因此共享 LLM 运行时会拒绝此路由上的带上限请求。
+
 ### 运行时更改配置
 
 profile 通过可选 settings seam 每次操作重新读取：base 与用户的 `llm-pi-ai:` 设置分节按提供方合并，因此用户可以新增路由、覆盖组合路由的一个字段或把路由指向另一个代理，全部在下一个请求生效、无需重启。适配器无法服务的分节会在写入处被拒绝——`settings.mutate` 回答 `settings-rejected`——之后失效的已存储分节会保留 namespace 最后有效值。当路由集合或某路由的重试策略变化时，插件会原子地重新注册：冲突路由会让此前路由继续服务。

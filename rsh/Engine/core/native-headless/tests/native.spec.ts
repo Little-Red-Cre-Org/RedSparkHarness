@@ -1,5 +1,5 @@
 /** Native Agent, model, filesystem tool, and released Session storage in one host. */
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
@@ -47,7 +47,8 @@ import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { NativeRootExecutionOperations, NativeRootRouteId, NativeSessionExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId,
+  NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeToolDelegationContext, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
@@ -723,6 +724,112 @@ it('prepares root input with the effective default model for a fresh Session', a
     expect(state.adapter.requests[0]).toMatchObject({ provider: 'mock', model: 'fixture' })
   } finally {
     await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('enforces restored output ceilings after selection and issues approval only for the attached owner', async () => {
+  let selectedMaxTokens: number | undefined
+  const modelSelection: NativeModelSelectionOperations = {
+    async state() { return { lastUsed: null, next: null, revision: null } },
+    async select() { throw new Error('unused') },
+    async capture(_owner, defaults) {
+      return { config: defaults, requestedConfig: { ...defaults,
+        ...selectedMaxTokens === undefined ? {} : { maxTokens: selectedMaxTokens } } }
+    },
+  }
+  const state = await fixture([textResponse('initial')], { modelSelection })
+  const id = SessionId('execution-policy-selected-ceiling')
+  const route = brandString<NativeRootRouteId>('root')
+  const message = (text: string) => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
+  const signal = new AbortController().signal
+  let restored: Awaited<ReturnType<typeof fixture>> | undefined
+  let stateStopped = false
+  try {
+    await state.rootExecution.execute({ route, id, resume: false, message: message('Create the policy Session.') }, signal)
+    await state.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
+      owner.append('execution/policy', { version: 1, maxSteps: 4, maxTokens: 64,
+        permission: { mode: 'require-approval', authority: 'session-owner' } })
+      await owner.flush()
+    }, signal)
+    await state.host.stop()
+    stateStopped = true
+    restored = await fixture([
+      toolCallResponse('policy-write', 'write_file', { path: 'policy-created.txt', content: 'authorized by owner' }),
+      textResponse('write completed'),
+      textResponse('fork completed'),
+    ], { directory: state.directory, modelSelection })
+    const prepared = restored.adapter.prepareCall.bind(restored.adapter)
+    vi.spyOn(restored.adapter, 'prepareCall').mockImplementation(async (provider, model, caller) => {
+      const captured = await prepared(provider, model, caller)
+      return { ...captured, supportsOutputTokenLimit: async () => true }
+    })
+
+    await expect(restored.rootExecution.execute({ route, id, resume: true, message: message('No owner proof.') }, signal))
+      .rejects.toThrow('accepted Session policy requires a live exact-owner approval capability')
+    expect(restored.adapter.requests).toHaveLength(0)
+
+    selectedMaxTokens = 1024
+    let issuedOwner: NativeActiveSessionOwner | undefined
+    const authorizedCalls: { callId: string; toolName: string; reason?: string }[] = []
+    const issueOwnerApproval = (owner: NativeActiveSessionOwner): NativeSessionOwnerApproval => {
+      issuedOwner = owner
+      const lifetime = owner.rootOperations?.signal
+      if (lifetime === undefined) throw new Error('root owner has no live approval lifetime')
+      return { agent: owner.agent, session: owner.session, lifetime, async authorize(request) {
+        authorizedCalls.push({ callId: request.callId, toolName: request.toolName,
+          ...request.reason === undefined ? {} : { reason: request.reason } })
+        return 'allowed-once'
+      } }
+    }
+    await expect(restored.rootExecution.execute({ route, id, resume: true, message: message('Reject selected 1024.'),
+      issueOwnerApproval }, signal)).rejects.toThrow('selected model controls exceed the accepted Session output-token ceiling')
+    expect(issuedOwner?.session.id).toBe(id)
+    expect(issuedOwner?.invocation).toBe('root')
+    expect(restored.adapter.requests).toHaveLength(0)
+
+    selectedMaxTokens = 32
+    await restored.rootExecution.execute({ route, id, resume: true, message: message('Run within the ceiling.'),
+      issueOwnerApproval }, signal)
+    expect(restored.adapter.requests).toHaveLength(2)
+    expect(restored.adapter.requests.map(request => request.maxTokens)).toEqual([32, 32])
+    expect(authorizedCalls).toEqual([{
+      callId: 'policy-write', toolName: 'write_file', reason: 'Writing a file changes the selected workspace.',
+    }])
+    expect(await readFile(join(restored.workspace, 'policy-created.txt'), 'utf8')).toBe('authorized by owner')
+
+    const forkId = SessionId('execution-policy-fork')
+    await restored.rootExecution.fork({ route, source: id, id: forkId }, signal)
+    selectedMaxTokens = 32
+    await expect(restored.rootExecution.execute({ route, id: forkId, resume: true, message: message('Reject fork without owner.'),
+    }, signal)).rejects.toThrow('accepted Session policy requires a live exact-owner approval capability')
+    expect(restored.adapter.requests).toHaveLength(2)
+    selectedMaxTokens = 1024
+    await expect(restored.rootExecution.execute({ route, id: forkId, resume: true, message: message('Reject fork ceiling.'),
+      issueOwnerApproval }, signal)).rejects.toThrow('selected model controls exceed the accepted Session output-token ceiling')
+    expect(restored.adapter.requests).toHaveLength(2)
+    selectedMaxTokens = 32
+    await restored.rootExecution.execute({ route, id: forkId, resume: true, message: message('Run fork within ceiling.'),
+      issueOwnerApproval }, signal)
+    expect(restored.adapter.requests).toHaveLength(3)
+    expect(restored.adapter.requests.at(-1)?.maxTokens).toBe(32)
+
+    const storage = new JsonlSessionBackend({ root: restored.sessions, compression: 'none' })
+    try {
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'native-approval/asked')).toMatchObject([{
+          data: { toolName: 'write_file', callId: 'policy-write', reason: 'Writing a file changes the selected workspace.' },
+        }])
+        expect(events.filter(event => event.type === 'native-approval/decided')).toMatchObject([{
+          data: { policy: 'ask', outcome: 'allowed-once' },
+        }])
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    if (restored !== undefined) await restored.host.stop()
+    if (!stateStopped) await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }
 })
@@ -1511,6 +1618,62 @@ it('rejects write_file under the installed never approval policy and persists it
         }])
         expect(events.filter(event => event.type === 'native-approval/decided')).toMatchObject([{ data: { policy: 'never', outcome: 'rejected' } }])
         expect(events.find(event => event.type === 'tool/result')).toMatchObject({ data: { error: { code: 'APPROVAL_REJECTED' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('keeps read_file available and rejects write_file under the durable deny policy', async () => {
+  const modelSelection: NativeModelSelectionOperations = {
+    async state() { return { lastUsed: null, next: null, revision: null } },
+    async select() { throw new Error('unused') },
+    async capture(_owner, defaults) { return { config: defaults, requestedConfig: defaults } },
+  }
+  const state = await fixture([
+    textResponse('Session ready.'),
+    toolCallResponse('read-deny-policy', 'read_file', { path: 'readable.txt' }),
+    toolCallResponse('write-deny-policy', 'write_file', { path: 'denied.txt', content: 'must not exist' }),
+    textResponse('read succeeded and write was denied'),
+  ], { modelSelection })
+  const route = brandString<NativeRootRouteId>('root')
+  const id = SessionId('execution-policy-deny')
+  const signal = new AbortController().signal
+  try {
+    await writeFile(join(state.workspace, 'readable.txt'), 'harmless read fixture')
+    await state.rootExecution.execute({ route, id, resume: false, message: createUserMessage({
+      source: { kind: 'user' }, content: [{ type: 'text', text: 'Seed the policy Session.' }],
+    }) }, signal)
+    await state.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
+      owner.append('execution/policy', { version: 1, maxSteps: 4, permission: { mode: 'deny' } })
+      await owner.flush()
+    }, signal)
+    await state.rootExecution.execute({ route, id, resume: true, message: createUserMessage({
+      source: { kind: 'user' }, content: [{ type: 'text', text: 'Read this file, then try to overwrite it.' }],
+    }) }, signal)
+
+    expect(state.adapter.requests).toHaveLength(4)
+    await expect(readFile(join(state.workspace, 'denied.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        const readResult = events.find(event => event.type === 'tool/result'
+          && event.data.message.source.kind === 'tool' && event.data.message.source.callId === 'read-deny-policy')
+        const writeResult = events.find(event => event.type === 'tool/result'
+          && event.data.message.source.kind === 'tool' && event.data.message.source.callId === 'write-deny-policy')
+        if (readResult?.type !== 'tool/result') throw new Error('The allowed read result was not persisted.')
+        expect(readResult.data.message.content[0].content).toContainEqual({ type: 'text', text: 'harmless read fixture' })
+        expect(writeResult).toMatchObject({ data: { error: { code: 'APPROVAL_REJECTED' } } })
+        expect(events.filter(event => event.type === 'native-approval/asked')).toMatchObject([{
+          data: { toolName: 'write_file', callId: 'write-deny-policy' },
+        }])
+        expect(events.filter(event => event.type === 'native-approval/decided')).toMatchObject([{
+          data: { policy: 'never', outcome: 'rejected' },
+        }])
       } finally { await reader.close() }
     } finally { await storage.close() }
   } finally {

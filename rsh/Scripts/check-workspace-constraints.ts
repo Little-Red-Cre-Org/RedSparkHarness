@@ -259,6 +259,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-acp-protocol': ['lib/shared-*.js'],
   '@deepseek-ai/dsh-spill': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],

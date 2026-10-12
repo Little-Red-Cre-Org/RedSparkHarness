@@ -13,6 +13,8 @@ export type { NativeResponsesOperationCapture, NativeResponsesPreparedGeneration
 
 export type * from './continuation.ts'
 export type * from './root-execution.ts'
+export type * from './execution-policy.ts'
+export { nativeSessionExecutionPolicy, readNativeSessionExecutionPolicy } from './execution-policy.ts'
 export * from './active-session.ts'
 export { NativeActiveSessionRegistry } from './active-session-registry.ts'
 

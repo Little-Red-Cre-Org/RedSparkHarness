@@ -38,7 +38,7 @@ kind: "package-reference"
 
 <a id="model-experience"></a>
 
-`./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
+`./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际，并会拒绝该代际无法按解析后的推理强度执行的 `maxTokens` 上限。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
 
 `captureResponsesOperation(step, route, maxTokens, signal, reasoningEffort)` 从确切的预备步骤捕获一条 transport 和嵌套代际能力。路由匹配时复用该步骤；路由变化时用 child controls 为所选模型只预备一次。返回的能力始终绑定该代际，并为每个嵌套操作捕获独立 transport。
 

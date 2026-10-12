@@ -181,6 +181,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Modules/Official/sandbox/sandbox-windows-acl': { kind: 'indirect', reason: 'The provider backend delegates model rendering to the shell/pwsh sandbox executors and their tools.' },
   'rsh/Programs/SDK/packages/client': { kind: 'none', reason: 'Client-process library; model-facing behavior lives in the spawned runtime\'s composed plugins.' },
   'rsh/Engine/subagent/sdk-protocol': { kind: 'none', reason: 'Client-facing wire library; the runtime plugins behind the serving entry own model-facing behavior.' },
+  'rsh/Modules/Official/subagent/acp-protocol': { kind: 'none', reason: 'Versioned ACP control metadata does not construct model requests.' },
   'rsh/Engine/subagent/sdk-runtime': { kind: 'indirect', reason: 'The SDK runtime transports typed requests; the selected server owns request assembly and Session logging.' },
   'rsh/Modules/Official/subagent/sdk-child': { kind: 'indirect', reason: 'The adapter delegates model request assembly and Session logging to the selected Native SDK server.' },
   'rsh/Engine/session/session-projection': { kind: 'none', reason: 'The projection registry serves client-facing read models of already-logged session state and registers nothing model-facing.' },

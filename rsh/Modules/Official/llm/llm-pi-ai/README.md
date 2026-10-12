@@ -110,6 +110,8 @@ A profile's `models` list replaces the route's installed catalog rather than ext
 
 For self-hosted Chat Completions endpoints, `thinkingTokenBudgetField` selects the reasoning-budget parameter, and `vllmPriority` sets an integer scheduler priority when the server enables priority scheduling. Template arguments accept `$var: thinking.budget`. `openai-responses` gateways can set `supportsMaxOutputTokens: false` to omit `max_output_tokens`. The ChatGPT-plan `openai-codex` route rejects unsupported controls such as output-token caps, temperature, prompt-cache retention, and WebSocket transport before dispatch.
 
+The prepared call reports whether each requested `maxTokens` ceiling can be enforced for its resolved model and reasoning effort. The ChatGPT-plan route reports no output-cap support, so the shared LLM runtime rejects capped requests for that route.
+
 ### Change configuration at runtime
 
 Profiles are re-read once per operation through the optional settings seam: the base and the user's `llm-pi-ai:` settings section merge per provider, so a user can add a route, override one field of a composition route, or point a route at another proxy, all effective on the next request with no restart. A section the adapter could not serve is refused where it is written — `settings.mutate` answers `settings-rejected` — and a stored section that later fails keeps the namespace's last good value. When the route set or a route's retry policy changes, the plugin re-registers atomically: a conflicting route leaves the previous routes serving.

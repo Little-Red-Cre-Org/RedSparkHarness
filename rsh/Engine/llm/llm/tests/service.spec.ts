@@ -737,13 +737,19 @@ describe('LlmRuntime', () => {
   it('materializes an adapter-owned maxTokens default while preserving an explicit cap', async () => {
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
-    ctx.llm.registerAdapter(['route'], new CatalogAdapter(
+    const adapter = new class extends CatalogAdapter {
+      override async prepareCall(provider: string, model: string) {
+        const prepared = await super.prepareCall(provider, model)
+        return { ...prepared, supportsOutputTokenLimit: async (maxTokens: number) => maxTokens > 0 && maxTokens <= 256_000 }
+      }
+    }(
       { id: 'route', name: 'Route' },
       [],
       {},
       {},
       { model: 256_000 },
-    ))
+    )
+    ctx.llm.registerAdapter(['route'], adapter)
 
     await expect(ctx.llm.resolveModelInfo('route', 'model')).resolves.toMatchObject({
       defaultMaxTokens: 256_000,
@@ -1006,6 +1012,7 @@ describe('LlmRuntime', () => {
         const captured = generation
         return Promise.resolve({
           model: { provider, id: model, name: model, inputModalities: ['text'] as const },
+          supportsOutputTokenLimit: async () => false,
           stream: (options: GenerateOptions) => {
             dispatched = captured
             return super.stream(options)

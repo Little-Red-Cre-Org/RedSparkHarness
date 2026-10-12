@@ -57,6 +57,9 @@
       "path": "../../../../Engine/core/approval-definition"
     },
     {
+      "path": "../../../../Modules/Official/subagent/acp-protocol"
+    },
+    {
       "path": "../../../../Modules/Official/interaction/commands/tsconfig.json"
     }
   ]

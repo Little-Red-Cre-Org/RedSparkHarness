@@ -2678,6 +2678,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../preset/agent-presets
+      '@deepseek-ai/dsh-approval-definition':
+        specifier: workspace:^
+        version: link:../approval-definition
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
@@ -8383,6 +8386,8 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
 
+  rsh/Modules/Official/subagent/acp-protocol: {}
+
   rsh/Modules/Official/subagent/codex-app-server:
     dependencies:
       '@deepseek-ai/dsh-json-rpc-line':
@@ -9105,6 +9110,9 @@ importers:
       '@agentclientprotocol/sdk':
         specifier: 1.4.0
         version: 1.4.0(zod@4.4.3)
+      '@deepseek-ai/dsh-acp-protocol':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/subagent/acp-protocol
       '@deepseek-ai/dsh-approval-definition':
         specifier: workspace:^
         version: link:../../../../Engine/core/approval-definition

@@ -114,6 +114,45 @@ interface NativeExternalSubagentDriver {
 }
 ```
 
+### ACP policy 元数据
+
+`@deepseek-ai/dsh-acp-protocol` 在 `com.deepseek.ai/dsh-native-subagent` 下定义版本 1 的 `_meta` 值。Client initialize metadata 声明是否支持权限中继；server metadata 报告 `maxSteps`、`maxTokens` 和支持的权限模式。Session policy 必须包含正安全整数 `maxSteps`、可选的正安全整数 `maxTokens`，以及 `permissionMode: 'deny' | 'parent-relay'`。Reader 会拒绝未知扩展字段和不支持的版本。本库只校验并编码 ACP metadata；消费它的 Program 会将已接受的 policy 转换为 Engine 持久化的 `execution/policy` 事件，并负责传输与强制执行。
+
+```ts type-equiv
+/** Permission behavior requested for a child Session over ACP. */
+type NativeAcpSubagentPermissionMode = 'deny' | 'parent-relay'
+```
+
+```ts type-equiv
+/** Session ceilings and permission mode accepted through ACP metadata. */
+interface NativeAcpSubagentPolicy {
+  readonly version: typeof NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION
+  readonly maxSteps: number
+  readonly maxTokens?: number
+  readonly permissionMode: NativeAcpSubagentPermissionMode
+}
+```
+
+```ts type-equiv
+/** Capabilities a Native ACP client advertises during initialize. */
+interface NativeAcpSubagentClientCapabilities {
+  /** Whether the client can relay permission requests to its owning Session. */
+  readonly permissionRelay: boolean
+}
+```
+
+```ts type-equiv
+/** Capabilities a Native ACP server advertises during initialize. */
+interface NativeAcpSubagentServerCapabilities {
+  /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
+  readonly maxSteps: true
+  /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
+  readonly maxTokens: true
+  /** Permission modes implemented by this server. */
+  readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
+}
+```
+
 ## 两类能力，两种发现方式
 
 提供方通过一个静态描述符公布其**启动时**功能，服务会在单次 run 存在之前即行检查；如果请求依赖提供方不具备的功能，会被明确拒绝（`SubagentError('UNSUPPORTED_CAPABILITY')`），绝不会被接受后静默忽略。这些 flag 仅描述单次 [`start()`](#the-provider-contract-subagentprovider) 路径，即由提供方组合子 agent 的路径。**可继续**子 agent 由继续执行管理器自行组合，因此它们由唯一一个可选方法把关，方法存在即为能力，并以 TypeScript 的类型收窄作为发现机制：[`SubagentProvider.prepareContinuable`](#the-provider-contract-subagentprovider)。

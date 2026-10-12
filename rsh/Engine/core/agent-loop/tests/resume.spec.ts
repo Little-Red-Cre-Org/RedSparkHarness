@@ -508,6 +508,63 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     await ctx2.fiber.dispose()
   })
 
+  it('refuses execution-policy Sessions before repair while preserving read-only history', async () => {
+    const sessionId = SessionId('policy-resume-refused')
+    const adapter = new MockAdapter([])
+    const { ctx } = await persistentHarness(adapter)
+    const policyEvent = {
+      type: 'execution/policy',
+      seq: SessionSeq(0),
+      time: 1,
+      data: { version: 1, maxSteps: 3, permission: { mode: 'deny' } },
+    } as unknown as SessionEvent
+    const events: SessionEvent[] = [
+      policyEvent,
+      { type: 'turn/start', seq: SessionSeq(1), time: 2, data: { turn: 1 } },
+    ]
+    await seedStoredSession(ctx, sessionId, events)
+
+    await expect(ctx.agents.resume({ resumeSessionId: sessionId }))
+      .rejects.toThrow('cannot resume a Session with execution/policy through the Cordis AgentLoop')
+
+    const forkId = SessionId('policy-fork-refused')
+    const forkSeed: SessionEvent[] = [
+      policyEvent,
+      { type: 'turn/start', seq: SessionSeq(1), time: 2, data: { turn: 1 } },
+      { type: 'turn/end', seq: SessionSeq(2), time: 3, data: { turn: 1, reason: { kind: 'completed' } } },
+    ]
+    await expect(ctx.agents.create({
+      sessionId: forkId,
+      seed: forkSeed,
+      inheritedEventCount: SessionLogOffset(forkSeed.length),
+      meta: { parentSession: SessionId('policy-fork-parent'), isSeeded: true },
+    })).rejects.toThrow('cannot create a Session with execution/policy through the Cordis AgentLoop')
+    expect(adapter.requests).toHaveLength(0)
+    expect(ctx.agents.get(sessionId)).toBeUndefined()
+    expect(ctx.sessions.get(sessionId)).toBeUndefined()
+    expect(ctx.agents.get(forkId)).toBeUndefined()
+    expect(ctx.sessions.get(forkId)).toBeUndefined()
+    await expect(ctx.sessionPersistence.stat(forkId)).resolves.toBeUndefined()
+    expect(await readStoredEvents(ctx, sessionId)).toEqual(events)
+
+    const historyHandle = await ctx.sessionPersistence.open(sessionId, 'read')
+    try {
+      const historyRead = await historyHandle.read()
+      const history = ctx.sessions.prepare(sessionId, {
+        seed: [...historyRead.events],
+        meta: historyHandle.header,
+        inheritedEventCount: historyHandle.inheritedEventCount,
+        eventState: historyRead.eventState,
+      })
+      expect(history.snapshotEvents().slice(0, events.length)).toEqual(events)
+      expect(history.snapshotEvents().at(-1)?.type).toBe('session/end-seed')
+    } finally {
+      await historyHandle.close()
+    }
+    expect(await readStoredEvents(ctx, sessionId)).toEqual(events)
+    await ctx.fiber.dispose()
+  })
+
   it('resume closes an interrupted tool call durably: tool/result, step/end, turn/end', async () => {
     const sessionId = SessionId('interrupted-tool-resume')
     const { ctx: ctx1, root } = await persistentHarness(new MockAdapter([]))

@@ -69,6 +69,7 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^"
   }

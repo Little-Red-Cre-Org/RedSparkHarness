@@ -1,5 +1,14 @@
 [
   {
+    "sessionUpdate": "available_commands_update",
+    "availableCommands": [
+      {
+        "name": "compact",
+        "description": "Compact older conversation history"
+      }
+    ]
+  },
+  {
     "sessionUpdate": "config_option_update",
     "configOptions": [
       {

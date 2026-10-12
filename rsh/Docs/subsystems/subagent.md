@@ -114,6 +114,45 @@ interface NativeExternalSubagentDriver {
 }
 ```
 
+### ACP policy metadata
+
+`@deepseek-ai/dsh-acp-protocol` defines version-1 `_meta` values under `com.deepseek.ai/dsh-native-subagent`. Client initialize metadata declares permission-relay support; server metadata reports `maxSteps`, `maxTokens`, and supported permission modes. A session policy requires a positive safe-integer `maxSteps`, an optional positive safe-integer `maxTokens`, and `permissionMode: 'deny' | 'parent-relay'`. Readers reject unknown extension fields and unsupported versions. The library validates and encodes ACP metadata; the consuming Program converts accepted policy into the Engine's durable `execution/policy` event and owns transport and enforcement.
+
+```ts type-equiv
+/** Permission behavior requested for a child Session over ACP. */
+type NativeAcpSubagentPermissionMode = 'deny' | 'parent-relay'
+```
+
+```ts type-equiv
+/** Session ceilings and permission mode accepted through ACP metadata. */
+interface NativeAcpSubagentPolicy {
+  readonly version: typeof NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION
+  readonly maxSteps: number
+  readonly maxTokens?: number
+  readonly permissionMode: NativeAcpSubagentPermissionMode
+}
+```
+
+```ts type-equiv
+/** Capabilities a Native ACP client advertises during initialize. */
+interface NativeAcpSubagentClientCapabilities {
+  /** Whether the client can relay permission requests to its owning Session. */
+  readonly permissionRelay: boolean
+}
+```
+
+```ts type-equiv
+/** Capabilities a Native ACP server advertises during initialize. */
+interface NativeAcpSubagentServerCapabilities {
+  /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
+  readonly maxSteps: true
+  /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
+  readonly maxTokens: true
+  /** Permission modes implemented by this server. */
+  readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
+}
+```
+
 ## Two kinds of capability, discovered two ways
 
 A provider advertises its **start-time** features on a static descriptor the service checks BEFORE a one-shot run exists; a request that needs one the provider lacks is rejected loud (`SubagentError('UNSUPPORTED_CAPABILITY')`), never accepted-then-ignored. Those flags describe only the one-shot [`start()`](#the-provider-contract-subagentprovider) path, where the provider composes the child. **Continuable** children are composed by the continuation manager itself, so they are gated by one optional method whose presence IS the capability, with TS narrowing as the discovery mechanism: [`SubagentProvider.prepareContinuable`](#the-provider-contract-subagentprovider).

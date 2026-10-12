@@ -1,11 +1,19 @@
 /** Cordis-free adapter metadata and streaming protocol shared by native and compatibility Providers. */
 import type { ResolvedRetryPolicy } from './retry-policy.ts'
 import type { GenerateOptions, LlmImageRequestPricing, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, StreamChunk } from './types.ts'
+import type { ReasoningEffortId } from './brand.ts'
 
 /** One adapter-owned model-resolution generation bound to its eventual stream call. */
 export interface PreparedAdapterCall {
   /** Exact model metadata from the same adapter generation as {@link stream}. */
   readonly model: LlmResolvedModelInfo
+  /**
+   * Whether this generation enforces this exact output limit under the resolved reasoning effort.
+   * @param maxTokens - requested positive output-token ceiling.
+   * @param reasoningEffort - effective effort for this model request, if selected.
+   * @returns true only when this route can apply that exact ceiling without widening it.
+   */
+  supportsOutputTokenLimit(maxTokens: number, reasoningEffort?: ReasoningEffortId): Promise<boolean>
   /** Dispatch through that generation without re-reading dynamic connection facts. */
   stream(options: GenerateOptions): AsyncIterable<StreamChunk>
 }
@@ -81,14 +89,18 @@ export abstract class LlmAdapter {
    * Bind exact model metadata and the eventual request dispatch to one adapter generation.
    * Dynamic adapters override this so settings changes between preparation and
    * dispatch cannot combine one generation's capabilities with another's endpoint.
+   * The returned capability must describe this exact route generation and
+   * reject output limits the transport cannot enforce without widening under
+   * the request's effective reasoning effort.
    * @param provider - registered provider route.
    * @param model - exact model id.
    * @param signal - cancellation for model resolution.
-   * @returns model metadata and a one-generation stream entry point.
+   * @returns model metadata, the generation's output-limit predicate, and its stream entry point.
    */
   async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
     return {
       model: await this.resolveModel(provider, model, signal),
+      supportsOutputTokenLimit: async () => false,
       stream: options => this.stream(options),
     }
   }

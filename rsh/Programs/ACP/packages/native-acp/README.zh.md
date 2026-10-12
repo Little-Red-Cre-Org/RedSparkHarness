@@ -22,7 +22,9 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，Engine 通过 root 维护操作持久化空 Session。此操作要求宿主组合安装原生 `activeSessions` Provider；缺少该服务时，安装规划会在激活前拒绝此 profile。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
+Profile 设置 `provider`、`model`、`systemPrompt` 和每个已接纳 turn 的正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，Engine 通过 root 维护操作持久化空 Session。此操作要求宿主组合安装原生 `activeSessions` Provider；缺少该服务时，安装规划会在激活前拒绝此 profile。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
+
+版本化的 `session/new` metadata 可设置每轮 `maxSteps`、可选 `maxTokens` 与 permission mode。Program 会校验它，并通过 Session writer 提交一条必需的 Engine `execution/policy` 事件；不会另存一条 ACP policy 记录。ACP 在发布 Session 前检查配置路由能否执行输出 token 上限，Headless 则在每次分发前检查精确选定并已准备的 generation，因此后续 model selection 不能扩大该上限。恢复 `parent-relay` 策略时，必须由精确的实时 Session owner 重新签发 approval capability；缺少该 owner 时会在模型工作前拒绝执行。
 
 Program 将 `rootExecution` 作为原生 application service 提供。它依据精确附着的 root Agent 和 Session 身份找到所属的 per-Session Engine executor，再通过该 root 的 branded route 分派；maintenance 和 fork 的新目标 ID 无须等于 ACP wire Session ID。route 准入会拒绝 foreign、delegated、released 和 closing root owner。清理期间，`capture` 与 `cancel` 会继续按精确身份解析正在关闭的 owner，使取消能在 Engine detach 之前完成。必需的 `releaseIdle` 操作会委托给所属 Engine；Engine 仅接受已准入动态 Workspace route 上精确且已结算的 owner，ACP 的 per-Session base route 不满足该条件。此 profile 未配置动态 Workspace 准入，因此不提供可选的 `createWorkspaceRoute` 能力。该设计保留每条 route 不可变的 cwd 与执行作用域，并把 root permission 请求投递到所属 ACP wire Session。route 活动时，已安装的 Provider 可以使用 root 操作；关闭 Session 或连接会释放其 executor 和 root。ACP wire 方法提供提示取消与 Session 关闭；settle、maintenance、fork、预设选择和按 route 授权的存储操作仍是内部 service。仅当所选持久化 Provider 支持可恢复删除时才提供该能力。动态 `selectWorkspace` 仍受 Engine 已注册 Workspace 和显式 route 准入配置约束；此 ACP profile 不启用该准入，继续通过标准 ACP `session/new` 与 `session/resume` 选择 cwd。
 
@@ -34,7 +36,7 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 图片提示需要所选附件 Provider 与模型目录。初始化仅在两者均安装时声明图片准入；每次图片提示在同一次根执行准入中检查 Session 下一步选择的模型并准备附件，拒绝未声明图片输入的模型。附件 Provider 校验已配置的位图格式、base64、字节与像素限额，标准化整批图片，并在用户消息准入之前按输入顺序返回持久引用。非法图片不会进入 Session 收件箱。取消与传输结束的清理也覆盖图片准备。
 
-预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消发送协作式传输取消，并完成 Session 审计结算，不等待忽略取消的对端。旧传输请求由连接持有，直到对端答复或 EOF 关闭连接；迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
+预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消会结算本地 approval 决定与 Session 审计，不等待忽略取消的对端；对应 wire 请求仍由连接持有，直到对端答复或 EOF 关闭连接。迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
 
 <a id="dev-note"></a>
 
@@ -69,3 +71,4 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 ## 已知限制与延后工作
 
 - 音频／嵌入式输入、提问请求和附件展示不属于此承载批次；不支持的提示内容显式失败。初始化声明不支持音频、嵌入上下文。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。
+- 此包提供 ACP server carrier，不提供用于启动外部 ACP subagent 的通用 provider。TypeScript 与 Python SDK 对必需 Engine `execution/policy` 事件的投影不由此 carrier 提供。

@@ -85,10 +85,15 @@ export class NativeAdapterModel implements NativeModel {
     return this.run(signal, async () => {
       const captured = await this.adapter.prepareCall(provider, model, signal)
       signal.throwIfAborted()
-      return { model: captured.model, stream: options => this.streamWith(options, captured.stream.bind(captured)),
-        ...captured.nativeResponses === undefined ? {} : {
-          nativeResponses: this.bindResponses(captured.nativeResponses, caller),
-        } }
+      return { model: captured.model, supportsOutputTokenLimit: async (maxTokens, reasoningEffort) => this.run(signal, async () => {
+        const supported = await captured.supportsOutputTokenLimit(maxTokens, reasoningEffort)
+        signal.throwIfAborted()
+        return supported
+      }),
+      stream: options => this.streamWith(options, captured.stream.bind(captured)),
+      ...captured.nativeResponses === undefined ? {} : {
+        nativeResponses: this.bindResponses(captured.nativeResponses, caller),
+      } }
     })
   }
 

@@ -132,7 +132,7 @@ it('inherits nested Responses generations for same and overridden routes', async
       const generation = `${provider}/${model}/${activeAdapterGeneration}/${++preparedCalls}`
       return { model: { provider, id: model, name: model, reasoning: { efforts: [
         { id: ReasoningEffortId('high'), name: 'High' }, { id: ReasoningEffortId('medium'), name: 'Medium' },
-      ] } }, async *stream() {}, nativeResponses: {
+      ] } }, supportsOutputTokenLimit: async () => true, async *stream() {}, nativeResponses: {
         async capture(request, signal) {
           signal.throwIfAborted()
           captures.push({ generation, route: request.route,

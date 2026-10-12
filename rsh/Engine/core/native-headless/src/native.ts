@@ -11,7 +11,9 @@ import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSession
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
   NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest,
   NativeResponsesPreparedGeneration } from '@deepseek-ai/dsh-native-session-execution'
+import { nativeSessionExecutionPolicy } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import { NativeContinuationSession } from './continuation-session.ts'
 import { NativeContinuationRuntime } from './continuation-runtime.ts'
@@ -87,10 +89,16 @@ export interface NativeTurnRequest {
   readonly onChunk?: (chunk: StreamChunk) => void
   /** Observe Session events after backend append; a failure interrupts the turn. */
   readonly onEvent?: (event: SessionEvent) => void
+  /**
+   * Issue exact-owner approval after the current root Session attaches; a durable policy never grants authority.
+   * @param owner - exact active root owner for this turn.
+   * @returns current approval authority, or undefined when this caller cannot authorize.
+   */
+  readonly issueOwnerApproval?: (owner: NativeActiveSessionOwner) => NativeSessionOwnerApproval | undefined
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'issueOwnerApproval'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -627,6 +635,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let releaseExecution: (() => Promise<void>) | undefined
     const pending: SessionEvent[] = []
     let restoredPrefix: SessionEvent[] = []
+    let policyEvents: readonly SessionEvent[] = []
     let owner: NativeContinuationSession
     let releaseObservation: (() => void) | undefined
     let seedResident = false
@@ -655,6 +664,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (resident !== undefined) {
         session = resident.session
         const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
+        policyEvents = stored.events
         acceptedPreset = foldNativeAgentPresetFacts(session.header, stored.events).preset
         const lastTurn = stored.events.findLast(event => event.type === 'turn/end')
         turn = lastTurn?.type === 'turn/end' ? lastTurn.data.turn + 1 : 1
@@ -667,6 +677,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       } else if (fresh !== undefined) {
         session = fresh
         restoredPrefix = forkSeed === undefined ? [] : [...forkSeed.events, ...constructorEvents]
+        policyEvents = restoredPrefix
         pending.push(...restoredPrefix)
         acceptedPreset = foldNativeAgentPresetFacts(session.header, restoredPrefix).preset
         const lastTurn = restoredPrefix.findLast(event => event.type === 'turn/end')
@@ -685,7 +696,18 @@ export class NativeHeadlessApplication implements NativeApplication {
         this.timeContext?.seed(session, repaired)
         this.agentInstructions?.seed(session, stored.events)
         restoredPrefix = [...repaired, ...pending]
+        policyEvents = restoredPrefix
         acceptedPreset = foldNativeAgentPresetFacts(session.header, restoredPrefix).preset
+      }
+      const executionPolicy = nativeSessionExecutionPolicy(policyEvents)
+      if (executionPolicy !== undefined) {
+        if (executionPolicy.maxSteps > config.maxSteps
+          || executionPolicy.maxTokens !== undefined && config.maxTokens !== undefined
+            && executionPolicy.maxTokens > config.maxTokens) {
+          throw new Error('native-headless: current profile cannot enforce the accepted Session execution policy')
+        }
+        config = { ...config, maxSteps: executionPolicy.maxSteps,
+          ...executionPolicy.maxTokens === undefined ? {} : { maxTokens: executionPolicy.maxTokens } }
       }
       if (this.agentPresets !== undefined) {
         if (acceptedPreset !== (this.executions.get(id)?.presetLease?.id ?? null)) {
@@ -767,36 +789,56 @@ export class NativeHeadlessApplication implements NativeApplication {
       const rootEpoch = this.rootEpochs.get(id)
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
       activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config, rootOrigin)
+      const ownerApproval = executionPolicy?.permission.mode === 'require-approval'
+        && operation === undefined && invocation === 'root' && activeOwner !== undefined
+        ? request.issueOwnerApproval?.(activeOwner) : undefined
+      if (executionPolicy?.permission.mode === 'require-approval' && operation === undefined) {
+        if (invocation !== 'root' || activeOwner === undefined || ownerApproval === undefined
+          || ownerApproval.agent !== agent || ownerApproval.session !== session || ownerApproval.lifetime.aborted) {
+          throw new Error('native-headless: accepted Session policy requires a live exact-owner approval capability')
+        }
+      }
       const requestApproval = async (requested: NativeToolApprovalRequest): Promise<NativeApprovalOutcome> => {
         if (requested.agent !== agent || requested.session !== session) {
           throw new Error('native-headless: approval invocation belongs to a different Agent or Session')
         }
         const service = this.approval
-        if (service === undefined) throw new Error('native-headless: no approval authority')
+        if (executionPolicy === undefined && service === undefined) throw new Error('native-headless: no approval authority')
+        ownerApproval?.lifetime.throwIfAborted()
+        const approvalSignal = AbortSignal.any([signal, requested.signal,
+          ...ownerApproval === undefined ? [] : [ownerApproval.lifetime]])
         const approvalId = NativeApprovalRequestId(randomUUID())
-        const sessionPolicy = sessionApprovalPolicy(session)
         track(session.append('native-approval/asked', {
           id: approvalId, toolName: requested.toolName, callId: requested.callId,
           ...requested.reason === undefined ? {} : { reason: requested.reason },
         }))
         await persist()
         await writer.flush()
-        const approvalSignal = AbortSignal.any([signal, requested.signal])
-        const decision = invocation === 'delegated'
-          ? { id: approvalId, policy: 'never' as const, outcome: 'rejected' as const }
-          : await service.request({
-            id: approvalId, agent, ...sessionPolicy === undefined ? {} : { sessionPolicy },
-            toolName: requested.toolName, callId: requested.callId,
-            ...requested.reason === undefined ? {} : { reason: requested.reason },
-            signal: approvalSignal,
-          })
+        let decision: Awaited<ReturnType<NativeApprovalServiceDefinition['request']>>
+        if (executionPolicy?.permission.mode === 'deny') {
+          decision = { id: approvalId, policy: 'never', outcome: 'rejected' }
+        } else if (executionPolicy?.permission.mode === 'require-approval') {
+          if (ownerApproval === undefined) throw new Error('native-headless: Session owner approval capability was revoked')
+          decision = { id: approvalId, policy: 'ask', outcome: await ownerApproval.authorize({
+            callId: requested.callId, toolName: requested.toolName,
+            ...requested.reason === undefined ? {} : { reason: requested.reason }, signal: approvalSignal,
+          }) }
+        } else if (invocation === 'delegated') {
+          decision = { id: approvalId, policy: 'never', outcome: 'rejected' }
+        } else {
+          if (service === undefined) throw new Error('native-headless: no approval authority')
+          const sessionPolicy = sessionApprovalPolicy(session)
+          decision = await service.request({ id: approvalId, agent,
+            ...(sessionPolicy === undefined ? {} : { sessionPolicy }), toolName: requested.toolName,
+            callId: requested.callId, ...requested.reason === undefined ? {} : { reason: requested.reason }, signal: approvalSignal })
+        }
         track(session.append('native-approval/decided', decision))
         await persist()
         await writer.flush()
         approvalSignal.throwIfAborted()
         return decision.outcome
       }
-      const approvalAuthority = this.approval === undefined ? undefined : {
+      const approvalAuthority = this.approval === undefined && executionPolicy === undefined ? undefined : {
         request: requestApproval,
         authorize: async (requested: NativeToolApprovalRequest): Promise<void> => {
           const outcome = await requestApproval(requested)
@@ -895,7 +937,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 const block: ToolCallBlock = { type: 'tool-call', id: call.callId, name: call.name, arguments: JSON.stringify(call.arguments) }
                 try {
                   if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
-                    if (call.name === 'write_file' && this.approval !== undefined) {
+                    if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
                       const outcome = await requestApproval({ agent, session, callId: call.callId, toolName: call.name,
                         reason: 'Writing a file changes the selected workspace.', signal: effectiveSignal })
                       if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
@@ -1055,6 +1097,10 @@ export class NativeHeadlessApplication implements NativeApplication {
           }
           const preparedStep = await this.modelExecution.prepareStep(selection?.requestedConfig ?? defaults, signal)
           signal.throwIfAborted()
+          if (executionPolicy?.maxTokens !== undefined
+            && (preparedStep.config.maxTokens === undefined || preparedStep.config.maxTokens > executionPolicy.maxTokens)) {
+            throw new Error('native-headless: selected model controls exceed the accepted Session output-token ceiling')
+          }
           return { selection, preparedStep }
         }
         const admit = async (step: number) => {
@@ -1195,7 +1241,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
               }
               if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
-                if (call.name === 'write_file' && this.approval !== undefined) {
+                if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
                   await authorize({ reason: 'Writing a file changes the selected workspace.' })
                 }
                 content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]

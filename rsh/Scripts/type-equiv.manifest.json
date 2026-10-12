@@ -178,6 +178,26 @@
       "source": "rsh/Engine/core/agent/src/runtime-types.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "NativeSessionExecutionPermission",
+      "source": "rsh/Engine/core/native-session-execution/src/execution-policy.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "NativeSessionExecutionPolicy",
+      "source": "rsh/Engine/core/native-session-execution/src/execution-policy.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "NativeSessionOwnerApprovalRequest",
+      "source": "rsh/Engine/core/native-session-execution/src/execution-policy.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/core.md",
+      "symbol": "NativeSessionOwnerApproval",
+      "source": "rsh/Engine/core/native-session-execution/src/execution-policy.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/scope.md",
       "symbol": "ScopeKey",
       "source": "rsh/Engine/core/scope/src/index.ts"
@@ -457,6 +477,11 @@
       "doc": "rsh/Docs/subsystems/llm-streaming.md",
       "symbol": "PreparedLlmCall",
       "source": "rsh/Engine/llm/llm/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "PreparedAdapterCall",
+      "source": "rsh/Engine/llm/llm/src/adapter.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/llm-streaming.md",
@@ -1500,6 +1525,26 @@
       "doc": "rsh/Docs/subsystems/subagent.md",
       "symbol": "NativeExternalSubagentDriver",
       "source": "rsh/Engine/subagent/native-subagent/src/external-driver.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpSubagentPermissionMode",
+      "source": "rsh/Modules/Official/subagent/acp-protocol/src/protocol.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpSubagentPolicy",
+      "source": "rsh/Modules/Official/subagent/acp-protocol/src/protocol.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpSubagentClientCapabilities",
+      "source": "rsh/Modules/Official/subagent/acp-protocol/src/protocol.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpSubagentServerCapabilities",
+      "source": "rsh/Modules/Official/subagent/acp-protocol/src/protocol.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/web.md",

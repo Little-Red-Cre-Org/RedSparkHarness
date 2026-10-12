@@ -386,6 +386,19 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源： [`rsh/Modules/Official/fs/tool-present/src/types.ts:15`](../Modules/Official/fs/tool-present/src/types.ts)
 
+### `execution/*`
+
+<a id="executionpolicy--log-only"></a>
+
+#### `execution/policy` — log-only
+
+```ts persistence-catalog
+/** Required execution authority; consumers must refuse to run when they cannot enforce it. */
+'execution/policy': NativeSessionExecutionPolicy
+```
+
+来源：[`rsh/Engine/core/native-session-execution/src/execution-policy.ts:64`](../Engine/core/native-session-execution/src/execution-policy.ts)
+
 ### `feedback/*`
 
 <a id="feedbackmessage-delete--log-only"></a>

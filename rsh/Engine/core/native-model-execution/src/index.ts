@@ -148,6 +148,10 @@ export class NativeModelExecution {
       ...config.temperature === undefined ? {} : { temperature: config.temperature },
       ...config.stop === undefined ? {} : { stop: config.stop } }
     const resolved = info === undefined ? controls : resolveCallConfigWithModel(controls, info)
+    if (resolved.maxTokens !== undefined
+      && (captured === undefined || !await captured.supportsOutputTokenLimit(resolved.maxTokens, resolved.reasoningEffort))) {
+      throw new Error('native-model-execution: selected model generation cannot enforce maxTokens')
+    }
     const retryPolicy = this.retryPolicyFor(undefined, config.provider)
     signal?.throwIfAborted()
     const handle: NativePreparedModelStep = Object.freeze({ config: deepFreeze(structuredClone(resolved)),

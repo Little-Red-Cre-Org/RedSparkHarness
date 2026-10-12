@@ -31,6 +31,8 @@ The `./native` entry requires `agents`, provides `sessionExecution` and `activeS
 
 `owners()` returns a detached array of exact live writable owners. Read-only observers subscribe before enumerating it and deduplicate by owner identity, so a Provider attached after a Program still observes that existing writer without adopting it. Released owners and replaced Agent objects are excluded.
 
+`NativeSessionExecutionPolicy` defines the required, versioned `execution/policy` payload with a per-turn step ceiling, an optional per-request output ceiling, and a permission requirement. `NativeSessionOwnerApproval` is a separate process-local capability bound to one exact live Agent and Session; the durable `session-owner` permission records the requirement, not approval proof.
+
 The ./root-route export owns the shared NativeRootRouteId brand without importing execution services. Host and Client use explicit compiler faces: only the pure route identifier is available on the Client face; active Session and root execution operations remain Host-owned. Workspace identity comes from the framework-independent Engine workspace-definition package.
 
 `NativeActiveSessionOwner.appendBatch` admits related facts through the Program’s sole retained writer. Rejected batches track no events; accepted events retain their sequence order and `flush()` persists them through the existing durability barrier.

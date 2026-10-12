@@ -171,6 +171,7 @@ it('captures the prepared provider generation and drains an undelivered response
       preparedCount++
       return {
         model: { provider, id: model, name: model },
+        supportsOutputTokenLimit: async () => false,
         async *stream() {},
         nativeResponses: { async capture() {
           capturedGenerations.push(generation)

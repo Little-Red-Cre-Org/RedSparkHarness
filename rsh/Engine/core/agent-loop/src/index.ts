@@ -48,6 +48,11 @@ function loaderReadiness(ctx: Context): Promise<void> | undefined {
   return Promise.resolve().then(() => loader.await()).then(() => undefined)
 }
 
+function refuseExecutionPolicy(events: readonly { readonly type: string }[], operation: 'create' | 'resume'): void {
+  if (events.some(({ type }) => type === 'execution/policy')) {
+    throw new Error(`cannot ${operation} a Session with execution/policy through the Cordis AgentLoop`)
+  }
+}
 
 /** Factory-level ownership: live agent teardowns plus config startup work. */
 class FactoryOwnership {
@@ -753,6 +758,7 @@ export class AgentLoop extends Service implements AgentFactory {
    * @returns the published handle.
    */
   async createAgent(ownerCtx: Context, options: CreateAgentOptions): Promise<AgentHandle> {
+    refuseExecutionPolicy(options.seed ?? [], 'create')
     const preparation = SessionPreparation.create(this.runtime.ctx.sessions.prepare(options.sessionId, {
       ...options.seed === undefined ? {} : { seed: options.seed },
       ...options.meta === undefined ? {} : { meta: options.meta },
@@ -879,6 +885,7 @@ export class AgentLoop extends Service implements AgentFactory {
           const coldRead = await handle.read(0, undefined, { signal: fused })
           fused.throwIfAborted()
           const persisted = coldRead.events
+          refuseExecutionPolicy(persisted, 'resume')
           const closers = interruptedTurnClosers(persisted)
           if (closers.length > 0) await handle.append(closers)
           preparation = SessionPreparation.create(this.runtime.ctx.sessions.prepare(id, {
