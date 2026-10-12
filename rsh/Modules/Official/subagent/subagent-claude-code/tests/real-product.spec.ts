@@ -21,7 +21,11 @@ import { Context } from '@deepseek-ai/cordis'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeExternalSubagentDriver, NativeExternalSubagentRequest } from '@deepseek-ai/dsh-native-subagent/native'
+import type {
+  NativeExternalSubagentDriver,
+  NativeExternalSubagentModelOperations,
+  NativeExternalSubagentRequest,
+} from '@deepseek-ai/dsh-native-subagent/native'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
@@ -42,6 +46,14 @@ import {
 
 const observedSdkMessages = vi.hoisted((): SDKMessage[] => [])
 const sdkTestOverrides = vi.hoisted((): { maxTurns?: number } => ({}))
+const unusedNativeModelOperations: NativeExternalSubagentModelOperations = {
+  tools: { schemas: [], programSchemas: [], promptText: '' },
+  async admitModelRequest() { throw new Error('Claude Code does not use the Native Responses model port') },
+  async recordModelResponse() { throw new Error('Claude Code does not use the Native Responses model port') },
+  async recordModelFailure() { throw new Error('Claude Code does not use the Native Responses model port') },
+  async executeTool() { throw new Error('Claude Code does not use the Native Responses model port') },
+  fatal(error) { throw error },
+}
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async (importOriginal) => {
   const actual = await importOriginal<
@@ -551,9 +563,11 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
       parentDepth: 0,
       maxDepth: 1,
       limits: { maxSteps: 2 },
+      model: unusedNativeModelOperations,
       authority: {
         toolNames: ['read_file'],
         builtinToolNames: ['read_file'],
+        programToolNames: [],
         sandboxPolicy: {
           mode: 'danger-full-access' as const,
           workspaceRoot: workspace,
@@ -659,9 +673,11 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
       parentDepth: 0,
       maxDepth: 1,
       limits: { maxSteps: 2 },
+      model: unusedNativeModelOperations,
       authority: {
         toolNames: [],
         builtinToolNames: [],
+        programToolNames: [],
         sandboxPolicy: {
           mode: 'danger-full-access' as const,
           workspaceRoot: workspace,

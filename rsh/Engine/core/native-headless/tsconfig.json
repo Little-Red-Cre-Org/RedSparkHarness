@@ -70,6 +70,9 @@
     },
     {
       "path": "../../context/agent-instructions"
+    },
+    {
+      "path": "../../../Modules/Official/attachment/attachment"
     }
   ]
 }

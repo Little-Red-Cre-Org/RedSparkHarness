@@ -32,6 +32,8 @@ Selected Model Providers can expose `resolveModel` for exact route metadata; an 
 
 The `./model-directory` Definition and `NativeAdapterModelDirectory` expose advisory catalogs from the same selected adapter, without a default store. `prepareStep` binds resolved controls and dispatch to one Provider generation. Consumers persist that exact configuration before `execute`; a foreign prepared identity or different dispatch controls reject. The pure `./model-selection` leaf owns durable selection vocabulary and its history projection.
 
+`captureResponsesOperation(step, route, maxTokens, signal, reasoningEffort)` captures one transport and a nested-generation capability from the exact prepared step. A matching route reuses that step; a changed route prepares the selected child model once with its controls. The returned capability stays bound to that generation and captures an independent transport for each nested operation.
+
 ## Dev Note
 
 No invariant companion is published: the service records the stream in its caller's Session and has no independent observation that could diverge from it.
@@ -54,5 +56,6 @@ The service does not alter the request prefix; any later cache effect follows th
 
 ## Known Limitations and Deferred Work
 
-- The caller still owns the turn and step sequence. Native SDK and Web consumers remain to be migrated.
+- The caller still owns the turn and step sequence. Native Headless provides this execution path to the shipped SDK and Web compositions.
+- A prepared adapter call may carry `nativeResponses` from that exact Provider generation. `captureResponses()` requires its route to match the prepared handle; `captureResponsesOperation()` prepares a changed route once, then captures from that route's exact handle. The shipped `llm-pi-ai` SIWC `openai-codex` generation provides the transport for Native external Responses operations. Capture rejects an absent capability or a parent `maxTokens` ceiling that the selected generation cannot enforce; shipped profile templates retain their in-process subagent default and do not install the Codex external driver.
 - The package manifest and the Session and LLM dependencies retain Cordis during the repository transition.

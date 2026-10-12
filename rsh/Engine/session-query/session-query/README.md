@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Use `ctx.sessionQuery` from Cordis application code when you need to read or search session history without touching the session service or a storage backend directly. The shipped composition mounts `@deepseek-ai/dsh-session-query-sqlite` ([README](../session-query-sqlite/README.md)) for ranked full-text search. Native compositions import this package's Cordis-free `./native` API; the SQLite package's `./native` Provider supplies the combined query service from `activeSessions` and optional persistence.
 
+Importing `./native` requires the `dsh-native-agent` peer to resolve its turn-boundary projection Definition; installing the peer does not mount a Native Provider.
+
 ### What you can do
 
 | Operation | What you get |

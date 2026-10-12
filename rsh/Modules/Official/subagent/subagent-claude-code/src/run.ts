@@ -36,13 +36,19 @@ export type ClaudeCodeRunSpec = Omit<ClaudeCodeProductRunSpec, 'onError'> & {
   readonly onError?: (error: Error, stopReason: SubagentStopReason) => void
 }
 
-/** Build the SDK options for one legacy profile-owned Claude query. */
+/** Build SDK options for one legacy profile-owned Claude query.
+ * @param spec - resolved compatibility configuration and process hooks.
+ * @param controller - per-query cancellation owner.
+ * @param capture - captures the SDK-owned child and process.
+ * @param captureDiagnostic - receives safe permission facts.
+ * @returns the official SDK query options.
+ */
 export function claudeQueryOptions(
   spec: ClaudeCodeRunSpec,
   controller: AbortController,
   capture: Parameters<typeof buildClaudeQueryOptions>[2],
   captureDiagnostic: Parameters<typeof buildClaudeQueryOptions>[3],
-) {
+): ReturnType<typeof buildClaudeQueryOptions> {
   const { onError: _onError, ...productSpec } = spec
   return buildClaudeQueryOptions(productSpec, controller, capture, captureDiagnostic)
 }
@@ -92,7 +98,12 @@ export async function startClaudeCodeRun(
   })
 }
 
-/** Preserve the legacy helper's result vocabulary for existing consumers. */
+/** Preserve the legacy helper's result vocabulary for existing consumers.
+ * @param query - published official SDK query.
+ * @param onPermissionDenied - records a safe native permission denial.
+ * @param onResult - records a terminal SDK result.
+ * @returns the completed compatibility result.
+ */
 export async function consumeClaudeQuery(
   query: AsyncIterable<SDKMessage>,
   onPermissionDenied?: () => void,

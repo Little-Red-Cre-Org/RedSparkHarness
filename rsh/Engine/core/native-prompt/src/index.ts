@@ -1,9 +1,12 @@
 /** Ordered, reversible prompt-section contributions for native applications. */
 import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type { ToolSdkSchema } from '@deepseek-ai/dsh-native-tools/sdk-typescript'
 
-/** Session-level tool allowlist that can constrain a scoped prompt contribution. */
+/** Session constraints and captured tool declarations used while rendering prompt contributions. */
 export interface NativePromptRenderContext {
   readonly allowedTools?: readonly string[]
+  /** Exact PTC bindings for an operation; prompt sections must not re-read a replacement Registry catalog. */
+  readonly programSchemas?: readonly ToolSdkSchema[]
 }
 
 /** One named section whose text is resolved before the model-visible message is logged. */

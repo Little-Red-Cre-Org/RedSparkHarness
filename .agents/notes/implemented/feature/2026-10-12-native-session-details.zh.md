@@ -1,4 +1,4 @@
-# Agent Note: Native 会话详情使用已观察事实
+# Agent Note：Native 会话详情使用已观察事实与可选工作区文件
 
 Status: implemented
 
@@ -6,20 +6,20 @@ Status: implemented
 
 ## Problem
 
-Native 右侧面板此前只显示所选 Session id 与工作目录，而对应的 legacy Cordis 面板包含文件浏览和文档预览的 tab 停靠面。Native Session history 与 roster API 提供对话事实，但不能枚举或读取工作区文件；Native 面板不得暗示自身具备并不存在的访问能力。
+Native 会话详情位于 legacy Cordis Sidebar 旁边，但属于独立组合。Session roster 与 history 暴露对话事实；工作区访问来自可选的 `clientNativeWorkspaceFiles` 服务。Native 不得导入 Cordis tab，也不得在服务缺失时暗示具备文件访问能力。
 
 ## Decision
 
-`ui-sidebar-right` 的 Native 入口通过现有 Client 数据呈现“概览”和“活动”分区。概览读取当前 Session header 与 roster 项。面板显示时，活动页调用 `NativeSessionClient.history()` 并统计 durable 轮次、用户与助手消息、工具调用和已记录 token 用量；它也从 history events 显示最近一次请求路由与上下文窗口。已执行模型事实以请求日志为准；advisory 模型目录不能替代它。
+`ui-sidebar-right` 的 Native 入口通过当前 Session header 与 roster 提供“概览”，通过 `NativeSessionClient.history()` 提供“活动”：durable 轮次、用户与助手消息、工具调用、已记录 token 用量、最近一次请求路由和上下文窗口。统计范围仅限 Host 返回的历史记录。
 
-该面板与 legacy 文件树及文档预览共用 `SidebarPathBar`。由于 Native 组合没有 Session 作用域的工作区文件客户端，面板省略文件列表和文档内容；轨迹检查不属于本面板。Cordis 停靠面与资源所有权仍由[右侧 Sidebar 停靠基础设施](2026-09-04-right-sidebar-docking-infrastructure.zh.md)定义；Native 左侧 Sidebar 投影仍由[Native sidebar Session 投影](2026-10-11-native-sidebar-session-projection.zh.md)定义。
+注册了 `clientNativeWorkspaceFiles` 时，同一面板会增加“文件”和“预览”。“文件”按需列出工作区相对目录；点击文件会将它选为预览内容。文本分页调用 `read`；HTML、图片和 PDF 完整内容调用 `readAll`；HTML 直接声明的相对脚本与样式表调用 `readRelated`，并在不透明的 `sandbox="allow-scripts"` iframe 中运行。文件变化后，`follow` 会刷新已展开目录和所选预览。`ui-primitives` 持有 props-only 树行以及 Native 与 legacy 适配器共用的代码、Markdown、HTML、图片和加载展示。
 
 ## Alternatives considered
 
-- **在本次变更中增加工作区文件方法：**拒绝，因为现有 API 已能呈现真实的 Session 与 history 事实，而 Host 文件访问需要独立的授权和数据约定。
-- **把 Cordis 停靠面与文件 tab 导入 Native：**拒绝，因为这些视图依赖 Native 未安装的 Cordis 服务与资源 Provider。
+- **要求整个面板都必须有工作区文件服务：**拒绝，因为没有可选文件服务的组合仍可使用 Session 概览与活动摘要。
+- **导入 legacy Cordis 文件树与预览插件：**拒绝，因为这些入口依赖 Native 未安装的 Cordis 注册、Remote slot 与资源 Provider。
 - **用模型目录表示当前 Session 路由：**拒绝，因为它只公布可选项；durable `request/header` events 才记录 Session 实际使用的路由。
 
 ## Consequences
 
-Native 会话详情使用 header 元数据与活动摘要，且不改变 Host 协议。计数与 token 总量仅覆盖 Host 返回的有界历史；用量只统计记录了 usage 的助手事件。Native Provider 提供 Session 作用域的文件事实前，文件浏览和预览均不可用。
+仅当 Host 组合提供可选服务时，Native 会话详情才显示工作区文件。视图保持只读，不改变 Session event 格式。文本按页读取；完整文件受 Host 文件大小上限约束。HTML 只会收到有界、直接声明的静态资源；iframe 不会获得文件读取回调。

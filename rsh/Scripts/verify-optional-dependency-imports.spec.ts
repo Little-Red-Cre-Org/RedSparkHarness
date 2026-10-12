@@ -23,6 +23,7 @@ const FIXTURE = {
       moduleResolution: 'bundler',
       noEmit: true,
       skipLibCheck: true,
+      jsx: 'preserve',
       types: [],
       paths: {
         '@f/opt': ['./rsh/f/opt/src/index.ts'],
@@ -30,7 +31,7 @@ const FIXTURE = {
         '@deepseek-ai/cordis': ['./rsh/f/cordis/src/index.ts'],
       },
     },
-    include: ['rsh/**/*.ts'],
+    include: ['rsh/**/*.ts', 'rsh/**/*.tsx'],
   }),
 
   'rsh/f/opt/package.json': JSON.stringify({ name: '@f/opt', version: '0.0.1' }),
@@ -75,7 +76,7 @@ const FIXTURE = {
     peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
   }),
   'rsh/f/unsafe-native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-  'rsh/f/unsafe-native-types-consumer/src/types.ts': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
+  'rsh/f/unsafe-native-types-consumer/src/types.tsx': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
 
   'rsh/f/cli/package.json': JSON.stringify({
     name: '@deepseek-ai/dsh',
@@ -223,7 +224,7 @@ describe('optional dependency loads', () => {
       'rsh/f/native-consumer/src/native-dependency.ts:1',
       'rsh/f/native-types-consumer/src/index.ts:1',
       'rsh/f/unsafe-native-types-consumer/src/index.ts:1',
-      'rsh/f/unsafe-native-types-consumer/src/types.ts:1',
+      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1',
     ])
   })
 
@@ -237,7 +238,7 @@ describe('optional dependency loads', () => {
 
   it('checks Cordis-free type exports while allowing legacy-only Cordis imports', () => {
     expect(safeExportViolations).toContain(
-      'rsh/f/unsafe-native-types-consumer/src/types.ts:1 loads @deepseek-ai/cordis at module scope,'
+      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1 loads @deepseek-ai/cordis at module scope,'
       + ' declared optional in peerDependenciesMeta; import it as a type, or restructure so module scope does not need it',
     )
     expect(safeExportViolations.some(violation => violation.startsWith('rsh/f/native-types-consumer/src/index.ts:1'))).toBe(false)

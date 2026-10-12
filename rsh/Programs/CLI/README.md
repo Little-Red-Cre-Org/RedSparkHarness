@@ -81,6 +81,6 @@ The [CLI behavior reference](reference/README.md) owns exact layer precedence, f
 
 ## Development
 
-The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `DSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. Outside explicit built mode, an unbuilt checkout may skip these tests.
+The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `DSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. The shipped native-headless loader check also requires built native plugin entries. Run it after `pnpm run build`; an unbuilt checkout may skip these tests outside explicit built mode.
 
 Production runs require built package and frontend artifacts. From the repository root, run `pnpm run build` separately, then use `pnpm dsh <args...>` to run the TypeScript entry and forward every argument; the [source-execution reference](reference/README.md#source-execution) owns the module-resolution contract.

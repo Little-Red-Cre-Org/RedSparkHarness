@@ -11,6 +11,8 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { plugin as subagentsPlugin } from '@deepseek-ai/dsh-native-subagent/native'
+import type { NativeExternalSubagentApprovalOutcome, NativeExternalSubagentId,
+  NativeSubagentOperations } from '@deepseek-ai/dsh-native-subagent/native'
 import { plugin as workflowPlugin } from '@deepseek-ai/dsh-workflow/native'
 import { plugin as workerPlugin } from '../src/native.ts'
 import { plugin as workflowToolPlugin } from '../../tool-workflow/src/native.ts'
@@ -19,11 +21,12 @@ import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import type { NativeToolApprovalAuthority, NativeToolApprovalRequest, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import type { NativeToolDelegationContext } from '@deepseek-ai/dsh-native-tools/types'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../../../core/native-headless/src/native.ts'
 import type { NativeWorkflowObserver, NativeWorkflowOperations, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
-import type { NativeSubagentOperations } from '@deepseek-ai/dsh-native-subagent/native'
 
 type AdapterScript = ConstructorParameters<typeof MockAdapter>[0]
 
@@ -317,19 +320,84 @@ it.each(['sync', 'async'] as const)('contains %s observer failures without break
 })
 
 it('cancels and drains an accepted child before closing the durable workflow record', async () => {
+  const parentGeneration = {} as NonNullable<NativeToolExecution['responsesGeneration']>
+  const currentGeneration = {} as NonNullable<NativeToolExecution['responsesGeneration']>
+  const resolutions: Parameters<NativeSubagentOperations['resolve']>[0][] = []
+  const approvalRequesters: NonNullable<Parameters<NativeSubagentOperations['resolve']>[0]['approvalRequester']>[] = []
+  const approvalRequests: NativeToolApprovalRequest[] = []
+  const approvalDecision = Promise.withResolvers<NativeExternalSubagentApprovalOutcome>()
+  void approvalDecision.promise.catch(() => {})
+  const approvalAuthority: NativeToolApprovalAuthority = {
+    request: (request) => {
+      approvalRequests.push(request)
+      return new Promise((resolve) => {
+        const cancel = (): void => { resolve('cancelled') }
+        if (request.signal.aborted) cancel()
+        else request.signal.addEventListener('abort', cancel, { once: true })
+      })
+    },
+    authorize: async () => undefined,
+  }
   const state = await fixture([
     toolCallResponse('workflow', 'workflow', { meta: { name: 'cancel-audit', description: 'stop cleanly' },
       script: "await agent('wait for cancellation'); return { unreachable: true }" }),
     textResponse('unused child result'),
     textResponse('workflow cancelled'),
   ], new Set([1]))
+  if (state.workflow === undefined || state.subagents === undefined) throw new Error('native workflow execution fixture is incomplete')
+  const context: NativeToolDelegationContext = {
+    depth: 1, maxDepth: 3, cwd: '', provider: 'mock', model: 'fixture', maxSteps: 4,
+    toolNames: ['workflow'], builtinToolNames: [], programToolNames: [],
+  }
+  const workflowStart = state.workflow.start.bind(state.workflow)
+  let parentCall: NativeToolExecution | undefined
+  let expectedDelegationContext: NativeToolDelegationContext | undefined
+  state.workflow.start = (name, request) => {
+    const cwd = request.parent.session.header.cwd
+    if (cwd === undefined) throw new Error('workflow test parent session has no workspace')
+    const delegationContext = { ...context, cwd }
+    expectedDelegationContext = delegationContext
+    const ancestor: NativeToolExecution = { ...request.parent, responsesGeneration: parentGeneration }
+    const childParent: NativeToolExecution = { ...request.parent, parent: ancestor, delegationContext,
+      responsesGeneration: currentGeneration, approvalAuthority }
+    parentCall = childParent
+    return workflowStart(name, { ...request, parent: childParent })
+  }
+  const resolveSubagent = state.subagents.resolve.bind(state.subagents)
+  state.subagents.resolve = (request) => {
+    resolutions.push(request)
+    if (request.approvalRequester !== undefined) approvalRequesters.push(request.approvalRequester)
+    return resolveSubagent(request)
+  }
+  const startSubagent = state.subagents.start.bind(state.subagents)
+  state.subagents.start = async (request, signal) => {
+    const requestApproval = approvalRequesters[0]
+    // The local spawn path does not dispatch external approvals; exercise the captured relay with its child signal.
+    if (requestApproval !== undefined) {
+      void requestApproval({ operationId: 'workflow-operation' as NativeExternalSubagentId,
+        requestId: 'workflow-approval', toolName: 'write_file', callId: 'child-write', signal })
+        .then(approvalDecision.resolve, approvalDecision.reject)
+    }
+    return startSubagent(request, signal)
+  }
   try {
     const running = state.host.run(state.scope, { kind: 'native-workflow-cancel' }, invocation =>
       state.app.run(['start and cancel the workflow'], invocation.signal))
     await vi.waitFor(() => { expect(state.adapter.requests).toHaveLength(2) }, { timeout: 5_000 })
+    await vi.waitFor(() => { expect(approvalRequests).toHaveLength(1) }, { timeout: 5_000 })
+    expect(resolutions).toHaveLength(1)
+    expect(parentCall).toBeDefined()
+    expect(expectedDelegationContext).toBeDefined()
+    expect(resolutions[0]?.delegationContext).toBe(expectedDelegationContext)
+    expect(resolutions[0]?.responsesGeneration).toBe(currentGeneration)
+    expect(resolutions[0]?.approvalRequester).toBeTypeOf('function')
+    expect(approvalRequests[0]).toMatchObject({ agent: parentCall?.agent, session: parentCall?.session,
+      callId: parentCall?.callId, toolName: 'write_file' })
     const run = state.run()
     expect(run).toBeDefined()
     run?.cancel('cancelled by test')
+    expect(await approvalDecision.promise).toBe('cancelled')
+    expect(approvalRequests[0]?.signal.aborted).toBe(true)
     await running
     const sessions = await readSessions(state.sessions)
     const parent = sessions.find(session => session.events.some(event => event.type === 'tool-workflow/run-start'))

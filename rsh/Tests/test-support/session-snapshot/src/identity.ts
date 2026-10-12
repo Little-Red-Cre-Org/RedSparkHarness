@@ -2,10 +2,10 @@
 
 const UUID_FRAGMENT_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 const LEGACY_TOKEN_RE = /^\{\{(?:sessionId|messageId)\}\}$/
-const CANONICAL_TOKEN_RE = /^\{\{(session|message|approval|workflow|command|rpc|retry|id):([1-9]\d*)\}\}$/
+const CANONICAL_TOKEN_RE = /^\{\{(session|message|approval|workflow|command|rpc|retry|id|epoch):([1-9]\d*)\}\}$/
 const ID_KEY_RE = /(?:^id$|Id$|Ids$)/
 
-type IdentityKind = 'session' | 'message' | 'approval' | 'workflow' | 'command' | 'rpc' | 'retry' | 'id'
+type IdentityKind = 'session' | 'message' | 'approval' | 'workflow' | 'command' | 'rpc' | 'retry' | 'id' | 'epoch'
 
 interface ParsedLog {
   readonly records: Record<string, unknown>[]
@@ -104,6 +104,11 @@ export function redactSessionSnapshotIds(logs: readonly string[]): string[] {
     for (const record of log.records) {
       if (record.type === 'feedback/message-put' && isRecord(record.data) && isRecord(record.data.item)) {
         claim(record.data.item.version, 'id')
+      }
+      if ((record.type === 'subagent/external-start' || record.type === 'subagent/external-operation')
+        && isRecord(record.data)) {
+        claim(record.data.parentEpoch, 'epoch')
+        claim(record.data.rootEpoch, 'epoch')
       }
       collect(record, record.type)
     }

@@ -231,6 +231,7 @@ export function successfulResult(message: SDKResultMessage): string {
  * @param query - published official SDK query.
  * @param onPermissionDenied - records a safe fact when the SDK reports native denial.
  * @param onResult - records that the SDK supplied a terminal result message.
+ * @param onReady - reports the SDK session id after initialization.
  * @returns the completed shared result.
  */
 export async function consumeClaudeQuery(

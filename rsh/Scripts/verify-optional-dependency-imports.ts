@@ -24,8 +24,8 @@
  * reported, and the fix it asks for (`import type`, or dropping the binding) is
  * what the published package wants regardless. Both compiler faces are scanned,
  * and only files that ship — a published package's `src` — are subject. A
- * package with Cordis-free exports may make its Cordis peer optional: legacy
- * entries may still load Cordis, while each declared safe export's static source
+ * package with Cordis-free exports may classify a peer as compatibility-only:
+ * legacy entries may load it, while each declared safe export's static source
  * closure may not. The packed-consumer test checks the emitted artifact too.
  */
 
@@ -155,9 +155,11 @@ function cordisFreeSourceClosure(
   if (!typesPath.startsWith('./lib/types/') || !typesPath.endsWith('.d.ts')) {
     throw new Error(`optional Cordis peer has an unsupported safe-entry types path: ${typesPath}`)
   }
-  const sourcePath = resolve(directory, 'src', typesPath.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
-  const entry = project.program.getSourceFile(sourcePath)
-  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded safe-entry source: ${sourcePath}`)
+  const sourceStem = resolve(directory, 'src', typesPath.slice('./lib/types/'.length, -'.d.ts'.length))
+  const sourcePaths = [`${sourceStem}.ts`, `${sourceStem}.tsx`]
+  const entry = sourcePaths.map(sourcePath => project.program.getSourceFile(sourcePath))
+    .find((source): source is ts.SourceFile => source !== undefined)
+  if (entry === undefined) throw new Error(`optional Cordis peer has no loaded safe-entry source: ${sourcePaths.join(' or ')}`)
   const visited = new Set<string>()
   const pending = [entry]
   while (pending.length > 0) {

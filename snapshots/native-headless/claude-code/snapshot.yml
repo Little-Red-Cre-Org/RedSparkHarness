@@ -1,0 +1,10 @@
+version: 1
+scenario: claude-code
+profile: native-headless
+composition: native-claude-code-opaque
+recording: authored
+header:
+  class: native-claude-code
+  pin: true
+workspace:
+  final: true

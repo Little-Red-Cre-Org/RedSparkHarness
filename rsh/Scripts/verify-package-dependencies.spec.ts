@@ -204,6 +204,7 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-api-workspace-controller',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.hostPackages).toEqual([
+      '@deepseek-ai/dsh-codex-app-server',
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-permission-presets',
       '@deepseek-ai/dsh-session',
@@ -234,6 +235,13 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
       '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
       '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
+      '@deepseek-ai/dsh-client-native-application': [
+        '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment',
+        '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory',
+      ],
+      '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
+      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
+      '@deepseek-ai/dsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
       '@deepseek-ai/dsh-client-ui-sidebar': [
         '@deepseek-ai/dsh-client-store',
         '@deepseek-ai/dsh-client-ui-primitives',
@@ -244,6 +252,9 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
       '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-client-ui-tool': ['react'],
+      '@deepseek-ai/dsh-client-ui-attachment': ['react'],
+      '@deepseek-ai/dsh-client-ui-goal': ['react'],
+      '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
       '@deepseek-ai/dsh-client-native-application': [
         'react',
         '@deepseek-ai/dsh-session',
@@ -255,10 +266,19 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
+      '@deepseek-ai/dsh-codex-app-server': [
+        '@deepseek-ai/dsh-llm',
+        '@deepseek-ai/dsh-native-model-execution',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-native-subagent',
+        '@deepseek-ai/dsh-native-tools',
+      ],
       '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
       '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
+      '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
+      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-session', '@types/react'],
       '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
       '@deepseek-ai/dsh-client-ui-session': [
         '@deepseek-ai/dsh-client-native-session',
@@ -285,6 +305,8 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-agent-presets',
         '@deepseek-ai/dsh-brand',
         '@deepseek-ai/dsh-commands',
+        '@deepseek-ai/dsh-authorization',
+        '@deepseek-ai/dsh-api-workspace-files',
       ],
       '@deepseek-ai/dsh-client-native-application': [
         '@deepseek-ai/dsh-native-runtime',
@@ -299,6 +321,12 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-client-ui-conversation',
         '@deepseek-ai/dsh-client-ui-slots',
       ],
+      '@deepseek-ai/dsh-client-ui-trajectory': [
+        '@deepseek-ai/dsh-client-ui-conversation',
+        '@deepseek-ai/dsh-client-ui-slots',
+        '@deepseek-ai/dsh-session',
+        '@types/react',
+      ],
       '@deepseek-ai/dsh-task-scheduler': [
         '@deepseek-ai/dsh-native-agent',
         '@deepseek-ai/dsh-native-runtime',
@@ -307,6 +335,14 @@ describe('package dependency scope', () => {
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
+      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
+      '@deepseek-ai/dsh-session-log-export': [
+        '@deepseek-ai/dsh-attachment',
+        '@deepseek-ai/dsh-native-runtime',
+        '@deepseek-ai/dsh-session',
+        '@deepseek-ai/dsh-session-persistence',
+        '@deepseek-ai/dsh-session-query',
+      ],
       '@deepseek-ai/dsh-permission-presets': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-native-session-execution',
@@ -325,6 +361,9 @@ describe('package dependency scope', () => {
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.nativeServicePeerDependencies).toEqual({
+      '@deepseek-ai/dsh-session-log-export': {
+        activeSessions: '@deepseek-ai/dsh-native-session-execution',
+      },
       '@deepseek-ai/dsh-permission-presets': {
         agents: '@deepseek-ai/dsh-native-agent',
         sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
@@ -353,6 +392,15 @@ describe('package dependency scope', () => {
       'boundContextSummary', 'errorChain',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-llm/native']).toEqual(['boundContextSummary'])
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).toEqual([
+      'JsonRpcLineTransport',
+    ])
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).not.toContain(
+      'JsonRpcResponseError',
+    )
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-subprocess/native']).toEqual([
+      'disposeChildConnection',
+    ])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/schemastery']).toEqual(['default'])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-session/types']).toBeUndefined()
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
@@ -365,11 +413,19 @@ describe('package dependency scope', () => {
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-title/normalize']).toEqual([
       'normalizeSessionTitle',
     ])
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session/types']).toEqual([
+      'SESSION_FORMAT_VERSION',
+    ])
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-llm/native']).toEqual([
+      'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText',
+    ])
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-native-subagent/native']).toEqual([
+      'serializeNativeExternalJson',
+    ])
     for (const specifier of [
       '@deepseek-ai/dsh-agent-presets/selection',
       '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
       '@deepseek-ai/dsh-native-model-selection/types',
-      '@deepseek-ai/dsh-session/types',
       '@deepseek-ai/dsh-session/event-validation',
       '@deepseek-ai/dsh-session/surface',
       '@deepseek-ai/dsh-tool-todo/client-native',
@@ -1465,6 +1521,11 @@ describe('dependency sections', () => {
           '@deepseek-ai/dsh-session-projection',
           '@deepseek-ai/dsh-user-approval',
         ],
+      },
+      {
+        name: '@deepseek-ai/dsh-tool-session-query',
+        manifestPath: 'rsh/Engine/session-query/tool-session-query/package.json',
+        peers: ['@deepseek-ai/dsh-tools'],
       },
     ]
     for (const profile of profiles) {

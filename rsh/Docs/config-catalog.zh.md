@@ -2446,7 +2446,7 @@ export interface Config {
 export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[number]
 ```
 
-来源：[`rsh/Engine/subagent/subagent-claude-code/src/index.ts:38`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
+来源：[`rsh/Modules/Official/subagent/subagent-claude-code/src/index.ts:39`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-codex"></a>
 

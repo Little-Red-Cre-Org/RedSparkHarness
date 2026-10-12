@@ -72,9 +72,6 @@
     "@deepseek-ai/dsh-invariants": {
       "optional": true
     },
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
-    },
     "@deepseek-ai/dsh-session": {
       "optional": true
     },
@@ -85,9 +82,6 @@
       "optional": true
     },
     "@deepseek-ai/dsh-tools": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-user-questions": {
       "optional": true
     },
     "@deepseek-ai/cordis": {

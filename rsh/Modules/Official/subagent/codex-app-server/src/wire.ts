@@ -9,6 +9,8 @@
 
 import type { Readable, Writable } from 'node:stream'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
+import type { NativeExternalToolSettlement } from '@deepseek-ai/dsh-native-subagent/native'
+import type { CodexConcludingToolReply, NativeCodexToolBridge } from './native-tool-bridge.ts'
 import type { CodexPermissionMode } from './types.ts'
 
 export type { CodexPermissionMode } from './types.ts'
@@ -18,12 +20,12 @@ interface CodexTextBlock {
   readonly text: string
 }
 
-/** Selected answer and terminal status from one Codex turn.
- * The app-server wire currently returns completed or token-limit outcomes.
- */
+/** Selected answer, terminal status, and optional durable Native tool result from one Codex turn. */
 export interface CodexWireResult {
   readonly output: readonly CodexTextBlock[]
   readonly stopReason: 'completed' | 'max-tokens'
+  /** Native result that ended this turn through a written dynamic-tool reply. */
+  readonly toolResult?: NativeExternalToolSettlement['result']
 }
 
 type JsonObject = Record<string, unknown>
@@ -207,6 +209,8 @@ export class CodexAppServerWire {
   private readonly fatal = Promise.withResolvers<never>()
   private threadId: string | undefined
   private turnId: string | undefined
+  private runSignal: AbortSignal | undefined
+  private concludedToolReply: CodexConcludingToolReply | undefined
   private pendingTurnId: string | undefined
   private turnCompleted: PromiseWithResolvers<{
     readonly params: JsonObject
@@ -241,6 +245,7 @@ export class CodexAppServerWire {
     output: Writable,
     private readonly permissionMode: CodexPermissionMode,
     private readonly model?: string,
+    private readonly toolBridge?: NativeCodexToolBridge,
   ) {
     this.transport = new JsonRpcLineTransport(input, output)
     // Fatal protocol state can arrive after the current guarded operation has
@@ -248,6 +253,10 @@ export class CodexAppServerWire {
     // another promise-adoption hop into active races.
     void this.fatal.promise.catch(() => {})
     this.transport.onRequest((method, params) => this.handleServerRequest(method, params))
+    this.transport.onRequestResultWritten(
+      (method, params, result) => { this.handleRequestResultWritten(method, params, result) },
+      (error) => { this.fail(error) },
+    )
     this.transport.onNotification((method, params) => {
       try {
         this.handleNotification(method, params)
@@ -295,7 +304,7 @@ export class CodexAppServerWire {
         version: '0.0.1',
       },
       capabilities: {
-        experimentalApi: false,
+        experimentalApi: (this.toolBridge?.catalog.appServerTools.length ?? 0) > 0,
         requestAttestation: false,
       },
     }, signal), signal), 'initialize response')
@@ -313,6 +322,8 @@ export class CodexAppServerWire {
       cwd,
       ephemeral: true,
       ...this.model === undefined ? {} : { model: this.model },
+      ...this.toolBridge === undefined || this.toolBridge.catalog.appServerTools.length === 0
+        ? {} : { dynamicTools: this.toolBridge.catalog.appServerTools },
       ...THREAD_PERMISSION_PARAMS[this.permissionMode],
     }, signal), signal), 'thread/start response')
     const thread = object(response.thread, 'thread/start thread')
@@ -321,11 +332,12 @@ export class CodexAppServerWire {
       throw new Error('subagent-codex: app-server did not create an ephemeral thread')
     }
     this.threadId = id
+    this.toolBridge?.bindThread(id)
   }
 
   /**
-   * Submit the one text-only task and wait for this thread/turn's authoritative
-   * terminal notification.
+   * Submit one text task and wait for this thread/turn's authoritative terminal
+   * notification or a durable Native tool conclusion.
    * @param texts - already validated task text blocks.
    * @param signal - local cancellation for the published run.
    * @param effort - optional reasoning effort sent on turn/start.
@@ -341,6 +353,7 @@ export class CodexAppServerWire {
       readonly order: number
     }>()
     this.turnCompleted = completion
+    this.runSignal = signal
     const threadId = this.threadId as string
     try {
       const response = object(await this.guarded(this.transport.request('turn/start', {
@@ -352,6 +365,9 @@ export class CodexAppServerWire {
       this.commitTurnId(string(turn.id, 'turn/start turn id'))
     } catch (error: unknown) {
       this.recordFailure({ stage: 'turn-start', category: 'unknown' })
+      const failure = thrown(error)
+      if (signal.aborted) this.toolBridge?.closeAdmission()
+      else this.toolBridge?.transportFailed(failure)
       throw error
     }
 
@@ -369,6 +385,15 @@ export class CodexAppServerWire {
     }
     const status = terminal.status
     if (status !== 'completed') {
+      const conclusion = this.concludedToolReply
+      if (status === 'interrupted' && conclusion !== undefined
+        && conclusion.threadId === this.threadId && conclusion.turnId === this.turnId) {
+        return {
+          output: this.collectOutput(),
+          stopReason: 'completed',
+          toolResult: structuredClone(conclusion.result),
+        }
+      }
       const parsed = failureInfo(terminal)
       this.recordFailure(parsed.httpStatus === undefined
         ? { stage: 'turn', category: parsed.category }
@@ -404,6 +429,7 @@ export class CodexAppServerWire {
    * remain authoritative when the child no longer accepts protocol requests.
    */
   interrupt(): void {
+    this.toolBridge?.closeAdmission()
     if (this.threadId === undefined || this.turnId === undefined || this.closed) return
     void this.transport.request('turn/interrupt', {
       threadId: this.threadId,
@@ -448,6 +474,7 @@ export class CodexAppServerWire {
   close(): void {
     if (this.closed) return
     this.closed = true
+    this.toolBridge?.closeAdmission()
     this.input.off('end', this.onInputEnd)
     this.transport.close()
   }
@@ -458,6 +485,7 @@ export class CodexAppServerWire {
   }
 
   private fail(error: Error): void {
+    this.toolBridge?.transportFailed(error)
     this.fatal.reject(error)
   }
 
@@ -489,6 +517,7 @@ export class CodexAppServerWire {
       throw new Error('subagent-codex: turn/start response did not match the active turn')
     }
     this.turnId = id
+    this.toolBridge?.bindTurn(id)
     const pendingDiagnostic = this.pendingDiagnostic
     this.pendingDiagnostic = undefined
     if (pendingDiagnostic !== undefined) {
@@ -599,7 +628,7 @@ export class CodexAppServerWire {
     return false
   }
 
-  private handleServerRequest(method: string, params: JsonObject): Promise<unknown> {
+  private async handleServerRequest(method: string, params: JsonObject): Promise<unknown> {
     try {
       switch (method) {
         case 'item/commandExecution/requestApproval':
@@ -612,7 +641,7 @@ export class CodexAppServerWire {
             decision === 'cancel' ? 'cancelled' : 'declined',
             'the provider does not grant interactive approval',
           )
-          return Promise.resolve({ decision })
+          return { decision }
         }
         case 'item/fileChange/requestApproval':
         {
@@ -624,7 +653,7 @@ export class CodexAppServerWire {
             decision === 'cancel' ? 'cancelled' : 'declined',
             'the provider does not grant interactive approval',
           )
-          return Promise.resolve({ decision })
+          return { decision }
         }
         case 'item/permissions/requestApproval':
           this.recordRequestDiagnostic(
@@ -633,7 +662,7 @@ export class CodexAppServerWire {
             'denied',
             'the provider grants no additional turn permissions',
           )
-          return Promise.resolve({ permissions: {}, scope: 'turn' })
+          return { permissions: {}, scope: 'turn' }
         case 'item/tool/requestUserInput':
           this.recordRequestDiagnostic(
             this.validateRunIds(params),
@@ -641,7 +670,7 @@ export class CodexAppServerWire {
             'empty response',
             'the provider does not collect interactive answers',
           )
-          return Promise.resolve({ answers: {} })
+          return { answers: {} }
         case 'mcpServer/elicitation/request':
           this.recordRequestDiagnostic(
             this.validateRunIds(params, true),
@@ -649,15 +678,38 @@ export class CodexAppServerWire {
             'declined',
             'the provider does not collect interactive MCP input',
           )
-          return Promise.resolve({ action: 'decline', content: null, _meta: null })
+          return { action: 'decline', content: null, _meta: null }
+        case 'item/tool/call':
+        {
+          if (this.toolBridge === undefined) throw new Error('subagent-codex: dynamic tool calls are disabled')
+          const threadId = string(params.threadId, 'dynamic tool thread id')
+          if (threadId !== this.threadId) throw new Error('subagent-codex: dynamic tool call referenced another thread')
+          const signal = this.runSignal
+          if (signal === undefined) throw new Error('subagent-codex: dynamic tool call arrived without an active turn')
+          return await this.toolBridge.executeCall(params, signal)
+        }
         default:
           throw new Error(`subagent-codex: unsupported app-server request ${JSON.stringify(method)}`)
       }
     } catch (error: unknown) {
       const normalized = thrown(error)
-      this.fail(normalized)
+      if (method !== 'item/tool/call' || this.runSignal?.aborted !== true) this.fail(normalized)
       return Promise.reject(normalized)
     }
+  }
+
+  private handleRequestResultWritten(method: string, params: JsonObject, result: unknown): void {
+    const conclusion = this.toolBridge?.requestResultWritten(method, params, result)
+    if (conclusion === undefined) return
+    if (conclusion.threadId !== this.threadId || conclusion.turnId !== this.turnId) {
+      throw new Error('subagent-codex: concluded tool reply does not match the authoritative active turn')
+    }
+    if (this.concludedToolReply !== undefined) return
+    this.concludedToolReply = conclusion
+    void this.transport.request('turn/interrupt', {
+      threadId: conclusion.threadId,
+      turnId: conclusion.turnId,
+    }).catch((error: unknown) => { this.fail(thrown(error)) })
   }
 
   private handleNotification(

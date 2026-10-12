@@ -4117,7 +4117,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ContinuableSubagentDescriptorData',
-    declaration: 'export interface ContinuableSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'continuable\';\n    readonly label: string;\n    readonly agentProvider?: string;\n    readonly agentModel?: string;\n    readonly agentReasoningEffort?: ReasoningEffortId;\n    readonly persona?: string;\n    readonly toolFilter?: ToolRestriction;\n}',
+    declaration: 'export interface ContinuableSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'continuable\';\n    readonly label: string;\n    readonly agentProvider?: string;\n    readonly agentModel?: string;\n    readonly agentReasoningEffort?: ReasoningEffortId;\n    readonly persona?: string;\n    readonly toolFilter?: ToolRestriction;\n    readonly delegationContext?: SubagentDelegationContext;\n}',
   },
   {
     name: 'CordisDynamicPackageId',
@@ -5994,6 +5994,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SubagentCatalog',
     declaration: 'export interface SubagentCatalog {\n    readonly entries: readonly SubagentListEntry[];\n    readonly parentAvailable: boolean;\n}',
+  },
+  {
+    name: 'SubagentDelegationContext',
+    declaration: 'export interface SubagentDelegationContext {\n    readonly depth: number;\n    readonly maxDepth: number;\n    readonly cwd: string;\n    readonly provider: string;\n    readonly model: string;\n    readonly reasoningEffort?: ReasoningEffortId;\n    readonly maxSteps: number;\n    readonly maxTokens?: number;\n    readonly toolNames: readonly string[];\n    readonly builtinToolNames: readonly string[];\n    readonly programToolNames: readonly string[];\n}',
   },
   {
     name: 'SubagentDescendantListEntry',

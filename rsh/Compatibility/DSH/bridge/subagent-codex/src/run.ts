@@ -112,6 +112,7 @@ export async function startCodexRun(request: SubagentStartRequest, spec: CodexRu
       ...spec.model === undefined ? {} : { model: spec.model },
       permissionMode: spec.permissionMode,
       env: spec.env,
+      envMode: 'scrub-overlay',
       disposeGraceMs: spec.disposeGraceMs,
       ...spec.onError === undefined ? {} : {
         onError: (error: Error, reason: SubagentStopReason) => spec.onError?.(compatibilityError(error), reason),

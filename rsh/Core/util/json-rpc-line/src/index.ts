@@ -13,6 +13,15 @@ import { StringDecoder } from 'node:string_decoder'
 type JsonRpcId = string | number
 type RequestHandler = (method: string, params: Record<string, unknown>) => Promise<unknown>
 type NotificationHandler = (method: string, params: Record<string, unknown>) => void
+type RequestResultWrittenHandler = (
+  method: string,
+  params: Record<string, unknown>,
+  result: unknown,
+) => void
+interface RequestResultWrittenObserver {
+  readonly handler: RequestResultWrittenHandler
+  readonly onError: (error: Error) => void
+}
 
 /** A JSON-RPC error response, preserving the wire `code` and optional `data`. */
 export class JsonRpcResponseError extends Error {
@@ -65,6 +74,7 @@ export class JsonRpcLineTransport implements JsonRpcTransportPeer {
   private started = false
   private requestHandler: RequestHandler | undefined
   private notificationHandler: NotificationHandler | undefined
+  private requestResultWrittenObserver: RequestResultWrittenObserver | undefined
   private readonly pending = new Map<JsonRpcId, PendingRequest>()
 
   constructor(
@@ -88,6 +98,7 @@ export class JsonRpcLineTransport implements JsonRpcTransportPeer {
     this.input.off('data', this.onData)
     this.input.off('error', this.onInputError)
     this.input.off('end', this.onInputEnd)
+    this.requestResultWrittenObserver = undefined
     this.failPending(new Error('JSON-RPC transport closed'))
   }
 
@@ -107,6 +118,20 @@ export class JsonRpcLineTransport implements JsonRpcTransportPeer {
    */
   onNotification(handler: NotificationHandler): void {
     this.notificationHandler = handler
+  }
+
+  /** Observe incoming request results after their result-frame write succeeds.
+   * The observer is captured when a request starts. Synchronous and callback
+   * write failures and an observer throw reach its owner callback once while
+   * it remains installed; closing or replacing it suppresses late callbacks.
+   * @param handler - synchronous observer called after the successful result-frame write callback.
+   * @param onObserverError - owner callback for write failure or observer throw; it must not throw.
+   */
+  onRequestResultWritten(
+    handler: RequestResultWrittenHandler,
+    onObserverError: (error: Error) => void,
+  ): void {
+    this.requestResultWrittenObserver = { handler, onError: onObserverError }
   }
 
   /**
@@ -225,15 +250,61 @@ export class JsonRpcLineTransport implements JsonRpcTransportPeer {
 
   private async handleIncomingRequest(id: JsonRpcId, method: string, params: Record<string, unknown>): Promise<void> {
     const handler = this.requestHandler
+    const observer = this.requestResultWrittenObserver
     if (!handler) {
       this.writeError(id, -32601, `method not found: ${method}`)
       return
     }
+    let result: unknown
     try {
-      const result = await handler(method, params)
-      this.write({ jsonrpc: '2.0', id, result })
+      result = await handler(method, params)
     } catch (error) {
       this.writeError(id, -32603, error instanceof Error ? error.message : String(error))
+      return
+    }
+
+    const writeState: {
+      returned: boolean
+      called: boolean
+      error: Error | null | undefined
+    } = { returned: false, called: false, error: undefined }
+    let observerErrorReported = false
+    const reportObserverError = (error: Error): void => {
+      if (observer === undefined || observer !== this.requestResultWrittenObserver || observerErrorReported) return
+      observerErrorReported = true
+      observer.onError(error)
+    }
+    const observeWriteCompletion = (error: Error | null | undefined): void => {
+      if (observer === undefined || observer !== this.requestResultWrittenObserver) return
+      if (error !== undefined && error !== null) {
+        reportObserverError(error)
+        return
+      }
+      try {
+        observer.handler(method, params, result)
+      } catch (observerError: unknown) {
+        reportObserverError(
+          observerError instanceof Error ? observerError : new Error(String(observerError)),
+        )
+      }
+    }
+
+    try {
+      this.write({ jsonrpc: '2.0', id, result }, (error) => {
+        if (writeState.called) return
+        writeState.called = true
+        writeState.error = error
+        if (writeState.returned) observeWriteCompletion(error)
+      })
+      writeState.returned = true
+      if (writeState.called) observeWriteCompletion(writeState.error)
+    } catch (error) {
+      const writeError = error instanceof Error ? error : new Error(String(error))
+      if (observer !== undefined && observer === this.requestResultWrittenObserver) {
+        reportObserverError(writeError)
+      } else {
+        this.writeError(id, -32603, writeError.message)
+      }
     }
   }
 
@@ -257,8 +328,8 @@ export class JsonRpcLineTransport implements JsonRpcTransportPeer {
     this.write({ jsonrpc: '2.0', id, error: { code, message } })
   }
 
-  private write(message: Record<string, unknown>): void {
-    this.output.write(`${JSON.stringify(message)}\n`)
+  private write(message: Record<string, unknown>, onWritten?: (error: Error | null | undefined) => void): void {
+    this.output.write(`${JSON.stringify(message)}\n`, onWritten)
   }
 
   private failPending(error: Error): void {

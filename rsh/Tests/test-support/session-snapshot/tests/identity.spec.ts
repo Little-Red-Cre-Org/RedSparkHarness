@@ -8,6 +8,12 @@ const approvalId = '44444444-4444-4444-8444-444444444444'
 const runId = '55555555-5555-4555-8555-555555555555'
 const otherId = '66666666-6666-4666-8666-666666666666'
 const proseUuid = '77777777-7777-4777-8777-777777777777'
+const parentEpoch = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const rootEpoch = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const replacementRootEpoch = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+const startOnlyParentEpoch = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+const startOnlyRootEpoch = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+const unrelatedEpoch = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
 
 describe('session snapshot identity redaction', () => {
   it('preserves feedback versions and target relationships without redacting unrelated prose', () => {
@@ -119,5 +125,33 @@ describe('session snapshot identity redaction', () => {
     expect(redacted?.match(/\{\{message:7\}\}/g)).toHaveLength(2)
     expect(redacted).toContain('"id":"{{message:8}}"')
     expect(redacted).not.toContain('{{id:')
+  })
+
+  it('redacts external lifecycle owner epochs while preserving their relationships', () => {
+    const source = [
+      JSON.stringify({ type: 'subagent/external-start', data: { parentEpoch, rootEpoch } }),
+      JSON.stringify({ type: 'subagent/external-operation', data: { parentEpoch, rootEpoch } }),
+      JSON.stringify({ type: 'subagent/external-operation', data: { parentEpoch, rootEpoch } }),
+      JSON.stringify({ type: 'subagent/external-start', data: { parentEpoch, rootEpoch: replacementRootEpoch } }),
+      JSON.stringify({ type: 'subagent/external-operation', data: { parentEpoch, rootEpoch: replacementRootEpoch } }),
+      JSON.stringify({ type: 'subagent/external-start', data: { parentEpoch: startOnlyParentEpoch, rootEpoch: startOnlyRootEpoch } }),
+      JSON.stringify({ type: 'other', data: { parentEpoch: unrelatedEpoch } }),
+    ].join('\n')
+
+    const [redacted] = redactSessionSnapshotIds([source])
+    const records = redacted!.split('\n').map(line => JSON.parse(line) as {
+      type: string
+      data: Record<string, string>
+    })
+    expect(records.slice(0, 6).map(record => [record.data.parentEpoch, record.data.rootEpoch])).toEqual([
+      ['{{epoch:1}}', '{{epoch:2}}'],
+      ['{{epoch:1}}', '{{epoch:2}}'],
+      ['{{epoch:1}}', '{{epoch:2}}'],
+      ['{{epoch:1}}', '{{epoch:3}}'],
+      ['{{epoch:1}}', '{{epoch:3}}'],
+      ['{{epoch:4}}', '{{epoch:5}}'],
+    ])
+    expect(records[6]?.data.parentEpoch).toBe(unrelatedEpoch)
+    expect(redactSessionSnapshotIds([redacted!])).toEqual([redacted])
   })
 })

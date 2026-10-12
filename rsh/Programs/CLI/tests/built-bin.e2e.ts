@@ -585,6 +585,17 @@ function startStartupProfile(fixture: StartupFixture, args: readonly string[]) {
 }
 
 describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
+  it('resolves the shipped native-headless profile through the public loader', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'rsh-native-headless-profile-'))
+    try {
+      ensureShippedNativeProfile('native-headless', home)
+      await loadNativeProfile({ profile: 'native-headless', patchFiles: [], target: 'host', home,
+        installAnchor: fileURLToPath(new URL('../package.json', import.meta.url)) })
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+    }
+  })
+
   it('requires --profile and rejects removed commands', async () => {
     const bare = await runBuiltBin()
     expect(bare.code).toBe(1)
