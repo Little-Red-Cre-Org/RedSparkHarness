@@ -12,8 +12,8 @@ import { isEntry } from './process.ts'
 import { releaseFamily, type PublishPlan, type ReleaseFamily, type ReleaseMember } from './families.ts'
 
 /**
- * Print the publish order the release will follow, and the peer declarations it
- * leaves unordered.
+ * Print the publish order the release will follow, and the peer ordering
+ * preferences it omits.
  *
  * The order is the release's own plan: an interrupted publication leaves exactly
  * a prefix of it, so reading it is how anyone judges what a partial run left on
@@ -30,9 +30,8 @@ function reportPublishOrder(family: ReleaseFamily, plan: PublishPlan): void {
   }
   if (plan.droppedPeerEdges.length === 0) return
   console.log(
-    `release verify: ${String(plan.droppedPeerEdges.length)} peer declaration(s) publish unordered,`
-    + ' because the peer cannot precede the package declaring it without contradicting a dependency edge'
-    + ' or its own cycle. npm treats an unmet peer as a warning, so this orders nothing and blocks nothing:',
+    `release verify: ${String(plan.droppedPeerEdges.length)} peer ordering preference(s) omitted,`
+    + ' because honoring each would create a cycle. Package declarations and peer optionality remain unchanged:',
   )
   for (const edge of plan.droppedPeerEdges) console.log(`  ${edge.consumer} -> ${edge.peer}`)
 }
@@ -102,7 +101,7 @@ function main(): void {
   const summary = versions.length === 1 ? versions[0] : `${String(versions.length)} versions`
   console.log(
     `release verify: family ${family.id}, ${String(members.length)} member(s), ${summary},`
-    + ` publish order resolved, ${String(plan.droppedPeerEdges.length)} peer declaration(s) unordered`
+    + ` publish order resolved, ${String(plan.droppedPeerEdges.length)} peer ordering preference(s) omitted`
     + (publishing ? ', publish gates passed' : ''),
   )
 }

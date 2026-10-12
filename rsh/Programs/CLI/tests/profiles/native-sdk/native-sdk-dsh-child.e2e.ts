@@ -8,6 +8,9 @@ import { expect, it } from 'vitest'
 import { DeepSeekHarness } from '../../../../SDK/packages/client/src/index.ts'
 
 const bin = fileURLToPath(new URL('../../../src/bin.ts', import.meta.url))
+const childNodeArgs = process.env.DSH_EXAMPLE_MODE === 'lib'
+  ? [fileURLToPath(new URL('../../../lib/bin.js', import.meta.url))]
+  : ['--import', 'tsx/esm', bin]
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
 const childTask = 'SDK_CHILD_MAX_STEPS_FIXTURE_3d0e8c'
 const slowParentTask = 'SDK_CHILD_START_CANCEL_FIXTURE_3d0e8c'
@@ -198,7 +201,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     providerPatch,
     { id: 'subagent-tool', config: { toolName: 'subagent', maxDepth: 3, maxSteps: 2 } },
   ] }))
-  const child = execa(process.execPath, ['--import', 'tsx/esm', bin, '--profile', 'native-sdk-dsh-child', '--patch', patch], {
+  const child = execa(process.execPath, [...childNodeArgs, '--profile', 'native-sdk-dsh-child', '--patch', patch], {
     cwd: root,
     env: { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
       TMP: runnerTempRoot, TEMP: runnerTempRoot, TMPDIR: runnerTempRoot },
@@ -349,7 +352,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     expect(durableExternalEnds.map(event => event.id)).toEqual(durableExternalStarts.map(event => event.id))
     expect(durableExternalEnds.map(event => event.stopReason)).toEqual(['error', 'aborted'])
 
-    const readOnlyChild = execa(process.execPath, ['--import', 'tsx/esm', bin, '--profile', 'native-sdk-dsh-child', '--patch', readOnlyPatch], {
+    const readOnlyChild = execa(process.execPath, [...childNodeArgs, '--profile', 'native-sdk-dsh-child', '--patch', readOnlyPatch], {
       cwd: root,
       env: { DSH_HOME: readOnlyHome, DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
         TMP: runnerTempRoot, TEMP: runnerTempRoot, TMPDIR: runnerTempRoot },

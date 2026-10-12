@@ -35,7 +35,7 @@ Native-headless CLI 使用 root Session id 派生 Agent id；持久化的 parent
 
 ## 命令与复现
 
-配套 evidence ledger 记录完整命令、工作目录、Node/platform、退出码、最终 base/head、已安装 tarball 身份与 SHA-256、进程结果以及冷 Session 文件。由于此环境拒绝默认 `tsx` CLI launcher 使用其 IPC socket，完整仓库 build 通过等效且受支持的 Node ESM loader 调用完成；原 launcher 失败也予以保留。`pack.ts --family dsh` 的 release-family 失败及其 dependency-cycle 诊断同样保留。与 upstream 最新 Koffi 的原生编译失败分开，另行记录了使用 lockfile 对齐的 `koffi@3.1.1` 的消费者安装。
+配套 evidence ledger 记录完整命令、工作目录、Node/platform、退出码、最终 base/head、已安装 tarball 身份与 SHA-256、进程结果以及冷 Session 文件。final-head 全量 build 尝试以 137 退出（aggregate exit 1）。定向 artifact 准备只重建 CLI 与 `llm-pi-ai`；其余 324 个 DSH tarball 中的 322 个复用了 commit `61a19bcd576e498313b3e2cc73d0329604a1514e` 的产物。这些定向产物不能证明全量 build 成功，也不能证明 final-head 完整发布家族已构建。原始 `tsx` launcher 失败与定向重建所用的受支持 Node ESM loader 调用均有记录。`pack.ts --family dsh` 的 release-family 失败及其 dependency-cycle 诊断同样保留。与 upstream 最新 Koffi 的原生编译失败分开，另行记录了使用 lockfile 对齐的 `koffi@3.1.1` 的消费者安装。
 
 验收刻意限定在 Linux x64 上选定的 `native-headless` `spawn` 路径；临时 `cwd` 仅用于隔离测试 workspace。它不代表支持其他 profile 或平台、external API provider、external-driver background/continuable 执行、跨 CLI invocation 的长时任务，也不代表缺少面向模型 Consumer 的随附 headless profile 已支持直接 spawn。
 

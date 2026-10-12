@@ -64,7 +64,7 @@
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-sdk-server": "workspace:^",
-    "@deepseek-ai/dsh-sdk-client": "workspace:^",
+    "@deepseek-ai/dsh-sdk-runtime": "workspace:^",
     "@deepseek-ai/dsh-sdk-child": "workspace:^",
     "@deepseek-ai/dsh-native-acp": "workspace:^",
     "@deepseek-ai/dsh-deepseek-account": "workspace:^",
