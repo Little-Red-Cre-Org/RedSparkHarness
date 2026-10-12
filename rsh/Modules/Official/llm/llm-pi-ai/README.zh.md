@@ -194,7 +194,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 <a id="model-experience"></a>
 
-原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。`modelSettings.configurableProviders()` 与 Cordis 入口共用目录投影；`discover()` 使用相同的端点发现路径，调用方传入的 `apiKey` 仅存在于当前请求中。Profile 或 `llm-pi-ai` 凭据记录变化时会发出 `llm/adapters-updated`。移除会先排空已接纳查询，再释放适配器。
+原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。`modelSettings.configurableProviders()` 与 Cordis 入口共用目录投影；`discover()` 使用相同的端点发现路径，调用方传入的 `apiKey` 仅存在于当前请求中。Profile 或 `llm-pi-ai` 凭据记录变化时会发出 `llm/adapters-updated`。随附的 DeepSeek 目录包含 `deepseek-flash` 和 `deepseek-v4-pro`。移除会先排空已接纳查询、凭据解析与 Native Responses 传输，再释放适配器；两组工作都结算后才会报告传输关闭失败。
 
 ## 模型体验
 
