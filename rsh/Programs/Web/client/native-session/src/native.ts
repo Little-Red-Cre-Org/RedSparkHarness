@@ -16,7 +16,7 @@ import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanMod
 export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { CommandExecution } from '@deepseek-ai/dsh-commands/facts'
+import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
 import { createNativeWorkspaceClients } from './workspaces.ts'
 import { NativeSessionRpcError } from './rpc-error.ts'
@@ -546,6 +546,12 @@ export interface NativeSessionClient {
    * @returns the durable command lifecycle identity and normalized outcome.
    */
   executeCommand(sessionId: SessionId, line: string, signal?: AbortSignal): Promise<CommandExecution>
+  /** List slash commands available to the selected Session's exact Program root owner.
+   * @param sessionId - selected stored Session.
+   * @param signal - caller cancellation.
+   * @returns visible command descriptions and optional input hints and attachment support.
+   */
+  commands(sessionId: SessionId, signal?: AbortSignal): Promise<readonly CommandDescriptor[]>
   /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
@@ -839,6 +845,10 @@ const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
   state: z.enum(['planned', 'activating', 'ready', 'draining', 'failed', 'disposed']),
   failure: z.enum(['activation', 'cleanup']).optional(),
 })) }) as unknown as z.ZodType<NativePluginInventory>
+const nativeCommandCatalogSchema = z.strictObject({ commands: z.array(z.strictObject({
+  definitionId: z.string().optional(), name: z.string().min(1), description: z.string().min(1),
+  input: z.strictObject({ hint: z.string(), attachments: z.boolean().optional() }).optional(),
+})) }) as unknown as z.ZodType<{ readonly commands: readonly CommandDescriptor[] }>
 
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
@@ -904,6 +914,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/mode-controls') return nativeModeControlsSchema.parse(value)
   if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
   if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
+  if (endpoint === 'session/commands') return nativeCommandCatalogSchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(listItem)
@@ -1261,6 +1272,8 @@ export function createNativeSessionClient(
       await call('session/select-preset', { sessionId: id, ...request }, signal)
     },
     executeCommand: (sessionId, line, signal) => call('session/command', { sessionId, line }, signal),
+    commands: async (sessionId, signal) => (await call<{ readonly commands: readonly CommandDescriptor[] }>(
+      'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
     prompt(sessionId, text, resume, signal, observe, images, onFollowError) {

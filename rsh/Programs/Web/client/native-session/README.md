@@ -32,6 +32,8 @@ The `./list-types` export contains the neutral Host/Client wire row for stored S
 
 `executeCommand(sessionId, line, signal?)` sends one complete slash-command line through the authenticated `session/command` RPC and returns its `CommandExecution`. The Host owns command lookup, idle-Session checks and dispatch on the exact root owner; cancellation waits for Host settlement. The Client adds no second command registry or execution path.
 
+`commands(sessionId, signal?)` reads the selected Session's command descriptors through `session/commands`, including each command's optional input hint and attachment support. The Client validates the Host response and keeps no command catalog cache.
+
 Model controls decode the selected Host catalog and installed preset metadata. Model and preset mutations require the displayed durable revision and resolve after Host maintenance settles. A catalog does not restrict explicit model routes; the model Provider validates resolution. These methods own no selection cache.
 
 `modeControls(sessionId, signal?)` reads the current agent preset, installed choices, durable revision and blank-session lock. Mode changes use `selectPreset` with that revision. The same reply includes plan-mode availability and current or pending state; `selectPlanMode(sessionId, active, signal?)` returns the Host state machine's `committed`, `queued`, `cancelled` or `noop` outcome.

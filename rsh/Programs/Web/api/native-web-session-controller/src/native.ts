@@ -190,7 +190,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
-  'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -553,6 +553,20 @@ export class NativeWebSessionService {
     }, signal)
   }
 
+  private async commandCatalog(id: SessionId, signal: AbortSignal): Promise<unknown> {
+    const commands = this.selections.commands
+    const scope = this.selections.commandScope
+    if (commands === undefined || scope === undefined) throw new Error('native web session: command catalog is unavailable')
+    const visibleNames = new Set(commands.list(scope).map(command => command.name))
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, (owner) => {
+      if (this.executor.rootExecution.capture(owner).id !== route) {
+        throw new Error('native web session: command catalog requires this Program root owner')
+      }
+      return Promise.resolve({ commands: commands.list(owner.agent.scope).filter(command => visibleNames.has(command.name)) })
+    }, signal)
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -764,6 +778,7 @@ export class NativeWebSessionService {
           active: this.active, persistence: this.persistence, maxHistoryEvents: this.config.maxHistoryEvents,
           label: 'native web session', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
         }, accepted)
+        if (endpoint === 'session/commands') return this.commandCatalog(id, accepted)
         if (endpoint === 'session/answer-human') {
           accepted.throwIfAborted()
           const turn = this.turns.get(id)
