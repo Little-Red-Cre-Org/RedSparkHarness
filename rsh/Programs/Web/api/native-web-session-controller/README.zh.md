@@ -30,6 +30,8 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
+经过身份认证的 `session/commands` 端点接受 `{ sessionId }`，并返回所选 Session 确切 Program root Agent 可用的 `{ commands }`。每个有效描述符包含名称、说明，以及可选的输入提示和附件支持信息；查询会检查 Web Program 的命令可见性，但不会分派命令处理器。
+
 控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
 
 控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, entries, crumbs }`，create-directory 创建一个子目录。Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。

@@ -47,6 +47,7 @@ import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-sessio
 import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
@@ -104,6 +105,56 @@ it('includes nested AggregateError messages in native Session failures', async (
       ok: false,
       error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
     })
+  } finally {
+    await service.close()
+  }
+})
+
+it('lists slash commands available to the exact Program root owner', async () => {
+  const programScope = new NativeScope()
+  const agentScope = new NativeScope()
+  const id = SessionId('command-catalog-session')
+  const owner = {
+    agent: { scope: agentScope }, session: { id }, invocation: 'root', writerAvailable: true,
+    onEvent: () => () => {},
+  } as unknown as NativeActiveSessionOwner
+  const programCommands = [
+    { name: 'compact', description: 'Program description' },
+    { name: 'program-only', description: 'Program only' },
+  ]
+  const ownerCommands = [
+    { name: 'compact', description: 'Session description', input: { hint: '[target]', attachments: true } },
+    { name: 'agent-only', description: 'Agent only' },
+  ]
+  const list = vi.fn((scope: NativeScope) => scope === programScope ? programCommands : ownerCommands)
+  const commands = { list } as unknown as NativeCommandOperations
+  const route = 'program-root-route'
+  const executeSessionOperation = vi.fn(async (
+    _request: unknown,
+    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<unknown>,
+    signal: AbortSignal,
+  ) => operation(owner, signal))
+  const executor = {
+    rootExecution: { capture: vi.fn(() => ({ id: route })) },
+    executeSessionOperation,
+    dispose: async () => {},
+  } as unknown as NativeHeadlessApplication
+  const active = {
+    owners: () => [owner], onAttached: () => async () => {}, onDetached: () => async () => {},
+  } as unknown as NativeActiveSessionOperations
+  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+      maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
+      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal,
+    { commands, commandScope: programScope })
+  try {
+    expect(await service.handle('session/commands', { sessionId: id }, new AbortController().signal)).toEqual({
+      ok: true,
+      value: { commands: [ownerCommands[0]] },
+    })
+    expect(list.mock.calls.map(([scope]) => scope)).toEqual([programScope, agentScope])
+    expect(executeSessionOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ id, resume: true, route }), expect.any(Function), expect.any(AbortSignal))
   } finally {
     await service.close()
   }

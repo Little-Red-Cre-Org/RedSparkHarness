@@ -32,6 +32,8 @@ kind: "package-reference"
 
 `executeCommand(sessionId, line, signal?)` 通过经过身份认证的 `session/command` RPC 发送一条完整斜杠命令，并返回其 `CommandExecution`。Host 负责命令查找、空闲 Session 检查以及在确切 root owner 上分派；取消会等待 Host 结算。Client 不增加第二个命令注册表或执行路径。
 
+`commands(sessionId, signal?)` 通过 `session/commands` 读取所选 Session 的命令描述符，包括各命令可选的输入提示和附件支持信息。Client 会验证 Host 响应，且不缓存命令目录。
+
 模型控件解码选定 Host 的目录与已安装预设元数据。模型与预设修改必须携带所呈现的持久化修订号，并在 Host 维护操作结算后完成。目录不限制显式模型路由；模型 Provider 验证解析。这些方法不拥有选择缓存。
 
 `modeControls(sessionId, signal?)` 会读取当前 agent preset、已安装选项、持久化修订号与空白 Session 锁定状态。模式变更通过携带该修订号的 `selectPreset` 完成。同一响应还包含 plan mode 的可用性及当前或待应用状态；`selectPlanMode(sessionId, active, signal?)` 返回 Host 状态机的 `committed`、`queued`、`cancelled` 或 `noop` 结果。
