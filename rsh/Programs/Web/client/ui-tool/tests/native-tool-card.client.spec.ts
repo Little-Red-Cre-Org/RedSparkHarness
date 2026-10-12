@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { ReactElement } from 'react'
 import type { GenericToolCardProps } from '../src/client/tool/toolviews/GenericToolCard.tsx'
 import { NativeToolCard } from '../src/tool-renderer.ts'
 import type { RunningToolCall } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
@@ -9,7 +10,8 @@ const block: RunningToolCall = {
 }
 
 function props(locale: 'en' | 'zh'): GenericToolCardProps {
-  return NativeToolCard({ block, toolName: 'read', locale }).props as GenericToolCardProps
+  const row = NativeToolCard({ block, toolName: 'read', locale }) as ReactElement<{ children: ReactElement<GenericToolCardProps>[] }>
+  return row.props.children[0].props
 }
 
 describe('NativeToolCard', () => {
