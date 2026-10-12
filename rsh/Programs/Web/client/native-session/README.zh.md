@@ -78,7 +78,7 @@ type NativeSettingsEvent =
 
 账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。OpenAI Codex 在模型调用报告额度前返回 `USAGE_PENDING`，之后返回 grant 邮箱、可空套餐、额度窗口和可选额度余额；快照仅保存在 Host 内存中，并按已存 grant 的 issuer 与 subject 隔离。账户响应不包含凭据值。
 
-同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、删除、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。
+同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。Host 集成从 `workspaces` 子路径导入可序列化的 Workspace 与目录类型。
 
 `clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
