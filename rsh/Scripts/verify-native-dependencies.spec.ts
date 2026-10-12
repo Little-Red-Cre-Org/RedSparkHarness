@@ -65,17 +65,17 @@ function fixture(content: string, dependency?: string): string {
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
     ])]
-      .map(owner => `${owner}/src/**/*.ts`),
+      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]),
   }))
   write('client.ts', 'export {}')
   write('tsconfig.client.json', JSON.stringify({
     compilerOptions: { noLib: true },
     include: ['client.ts', ...[...nativePackageDirectories]
       .filter(owner => owner.startsWith('rsh/Programs/Web/client/'))
-      .map(owner => `${owner}/src/**/*.ts`), ...[
+      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]), ...[
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
-    ].map(owner => `${owner}/src/**/*.ts`)],
+    ].flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`])],
   }))
   return root
 }
@@ -231,6 +231,17 @@ it('checks a mixed native library export without an installer manifest', () => {
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/native-types.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Credential {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
+})
+
+it.each(['rsh/Programs/Web/client/ui-trajectory'])('checks a TSX native source in the compiler face for %s', (owner) => {
+  const root = fixture('export {}')
+  mkdirSync(join(root, owner, 'src'), { recursive: true })
+  writeFileSync(join(root, owner, 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh-client-ui-trajectory',
+    exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+  }))
+  writeFileSync(join(root, owner, 'src/native.tsx'), 'export {}')
+  expect(collectNativeDependencyViolations(root)).toEqual([])
 })
 
 it('checks a declared Cordis-free subpath in a mixed package', () => {

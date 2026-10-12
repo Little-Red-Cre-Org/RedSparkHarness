@@ -22,6 +22,9 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native-types": {
+      "types": "./lib/types/native-types.d.ts"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json",
     "./tool-records": {
